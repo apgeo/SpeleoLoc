@@ -1,0 +1,24 @@
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS "cave_places" (
+	"title"	TEXT(80) NOT NULL,
+	"id"	INTEGER NOT NULL UNIQUE,
+	"cave_id"	INTEGER,
+	PRIMARY KEY("id" AUTOINCREMENT),
+	FOREIGN KEY("cave_id") REFERENCES "caves"("id")
+);
+CREATE TABLE IF NOT EXISTS "caves" (
+	"title"	TEXT(50) NOT NULL UNIQUE,
+	"area_title"	TEXT(50),
+	"id"	INTEGER NOT NULL UNIQUE,
+	"place_qr_code_identifier"	INTEGER UNIQUE,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "raster_maps" (
+	"id"	INTEGER NOT NULL UNIQUE,
+	"map_type"	TEXT(20) NOT NULL,
+	"file_name"	TEXT(255) NOT NULL,
+	"cave_id"	INTEGER NOT NULL,
+	"cave_area"	text(50),
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+COMMIT;

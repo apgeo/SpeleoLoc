@@ -1,0 +1,144 @@
+import 'package:drift/drift.dart' hide Column;
+import 'package:flutter/material.dart';
+import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleo_loc/utils/localization.dart';
+
+class SurfaceAreasPage extends StatefulWidget {
+  const SurfaceAreasPage({super.key});
+
+  @override
+  State<SurfaceAreasPage> createState() => _SurfaceAreasPageState();
+}
+
+class _SurfaceAreasPageState extends State<SurfaceAreasPage> {
+  List<SurfaceArea> _areas = [];
+  bool _changed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAreas();
+  }
+
+  void _loadAreas() async {
+    final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
+    if (!mounted) return;
+    setState(() {
+      _areas = areas;
+    });
+  }
+
+  Future<void> _showAddEditDialog({SurfaceArea? existing}) async {
+    final controller = TextEditingController(text: existing?.title ?? '');
+    final descController = TextEditingController(text: existing?.description ?? '');
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(existing == null ? LocServ.inst.t('add_surface_area') : LocServ.inst.t('edit')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(labelText: LocServ.inst.t('enter_surface_area_title')),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: descController,
+              decoration: InputDecoration(labelText: LocServ.inst.t('description')),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(
+            onPressed: () async {
+              final title = controller.text.trim();
+              if (title.isEmpty) return;
+              final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
+              if (existing == null) {
+                await appDatabase.into(appDatabase.surfaceAreas).insert(
+                  SurfaceAreasCompanion.insert(title: title, description: Value(desc)),
+                );
+              } else {
+                await (appDatabase.update(appDatabase.surfaceAreas)..where((a) => a.id.equals(existing.id))).write(
+                  SurfaceAreasCompanion(title: Value(title), description: Value(desc)),
+                );
+              }
+              Navigator.pop(context, true);
+            },
+            child: Text(LocServ.inst.t('save')),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      _changed = true;
+      _loadAreas();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('surface_area_saved'))));
+    }
+  }
+
+  Future<void> _confirmDelete(SurfaceArea area) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LocServ.inst.t('confirm')),
+        content: Text(LocServ.inst.t('delete_area_confirm')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(LocServ.inst.t('yes'))),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await (appDatabase.delete(appDatabase.surfaceAreas)..where((a) => a.id.equals(area.id))).go();
+      _changed = true;
+      _loadAreas();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('surface_area_deleted'))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) Navigator.pop(context, _changed);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(LocServ.inst.t('manage_surface_areas')),
+          actions: [
+            IconButton(onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+          ],
+        ),
+        body: ListView.separated(
+          itemCount: _areas.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final area = _areas[index];
+            return ListTile(
+              title: Text(area.title),
+              subtitle: area.description != null && area.description!.isNotEmpty
+                  ? Text(area.description!, style: const TextStyle(fontSize: 12, color: Colors.grey))
+                  : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(onPressed: () => _showAddEditDialog(existing: area), icon: const Icon(Icons.edit)),
+                  IconButton(onPressed: () => _confirmDelete(area), icon: const Icon(Icons.delete)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
