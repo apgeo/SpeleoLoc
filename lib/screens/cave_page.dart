@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/raster_map_place_selector.dart';
-import 'package:speleo_loc/screens/scanner_page.dart';
-import 'package:speleo_loc/screens/cave_place_page.dart';
-import 'package:speleo_loc/screens/generated_qr_code_viewer.dart';
-import 'package:speleo_loc/screens/map_viewer_page.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/widgets/icon_action_button.dart';
-import 'package:speleo_loc/screens/add_new_cave.dart';
-import 'package:speleo_loc/screens/general_data/cave_areas_page.dart';
-import 'package:speleo_loc/screens/general_data/surface_areas_page.dart';
-import 'package:speleo_loc/screens/csv_cave_place_import_page.dart';
-import 'package:speleo_loc/utils/deep_link_handler.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/raster_map_place_selector.dart';
+import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/screens/cave_place_page.dart';
+import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
+import 'package:speleoloc/screens/map_viewer_page.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/screens/add_new_cave.dart';
+import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
+import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
+import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
+import 'package:speleoloc/utils/deep_link_handler.dart';
 
 class CavePage extends StatefulWidget {
   const CavePage({super.key, required this.caveId});

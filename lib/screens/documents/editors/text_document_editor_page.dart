@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/utils/documentation_file_helper.dart';
-import 'package:speleo_loc/utils/file_utils.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// A simple plain-text editor that creates a new documentation file record.
 ///

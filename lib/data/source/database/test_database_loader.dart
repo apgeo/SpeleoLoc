@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// Configurable paths — override via `--dart-define-from-file=build_settings.json`
 const String _defaultTestDbPath =

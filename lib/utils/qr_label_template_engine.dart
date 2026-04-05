@@ -1,4 +1,4 @@
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// Segment of a rendered label: text content with optional font size/color overrides.
 class LabelSegment {

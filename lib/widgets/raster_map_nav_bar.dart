@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// Configuration that controls sizing and layout of the [RasterMapNavBar].
 class RasterMapNavBarStyle {

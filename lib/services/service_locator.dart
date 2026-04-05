@@ -1,8 +1,8 @@
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/services/cave_repository.dart';
-import 'package:speleo_loc/services/cave_place_repository.dart';
-import 'package:speleo_loc/services/raster_map_repository.dart';
-import 'package:speleo_loc/services/definition_repository.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/cave_place_repository.dart';
+import 'package:speleoloc/services/raster_map_repository.dart';
+import 'package:speleoloc/services/definition_repository.dart';
 
 // Global repository instances (can be replaced with a DI container later)
 final caveRepository = CaveRepository(appDatabase);

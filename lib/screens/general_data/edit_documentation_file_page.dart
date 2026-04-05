@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/utils/documentation_file_helper.dart';
-import 'package:speleo_loc/utils/image_compression_settings.dart';
-import 'package:speleo_loc/utils/image_compressor.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/image_compression_settings.dart';
+import 'package:speleoloc/utils/image_compressor.dart';
+import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
 
 class EditDocumentationFilePage extends StatefulWidget {

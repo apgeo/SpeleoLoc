@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/scanner_page.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// A compact dialog for quickly adding a new cave place.
 ///

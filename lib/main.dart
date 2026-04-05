@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/app.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/services/document_format_registry.dart';
-import 'package:speleo_loc/utils/app_start_counter.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/app.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/document_format_registry.dart';
+import 'package:speleoloc/utils/app_start_counter.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

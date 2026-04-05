@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/settings/settings_helper.dart';
-import 'package:speleo_loc/utils/cave_place_qr_generator.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/cave_place_qr_generator.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Dialog that renders and displays the QR code image for a given [CavePlace].
 ///

@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/utils/documentation_file_helper.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Audio recorder with waveform visualisation.
 ///

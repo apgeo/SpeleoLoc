@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/screens/general_data/surface_areas_page.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 class AddNewCave extends StatefulWidget {
   final Cave? cave; // if provided, we're editing

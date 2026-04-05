@@ -1,6 +1,6 @@
 {
-    "name": "speleo_loc",
-    "short_name": "speleo_loc",
+    "name": "speleoloc",
+    "short_name": "speleoloc",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

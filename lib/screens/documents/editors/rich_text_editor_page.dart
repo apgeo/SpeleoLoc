@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/utils/documentation_file_helper.dart';
-import 'package:speleo_loc/utils/file_utils.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Rich-text editor powered by `flutter_quill`.
 ///

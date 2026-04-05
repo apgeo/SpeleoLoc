@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 void main() {
   testWidgets('markers remain visible after programmatic zoom', (

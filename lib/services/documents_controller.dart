@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 // ---------------------------------------------------------------------------
 //  DocumentsSource — describes where documents come from

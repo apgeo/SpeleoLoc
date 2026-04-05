@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/geofeature_documents_page.dart';
-import 'package:speleo_loc/services/documents_controller.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/geofeature_documents_page.dart';
+import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Page that lists documentation files.
 ///

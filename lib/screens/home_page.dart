@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/scanner_page.dart';
-import 'package:speleo_loc/screens/add_new_cave.dart';
-import 'package:speleo_loc/screens/general_data/surface_areas_page.dart';
-import 'package:speleo_loc/screens/settings/settings_main_page.dart';
-import 'package:speleo_loc/screens/general_data/documentation_files_page.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/utils/app_start_counter.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/database_restore_helper.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/widgets/icon_action_button.dart';
-import 'package:speleo_loc/screens/csv_cave_place_import_page.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/screens/add_new_cave.dart';
+import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
+import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_start_counter.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -41,6 +41,31 @@ class _HomePageState extends State<HomePage> {
   bool showActionButtons = false;
 
   bool _testDataPromptShown = false;
+
+  int _titleTapCount = 0;
+  DateTime _lastTitleTap = DateTime(0);
+
+  void _onTitleTap() {
+    final now = DateTime.now();
+    if (now.difference(_lastTitleTap).inSeconds > 3) {
+      _titleTapCount = 0;
+    }
+    _lastTitleTap = now;
+    _titleTapCount++;
+    if (_titleTapCount >= 9) {
+      _titleTapCount = 0;
+      final newValue = !debugModeNotifier.value;
+      debugModeNotifier.value = newValue;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newValue
+              ? 'Debug mode activated'
+              : 'Debug mode deactivated'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -246,7 +271,10 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: GestureDetector(
+          onTap: _onTitleTap,
+          child: Text(widget.title),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

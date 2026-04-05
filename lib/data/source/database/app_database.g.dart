@@ -2602,6 +2602,28 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _isEntranceMeta = const VerificationMeta(
+    'isEntrance',
+  );
+  late final GeneratedColumn<int> isEntrance = GeneratedColumn<int>(
+    'is_entrance',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _isMainEntranceMeta = const VerificationMeta(
+    'isMainEntrance',
+  );
+  late final GeneratedColumn<int> isMainEntrance = GeneratedColumn<int>(
+    'is_main_entrance',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2646,6 +2668,8 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     latitude,
     longitude,
     depthInCave,
+    isEntrance,
+    isMainEntrance,
     createdAt,
     updatedAt,
     deletedAt,
@@ -2729,6 +2753,21 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         ),
       );
     }
+    if (data.containsKey('is_entrance')) {
+      context.handle(
+        _isEntranceMeta,
+        isEntrance.isAcceptableOrUnknown(data['is_entrance']!, _isEntranceMeta),
+      );
+    }
+    if (data.containsKey('is_main_entrance')) {
+      context.handle(
+        _isMainEntranceMeta,
+        isMainEntrance.isAcceptableOrUnknown(
+          data['is_main_entrance']!,
+          _isMainEntranceMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2796,6 +2835,14 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         DriftSqlType.double,
         data['${effectivePrefix}depth_in_cave'],
       ),
+      isEntrance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_entrance'],
+      ),
+      isMainEntrance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_main_entrance'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -2840,6 +2887,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   final double? depthInCave;
 
   /// can be positive or negative, e.g. for places above the entrance or in a pit
+  final int? isEntrance;
+
+  /// if 1, this place is an entrance;
+  final int? isMainEntrance;
+
+  /// if 1, this place is the main entrance
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -2853,6 +2906,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     this.latitude,
     this.longitude,
     this.depthInCave,
+    this.isEntrance,
+    this.isMainEntrance,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -2880,6 +2935,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     }
     if (!nullToAbsent || depthInCave != null) {
       map['depth_in_cave'] = Variable<double>(depthInCave);
+    }
+    if (!nullToAbsent || isEntrance != null) {
+      map['is_entrance'] = Variable<int>(isEntrance);
+    }
+    if (!nullToAbsent || isMainEntrance != null) {
+      map['is_main_entrance'] = Variable<int>(isMainEntrance);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -2916,6 +2977,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       depthInCave: depthInCave == null && nullToAbsent
           ? const Value.absent()
           : Value(depthInCave),
+      isEntrance: isEntrance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isEntrance),
+      isMainEntrance: isMainEntrance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isMainEntrance),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -2945,6 +3012,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
       depthInCave: serializer.fromJson<double?>(json['depth_in_cave']),
+      isEntrance: serializer.fromJson<int?>(json['is_entrance']),
+      isMainEntrance: serializer.fromJson<int?>(json['is_main_entrance']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -2965,6 +3034,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
       'depth_in_cave': serializer.toJson<double?>(depthInCave),
+      'is_entrance': serializer.toJson<int?>(isEntrance),
+      'is_main_entrance': serializer.toJson<int?>(isMainEntrance),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -2981,6 +3052,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
     Value<double?> depthInCave = const Value.absent(),
+    Value<int?> isEntrance = const Value.absent(),
+    Value<int?> isMainEntrance = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
@@ -2996,6 +3069,10 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
     depthInCave: depthInCave.present ? depthInCave.value : this.depthInCave,
+    isEntrance: isEntrance.present ? isEntrance.value : this.isEntrance,
+    isMainEntrance: isMainEntrance.present
+        ? isMainEntrance.value
+        : this.isMainEntrance,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -3019,6 +3096,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       depthInCave: data.depthInCave.present
           ? data.depthInCave.value
           : this.depthInCave,
+      isEntrance: data.isEntrance.present
+          ? data.isEntrance.value
+          : this.isEntrance,
+      isMainEntrance: data.isMainEntrance.present
+          ? data.isMainEntrance.value
+          : this.isMainEntrance,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -3037,6 +3120,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
           ..write('depthInCave: $depthInCave, ')
+          ..write('isEntrance: $isEntrance, ')
+          ..write('isMainEntrance: $isMainEntrance, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -3055,6 +3140,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     latitude,
     longitude,
     depthInCave,
+    isEntrance,
+    isMainEntrance,
     createdAt,
     updatedAt,
     deletedAt,
@@ -3072,6 +3159,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           other.latitude == this.latitude &&
           other.longitude == this.longitude &&
           other.depthInCave == this.depthInCave &&
+          other.isEntrance == this.isEntrance &&
+          other.isMainEntrance == this.isMainEntrance &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
@@ -3087,6 +3176,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
   final Value<double?> latitude;
   final Value<double?> longitude;
   final Value<double?> depthInCave;
+  final Value<int?> isEntrance;
+  final Value<int?> isMainEntrance;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
@@ -3100,6 +3191,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
     this.depthInCave = const Value.absent(),
+    this.isEntrance = const Value.absent(),
+    this.isMainEntrance = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -3114,6 +3207,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
     this.depthInCave = const Value.absent(),
+    this.isEntrance = const Value.absent(),
+    this.isMainEntrance = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -3129,6 +3224,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Expression<double>? latitude,
     Expression<double>? longitude,
     Expression<double>? depthInCave,
+    Expression<int>? isEntrance,
+    Expression<int>? isMainEntrance,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
@@ -3144,6 +3241,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (depthInCave != null) 'depth_in_cave': depthInCave,
+      if (isEntrance != null) 'is_entrance': isEntrance,
+      if (isMainEntrance != null) 'is_main_entrance': isMainEntrance,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -3160,6 +3259,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Value<double?>? latitude,
     Value<double?>? longitude,
     Value<double?>? depthInCave,
+    Value<int?>? isEntrance,
+    Value<int?>? isMainEntrance,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
@@ -3175,6 +3276,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       depthInCave: depthInCave ?? this.depthInCave,
+      isEntrance: isEntrance ?? this.isEntrance,
+      isMainEntrance: isMainEntrance ?? this.isMainEntrance,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -3213,6 +3316,12 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     if (depthInCave.present) {
       map['depth_in_cave'] = Variable<double>(depthInCave.value);
     }
+    if (isEntrance.present) {
+      map['is_entrance'] = Variable<int>(isEntrance.value);
+    }
+    if (isMainEntrance.present) {
+      map['is_main_entrance'] = Variable<int>(isMainEntrance.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -3237,6 +3346,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
           ..write('depthInCave: $depthInCave, ')
+          ..write('isEntrance: $isEntrance, ')
+          ..write('isMainEntrance: $isMainEntrance, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -4644,7 +4755,7 @@ class DocumentationFile extends DataClass
   final String? fileHash;
   final String fileType;
 
-  /// e.g. "photo", "video", "audio", "text_document", "web_link", etc.
+  /// "photo", "video", "audio", "text_document", "web_link", etc.
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -8233,6 +8344,8 @@ typedef $CavePlacesCreateCompanionBuilder =
       Value<double?> latitude,
       Value<double?> longitude,
       Value<double?> depthInCave,
+      Value<int?> isEntrance,
+      Value<int?> isMainEntrance,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -8248,6 +8361,8 @@ typedef $CavePlacesUpdateCompanionBuilder =
       Value<double?> latitude,
       Value<double?> longitude,
       Value<double?> depthInCave,
+      Value<int?> isEntrance,
+      Value<int?> isMainEntrance,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -8363,6 +8478,16 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
 
   ColumnFilters<double> get depthInCave => $composableBuilder(
     column: $table.depthInCave,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isEntrance => $composableBuilder(
+    column: $table.isEntrance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isMainEntrance => $composableBuilder(
+    column: $table.isMainEntrance,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8498,6 +8623,16 @@ class $CavePlacesOrderingComposer extends Composer<_$AppDatabase, CavePlaces> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get isEntrance => $composableBuilder(
+    column: $table.isEntrance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isMainEntrance => $composableBuilder(
+    column: $table.isMainEntrance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -8593,6 +8728,16 @@ class $CavePlacesAnnotationComposer
 
   GeneratedColumn<double> get depthInCave => $composableBuilder(
     column: $table.depthInCave,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get isEntrance => $composableBuilder(
+    column: $table.isEntrance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get isMainEntrance => $composableBuilder(
+    column: $table.isMainEntrance,
     builder: (column) => column,
   );
 
@@ -8720,6 +8865,8 @@ class $CavePlacesTableManager
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
+                Value<int?> isEntrance = const Value.absent(),
+                Value<int?> isMainEntrance = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -8733,6 +8880,8 @@ class $CavePlacesTableManager
                 latitude: latitude,
                 longitude: longitude,
                 depthInCave: depthInCave,
+                isEntrance: isEntrance,
+                isMainEntrance: isMainEntrance,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -8748,6 +8897,8 @@ class $CavePlacesTableManager
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
+                Value<int?> isEntrance = const Value.absent(),
+                Value<int?> isMainEntrance = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -8761,6 +8912,8 @@ class $CavePlacesTableManager
                 latitude: latitude,
                 longitude: longitude,
                 depthInCave: depthInCave,
+                isEntrance: isEntrance,
+                isMainEntrance: isMainEntrance,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

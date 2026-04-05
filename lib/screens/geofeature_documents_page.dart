@@ -2,19 +2,19 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/documents/editors/camera_capture_page.dart';
-import 'package:speleo_loc/screens/documents/editors/image_editor_page.dart';
-import 'package:speleo_loc/screens/documents/editors/rich_text_editor_page.dart';
-import 'package:speleo_loc/screens/documents/editors/sound_recorder_page.dart';
-import 'package:speleo_loc/screens/documents/viewers/documentation_file_viewer.dart';
-import 'package:speleo_loc/screens/documents/editors/text_document_editor_page.dart';
-import 'package:speleo_loc/services/document_format_registry.dart';
-import 'package:speleo_loc/services/documents_controller.dart';
-import 'package:speleo_loc/screens/general_data/edit_documentation_file_page.dart';
-import 'package:speleo_loc/utils/file_utils.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/widgets/document_thumbnail_widgets.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/documents/editors/camera_capture_page.dart';
+import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
+import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
+import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
+import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
+import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
+import 'package:speleoloc/services/document_format_registry.dart';
+import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/screens/general_data/edit_documentation_file_page.dart';
+import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 
 // ---------------------------------------------------------------------------
 //  Enums

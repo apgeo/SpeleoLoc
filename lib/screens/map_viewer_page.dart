@@ -1,18 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/cave_place_page.dart';
-import 'package:speleo_loc/screens/geofeature_documents_page.dart';
-import 'package:speleo_loc/services/documents_controller.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/utils/file_utils.dart';
-import 'package:speleo_loc/utils/raw_image_data.dart';
-import 'package:speleo_loc/widgets/raster_map_place_point_editor.dart';
-import 'package:speleo_loc/widgets/raster_map_nav_bar.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_place_page.dart';
+import 'package:speleoloc/screens/geofeature_documents_page.dart';
+import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/raw_image_data.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
 
 class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
@@ -52,7 +52,8 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     showZoomControls: true,
     gestureZoomEnabled: true,
     keepZoomOnNavigation: true,
-    initialZoomLevel: 0.8,
+    autoZoomToPoints: false,
+    initialZoomLevel: 1.0,
   );
   final GlobalKey _childKey = GlobalKey();
 
@@ -234,7 +235,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
           final x = cpwd.definition!.xCoordinate!.toDouble();
           final y = cpwd.definition!.yCoordinate!.toDouble();
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _editorController.zoomToPoint(x, y, zoomLevel: 0.8);
+            _editorController.panToPoint(x, y);
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

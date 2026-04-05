@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
 
 /// PDF output settings: grid layout (rows/columns), QR label template.
 class SettingsPdfOutputPage extends StatefulWidget {

@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/utils/image_compression_settings.dart';
-import 'package:speleo_loc/utils/image_compressor.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/image_compression_settings.dart';
+import 'package:speleoloc/utils/image_compressor.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Whether to apply image compression when picking raster map images.
 const bool kCompressRasterMapImages = false;

@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// Repository for [CavePlaceToRasterMapDefinition] — querying and persisting
 /// the image-space coordinates that link a cave place to a raster map.

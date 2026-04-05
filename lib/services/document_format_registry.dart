@@ -1,14 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/documents/editors/camera_capture_page.dart';
-import 'package:speleo_loc/screens/documents/editors/image_editor_page.dart';
-import 'package:speleo_loc/screens/documents/editors/rich_text_editor_page.dart';
-import 'package:speleo_loc/screens/documents/editors/sound_recorder_page.dart';
-import 'package:speleo_loc/screens/documents/editors/text_document_editor_page.dart';
-import 'package:speleo_loc/screens/documents/viewers/documentation_file_viewer.dart';
-import 'package:speleo_loc/widgets/document_thumbnail_widgets.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/documents/editors/camera_capture_page.dart';
+import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
+import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
+import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
+import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
+import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
+import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 
 typedef DocumentThumbnailBuilder = Widget Function({
   required BuildContext context,

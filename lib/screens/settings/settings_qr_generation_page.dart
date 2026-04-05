@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
 
 /// QR code generation settings subpage: sizes, colors, error correction, etc.
 class SettingsQrGenerationPage extends StatefulWidget {

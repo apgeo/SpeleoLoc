@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 class RasterMapPointsLegend extends StatelessWidget {
   const RasterMapPointsLegend({super.key});

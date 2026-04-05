@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:speleo_loc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 void main() {
   testWidgets('tapping in editor calls onImagePointChanged when not readonly', (

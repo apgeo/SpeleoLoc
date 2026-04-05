@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// Shared helper for documentation file storage, hashing, and DB insertion.
 ///

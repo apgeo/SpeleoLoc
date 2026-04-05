@@ -1,11 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/dialogs/confirm_dialog.dart';
-import 'package:speleo_loc/services/data_archive_service.dart';
-import 'package:speleo_loc/services/data_export_import_repository.dart';
-import 'package:speleo_loc/utils/database_restore_helper.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
+import 'package:speleoloc/services/data_archive_service.dart';
+import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Full data export / import page.
 ///

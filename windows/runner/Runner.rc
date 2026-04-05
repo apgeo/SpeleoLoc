@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "speleo_loc" "\0"
+            VALUE "FileDescription", "speleoloc" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "speleo_loc" "\0"
+            VALUE "InternalName", "speleoloc" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "speleo_loc.exe" "\0"
-            VALUE "ProductName", "speleo_loc" "\0"
+            VALUE "OriginalFilename", "speleoloc.exe" "\0"
+            VALUE "ProductName", "speleoloc" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

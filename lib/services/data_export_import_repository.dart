@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/utils/constants.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/constants.dart';
 
 /// Data access layer for export/import operations.
 ///

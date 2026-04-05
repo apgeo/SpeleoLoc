@@ -1,4 +1,4 @@
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 class RasterMapRepository {
   final AppDatabase _database;

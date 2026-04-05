@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/scanner_page.dart';
-import 'package:speleo_loc/screens/raster_map_place_selector.dart';
-import 'package:speleo_loc/widgets/raster_map_place_point_editor.dart';
-import 'package:speleo_loc/screens/general_data/cave_areas_page.dart';
-import 'package:speleo_loc/screens/geofeature_documents_page.dart';
-import 'package:speleo_loc/services/documents_controller.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/widgets/cave_place_qr_preview_dialog.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/screens/raster_map_place_selector.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
+import 'package:speleoloc/screens/geofeature_documents_page.dart';
+import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
 
 class CavePlacePage extends StatefulWidget {
   const CavePlacePage({super.key, required this.caveId, this.cavePlaceId});
@@ -38,6 +38,7 @@ class _CavePlacePageState extends State<CavePlacePage>
 
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _depthController = TextEditingController();
   final _qrController = TextEditingController();
   final _latController = TextEditingController();
   final _longController = TextEditingController();
@@ -53,9 +54,22 @@ class _CavePlacePageState extends State<CavePlacePage>
   bool _hasUnsavedChanges = false;
   bool _titleModified = false;
   bool _descriptionModified = false;
+  bool _depthModified = false;
   bool _qrModified = false;
   bool _latModified = false;
   bool _longModified = false;
+  int _descriptionLines = 1;
+
+  static final TextInputFormatter _depthInputFormatter =
+      TextInputFormatter.withFunction((oldValue, newValue) {
+        final text = newValue.text;
+        if (text.isEmpty || text == '-' || text == '.' || text == '-.') {
+          return newValue;
+        }
+        final normalized = text.replaceAll(',', '.');
+        final pattern = RegExp(r'^-?\d{0,4}(?:\.\d{0,1})?$');
+        return pattern.hasMatch(normalized) ? newValue : oldValue;
+      });
 
   // Feature toggle: show interactive RasterMapPlacePointEditor in the
   // "Raster maps" tab of CavePlacePage. Disabled by default so the
@@ -72,6 +86,7 @@ class _CavePlacePageState extends State<CavePlacePage>
 
     _titleController.addListener(() => _onFieldEdited('title'));
     _descriptionController.addListener(() => _onFieldEdited('description'));
+    _depthController.addListener(() => _onFieldEdited('depth'));
     _qrController.addListener(() => _onFieldEdited('qr'));
     _latController.addListener(() => _onFieldEdited('lat'));
     _longController.addListener(() => _onFieldEdited('long'));
@@ -81,6 +96,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _depthController.dispose();
     _qrController.dispose();
     _latController.dispose();
     _longController.dispose();
@@ -104,10 +120,14 @@ class _CavePlacePageState extends State<CavePlacePage>
       }
       _titleController.text = _cavePlace!.title;
       _descriptionController.text = _cavePlace!.description ?? '';
+      _descriptionLines = _computeDescriptionLines(_descriptionController.text);
+      _depthController.text = _formatDepthValue(_cavePlace!.depthInCave);
       _qrController.text = _cavePlace!.placeQrCodeIdentifier?.toString() ?? '';
       _latController.text = _cavePlace!.latitude?.toString() ?? '';
       _longController.text = _cavePlace!.longitude?.toString() ?? '';
       _selectedCaveAreaId = _cavePlace!.caveAreaId;
+    } else {
+      _descriptionLines = 1;
     }
     _rasterMaps = await (appDatabase.select(
       appDatabase.rasterMaps,
@@ -138,6 +158,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     final description = _descriptionController.text.isEmpty
         ? null
         : _descriptionController.text;
+    final depth = _parseDepthValue(_depthController.text);
     final qr = int.tryParse(_qrController.text);
     final lat = double.tryParse(_latController.text);
     final long = double.tryParse(_longController.text);
@@ -147,6 +168,45 @@ class _CavePlacePageState extends State<CavePlacePage>
         context,
       ).showSnackBar(SnackBar(content: Text(LocServ.inst.t('title_required'))));
       return null;
+    }
+
+    if (_depthController.text.trim().isNotEmpty && depth == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(LocServ.inst.t('depth_invalid_number'))),
+      );
+      return null;
+    }
+
+    if (depth != null && (depth < -5000 || depth > 5000)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(LocServ.inst.t('depth_out_of_range'))),
+      );
+      return null;
+    }
+
+    if (depth != null && (depth < -1800 || depth > 1800)) {
+      final confirmExtremeDepth = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(LocServ.inst.t('confirm')),
+          content: Text(
+            LocServ.inst
+                .t('depth_outlier_confirm')
+                .replaceAll('{depth}', _formatDepthValue(depth)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(LocServ.inst.t('yes')),
+            ),
+          ],
+        ),
+      );
+      if (confirmExtremeDepth != true) return null;
     }
 
     // Check for duplicate QR code within the same cave
@@ -197,6 +257,7 @@ class _CavePlacePageState extends State<CavePlacePage>
               description: description == null
                   ? const Value.absent()
                   : Value(description),
+                depthInCave: Value(depth),
               placeQrCodeIdentifier: Value(qr),
               latitude: Value(lat),
               longitude: Value(long),
@@ -220,6 +281,7 @@ class _CavePlacePageState extends State<CavePlacePage>
           description: description == null
               ? const Value.absent()
               : Value(description),
+            depthInCave: Value(depth),
           placeQrCodeIdentifier: Value(qr),
           latitude: Value(lat),
           longitude: Value(long),
@@ -250,6 +312,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       _hasUnsavedChanges = false;
       _titleModified = false;
       _descriptionModified = false;
+      _depthModified = false;
       _qrModified = false;
       _latModified = false;
       _longModified = false;
@@ -264,6 +327,9 @@ class _CavePlacePageState extends State<CavePlacePage>
     } else if (field == 'description') {
       final orig = _cavePlace?.description ?? '';
       _descriptionModified = _descriptionController.text != orig;
+    } else if (field == 'depth') {
+      final orig = _formatDepthValue(_cavePlace?.depthInCave);
+      _depthModified = _depthController.text != orig;
     } else if (field == 'qr') {
       final orig = _cavePlace?.placeQrCodeIdentifier?.toString() ?? '';
       _qrModified = _qrController.text != orig;
@@ -279,10 +345,28 @@ class _CavePlacePageState extends State<CavePlacePage>
       _hasUnsavedChanges =
           _titleModified ||
           _descriptionModified ||
+          _depthModified ||
           _qrModified ||
           _latModified ||
           _longModified;
     });
+  }
+
+  String _formatDepthValue(double? value) {
+    if (value == null) return '';
+    return value.toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), '');
+  }
+
+  int _computeDescriptionLines(String text) {
+    if (text.isEmpty) return 1;
+    final lines = '\n'.allMatches(text).length + 1;
+    return lines.clamp(1, 5);
+  }
+
+  double? _parseDepthValue(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty || trimmed == '-') return null;
+    return double.tryParse(trimmed.replaceAll(',', '.'));
   }
 
   Future<bool> _onWillPop() async {
@@ -678,22 +762,69 @@ class _CavePlacePageState extends State<CavePlacePage>
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Description (multiline)
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(
-                    labelText: LocServ.inst.t('description'),
-                    filled: _descriptionModified,
-                    fillColor: _descriptionModified
-                        ? Colors.green.withValues(alpha: 0.06)
-                        : null,
-                  ),
-                  maxLines: 3,
+                // Description (expandable multiline)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _descriptionController,
+                        decoration: InputDecoration(
+                          labelText: LocServ.inst.t('description'),
+                          filled: _descriptionModified,
+                          fillColor: _descriptionModified
+                              ? Colors.green.withValues(alpha: 0.06)
+                              : null,
+                        ),
+                        minLines: 1,
+                        maxLines: _descriptionLines,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.unfold_more, size: 18),
+                      tooltip: LocServ.inst.t('expand_description'),
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          if (_descriptionLines < 5) {
+                            _descriptionLines += 1;
+                          }
+                        });
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                // Cave area dropdown + manage button
+                // Cave area dropdown and manage areas button, depth
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    
+                    SizedBox(
+                      width: 80,
+                      child: TextFormField(
+                        controller: _depthController,
+                        decoration: InputDecoration(
+                          labelText: "Depth '+/-'",
+                          filled: _depthModified,
+                          fillColor: _depthModified
+                              ? Colors.green.withValues(alpha: 0.06)
+                              : null,
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
+                        inputFormatters: [_depthInputFormatter],
+                      ),
+                    ),
+
+                    const SizedBox(width: 28),
+
                     Expanded(
                       child: DropdownButtonFormField<int?>(
                         initialValue: _selectedCaveAreaId,
@@ -745,6 +876,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                         },
                       ),
                     ),
+
                     IconButton(
                       icon: const Icon(Icons.layers),
                       tooltip: LocServ.inst.t('manage_cave_areas'),
@@ -771,6 +903,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                         });
                       },
                     ),
+
                   ],
                 ),
                 const SizedBox(height: 8),

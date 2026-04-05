@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/services/csv_cave_place_importer.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/csv_cave_place_importer.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Screen for importing cave place data from CSV files.
 ///

@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 // fix import as bellow
-// import 'package:speleo_loc/screens/general_data/raster_map_form.dart';
+// import 'package:speleoloc/screens/general_data/raster_map_form.dart';
 import 'raster_map_form.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/widgets/icon_action_button.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/icon_action_button.dart';
 
 class RasterMapsPage extends StatefulWidget {
   const RasterMapsPage({super.key, required this.caveId});

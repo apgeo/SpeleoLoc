@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/documents/editors/image_editor_page.dart';
-import 'package:speleo_loc/utils/documentation_file_helper.dart';
-import 'package:speleo_loc/utils/image_compression_settings.dart';
-import 'package:speleo_loc/utils/image_compressor.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/image_compression_settings.dart';
+import 'package:speleoloc/utils/image_compressor.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Captures a photo using [ImagePicker] (camera) and then optionally opens the
 /// [ImageEditorPage] for annotation / cropping before saving.

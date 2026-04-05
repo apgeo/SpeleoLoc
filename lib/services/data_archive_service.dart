@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/services/data_export_import_repository.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/database_restore_helper.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/database_restore_helper.dart';
 
 // =============================================================================
 //  Models

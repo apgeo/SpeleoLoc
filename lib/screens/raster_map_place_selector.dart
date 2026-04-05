@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/settings/settings_helper.dart';
-import 'package:speleo_loc/services/service_locator.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/file_utils.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/widgets/raster_map_nav_bar.dart';
-import 'package:speleo_loc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
@@ -43,12 +43,14 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
         showTapModeCheckbox: true,
         
         autoZoomToPoints: true,
+        keepZoomOnNavigation: true,
 
         //todo: check/fix - label color not working in most cases, maybe something to do with the source of calculation and moment
         useImageTextColor: true,
         //todo: check - seems like when enabled, the zoom is constrained to a max level, jumping back if zoomed too far on point switch
         animatePointTransitions: true,
         // gestureZoomEnabled: !true,
+        
       );
 
   static const bool DEBUG_UI = false;
@@ -343,20 +345,6 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
         child: LayoutBuilder(builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 520;
 
-          // final zoomControls = Container(
-          //   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          //   decoration: BoxDecoration(
-          //     border: Border.all(color: Colors.grey, width: 1.2),
-          //     borderRadius: BorderRadius.circular(8),
-          //     color: Theme.of(context).colorScheme.surface,
-          //   ),
-          //   child: Row(mainAxisSize: MainAxisSize.min, children: [
-          //     Tooltip(message: 'Zoom out', child: IconButton(iconSize: 20, onPressed: _editorController.zoomOut, icon: const Icon(Icons.remove))),
-          //     Tooltip(message: 'Reset', child: IconButton(iconSize: 20, onPressed: _editorController.resetZoom, icon: const Icon(Icons.refresh))),
-          //     Tooltip(message: 'Zoom in', child: IconButton(iconSize: 20, onPressed: _editorController.zoomIn, icon: const Icon(Icons.add))),
-          //   ]),
-          // );
-
           if (isNarrow) {
             return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Padding(
@@ -364,7 +352,6 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
                 child: Row(children: [
                   // const Expanded(child: RasterMapPointsLegend()),
                   // const SizedBox(width: 12),
-                  // zoomControls,
                 ]),
               ),
             ]);
@@ -373,7 +360,6 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
           return Row(children: [
             // const Padding(padding: EdgeInsets.only(left: 4.0), child: RasterMapPointsLegend()),
             // const SizedBox(width: 12),
-            // zoomControls,
           ]);
         }),
       ),

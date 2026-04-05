@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key, required this.onScan});

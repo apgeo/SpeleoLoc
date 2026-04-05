@@ -1,5 +1,5 @@
-import 'package:speleo_loc/screens/settings/settings_helper.dart';
-import 'package:speleo_loc/utils/constants.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/constants.dart';
 
 /// Predefined image compression profiles.
 ///

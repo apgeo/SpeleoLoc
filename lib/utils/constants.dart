@@ -30,6 +30,10 @@ const double zoomTextThreshold = 2.0;
 // Feature flags
 const bool showCaveDeleteButtons = false;
 
+/// Runtime debug mode activated by tapping the home-page title 9 times.
+/// Listen via [debugModeNotifier] to react to changes.
+final ValueNotifier<bool> debugModeNotifier = ValueNotifier<bool>(false);
+
 // Configuration keys
 const String qrGenerationConfigKey = 'qr_code_generation';
 const String pdfOutputConfigKey = 'pdf_output_config';

@@ -8,8 +8,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:barcode/barcode.dart' show BarcodeQRCorrectionLevel;
 
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/utils/qr_label_template_engine.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/qr_label_template_engine.dart';
 
 // ---------------------------------------------------------------------------
 // Data classes

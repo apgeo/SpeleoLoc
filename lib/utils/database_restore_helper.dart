@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/data/source/database/test_database_loader.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/test_database_loader.dart';
 import 'package:restart_app/restart_app.dart';
 
 /// Reusable helper for database reinitialize / restore operations.

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/screens/home_page.dart';
-import 'package:speleo_loc/screens/cave_page.dart';
-import 'package:speleo_loc/screens/cave_place_page.dart';
+import 'package:speleoloc/screens/home_page.dart';
+import 'package:speleoloc/screens/cave_page.dart';
+import 'package:speleoloc/screens/cave_place_page.dart';
 // fix import as bellow
-// import 'package:speleo_loc/screens/general_data/raster_maps_page.dart';
+// import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 import 'screens/general_data/raster_maps_page.dart';
-import 'package:speleo_loc/screens/settings/settings_main_page.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/deep_link_handler.dart';
+import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/deep_link_handler.dart';
 
 class SpeleoLocApp extends StatefulWidget {
   const SpeleoLocApp({super.key});

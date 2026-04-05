@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/utils/image_compression_settings.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/utils/image_compression_settings.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Settings page for image compression on import.
 class SettingsImageCompressionPage extends StatefulWidget {

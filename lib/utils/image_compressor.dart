@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-import 'package:speleo_loc/utils/image_compression_settings.dart';
+import 'package:speleoloc/utils/image_compression_settings.dart';
 
 /// Utility for compressing and resizing images on import.
 class ImageCompressor {

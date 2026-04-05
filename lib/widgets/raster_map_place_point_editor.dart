@@ -4,98 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_view/photo_view.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/widgets/raster_map_points_legend.dart';
-import 'package:speleo_loc/widgets/raster_map_nav_bar.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/utils/raw_image_data.dart';
-import 'package:speleo_loc/screens/cave_place_page.dart';
-import 'package:speleo_loc/screens/general_data/documentation_files_page.dart';
-import 'package:speleo_loc/widgets/add_cave_place_popup.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/widgets/raster_map_points_legend.dart';
+import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
+import 'package:speleoloc/widgets/raster_map_image_cache.dart';
+import 'package:speleoloc/widgets/raster_map_marker_builder.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/raw_image_data.dart';
+import 'package:speleoloc/screens/cave_place_page.dart';
+import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
+import 'package:speleoloc/widgets/add_cave_place_popup.dart';
 
-// Top-level sync decoder used by `compute` in an isolate. Returns a simple
-// serializable map with width/height and raw RGBA bytes (List<int>).
-Map<String, dynamic>? decodeImageToRawSync(String path) {
-  try {
-    final bytes = File(path).readAsBytesSync();
-    final image = img.decodeImage(bytes);
-    if (image == null) return null;
-    final pix = image.getBytes();
-    return {'w': image.width, 'h': image.height, 'pixels': pix};
-  } catch (_) {
-    return null;
-  }
-}
+// Re-export so existing callers (e.g. MapViewerPage) that import the image
+// cache functions from this file continue to work without changes.
+export 'package:speleoloc/widgets/raster_map_image_cache.dart';
 
-// Persistent in-memory cache for decoded RawImageData keyed by absolute file
-// path. Storing the Future prevents duplicate isolate work when multiple
-// widgets request the same image concurrently.
-// Limited to [_maxCacheEntries] entries to avoid unbounded memory growth.
-const int _maxCacheEntries = 5;
-final Map<String, Future<RawImageData?>?> _decodedImageCache = {};
-final List<String> _cacheInsertionOrder = [];
-
-/// Returns a cached [RawImageData] for [path] or decodes it (in an isolate)
-/// and caches the result. Safe to call from any file that imports this
-/// widget; callers get a Future<RawImageData?>.
-Future<RawImageData?> decodeImageToRawCached(String path) {
-  final existing = _decodedImageCache[path];
-  if (existing != null) return existing;
-
-  final future = compute(decodeImageToRawSync, path).then((result) {
-    if (result == null) return null;
-    final rawPixels = (result['pixels'] as List).cast<int>();
-    final w = result['w'] as int;
-    final h = result['h'] as int;
-    final pixels = Uint8List.fromList(rawPixels);
-
-    // expected number of bytes for RGBA
-    final expectedRGBA = w * h * 4;
-
-    // If the decoder returned RGB (3 bytes/pixel), convert to RGBA.
-    if (pixels.length == w * h * 3) {
-      final rgba = Uint8List(expectedRGBA);
-      for (int src = 0, dst = 0; src < pixels.length; src += 3, dst += 4) {
-        rgba[dst] = pixels[src];
-        rgba[dst + 1] = pixels[src + 1];
-        rgba[dst + 2] = pixels[src + 2];
-        rgba[dst + 3] = 255;
-      }
-      return RawImageData(w, h, rgba);
-    }
-
-    // If buffer already matches expected RGBA length, use it directly.
-    if (pixels.length == expectedRGBA) {
-      return RawImageData(w, h, pixels);
-    }
-
-    // Fallback: trim or pad the buffer to avoid later range errors.
-    if (pixels.length > expectedRGBA) {
-      final trimmed = pixels.sublist(0, expectedRGBA);
-      return RawImageData(w, h, Uint8List.fromList(trimmed));
-    } else {
-      final padded = Uint8List(expectedRGBA);
-      padded.setRange(0, pixels.length, pixels);
-      return RawImageData(w, h, padded);
-    }
-  }).catchError((_) => null);
-
-  _decodedImageCache[path] = future;
-  _cacheInsertionOrder.remove(path);
-  _cacheInsertionOrder.add(path);
-  // Evict oldest entries when cache exceeds limit.
-  while (_cacheInsertionOrder.length > _maxCacheEntries) {
-    final oldest = _cacheInsertionOrder.removeAt(0);
-    _decodedImageCache.remove(oldest);
-  }
-  return future;
-}
-
-/// Clears the decoded-image cache (useful for tests or low-memory scenarios).
-void clearDecodedImageCache() {
-  _decodedImageCache.clear();
-  _cacheInsertionOrder.clear();
-}
 
 /// A reusable widget that encapsulates PhotoView-based image display,
 /// tapping to select a point (image-space coordinates), zoom/pan controls
@@ -216,6 +139,11 @@ class RasterMapPlacePointEditorController {
   /// Zooms/pans to center the provided image-space point.
   void zoomToPoint(double imageX, double imageY, {double zoomLevel = 2.5}) =>
       _state?.zoomToPoint(imageX, imageY, zoomLevel: zoomLevel);
+
+  /// Pans to center the given image-space point while keeping the current zoom.
+  void panToPoint(double imageX, double imageY) =>
+      _state?._moveToPoint(imageX, imageY, animate: animatePointTransitions);
+
   void zoomIn() => _state?.zoomIn();
   void zoomOut() => _state?.zoomOut();
   void resetZoom() => _state?.resetZoom();
@@ -383,12 +311,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   // editor viewport instead of the full screen (fixes image moving off-screen).
   Size? _photoViewportSize;
 
-  // Marker sizes
-  static const double _currentMarkerSize = 18.0;
-  static const double _initialCircleSize = 24.0;
-  static const double _innerDotSize = 8.0;
-  static const double _redDotSize = 10.0;
-
   late bool _showLegend;
   late bool _showZoomControls;
   late bool _gestureZoomEnabled;
@@ -429,6 +351,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   // Key for the embedded nav bar (for programmatic scrolling)
   final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
+
+  static const bool SHOW_SAVE_CAVE_PLACE_BUTTON = false;
 
   @override
   void initState() {
@@ -515,12 +439,14 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     } else {
       // sampling disabled: clear any existing decoded cache for this image
       _img = null;
-      _decodedImageCache.remove(widget.imageFile.path);
+      decodedImageCache.remove(widget.imageFile.path);
     }
   }
 
   @override
   void dispose() {
+    // Auto-save modified point when navigating away
+    _saveDefinitionIfNeeded();
     // detach controller reference
     if (widget.controller?._state == this) widget.controller?._state = null;
     _pvSubscription?.cancel();
@@ -619,7 +545,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       }
     } else {
       // disable sampling -> clear local decoded image and cache entry
-      _decodedImageCache.remove(widget.imageFile.path);
+      decodedImageCache.remove(widget.imageFile.path);
       setState(() => _img = null);
     }
   }
@@ -676,13 +602,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     double imageX,
     double imageY,
     PhotoViewControllerValue controllerValue,
-  ) {
-    final scale = controllerValue.scale ?? 1.0;
-    final offset = controllerValue.position;
-    final viewportX = imageX * scale + offset.dx;
-    final viewportY = imageY * scale + offset.dy;
-    return Offset(viewportX, viewportY);
-  }
+  ) => RasterMapMarkerBuilder.imageToViewport(imageX, imageY, controllerValue);
 
   String _resolveSelectedCavePlaceTitle() {
     if (_initialControllerCavePlaceTitle != null &&
@@ -710,25 +630,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     }
 
     return '';
-  }
-
-  Color _getTextColor(int x, int y) {
-    // quick-path when image sampling is disabled — use widget default
-    if (!_useImageTextColor) return widget.defaultLabelColor;
-
-    if (_img == null ||
-        x < 0 ||
-        y < 0 ||
-        x >= _img!.width ||
-        y >= _img!.height) {
-      return widget.defaultLabelColor;
-    }
-    final pixel = _img!.getPixel(x, y);
-    final r = pixel.r;
-    final g = pixel.g;
-    final b = pixel.b;
-    final luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? Colors.black : widget.defaultLabelColor;
   }
 
   Future<void> _onImageTap(
@@ -992,62 +893,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     widget.onCavePlaceSelected?.call(cpwd);
   }
 
-  /// Returns the opposite contrast color for [color] (black ↔ white).
-  Color _oppositeColor(Color color) {
-    final lum = (0.299 * color.r + 0.587 * color.g + 0.114 * color.b);
-    return lum > 0.5 ? Colors.black : Colors.white;
-  }
-
-  /// Build a label widget with optional text outline and/or background box.
-  Widget _buildLabelWidget(String text, Color textColor) {
-    final outlineEnabled = widget.controller?.textOutlineEnabled ?? true;
-    final outlineWidth = widget.controller?.textOutlineWidth ?? 2.0;
-    final bgEnabled = widget.controller?.textBackgroundEnabled ?? false;
-
-    Widget labelWidget;
-    if (outlineEnabled) {
-      final strokeColor = _oppositeColor(textColor);
-      labelWidget = Stack(
-        children: [
-          // Stroke / outline text
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = outlineWidth
-                ..color = strokeColor,
-            ),
-          ),
-          // Fill text on top
-          Text(
-            text,
-            style: TextStyle(fontSize: 10, color: textColor),
-          ),
-        ],
-      );
-    } else {
-      labelWidget = Text(
-        text,
-        style: TextStyle(fontSize: 10, color: textColor),
-      );
-    }
-
-    if (bgEnabled) {
-      labelWidget = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: labelWidget,
-      );
-    }
-
-    return labelWidget;
-  }
-
   /// Reset the selected point back to the initial position (from when the
   /// cave place was selected). Only active when `_userHasSelectedNewPoint`.
   void _resetPointToInitial() {
@@ -1129,15 +974,35 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     );
   }
 
+  /// Notify the parent to save the current point when the user has modified it.
+  void _saveDefinitionIfNeeded() {
+    if (_userHasSelectedNewPoint && widget.onSaveDefinitionRequested != null) {
+      widget.onSaveDefinitionRequested!();
+    }
+  }
+
   /// Open CavePlacePage for the currently selected cave place.
   Future<void> _openCavePlacePage() async {
+    _saveDefinitionIfNeeded();
     final cavePlaceId = widget.controller?.cavePlaceId;
-    if (widget.caveId == null || cavePlaceId == null) return;
+    if (cavePlaceId == null) return;
+
+    // Resolve caveId: use widget prop if available, otherwise look it up
+    // from the cave places list (covers MapViewerPage where caveId is not passed).
+    int? caveId = widget.caveId;
+    if (caveId == null) {
+      final match = widget.cavePlacesWithDefinitions
+          .where((c) => c.cavePlace.id == cavePlaceId)
+          .firstOrNull;
+      caveId = match?.cavePlace.caveId;
+    }
+    if (caveId == null) return;
+
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CavePlacePage(
-          caveId: widget.caveId!,
+          caveId: caveId!,
           cavePlaceId: cavePlaceId,
         ),
       ),
@@ -1150,6 +1015,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   /// Open DocumentationFilesPage for the currently selected cave place.
   Future<void> _openCavePlaceDocuments() async {
+    _saveDefinitionIfNeeded();
     final cavePlaceId = widget.controller?.cavePlaceId;
     if (cavePlaceId == null) return;
     await Navigator.push(
@@ -1234,346 +1100,97 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                         return '$selectedCavePlaceTitle ($suffix)';
                       }
 
-                      // Collect image-space coordinates that belong to
-                      // "special" states (new, original, current) so we can
-                      // skip the generic red dot for those points.
-                      final Set<String> _specialPointKeys = {};
+                      // Compute special point keys (to skip their red dots)
+                      final specialPointKeys = RasterMapMarkerBuilder.computeSpecialPointKeys(
+                        userHasSelectedNewPoint: _userHasSelectedNewPoint,
+                        selectedX: _imageSelectedX,
+                        selectedY: _imageSelectedY,
+                        initialX: widget.initialImageX,
+                        initialY: widget.initialImageY,
+                        controllerX: _initialControllerCavePlaceX,
+                        controllerY: _initialControllerCavePlaceY,
+                      );
 
-                      // helper to create a key from image coords
-                      String _ptKey(int x, int y) => '$x,$y';
+                      final outlineEnabled = widget.controller?.textOutlineEnabled ?? true;
+                      final outlineWidth = widget.controller?.textOutlineWidth ?? 2.0;
+                      final bgEnabled = widget.controller?.textBackgroundEnabled ?? false;
 
-                      // Gather special point keys before the red-dot loop.
-                      // new point
-                      if (_userHasSelectedNewPoint && _imageSelectedX != null && _imageSelectedY != null) {
-                        _specialPointKeys.add(_ptKey(_imageSelectedX!.toInt(), _imageSelectedY!.toInt()));
-                        // original point (if different from new)
-                        if (widget.initialImageX != null && widget.initialImageY != null) {
-                          _specialPointKeys.add(_ptKey(widget.initialImageX!.toInt(), widget.initialImageY!.toInt()));
-                        }
-                      } else if (_initialControllerCavePlaceX != null && _initialControllerCavePlaceY != null) {
-                        // current (controller-selected) point
-                        _specialPointKeys.add(_ptKey(_initialControllerCavePlaceX!.toInt(), _initialControllerCavePlaceY!.toInt()));
-                      } else if (widget.initialImageX != null && widget.initialImageY != null) {
-                        // legacy original
-                        _specialPointKeys.add(_ptKey(widget.initialImageX!.toInt(), widget.initialImageY!.toInt()));
-                      }
-
-                      // Existing definitions (red)
-                      for (final cpwd in widget.cavePlacesWithDefinitions.where(
-                        (cpwd) => cpwd.definition != null,
-                      )) {
-                        final def = cpwd.definition!;
-                        final imageX = (def.xCoordinate ?? 0).toDouble();
-                        final imageY = (def.yCoordinate ?? 0).toDouble();
-                        final viewportPos = _imageToViewportCoordinates(
-                          imageX,
-                          imageY,
-                          controllerValue,
-                        );
-                        final textColor = _getTextColor(
-                          imageX.toInt(),
-                          imageY.toInt(),
-                        );
-
-                        // Skip red dot if this point is a special state point
-                        final isSpecial = _specialPointKeys.contains(_ptKey(imageX.toInt(), imageY.toInt()));
-
-                        if (!isSpecial) {
-                          overlay.add(
-                            Positioned(
-                              left: viewportPos.dx - (_redDotSize / 2),
-                              top: viewportPos.dy - (_redDotSize / 2),
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () async {
-                                  _startPulseAtImagePoint(imageX, imageY);
-                                  await _handleNavCavePlaceSelected(cpwd, notifyMarkerTap: true);
-                                },
-                                onLongPress: () {
-                                  _showLongTapToast(cpwd.cavePlace.title);
-                                },
-                                child: Container(
-                                  width: _redDotSize + 8,
-                                  height: _redDotSize + 8,
-                                  alignment: Alignment.center,
-                                  child: Container(
-                                    width: _redDotSize,
-                                    height: _redDotSize,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                      // Existing definitions (red dots + labels)
+                      overlay.addAll(RasterMapMarkerBuilder.buildDefinitionMarkers(
+                        definitions: widget.cavePlacesWithDefinitions,
+                        controllerValue: controllerValue,
+                        specialPointKeys: specialPointKeys,
+                        useImageTextColor: _useImageTextColor,
+                        img: _img,
+                        defaultLabelColor: widget.defaultLabelColor,
+                        outlineEnabled: outlineEnabled,
+                        outlineWidth: outlineWidth,
+                        bgEnabled: bgEnabled,
+                        onTap: (cpwd) async {
+                          final def = cpwd.definition!;
+                          _startPulseAtImagePoint(
+                            (def.xCoordinate ?? 0).toDouble(),
+                            (def.yCoordinate ?? 0).toDouble(),
                           );
-                        } else {
-                          // Still add a transparent hit-test area for tapping
-                          overlay.add(
-                            Positioned(
-                              left: viewportPos.dx - (_redDotSize / 2),
-                              top: viewportPos.dy - (_redDotSize / 2),
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () async {
-                                  _startPulseAtImagePoint(imageX, imageY);
-                                  await _handleNavCavePlaceSelected(cpwd, notifyMarkerTap: true);
-                                },
-                                onLongPress: () {
-                                  _showLongTapToast(cpwd.cavePlace.title);
-                                },
-                                child: SizedBox(
-                                  width: _redDotSize + 8,
-                                  height: _redDotSize + 8,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        overlay.add(
-                          Positioned(
-                            left: viewportPos.dx + 10,
-                            top: viewportPos.dy - 10,
-                            child: _buildLabelWidget(
-                              '${cpwd.cavePlace.title} ${cpwd.definition?.cavePlaceId ?? ''}',
-                              textColor,
-                            ),
-                          ),
-                        );
-                      }
+                          await _handleNavCavePlaceSelected(cpwd, notifyMarkerTap: true);
+                        },
+                        onLongPress: _showLongTapToast,
+                      ));
 
                       // Selected / initial markers
-                      // - If the user has explicitly tapped and set a new point,
-                      //   show the filled blue + orange inner dot marker (new selection).
-                      // - Otherwise, if a controller-provided `cavePlaceId` maps to a
-                      //   definition in `cavePlacesWithDefinitions`, show that place
-                      //   as an *initial* blue marker (no orange inner dot).
-                      // - Existing `widget.initialImageX/Y` behaviour is preserved
-                      //   for the legacy 'old' marker when a new selection replaces it.
-
-                      // 1) Show 'new' marker only when user explicitly selected one
                       if (_userHasSelectedNewPoint && _imageSelectedX != null && _imageSelectedY != null) {
-                        // show old-point outline if there was an original saved point
-                        if (widget.initialImageX != null &&
-                            (_imageSelectedX!.toInt() != widget.initialImageX!.toInt() ||
-                                _imageSelectedY!.toInt() != widget.initialImageY!.toInt())) {
-                          final oldViewportPos = _imageToViewportCoordinates(
-                            widget.initialImageX!,
-                            widget.initialImageY!,
-                            controllerValue,
-                          );
-                          overlay.add(
-                            Positioned(
-                              left: oldViewportPos.dx - (_initialCircleSize / 2),
-                              top: oldViewportPos.dy - (_initialCircleSize / 2),
-                              child: Container(
-                                width: _initialCircleSize,
-                                height: _initialCircleSize,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.transparent,
-                                  border: Border.all(
-                                    color: Colors.blue,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-
-                          overlay.add(
-                            Positioned(
-                              left: oldViewportPos.dx + 10,
-                              top: oldViewportPos.dy - 10,
-                              child: _buildLabelWidget(
-                                markerLabel('old_point'),
-                                _getTextColor(
-                                  widget.initialImageX!.toInt(),
-                                  widget.initialImageY!.toInt(),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        final newViewportPos = _imageToViewportCoordinates(
-                          _imageSelectedX!,
-                          _imageSelectedY!,
-                          controllerValue,
-                        );
-
-                        // filled blue outer marker
-                        overlay.add(
-                          Positioned(
-                            left: newViewportPos.dx - (_currentMarkerSize / 2),
-                            top: newViewportPos.dy - (_currentMarkerSize / 2),
-                            child: Container(
-                              width: _currentMarkerSize,
-                              height: _currentMarkerSize,
-                              decoration: const BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        );
-
-                        // inner orange dot to indicate user selection
-                        overlay.add(
-                          Positioned(
-                            left: newViewportPos.dx - (_innerDotSize / 2),
-                            top: newViewportPos.dy - (_innerDotSize / 2),
-                            child: Container(
-                              width: _innerDotSize,
-                              height: _innerDotSize,
-                              decoration: const BoxDecoration(
-                                color: Colors.orange,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        );
-
-                        overlay.add(
-                          Positioned(
-                            left: newViewportPos.dx + 10,
-                            top: newViewportPos.dy - 10,
-                            child: _buildLabelWidget(
-                              markerLabel('new_point'),
-                              _getTextColor(
-                                _imageSelectedX!.toInt(),
-                                _imageSelectedY!.toInt(),
-                              ),
-                            ),
-                          ),
-                        );
-
+                        overlay.addAll(RasterMapMarkerBuilder.buildNewPointMarkers(
+                          newX: _imageSelectedX!,
+                          newY: _imageSelectedY!,
+                          oldX: widget.initialImageX,
+                          oldY: widget.initialImageY,
+                          controllerValue: controllerValue,
+                          markerLabel: markerLabel,
+                          useImageTextColor: _useImageTextColor,
+                          img: _img,
+                          defaultLabelColor: widget.defaultLabelColor,
+                          outlineEnabled: outlineEnabled,
+                          outlineWidth: outlineWidth,
+                          bgEnabled: bgEnabled,
+                        ));
                       } else if (_initialControllerCavePlaceX != null && _initialControllerCavePlaceY != null) {
-                        // 2) No user-set point: show controller-specified cavePlace as
-                        // a blue marker (no orange inner dot).
-                        final viewportPos = _imageToViewportCoordinates(
-                          _initialControllerCavePlaceX!,
-                          _initialControllerCavePlaceY!,
-                          controllerValue,
-                        );
-
-                        // Resolve cave place title for the blue marker
-                        String _blueMarkerLabel = '';
-                        try {
-                          final _blueMarkerCpwd = widget.cavePlacesWithDefinitions.where((c) => c.definition != null && c.definition!.xCoordinate == _initialControllerCavePlaceX!.toInt() && c.definition!.yCoordinate == _initialControllerCavePlaceY!.toInt()).firstOrNull;
-                          _blueMarkerLabel = _blueMarkerCpwd?.cavePlace.title ?? '';
-                        } catch (_) {}
-
-                        overlay.add(
-                          Positioned(
-                            left: viewportPos.dx - (_currentMarkerSize / 2),
-                            top: viewportPos.dy - (_currentMarkerSize / 2),
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onLongPress: () {
-                                if (_blueMarkerLabel.isNotEmpty) {
-                                  _showLongTapToast(_blueMarkerLabel);
-                                }
-                              },
-                              child: Container(
-                                width: _currentMarkerSize + 8,
-                                height: _currentMarkerSize + 8,
-                                alignment: Alignment.center,
-                                child: Container(
-                                  width: _currentMarkerSize,
-                                  height: _currentMarkerSize,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.blue,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-
-                        overlay.add(
-                          Positioned(
-                            left: viewportPos.dx + 10,
-                            top: viewportPos.dy - 10,
-                            child: _buildLabelWidget(_blueMarkerLabel, _getTextColor(_initialControllerCavePlaceX!.toInt(), _initialControllerCavePlaceY!.toInt())),
-                          ),
-                        );
-
+                        overlay.addAll(RasterMapMarkerBuilder.buildControllerPlaceMarker(
+                          imageX: _initialControllerCavePlaceX!,
+                          imageY: _initialControllerCavePlaceY!,
+                          controllerValue: controllerValue,
+                          definitions: widget.cavePlacesWithDefinitions,
+                          useImageTextColor: _useImageTextColor,
+                          img: _img,
+                          defaultLabelColor: widget.defaultLabelColor,
+                          outlineEnabled: outlineEnabled,
+                          outlineWidth: outlineWidth,
+                          bgEnabled: bgEnabled,
+                          onLongPress: _showLongTapToast,
+                        ));
                       } else if (widget.initialImageX != null && widget.initialImageY != null && !_userHasSelectedNewPoint) {
-                        // legacy: when editing an existing definition but no user
-                        // replacement has been chosen yet, display the old-point
-                        // outline so user can redefine it.
-                        final oldViewportPos = _imageToViewportCoordinates(
-                          widget.initialImageX!,
-                          widget.initialImageY!,
-                          controllerValue,
-                        );
-                        overlay.add(
-                          Positioned(
-                            left: oldViewportPos.dx - (_initialCircleSize / 2),
-                            top: oldViewportPos.dy - (_initialCircleSize / 2),
-                            child: Container(
-                              width: _initialCircleSize,
-                              height: _initialCircleSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.transparent,
-                                border: Border.all(
-                                  color: Colors.blue,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-
-                        overlay.add(
-                          Positioned(
-                            left: oldViewportPos.dx + 10,
-                            top: oldViewportPos.dy - 10,
-                            child: _buildLabelWidget(
-                              markerLabel('old_point'),
-                              _getTextColor(
-                                widget.initialImageX!.toInt(),
-                                widget.initialImageY!.toInt(),
-                              ),
-                            ),
-                          ),
-                        );
+                        overlay.addAll(RasterMapMarkerBuilder.buildLegacyOldPointMarker(
+                          imageX: widget.initialImageX!,
+                          imageY: widget.initialImageY!,
+                          controllerValue: controllerValue,
+                          markerLabel: markerLabel,
+                          useImageTextColor: _useImageTextColor,
+                          img: _img,
+                          defaultLabelColor: widget.defaultLabelColor,
+                          outlineEnabled: outlineEnabled,
+                          outlineWidth: outlineWidth,
+                          bgEnabled: bgEnabled,
+                        ));
                       }
 
-                      // Pulse animation overlay (triggered on marker tap)
-                      if (_pulseImageX != null && _pulseImageY != null && _pulseController.value > 0) {
-                        final pulseViewport = _imageToViewportCoordinates(_pulseImageX!, _pulseImageY!, controllerValue);
-                        final t = _pulseController.value; // 0..1
-                        final base = 22.0;
-                        final size = base + (28.0 * t);
-                        overlay.add(
-                          Positioned(
-                            left: pulseViewport.dx - (size / 2),
-                            top: pulseViewport.dy - (size / 2),
-                            child: IgnorePointer(
-                              child: Opacity(
-                                opacity: 1.0 - t,
-                                child: Container(
-                                  width: size,
-                                  height: size,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.95),
-                                      width: 2.0 * (1.0 - t) + 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
+                      // Pulse animation overlay
+                      final pulseWidget = RasterMapMarkerBuilder.buildPulseOverlay(
+                        pulseImageX: _pulseImageX,
+                        pulseImageY: _pulseImageY,
+                        pulseValue: _pulseController.value,
+                        controllerValue: controllerValue,
+                        primaryColor: Theme.of(context).colorScheme.primary,
+                      );
+                      if (pulseWidget != null) overlay.add(pulseWidget);
 
                       return Stack(children: overlay);
                     },
@@ -1695,7 +1312,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                   ),
                 ),
               // Save / define place on map
-              if (widget.onSaveDefinitionRequested != null)
+              if (SHOW_SAVE_CAVE_PLACE_BUTTON && widget.onSaveDefinitionRequested != null)
                 IconButton(
                   onPressed: widget.onSaveDefinitionRequested,
                   icon: Icon(Icons.save_alt, size: 24, color: Theme.of(context).colorScheme.primary),

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:speleo_loc/utils/localization.dart';
-import 'package:speleo_loc/screens/settings/settings_general_page.dart';
-import 'package:speleo_loc/screens/settings/settings_image_compression_page.dart';
-import 'package:speleo_loc/screens/settings/settings_qr_generation_page.dart';
-import 'package:speleo_loc/screens/settings/settings_pdf_output_page.dart';
-import 'package:speleo_loc/screens/settings/settings_database_page.dart';
-import 'package:speleo_loc/screens/settings/data_export_import_page.dart';
+import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/screens/settings/settings_general_page.dart';
+import 'package:speleoloc/screens/settings/settings_image_compression_page.dart';
+import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
+import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
+import 'package:speleoloc/screens/settings/settings_database_page.dart';
+import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 
 /// Master settings page with sections that navigate to subpages.
 class SettingsMainPage extends StatefulWidget {

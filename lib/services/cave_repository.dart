@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 class CaveRepository {
   final AppDatabase _database;

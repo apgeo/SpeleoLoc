@@ -1,4 +1,4 @@
-package com.example.speleo_loc
+package com.example.speleoloc
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,7 +7,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "speleo_loc/deep_link"
+    private val CHANNEL = "speleoloc/deep_link"
     private var methodChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

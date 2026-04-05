@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:speleo_loc/data/source/database/app_database.dart';
-import 'package:speleo_loc/screens/map_viewer_page.dart';
-import 'package:speleo_loc/utils/constants.dart';
-import 'package:speleo_loc/utils/localization.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/map_viewer_page.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
 
 /// Handles deep links in the "sp://<dl_input>" format.
@@ -16,7 +16,7 @@ class DeepLinkHandler {
   static final DeepLinkHandler instance = DeepLinkHandler._();
 
   GlobalKey<NavigatorState>? _navigatorKey;
-  static const _channel = MethodChannel('speleo_loc/deep_link');
+  static const _channel = MethodChannel('speleoloc/deep_link');
   StreamSubscription? _linkSub;
 
   void init(GlobalKey<NavigatorState> navigatorKey) {
