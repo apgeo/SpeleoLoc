@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Audio recorder with waveform visualisation.
@@ -43,15 +46,23 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
 
   // audio_waveforms
   late RecorderController _waveController;
-  late PlayerController _playerController;
+  PlayerController _playerController = PlayerController();
 
   bool _recorderReady = false;
   bool _isRecording = false;
+  bool _isPaused = false;
   bool _hasRecording = false;
   bool _isPlaying = false;
   bool _isSaving = false;
   String? _recordedPath;
   Duration _elapsed = Duration.zero;
+
+  StreamSubscription<RecordingDisposition>? _recorderProgressSub;
+
+  // WAV splice support: when re-recording from slider position, the original
+  // WAV bytes are kept so only the portion before the slider is preserved.
+  int _currentPositionMs = 0;
+  Uint8List? _preSpliceWavBytes;
 
   bool get _isEditing => widget.existingDoc != null;
 
@@ -63,7 +74,6 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
       ..androidOutputFormat = AndroidOutputFormat.mpeg4
       ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
       ..sampleRate = 44100;
-    _playerController = PlayerController();
 
     if (_isEditing) {
       _titleCtrl.text = widget.existingDoc!.title;
@@ -75,15 +85,72 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
   Future<void> _initRecorder() async {
     try {
       await _recorder.openRecorder();
+      await _recorder.setSubscriptionDuration(const Duration(milliseconds: 100));
       await _player.openPlayer();
+
+      if (_isEditing) {
+        await _loadExistingRecording();
+      }
+
       if (mounted) setState(() => _recorderReady = true);
     } catch (e) {
       debugPrint('[SoundRecorderPage] init error: $e');
     }
   }
 
+  /// In edit mode, copy the existing audio file to a temp location and prepare
+  /// the player so the user can listen before deciding to re-record.
+  Future<void> _loadExistingRecording() async {
+    try {
+      final doc = widget.existingDoc!;
+      final existingFile = await getDocumentsFile(doc.fileName);
+      if (existingFile != null && existingFile.existsSync()) {
+        final dir = await getTemporaryDirectory();
+        final tempPath =
+            '${dir.path}/edit_${DateTime.now().millisecondsSinceEpoch}.wav';
+        await existingFile.copy(tempPath);
+        _recordedPath = tempPath;
+
+        await _playerController.preparePlayer(
+          path: tempPath,
+          shouldExtractWaveform: true,
+        );
+        _playerController.onCurrentDurationChanged.listen((ms) {
+          _currentPositionMs = ms;
+          if (mounted && !_isRecording) {
+            setState(() => _elapsed = Duration(milliseconds: ms));
+          }
+        });
+
+        if (mounted) setState(() => _hasRecording = true);
+      }
+    } catch (e) {
+      debugPrint('[SoundRecorderPage] load existing recording error: $e');
+    }
+  }
+
+  /// Disposes the current [PlayerController] and creates a fresh one wired to
+  /// the recorded file at [_recordedPath].
+  Future<void> _preparePlayerForRecordedFile() async {
+    _playerController.dispose();
+    _playerController = PlayerController();
+    if (_recordedPath != null) {
+      await _playerController.preparePlayer(
+        path: _recordedPath!,
+        shouldExtractWaveform: true,
+      );
+      _playerController.onCurrentDurationChanged.listen((ms) {
+        _currentPositionMs = ms;
+        if (mounted && !_isRecording) {
+          setState(() => _elapsed = Duration(milliseconds: ms));
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _recorderProgressSub?.cancel();
     _recorder.closeRecorder();
     _player.closePlayer();
     _waveController.dispose();
@@ -136,6 +203,20 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
     }
 
     try {
+      // If re-recording over an existing recording, preserve the WAV prefix
+      // up to the current slider position so only the tail is overwritten.
+      if (_hasRecording && _recordedPath != null) {
+        final file = File(_recordedPath!);
+        if (file.existsSync()) {
+          _preSpliceWavBytes = await file.readAsBytes();
+        }
+        if (_isPlaying) {
+          await _player.stopPlayer();
+          await _playerController.pausePlayer();
+          _isPlaying = false;
+        }
+      }
+
       final dir = await getTemporaryDirectory();
       _recordedPath =
           '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.wav';
@@ -146,12 +227,14 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
       );
       await _waveController.record();
 
-      _recorder.onProgress!.listen((event) {
+      _recorderProgressSub?.cancel();
+      _recorderProgressSub = _recorder.onProgress!.listen((event) {
         if (mounted) setState(() => _elapsed = event.duration);
       });
 
       setState(() {
         _isRecording = true;
+        _isPaused = false;
         _hasRecording = false;
       });
     } catch (e) {
@@ -166,21 +249,88 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
 
   Future<void> _stopRecording() async {
     try {
+      _recorderProgressSub?.cancel();
+      _recorderProgressSub = null;
       await _recorder.stopRecorder();
       await _waveController.stop();
-      if (_recordedPath != null) {
-        await _playerController.preparePlayer(
-          path: _recordedPath!,
-          shouldExtractWaveform: true,
-        );
+
+      // If we were recording over an existing WAV (splice), merge the original
+      // prefix with the newly recorded tail.
+      if (_preSpliceWavBytes != null && _recordedPath != null) {
+        await _mergeWavFiles(_preSpliceWavBytes!, File(_recordedPath!));
+        _preSpliceWavBytes = null;
       }
+
+      // Recreate PlayerController to avoid stale state from the previous
+      // recording session (fixes record → stop → record → stop losing buttons).
+      await _preparePlayerForRecordedFile();
+
       setState(() {
         _isRecording = false;
+        _isPaused = false;
         _hasRecording = _recordedPath != null;
       });
     } catch (e) {
       debugPrint('[SoundRecorderPage] stop recording error: $e');
     }
+  }
+
+  Future<void> _pauseRecording() async {
+    try {
+      await _recorder.pauseRecorder();
+      await _waveController.stop();
+      setState(() => _isPaused = true);
+    } catch (e) {
+      debugPrint('[SoundRecorderPage] pause error: $e');
+    }
+  }
+
+  Future<void> _resumeRecording() async {
+    try {
+      await _recorder.resumeRecorder();
+      await _waveController.record();
+      setState(() => _isPaused = false);
+    } catch (e) {
+      debugPrint('[SoundRecorderPage] resume error: $e');
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  //  WAV splice
+  // -----------------------------------------------------------------------
+
+  /// Merges the prefix of [originalWav] (up to [_currentPositionMs]) with the
+  /// newly recorded [newFile]. The result overwrites [_recordedPath].
+  Future<void> _mergeWavFiles(Uint8List originalWav, File newFile) async {
+    final newBytes = await newFile.readAsBytes();
+    final info = _WavInfo.parse(originalWav);
+    final newInfo = _WavInfo.parse(Uint8List.fromList(newBytes));
+
+    final bytesPerSecond =
+        info.sampleRate * info.numChannels * (info.bitsPerSample ~/ 8);
+    final blockAlign = info.numChannels * (info.bitsPerSample ~/ 8);
+
+    int prefixDataBytes =
+        (_currentPositionMs / 1000.0 * bytesPerSecond).round();
+    prefixDataBytes = (prefixDataBytes ~/ blockAlign) * blockAlign;
+    if (prefixDataBytes > info.dataSize) prefixDataBytes = info.dataSize;
+
+    final newDataSize = prefixDataBytes + newInfo.dataSize;
+
+    // Build WAV header from the original, patching chunk sizes.
+    final header =
+        Uint8List.fromList(originalWav.sublist(0, info.dataOffset));
+    final hd = ByteData.sublistView(header);
+    hd.setUint32(4, info.dataOffset - 8 + newDataSize, Endian.little);
+    hd.setUint32(info.dataOffset - 4, newDataSize, Endian.little);
+
+    final merged = BytesBuilder(copy: false)
+      ..add(header)
+      ..add(originalWav.sublist(
+          info.dataOffset, info.dataOffset + prefixDataBytes))
+      ..add(newBytes.sublist(newInfo.dataOffset));
+
+    await File(_recordedPath!).writeAsBytes(merged.toBytes(), flush: true);
   }
 
   // -----------------------------------------------------------------------
@@ -215,12 +365,22 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
   // -----------------------------------------------------------------------
 
   Future<void> _save() async {
-    final title = _titleCtrl.text.trim();
+    // If still recording, stop first so the file is flushed.
+    if (_isRecording) {
+      await _stopRecording();
+    }
+
+    String title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('title_required'))),
-      );
-      return;
+      final now = DateTime.now();
+      title = 'rec_'
+          '${now.year}'
+          '${now.month.toString().padLeft(2, '0')}'
+          '${now.day.toString().padLeft(2, '0')}'
+          '_'
+          '${now.hour.toString().padLeft(2, '0')}'
+          '${now.minute.toString().padLeft(2, '0')}'
+          '${now.second.toString().padLeft(2, '0')}';
     }
     if (_recordedPath == null || !File(_recordedPath!).existsSync()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -303,7 +463,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
               : LocServ.inst.t('new_audio_recording'),
         ),
         actions: [
-          if (_hasRecording && !_isSaving)
+          if ((_hasRecording || _isRecording) && !_isSaving)
             IconButton(
               icon: const Icon(Icons.save),
               tooltip: LocServ.inst.t('save'),
@@ -394,6 +554,22 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
                       _isPlaying ? Icons.stop : Icons.play_arrow,
                     ),
                   ),
+                if (_isRecording) ...[
+                  // Pause / resume button
+                  IconButton.filled(
+                    iconSize: 36,
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondary,
+                    ),
+                    onPressed:
+                        _isPaused ? _resumeRecording : _pauseRecording,
+                    icon: Icon(
+                      _isPaused ? Icons.play_arrow : Icons.pause,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
                 const SizedBox(width: 24),
                 IconButton.filled(
                   iconSize: 48,
@@ -413,6 +589,58 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  _WavInfo — lightweight WAV header parser for splice support
+// ---------------------------------------------------------------------------
+
+class _WavInfo {
+  final int sampleRate;
+  final int numChannels;
+  final int bitsPerSample;
+  final int dataOffset; // byte offset where PCM data starts
+  final int dataSize;
+
+  _WavInfo({
+    required this.sampleRate,
+    required this.numChannels,
+    required this.bitsPerSample,
+    required this.dataOffset,
+    required this.dataSize,
+  });
+
+  static _WavInfo parse(Uint8List wav) {
+    final bd = ByteData.sublistView(wav);
+    final sampleRate = bd.getUint32(24, Endian.little);
+    final numChannels = bd.getUint16(22, Endian.little);
+    final bitsPerSample = bd.getUint16(34, Endian.little);
+
+    // Walk RIFF sub-chunks to find the 'data' chunk.
+    int offset = 12;
+    while (offset < wav.length - 8) {
+      final chunkId = String.fromCharCodes(wav.sublist(offset, offset + 4));
+      final chunkSize = bd.getUint32(offset + 4, Endian.little);
+      if (chunkId == 'data') {
+        return _WavInfo(
+          sampleRate: sampleRate,
+          numChannels: numChannels,
+          bitsPerSample: bitsPerSample,
+          dataOffset: offset + 8,
+          dataSize: chunkSize,
+        );
+      }
+      offset += 8 + chunkSize;
+    }
+    // Fallback: standard 44-byte header.
+    return _WavInfo(
+      sampleRate: sampleRate,
+      numChannels: numChannels,
+      bitsPerSample: bitsPerSample,
+      dataOffset: 44,
+      dataSize: wav.length - 44,
     );
   }
 }

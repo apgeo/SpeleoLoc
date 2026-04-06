@@ -8,6 +8,7 @@ import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
 import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
 import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
 import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
+import 'package:speleoloc/screens/documents/viewers/sound_file_viewer.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 
 typedef DocumentThumbnailBuilder = Widget Function({
@@ -313,6 +314,8 @@ void registerBuiltInDocumentFormats() {
       caveAreaId: caveAreaId,
       existingDoc: existingDoc,
     ),
+    buildViewer: ({required file, required doc}) =>
+        SoundFileViewer(file: file, doc: doc),
     buildThumbnail: _iconThumb(Icons.audiotrack, tint: Colors.teal),
   ));
 
