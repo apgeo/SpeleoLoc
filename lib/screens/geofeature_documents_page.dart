@@ -206,7 +206,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
     final registry = DocumentFormatRegistry.instance;
     final handler = registry.handlerForDoc(doc);
 
-    // Prefer editor; fall back to viewer.
+    // Prefer editor; fall back to viewer with edit FAB.
     Widget? page;
     if (handler?.buildEditor != null && widget.source.geofeatureLink != null) {
       final link = widget.source.geofeatureLink!;
@@ -217,7 +217,11 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
         existingDoc: doc,
       );
     } else if (handler?.buildViewer != null) {
-      page = handler!.buildViewer!(file: file, doc: doc);
+      page = handler!.buildEditableViewer(
+        file: file,
+        doc: doc,
+        geofeatureLink: widget.source.geofeatureLink,
+      );
     }
 
     if (page != null) {
@@ -271,15 +275,19 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
   // -----------------------------------------------------------------------
 
   Widget _buildListItem(DocumentationFile doc) {
-    return ListTile(
-      leading: _buildSmallThumbnail(doc),
-      title: Text(doc.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        '${_categoryLabel(doc.fileType)}  \u2022  ${_formatSize(doc.fileSize)}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      onLongPressStart: (details) =>
+          _showDocumentContextMenu(context, details.globalPosition, doc),
+      child: ListTile(
+        leading: _buildSmallThumbnail(doc),
+        title: Text(doc.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          '${_categoryLabel(doc.fileType)}  \u2022  ${_formatSize(doc.fileSize)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: () => _openDocument(doc),
       ),
-      onTap: () => _openDocument(doc),
     );
   }
 
@@ -288,7 +296,11 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _openDocument(doc),
-        child: Column(
+        onLongPress: () {},  // handled by GestureDetector below
+        child: GestureDetector(
+          onLongPressStart: (details) =>
+              _showDocumentContextMenu(context, details.globalPosition, doc),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: _buildLargeThumbnail(doc)),
@@ -302,6 +314,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -389,6 +402,88 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
         caveAreaId: link.type == GeofeatureType.caveArea ? link.geofeatureId : null,
       ),
     );
+  }
+
+  /// Open a document explicitly in viewer mode.
+  Future<void> _openDocumentForViewing(DocumentationFile doc) async {
+    if (doc.fileName.isEmpty) return;
+    final file = await getDocumentsFile(doc.fileName);
+    if (file == null || !mounted) return;
+
+    final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
+    final page = handler?.buildEditableViewer(
+          file: file,
+          doc: doc,
+          geofeatureLink: widget.source.geofeatureLink,
+        ) ??
+        DocumentationFileViewer(file: file, doc: doc);
+    _navigateAndRefresh(page);
+  }
+
+  /// Open a document explicitly in editor mode.
+  Future<void> _openDocumentForEditing(DocumentationFile doc) async {
+    if (doc.fileName.isEmpty) return;
+    final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
+    if (handler?.buildEditor == null) return;
+
+    final link = widget.source.geofeatureLink;
+    final editor = handler!.buildEditor!(
+      cavePlaceId:
+          link?.type == GeofeatureType.cavePlace ? link!.geofeatureId : null,
+      caveId: link?.type == GeofeatureType.cave ? link!.geofeatureId : null,
+      caveAreaId:
+          link?.type == GeofeatureType.caveArea ? link!.geofeatureId : null,
+      existingDoc: doc,
+    );
+    _navigateAndRefresh(editor);
+  }
+
+  /// Shows a context menu for the given document with View / Edit options.
+  void _showDocumentContextMenu(
+      BuildContext context, Offset position, DocumentationFile doc) {
+    final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
+    final hasViewer = handler?.hasViewer ?? false;
+    final hasEditor = handler?.hasEditor ?? false;
+
+    if (!hasViewer && !hasEditor) {
+      // No actions available — just open as usual.
+      _openDocument(doc);
+      return;
+    }
+
+    final items = <PopupMenuEntry<String>>[
+      if (hasViewer)
+        PopupMenuItem(
+          value: 'view',
+          child: Row(children: [
+            const Icon(Icons.visibility, size: 20),
+            const SizedBox(width: 10),
+            Text(LocServ.inst.t('view')),
+          ]),
+        ),
+      if (hasEditor)
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(children: [
+            const Icon(Icons.edit, size: 20),
+            const SizedBox(width: 10),
+            Text(LocServ.inst.t('edit')),
+          ]),
+        ),
+    ];
+
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+          position.dx, position.dy, position.dx, position.dy),
+      items: items,
+    ).then((value) {
+      if (value == 'view') {
+        _openDocumentForViewing(doc);
+      } else if (value == 'edit') {
+        _openDocumentForEditing(doc);
+      }
+    });
   }
 
   /// Push a page and reload the document list when it returns `true`.

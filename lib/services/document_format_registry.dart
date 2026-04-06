@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/widgets/editable_document_viewer.dart';
 import 'package:speleoloc/screens/documents/editors/camera_capture_page.dart';
 import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
 import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
@@ -78,6 +79,24 @@ class DocumentFormatHandler {
 
   bool get hasEditor => buildEditor != null;
   bool get hasViewer => buildViewer != null;
+
+  /// Builds a viewer widget wrapped with a floating edit button when an editor
+  /// is available for this format. Returns `null` when no viewer is registered.
+  Widget? buildEditableViewer({
+    required File file,
+    required DocumentationFile doc,
+    DocumentationGeofeatureLink? geofeatureLink,
+  }) {
+    if (buildViewer == null) return null;
+    final viewer = buildViewer!(file: file, doc: doc);
+    if (!hasEditor) return viewer;
+    return EditableDocumentViewer(
+      doc: doc,
+      file: file,
+      geofeatureLink: geofeatureLink,
+      child: viewer,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
