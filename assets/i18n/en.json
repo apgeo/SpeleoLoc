@@ -360,5 +360,6 @@
   "depth_outlier_confirm": "Depth value ({depth}) is outside the typical range (-1800 to +1800). Are you sure it is correct?",
   "expand_description": "Expand description",
   "regenerate_pdf": "Regenerate PDF",
-  "generating_pdf": "Generating PDF..."
+  "generating_pdf": "Generating PDF...",
+  "open_viewer": "Open"
 }

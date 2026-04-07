@@ -458,7 +458,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
           child: Row(children: [
             const Icon(Icons.visibility, size: 20),
             const SizedBox(width: 10),
-            Text(LocServ.inst.t('view')),
+            Text(LocServ.inst.t('open_viewer')),
           ]),
         ),
       if (hasEditor)
