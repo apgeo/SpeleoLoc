@@ -18,6 +18,7 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
   late TextEditingController _templateController;
   late TextEditingController _columnsController;
   late TextEditingController _rowsController;
+  final FocusNode _templateFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
     _templateController.dispose();
     _columnsController.dispose();
     _rowsController.dispose();
+    _templateFocusNode.dispose();
     super.dispose();
   }
 
@@ -87,35 +89,7 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
               style:
                   const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _columnsController,
-                  decoration: InputDecoration(
-                      labelText: LocServ.inst.t('pdf_grid_columns')),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) async {
-                    cfg['gridColumns'] = int.tryParse(v) ?? 4;
-                    await _saveConfig(cfg);
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextFormField(
-                  controller: _rowsController,
-                  decoration: InputDecoration(
-                      labelText: LocServ.inst.t('pdf_grid_rows')),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) async {
-                    cfg['gridRows'] = int.tryParse(v) ?? 5;
-                    await _saveConfig(cfg);
-                  },
-                ),
-              ),
-            ],
-          ),
+          _buildStepperRow(cfg),
           const SizedBox(height: 24),
           // QR Label template section
           Text(LocServ.inst.t('qr_label_template'),
@@ -124,6 +98,7 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
           const SizedBox(height: 8),
           TextFormField(
             controller: _templateController,
+            focusNode: _templateFocusNode,
             decoration: InputDecoration(
               labelText: LocServ.inst.t('qr_label_template'),
               border: const OutlineInputBorder(),
@@ -167,6 +142,109 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
     );
   }
 
+  void _insertVariable(String variable) {
+    final text = _templateController.text;
+    final sel = _templateController.selection;
+    final cursor = sel.isValid ? sel.baseOffset : text.length;
+    final before = text.substring(0, cursor);
+    final after = text.substring(cursor);
+    final newText = '$before$variable$after';
+    _templateController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + variable.length),
+    );
+    _templateFocusNode.requestFocus();
+    final cfg = _cfg;
+    if (cfg != null) {
+      cfg['labelTemplate'] = newText;
+      _saveConfig(cfg);
+    }
+  }
+
+  Widget _buildStepperRow(Map<String, dynamic> cfg) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStepperField(
+            controller: _columnsController,
+            label: LocServ.inst.t('pdf_grid_columns'),
+            min: 1,
+            max: 10,
+            configKey: 'gridColumns',
+            cfg: cfg,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStepperField(
+            controller: _rowsController,
+            label: LocServ.inst.t('pdf_grid_rows'),
+            min: 1,
+            max: 20,
+            configKey: 'gridRows',
+            cfg: cfg,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepperField({
+    required TextEditingController controller,
+    required String label,
+    required int min,
+    required int max,
+    required String configKey,
+    required Map<String, dynamic> cfg,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12)),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              onPressed: () {
+                final cur = int.tryParse(controller.text) ?? min;
+                final next = (cur - 1).clamp(min, max);
+                controller.text = next.toString();
+                cfg[configKey] = next;
+                _saveConfig(cfg);
+                setState(() {});
+              },
+            ),
+            SizedBox(
+              width: 40,
+              child: TextFormField(
+                controller: controller,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                onChanged: (v) {
+                  final val = (int.tryParse(v) ?? min).clamp(min, max);
+                  cfg[configKey] = val;
+                  _saveConfig(cfg);
+                },
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () {
+                final cur = int.tryParse(controller.text) ?? min;
+                final next = (cur + 1).clamp(min, max);
+                controller.text = next.toString();
+                cfg[configKey] = next;
+                _saveConfig(cfg);
+                setState(() {});
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _variableChip(String variable, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -180,11 +258,16 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
             ),
-            child: Text(variable,
-                style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+            child: GestureDetector(
+              onTap: variable.startsWith('@') || variable == '\\n'
+                  ? () => _insertVariable(variable)
+                  : null,
+              child: Text(variable,
+                  style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(

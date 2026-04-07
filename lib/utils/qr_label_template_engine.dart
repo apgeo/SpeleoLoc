@@ -46,7 +46,7 @@ class QrLabelTemplateEngine {
     result = result.replaceAll(RegExp(r'#fz\d+'), '');
     result = result.replaceAll(RegExp(r'#fc[0-9a-fA-F]+'), '');
 
-    return result.trim();
+    return _cleanupResolved(result);
   }
 
   /// Parse template into segments with formatting info (for PDF rendering).
@@ -68,6 +68,9 @@ class QrLabelTemplateEngine {
 
     // Handle \n as newline
     resolved = resolved.replaceAll('\\n', '\n');
+
+    // Clean up trailing/leading separators from empty variable substitutions
+    resolved = _cleanupResolved(resolved);
 
     // Parse segments with #fz and #fc prefixes
     final segments = <LabelSegment>[];
@@ -92,6 +95,27 @@ class QrLabelTemplateEngine {
     }
 
     return segments;
+  }
+
+  /// Cleans up resolved text: collapses duplicate separators left behind
+  /// when variables resolve to empty, trims separators at line boundaries,
+  /// and removes blank lines.
+  static String _cleanupResolved(String text) {
+    final lines = text.split('\n');
+    final cleaned = <String>[];
+    for (final line in lines) {
+      var l = line;
+      // Collapse runs of separator characters (comma, dash, pipe, colon
+      // optionally surrounded by spaces) into a single occurrence.
+      l = l.replaceAll(RegExp(r'([,\-|:])\s*\1+'), r'$1');
+      // Collapse multiple spaces
+      l = l.replaceAll(RegExp(r'  +'), ' ');
+      // Trim separators and whitespace from both ends
+      l = l.replaceAll(RegExp(r'^[\s,\-|:]+'), '');
+      l = l.replaceAll(RegExp(r'[\s,\-|:]+$'), '');
+      if (l.isNotEmpty) cleaned.add(l);
+    }
+    return cleaned.join('\n').trim();
   }
 
   /// Formats depth_in_cave always with sign (+ or -)
