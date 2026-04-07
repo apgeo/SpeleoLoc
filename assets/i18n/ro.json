@@ -359,6 +359,8 @@
   "regenerate_pdf": "Regenerare PDF",
   "generating_pdf": "Se generează PDF-ul...",
   "cave_place": "Locuri din peșteră",
-  "open_viewer": "Deschide"
+  "open_viewer": "Deschide",
+  "menu_use_popup": "Meniu popup",
+  "menu_use_drawer": "Meniu lateral"
 }
 

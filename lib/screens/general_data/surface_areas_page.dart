@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class SurfaceAreasPage extends StatefulWidget {
   const SurfaceAreasPage({super.key});
@@ -10,7 +11,8 @@ class SurfaceAreasPage extends StatefulWidget {
   State<SurfaceAreasPage> createState() => _SurfaceAreasPageState();
 }
 
-class _SurfaceAreasPageState extends State<SurfaceAreasPage> {
+class _SurfaceAreasPageState extends State<SurfaceAreasPage>
+    with AppBarMenuMixin<SurfaceAreasPage> {
   List<SurfaceArea> _areas = [];
   bool _changed = false;
 
@@ -112,10 +114,13 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage> {
         if (!didPop) Navigator.pop(context, _changed);
       },
       child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           title: Text(LocServ.inst.t('manage_surface_areas')),
           actions: [
             IconButton(onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+            buildAppBarMenuButton(),
           ],
         ),
         body: ListView.separated(

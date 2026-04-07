@@ -8,6 +8,7 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
@@ -29,7 +30,8 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
   State<RasterMapPlaceSelectorPage> createState() => _RasterMapPlaceSelectorPageState();
 }
 
-class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage> {
+class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
+    with AppBarMenuMixin<RasterMapPlaceSelectorPage> {
   // Selected image-space coordinates received from the editor widget
   double? _imageSelectedX;
   double? _imageSelectedY;
@@ -305,6 +307,8 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
         : '';
 
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         titleSpacing: 0,
         title: Column(
@@ -337,6 +341,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
               SettingsHelper.saveStringConfig(compactNavBarKey, _compactNavBar.toString());
             },
           ),
+          buildAppBarMenuButton(),
         ],
       ),
       // bottom controls: legend + zoom controls + save button — responsive layout

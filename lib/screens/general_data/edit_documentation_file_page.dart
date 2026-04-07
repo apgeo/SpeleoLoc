@@ -8,6 +8,7 @@ import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class EditDocumentationFilePage extends StatefulWidget {
   const EditDocumentationFilePage({super.key, this.documentationFile, this.cavePlaceId, this.caveId, this.caveAreaId});
@@ -21,7 +22,8 @@ class EditDocumentationFilePage extends StatefulWidget {
   State<EditDocumentationFilePage> createState() => _EditDocumentationFilePageState();
 }
 
-class _EditDocumentationFilePageState extends State<EditDocumentationFilePage> {
+class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
+    with AppBarMenuMixin<EditDocumentationFilePage> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   File? _pickedFile;
@@ -151,7 +153,12 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage> {
   Widget build(BuildContext context) {
     final editing = widget.documentationFile != null;
     return Scaffold(
-      appBar: AppBar(title: Text(editing ? LocServ.inst.t('edit') : '${LocServ.inst.t('add')} ${LocServ.inst.t('documentation_files')}')),
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
+      appBar: AppBar(
+        title: Text(editing ? LocServ.inst.t('edit') : '${LocServ.inst.t('add')} ${LocServ.inst.t('documentation_files')}'),
+        actions: [buildAppBarMenuButton()],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(

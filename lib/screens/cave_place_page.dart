@@ -13,6 +13,7 @@ import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class CavePlacePage extends StatefulWidget {
   const CavePlacePage({super.key, required this.caveId, this.cavePlaceId});
@@ -25,7 +26,25 @@ class CavePlacePage extends StatefulWidget {
 }
 
 class _CavePlacePageState extends State<CavePlacePage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AppBarMenuMixin<CavePlacePage> {
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    AppMenuItem(
+      value: 'toggle_gps',
+      icon: _showLatLngFields ? Icons.check_box : Icons.check_box_outline_blank,
+      label: LocServ.inst.t('show_hide_gps'),
+    ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) {
+    if (value == 'toggle_gps') {
+      setState(() {
+        _showLatLngFields = !_showLatLngFields;
+      });
+    }
+  }
+
   // Using global appDatabase instance
   CavePlace? _cavePlace;
   int? _currentCavePlaceId;
@@ -662,6 +681,8 @@ class _CavePlacePageState extends State<CavePlacePage>
         }
       },
       child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           titleSpacing: 0,
           title: Column(
@@ -725,25 +746,7 @@ class _CavePlacePageState extends State<CavePlacePage>
               constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               onPressed: () => _save(),
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              onSelected: (value) {
-                if (value == 'toggle_gps') {
-                  setState(() {
-                    _showLatLngFields = !_showLatLngFields;
-                  });
-                }
-              },
-              itemBuilder: (context) => [
-                CheckedPopupMenuItem<String>(
-                  value: 'toggle_gps',
-                  checked: _showLatLngFields,
-                  child: Text(LocServ.inst.t('show_hide_gps')),
-                ),
-              ],
-            ),
+            buildAppBarMenuButton(),
           ],
         ),
         body: SingleChildScrollView(

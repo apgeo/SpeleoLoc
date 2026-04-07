@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/csv_cave_place_importer.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Screen for importing cave place data from CSV files.
 ///
@@ -26,7 +27,8 @@ class CSVCavePlaceImportPage extends StatefulWidget {
   State<CSVCavePlaceImportPage> createState() => _CSVCavePlaceImportPageState();
 }
 
-class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage> {
+class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
+    with AppBarMenuMixin<CSVCavePlaceImportPage> {
   final CSVCavePlaceImporter _importer = CSVCavePlaceImporter(appDatabase);
 
   // CSV data
@@ -385,9 +387,12 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage> {
         : LocServ.inst.t('csv_import_single');
 
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(title),
+        actions: [buildAppBarMenuButton()],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

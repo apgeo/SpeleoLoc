@@ -14,6 +14,7 @@ import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/screens/general_data/edit_documentation_file_page.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 
 // ---------------------------------------------------------------------------
@@ -56,7 +57,8 @@ class GeofeatureDocumentsPage extends StatefulWidget {
       _GeofeatureDocumentsPageState();
 }
 
-class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
+class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
+    with AppBarMenuMixin<GeofeatureDocumentsPage> {
   // Data
   late final DocumentsController _controller;
   List<DocumentationFile> _filteredDocs = [];
@@ -686,6 +688,8 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
@@ -750,6 +754,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage> {
             ],
           ),
           ],
+          buildAppBarMenuButton(),
         ],
       ),
       body: _isLoading

@@ -4,6 +4,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Lightweight viewer that handles common file types inline (images, text)
 /// and embeds PDF rendering for `.pdf` files using `pdfx`.
@@ -17,7 +18,8 @@ class DocumentationFileViewer extends StatefulWidget {
   State<DocumentationFileViewer> createState() => _DocumentationFileViewerState();
 }
 
-class _DocumentationFileViewerState extends State<DocumentationFileViewer> {
+class _DocumentationFileViewerState extends State<DocumentationFileViewer>
+    with AppBarMenuMixin<DocumentationFileViewer> {
   PdfControllerPinch? _pdfController;
 
   @override
@@ -80,7 +82,12 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.doc.title)),
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
+      appBar: AppBar(
+        title: Text(widget.doc.title),
+        actions: [buildAppBarMenuButton()],
+      ),
       body: body,
     );
   }

@@ -6,6 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Rich-text editor powered by `flutter_quill`.
 ///
@@ -32,7 +33,8 @@ class RichTextEditorPage extends StatefulWidget {
   State<RichTextEditorPage> createState() => _RichTextEditorPageState();
 }
 
-class _RichTextEditorPageState extends State<RichTextEditorPage> {
+class _RichTextEditorPageState extends State<RichTextEditorPage>
+    with AppBarMenuMixin<RichTextEditorPage> {
   final _titleCtrl = TextEditingController();
   late QuillController _quillController;
   final FocusNode _editorFocusNode = FocusNode();
@@ -145,6 +147,8 @@ class _RichTextEditorPageState extends State<RichTextEditorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(
           _isEditing
@@ -169,6 +173,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage> {
               tooltip: LocServ.inst.t('save'),
               onPressed: _save,
             ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: _isLoading

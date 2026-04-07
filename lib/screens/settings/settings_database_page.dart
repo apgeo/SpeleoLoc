@@ -7,6 +7,7 @@ import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Database management settings: reinitialize, export.
@@ -17,12 +18,16 @@ class SettingsDatabasePage extends StatefulWidget {
   State<SettingsDatabasePage> createState() => _SettingsDatabasePageState();
 }
 
-class _SettingsDatabasePageState extends State<SettingsDatabasePage> {
+class _SettingsDatabasePageState extends State<SettingsDatabasePage>
+    with AppBarMenuMixin<SettingsDatabasePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_database')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

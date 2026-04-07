@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// PDF output settings: grid layout (rows/columns), QR label template.
 class SettingsPdfOutputPage extends StatefulWidget {
@@ -11,7 +12,8 @@ class SettingsPdfOutputPage extends StatefulWidget {
   State<SettingsPdfOutputPage> createState() => _SettingsPdfOutputPageState();
 }
 
-class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage> {
+class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
+    with AppBarMenuMixin<SettingsPdfOutputPage> {
   Map<String, dynamic>? _cfg;
   late TextEditingController _templateController;
   late TextEditingController _columnsController;
@@ -71,8 +73,11 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage> {
     }
 
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_pdf_output')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

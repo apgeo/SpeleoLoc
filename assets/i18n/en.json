@@ -361,5 +361,7 @@
   "expand_description": "Expand description",
   "regenerate_pdf": "Regenerate PDF",
   "generating_pdf": "Generating PDF...",
-  "open_viewer": "Open"
+  "open_viewer": "Open",
+  "menu_use_popup": "Use popup menu",
+  "menu_use_drawer": "Use side menu"
 }

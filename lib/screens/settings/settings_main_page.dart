@@ -6,6 +6,7 @@ import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
 import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_database_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Master settings page with sections that navigate to subpages.
 class SettingsMainPage extends StatefulWidget {
@@ -15,7 +16,8 @@ class SettingsMainPage extends StatefulWidget {
   State<SettingsMainPage> createState() => _SettingsMainPageState();
 }
 
-class _SettingsMainPageState extends State<SettingsMainPage> {
+class _SettingsMainPageState extends State<SettingsMainPage>
+    with AppBarMenuMixin<SettingsMainPage> {
   bool shouldReloadUI = false;
 
   @override
@@ -28,8 +30,11 @@ class _SettingsMainPageState extends State<SettingsMainPage> {
         }
       },
       child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           title: Text(LocServ.inst.t('settings')),
+          actions: [buildAppBarMenuButton()],
         ),
         body: ListView(
           children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Settings page for image compression on import.
 class SettingsImageCompressionPage extends StatefulWidget {
@@ -12,7 +13,8 @@ class SettingsImageCompressionPage extends StatefulWidget {
 }
 
 class _SettingsImageCompressionPageState
-    extends State<SettingsImageCompressionPage> {
+    extends State<SettingsImageCompressionPage>
+    with AppBarMenuMixin<SettingsImageCompressionPage> {
   ImageCompressionSettings? _settings;
   late TextEditingController _resolutionCtrl;
   late TextEditingController _qualityCtrl;
@@ -75,8 +77,11 @@ class _SettingsImageCompressionPageState
     final isManual = s.profile == ImageCompressionProfile.manual;
 
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('image_compression')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

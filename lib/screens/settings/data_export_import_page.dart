@@ -6,6 +6,7 @@ import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Full data export / import page.
 ///
@@ -19,7 +20,8 @@ class DataExportImportPage extends StatefulWidget {
   State<DataExportImportPage> createState() => _DataExportImportPageState();
 }
 
-class _DataExportImportPageState extends State<DataExportImportPage> {
+class _DataExportImportPageState extends State<DataExportImportPage>
+    with AppBarMenuMixin<DataExportImportPage> {
   bool _includeDocFiles = true;
   bool _includeRasterMaps = true;
   bool _diffExport = false;
@@ -27,8 +29,11 @@ class _DataExportImportPageState extends State<DataExportImportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('data_export_import')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

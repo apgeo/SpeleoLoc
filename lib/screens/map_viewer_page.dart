@@ -13,6 +13,7 @@ import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
@@ -38,7 +39,7 @@ class MapViewerPage extends StatefulWidget {
   State<MapViewerPage> createState() => _MapViewerPageState();
 }
 
-class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin {
+class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage> {
   CavePlace? _cavePlace;
   List<RasterMap> _rasterMaps = [];
   RasterMap? _selectedRasterMap;
@@ -253,6 +254,8 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         titleSpacing: 0,
         title: Text(
@@ -306,6 +309,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
               },
             ),
           ],
+          buildAppBarMenuButton(),
         ],
       ),
       body: _isLoading

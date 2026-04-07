@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class CaveAreasPage extends StatefulWidget {
   const CaveAreasPage({super.key, required this.caveId});
@@ -12,7 +13,8 @@ class CaveAreasPage extends StatefulWidget {
   State<CaveAreasPage> createState() => _CaveAreasPageState();
 }
 
-class _CaveAreasPageState extends State<CaveAreasPage> {
+class _CaveAreasPageState extends State<CaveAreasPage>
+    with AppBarMenuMixin<CaveAreasPage> {
   List<CaveArea> _areas = [];
   bool _changed = false;
 
@@ -101,10 +103,13 @@ class _CaveAreasPageState extends State<CaveAreasPage> {
         if (!didPop) Navigator.pop(context, _changed);
       },
       child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           title: Text(LocServ.inst.t('manage_cave_areas')),
           actions: [
             IconButton(onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+            buildAppBarMenuButton(),
           ],
         ),
         body: ListView.separated(

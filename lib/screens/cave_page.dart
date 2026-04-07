@@ -11,9 +11,9 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
-import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class CavePage extends StatefulWidget {
   const CavePage({super.key, required this.caveId});
@@ -24,7 +24,75 @@ class CavePage extends StatefulWidget {
   State<CavePage> createState() => _CavePageState();
 }
 
-class _CavePageState extends State<CavePage> {
+class _CavePageState extends State<CavePage> with AppBarMenuMixin<CavePage> {
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    AppMenuItem(
+      value: 'edit_cave',
+      icon: Icons.edit_note,
+      label: LocServ.inst.t('edit_cave'),
+    ),
+    AppMenuItem(
+      value: 'delete',
+      icon: Icons.delete,
+      label: LocServ.inst.t('delete_cave'),
+    ),
+    AppMenuItem(
+      value: 'csv_import',
+      icon: Icons.upload_file,
+      label: LocServ.inst.t('csv_import_places'),
+    ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) async {
+    if (value == 'edit_cave') {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddNewCave(cave: _cave),
+        ),
+      );
+      if (result != null) {
+        await _loadCave();
+        await _loadSurfaceAreas();
+        if (mounted) setState(() {});
+      }
+    } else if (value == 'csv_import') {
+      final result = await Navigator.push<bool?>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CSVCavePlaceImportPage(caveId: widget.caveId),
+        ),
+      );
+      if (result == true) {
+        _loadCavePlaces();
+      }
+    } else if (value == 'delete') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(LocServ.inst.t('confirm')),
+          content: Text(LocServ.inst.t('delete_cave_confirm')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(LocServ.inst.t('yes')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await caveRepository.deleteCave(widget.caveId);
+        if (!mounted) return;
+        Navigator.pop(context, true);
+      }
+    }
+  }
   // Using global appDatabase instance
   Cave? _cave;
   List<CavePlace> _cavePlaces = [];
@@ -308,99 +376,6 @@ class _CavePageState extends State<CavePage> {
     }
   }
 
-  Future<void> _showRenameDialog() async {
-    final controller = TextEditingController(text: _cave?.title ?? '');
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(LocServ.inst.t('rename_cave')),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: LocServ.inst.t('enter_new_name'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(LocServ.inst.t('cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(LocServ.inst.t('yes')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      final newTitle = controller.text.trim();
-      if (newTitle.isNotEmpty) {
-        await caveRepository.updateCave(widget.caveId, newTitle);
-        _loadCave();
-        if (mounted) setState(() {});
-      }
-    }
-  }
-
-  Future<void> _showRedefineAreaDialog() async {
-    // show dropdown of surface areas (allow None)
-    final result = await showDialog<Map<String, dynamic>?>(
-      context: context,
-      builder: (context) {
-        int? temp = _cave?.surfaceAreaId;
-        return AlertDialog(
-          title: Text(LocServ.inst.t('area_title')),
-          content: StatefulBuilder(
-            builder: (context, setInner) => Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int?>(
-                    initialValue: temp,
-                    decoration: InputDecoration(labelText: LocServ.inst.t('area_title')),
-                    items: [
-                      DropdownMenuItem(value: null, child: Text(LocServ.inst.t('none'))),
-                      ..._surfaceAreaTitles.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))),
-                    ],
-                    onChanged: (v) => setInner(() => temp = v),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.landscape),
-                  tooltip: LocServ.inst.t('manage_surface_areas'),
-                  onPressed: () async {
-                    final result = await Navigator.push<bool?>(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
-                    );
-                    if (result == true) {
-                      await _loadSurfaceAreas();
-                      setInner(() {});
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, {'confirmed': false}), child: Text(LocServ.inst.t('cancel'))),
-            TextButton(onPressed: () => Navigator.pop(context, {'confirmed': true, 'value': temp}), child: Text(LocServ.inst.t('save'))),
-          ],
-        );
-      },
-    );
-
-    if (result != null && result['confirmed'] == true) {
-      final int? selected = result['value'] as int?;
-      if (selected != _cave?.surfaceAreaId) {
-        await caveRepository.updateCave(widget.caveId, _cave!.title, surfaceAreaId: selected);
-        await _loadCave();
-        await _loadSurfaceAreas();
-        if (mounted) setState(() {});
-      }
-    }
-  }
-
   void _onScan(String code) async {
     final qrCode = int.tryParse(code);
     if (qrCode != null) {
@@ -447,6 +422,8 @@ class _CavePageState extends State<CavePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
@@ -461,120 +438,7 @@ class _CavePageState extends State<CavePage> {
           ],
         ),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.layers),
-          //   tooltip: LocServ.inst.t('manage_cave_areas'),
-          //   onPressed: () async {
-          //     await Navigator.push(context, MaterialPageRoute(builder: (_) => CaveAreasPage(caveId: widget.caveId)));
-          //     _loadCavePlaces();
-          //   },
-          // ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'edit_cave') {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AddNewCave(cave: _cave),
-                  ),
-                );
-                if (result != null) {
-                  await _loadCave();
-                  await _loadSurfaceAreas();
-                  if (mounted) setState(() {});
-                }
-              } else if (v == 'rename') {
-                await _showRenameDialog();
-              } else if (v == 'redefine_area') {
-                await _showRedefineAreaDialog();
-              } else if (v == 'csv_import') {
-                final result = await Navigator.push<bool?>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CSVCavePlaceImportPage(caveId: widget.caveId),
-                  ),
-                );
-                if (result == true) {
-                  _loadCavePlaces();
-                }
-              } else if (v == 'delete') {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text(LocServ.inst.t('confirm')),
-                    content: Text(LocServ.inst.t('delete_cave_confirm')),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: Text(LocServ.inst.t('cancel')),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: Text(LocServ.inst.t('yes')),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirmed == true) {
-                  await caveRepository.deleteCave(widget.caveId);
-                  if (!mounted) return;
-                  Navigator.pop(context, true);
-                }
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'edit_cave',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_note, size: 20),
-                    const SizedBox(width: 8),
-                    Text(LocServ.inst.t('edit_cave')),
-                  ],
-                ),
-              ),
-              // PopupMenuItem(
-              //   value: 'rename',
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.edit, size: 20),
-              //       const SizedBox(width: 8),
-              //       Text(LocServ.inst.t('rename_cave')),
-              //     ],
-              //   ),
-              // ),
-              // PopupMenuItem(
-              //   value: 'redefine_area',
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.location_on, size: 20),
-              //       const SizedBox(width: 8),
-              //       Text(LocServ.inst.t('area_title')),
-              //     ],
-              //   ),
-              // ),
-              PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 20),
-                    const SizedBox(width: 8),
-                    Text(LocServ.inst.t('delete_cave')),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'csv_import',
-                child: Row(
-                  children: [
-                    Icon(Icons.upload_file, size: 20),
-                    const SizedBox(width: 8),
-                    Text(LocServ.inst.t('csv_import_places')),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: Stack(

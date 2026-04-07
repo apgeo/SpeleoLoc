@@ -12,6 +12,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -32,7 +33,40 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    AppMenuItem(
+      value: 'surface_areas',
+      icon: Icons.landscape,
+      label: LocServ.inst.t('manage_surface_areas'),
+    ),
+    AppMenuItem(
+      value: 'csv_import',
+      icon: Icons.upload_file,
+      label: LocServ.inst.t('csv_import_places'),
+    ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) async {
+    switch (value) {
+      case 'surface_areas':
+        final result = await Navigator.push<bool?>(
+          context,
+          MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
+        );
+        if (result == true) _loadCaves();
+        break;
+      case 'csv_import':
+        final result = await Navigator.push<bool?>(
+          context,
+          MaterialPageRoute(builder: (_) => const CSVCavePlaceImportPage()),
+        );
+        if (result == true) _loadCaves();
+        break;
+    }
+  }
   // Using global appDatabase instance
   List<Cave> _caves = [];
   Map<int, int> _cavePlaceCounts = {};
@@ -264,6 +298,8 @@ class _HomePageState extends State<HomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         // TRY THIS: Try changing the color here to a specific color (to
         // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
@@ -306,55 +342,7 @@ class _HomePageState extends State<HomePage> {
               }
             },
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            tooltip: LocServ.inst.t('more'),
-            onSelected: (value) async {
-              switch (value) {
-                case 'surface_areas':
-                  final result = await Navigator.push<bool?>(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
-                  );
-                  if (result == true) {
-                    print('[HomePage] _loadCaves triggered after returning from SurfaceAreasPage');
-                    _loadCaves();
-                  }
-                  break;
-                case 'csv_import':
-                  final result = await Navigator.push<bool?>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CSVCavePlaceImportPage(),
-                    ),
-                  );
-                  if (result == true) {
-                    _loadCaves();
-                  }
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'surface_areas',
-                child: ListTile(
-                  leading: const Icon(Icons.landscape),
-                  title: Text(LocServ.inst.t('manage_surface_areas')),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'csv_import',
-                child: ListTile(
-                  leading: const Icon(Icons.upload_file),
-                  title: Text(LocServ.inst.t('csv_import_places')),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          )
+          buildAppBarMenuButton(),
         ],
       ),
       body: SingleChildScrollView(

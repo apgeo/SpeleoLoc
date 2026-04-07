@@ -10,6 +10,7 @@ import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:pdfx/pdfx.dart';
 
 /// Viewer screen for generated QR code PDFs.
@@ -26,7 +27,8 @@ class GeneratedQRCodeViewer extends StatefulWidget {
   State<GeneratedQRCodeViewer> createState() => _GeneratedQRCodeViewerState();
 }
 
-class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer> {
+class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
+    with AppBarMenuMixin<GeneratedQRCodeViewer> {
   GenerationResult? _result;
   bool _isGenerating = false;
   String? _error;
@@ -163,6 +165,8 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('generated_qr_codes')),
         actions: [
@@ -172,6 +176,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer> {
               tooltip: LocServ.inst.t('save'),
               onPressed: () => _exportResult(context),
             ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: Column(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// General settings: app language.
 class SettingsGeneralPage extends StatefulWidget {
@@ -11,7 +12,8 @@ class SettingsGeneralPage extends StatefulWidget {
   State<SettingsGeneralPage> createState() => _SettingsGeneralPageState();
 }
 
-class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
+class _SettingsGeneralPageState extends State<SettingsGeneralPage>
+    with AppBarMenuMixin<SettingsGeneralPage> {
   String? _appLanguage;
   bool _needsReload = false;
 
@@ -43,12 +45,15 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
         }
       },
       child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           title: Text(LocServ.inst.t('settings_general')),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context, _needsReload),
           ),
+          actions: [buildAppBarMenuButton()],
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),

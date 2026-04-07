@@ -1,0 +1,478 @@
+import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
+import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
+
+/// Configuration key for the persisted menu mode preference.
+const String _menuModeConfigKey = 'app_menu_mode';
+
+/// A menu item descriptor used by the global menu system.
+class AppMenuItem {
+  final String? value;
+  final IconData icon;
+  final String? label;
+  final VoidCallback? onTap;
+
+  const AppMenuItem({
+    this.value,
+    required this.icon,
+    this.label,
+    this.onTap,
+  });
+}
+
+/// Defines how the app menu is presented.
+enum AppMenuMode { popup, drawer }
+
+/// Global notifier so all screens share the same menu mode.
+final ValueNotifier<AppMenuMode> _menuModeNotifier =
+    ValueNotifier(AppMenuMode.drawer);
+
+/// Cached app version string, populated at startup.
+String _appVersion = '';
+
+/// Call once at app startup to load the persisted menu mode.
+Future<void> initAppMenuMode() async {
+  final stored = await SettingsHelper.loadStringConfig(_menuModeConfigKey, 'drawer');
+  _menuModeNotifier.value =
+      stored == 'popup' ? AppMenuMode.popup : AppMenuMode.drawer;
+  try {
+    final info = await PackageInfo.fromPlatform();
+    _appVersion = 'v${info.version}+${info.buildNumber}';
+  } catch (_) {
+    _appVersion = '';
+  }
+}
+
+/// Mixin that adds a unified app menu (popup or end-drawer) to any screen
+/// with an [AppBar].
+///
+/// Usage:
+/// ```dart
+/// class _MyPageState extends State<MyPage> with AppBarMenuMixin<MyPage> {
+///   @override
+///   List<AppMenuItem> get screenMenuItems => [ ... ];
+///
+///   @override
+///   void onScreenMenuItemSelected(String value) { ... }
+///
+///   @override
+///   Widget build(BuildContext context) {
+///     return Scaffold(
+///       key: appMenuScaffoldKey,
+///       endDrawer: buildAppMenuEndDrawer(),
+///       appBar: AppBar(
+///         actions: [
+///           ...otherActions,
+///           buildAppBarMenuButton(),
+///         ],
+///       ),
+///     );
+///   }
+/// }
+/// ```
+mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
+  /// Override to provide screen-specific menu items.
+  List<AppMenuItem> get screenMenuItems => const [];
+
+  /// Override to handle selection of screen-specific popup-menu items.
+  void onScreenMenuItemSelected(String value) {}
+
+  /// GlobalKey for the Scaffold. Screens must set `key: appMenuScaffoldKey`.
+  final GlobalKey<ScaffoldState> appMenuScaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _menuModeNotifier.addListener(_onMenuModeChanged);
+  }
+
+  @override
+  void dispose() {
+    _menuModeNotifier.removeListener(_onMenuModeChanged);
+    super.dispose();
+  }
+
+  void _onMenuModeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Builds the menu trigger button for the AppBar actions list.
+  Widget buildAppBarMenuButton() {
+    if (_menuModeNotifier.value == AppMenuMode.popup) {
+      return _buildPopupMenuButton();
+    }
+    return IconButton(
+      icon: const Icon(Icons.more_vert),
+      tooltip: LocServ.inst.t('more'),
+      onPressed: () => appMenuScaffoldKey.currentState?.openEndDrawer(),
+    );
+  }
+
+  /// Builds the end-drawer widget. Assign to [Scaffold.endDrawer].
+  Widget buildAppMenuEndDrawer() {
+    return _AppMenuDrawer(
+      screenItems: screenMenuItems,
+      onScreenItemTap: (item) {
+        Navigator.pop(context); // close drawer
+        if (item.onTap != null) {
+          item.onTap!();
+        } else if (item.value != null) {
+          onScreenMenuItemSelected(item.value!);
+        }
+      },
+    );
+  }
+
+  Widget _buildPopupMenuButton() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert),
+      tooltip: LocServ.inst.t('more'),
+      onSelected: (value) {
+        if (value == '_toggle_menu_mode') {
+          _setMenuMode(AppMenuMode.drawer);
+          return;
+        }
+        if (_handleGlobalMenuSelection(value)) return;
+        onScreenMenuItemSelected(value);
+      },
+      itemBuilder: (_) {
+        final items = <PopupMenuEntry<String>>[];
+
+        // Screen-specific items
+        for (final item in screenMenuItems) {
+          items.add(PopupMenuItem<String>(
+            value: item.value,
+            child: Row(
+              children: [
+                Icon(item.icon, size: 20),
+                if (item.label != null) ...[
+                  const SizedBox(width: 8),
+                  Text(item.label!),
+                ],
+              ],
+            ),
+          ));
+        }
+
+        if (screenMenuItems.isNotEmpty) {
+          items.add(const PopupMenuDivider());
+        }
+
+        // Global navigation items — icon-only row
+        items.add(_GlobalNavRow());
+
+        // Mode toggle
+        items.add(const PopupMenuDivider());
+        items.add(PopupMenuItem<String>(
+          value: '_toggle_menu_mode',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.menu_open, size: 20),
+            ],
+          ),
+        ));
+
+        return items;
+      },
+    );
+  }
+
+  bool _handleGlobalMenuSelection(String value) {
+    switch (value) {
+      case '_nav_caves':
+        Navigator.pushNamedAndRemoveUntil(context, homeRoute, (route) => false);
+        return true;
+      case '_nav_scan':
+        _navigateToScanner();
+        return true;
+      case '_nav_documents':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const DocumentationFilesPage()));
+        return true;
+      case '_nav_settings':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SettingsMainPage()));
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void _navigateToScanner() async {
+    var status = await Permission.camera.status;
+    if (!status.isGranted) {
+      status = await Permission.camera.request();
+    }
+    if (!mounted) return;
+
+    if (status.isGranted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ScannerPage(
+            onScan: (code) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${LocServ.inst.t('scan_result')}: $code')),
+                );
+                Navigator.pop(context, code);
+              }
+            },
+          ),
+        ),
+      );
+    } else if (status.isPermanentlyDenied) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('permission_required')),
+          content: Text(LocServ.inst.t('camera_permission_required')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () {
+                openAppSettings();
+                Navigator.of(ctx).pop();
+              },
+              child: Text(LocServ.inst.t('open_settings')),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  static void _setMenuMode(AppMenuMode mode) {
+    _menuModeNotifier.value = mode;
+    SettingsHelper.saveStringConfig(
+        _menuModeConfigKey, mode == AppMenuMode.popup ? 'popup' : 'drawer');
+  }
+}
+
+/// Custom popup entry that renders global navigation as a row of icon buttons.
+class _GlobalNavRow extends PopupMenuEntry<String> {
+  @override
+  final double height = 170;
+
+  @override
+  bool represents(String? value) => false;
+
+  @override
+  State<_GlobalNavRow> createState() => _GlobalNavRowState();
+}
+
+class _GlobalNavRowState extends State<_GlobalNavRow> {
+  void _go(String value) {
+    Navigator.pop(context, value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+      child: Wrap(
+        alignment: WrapAlignment.spaceEvenly,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _navIconWithLabel(Icons.home, LocServ.inst.t('caves'), () => _go('_nav_caves')),
+          _navIconWithLabel(Icons.qr_code_scanner, LocServ.inst.t('scan'), () => _go('_nav_scan')),
+          _navIconWithLabel(Icons.description, LocServ.inst.t('documentation'), () => _go('_nav_documents')),
+          _navIconWithLabel(Icons.settings, LocServ.inst.t('settings'), () => _go('_nav_settings')),
+        ],
+      ),
+    );
+  }
+
+  Widget _navIconWithLabel(IconData icon, String label, VoidCallback onTap) {
+    return SizedBox(
+      width: 88,
+      child: InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48),
+            const SizedBox(height: 3),
+            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+          ],
+        ),
+      ),
+      ),
+    );
+  }
+}
+
+/// The sliding drawer that shows screen-specific and global menu items.
+class _AppMenuDrawer extends StatelessWidget {
+  final List<AppMenuItem> screenItems;
+  final void Function(AppMenuItem) onScreenItemTap;
+
+  const _AppMenuDrawer({
+    required this.screenItems,
+    required this.onScreenItemTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      width: 220,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 12),
+            // Screen-specific items
+            if (screenItems.isNotEmpty) ...[
+              ...screenItems.map((item) => ListTile(
+                    leading: Icon(item.icon),
+                    title: item.label != null ? Text(item.label!) : null,
+                    dense: true,
+                    onTap: () => onScreenItemTap(item),
+                  )),
+              const Divider(),
+            ],
+            // Global navigation items with labels
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+              child: Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _navIconWithLabel(context, Icons.home, LocServ.inst.t('caves'), () {
+                    Navigator.pop(context);
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, homeRoute, (route) => false);
+                  }),
+                  _navIconWithLabel(context, Icons.qr_code_scanner, LocServ.inst.t('scan'), () {
+                    Navigator.pop(context);
+                    _openScanner(context);
+                  }),
+                  _navIconWithLabel(context, Icons.description, LocServ.inst.t('documentation'), () {
+                    Navigator.pop(context);
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const DocumentationFilesPage()));
+                  }),
+                  _navIconWithLabel(context, Icons.settings, LocServ.inst.t('settings'), () {
+                    Navigator.pop(context);
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const SettingsMainPage()));
+                  }),
+                ],
+              ),
+            ),
+            const Spacer(),
+            // Mode toggle icon + version label at bottom
+            const Divider(),
+            Column(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: LocServ.inst.t('menu_use_popup'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    AppBarMenuMixin._setMenuMode(AppMenuMode.popup);
+                  },
+                ),
+                if (_appVersion.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: Text(
+                      _appVersion,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 2),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _navIconWithLabel(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return SizedBox(
+      width: 88,
+      child: InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48),
+            const SizedBox(height: 3),
+            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+          ],
+        ),
+      ),
+      ),
+    );
+  }
+
+  void _openScanner(BuildContext context) async {
+    var status = await Permission.camera.status;
+    if (!status.isGranted) {
+      status = await Permission.camera.request();
+    }
+    if (!context.mounted) return;
+
+    if (status.isGranted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ScannerPage(
+            onScan: (code) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${LocServ.inst.t('scan_result')}: $code')),
+                );
+                Navigator.pop(context, code);
+              }
+            },
+          ),
+        ),
+      );
+    } else if (status.isPermanentlyDenied) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('permission_required')),
+          content: Text(LocServ.inst.t('camera_permission_required')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () {
+                openAppSettings();
+                Navigator.of(ctx).pop();
+              },
+              child: Text(LocServ.inst.t('open_settings')),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}

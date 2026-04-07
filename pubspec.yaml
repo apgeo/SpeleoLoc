@@ -59,6 +59,7 @@ dependencies:
   flutter_quill: ^11.4.0
   flutter_sound: ^9.17.8
   audio_waveforms: ^1.2.1
+  package_info_plus: ^8.3.0
 
 dev_dependencies:
   flutter_test:

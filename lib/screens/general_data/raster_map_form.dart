@@ -7,6 +7,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Whether to apply image compression when picking raster map images.
 const bool kCompressRasterMapImages = false;
@@ -21,7 +22,8 @@ class RasterMapForm extends StatefulWidget {
   State<RasterMapForm> createState() => _RasterMapFormState();
 }
 
-class _RasterMapFormState extends State<RasterMapForm> {
+class _RasterMapFormState extends State<RasterMapForm>
+    with AppBarMenuMixin<RasterMapForm> {
   String? _selectedMapType;
   String? _imagePath;  String? _fullImagePath;  final _titleController = TextEditingController();
 
@@ -125,8 +127,11 @@ class _RasterMapFormState extends State<RasterMapForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(widget.rasterMap != null ? LocServ.inst.t('edit_raster_map') : LocServ.inst.t('add_raster_map')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

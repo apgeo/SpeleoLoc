@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class SQLCommandRunner extends StatefulWidget {
   const SQLCommandRunner({super.key});
@@ -9,7 +10,8 @@ class SQLCommandRunner extends StatefulWidget {
   State<SQLCommandRunner> createState() => _SQLCommandRunnerState();
 }
 
-class _SQLCommandRunnerState extends State<SQLCommandRunner> {
+class _SQLCommandRunnerState extends State<SQLCommandRunner>
+    with AppBarMenuMixin<SQLCommandRunner> {
   final TextEditingController _sqlController = TextEditingController();
   bool _isRunning = false;
   String _output = '';
@@ -85,8 +87,11 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('sql_command_runner')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

@@ -3,6 +3,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// A simple plain-text editor that creates a new documentation file record.
 ///
@@ -31,7 +32,8 @@ class TextDocumentEditorPage extends StatefulWidget {
   State<TextDocumentEditorPage> createState() => _TextDocumentEditorPageState();
 }
 
-class _TextDocumentEditorPageState extends State<TextDocumentEditorPage> {
+class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
+    with AppBarMenuMixin<TextDocumentEditorPage> {
   final _titleCtrl = TextEditingController();
   final _contentCtrl = TextEditingController();
   bool _isSaving = false;
@@ -158,6 +160,8 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(
           _isEditing
@@ -176,6 +180,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage> {
               tooltip: LocServ.inst.t('save'),
               onPressed: _save,
             ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: _isLoading

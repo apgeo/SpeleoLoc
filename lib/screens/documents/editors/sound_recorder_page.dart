@@ -11,6 +11,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Audio recorder with waveform visualisation.
 ///
@@ -37,7 +38,8 @@ class SoundRecorderPage extends StatefulWidget {
   State<SoundRecorderPage> createState() => _SoundRecorderPageState();
 }
 
-class _SoundRecorderPageState extends State<SoundRecorderPage> {
+class _SoundRecorderPageState extends State<SoundRecorderPage>
+    with AppBarMenuMixin<SoundRecorderPage> {
   final _titleCtrl = TextEditingController();
 
   // flutter_sound
@@ -456,6 +458,8 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(
           _isEditing
@@ -480,6 +484,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage> {
                 ),
               ),
             ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: Padding(

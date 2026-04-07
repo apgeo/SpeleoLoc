@@ -3,6 +3,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class AddNewCave extends StatefulWidget {
   final Cave? cave; // if provided, we're editing
@@ -13,7 +14,8 @@ class AddNewCave extends StatefulWidget {
   State<AddNewCave> createState() => _AddNewCaveState();
 }
 
-class _AddNewCaveState extends State<AddNewCave> {
+class _AddNewCaveState extends State<AddNewCave>
+    with AppBarMenuMixin<AddNewCave> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -71,8 +73,11 @@ class _AddNewCaveState extends State<AddNewCave> {
   Widget build(BuildContext context) {
     final isEditing = widget.cave != null;
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(isEditing ? LocServ.inst.t('edit_cave') : LocServ.inst.t('add_new_cave')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

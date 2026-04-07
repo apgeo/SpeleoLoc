@@ -8,6 +8,7 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Captures a photo using [ImagePicker] (camera) and then optionally opens the
 /// [ImageEditorPage] for annotation / cropping before saving.
@@ -30,7 +31,8 @@ class CameraCapturePage extends StatefulWidget {
   State<CameraCapturePage> createState() => _CameraCapturePageState();
 }
 
-class _CameraCapturePageState extends State<CameraCapturePage> {
+class _CameraCapturePageState extends State<CameraCapturePage>
+    with AppBarMenuMixin<CameraCapturePage> {
   final ImagePicker _picker = ImagePicker();
   bool _isSaving = false;
   File? _capturedFile;
@@ -133,6 +135,8 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('new_photo')),
         actions: [
@@ -159,6 +163,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
                 ),
               ),
             ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: _capturedFile == null

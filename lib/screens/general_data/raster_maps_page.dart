@@ -8,6 +8,7 @@ import 'raster_map_form.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 class RasterMapsPage extends StatefulWidget {
   const RasterMapsPage({super.key, required this.caveId});
@@ -18,7 +19,8 @@ class RasterMapsPage extends StatefulWidget {
   State<RasterMapsPage> createState() => _RasterMapsPageState();
 }
 
-class _RasterMapsPageState extends State<RasterMapsPage> {
+class _RasterMapsPageState extends State<RasterMapsPage>
+    with AppBarMenuMixin<RasterMapsPage> {
   List<RasterMap> _rasterMaps = [];
 
   bool _changed = false;
@@ -109,6 +111,8 @@ class _RasterMapsPageState extends State<RasterMapsPage> {
         if (!didPop) Navigator.pop(context, _changed);
       },
       child: Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('raster_maps')),
         actions: [
@@ -126,6 +130,7 @@ class _RasterMapsPageState extends State<RasterMapsPage> {
               }
             },
           ),
+          buildAppBarMenuButton(),
         ],
       ),
       body: SingleChildScrollView(

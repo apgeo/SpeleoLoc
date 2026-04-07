@@ -4,6 +4,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/document_format_registry.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,9 @@ void main() async {
   } catch (_) {
     // DB not ready yet — use default locale
   }
+
+  // Load persisted menu mode preference (popup vs drawer).
+  await initAppMenuMode();
 
   runApp(const SpeleoLocApp());
 }

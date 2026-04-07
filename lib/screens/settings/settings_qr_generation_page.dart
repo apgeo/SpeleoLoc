@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// QR code generation settings subpage: sizes, colors, error correction, etc.
 class SettingsQrGenerationPage extends StatefulWidget {
@@ -12,7 +13,8 @@ class SettingsQrGenerationPage extends StatefulWidget {
       _SettingsQrGenerationPageState();
 }
 
-class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage> {
+class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
+    with AppBarMenuMixin<SettingsQrGenerationPage> {
   Map<String, dynamic>? _cfg;
   String _qrOutputKind = 'pdf';
 
@@ -72,8 +74,11 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage> {
     }
 
     return Scaffold(
+      key: appMenuScaffoldKey,
+      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_qr_generation')),
+        actions: [buildAppBarMenuButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
