@@ -176,7 +176,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
 
   Future<void> _startTrip() async {
     final defaultTitle = '${_cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final controller = TextEditingController(text: defaultTitle);
+    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveId);
+    final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
+    final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -199,7 +201,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       ),
     );
     if (confirmed == true && mounted) {
-      await caveTripService.startTrip(widget.caveId, controller.text.trim().isNotEmpty ? controller.text.trim() : defaultTitle);
+      await caveTripService.startTrip(widget.caveId, controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle);
       setState(() {});
     }
   }

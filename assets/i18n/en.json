@@ -372,6 +372,7 @@
   "trip_resume": "Resume trip",
   "trip_restart": "Restart trip",
   "trip_log": "Trip log",
+  "trip_log_title": "Trip log",
   "trip_title_hint": "Trip title",
   "trip_name_dialog_title": "Start a new trip",
   "trip_active": "Active trip",
@@ -386,7 +387,13 @@
   "trip_deleted": "Trip deleted",
   "trip_stop_confirm": "Stop recording this trip?",
   "trip_stopped": "Trip stopped",
-  "trip_history": "Past trips",
+  "trip_history": "Past / active trip(s)",
   "trip_no_history": "No past trips",
-  "trip_cave": "Cave"
+  "trip_cave": "Cave",
+  "trip_log_started": "Trip started: \"{title}\"",
+  "trip_log_ended": "Trip ended",
+  "trip_log_paused": "Trip paused",
+  "trip_log_resumed": "Trip resumed",
+  "trip_log_qr_scanned": "QR scanned: {label}",
+  "trip_log_document_added": "Document added: {label}"
 }

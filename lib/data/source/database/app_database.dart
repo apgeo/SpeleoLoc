@@ -333,6 +333,14 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  /// Returns all trip titles for [caveId].
+  Future<List<String>> getCaveTripTitles(int caveId) async {
+    final trips = await (select(caveTrips)
+          ..where((t) => t.caveId.equals(caveId)))
+        .get();
+    return trips.map((t) => t.title).toList();
+  }
+
   Future<void> linkDocumentToTrip(int docId, int tripId) async {
     await into(documentationFilesToCaveTrips).insertOnConflictUpdate(
       DocumentationFilesToCaveTripsCompanion.insert(

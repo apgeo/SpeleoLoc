@@ -94,8 +94,8 @@ class GenerationPreferences {
     this.pdfGridColumns = 4,
     this.pdfGridRows = 5,
     this.labelTemplate = '@place_title, @depth',
-    this.pdfQrPaddingH = 2.0,
-    this.pdfQrPaddingV = 2.0,
+    this.pdfQrPaddingH = 18.0,
+    this.pdfQrPaddingV = 18.0,
     this.caveTitle,
     this.areaTitle,
   });

@@ -597,32 +597,28 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
               }),
             ],
             const SizedBox(height: 4),
-            Row(children: [
-              Expanded(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.route, size: 14),
-                  label: Text(LocServ.inst.t('trip_view'), style: const TextStyle(fontSize: 11)),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.route, size: 28),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: LocServ.inst.t('trip_view'),
                   onPressed: () {
                     widget.onClose();
                     Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
                   },
                 ),
-              ),              
-              Expanded(
-                child: TextButton.icon(
+                IconButton(
                   icon: Icon(
                     isPaused ? Icons.play_circle : Icons.pause_circle,
-                    size: 14,
+                    size: 28,
                     color: isPaused ? Colors.green : Colors.orange,
                   ),
-                  // option if not enouch space for full label, using icon only
-                  label: Text(''),
-                  // label: Text(
-                  //   isPaused ? LocServ.inst.t('trip_resume') : LocServ.inst.t('trip_pause'),
-                  //   style: TextStyle(fontSize: 11, color: isPaused ? Colors.green : Colors.orange),
-                  // ),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: isPaused ? LocServ.inst.t('trip_resume') : LocServ.inst.t('trip_pause'),
                   onPressed: () {
                     if (isPaused) {
                       caveTripService.resumeTrip();
@@ -632,19 +628,18 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                     setState(() {});
                   },
                 ),
-              ),
-              Expanded(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.stop, size: 14, color: Colors.red),
-                  label: Text(LocServ.inst.t('trip_stop'), style: const TextStyle(fontSize: 11, color: Colors.red)),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                IconButton(
+                  icon: const Icon(Icons.stop, size: 28, color: Colors.red),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: LocServ.inst.t('trip_stop'),
                   onPressed: () async {
                     widget.onClose();
                     await caveTripService.stopTrip();
                   },
                 ),
-              ),
-            ]),
+              ],
+            ),
           ],
         ),
       ),

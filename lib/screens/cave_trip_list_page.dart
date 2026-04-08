@@ -62,7 +62,9 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     final caveName = _cave?.title ?? '';
     final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
     final defaultTitle = '$caveName $dateStr';
-    final controller = TextEditingController(text: defaultTitle);
+    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveId);
+    final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
+    final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -79,7 +81,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
       ),
     );
     if (confirmed == true && mounted) {
-      final title = controller.text.trim().isNotEmpty ? controller.text.trim() : defaultTitle;
+      final title = controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle;
       final tripId = await caveTripService.startTrip(widget.caveId, title);
       if (mounted) {
         await Navigator.pushNamed(context, caveTripRoute, arguments: tripId);

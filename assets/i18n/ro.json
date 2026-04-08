@@ -370,6 +370,7 @@
   "trip_resume": "Continuă",
   "trip_restart": "Repornește",
   "trip_log": "Jurnal",
+  "trip_log_title": "Jurnal",
   "trip_title_hint": "Titlul turei",
   "trip_name_dialog_title": "Începe o tură nouă",
   "trip_active": "Tură activă",
@@ -384,8 +385,14 @@
   "trip_deleted": "Tură ștearsă",
   "trip_stop_confirm": "Oprești înregistrarea acestei ture?",
   "trip_stopped": "Tură oprită",
-  "trip_history": "Ture trecute",
+  "trip_history": "Ture trecute / active",
   "trip_no_history": "Nicio tură trecută",
-  "trip_cave": "Peșteră"
+  "trip_cave": "Peșteră",
+  "trip_log_started": "Tură începută: \"{title}\"",
+  "trip_log_ended": "Tură terminată",
+  "trip_log_paused": "Tură în pauză",
+  "trip_log_resumed": "Tură reluată",
+  "trip_log_qr_scanned": "QR scanat: {label}",
+  "trip_log_document_added": "Document adăugat: {label}"
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 class CaveTripService {
   CaveTripService._();
@@ -39,14 +40,14 @@ class CaveTripService {
     );
     await _saveConfig(tripId);
     activeTripIdNotifier.value = tripId;
-    await _append(_logLine('Trip started: "$title"'), tripId);
+    await _append(_logLine(LocServ.inst.t('trip_log_started', {'title': title})), tripId);
     return tripId;
   }
 
   Future<void> stopTrip() async {
     final id = activeTripIdNotifier.value;
     if (id != null) {
-      await _append(_logLine('Trip ended'), id);
+      await _append(_logLine(LocServ.inst.t('trip_log_ended')), id);
       await appDatabase.endCaveTrip(id);
     }
     await _clearConfig();
@@ -57,13 +58,13 @@ class CaveTripService {
   void pauseTrip() {
     if (activeTripIdNotifier.value == null) return;
     isPausedNotifier.value = true;
-    _append(_logLine('Trip paused'), activeTripIdNotifier.value!);
+    _append(_logLine(LocServ.inst.t('trip_log_paused')), activeTripIdNotifier.value!);
   }
 
   void resumeTrip() {
     if (activeTripIdNotifier.value == null) return;
     isPausedNotifier.value = false;
-    _append(_logLine('Trip resumed'), activeTripIdNotifier.value!);
+    _append(_logLine(LocServ.inst.t('trip_log_resumed')), activeTripIdNotifier.value!);
   }
 
   Future<void> recordPoint(int cavePlaceId, {String? placeTitle}) async {
@@ -72,7 +73,7 @@ class CaveTripService {
     try {
       await appDatabase.insertTripPoint(tripId: id, cavePlaceId: cavePlaceId);
       final label = placeTitle != null ? '"$placeTitle"' : 'place #$cavePlaceId';
-      await _append(_logLine('QR scanned: $label'), id);
+      await _append(_logLine(LocServ.inst.t('trip_log_qr_scanned', {'label': label})), id);
     } catch (_) {}
   }
 
@@ -82,7 +83,7 @@ class CaveTripService {
     try {
       await appDatabase.linkDocumentToTrip(docId, id);
       final label = documentTitle != null ? '"$documentTitle"' : 'doc #$docId';
-      final sb = StringBuffer(_logLine('Document added: $label'));
+      final sb = StringBuffer(_logLine(LocServ.inst.t('trip_log_document_added', {'label': label})));
       if (textContent != null && textContent.trim().isNotEmpty) {
         sb.write('\n');
         for (final line in textContent.split('\n')) {
@@ -120,6 +121,25 @@ class CaveTripService {
     await (appDatabase.delete(appDatabase.configurations)
           ..where((c) => c.title.equals(activeTripConfigKey)))
         .go();
+  }
+
+  /// Regex to match a trailing ` [N]` suffix.
+  static final _suffixRe = RegExp(r'\s+\[\d+\]$');
+
+  /// Returns a unique trip title given [proposed] and [existingTitles].
+  ///
+  /// If [proposed] is not in [existingTitles], it is returned as-is.
+  /// Otherwise, strips any existing ` [N]` suffix from [proposed] to get a
+  /// base title, then appends ` [2]`, ` [3]`, … until a title is found that
+  /// is not in [existingTitles].
+  static String uniqueTripTitle(String proposed, List<String> existingTitles) {
+    final titles = existingTitles.toSet();
+    if (!titles.contains(proposed)) return proposed;
+    final base = proposed.replaceAll(_suffixRe, '');
+    for (int i = 2;; i++) {
+      final candidate = '$base [$i]';
+      if (!titles.contains(candidate)) return candidate;
+    }
   }
 }
 
