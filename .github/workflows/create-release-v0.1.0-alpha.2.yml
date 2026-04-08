@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - copilot/release-v0-1-0-alpha-2
+  workflow_dispatch:
 
 jobs:
   create-release:
