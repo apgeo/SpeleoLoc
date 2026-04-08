@@ -102,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4; // Schema version
+  int get schemaVersion => 5; // Schema version
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -253,6 +253,10 @@ class AppDatabase extends _$AppDatabase {
           )
         ''');
       }
+
+      if (from < 5) {
+        await customStatement('ALTER TABLE cave_trips ADD COLUMN log TEXT');
+      }
     },
   );
 
@@ -347,6 +351,32 @@ class AppDatabase extends _$AppDatabase {
         ..where((t) => t.caveTripId.equals(tripId))).go();
       await (delete(caveTrips)..where((t) => t.id.equals(tripId))).go();
     });
+  }
+
+  /// Atomically appends [formattedLine] to the trip log (reads then writes in a transaction).
+  Future<void> appendToTripLog(int tripId, String formattedLine) async {
+    await transaction(() async {
+      final trip = await (select(caveTrips)..where((t) => t.id.equals(tripId))).getSingleOrNull();
+      if (trip == null) return;
+      final current = trip.log ?? '';
+      final newLog = current.isEmpty ? formattedLine : '$current\n$formattedLine';
+      await (update(caveTrips)..where((t) => t.id.equals(tripId))).write(
+        CaveTripsCompanion(
+          log: Value(newLog),
+          updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        ),
+      );
+    });
+  }
+
+  /// Replaces the entire log for a trip (used by editable log page).
+  Future<void> updateTripLog(int tripId, String log) async {
+    await (update(caveTrips)..where((t) => t.id.equals(tripId))).write(
+      CaveTripsCompanion(
+        log: Value(log),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
   }
 
   Future<bool> _geofeatureExists(GeofeatureType type, int geofeatureId) async {

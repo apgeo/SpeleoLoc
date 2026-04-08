@@ -142,6 +142,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
           savedFile: savedFile,
           fileType: 'text_document',
           parentLink: parentLink,
+          textContent: content,
         );
       }
 

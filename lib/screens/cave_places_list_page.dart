@@ -129,6 +129,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   final _filterController = TextEditingController();
   bool _showFilter = false;
   bool _showManualQrSection = false;
+  bool _checkboxMode = false;
+  Set<int> _selectedPlaceIds = {};
   Map<int, String> _areaTitles = {};
   Map<int, String> _surfaceAreaTitles = {};
   int _pastTripsCount = 0;
@@ -229,14 +231,51 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     Navigator.pushNamed(context, caveTripRoute, arguments: id);
   }
 
-  Future<void> _printQRCodes() async {
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GeneratedQRCodeViewer(caveId: widget.caveId),
+  Future<void> _deleteSelectedPlaces() async {
+    final count = _selectedPlaceIds.length;
+    if (count == 0) return;
+    final confirmMsg = LocServ.inst.t('delete_selected_confirm').replaceAll('{count}', '$count');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('confirm')),
+        content: Text(confirmMsg),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+        ],
       ),
     );
+    if (confirmed == true) {
+      for (final id in _selectedPlaceIds) {
+        await cavePlaceRepository.deleteCavePlace(id);
+      }
+      setState(() {
+        _selectedPlaceIds.clear();
+        _checkboxMode = false;
+      });
+      await _loadCavePlaces();
+    }
+  }
+
+  Future<void> _printQRCodes() async {
+    if (!mounted) return;
+    if (_checkboxMode && _selectedPlaceIds.isNotEmpty) {
+      final selected = _filteredCavePlaces.where((cp) => _selectedPlaceIds.contains(cp.id)).toList();
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GeneratedQRCodeViewer(cavePlaces: selected),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GeneratedQRCodeViewer(caveId: widget.caveId),
+        ),
+      );
+    }
   }
 
   void _onScroll() {
@@ -486,7 +525,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         // Record trip point if there's an active trip for this cave
         final activeTripCaveId = await caveTripService.getActiveTripCaveId();
         if (activeTripCaveId == widget.caveId) {
-          await caveTripService.recordPoint(cavePlace.id);
+          await caveTripService.recordPoint(cavePlace.id, placeTitle: cavePlace.title);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
@@ -725,6 +764,47 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                           ),
                         ),
                       ),
+                      if (_checkboxMode) ...[
+                        IconButton(
+                          icon: const Icon(Icons.select_all, size: 20),
+                          tooltip: LocServ.inst.t('select_all'),
+                          onPressed: () {
+                            setState(() {
+                              _selectedPlaceIds = _filteredCavePlaces.map((cp) => cp.id).toSet();
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.flip, size: 20),
+                          tooltip: LocServ.inst.t('invert_selection'),
+                          onPressed: () {
+                            setState(() {
+                              final all = _filteredCavePlaces.map((cp) => cp.id).toSet();
+                              _selectedPlaceIds = all.difference(_selectedPlaceIds);
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_sweep, size: 20),
+                          tooltip: LocServ.inst.t('delete_selected'),
+                          color: Colors.red,
+                          onPressed: _selectedPlaceIds.isEmpty ? null : _deleteSelectedPlaces,
+                        ),
+                      ],
+                      IconButton(
+                        icon: Icon(
+                          Icons.checklist,
+                          size: 20,
+                          color: _checkboxMode ? Theme.of(context).colorScheme.primary : null,
+                        ),
+                        tooltip: LocServ.inst.t('select_mode'),
+                        onPressed: () {
+                          setState(() {
+                            _checkboxMode = !_checkboxMode;
+                            if (!_checkboxMode) _selectedPlaceIds.clear();
+                          });
+                        },
+                      ),
                       IconButton(
                         icon: const Icon(Icons.filter_list, size: 20),
                         tooltip: LocServ.inst.t('show_filter'),
@@ -763,6 +843,16 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                       children: [
                         InkWell(
                           onTap: () async {
+                            if (_checkboxMode) {
+                              setState(() {
+                                if (_selectedPlaceIds.contains(cp.id)) {
+                                  _selectedPlaceIds.remove(cp.id);
+                                } else {
+                                  _selectedPlaceIds.add(cp.id);
+                                }
+                              });
+                              return;
+                            }
                             final result = await Navigator.pushNamed(
                               context,
                               cavePlaceRoute,
@@ -777,6 +867,19 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                             padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
                             child: Row(
                               children: [
+                                if (_checkboxMode)
+                                  Checkbox(
+                                    value: _selectedPlaceIds.contains(cp.id),
+                                    onChanged: (v) {
+                                      setState(() {
+                                        if (v == true) {
+                                          _selectedPlaceIds.add(cp.id);
+                                        } else {
+                                          _selectedPlaceIds.remove(cp.id);
+                                        }
+                                      });
+                                    },
+                                  ),
                                 // Title takes all available space
                                 Expanded(
                                   child: Text(

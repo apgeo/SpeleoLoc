@@ -338,7 +338,13 @@ class _AppMenuDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12),
-
+            ValueListenableBuilder<int?>(
+              valueListenable: caveTripService.activeTripIdNotifier,
+              builder: (context, tripId, _) {
+                if (tripId == null) return const SizedBox.shrink();
+                return _ActiveTripCard(tripId: tripId, onClose: () => Navigator.pop(context));
+              },
+            ),
             // Screen-specific items
             if (screenItems.isNotEmpty) ...[
               ...screenItems.map((item) => ListTile(
@@ -379,16 +385,6 @@ class _AppMenuDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            const SizedBox(height: 12),
-            ValueListenableBuilder<int?>(
-              valueListenable: caveTripService.activeTripIdNotifier,
-              builder: (context, tripId, _) {
-                if (tripId == null) return const SizedBox.shrink();
-                return _ActiveTripCard(tripId: tripId, onClose: () => Navigator.pop(context));
-              },
-            ),
-
             const Spacer(),
             // Mode toggle icon + version label at bottom
             const Divider(),
@@ -511,6 +507,17 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
   void initState() {
     super.initState();
     _load();
+    caveTripService.isPausedNotifier.addListener(_onPauseChanged);
+  }
+
+  void _onPauseChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    caveTripService.isPausedNotifier.removeListener(_onPauseChanged);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -551,19 +558,31 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
   Widget build(BuildContext context) {
     final trip = _trip;
     if (trip == null) return const SizedBox.shrink();
+    final isPaused = caveTripService.isPausedNotifier.value;
     final dateTimeFormat = DateFormat('HH:mm');
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      color: Colors.green.withValues(alpha: 0.08),
+      color: isPaused
+          ? Colors.orange.withValues(alpha: 0.08)
+          : Colors.green.withValues(alpha: 0.08),
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Icon(Icons.fiber_manual_record, color: Colors.green, size: 10),
+              Icon(
+                isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
+                color: isPaused ? Colors.orange : Colors.green,
+                size: 10,
+              ),
               const SizedBox(width: 4),
               Expanded(child: Text(trip.title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+              if (isPaused)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Icon(Icons.pause_circle, size: 10, color: Colors.orange),
+                ),
             ]),
             if (_cave != null)
               Text(_cave!.title, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
@@ -587,6 +606,30 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                   onPressed: () {
                     widget.onClose();
                     Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
+                  },
+                ),
+              ),              
+              Expanded(
+                child: TextButton.icon(
+                  icon: Icon(
+                    isPaused ? Icons.play_circle : Icons.pause_circle,
+                    size: 14,
+                    color: isPaused ? Colors.green : Colors.orange,
+                  ),
+                  // option if not enouch space for full label, using icon only
+                  label: Text(''),
+                  // label: Text(
+                  //   isPaused ? LocServ.inst.t('trip_resume') : LocServ.inst.t('trip_pause'),
+                  //   style: TextStyle(fontSize: 11, color: isPaused ? Colors.green : Colors.orange),
+                  // ),
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  onPressed: () {
+                    if (isPaused) {
+                      caveTripService.resumeTrip();
+                    } else {
+                      caveTripService.pauseTrip();
+                    }
+                    setState(() {});
                   },
                 ),
               ),

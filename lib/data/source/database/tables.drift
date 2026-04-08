@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS cave_trips (
     description         TEXT,
     trip_started_at     INTEGER NOT NULL,
     trip_ended_at       INTEGER,
+    log                 TEXT,
     created_at          INTEGER,
     updated_at          INTEGER,
     deleted_at          INTEGER

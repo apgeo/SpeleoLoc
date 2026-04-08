@@ -4,6 +4,7 @@ import 'package:speleoloc/screens/cave_places_list_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/cave_trip_page.dart';
 import 'package:speleoloc/screens/cave_trip_list_page.dart';
+import 'package:speleoloc/screens/cave_trip_log_page.dart';
 // fix import as bellow
 // import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 import 'screens/general_data/raster_maps_page.dart';
@@ -65,6 +66,10 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         caveTripListRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as int?;
           return CaveTripListPage(caveId: args ?? 0);
+        },
+        caveTripLogRoute: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as int?;
+          return CaveTripLogPage(tripId: args ?? 0);
         },
       },
     );

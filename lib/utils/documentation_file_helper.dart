@@ -174,6 +174,7 @@ class DocumentationFileHelper {
     required SavedFileInfo savedFile,
     String? fileType,
     DocumentationGeofeatureLink? parentLink,
+    String? textContent,
   }) async {
     final effectiveType =
         fileType ?? detectFileType(savedFile.relativePath);
@@ -194,7 +195,7 @@ class DocumentationFileHelper {
       companion: companion,
       parentLink: parentLink,
     );
-    caveTripService.linkDocument(docId);
+    caveTripService.linkDocument(docId, documentTitle: title, textContent: textContent);
     return docId;
   }
 
