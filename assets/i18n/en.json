@@ -190,6 +190,7 @@
   "auto_save_on_switch": "Save the current point automatically when switching to another place or map?",
   "cave_place_deleted": "Cave place deleted",
   "cave_place_not_found": "Cave place not found",
+  "multiple_qr_matches": "Multiple places found",
   "invalid_qr_code_detail": "Invalid QR code (not parsable per rules)",
   "cave_place_identified": "Cave place has been identified",
   "manual_qr_search": "Manual QR code search",

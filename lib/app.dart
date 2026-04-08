@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/home_page.dart';
-import 'package:speleoloc/screens/cave_page.dart';
+import 'package:speleoloc/screens/cave_places_list_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 // fix import as bellow
 // import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
@@ -45,7 +45,7 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         homeRoute: (context) => const HomePage(title: appName),
         caveRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as int?;
-          return CavePage(caveId: args ?? 0);
+          return CavePlacesListPage(caveId: args ?? 0);
         },
         cavePlaceRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, int>?;

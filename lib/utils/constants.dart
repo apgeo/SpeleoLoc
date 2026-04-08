@@ -56,3 +56,6 @@ const String imageCompressionConfigKey = 'image_compression';
 
 // Compact nav bar state
 const String compactNavBarKey = 'compact_nav_bar';
+
+// QR code viewer: auto-refresh after returning from settings
+const bool autoRefreshQrAfterSettings = true;

@@ -1262,7 +1262,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                     if (mounted) setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
                   },
                   icon: Icon(
-                    _tapDefinesNewPoint ? Icons.add_location : Icons.touch_app,
+                    // tap_mode_define_point icon options to consider: move_up, edit_location, edit_location_alt, swipe_up, swipe_right_alt
+                    _tapDefinesNewPoint ? Icons.edit_location_alt : Icons.touch_app,
                     size: 20,
                     color: _tapDefinesNewPoint ? Colors.blue : Colors.orange,
                   ),

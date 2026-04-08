@@ -194,23 +194,25 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
                 IconButton(
                   icon: const Icon(Icons.qr_code),
                   tooltip: LocServ.inst.t('settings_qr_generation_settings'),
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const SettingsQrGenerationPage()),
                     );
+                    if (autoRefreshQrAfterSettings && mounted) _generate();
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.picture_as_pdf),
                   tooltip: LocServ.inst.t('settings_pdf_output_settings'),
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const SettingsPdfOutputPage()),
                     );
+                    if (autoRefreshQrAfterSettings && mounted) _generate();
                   },
                 ),
               ],

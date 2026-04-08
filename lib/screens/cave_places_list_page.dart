@@ -15,16 +15,16 @@ import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 
-class CavePage extends StatefulWidget {
-  const CavePage({super.key, required this.caveId});
+class CavePlacesListPage extends StatefulWidget {
+  const CavePlacesListPage({super.key, required this.caveId});
 
   final int caveId;
 
   @override
-  State<CavePage> createState() => _CavePageState();
+  State<CavePlacesListPage> createState() => _CavePlacesListPageState();
 }
 
-class _CavePageState extends State<CavePage> with AppBarMenuMixin<CavePage> {
+class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage> {
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
@@ -164,7 +164,7 @@ class _CavePageState extends State<CavePage> with AppBarMenuMixin<CavePage> {
   }
 
   Future<void> _loadCavePlaces() async {
-    print('[CavePage] _loadCavePlaces() for caveId ${widget.caveId}');
+    print('[CavePlacesListPage] _loadCavePlaces() for caveId ${widget.caveId}');
 
     _cavePlaces = await cavePlaceRepository.getCavePlaces(widget.caveId);
     await _loadCaveAreas();
@@ -468,7 +468,7 @@ class _CavePageState extends State<CavePage> with AppBarMenuMixin<CavePage> {
                       IconActionButton(
                         onPressed: () async {
                           // print('');
-                          // print('[CavePage] Navigating to CavePlacePage to add new place for caveId ${widget.caveId}');
+                          // print('[CavePlacesListPage] Navigating to CavePlacePage to add new place for caveId ${widget.caveId}');
 
                           final result = await Navigator.push(
                             context,
@@ -546,7 +546,7 @@ class _CavePageState extends State<CavePage> with AppBarMenuMixin<CavePage> {
                     ],
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 4),
 
                   if (_showManualQrSection)
                     Column(
@@ -584,7 +584,7 @@ class _CavePageState extends State<CavePage> with AppBarMenuMixin<CavePage> {
                       ],
                     ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Expanded(

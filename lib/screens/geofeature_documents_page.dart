@@ -489,12 +489,15 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   }
 
   /// Push a page and reload the document list when it returns `true`.
+  /// Also evicts cached file images so edited thumbnails refresh.
   Future<void> _navigateAndRefresh(Widget page) async {
     final result = await Navigator.push<bool?>(
       context,
       MaterialPageRoute(builder: (_) => page),
     );
     if (result == true) {
+      imageCache.clear();
+      imageCache.clearLiveImages();
       await _loadDocuments();
     }
   }

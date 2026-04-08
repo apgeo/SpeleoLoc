@@ -189,6 +189,7 @@
   "cave_place_not_found": "Locul din peșteră nu a fost găsit",
   "invalid_qr_code_detail": "Cod QR invalid (nu poate fi interpretat conform regulilor)",
   "cave_place_identified": "Locul din peșteră a fost identificat",
+  "multiple_qr_matches": "Mai multe locuri găsite",
   "manual_qr_search": "Căutare manuală cod QR",
   "show_filter": "Arată filtrul",
   "filter_cave_places": "Filtrează locurile după titlu sau număr cod QR",

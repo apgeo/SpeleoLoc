@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (
 	geofeature_type 		TEXT(10) NOT NULL, -- can be "cave", "cave_place", or "cave_area"; enforced by code 
 	documentation_file_id 	INTEGER NOT NULL REFERENCES documentation_files (id),
 
+	-- created_at 				INTEGER,
 	updated_at 				INTEGER,
 	deleted_at 				INTEGER,
 

@@ -8,6 +8,8 @@ import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
+import 'package:speleoloc/services/qr_code_lookup_service.dart';
+import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -313,6 +315,11 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: LocServ.inst.t('scan_qr'),
+            onPressed: _scanAndLookupQr,
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: LocServ.inst.t('add_new_cave'),
             onPressed: _addNewCave,
@@ -442,6 +449,61 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
       //   child: const Icon(Icons.add),
       // ),
     );
+  }
+
+  Future<void> _scanAndLookupQr() async {
+    final status = await Permission.camera.status;
+    PermissionStatus resultStatus = status;
+    if (!status.isGranted) {
+      resultStatus = await Permission.camera.request();
+    }
+    if (!mounted) return;
+
+    if (resultStatus.isGranted) {
+      String? scannedCode;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ScannerPage(onScan: (code) {
+            scannedCode = code;
+          }),
+        ),
+      );
+      if (scannedCode != null && mounted) {
+        final handler = QrCodeLookupHandler(QrCodeLookupService(appDatabase));
+        final result = await handler.handleScannedCode(context, scannedCode!);
+        if (result != null) _loadCaves();
+      }
+    } else if (resultStatus.isPermanentlyDenied) {
+      if (mounted) {
+        showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(LocServ.inst.t('permission_required')),
+            content: Text(LocServ.inst.t('camera_permission_required')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(LocServ.inst.t('cancel')),
+              ),
+              TextButton(
+                onPressed: () {
+                  openAppSettings();
+                  Navigator.of(context).pop();
+                },
+                child: Text(LocServ.inst.t('open_settings')),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LocServ.inst.t('camera_permission_denied'))),
+        );
+      }
+    }
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {

@@ -55,3 +55,4 @@ app.*.map.json
 # Keep test fixtures tracked, ignore only generated app test outputs
 /test_data/app_tests/
 
+.github/

@@ -23,25 +23,6 @@ class _ScannerPageState extends State<ScannerPage>
     super.dispose();
   }
 
-  // void initDatabase() async {
-  //   // database = AppDatabase();
-
-  //     await database
-  //         .into(database.caves)
-  //         .insert(
-  //           CavesCompanion.insert(
-  //             title: 'P. Comana',
-  //             // areaTitle: Value('Persani')
-  //           ),
-  //         );
-  //     List<Cave> allItems = await database.select(database.caves).get();
-
-  //     await database.close();
-
-  //      // _controller.
-  //     print('caves in database: $allItems');
-  // }  
-  
   @override
   Widget build(BuildContext context) {
     // initDatabase();
