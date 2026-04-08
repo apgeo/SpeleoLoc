@@ -395,5 +395,7 @@
   "trip_log_paused": "Trip paused",
   "trip_log_resumed": "Trip resumed",
   "trip_log_qr_scanned": "QR scanned: {label}",
-  "trip_log_document_added": "Document added: {label}"
+  "trip_log_document_added": "Document added: {label}",
+  "trip_map_view": "Map view",
+  "no_raster_maps": "No raster maps available"
 }

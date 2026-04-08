@@ -393,6 +393,8 @@
   "trip_log_paused": "Tură în pauză",
   "trip_log_resumed": "Tură reluată",
   "trip_log_qr_scanned": "QR scanat: {label}",
-  "trip_log_document_added": "Document adăugat: {label}"
+  "trip_log_document_added": "Document adăugat: {label}",
+  "trip_map_view": "Vedere hartă",
+  "no_raster_maps": "Nu există hărți raster"
 }
 

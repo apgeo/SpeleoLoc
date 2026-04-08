@@ -1,7 +1,9 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 /// Helper class that builds the overlay widgets (marker dots, labels, pulse
 /// animation) for [RasterMapPlacePointEditor].
@@ -481,4 +483,157 @@ class RasterMapMarkerBuilder {
     }
     return keys;
   }
+
+  /// Build the trip route overlay: lines between consecutive trip points,
+  /// directional arrows at the midpoint of each line, and incremental
+  /// numbered labels next to each point.
+  static List<Widget> buildTripOverlay({
+    required TripOverlayData tripOverlay,
+    required List<CavePlaceWithDefinition> definitions,
+    required PhotoViewControllerValue controllerValue,
+  }) {
+    final List<Widget> widgets = [];
+
+    // Build a map from cavePlaceId -> image (x, y)
+    final Map<int, Offset> coordsById = {};
+    for (final cpwd in definitions) {
+      final def = cpwd.definition;
+      if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
+        coordsById[cpwd.cavePlace.id] = Offset(
+          def.xCoordinate!.toDouble(),
+          def.yCoordinate!.toDouble(),
+        );
+      }
+    }
+
+    // Resolve ordered trip points to viewport coordinates
+    final List<Offset?> imagePoints = [];
+    for (final placeId in tripOverlay.orderedCavePlaceIds) {
+      imagePoints.add(coordsById[placeId]);
+    }
+
+    // Draw lines + arrows between consecutive points that both have coords
+    for (int i = 0; i < imagePoints.length - 1; i++) {
+      final from = imagePoints[i];
+      final to = imagePoints[i + 1];
+      if (from == null || to == null) continue;
+
+      final vpFrom = imageToViewport(from.dx, from.dy, controllerValue);
+      final vpTo = imageToViewport(to.dx, to.dy, controllerValue);
+
+      // Line + arrow via CustomPaint
+      widgets.add(
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _TripRoutePainter(
+                from: vpFrom,
+                to: vpTo,
+                color: tripOverlay.routeColor,
+                strokeWidth: tripOverlay.routeLineWidth,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Draw incremental numbers next to each point
+    for (int i = 0; i < imagePoints.length; i++) {
+      final pt = imagePoints[i];
+      if (pt == null) continue;
+      final vp = imageToViewport(pt.dx, pt.dy, controllerValue);
+
+      widgets.add(
+        Positioned(
+          left: vp.dx - 20,
+          top: vp.dy - 20,
+          child: IgnorePointer(
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: tripOverlay.routeColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.0),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${i + 1}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: tripOverlay.numberFontSize * 0.75,
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+}
+
+/// Custom painter that draws a line and a directional arrow at the midpoint.
+class _TripRoutePainter extends CustomPainter {
+  final Offset from;
+  final Offset to;
+  final Color color;
+  final double strokeWidth;
+
+  _TripRoutePainter({
+    required this.from,
+    required this.to,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // Draw the line
+    canvas.drawLine(from, to, paint);
+
+    // Draw an arrow at the midpoint
+    final mid = Offset((from.dx + to.dx) / 2, (from.dy + to.dy) / 2);
+    final angle = math.atan2(to.dy - from.dy, to.dx - from.dx);
+    const arrowLength = 10.0;
+    const arrowAngle = 0.5; // ~28.6 degrees
+
+    final arrowP1 = Offset(
+      mid.dx - arrowLength * math.cos(angle - arrowAngle),
+      mid.dy - arrowLength * math.sin(angle - arrowAngle),
+    );
+    final arrowP2 = Offset(
+      mid.dx - arrowLength * math.cos(angle + arrowAngle),
+      mid.dy - arrowLength * math.sin(angle + arrowAngle),
+    );
+
+    final arrowPaint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..moveTo(mid.dx, mid.dy)
+      ..lineTo(arrowP1.dx, arrowP1.dy)
+      ..lineTo(arrowP2.dx, arrowP2.dy)
+      ..close();
+    canvas.drawPath(path, arrowPaint);
+  }
+
+  @override
+  bool shouldRepaint(_TripRoutePainter oldDelegate) =>
+      from != oldDelegate.from ||
+      to != oldDelegate.to ||
+      color != oldDelegate.color ||
+      strokeWidth != oldDelegate.strokeWidth;
 }

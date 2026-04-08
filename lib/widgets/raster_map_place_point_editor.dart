@@ -19,6 +19,34 @@ import 'package:speleoloc/widgets/add_cave_place_popup.dart';
 // cache functions from this file continue to work without changes.
 export 'package:speleoloc/widgets/raster_map_image_cache.dart';
 
+/// Trip overlay data for displaying trip route on a raster map.
+///
+/// Contains the ordered sequence of cave place IDs visited during a trip.
+/// The editor uses this together with [CavePlaceWithDefinition] data to
+/// draw lines between consecutive points, direction arrows, and incremental
+/// numbering.
+class TripOverlayData {
+  /// Ordered list of cave place IDs in the order they were visited.
+  /// A place may appear more than once if revisited during the trip.
+  final List<int> orderedCavePlaceIds;
+
+  /// Line/arrow color for the trip route.
+  final Color routeColor;
+
+  /// Line width for the trip route.
+  final double routeLineWidth;
+
+  /// Size of the incremental number labels.
+  final double numberFontSize;
+
+  const TripOverlayData({
+    required this.orderedCavePlaceIds,
+    this.routeColor = Colors.blue,
+    this.routeLineWidth = 2.5,
+    this.numberFontSize = 12.0,
+  });
+}
+
 
 /// A reusable widget that encapsulates PhotoView-based image display,
 /// tapping to select a point (image-space coordinates), zoom/pan controls
@@ -208,6 +236,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.onCavePlaceAdded,
     this.onSaveDefinitionRequested,
     this.caveId,
+    this.tripOverlay,
   });
 
   final File imageFile;
@@ -285,6 +314,11 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// Cave id — needed for the add-cave-place popup to know which cave to add
   /// a place to. Only required when [onCavePlaceAdded] is provided.
   final int? caveId;
+
+  /// Optional trip overlay data. When provided, the editor draws the trip
+  /// route (lines, direction arrows, and incremental point numbers) on top
+  /// of the raster map.
+  final TripOverlayData? tripOverlay;
 
   @override
   State<RasterMapPlacePointEditor> createState() =>
@@ -1191,6 +1225,15 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                         primaryColor: Theme.of(context).colorScheme.primary,
                       );
                       if (pulseWidget != null) overlay.add(pulseWidget);
+
+                      // Trip route overlay (lines, arrows, numbers)
+                      if (widget.tripOverlay != null) {
+                        overlay.addAll(RasterMapMarkerBuilder.buildTripOverlay(
+                          tripOverlay: widget.tripOverlay!,
+                          definitions: widget.cavePlacesWithDefinitions,
+                          controllerValue: controllerValue,
+                        ));
+                      }
 
                       return Stack(children: overlay);
                     },

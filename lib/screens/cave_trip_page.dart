@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 class CaveTripPage extends StatefulWidget {
   const CaveTripPage({super.key, required this.tripId});
@@ -19,6 +24,22 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
   Cave? _cave;
   List<CaveTripPoint> _points = [];
   Map<int, CavePlace> _placesById = {};
+
+  // Raster map state for the trip map view
+  List<RasterMap> _rasterMaps = [];
+  RasterMap? _selectedRasterMap;
+  List<CavePlaceWithDefinition> _placesWithDefs = [];
+  File? _rasterImageFile;
+  final Map<String, ImageProvider> _imageProviderCache = {};
+  final RasterMapPlacePointEditorController _editorController =
+      RasterMapPlacePointEditorController(
+    showLegend: false,
+    showZoomControls: true,
+    gestureZoomEnabled: true,
+  );
+
+  /// false = list view, true = map view
+  bool _showMapView = false;
 
   bool get _isActive => _trip?.tripEndedAt == null;
 
@@ -50,6 +71,8 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
   void dispose() {
     caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     caveTripService.isPausedNotifier.removeListener(_onTripStateChanged);
+    _editorController.detach();
+    _imageProviderCache.clear();
     super.dispose();
   }
 
@@ -77,12 +100,48 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
           .get();
       placesById = {for (var p in places) p.id: p};
     }
+
+    // Load raster maps for the cave
+    List<RasterMap> rasterMaps = [];
+    if (cave != null) {
+      rasterMaps = await rasterMapRepository.getRasterMaps(cave.id);
+    }
+
     if (mounted) {
       setState(() {
         _trip = trip;
         _cave = cave;
         _points = points;
         _placesById = placesById;
+        _rasterMaps = rasterMaps;
+      });
+      // Load definitions for the first raster map if available
+      if (_selectedRasterMap == null && rasterMaps.isNotEmpty) {
+        _selectedRasterMap = rasterMaps.first;
+        await _loadRasterMapData();
+      }
+    }
+  }
+
+  Future<void> _loadRasterMapData() async {
+    final rm = _selectedRasterMap;
+    final cave = _cave;
+    if (rm == null || cave == null) return;
+
+    final defs = await rasterMapRepository
+        .getCavePlacesWithDefinitionsForRasterMap(cave.id, rm.id);
+
+    File? imageFile;
+    try {
+      final path = await getDocumentsFilePath(rm.fileName);
+      final f = File(path);
+      if (f.existsSync()) imageFile = f;
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _placesWithDefs = defs;
+        _rasterImageFile = imageFile;
       });
     }
   }
@@ -265,108 +324,191 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(trip.title),
-        actions: [buildAppBarMenuButton()],
+        actions: [
+          // Toggle between list and map view
+          if (_rasterMaps.isNotEmpty)
+            IconButton(
+              icon: Icon(_showMapView ? Icons.list : Icons.map),
+              tooltip: _showMapView
+                  ? LocServ.inst.t('trip_points')
+                  : LocServ.inst.t('trip_map_view'),
+              onPressed: () => setState(() => _showMapView = !_showMapView),
+            ),
+          buildAppBarMenuButton(),
+        ],
       ),
       body: Column(
         children: [
           _buildActionToolbar(),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_cave != null)
-                          Row(children: [
-                            const Icon(Icons.location_on, size: 16),
-                            const SizedBox(width: 4),
-                            Text(_cave!.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ]),
-                        const SizedBox(height: 4),
-                        Text('${LocServ.inst.t('trip_started')}: ${dateTimeFormat.format(startDt)}'),
-                        if (endDt != null)
-                          Text('${LocServ.inst.t('trip_ended')}: ${dateTimeFormat.format(endDt)}'),
-                        Text('${LocServ.inst.t('trip_duration')}: ${_formatDuration(trip.tripStartedAt, trip.tripEndedAt)}'),
-                        Text('${LocServ.inst.t('trip_points')}: ${_points.length}'),
-                        if (_isActive) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isPaused
-                                      ? Colors.orange.withValues(alpha: 0.15)
-                                      : Colors.green.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
-                                      color: isPaused ? Colors.orange : Colors.green,
-                                      size: 12,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      isPaused
-                                          ? LocServ.inst.t('trip_paused')
-                                          : LocServ.inst.t('trip_active'),
-                                      style: TextStyle(
-                                        color: isPaused ? Colors.orange : Colors.green,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_points.isEmpty)
-                  Center(child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(LocServ.inst.t('trip_no_points'), style: TextStyle(color: Colors.grey[600])),
-                  ))
-                else
-                  ...List.generate(_points.length, (i) {
-                    final pt = _points[i];
-                    final place = _placesById[pt.cavePlaceId];
-                    final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
-                    return ListTile(
-                      leading: CircleAvatar(
-                        radius: 14,
-                        child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
-                      ),
-                      title: Text(place?.title ?? '#${pt.cavePlaceId}'),
-                      subtitle: Text(dateTimeFormat.format(dt)),
-                      trailing: place?.depthInCave != null
-                          ? Text(
-                              '${place!.depthInCave! > 0 ? '+' : ''}${place.depthInCave}m',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            )
-                          : null,
-                      onTap: place == null
-                          ? null
-                          : () => Navigator.pushNamed(context, cavePlaceRoute,
-                              arguments: {'caveId': place.caveId, 'cavePlaceId': place.id}),
-                    );
-                  }),
-              ],
+            child: _showMapView ? _buildMapView() : _buildListView(
+              trip: trip,
+              isPaused: isPaused,
+              dateTimeFormat: dateTimeFormat,
+              startDt: startDt,
+              endDt: endDt,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildListView({
+    required CaveTrip trip,
+    required bool isPaused,
+    required DateFormat dateTimeFormat,
+    required DateTime startDt,
+    required DateTime? endDt,
+  }) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_cave != null)
+                  Row(children: [
+                    const Icon(Icons.location_on, size: 16),
+                    const SizedBox(width: 4),
+                    Text(_cave!.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ]),
+                const SizedBox(height: 4),
+                Text('${LocServ.inst.t('trip_started')}: ${dateTimeFormat.format(startDt)}'),
+                if (endDt != null)
+                  Text('${LocServ.inst.t('trip_ended')}: ${dateTimeFormat.format(endDt)}'),
+                Text('${LocServ.inst.t('trip_duration')}: ${_formatDuration(trip.tripStartedAt, trip.tripEndedAt)}'),
+                Text('${LocServ.inst.t('trip_points')}: ${_points.length}'),
+                if (_isActive) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isPaused
+                              ? Colors.orange.withValues(alpha: 0.15)
+                              : Colors.green.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
+                              color: isPaused ? Colors.orange : Colors.green,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isPaused
+                                  ? LocServ.inst.t('trip_paused')
+                                  : LocServ.inst.t('trip_active'),
+                              style: TextStyle(
+                                color: isPaused ? Colors.orange : Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_points.isEmpty)
+          Center(child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(LocServ.inst.t('trip_no_points'), style: TextStyle(color: Colors.grey[600])),
+          ))
+        else
+          ...List.generate(_points.length, (i) {
+            final pt = _points[i];
+            final place = _placesById[pt.cavePlaceId];
+            final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
+            return ListTile(
+              leading: CircleAvatar(
+                radius: 14,
+                child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
+              ),
+              title: Text(place?.title ?? '#${pt.cavePlaceId}'),
+              subtitle: Text(dateTimeFormat.format(dt)),
+              trailing: place?.depthInCave != null
+                  ? Text(
+                      '${place!.depthInCave! > 0 ? '+' : ''}${place.depthInCave}m',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    )
+                  : null,
+              onTap: place == null
+                  ? null
+                  : () => Navigator.pushNamed(context, cavePlaceRoute,
+                      arguments: {'caveId': place.caveId, 'cavePlaceId': place.id}),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _buildMapView() {
+    if (_rasterMaps.isEmpty) {
+      return Center(child: Text(LocServ.inst.t('no_raster_maps')));
+    }
+
+    final imageFile = _rasterImageFile;
+
+    return Column(
+      children: [
+        // Raster map selector (when multiple maps exist)
+        if (_rasterMaps.length > 1)
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: _rasterMaps.length,
+              itemBuilder: (context, i) {
+                final rm = _rasterMaps[i];
+                final isSelected = rm.id == _selectedRasterMap?.id;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: ChoiceChip(
+                    label: Text(rm.title, style: const TextStyle(fontSize: 11)),
+                    selected: isSelected,
+                    onSelected: (_) async {
+                      setState(() => _selectedRasterMap = rm);
+                      await _loadRasterMapData();
+                    },
+                    visualDensity: VisualDensity.compact,
+                  ),
+                );
+              },
+            ),
+          ),
+        // Map editor
+        Expanded(
+          child: imageFile != null
+              ? RasterMapPlacePointEditor(
+                  controller: _editorController,
+                  imageFile: imageFile,
+                  imageProvider: _imageProviderCache[imageFile.path] ??= FileImage(imageFile),
+                  cavePlacesWithDefinitions: _placesWithDefs,
+                  isReadonly: true,
+                  tripOverlay: _points.isNotEmpty
+                      ? TripOverlayData(
+                          orderedCavePlaceIds: _points.map((p) => p.cavePlaceId).toList(),
+                        )
+                      : null,
+                )
+              : Center(child: Text(LocServ.inst.t('no_raster_maps'))),
+        ),
+      ],
     );
   }
 }
