@@ -168,3 +168,39 @@ CREATE TABLE IF NOT EXISTS surface_areas (
 	updated_at 		INTEGER,
 	deleted_at 		INTEGER
 );
+
+-- Table: cave_trips
+CREATE TABLE IF NOT EXISTS cave_trips (
+    id                  INTEGER   PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+    cave_id             INTEGER NOT NULL REFERENCES caves (id),
+    title               TEXT(255) NOT NULL,
+    description         TEXT,
+    trip_started_at     INTEGER NOT NULL,
+    trip_ended_at       INTEGER,
+    created_at          INTEGER,
+    updated_at          INTEGER,
+    deleted_at          INTEGER
+);
+
+-- Table: cave_trip_points
+CREATE TABLE IF NOT EXISTS cave_trip_points (
+    id              INTEGER   PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+    cave_trip_id    INTEGER NOT NULL REFERENCES cave_trips (id),
+    cave_place_id   INTEGER NOT NULL REFERENCES cave_places (id),
+    scanned_at      INTEGER NOT NULL,
+    notes           TEXT,
+    created_at      INTEGER,
+    updated_at      INTEGER,
+    deleted_at      INTEGER,
+    UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK
+);
+
+-- Table: documentation_files_to_cave_trips
+CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
+    id                      INTEGER   PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+    documentation_file_id   INTEGER NOT NULL REFERENCES documentation_files (id),
+    cave_trip_id            INTEGER NOT NULL REFERENCES cave_trips (id),
+    created_at              INTEGER,
+    deleted_at              INTEGER,
+    UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK
+);

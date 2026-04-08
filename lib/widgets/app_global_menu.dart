@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -335,6 +338,7 @@ class _AppMenuDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12),
+
             // Screen-specific items
             if (screenItems.isNotEmpty) ...[
               ...screenItems.map((item) => ListTile(
@@ -375,6 +379,16 @@ class _AppMenuDrawer extends StatelessWidget {
                 ],
               ),
             ),
+
+            const SizedBox(height: 12),
+            ValueListenableBuilder<int?>(
+              valueListenable: caveTripService.activeTripIdNotifier,
+              builder: (context, tripId, _) {
+                if (tripId == null) return const SizedBox.shrink();
+                return _ActiveTripCard(tripId: tripId, onClose: () => Navigator.pop(context));
+              },
+            ),
+
             const Spacer(),
             // Mode toggle icon + version label at bottom
             const Divider(),
@@ -474,5 +488,123 @@ class _AppMenuDrawer extends StatelessWidget {
         ),
       );
     }
+  }
+}
+
+class _ActiveTripCard extends StatefulWidget {
+  final int tripId;
+  final VoidCallback onClose;
+  const _ActiveTripCard({required this.tripId, required this.onClose});
+
+  @override
+  State<_ActiveTripCard> createState() => _ActiveTripCardState();
+}
+
+class _ActiveTripCardState extends State<_ActiveTripCard> {
+  CaveTrip? _trip;
+  Cave? _cave;
+  List<CaveTripPoint> _points = [];
+  Map<int, CavePlace> _placesById = {};
+  int _totalPoints = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final trip = await (appDatabase.select(appDatabase.caveTrips)
+          ..where((t) => t.id.equals(widget.tripId)))
+        .getSingleOrNull();
+    if (trip == null) return;
+    final cave = await (appDatabase.select(appDatabase.caves)
+          ..where((c) => c.id.equals(trip.caveId)))
+        .getSingleOrNull();
+    final points = await appDatabase.getTripPoints(widget.tripId);
+    final last5 = points.reversed.take(5).toList().reversed.toList();
+    final placeIds = last5.map((p) => p.cavePlaceId).toSet().toList();
+    Map<int, CavePlace> placesById = {};
+    if (placeIds.isNotEmpty) {
+      final places = await (appDatabase.select(appDatabase.cavePlaces)
+            ..where((cp) => cp.id.isIn(placeIds)))
+          .get();
+      placesById = {for (var p in places) p.id: p};
+    }
+    if (mounted) setState(() {
+      _trip = trip;
+      _cave = cave;
+      _points = last5;
+      _placesById = placesById;
+      _totalPoints = points.length;
+    });
+  }
+
+  String _formatDuration(int startMs) {
+    final d = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(startMs));
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = _trip;
+    if (trip == null) return const SizedBox.shrink();
+    final dateTimeFormat = DateFormat('HH:mm');
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: Colors.green.withValues(alpha: 0.08),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.fiber_manual_record, color: Colors.green, size: 10),
+              const SizedBox(width: 4),
+              Expanded(child: Text(trip.title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+            ]),
+            if (_cave != null)
+              Text(_cave!.title, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+            Text('${_formatDuration(trip.tripStartedAt)} · $_totalPoints pts', style: const TextStyle(fontSize: 10)),
+            if (_points.isNotEmpty) ...[
+              const Divider(height: 8),
+              ..._points.map((pt) {
+                final place = _placesById[pt.cavePlaceId];
+                final time = dateTimeFormat.format(DateTime.fromMillisecondsSinceEpoch(pt.scannedAt));
+                return Text('$time ${place?.title ?? '#${pt.cavePlaceId}'}',
+                    style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis);
+              }),
+            ],
+            const SizedBox(height: 4),
+            Row(children: [
+              Expanded(
+                child: TextButton.icon(
+                  icon: const Icon(Icons.route, size: 14),
+                  label: Text(LocServ.inst.t('trip_view'), style: const TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  onPressed: () {
+                    widget.onClose();
+                    Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
+                  },
+                ),
+              ),
+              Expanded(
+                child: TextButton.icon(
+                  icon: const Icon(Icons.stop, size: 14, color: Colors.red),
+                  label: Text(LocServ.inst.t('trip_stop'), style: const TextStyle(fontSize: 11, color: Colors.red)),
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  onPressed: () async {
+                    widget.onClose();
+                    await caveTripService.stopTrip();
+                  },
+                ),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
   }
 }

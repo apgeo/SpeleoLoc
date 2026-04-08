@@ -5294,6 +5294,8 @@ class DocumentationFilesToGeofeature extends DataClass
 
   /// can be "cave", "cave_place", or "cave_area"; enforced by code
   final int documentationFileId;
+
+  /// created_at 				INTEGER,
   final int? updatedAt;
   final int? deletedAt;
   const DocumentationFilesToGeofeature({
@@ -5887,6 +5889,1476 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
   }
 }
 
+class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  CaveTrips(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
+  );
+  static const VerificationMeta _caveIdMeta = const VerificationMeta('caveId');
+  late final GeneratedColumn<int> caveId = GeneratedColumn<int>(
+    'cave_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES caves(id)',
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _tripStartedAtMeta = const VerificationMeta(
+    'tripStartedAt',
+  );
+  late final GeneratedColumn<int> tripStartedAt = GeneratedColumn<int>(
+    'trip_started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _tripEndedAtMeta = const VerificationMeta(
+    'tripEndedAt',
+  );
+  late final GeneratedColumn<int> tripEndedAt = GeneratedColumn<int>(
+    'trip_ended_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    caveId,
+    title,
+    description,
+    tripStartedAt,
+    tripEndedAt,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cave_trips';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CaveTrip> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('cave_id')) {
+      context.handle(
+        _caveIdMeta,
+        caveId.isAcceptableOrUnknown(data['cave_id']!, _caveIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_caveIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('trip_started_at')) {
+      context.handle(
+        _tripStartedAtMeta,
+        tripStartedAt.isAcceptableOrUnknown(
+          data['trip_started_at']!,
+          _tripStartedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_tripStartedAtMeta);
+    }
+    if (data.containsKey('trip_ended_at')) {
+      context.handle(
+        _tripEndedAtMeta,
+        tripEndedAt.isAcceptableOrUnknown(
+          data['trip_ended_at']!,
+          _tripEndedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CaveTrip map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CaveTrip(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      caveId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cave_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      tripStartedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}trip_started_at'],
+      )!,
+      tripEndedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}trip_ended_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  CaveTrips createAlias(String alias) {
+    return CaveTrips(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class CaveTrip extends DataClass implements Insertable<CaveTrip> {
+  final int id;
+  final int caveId;
+  final String title;
+  final String? description;
+  final int tripStartedAt;
+  final int? tripEndedAt;
+  final int? createdAt;
+  final int? updatedAt;
+  final int? deletedAt;
+  const CaveTrip({
+    required this.id,
+    required this.caveId,
+    required this.title,
+    this.description,
+    required this.tripStartedAt,
+    this.tripEndedAt,
+    this.createdAt,
+    this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['cave_id'] = Variable<int>(caveId);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['trip_started_at'] = Variable<int>(tripStartedAt);
+    if (!nullToAbsent || tripEndedAt != null) {
+      map['trip_ended_at'] = Variable<int>(tripEndedAt);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    return map;
+  }
+
+  CaveTripsCompanion toCompanion(bool nullToAbsent) {
+    return CaveTripsCompanion(
+      id: Value(id),
+      caveId: Value(caveId),
+      title: Value(title),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      tripStartedAt: Value(tripStartedAt),
+      tripEndedAt: tripEndedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tripEndedAt),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory CaveTrip.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CaveTrip(
+      id: serializer.fromJson<int>(json['id']),
+      caveId: serializer.fromJson<int>(json['cave_id']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String?>(json['description']),
+      tripStartedAt: serializer.fromJson<int>(json['trip_started_at']),
+      tripEndedAt: serializer.fromJson<int?>(json['trip_ended_at']),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      updatedAt: serializer.fromJson<int?>(json['updated_at']),
+      deletedAt: serializer.fromJson<int?>(json['deleted_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'cave_id': serializer.toJson<int>(caveId),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String?>(description),
+      'trip_started_at': serializer.toJson<int>(tripStartedAt),
+      'trip_ended_at': serializer.toJson<int?>(tripEndedAt),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'updated_at': serializer.toJson<int?>(updatedAt),
+      'deleted_at': serializer.toJson<int?>(deletedAt),
+    };
+  }
+
+  CaveTrip copyWith({
+    int? id,
+    int? caveId,
+    String? title,
+    Value<String?> description = const Value.absent(),
+    int? tripStartedAt,
+    Value<int?> tripEndedAt = const Value.absent(),
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> updatedAt = const Value.absent(),
+    Value<int?> deletedAt = const Value.absent(),
+  }) => CaveTrip(
+    id: id ?? this.id,
+    caveId: caveId ?? this.caveId,
+    title: title ?? this.title,
+    description: description.present ? description.value : this.description,
+    tripStartedAt: tripStartedAt ?? this.tripStartedAt,
+    tripEndedAt: tripEndedAt.present ? tripEndedAt.value : this.tripEndedAt,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  CaveTrip copyWithCompanion(CaveTripsCompanion data) {
+    return CaveTrip(
+      id: data.id.present ? data.id.value : this.id,
+      caveId: data.caveId.present ? data.caveId.value : this.caveId,
+      title: data.title.present ? data.title.value : this.title,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      tripStartedAt: data.tripStartedAt.present
+          ? data.tripStartedAt.value
+          : this.tripStartedAt,
+      tripEndedAt: data.tripEndedAt.present
+          ? data.tripEndedAt.value
+          : this.tripEndedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaveTrip(')
+          ..write('id: $id, ')
+          ..write('caveId: $caveId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('tripStartedAt: $tripStartedAt, ')
+          ..write('tripEndedAt: $tripEndedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    caveId,
+    title,
+    description,
+    tripStartedAt,
+    tripEndedAt,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CaveTrip &&
+          other.id == this.id &&
+          other.caveId == this.caveId &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.tripStartedAt == this.tripStartedAt &&
+          other.tripEndedAt == this.tripEndedAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
+  final Value<int> id;
+  final Value<int> caveId;
+  final Value<String> title;
+  final Value<String?> description;
+  final Value<int> tripStartedAt;
+  final Value<int?> tripEndedAt;
+  final Value<int?> createdAt;
+  final Value<int?> updatedAt;
+  final Value<int?> deletedAt;
+  const CaveTripsCompanion({
+    this.id = const Value.absent(),
+    this.caveId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.tripStartedAt = const Value.absent(),
+    this.tripEndedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  });
+  CaveTripsCompanion.insert({
+    this.id = const Value.absent(),
+    required int caveId,
+    required String title,
+    this.description = const Value.absent(),
+    required int tripStartedAt,
+    this.tripEndedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  }) : caveId = Value(caveId),
+       title = Value(title),
+       tripStartedAt = Value(tripStartedAt);
+  static Insertable<CaveTrip> custom({
+    Expression<int>? id,
+    Expression<int>? caveId,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<int>? tripStartedAt,
+    Expression<int>? tripEndedAt,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? deletedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (caveId != null) 'cave_id': caveId,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (tripStartedAt != null) 'trip_started_at': tripStartedAt,
+      if (tripEndedAt != null) 'trip_ended_at': tripEndedAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+    });
+  }
+
+  CaveTripsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? caveId,
+    Value<String>? title,
+    Value<String?>? description,
+    Value<int>? tripStartedAt,
+    Value<int?>? tripEndedAt,
+    Value<int?>? createdAt,
+    Value<int?>? updatedAt,
+    Value<int?>? deletedAt,
+  }) {
+    return CaveTripsCompanion(
+      id: id ?? this.id,
+      caveId: caveId ?? this.caveId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      tripStartedAt: tripStartedAt ?? this.tripStartedAt,
+      tripEndedAt: tripEndedAt ?? this.tripEndedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (caveId.present) {
+      map['cave_id'] = Variable<int>(caveId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (tripStartedAt.present) {
+      map['trip_started_at'] = Variable<int>(tripStartedAt.value);
+    }
+    if (tripEndedAt.present) {
+      map['trip_ended_at'] = Variable<int>(tripEndedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaveTripsCompanion(')
+          ..write('id: $id, ')
+          ..write('caveId: $caveId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('tripStartedAt: $tripStartedAt, ')
+          ..write('tripEndedAt: $tripEndedAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class CaveTripPoints extends Table
+    with TableInfo<CaveTripPoints, CaveTripPoint> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  CaveTripPoints(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
+  );
+  static const VerificationMeta _caveTripIdMeta = const VerificationMeta(
+    'caveTripId',
+  );
+  late final GeneratedColumn<int> caveTripId = GeneratedColumn<int>(
+    'cave_trip_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES cave_trips(id)',
+  );
+  static const VerificationMeta _cavePlaceIdMeta = const VerificationMeta(
+    'cavePlaceId',
+  );
+  late final GeneratedColumn<int> cavePlaceId = GeneratedColumn<int>(
+    'cave_place_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES cave_places(id)',
+  );
+  static const VerificationMeta _scannedAtMeta = const VerificationMeta(
+    'scannedAt',
+  );
+  late final GeneratedColumn<int> scannedAt = GeneratedColumn<int>(
+    'scanned_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    caveTripId,
+    cavePlaceId,
+    scannedAt,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cave_trip_points';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CaveTripPoint> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('cave_trip_id')) {
+      context.handle(
+        _caveTripIdMeta,
+        caveTripId.isAcceptableOrUnknown(
+          data['cave_trip_id']!,
+          _caveTripIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_caveTripIdMeta);
+    }
+    if (data.containsKey('cave_place_id')) {
+      context.handle(
+        _cavePlaceIdMeta,
+        cavePlaceId.isAcceptableOrUnknown(
+          data['cave_place_id']!,
+          _cavePlaceIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_cavePlaceIdMeta);
+    }
+    if (data.containsKey('scanned_at')) {
+      context.handle(
+        _scannedAtMeta,
+        scannedAt.isAcceptableOrUnknown(data['scanned_at']!, _scannedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scannedAtMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {caveTripId, cavePlaceId, scannedAt},
+  ];
+  @override
+  CaveTripPoint map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CaveTripPoint(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      caveTripId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cave_trip_id'],
+      )!,
+      cavePlaceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cave_place_id'],
+      )!,
+      scannedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scanned_at'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  CaveTripPoints createAlias(String alias) {
+    return CaveTripPoints(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'UNIQUE(cave_trip_id, cave_place_id, scanned_at)ON CONFLICT ROLLBACK',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
+  final int id;
+  final int caveTripId;
+  final int cavePlaceId;
+  final int scannedAt;
+  final String? notes;
+  final int? createdAt;
+  final int? updatedAt;
+  final int? deletedAt;
+  const CaveTripPoint({
+    required this.id,
+    required this.caveTripId,
+    required this.cavePlaceId,
+    required this.scannedAt,
+    this.notes,
+    this.createdAt,
+    this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['cave_trip_id'] = Variable<int>(caveTripId);
+    map['cave_place_id'] = Variable<int>(cavePlaceId);
+    map['scanned_at'] = Variable<int>(scannedAt);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    return map;
+  }
+
+  CaveTripPointsCompanion toCompanion(bool nullToAbsent) {
+    return CaveTripPointsCompanion(
+      id: Value(id),
+      caveTripId: Value(caveTripId),
+      cavePlaceId: Value(cavePlaceId),
+      scannedAt: Value(scannedAt),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory CaveTripPoint.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CaveTripPoint(
+      id: serializer.fromJson<int>(json['id']),
+      caveTripId: serializer.fromJson<int>(json['cave_trip_id']),
+      cavePlaceId: serializer.fromJson<int>(json['cave_place_id']),
+      scannedAt: serializer.fromJson<int>(json['scanned_at']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      updatedAt: serializer.fromJson<int?>(json['updated_at']),
+      deletedAt: serializer.fromJson<int?>(json['deleted_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'cave_trip_id': serializer.toJson<int>(caveTripId),
+      'cave_place_id': serializer.toJson<int>(cavePlaceId),
+      'scanned_at': serializer.toJson<int>(scannedAt),
+      'notes': serializer.toJson<String?>(notes),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'updated_at': serializer.toJson<int?>(updatedAt),
+      'deleted_at': serializer.toJson<int?>(deletedAt),
+    };
+  }
+
+  CaveTripPoint copyWith({
+    int? id,
+    int? caveTripId,
+    int? cavePlaceId,
+    int? scannedAt,
+    Value<String?> notes = const Value.absent(),
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> updatedAt = const Value.absent(),
+    Value<int?> deletedAt = const Value.absent(),
+  }) => CaveTripPoint(
+    id: id ?? this.id,
+    caveTripId: caveTripId ?? this.caveTripId,
+    cavePlaceId: cavePlaceId ?? this.cavePlaceId,
+    scannedAt: scannedAt ?? this.scannedAt,
+    notes: notes.present ? notes.value : this.notes,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  CaveTripPoint copyWithCompanion(CaveTripPointsCompanion data) {
+    return CaveTripPoint(
+      id: data.id.present ? data.id.value : this.id,
+      caveTripId: data.caveTripId.present
+          ? data.caveTripId.value
+          : this.caveTripId,
+      cavePlaceId: data.cavePlaceId.present
+          ? data.cavePlaceId.value
+          : this.cavePlaceId,
+      scannedAt: data.scannedAt.present ? data.scannedAt.value : this.scannedAt,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaveTripPoint(')
+          ..write('id: $id, ')
+          ..write('caveTripId: $caveTripId, ')
+          ..write('cavePlaceId: $cavePlaceId, ')
+          ..write('scannedAt: $scannedAt, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    caveTripId,
+    cavePlaceId,
+    scannedAt,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CaveTripPoint &&
+          other.id == this.id &&
+          other.caveTripId == this.caveTripId &&
+          other.cavePlaceId == this.cavePlaceId &&
+          other.scannedAt == this.scannedAt &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class CaveTripPointsCompanion extends UpdateCompanion<CaveTripPoint> {
+  final Value<int> id;
+  final Value<int> caveTripId;
+  final Value<int> cavePlaceId;
+  final Value<int> scannedAt;
+  final Value<String?> notes;
+  final Value<int?> createdAt;
+  final Value<int?> updatedAt;
+  final Value<int?> deletedAt;
+  const CaveTripPointsCompanion({
+    this.id = const Value.absent(),
+    this.caveTripId = const Value.absent(),
+    this.cavePlaceId = const Value.absent(),
+    this.scannedAt = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  });
+  CaveTripPointsCompanion.insert({
+    this.id = const Value.absent(),
+    required int caveTripId,
+    required int cavePlaceId,
+    required int scannedAt,
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  }) : caveTripId = Value(caveTripId),
+       cavePlaceId = Value(cavePlaceId),
+       scannedAt = Value(scannedAt);
+  static Insertable<CaveTripPoint> custom({
+    Expression<int>? id,
+    Expression<int>? caveTripId,
+    Expression<int>? cavePlaceId,
+    Expression<int>? scannedAt,
+    Expression<String>? notes,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? deletedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (caveTripId != null) 'cave_trip_id': caveTripId,
+      if (cavePlaceId != null) 'cave_place_id': cavePlaceId,
+      if (scannedAt != null) 'scanned_at': scannedAt,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+    });
+  }
+
+  CaveTripPointsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? caveTripId,
+    Value<int>? cavePlaceId,
+    Value<int>? scannedAt,
+    Value<String?>? notes,
+    Value<int?>? createdAt,
+    Value<int?>? updatedAt,
+    Value<int?>? deletedAt,
+  }) {
+    return CaveTripPointsCompanion(
+      id: id ?? this.id,
+      caveTripId: caveTripId ?? this.caveTripId,
+      cavePlaceId: cavePlaceId ?? this.cavePlaceId,
+      scannedAt: scannedAt ?? this.scannedAt,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (caveTripId.present) {
+      map['cave_trip_id'] = Variable<int>(caveTripId.value);
+    }
+    if (cavePlaceId.present) {
+      map['cave_place_id'] = Variable<int>(cavePlaceId.value);
+    }
+    if (scannedAt.present) {
+      map['scanned_at'] = Variable<int>(scannedAt.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaveTripPointsCompanion(')
+          ..write('id: $id, ')
+          ..write('caveTripId: $caveTripId, ')
+          ..write('cavePlaceId: $cavePlaceId, ')
+          ..write('scannedAt: $scannedAt, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class DocumentationFilesToCaveTrips extends Table
+    with
+        TableInfo<DocumentationFilesToCaveTrips, DocumentationFilesToCaveTrip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  DocumentationFilesToCaveTrips(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
+  );
+  static const VerificationMeta _documentationFileIdMeta =
+      const VerificationMeta('documentationFileId');
+  late final GeneratedColumn<int> documentationFileId = GeneratedColumn<int>(
+    'documentation_file_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES documentation_files(id)',
+  );
+  static const VerificationMeta _caveTripIdMeta = const VerificationMeta(
+    'caveTripId',
+  );
+  late final GeneratedColumn<int> caveTripId = GeneratedColumn<int>(
+    'cave_trip_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES cave_trips(id)',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    documentationFileId,
+    caveTripId,
+    createdAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'documentation_files_to_cave_trips';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DocumentationFilesToCaveTrip> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('documentation_file_id')) {
+      context.handle(
+        _documentationFileIdMeta,
+        documentationFileId.isAcceptableOrUnknown(
+          data['documentation_file_id']!,
+          _documentationFileIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_documentationFileIdMeta);
+    }
+    if (data.containsKey('cave_trip_id')) {
+      context.handle(
+        _caveTripIdMeta,
+        caveTripId.isAcceptableOrUnknown(
+          data['cave_trip_id']!,
+          _caveTripIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_caveTripIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {documentationFileId, caveTripId},
+  ];
+  @override
+  DocumentationFilesToCaveTrip map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DocumentationFilesToCaveTrip(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      documentationFileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}documentation_file_id'],
+      )!,
+      caveTripId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cave_trip_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  DocumentationFilesToCaveTrips createAlias(String alias) {
+    return DocumentationFilesToCaveTrips(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'UNIQUE(documentation_file_id, cave_trip_id)ON CONFLICT ROLLBACK',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class DocumentationFilesToCaveTrip extends DataClass
+    implements Insertable<DocumentationFilesToCaveTrip> {
+  final int id;
+  final int documentationFileId;
+  final int caveTripId;
+  final int? createdAt;
+  final int? deletedAt;
+  const DocumentationFilesToCaveTrip({
+    required this.id,
+    required this.documentationFileId,
+    required this.caveTripId,
+    this.createdAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['documentation_file_id'] = Variable<int>(documentationFileId);
+    map['cave_trip_id'] = Variable<int>(caveTripId);
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    return map;
+  }
+
+  DocumentationFilesToCaveTripsCompanion toCompanion(bool nullToAbsent) {
+    return DocumentationFilesToCaveTripsCompanion(
+      id: Value(id),
+      documentationFileId: Value(documentationFileId),
+      caveTripId: Value(caveTripId),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory DocumentationFilesToCaveTrip.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DocumentationFilesToCaveTrip(
+      id: serializer.fromJson<int>(json['id']),
+      documentationFileId: serializer.fromJson<int>(
+        json['documentation_file_id'],
+      ),
+      caveTripId: serializer.fromJson<int>(json['cave_trip_id']),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      deletedAt: serializer.fromJson<int?>(json['deleted_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'documentation_file_id': serializer.toJson<int>(documentationFileId),
+      'cave_trip_id': serializer.toJson<int>(caveTripId),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'deleted_at': serializer.toJson<int?>(deletedAt),
+    };
+  }
+
+  DocumentationFilesToCaveTrip copyWith({
+    int? id,
+    int? documentationFileId,
+    int? caveTripId,
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> deletedAt = const Value.absent(),
+  }) => DocumentationFilesToCaveTrip(
+    id: id ?? this.id,
+    documentationFileId: documentationFileId ?? this.documentationFileId,
+    caveTripId: caveTripId ?? this.caveTripId,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  DocumentationFilesToCaveTrip copyWithCompanion(
+    DocumentationFilesToCaveTripsCompanion data,
+  ) {
+    return DocumentationFilesToCaveTrip(
+      id: data.id.present ? data.id.value : this.id,
+      documentationFileId: data.documentationFileId.present
+          ? data.documentationFileId.value
+          : this.documentationFileId,
+      caveTripId: data.caveTripId.present
+          ? data.caveTripId.value
+          : this.caveTripId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentationFilesToCaveTrip(')
+          ..write('id: $id, ')
+          ..write('documentationFileId: $documentationFileId, ')
+          ..write('caveTripId: $caveTripId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, documentationFileId, caveTripId, createdAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DocumentationFilesToCaveTrip &&
+          other.id == this.id &&
+          other.documentationFileId == this.documentationFileId &&
+          other.caveTripId == this.caveTripId &&
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class DocumentationFilesToCaveTripsCompanion
+    extends UpdateCompanion<DocumentationFilesToCaveTrip> {
+  final Value<int> id;
+  final Value<int> documentationFileId;
+  final Value<int> caveTripId;
+  final Value<int?> createdAt;
+  final Value<int?> deletedAt;
+  const DocumentationFilesToCaveTripsCompanion({
+    this.id = const Value.absent(),
+    this.documentationFileId = const Value.absent(),
+    this.caveTripId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  });
+  DocumentationFilesToCaveTripsCompanion.insert({
+    this.id = const Value.absent(),
+    required int documentationFileId,
+    required int caveTripId,
+    this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  }) : documentationFileId = Value(documentationFileId),
+       caveTripId = Value(caveTripId);
+  static Insertable<DocumentationFilesToCaveTrip> custom({
+    Expression<int>? id,
+    Expression<int>? documentationFileId,
+    Expression<int>? caveTripId,
+    Expression<int>? createdAt,
+    Expression<int>? deletedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (documentationFileId != null)
+        'documentation_file_id': documentationFileId,
+      if (caveTripId != null) 'cave_trip_id': caveTripId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+    });
+  }
+
+  DocumentationFilesToCaveTripsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? documentationFileId,
+    Value<int>? caveTripId,
+    Value<int?>? createdAt,
+    Value<int?>? deletedAt,
+  }) {
+    return DocumentationFilesToCaveTripsCompanion(
+      id: id ?? this.id,
+      documentationFileId: documentationFileId ?? this.documentationFileId,
+      caveTripId: caveTripId ?? this.caveTripId,
+      createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (documentationFileId.present) {
+      map['documentation_file_id'] = Variable<int>(documentationFileId.value);
+    }
+    if (caveTripId.present) {
+      map['cave_trip_id'] = Variable<int>(caveTripId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentationFilesToCaveTripsCompanion(')
+          ..write('id: $id, ')
+          ..write('documentationFileId: $documentationFileId, ')
+          ..write('caveTripId: $caveTripId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5903,6 +7375,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final DocumentationFilesToGeofeatures documentationFilesToGeofeatures =
       DocumentationFilesToGeofeatures(this);
   late final Configurations configurations = Configurations(this);
+  late final CaveTrips caveTrips = CaveTrips(this);
+  late final CaveTripPoints caveTripPoints = CaveTripPoints(this);
+  late final DocumentationFilesToCaveTrips documentationFilesToCaveTrips =
+      DocumentationFilesToCaveTrips(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5919,6 +7395,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     documentationFiles,
     documentationFilesToGeofeatures,
     configurations,
+    caveTrips,
+    caveTripPoints,
+    documentationFilesToCaveTrips,
   ];
 }
 
@@ -6350,6 +7829,25 @@ final class $CavesReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<CaveTrips, List<CaveTrip>> _caveTripsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.caveTrips,
+    aliasName: $_aliasNameGenerator(db.caves.id, db.caveTrips.caveId),
+  );
+
+  $CaveTripsProcessedTableManager get caveTripsRefs {
+    final manager = $CaveTripsTableManager(
+      $_db,
+      $_db.caveTrips,
+    ).filter((f) => f.caveId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_caveTripsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
@@ -6504,6 +8002,31 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
           }) => $RasterMapsFilterComposer(
             $db: $db,
             $table: $db.rasterMaps,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> caveTripsRefs(
+    Expression<bool> Function($CaveTripsFilterComposer f) f,
+  ) {
+    final $CaveTripsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.caveId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsFilterComposer(
+            $db: $db,
+            $table: $db.caveTrips,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6726,6 +8249,31 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
     );
     return f(composer);
   }
+
+  Expression<T> caveTripsRefs<T extends Object>(
+    Expression<T> Function($CaveTripsAnnotationComposer a) f,
+  ) {
+    final $CaveTripsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.caveId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsAnnotationComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $CavesTableManager
@@ -6747,6 +8295,7 @@ class $CavesTableManager
             bool caveEntrancesRefs,
             bool cavePlacesRefs,
             bool rasterMapsRefs,
+            bool caveTripsRefs,
           })
         > {
   $CavesTableManager(_$AppDatabase db, Caves table)
@@ -6806,6 +8355,7 @@ class $CavesTableManager
                 caveEntrancesRefs = false,
                 cavePlacesRefs = false,
                 rasterMapsRefs = false,
+                caveTripsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -6814,6 +8364,7 @@ class $CavesTableManager
                     if (caveEntrancesRefs) db.caveEntrances,
                     if (cavePlacesRefs) db.cavePlaces,
                     if (rasterMapsRefs) db.rasterMaps,
+                    if (caveTripsRefs) db.caveTrips,
                   ],
                   addJoins:
                       <
@@ -6902,6 +8453,20 @@ class $CavesTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (caveTripsRefs)
+                        await $_getPrefetchedData<Cave, Caves, CaveTrip>(
+                          currentTable: table,
+                          referencedTable: $CavesReferences._caveTripsRefsTable(
+                            db,
+                          ),
+                          managerFromTypedResult: (p0) =>
+                              $CavesReferences(db, table, p0).caveTripsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.caveId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6928,6 +8493,7 @@ typedef $CavesProcessedTableManager =
         bool caveEntrancesRefs,
         bool cavePlacesRefs,
         bool rasterMapsRefs,
+        bool caveTripsRefs,
       })
     >;
 typedef $CaveAreasCreateCompanionBuilder =
@@ -8436,6 +10002,27 @@ final class $CavePlacesReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<CaveTripPoints, List<CaveTripPoint>>
+  _caveTripPointsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.caveTripPoints,
+    aliasName: $_aliasNameGenerator(
+      db.cavePlaces.id,
+      db.caveTripPoints.cavePlaceId,
+    ),
+  );
+
+  $CaveTripPointsProcessedTableManager get caveTripPointsRefs {
+    final manager = $CaveTripPointsTableManager(
+      $_db,
+      $_db.caveTripPoints,
+    ).filter((f) => f.cavePlaceId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_caveTripPointsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
@@ -8576,6 +10163,31 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> caveTripPointsRefs(
+    Expression<bool> Function($CaveTripPointsFilterComposer f) f,
+  ) {
+    final $CaveTripPointsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.cavePlaceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsFilterComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -8822,6 +10434,31 @@ class $CavePlacesAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> caveTripPointsRefs<T extends Object>(
+    Expression<T> Function($CaveTripPointsAnnotationComposer a) f,
+  ) {
+    final $CaveTripPointsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.cavePlaceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsAnnotationComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $CavePlacesTableManager
@@ -8841,6 +10478,7 @@ class $CavePlacesTableManager
             bool caveId,
             bool caveAreaId,
             bool cavePlaceToRasterMapDefinitionsRefs,
+            bool caveTripPointsRefs,
           })
         > {
   $CavePlacesTableManager(_$AppDatabase db, CavePlaces table)
@@ -8929,12 +10567,14 @@ class $CavePlacesTableManager
                 caveId = false,
                 caveAreaId = false,
                 cavePlaceToRasterMapDefinitionsRefs = false,
+                caveTripPointsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (cavePlaceToRasterMapDefinitionsRefs)
                       db.cavePlaceToRasterMapDefinitions,
+                    if (caveTripPointsRefs) db.caveTripPoints,
                   ],
                   addJoins:
                       <
@@ -9003,6 +10643,26 @@ class $CavePlacesTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (caveTripPointsRefs)
+                        await $_getPrefetchedData<
+                          CavePlace,
+                          CavePlaces,
+                          CaveTripPoint
+                        >(
+                          currentTable: table,
+                          referencedTable: $CavePlacesReferences
+                              ._caveTripPointsRefsTable(db),
+                          managerFromTypedResult: (p0) => $CavePlacesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).caveTripPointsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cavePlaceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -9027,6 +10687,7 @@ typedef $CavePlacesProcessedTableManager =
         bool caveId,
         bool caveAreaId,
         bool cavePlaceToRasterMapDefinitionsRefs,
+        bool caveTripPointsRefs,
       })
     >;
 typedef $RasterMapsCreateCompanionBuilder =
@@ -10180,6 +11841,37 @@ final class $DocumentationFilesReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    DocumentationFilesToCaveTrips,
+    List<DocumentationFilesToCaveTrip>
+  >
+  _documentationFilesToCaveTripsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.documentationFilesToCaveTrips,
+        aliasName: $_aliasNameGenerator(
+          db.documentationFiles.id,
+          db.documentationFilesToCaveTrips.documentationFileId,
+        ),
+      );
+
+  $DocumentationFilesToCaveTripsProcessedTableManager
+  get documentationFilesToCaveTripsRefs {
+    final manager =
+        $DocumentationFilesToCaveTripsTableManager(
+          $_db,
+          $_db.documentationFilesToCaveTrips,
+        ).filter(
+          (f) => f.documentationFileId.id.sqlEquals($_itemColumn<int>('id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _documentationFilesToCaveTripsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $DocumentationFilesFilterComposer
@@ -10259,6 +11951,32 @@ class $DocumentationFilesFilterComposer
               }) => $DocumentationFilesToGeofeaturesFilterComposer(
                 $db: $db,
                 $table: $db.documentationFilesToGeofeatures,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> documentationFilesToCaveTripsRefs(
+    Expression<bool> Function($DocumentationFilesToCaveTripsFilterComposer f) f,
+  ) {
+    final $DocumentationFilesToCaveTripsFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.documentationFilesToCaveTrips,
+          getReferencedColumn: (t) => t.documentationFileId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripsFilterComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTrips,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -10396,6 +12114,33 @@ class $DocumentationFilesAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> documentationFilesToCaveTripsRefs<T extends Object>(
+    Expression<T> Function($DocumentationFilesToCaveTripsAnnotationComposer a)
+    f,
+  ) {
+    final $DocumentationFilesToCaveTripsAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.documentationFilesToCaveTrips,
+          getReferencedColumn: (t) => t.documentationFileId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripsAnnotationComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTrips,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $DocumentationFilesTableManager
@@ -10411,7 +12156,10 @@ class $DocumentationFilesTableManager
           $DocumentationFilesUpdateCompanionBuilder,
           (DocumentationFile, $DocumentationFilesReferences),
           DocumentationFile,
-          PrefetchHooks Function({bool documentationFilesToGeofeaturesRefs})
+          PrefetchHooks Function({
+            bool documentationFilesToGeofeaturesRefs,
+            bool documentationFilesToCaveTripsRefs,
+          })
         > {
   $DocumentationFilesTableManager(_$AppDatabase db, DocumentationFiles table)
     : super(
@@ -10481,12 +12229,17 @@ class $DocumentationFilesTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({documentationFilesToGeofeaturesRefs = false}) {
+              ({
+                documentationFilesToGeofeaturesRefs = false,
+                documentationFilesToCaveTripsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (documentationFilesToGeofeaturesRefs)
                       db.documentationFilesToGeofeatures,
+                    if (documentationFilesToCaveTripsRefs)
+                      db.documentationFilesToCaveTrips,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -10506,6 +12259,27 @@ class $DocumentationFilesTableManager
                                 table,
                                 p0,
                               ).documentationFilesToGeofeaturesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.documentationFileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (documentationFilesToCaveTripsRefs)
+                        await $_getPrefetchedData<
+                          DocumentationFile,
+                          DocumentationFiles,
+                          DocumentationFilesToCaveTrip
+                        >(
+                          currentTable: table,
+                          referencedTable: $DocumentationFilesReferences
+                              ._documentationFilesToCaveTripsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $DocumentationFilesReferences(
+                                db,
+                                table,
+                                p0,
+                              ).documentationFilesToCaveTripsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.documentationFileId == item.id,
@@ -10532,7 +12306,10 @@ typedef $DocumentationFilesProcessedTableManager =
       $DocumentationFilesUpdateCompanionBuilder,
       (DocumentationFile, $DocumentationFilesReferences),
       DocumentationFile,
-      PrefetchHooks Function({bool documentationFilesToGeofeaturesRefs})
+      PrefetchHooks Function({
+        bool documentationFilesToGeofeaturesRefs,
+        bool documentationFilesToCaveTripsRefs,
+      })
     >;
 typedef $DocumentationFilesToGeofeaturesCreateCompanionBuilder =
     DocumentationFilesToGeofeaturesCompanion Function({
@@ -11095,6 +12872,1497 @@ typedef $ConfigurationsProcessedTableManager =
       Configuration,
       PrefetchHooks Function()
     >;
+typedef $CaveTripsCreateCompanionBuilder =
+    CaveTripsCompanion Function({
+      Value<int> id,
+      required int caveId,
+      required String title,
+      Value<String?> description,
+      required int tripStartedAt,
+      Value<int?> tripEndedAt,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> deletedAt,
+    });
+typedef $CaveTripsUpdateCompanionBuilder =
+    CaveTripsCompanion Function({
+      Value<int> id,
+      Value<int> caveId,
+      Value<String> title,
+      Value<String?> description,
+      Value<int> tripStartedAt,
+      Value<int?> tripEndedAt,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> deletedAt,
+    });
+
+final class $CaveTripsReferences
+    extends BaseReferences<_$AppDatabase, CaveTrips, CaveTrip> {
+  $CaveTripsReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static Caves _caveIdTable(_$AppDatabase db) => db.caves.createAlias(
+    $_aliasNameGenerator(db.caveTrips.caveId, db.caves.id),
+  );
+
+  $CavesProcessedTableManager get caveId {
+    final $_column = $_itemColumn<int>('cave_id')!;
+
+    final manager = $CavesTableManager(
+      $_db,
+      $_db.caves,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<CaveTripPoints, List<CaveTripPoint>>
+  _caveTripPointsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.caveTripPoints,
+    aliasName: $_aliasNameGenerator(
+      db.caveTrips.id,
+      db.caveTripPoints.caveTripId,
+    ),
+  );
+
+  $CaveTripPointsProcessedTableManager get caveTripPointsRefs {
+    final manager = $CaveTripPointsTableManager(
+      $_db,
+      $_db.caveTripPoints,
+    ).filter((f) => f.caveTripId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_caveTripPointsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    DocumentationFilesToCaveTrips,
+    List<DocumentationFilesToCaveTrip>
+  >
+  _documentationFilesToCaveTripsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.documentationFilesToCaveTrips,
+        aliasName: $_aliasNameGenerator(
+          db.caveTrips.id,
+          db.documentationFilesToCaveTrips.caveTripId,
+        ),
+      );
+
+  $DocumentationFilesToCaveTripsProcessedTableManager
+  get documentationFilesToCaveTripsRefs {
+    final manager = $DocumentationFilesToCaveTripsTableManager(
+      $_db,
+      $_db.documentationFilesToCaveTrips,
+    ).filter((f) => f.caveTripId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _documentationFilesToCaveTripsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
+  $CaveTripsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tripStartedAt => $composableBuilder(
+    column: $table.tripStartedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tripEndedAt => $composableBuilder(
+    column: $table.tripEndedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $CavesFilterComposer get caveId {
+    final $CavesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveId,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesFilterComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> caveTripPointsRefs(
+    Expression<bool> Function($CaveTripPointsFilterComposer f) f,
+  ) {
+    final $CaveTripPointsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.caveTripId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsFilterComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> documentationFilesToCaveTripsRefs(
+    Expression<bool> Function($DocumentationFilesToCaveTripsFilterComposer f) f,
+  ) {
+    final $DocumentationFilesToCaveTripsFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.documentationFilesToCaveTrips,
+          getReferencedColumn: (t) => t.caveTripId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripsFilterComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTrips,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $CaveTripsOrderingComposer extends Composer<_$AppDatabase, CaveTrips> {
+  $CaveTripsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tripStartedAt => $composableBuilder(
+    column: $table.tripStartedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tripEndedAt => $composableBuilder(
+    column: $table.tripEndedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $CavesOrderingComposer get caveId {
+    final $CavesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveId,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesOrderingComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
+  $CaveTripsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get tripStartedAt => $composableBuilder(
+    column: $table.tripStartedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get tripEndedAt => $composableBuilder(
+    column: $table.tripEndedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $CavesAnnotationComposer get caveId {
+    final $CavesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveId,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesAnnotationComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> caveTripPointsRefs<T extends Object>(
+    Expression<T> Function($CaveTripPointsAnnotationComposer a) f,
+  ) {
+    final $CaveTripPointsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.caveTripId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsAnnotationComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> documentationFilesToCaveTripsRefs<T extends Object>(
+    Expression<T> Function($DocumentationFilesToCaveTripsAnnotationComposer a)
+    f,
+  ) {
+    final $DocumentationFilesToCaveTripsAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.documentationFilesToCaveTrips,
+          getReferencedColumn: (t) => t.caveTripId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripsAnnotationComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTrips,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $CaveTripsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          CaveTrips,
+          CaveTrip,
+          $CaveTripsFilterComposer,
+          $CaveTripsOrderingComposer,
+          $CaveTripsAnnotationComposer,
+          $CaveTripsCreateCompanionBuilder,
+          $CaveTripsUpdateCompanionBuilder,
+          (CaveTrip, $CaveTripsReferences),
+          CaveTrip,
+          PrefetchHooks Function({
+            bool caveId,
+            bool caveTripPointsRefs,
+            bool documentationFilesToCaveTripsRefs,
+          })
+        > {
+  $CaveTripsTableManager(_$AppDatabase db, CaveTrips table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $CaveTripsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $CaveTripsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $CaveTripsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> caveId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> tripStartedAt = const Value.absent(),
+                Value<int?> tripEndedAt = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+              }) => CaveTripsCompanion(
+                id: id,
+                caveId: caveId,
+                title: title,
+                description: description,
+                tripStartedAt: tripStartedAt,
+                tripEndedAt: tripEndedAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int caveId,
+                required String title,
+                Value<String?> description = const Value.absent(),
+                required int tripStartedAt,
+                Value<int?> tripEndedAt = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+              }) => CaveTripsCompanion.insert(
+                id: id,
+                caveId: caveId,
+                title: title,
+                description: description,
+                tripStartedAt: tripStartedAt,
+                tripEndedAt: tripEndedAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (e.readTable(table), $CaveTripsReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                caveId = false,
+                caveTripPointsRefs = false,
+                documentationFilesToCaveTripsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (caveTripPointsRefs) db.caveTripPoints,
+                    if (documentationFilesToCaveTripsRefs)
+                      db.documentationFilesToCaveTrips,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (caveId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveId,
+                                    referencedTable: $CaveTripsReferences
+                                        ._caveIdTable(db),
+                                    referencedColumn: $CaveTripsReferences
+                                        ._caveIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (caveTripPointsRefs)
+                        await $_getPrefetchedData<
+                          CaveTrip,
+                          CaveTrips,
+                          CaveTripPoint
+                        >(
+                          currentTable: table,
+                          referencedTable: $CaveTripsReferences
+                              ._caveTripPointsRefsTable(db),
+                          managerFromTypedResult: (p0) => $CaveTripsReferences(
+                            db,
+                            table,
+                            p0,
+                          ).caveTripPointsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.caveTripId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (documentationFilesToCaveTripsRefs)
+                        await $_getPrefetchedData<
+                          CaveTrip,
+                          CaveTrips,
+                          DocumentationFilesToCaveTrip
+                        >(
+                          currentTable: table,
+                          referencedTable: $CaveTripsReferences
+                              ._documentationFilesToCaveTripsRefsTable(db),
+                          managerFromTypedResult: (p0) => $CaveTripsReferences(
+                            db,
+                            table,
+                            p0,
+                          ).documentationFilesToCaveTripsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.caveTripId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $CaveTripsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      CaveTrips,
+      CaveTrip,
+      $CaveTripsFilterComposer,
+      $CaveTripsOrderingComposer,
+      $CaveTripsAnnotationComposer,
+      $CaveTripsCreateCompanionBuilder,
+      $CaveTripsUpdateCompanionBuilder,
+      (CaveTrip, $CaveTripsReferences),
+      CaveTrip,
+      PrefetchHooks Function({
+        bool caveId,
+        bool caveTripPointsRefs,
+        bool documentationFilesToCaveTripsRefs,
+      })
+    >;
+typedef $CaveTripPointsCreateCompanionBuilder =
+    CaveTripPointsCompanion Function({
+      Value<int> id,
+      required int caveTripId,
+      required int cavePlaceId,
+      required int scannedAt,
+      Value<String?> notes,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> deletedAt,
+    });
+typedef $CaveTripPointsUpdateCompanionBuilder =
+    CaveTripPointsCompanion Function({
+      Value<int> id,
+      Value<int> caveTripId,
+      Value<int> cavePlaceId,
+      Value<int> scannedAt,
+      Value<String?> notes,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> deletedAt,
+    });
+
+final class $CaveTripPointsReferences
+    extends BaseReferences<_$AppDatabase, CaveTripPoints, CaveTripPoint> {
+  $CaveTripPointsReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static CaveTrips _caveTripIdTable(_$AppDatabase db) =>
+      db.caveTrips.createAlias(
+        $_aliasNameGenerator(db.caveTripPoints.caveTripId, db.caveTrips.id),
+      );
+
+  $CaveTripsProcessedTableManager get caveTripId {
+    final $_column = $_itemColumn<int>('cave_trip_id')!;
+
+    final manager = $CaveTripsTableManager(
+      $_db,
+      $_db.caveTrips,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveTripIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static CavePlaces _cavePlaceIdTable(_$AppDatabase db) =>
+      db.cavePlaces.createAlias(
+        $_aliasNameGenerator(db.caveTripPoints.cavePlaceId, db.cavePlaces.id),
+      );
+
+  $CavePlacesProcessedTableManager get cavePlaceId {
+    final $_column = $_itemColumn<int>('cave_place_id')!;
+
+    final manager = $CavePlacesTableManager(
+      $_db,
+      $_db.cavePlaces,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cavePlaceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $CaveTripPointsFilterComposer
+    extends Composer<_$AppDatabase, CaveTripPoints> {
+  $CaveTripPointsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get scannedAt => $composableBuilder(
+    column: $table.scannedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $CaveTripsFilterComposer get caveTripId {
+    final $CaveTripsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripId,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsFilterComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CavePlacesFilterComposer get cavePlaceId {
+    final $CavePlacesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cavePlaceId,
+      referencedTable: $db.cavePlaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlacesFilterComposer(
+            $db: $db,
+            $table: $db.cavePlaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveTripPointsOrderingComposer
+    extends Composer<_$AppDatabase, CaveTripPoints> {
+  $CaveTripPointsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get scannedAt => $composableBuilder(
+    column: $table.scannedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $CaveTripsOrderingComposer get caveTripId {
+    final $CaveTripsOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripId,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsOrderingComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CavePlacesOrderingComposer get cavePlaceId {
+    final $CavePlacesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cavePlaceId,
+      referencedTable: $db.cavePlaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlacesOrderingComposer(
+            $db: $db,
+            $table: $db.cavePlaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveTripPointsAnnotationComposer
+    extends Composer<_$AppDatabase, CaveTripPoints> {
+  $CaveTripPointsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get scannedAt =>
+      $composableBuilder(column: $table.scannedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $CaveTripsAnnotationComposer get caveTripId {
+    final $CaveTripsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripId,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsAnnotationComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CavePlacesAnnotationComposer get cavePlaceId {
+    final $CavePlacesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cavePlaceId,
+      referencedTable: $db.cavePlaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlacesAnnotationComposer(
+            $db: $db,
+            $table: $db.cavePlaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveTripPointsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          CaveTripPoints,
+          CaveTripPoint,
+          $CaveTripPointsFilterComposer,
+          $CaveTripPointsOrderingComposer,
+          $CaveTripPointsAnnotationComposer,
+          $CaveTripPointsCreateCompanionBuilder,
+          $CaveTripPointsUpdateCompanionBuilder,
+          (CaveTripPoint, $CaveTripPointsReferences),
+          CaveTripPoint,
+          PrefetchHooks Function({bool caveTripId, bool cavePlaceId})
+        > {
+  $CaveTripPointsTableManager(_$AppDatabase db, CaveTripPoints table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $CaveTripPointsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $CaveTripPointsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $CaveTripPointsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> caveTripId = const Value.absent(),
+                Value<int> cavePlaceId = const Value.absent(),
+                Value<int> scannedAt = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+              }) => CaveTripPointsCompanion(
+                id: id,
+                caveTripId: caveTripId,
+                cavePlaceId: cavePlaceId,
+                scannedAt: scannedAt,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int caveTripId,
+                required int cavePlaceId,
+                required int scannedAt,
+                Value<String?> notes = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+              }) => CaveTripPointsCompanion.insert(
+                id: id,
+                caveTripId: caveTripId,
+                cavePlaceId: cavePlaceId,
+                scannedAt: scannedAt,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $CaveTripPointsReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({caveTripId = false, cavePlaceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (caveTripId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.caveTripId,
+                                referencedTable: $CaveTripPointsReferences
+                                    ._caveTripIdTable(db),
+                                referencedColumn: $CaveTripPointsReferences
+                                    ._caveTripIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (cavePlaceId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.cavePlaceId,
+                                referencedTable: $CaveTripPointsReferences
+                                    ._cavePlaceIdTable(db),
+                                referencedColumn: $CaveTripPointsReferences
+                                    ._cavePlaceIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $CaveTripPointsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      CaveTripPoints,
+      CaveTripPoint,
+      $CaveTripPointsFilterComposer,
+      $CaveTripPointsOrderingComposer,
+      $CaveTripPointsAnnotationComposer,
+      $CaveTripPointsCreateCompanionBuilder,
+      $CaveTripPointsUpdateCompanionBuilder,
+      (CaveTripPoint, $CaveTripPointsReferences),
+      CaveTripPoint,
+      PrefetchHooks Function({bool caveTripId, bool cavePlaceId})
+    >;
+typedef $DocumentationFilesToCaveTripsCreateCompanionBuilder =
+    DocumentationFilesToCaveTripsCompanion Function({
+      Value<int> id,
+      required int documentationFileId,
+      required int caveTripId,
+      Value<int?> createdAt,
+      Value<int?> deletedAt,
+    });
+typedef $DocumentationFilesToCaveTripsUpdateCompanionBuilder =
+    DocumentationFilesToCaveTripsCompanion Function({
+      Value<int> id,
+      Value<int> documentationFileId,
+      Value<int> caveTripId,
+      Value<int?> createdAt,
+      Value<int?> deletedAt,
+    });
+
+final class $DocumentationFilesToCaveTripsReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          DocumentationFilesToCaveTrips,
+          DocumentationFilesToCaveTrip
+        > {
+  $DocumentationFilesToCaveTripsReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static DocumentationFiles _documentationFileIdTable(_$AppDatabase db) =>
+      db.documentationFiles.createAlias(
+        $_aliasNameGenerator(
+          db.documentationFilesToCaveTrips.documentationFileId,
+          db.documentationFiles.id,
+        ),
+      );
+
+  $DocumentationFilesProcessedTableManager get documentationFileId {
+    final $_column = $_itemColumn<int>('documentation_file_id')!;
+
+    final manager = $DocumentationFilesTableManager(
+      $_db,
+      $_db.documentationFiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_documentationFileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static CaveTrips _caveTripIdTable(_$AppDatabase db) =>
+      db.caveTrips.createAlias(
+        $_aliasNameGenerator(
+          db.documentationFilesToCaveTrips.caveTripId,
+          db.caveTrips.id,
+        ),
+      );
+
+  $CaveTripsProcessedTableManager get caveTripId {
+    final $_column = $_itemColumn<int>('cave_trip_id')!;
+
+    final manager = $CaveTripsTableManager(
+      $_db,
+      $_db.caveTrips,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveTripIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $DocumentationFilesToCaveTripsFilterComposer
+    extends Composer<_$AppDatabase, DocumentationFilesToCaveTrips> {
+  $DocumentationFilesToCaveTripsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $DocumentationFilesFilterComposer get documentationFileId {
+    final $DocumentationFilesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileId,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesFilterComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CaveTripsFilterComposer get caveTripId {
+    final $CaveTripsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripId,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsFilterComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $DocumentationFilesToCaveTripsOrderingComposer
+    extends Composer<_$AppDatabase, DocumentationFilesToCaveTrips> {
+  $DocumentationFilesToCaveTripsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $DocumentationFilesOrderingComposer get documentationFileId {
+    final $DocumentationFilesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileId,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesOrderingComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CaveTripsOrderingComposer get caveTripId {
+    final $CaveTripsOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripId,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsOrderingComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $DocumentationFilesToCaveTripsAnnotationComposer
+    extends Composer<_$AppDatabase, DocumentationFilesToCaveTrips> {
+  $DocumentationFilesToCaveTripsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $DocumentationFilesAnnotationComposer get documentationFileId {
+    final $DocumentationFilesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileId,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesAnnotationComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CaveTripsAnnotationComposer get caveTripId {
+    final $CaveTripsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripId,
+      referencedTable: $db.caveTrips,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripsAnnotationComposer(
+            $db: $db,
+            $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $DocumentationFilesToCaveTripsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          DocumentationFilesToCaveTrips,
+          DocumentationFilesToCaveTrip,
+          $DocumentationFilesToCaveTripsFilterComposer,
+          $DocumentationFilesToCaveTripsOrderingComposer,
+          $DocumentationFilesToCaveTripsAnnotationComposer,
+          $DocumentationFilesToCaveTripsCreateCompanionBuilder,
+          $DocumentationFilesToCaveTripsUpdateCompanionBuilder,
+          (
+            DocumentationFilesToCaveTrip,
+            $DocumentationFilesToCaveTripsReferences,
+          ),
+          DocumentationFilesToCaveTrip,
+          PrefetchHooks Function({bool documentationFileId, bool caveTripId})
+        > {
+  $DocumentationFilesToCaveTripsTableManager(
+    _$AppDatabase db,
+    DocumentationFilesToCaveTrips table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $DocumentationFilesToCaveTripsFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $DocumentationFilesToCaveTripsOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $DocumentationFilesToCaveTripsAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> documentationFileId = const Value.absent(),
+                Value<int> caveTripId = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+              }) => DocumentationFilesToCaveTripsCompanion(
+                id: id,
+                documentationFileId: documentationFileId,
+                caveTripId: caveTripId,
+                createdAt: createdAt,
+                deletedAt: deletedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int documentationFileId,
+                required int caveTripId,
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+              }) => DocumentationFilesToCaveTripsCompanion.insert(
+                id: id,
+                documentationFileId: documentationFileId,
+                caveTripId: caveTripId,
+                createdAt: createdAt,
+                deletedAt: deletedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $DocumentationFilesToCaveTripsReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({documentationFileId = false, caveTripId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (documentationFileId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.documentationFileId,
+                                    referencedTable:
+                                        $DocumentationFilesToCaveTripsReferences
+                                            ._documentationFileIdTable(db),
+                                    referencedColumn:
+                                        $DocumentationFilesToCaveTripsReferences
+                                            ._documentationFileIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (caveTripId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveTripId,
+                                    referencedTable:
+                                        $DocumentationFilesToCaveTripsReferences
+                                            ._caveTripIdTable(db),
+                                    referencedColumn:
+                                        $DocumentationFilesToCaveTripsReferences
+                                            ._caveTripIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $DocumentationFilesToCaveTripsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      DocumentationFilesToCaveTrips,
+      DocumentationFilesToCaveTrip,
+      $DocumentationFilesToCaveTripsFilterComposer,
+      $DocumentationFilesToCaveTripsOrderingComposer,
+      $DocumentationFilesToCaveTripsAnnotationComposer,
+      $DocumentationFilesToCaveTripsCreateCompanionBuilder,
+      $DocumentationFilesToCaveTripsUpdateCompanionBuilder,
+      (DocumentationFilesToCaveTrip, $DocumentationFilesToCaveTripsReferences),
+      DocumentationFilesToCaveTrip,
+      PrefetchHooks Function({bool documentationFileId, bool caveTripId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11128,4 +14396,14 @@ class $AppDatabaseManager {
       );
   $ConfigurationsTableManager get configurations =>
       $ConfigurationsTableManager(_db, _db.configurations);
+  $CaveTripsTableManager get caveTrips =>
+      $CaveTripsTableManager(_db, _db.caveTrips);
+  $CaveTripPointsTableManager get caveTripPoints =>
+      $CaveTripPointsTableManager(_db, _db.caveTripPoints);
+  $DocumentationFilesToCaveTripsTableManager
+  get documentationFilesToCaveTrips =>
+      $DocumentationFilesToCaveTripsTableManager(
+        _db,
+        _db.documentationFilesToCaveTrips,
+      );
 }

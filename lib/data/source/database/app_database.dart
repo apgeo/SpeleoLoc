@@ -102,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 3; // Schema version
+  int get schemaVersion => 4; // Schema version
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -212,8 +212,142 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('ALTER TABLE documentation_files__new RENAME TO documentation_files');
         });
       }
+
+      if (from < 4) {
+        await customStatement('''
+          CREATE TABLE IF NOT EXISTS cave_trips (
+            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+            cave_id INTEGER NOT NULL REFERENCES caves (id),
+            title TEXT(255) NOT NULL,
+            description TEXT,
+            trip_started_at INTEGER NOT NULL,
+            trip_ended_at INTEGER,
+            created_at INTEGER,
+            updated_at INTEGER,
+            deleted_at INTEGER
+          )
+        ''');
+
+        await customStatement('''
+          CREATE TABLE IF NOT EXISTS cave_trip_points (
+            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+            cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id),
+            cave_place_id INTEGER NOT NULL REFERENCES cave_places (id),
+            scanned_at INTEGER NOT NULL,
+            notes TEXT,
+            created_at INTEGER,
+            updated_at INTEGER,
+            deleted_at INTEGER,
+            UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK
+          )
+        ''');
+
+        await customStatement('''
+          CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
+            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+            documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id),
+            cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id),
+            created_at INTEGER,
+            deleted_at INTEGER,
+            UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK
+          )
+        ''');
+      }
     },
   );
+
+  // Cave trips
+  Future<int> insertCaveTrip({
+    required int caveId,
+    required String title,
+    String? description,
+    required int startedAt,
+  }) async {
+    return into(caveTrips).insert(
+      CaveTripsCompanion.insert(
+        caveId: caveId,
+        title: title,
+        description: Value(description),
+        tripStartedAt: startedAt,
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> endCaveTrip(int tripId) async {
+    await (update(caveTrips)..where((t) => t.id.equals(tripId))).write(
+      CaveTripsCompanion(
+        tripEndedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<CaveTrip?> getActiveTripForCave(int caveId) async {
+    return (select(caveTrips)
+      ..where((t) => t.caveId.equals(caveId) & t.tripEndedAt.isNull())
+      ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
+      ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<CaveTrip?> getActiveTrip() async {
+    return (select(caveTrips)
+      ..where((t) => t.tripEndedAt.isNull())
+      ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
+      ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<int> insertTripPoint({
+    required int tripId,
+    required int cavePlaceId,
+    String? notes,
+  }) async {
+    return into(caveTripPoints).insert(
+      CaveTripPointsCompanion.insert(
+        caveTripId: tripId,
+        cavePlaceId: cavePlaceId,
+        scannedAt: DateTime.now().millisecondsSinceEpoch,
+        notes: Value(notes),
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<List<CaveTripPoint>> getTripPoints(int tripId) async {
+    return (select(caveTripPoints)
+      ..where((t) => t.caveTripId.equals(tripId))
+      ..orderBy([(t) => OrderingTerm.asc(t.scannedAt)]))
+        .get();
+  }
+
+  Future<List<CaveTrip>> getCaveTrips(int caveId) async {
+    return (select(caveTrips)
+      ..where((t) => t.caveId.equals(caveId))
+      ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)]))
+        .get();
+  }
+
+  Future<void> linkDocumentToTrip(int docId, int tripId) async {
+    await into(documentationFilesToCaveTrips).insertOnConflictUpdate(
+      DocumentationFilesToCaveTripsCompanion.insert(
+        documentationFileId: docId,
+        caveTripId: tripId,
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> deleteCaveTrip(int tripId) async {
+    await transaction(() async {
+      await (delete(documentationFilesToCaveTrips)
+        ..where((t) => t.caveTripId.equals(tripId))).go();
+      await (delete(caveTripPoints)
+        ..where((t) => t.caveTripId.equals(tripId))).go();
+      await (delete(caveTrips)..where((t) => t.id.equals(tripId))).go();
+    });
+  }
 
   Future<bool> _geofeatureExists(GeofeatureType type, int geofeatureId) async {
     switch (type) {

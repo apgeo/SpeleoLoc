@@ -7,6 +7,7 @@ import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
 import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
@@ -26,23 +27,44 @@ class CavePlacesListPage extends StatefulWidget {
 
 class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage> {
   @override
-  List<AppMenuItem> get screenMenuItems => [
-    AppMenuItem(
-      value: 'edit_cave',
-      icon: Icons.edit_note,
-      label: LocServ.inst.t('edit_cave'),
-    ),
-    AppMenuItem(
-      value: 'delete',
-      icon: Icons.delete,
-      label: LocServ.inst.t('delete_cave'),
-    ),
-    AppMenuItem(
-      value: 'csv_import',
-      icon: Icons.upload_file,
-      label: LocServ.inst.t('csv_import_places'),
-    ),
-  ];
+  List<AppMenuItem> get screenMenuItems {
+    final activeTripId = caveTripService.activeTripIdNotifier.value;
+    return [
+      if (activeTripId == null)
+        AppMenuItem(
+          value: 'start_trip',
+          icon: Icons.play_arrow,
+          label: LocServ.inst.t('trip_start'),
+        )
+      else ...[
+        AppMenuItem(
+          value: 'view_trip',
+          icon: Icons.route,
+          label: LocServ.inst.t('trip_view'),
+        ),
+        AppMenuItem(
+          value: 'stop_trip',
+          icon: Icons.stop,
+          label: LocServ.inst.t('trip_stop'),
+        ),
+      ],
+      AppMenuItem(
+        value: 'edit_cave',
+        icon: Icons.edit_note,
+        label: LocServ.inst.t('edit_cave'),
+      ),
+      AppMenuItem(
+        value: 'delete',
+        icon: Icons.delete,
+        label: LocServ.inst.t('delete_cave'),
+      ),
+      AppMenuItem(
+        value: 'csv_import',
+        icon: Icons.upload_file,
+        label: LocServ.inst.t('csv_import_places'),
+      ),
+    ];
+  }
 
   @override
   void onScreenMenuItemSelected(String value) async {
@@ -91,6 +113,12 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         if (!mounted) return;
         Navigator.pop(context, true);
       }
+    } else if (value == 'start_trip') {
+      await _startTrip();
+    } else if (value == 'stop_trip') {
+      await _stopTrip();
+    } else if (value == 'view_trip') {
+      _viewActiveTrip();
     }
   }
   // Using global appDatabase instance
@@ -103,6 +131,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   bool _showManualQrSection = false;
   Map<int, String> _areaTitles = {};
   Map<int, String> _surfaceAreaTitles = {};
+  int _pastTripsCount = 0;
 
   // Per-place definitions info and scroll handling
   Map<int, int> _definitionCountByPlace = {};
@@ -114,9 +143,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
+    caveTripService.activeTripIdNotifier.addListener(_onTripStateChanged);
     _loadCave();
     _loadSurfaceAreas();
     _loadCavePlaces();
+    _loadTripCount();
   }
 
   Future<void> _loadSurfaceAreas() async {
@@ -126,6 +157,76 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     } catch (e) {
       _surfaceAreaTitles = {};
     }
+  }
+
+  void _onTripStateChanged() {
+    if (mounted) {
+      setState(() {});
+      _loadTripCount();
+    }
+  }
+
+  Future<void> _loadTripCount() async {
+    final trips = await appDatabase.getCaveTrips(widget.caveId);
+    final ended = trips.where((t) => t.tripEndedAt != null).length;
+    if (mounted) setState(() => _pastTripsCount = ended);
+  }
+
+  Future<void> _startTrip() async {
+    final defaultTitle = '${_cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
+    final controller = TextEditingController(text: defaultTitle);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('trip_name_dialog_title')),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('ok')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await caveTripService.startTrip(widget.caveId, controller.text.trim().isNotEmpty ? controller.text.trim() : defaultTitle);
+      setState(() {});
+    }
+  }
+
+  Future<void> _stopTrip() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('confirm')),
+        content: Text(LocServ.inst.t('trip_stop_confirm')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await caveTripService.stopTrip();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_stopped'))));
+        setState(() {});
+      }
+    }
+  }
+
+  void _viewActiveTrip() {
+    final id = caveTripService.activeTripIdNotifier.value;
+    if (id == null) return;
+    Navigator.pushNamed(context, caveTripRoute, arguments: id);
   }
 
   Future<void> _printQRCodes() async {
@@ -150,6 +251,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     _filterController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     super.dispose();
   }
 
@@ -381,6 +483,16 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     if (qrCode != null) {
       final cavePlace = await cavePlaceRepository.findCavePlaceByQrCode(qrCode, widget.caveId);
       if (cavePlace != null) {
+        // Record trip point if there's an active trip for this cave
+        final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+        if (activeTripCaveId == widget.caveId) {
+          await caveTripService.recordPoint(cavePlace.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
+            );
+          }
+        }
         _onCavePlaceFound(cavePlace);
       } else {
         if (mounted) {
@@ -547,6 +659,23 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                   ),
 
                   const SizedBox(height: 4),
+
+                  if (_pastTripsCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 2),
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.history, size: 16),
+                        label: Text('${LocServ.inst.t('trip_history')} ($_pastTripsCount)'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          textStyle: const TextStyle(fontSize: 13),
+                        ),
+                        onPressed: () async {
+                          await Navigator.pushNamed(context, caveTripListRoute, arguments: widget.caveId);
+                          _loadTripCount();
+                        },
+                      ),
+                    ),
 
                   if (_showManualQrSection)
                     Column(

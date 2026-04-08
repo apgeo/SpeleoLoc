@@ -362,6 +362,26 @@
   "cave_place": "Locuri din peșteră",
   "open_viewer": "Deschide",
   "menu_use_popup": "Meniu popup",
-  "menu_use_drawer": "Meniu lateral"
+  "menu_use_drawer": "Meniu lateral",
+  "trip_start": "Începe tura",
+  "trip_stop": "Oprește tura",
+  "trip_view": "Vezi tura",
+  "trip_title_hint": "Titlul turei",
+  "trip_name_dialog_title": "Începe o tură nouă",
+  "trip_active": "Tură activă",
+  "trip_started": "Început",
+  "trip_ended": "Terminat",
+  "trip_duration": "Durată",
+  "trip_points": "Puncte",
+  "trip_no_points": "Niciun punct înregistrat",
+  "trip_point_added": "Punct adăugat la tură",
+  "trip_delete": "Șterge tura",
+  "trip_delete_confirm": "Șterge această tură și toate punctele ei?",
+  "trip_deleted": "Tură ștearsă",
+  "trip_stop_confirm": "Oprești înregistrarea acestei ture?",
+  "trip_stopped": "Tură oprită",
+  "trip_history": "Ture trecute",
+  "trip_no_history": "Nicio tură trecută",
+  "trip_cave": "Peșteră"
 }
 

@@ -228,10 +228,46 @@ const List<_TableCfg> _tableConfigs = [
       ['title']
     ],
   ),
+  _TableCfg(
+    name: 'cave_trips',
+    humanName: 'Cave Trips',
+    columns: [
+      'cave_id', 'title', 'description', 'trip_started_at', 'trip_ended_at',
+      'created_at', 'updated_at', 'deleted_at'
+    ],
+    uniqueConstraints: [],
+    foreignKeys: {'cave_id': 'caves'},
+  ),
+  _TableCfg(
+    name: 'cave_trip_points',
+    humanName: 'Cave Trip Points',
+    columns: [
+      'cave_trip_id', 'cave_place_id', 'scanned_at', 'notes',
+      'created_at', 'updated_at', 'deleted_at'
+    ],
+    uniqueConstraints: [
+      ['cave_trip_id', 'cave_place_id', 'scanned_at']
+    ],
+    foreignKeys: {'cave_trip_id': 'cave_trips', 'cave_place_id': 'cave_places'},
+  ),
+  _TableCfg(
+    name: 'documentation_files_to_cave_trips',
+    humanName: 'Document-Trip Links',
+    columns: [
+      'documentation_file_id', 'cave_trip_id', 'created_at', 'deleted_at'
+    ],
+    uniqueConstraints: [
+      ['documentation_file_id', 'cave_trip_id']
+    ],
+    foreignKeys: {
+      'documentation_file_id': 'documentation_files',
+      'cave_trip_id': 'cave_trips',
+    },
+  ),
 ];
 
 /// Configuration keys that should *not* be imported (device-local settings).
-const Set<String> _skipConfigKeys = {lastOpenCaveKey, lastExportTimestampKey};
+const Set<String> _skipConfigKeys = {lastOpenCaveKey, lastExportTimestampKey, activeTripConfigKey};
 
 /// Maps geofeature_type DB value to the table name used for id-remapping.
 String? _geofeatureTypeToTable(String type) {
