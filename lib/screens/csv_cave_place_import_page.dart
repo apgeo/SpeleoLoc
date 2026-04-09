@@ -1,140 +1,115 @@
-import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_place_importer.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/widgets/app_global_menu.dart';
 
 /// Screen for importing cave place data from CSV files.
 ///
+/// Uses [CSVImportPage] to handle file selection and column mapping,
+/// then processes the resulting data to import cave places.
+///
 /// Pass [caveId] for single-cave import mode, or omit/null for multiple-cave mode.
-class CSVCavePlaceImportPage extends StatefulWidget {
+class CSVCavePlacesImportPage extends StatefulWidget {
   /// If non-null, import is scoped to this single cave.
   final int? caveId;
 
   /// Maximum number of duplicate matches to preview (default 5).
   final int maxPreviewDuplicates;
 
-  const CSVCavePlaceImportPage({
+  const CSVCavePlacesImportPage({
     super.key,
     this.caveId,
     this.maxPreviewDuplicates = 5,
   });
 
   @override
-  State<CSVCavePlaceImportPage> createState() => _CSVCavePlaceImportPageState();
+  State<CSVCavePlacesImportPage> createState() => _CSVCavePlacesImportPageState();
 }
 
-class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
-    with AppBarMenuMixin<CSVCavePlaceImportPage> {
+class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
   final CSVCavePlaceImporter _importer = CSVCavePlaceImporter(appDatabase);
-
-  // CSV data
-  String? _filePath;
-  List<List<dynamic>>? _csvData;
-  List<String> _headers = [];
-
-  // Column mappings (null = "none" / not imported)
-  int? _caveNameColumnIndex;
-  int? _cavePlaceNameColumnIndex;
-  int? _qrCodeColumnIndex;
-  int? _caveAreaColumnIndex;
-
-  // State
-  bool _isLoading = false;
-  String? _errorMessage;
+  bool _isProcessing = false;
+  bool _hasNavigated = false;
 
   bool get _isMultipleCaveMode => widget.caveId == null;
 
-  /// Build the import config from current selections.
-  CSVImportConfig _buildConfig() {
-    return CSVImportConfig(
-      caveId: widget.caveId,
-      caveNameColumn: _isMultipleCaveMode ? _caveNameColumnIndex : null,
-      cavePlaceNameColumn: _cavePlaceNameColumnIndex,
-      qrCodeColumn: _qrCodeColumnIndex,
-      caveAreaColumn: _isMultipleCaveMode ? _caveAreaColumnIndex : null,
-      maxPreviewDuplicates: widget.maxPreviewDuplicates,
+  List<CSVColumnDefinition> get _columnDefinitions => [
+        if (_isMultipleCaveMode)
+          CSVColumnDefinition(
+            key: 'cave_name',
+            label: LocServ.inst.t('csv_field_cave_name'),
+            required: true,
+          ),
+        CSVColumnDefinition(
+          key: 'place_name',
+          label: LocServ.inst.t('csv_field_place_name'),
+          required: true,
+        ),
+        CSVColumnDefinition(
+          key: 'qr_code',
+          label: LocServ.inst.t('csv_field_qr_code'),
+        ),
+        if (_isMultipleCaveMode)
+          CSVColumnDefinition(
+            key: 'cave_area',
+            label: LocServ.inst.t('csv_field_cave_area'),
+          ),
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
+  }
+
+  Future<void> _navigateToCSVImport() async {
+    if (_hasNavigated) return;
+    _hasNavigated = true;
+
+    final title = _isMultipleCaveMode
+        ? LocServ.inst.t('csv_import_multiple')
+        : LocServ.inst.t('csv_import_single');
+
+    final result = await Navigator.push<CSVImportResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CSVImportPage(
+          title: title,
+          columnDefinitions: _columnDefinitions,
+        ),
+      ),
     );
+
+    if (!mounted) return;
+
+    if (result == null) {
+      Navigator.pop(context);
+      return;
+    }
+
+    await _processImport(result);
   }
 
-  Future<void> _pickFile() async {
+  Future<void> _processImport(CSVImportResult csvResult) async {
+    setState(() => _isProcessing = true);
+
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv', 'txt'],
+      final config = CSVCavePlacesImportConfig(
+        caveId: widget.caveId,
+        caveNameColumn: _isMultipleCaveMode ? csvResult.columnMappings['cave_name'] : null,
+        cavePlaceNameColumn: csvResult.columnMappings['place_name'],
+        qrCodeColumn: csvResult.columnMappings['qr_code'],
+        caveAreaColumn: _isMultipleCaveMode ? csvResult.columnMappings['cave_area'] : null,
+        maxPreviewDuplicates: widget.maxPreviewDuplicates,
       );
-      if (result == null || result.files.isEmpty) return;
 
-      final path = result.files.single.path;
-      if (path == null) return;
-
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final file = File(path);
-      final content = await file.readAsString(encoding: utf8);
-      final csvData = _importer.parseCSV(content);
-
-      if (csvData.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = LocServ.inst.t('csv_file_empty');
-        });
-        return;
-      }
-
-      final headers = _importer.getHeaders(csvData);
-
-      setState(() {
-        _filePath = path;
-        _csvData = csvData;
-        _headers = headers;
-        _caveNameColumnIndex = null;
-        _cavePlaceNameColumnIndex = null;
-        _qrCodeColumnIndex = null;
-        _caveAreaColumnIndex = null;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = '${LocServ.inst.t('error')}: $e';
-      });
-    }
-  }
-
-  Future<void> _startImport() async {
-    if (_csvData == null) return;
-
-    // Validate that at least cave place name column is mapped
-    if (_cavePlaceNameColumnIndex == null) {
-      _showMessage(LocServ.inst.t('csv_place_name_required'));
-      return;
-    }
-
-    // In multiple cave mode, cave name column is required
-    if (_isMultipleCaveMode && _caveNameColumnIndex == null) {
-      _showMessage(LocServ.inst.t('csv_cave_name_required'));
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final config = _buildConfig();
-      final rows = _importer.parseRows(_csvData!, config);
+      final rows = _importer.parseRows(csvResult.rawData, config);
 
       if (rows.isEmpty) {
-        setState(() => _isLoading = false);
+        setState(() => _isProcessing = false);
         _showMessage(LocServ.inst.t('csv_no_valid_rows'));
+        if (mounted) Navigator.pop(context);
         return;
       }
 
@@ -147,7 +122,8 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
           existing.totalCount,
         );
         if (proceed != true) {
-          setState(() => _isLoading = false);
+          setState(() => _isProcessing = false);
+          if (mounted) Navigator.pop(context);
           return;
         }
       }
@@ -159,8 +135,8 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
         if (!mounted) return;
         final result = await _showQrConflictDialog(qrConflicts);
         if (result == null) {
-          // User cancelled
-          setState(() => _isLoading = false);
+          setState(() => _isProcessing = false);
+          if (mounted) Navigator.pop(context);
           return;
         }
         overwriteQr = result;
@@ -169,16 +145,15 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
       // Step 3: Import
       final importResult = await _importer.importRows(rows, config, overwriteQr: overwriteQr);
 
-      setState(() => _isLoading = false);
+      setState(() => _isProcessing = false);
 
       if (!mounted) return;
       // Step 4: Show results
       await _showImportResultDialog(importResult);
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = '${LocServ.inst.t('error')}: $e';
-      });
+      setState(() => _isProcessing = false);
+      _showMessage('${LocServ.inst.t('error')}: $e');
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -191,7 +166,7 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
 
   /// Show dialog listing existing matching combinations, ask user to proceed.
   Future<bool?> _showExistingCombinationsDialog(
-    List<ExistingMatch> matches,
+    List<CavePlaceExistingMatch> matches,
     int totalCount,
   ) async {
     final previewCount =
@@ -251,7 +226,7 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
 
   /// Show dialog about QR code conflicts. Returns true if user wants to overwrite,
   /// false to skip QR updates, null if cancelled.
-  Future<bool?> _showQrConflictDialog(List<ExistingMatch> conflicts) async {
+  Future<bool?> _showQrConflictDialog(List<CavePlaceExistingMatch> conflicts) async {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -306,7 +281,7 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
   }
 
   /// Show the import result summary.
-  Future<void> _showImportResultDialog(CSVImportResult result) async {
+  Future<void> _showImportResultDialog(CSVCavePlaceImportResult result) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -337,206 +312,20 @@ class _CSVCavePlaceImportPageState extends State<CSVCavePlaceImportPage>
     }
   }
 
-  /// Build the dropdown items for column selection, including a "None" option.
-  List<DropdownMenuItem<int?>> _buildColumnDropdownItems() {
-    return [
-      DropdownMenuItem<int?>(
-        value: null,
-        child: Text(LocServ.inst.t('none')),
-      ),
-      ..._headers.asMap().entries.map(
-            (e) => DropdownMenuItem<int?>(
-              value: e.key,
-              child: Text(e.value),
-            ),
-          ),
-    ];
-  }
-
-  Widget _buildMappingRow(String label, int? currentValue, ValueChanged<int?> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 140,
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DropdownButtonFormField<int?>(
-              initialValue: currentValue,
-              items: _buildColumnDropdownItems(),
-              onChanged: onChanged,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final title = _isMultipleCaveMode
-        ? LocServ.inst.t('csv_import_multiple')
-        : LocServ.inst.t('csv_import_single');
-
     return Scaffold(
-      key: appMenuScaffoldKey,
-      endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(title),
-        actions: [buildAppBarMenuButton()],
+        title: Text(
+          _isMultipleCaveMode
+              ? LocServ.inst.t('csv_import_multiple')
+              : LocServ.inst.t('csv_import_single'),
+        ),
       ),
-      body: _isLoading
+      body: _isProcessing
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // File selection section
-                  Text(
-                    LocServ.inst.t('csv_file_requirements'),
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _pickFile,
-                        icon: const Icon(Icons.file_open),
-                        label: Text(LocServ.inst.t('csv_select_file')),
-                      ),
-                      if (_filePath != null) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _filePath!.split(Platform.pathSeparator).last,
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ],
-
-                  // Column mappings section (visible after file is loaded)
-                  if (_csvData != null && _headers.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text(
-                      LocServ.inst.t('csv_column_mappings'),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      '${LocServ.inst.t('csv_rows_found')}: ${_csvData!.length - 1}',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Cave name mapping (only in multiple cave mode)
-                    if (_isMultipleCaveMode)
-                      _buildMappingRow(
-                        LocServ.inst.t('csv_field_cave_name'),
-                        _caveNameColumnIndex,
-                        (v) => setState(() => _caveNameColumnIndex = v),
-                      ),
-
-                    // Cave place name mapping
-                    _buildMappingRow(
-                      LocServ.inst.t('csv_field_place_name'),
-                      _cavePlaceNameColumnIndex,
-                      (v) => setState(() => _cavePlaceNameColumnIndex = v),
-                    ),
-
-                    // QR code mapping
-                    _buildMappingRow(
-                      LocServ.inst.t('csv_field_qr_code'),
-                      _qrCodeColumnIndex,
-                      (v) => setState(() => _qrCodeColumnIndex = v),
-                    ),
-
-                    // Cave area mapping (only in multiple cave mode)
-                    if (_isMultipleCaveMode)
-                      _buildMappingRow(
-                        LocServ.inst.t('csv_field_cave_area'),
-                        _caveAreaColumnIndex,
-                        (v) => setState(() => _caveAreaColumnIndex = v),
-                      ),
-
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 12),
-
-                    // Import button
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: _startImport,
-                        icon: const Icon(Icons.download),
-                        label: Text(LocServ.inst.t('csv_start_import')),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                        ),
-                      ),
-                    ),
-
-                    // Data preview
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text(
-                      LocServ.inst.t('csv_data_preview'),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDataPreview(),
-                  ],
-                ],
-              ),
-            ),
-    );
-  }
-
-  /// Build a small scrollable preview table of the CSV data.
-  Widget _buildDataPreview() {
-    if (_csvData == null || _csvData!.isEmpty) return const SizedBox.shrink();
-
-    final previewRows = _csvData!.take(11).toList(); // header + up to 10 rows
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columnSpacing: 16,
-        headingRowColor: WidgetStateProperty.all(Colors.grey[200]),
-        columns: _headers
-            .map((h) => DataColumn(
-                  label: Text(h, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ))
-            .toList(),
-        rows: previewRows.skip(1).map((row) {
-          return DataRow(
-            cells: List.generate(_headers.length, (i) {
-              final value = i < row.length ? row[i].toString() : '';
-              return DataCell(Text(value, style: const TextStyle(fontSize: 12)));
-            }),
-          );
-        }).toList(),
-      ),
+          : const SizedBox.shrink(),
     );
   }
 }

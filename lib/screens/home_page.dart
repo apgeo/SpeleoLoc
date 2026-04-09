@@ -16,6 +16,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
+import 'package:speleoloc/screens/csv_caves_import_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -48,6 +49,11 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
       icon: Icons.upload_file,
       label: LocServ.inst.t('csv_import_places'),
     ),
+    AppMenuItem(
+      value: 'csv_import_caves',
+      icon: Icons.upload_file,
+      label: LocServ.inst.t('csv_import_caves'),
+    ),
   ];
 
   @override
@@ -63,7 +69,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
       case 'csv_import':
         final result = await Navigator.push<bool?>(
           context,
-          MaterialPageRoute(builder: (_) => const CSVCavePlaceImportPage()),
+          MaterialPageRoute(builder: (_) => const CSVCavePlacesImportPage()),
+        );
+        if (result == true) _loadCaves();
+        break;
+      case 'csv_import_caves':
+        final result = await Navigator.push<bool?>(
+          context,
+          MaterialPageRoute(builder: (_) => const CSVCavesImportPage()),
         );
         if (result == true) _loadCaves();
         break;

@@ -3,7 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// Configuration for CSV cave place import.
-class CSVImportConfig {
+class CSVCavePlacesImportConfig {
   /// If non-null, import is in single-cave mode for this cave id.
   final int? caveId;
 
@@ -24,7 +24,7 @@ class CSVImportConfig {
 
   bool get isMultipleCaveMode => caveId == null;
 
-  CSVImportConfig({
+  CSVCavePlacesImportConfig({
     this.caveId,
     this.caveNameColumn,
     this.cavePlaceNameColumn,
@@ -35,13 +35,13 @@ class CSVImportConfig {
 }
 
 /// Represents one row parsed from CSV to be imported.
-class CSVImportRow {
+class CSVCavePlaceImportRow {
   final String? caveName;
   final String? cavePlaceName;
   final int? qrCode;
   final String? caveArea;
 
-  CSVImportRow({this.caveName, this.cavePlaceName, this.qrCode, this.caveArea});
+  CSVCavePlaceImportRow({this.caveName, this.cavePlaceName, this.qrCode, this.caveArea});
 
   @override
   String toString() =>
@@ -49,13 +49,13 @@ class CSVImportRow {
 }
 
 /// Represents an existing combination found in the database that matches a CSV row.
-class ExistingMatch {
+class CavePlaceExistingMatch {
   final String caveName;
   final String cavePlaceName;
   final String? caveArea;
   final int? existingQrCode;
 
-  ExistingMatch({
+  CavePlaceExistingMatch({
     required this.caveName,
     required this.cavePlaceName,
     this.caveArea,
@@ -64,13 +64,13 @@ class ExistingMatch {
 }
 
 /// Result of an import operation.
-class CSVImportResult {
+class CSVCavePlaceImportResult {
   final int cavesCreated;
   final int cavePlacesCreated;
   final int caveAreasCreated;
   final int qrCodesUpdated;
 
-  CSVImportResult({
+  CSVCavePlaceImportResult({
     required this.cavesCreated,
     required this.cavePlacesCreated,
     required this.caveAreasCreated,
@@ -100,10 +100,10 @@ class CSVCavePlaceImporter {
   }
 
   /// Parse CSV rows according to the given config, skipping the header row.
-  List<CSVImportRow> parseRows(List<List<dynamic>> csvData, CSVImportConfig config) {
+  List<CSVCavePlaceImportRow> parseRows(List<List<dynamic>> csvData, CSVCavePlacesImportConfig config) {
     if (csvData.length < 2) return [];
 
-    final rows = <CSVImportRow>[];
+    final rows = <CSVCavePlaceImportRow>[];
     for (int i = 1; i < csvData.length; i++) {
       final row = csvData[i];
       if (row.isEmpty) continue;
@@ -136,7 +136,7 @@ class CSVCavePlaceImporter {
       // Skip rows with no place name
       if (cavePlaceName == null || cavePlaceName.isEmpty) continue;
 
-      rows.add(CSVImportRow(
+      rows.add(CSVCavePlaceImportRow(
         caveName: caveName,
         cavePlaceName: cavePlaceName,
         qrCode: qrCode,
@@ -150,11 +150,11 @@ class CSVCavePlaceImporter {
   /// exist in the database, matching the CSV rows.
   /// In single-cave mode, only cave place name is matched within the specified cave.
   /// Returns the list of matches and the total count.
-  Future<({List<ExistingMatch> matches, int totalCount})> findExistingCombinations(
-    List<CSVImportRow> rows,
-    CSVImportConfig config,
+  Future<({List<CavePlaceExistingMatch> matches, int totalCount})> findExistingCombinations(
+    List<CSVCavePlaceImportRow> rows,
+    CSVCavePlacesImportConfig config,
   ) async {
-    final List<ExistingMatch> allMatches = [];
+    final List<CavePlaceExistingMatch> allMatches = [];
 
     if (config.isMultipleCaveMode) {
       // Multiple cave mode: match cave name + cave area + cave place
@@ -197,7 +197,7 @@ class CSVCavePlaceImporter {
           final matchingPlaces = cavePlaces[row.cavePlaceName!.toLowerCase()];
           if (matchingPlaces != null && matchingPlaces.isNotEmpty) {
             for (final mp in matchingPlaces) {
-              allMatches.add(ExistingMatch(
+              allMatches.add(CavePlaceExistingMatch(
                 caveName: cave.title,
                 cavePlaceName: mp.title,
                 caveArea: row.caveArea,
@@ -229,7 +229,7 @@ class CSVCavePlaceImporter {
         final matchingPlaces = placeMap[row.cavePlaceName!.toLowerCase()];
         if (matchingPlaces != null && matchingPlaces.isNotEmpty) {
           for (final mp in matchingPlaces) {
-            allMatches.add(ExistingMatch(
+            allMatches.add(CavePlaceExistingMatch(
               caveName: caveName,
               cavePlaceName: mp.title,
               caveArea: row.caveArea,
@@ -245,11 +245,11 @@ class CSVCavePlaceImporter {
 
   /// Find rows where the CSV has a QR code that already exists in the database
   /// on a *different* cave place or a matching place that already has a different QR.
-  Future<List<ExistingMatch>> findQrCodeConflicts(
-    List<CSVImportRow> rows,
-    CSVImportConfig config,
+  Future<List<CavePlaceExistingMatch>> findQrCodeConflicts(
+    List<CSVCavePlaceImportRow> rows,
+    CSVCavePlacesImportConfig config,
   ) async {
-    final conflicts = <ExistingMatch>[];
+    final conflicts = <CavePlaceExistingMatch>[];
     if (config.qrCodeColumn == null) return conflicts;
 
     for (final row in rows) {
@@ -264,7 +264,7 @@ class CSVCavePlaceImporter {
               ..where((c) => c.id.equals(existing.caveId)))
             .getSingleOrNull();
         caveName = cave?.title ?? '';
-        conflicts.add(ExistingMatch(
+        conflicts.add(CavePlaceExistingMatch(
           caveName: caveName,
           cavePlaceName: existing.title,
           caveArea: null,
@@ -277,9 +277,9 @@ class CSVCavePlaceImporter {
 
   /// Perform the actual import.
   /// [overwriteQr] — if true, existing QR codes will be overwritten.
-  Future<CSVImportResult> importRows(
-    List<CSVImportRow> rows,
-    CSVImportConfig config, {
+  Future<CSVCavePlaceImportResult> importRows(
+    List<CSVCavePlaceImportRow> rows,
+    CSVCavePlacesImportConfig config, {
     bool overwriteQr = false,
   }) async {
     return _database.transaction(() async {
@@ -388,7 +388,7 @@ class CSVCavePlaceImporter {
       }
     }
 
-    return CSVImportResult(
+    return CSVCavePlaceImportResult(
       cavesCreated: cavesCreated,
       cavePlacesCreated: cavePlacesCreated,
       caveAreasCreated: caveAreasCreated,
