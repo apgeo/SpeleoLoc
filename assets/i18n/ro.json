@@ -392,9 +392,13 @@
   "trip_log_ended": "Tură terminată",
   "trip_log_paused": "Tură în pauză",
   "trip_log_resumed": "Tură reluată",
-  "trip_log_qr_scanned": "QR scanat: {label}",
+  "trip_log_qr_scanned": "Punct: {label}",
   "trip_log_document_added": "Document adăugat: {label}",
   "trip_map_view": "Vedere hartă",
+  "trip_list_view": "Vedere listă",
+  "trip_play_route": "Redă traseul",
+  "trip_export_map": "Exportă harta",
+  "trip_zoom_extent": "Încadrează traseul",
+  "trip_map_exported": "Harta traseului exportată",
   "no_raster_maps": "Nu există hărți raster"
 }
-

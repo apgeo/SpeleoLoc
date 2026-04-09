@@ -538,20 +538,50 @@ class RasterMapMarkerBuilder {
       );
     }
 
+    // Detect how many sequential trip markers share the same image point
+    // so we can spread them around the point instead of stacking.
+    // Group consecutive indices that map to the same image coordinate.
+    final Map<int, List<int>> groupedByCoord = {}; // hash -> [indices]
+    for (int i = 0; i < imagePoints.length; i++) {
+      final pt = imagePoints[i];
+      if (pt == null) continue;
+      final key = pt.dx.toInt() * 100000 + pt.dy.toInt();
+      (groupedByCoord[key] ??= []).add(i);
+    }
+
     // Draw incremental numbers next to each point
     for (int i = 0; i < imagePoints.length; i++) {
       final pt = imagePoints[i];
       if (pt == null) continue;
       final vp = imageToViewport(pt.dx, pt.dy, controllerValue);
 
+      final key = pt.dx.toInt() * 100000 + pt.dy.toInt();
+      final group = groupedByCoord[key]!;
+      final isStacked = group.length > 1;
+      final indexInGroup = group.indexOf(i);
+
+      // When multiple markers share the same point, spread them in a ring
+      double offsetX = 0, offsetY = 0;
+      double circleSize = 18;
+      double fontSize = tripOverlay.numberFontSize * 0.75;
+      if (isStacked) {
+        circleSize = 22;
+        fontSize = tripOverlay.numberFontSize * 0.6;
+        final angleStep = 2 * math.pi / group.length;
+        final radius = 14.0;
+        final angle = -math.pi / 2 + angleStep * indexInGroup;
+        offsetX = radius * math.cos(angle);
+        offsetY = radius * math.sin(angle);
+      }
+
       widgets.add(
         Positioned(
-          left: vp.dx - 20,
-          top: vp.dy - 20,
+          left: vp.dx - circleSize / 2 + offsetX,
+          top: vp.dy - circleSize / 2 + offsetY,
           child: IgnorePointer(
             child: Container(
-              width: 18,
-              height: 18,
+              width: circleSize,
+              height: circleSize,
               decoration: BoxDecoration(
                 color: tripOverlay.routeColor,
                 shape: BoxShape.circle,
@@ -562,7 +592,7 @@ class RasterMapMarkerBuilder {
                 '${i + 1}',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: tripOverlay.numberFontSize * 0.75,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   height: 1.0,
                 ),
@@ -602,8 +632,11 @@ class _TripRoutePainter extends CustomPainter {
     // Draw the line
     canvas.drawLine(from, to, paint);
 
-    // Draw an arrow at the midpoint
-    final mid = Offset((from.dx + to.dx) / 2, (from.dy + to.dy) / 2);
+    // Draw an arrow at 65% of the line length (toward destination)
+    final mid = Offset(
+      from.dx + (to.dx - from.dx) * 0.65,
+      from.dy + (to.dy - from.dy) * 0.65,
+    );
     final angle = math.atan2(to.dy - from.dy, to.dx - from.dx);
     const arrowLength = 10.0;
     const arrowAngle = 0.5; // ~28.6 degrees

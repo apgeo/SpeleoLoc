@@ -1,7 +1,10 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -19,7 +22,7 @@ class CaveTripPage extends StatefulWidget {
   State<CaveTripPage> createState() => _CaveTripPageState();
 }
 
-class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTripPage> {
+class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMixin, AppBarMenuMixin<CaveTripPage> {
   CaveTrip? _trip;
   Cave? _cave;
   List<CaveTripPoint> _points = [];
@@ -40,6 +43,14 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
 
   /// false = list view, true = map view
   bool _showMapView = false;
+
+  // Route playback animation state
+  bool _isPlayingRoute = false;
+  int _animatedPointCount = 0;
+  AnimationController? _playbackController;
+
+  // Export map key
+  final GlobalKey _mapRepaintKey = GlobalKey();
 
   bool get _isActive => _trip?.tripEndedAt == null;
 
@@ -71,6 +82,7 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
   void dispose() {
     caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     caveTripService.isPausedNotifier.removeListener(_onTripStateChanged);
+    _playbackController?.dispose();
     _editorController.detach();
     _imageProviderCache.clear();
     super.dispose();
@@ -143,6 +155,79 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
         _placesWithDefs = defs;
         _rasterImageFile = imageFile;
       });
+    }
+  }
+
+  // --- Playback ---
+
+  void _startPlayback() {
+    if (_points.isEmpty) return;
+    _playbackController?.dispose();
+    final totalPoints = _points.length;
+    // ~800ms per point
+    final duration = Duration(milliseconds: 800 * totalPoints);
+    _playbackController = AnimationController(vsync: this, duration: duration)
+      ..addListener(() {
+        final count = (_playbackController!.value * totalPoints).ceil().clamp(0, totalPoints);
+        if (count != _animatedPointCount) {
+          setState(() => _animatedPointCount = count);
+        }
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() => _isPlayingRoute = false);
+        }
+      })
+      ..forward(from: 0.0);
+    setState(() {
+      _isPlayingRoute = true;
+      _animatedPointCount = 0;
+    });
+  }
+
+  void _stopPlayback() {
+    _playbackController?.stop();
+    setState(() {
+      _isPlayingRoute = false;
+      _animatedPointCount = _points.length;
+    });
+  }
+
+  // --- Zoom to trip extent ---
+
+  void _zoomToTripExtent() {
+    final imagePoints = <Offset>[];
+    for (final pt in _points) {
+      final cpwd = _placesWithDefs.where((c) => c.cavePlace.id == pt.cavePlaceId).firstOrNull;
+      final def = cpwd?.definition;
+      if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
+        imagePoints.add(Offset(def.xCoordinate!.toDouble(), def.yCoordinate!.toDouble()));
+      }
+    }
+    if (imagePoints.isNotEmpty) {
+      _editorController.zoomToFitPoints(imagePoints);
+    }
+  }
+
+  // --- Export map as image ---
+
+  Future<void> _exportMapImage() async {
+    final boundary = _mapRepaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+    final image = await boundary.toImage(pixelRatio: 2.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) return;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final tripTitle = _trip?.title.replaceAll(RegExp(r'[^\w\-]'), '_') ?? 'trip';
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final file = File('${dir.path}/trip_map_${tripTitle}_$ts.png');
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${LocServ.inst.t('trip_map_exported')}: ${file.path}')),
+      );
     }
   }
 
@@ -273,12 +358,49 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
       onTap: () => Navigator.pushNamed(context, caveTripLogRoute, arguments: widget.tripId),
     ));
 
+    // List/map toggle
+    if (_rasterMaps.isNotEmpty) {
+      buttons.add(_TripToolbarButton(
+        icon: _showMapView ? Icons.list : Icons.map,
+        label: _showMapView
+            ? LocServ.inst.t('trip_list_view')
+            : LocServ.inst.t('trip_map_view'),
+        color: Colors.grey[700]!,
+        onTap: () => setState(() => _showMapView = !_showMapView),
+      ));
+    }
+
+    // Map-only buttons
+    if (_showMapView && _rasterMaps.isNotEmpty) {
+      buttons.add(_TripToolbarButton(
+        icon: _isPlayingRoute ? Icons.stop : Icons.play_arrow,
+        label: LocServ.inst.t('trip_play_route'),
+        color: _isPlayingRoute ? Colors.red : Colors.deepPurple,
+        onTap: _isPlayingRoute ? _stopPlayback : _startPlayback,
+      ));
+      buttons.add(_TripToolbarButton(
+        icon: Icons.fit_screen,
+        label: LocServ.inst.t('trip_zoom_extent'),
+        color: Colors.grey[700]!,
+        onTap: _zoomToTripExtent,
+      ));
+      buttons.add(_TripToolbarButton(
+        icon: Icons.image_outlined,
+        label: LocServ.inst.t('trip_export_map'),
+        color: Colors.grey[700]!,
+        onTap: _exportMapImage,
+      ));
+    }
+
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: buttons.map((b) => _buildTripButton(b)).toList(),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: buttons.map((b) => _buildTripButton(b)).toList(),
+        ),
       ),
     );
   }
@@ -288,13 +410,13 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
       onTap: btn.onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(btn.icon, size: 36, color: btn.color),
-            const SizedBox(height: 4),
-            Text(btn.label, style: TextStyle(fontSize: 11, color: btn.color)),
+            Icon(btn.icon, size: 28, color: btn.color),
+            const SizedBox(height: 2),
+            Text(btn.label, style: TextStyle(fontSize: 10, color: btn.color)),
           ],
         ),
       ),
@@ -325,15 +447,6 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
       appBar: AppBar(
         title: Text(trip.title),
         actions: [
-          // Toggle between list and map view
-          if (_rasterMaps.isNotEmpty)
-            IconButton(
-              icon: Icon(_showMapView ? Icons.list : Icons.map),
-              tooltip: _showMapView
-                  ? LocServ.inst.t('trip_points')
-                  : LocServ.inst.t('trip_map_view'),
-              onPressed: () => setState(() => _showMapView = !_showMapView),
-            ),
           buildAppBarMenuButton(),
         ],
       ),
@@ -434,12 +547,15 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
             final place = _placesById[pt.cavePlaceId];
             final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
             return ListTile(
+              dense: true,
+              visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: CircleAvatar(
                 radius: 14,
                 child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
               ),
               title: Text(place?.title ?? '#${pt.cavePlaceId}'),
-              subtitle: Text(dateTimeFormat.format(dt)),
+              subtitle: Text(dateTimeFormat.format(dt), style: const TextStyle(fontSize: 11)),
               trailing: place?.depthInCave != null
                   ? Text(
                       '${place!.depthInCave! > 0 ? '+' : ''}${place.depthInCave}m',
@@ -462,6 +578,10 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
     }
 
     final imageFile = _rasterImageFile;
+    // During playback, show only the first N points
+    final visibleIds = _isPlayingRoute
+        ? _points.take(_animatedPointCount).map((p) => p.cavePlaceId).toList()
+        : _points.map((p) => p.cavePlaceId).toList();
 
     return Column(
       children: [
@@ -494,17 +614,20 @@ class _CaveTripPageState extends State<CaveTripPage> with AppBarMenuMixin<CaveTr
         // Map editor
         Expanded(
           child: imageFile != null
-              ? RasterMapPlacePointEditor(
-                  controller: _editorController,
-                  imageFile: imageFile,
-                  imageProvider: _imageProviderCache[imageFile.path] ??= FileImage(imageFile),
-                  cavePlacesWithDefinitions: _placesWithDefs,
-                  isReadonly: true,
-                  tripOverlay: _points.isNotEmpty
-                      ? TripOverlayData(
-                          orderedCavePlaceIds: _points.map((p) => p.cavePlaceId).toList(),
-                        )
-                      : null,
+              ? RepaintBoundary(
+                  key: _mapRepaintKey,
+                  child: RasterMapPlacePointEditor(
+                    controller: _editorController,
+                    imageFile: imageFile,
+                    imageProvider: _imageProviderCache[imageFile.path] ??= FileImage(imageFile),
+                    cavePlacesWithDefinitions: _placesWithDefs,
+                    isReadonly: true,
+                    tripOverlay: visibleIds.isNotEmpty
+                        ? TripOverlayData(
+                            orderedCavePlaceIds: visibleIds,
+                          )
+                        : null,
+                  ),
                 )
               : Center(child: Text(LocServ.inst.t('no_raster_maps'))),
         ),

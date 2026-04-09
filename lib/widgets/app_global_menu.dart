@@ -565,11 +565,17 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
       color: isPaused
           ? Colors.orange.withValues(alpha: 0.08)
           : Colors.green.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          widget.onClose();
+          Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(children: [
               Icon(
                 isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
@@ -603,6 +609,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                 IconButton(
                   icon: const Icon(Icons.route, size: 28),
                   padding: EdgeInsets.zero,
+                  color: Colors.blue,
                   constraints: const BoxConstraints(),
                   tooltip: LocServ.inst.t('trip_view'),
                   onPressed: () {
@@ -641,6 +648,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
               ],
             ),
           ],
+        ),
         ),
       ),
     );

@@ -176,6 +176,10 @@ class RasterMapPlacePointEditorController {
   void zoomOut() => _state?.zoomOut();
   void resetZoom() => _state?.resetZoom();
 
+  /// Zoom/pan to fit a bounding box of image-space points.
+  void zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) =>
+      _state?._zoomToFitPoints(imagePoints, padding: padding);
+
   void setShowNavBar(bool v) {
     showNavBar = v;
     _state?._setShowNavBar(v);
@@ -792,6 +796,35 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
     final offsetX = (viewport.width / 2) - (imageX * zoomLevel);
     final offsetY = (viewport.height / 2) - (imageY * zoomLevel);
+    _photoViewController.position = Offset(offsetX, offsetY);
+  }
+
+  /// Zoom/pan to fit a bounding box of image-space points with padding.
+  void _zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) {
+    if (imagePoints.isEmpty) return;
+    final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
+
+    double minX = imagePoints.first.dx, maxX = minX;
+    double minY = imagePoints.first.dy, maxY = minY;
+    for (final p in imagePoints) {
+      if (p.dx < minX) minX = p.dx;
+      if (p.dx > maxX) maxX = p.dx;
+      if (p.dy < minY) minY = p.dy;
+      if (p.dy > maxY) maxY = p.dy;
+    }
+
+    final imageW = (maxX - minX).clamp(1.0, double.infinity);
+    final imageH = (maxY - minY).clamp(1.0, double.infinity);
+    final scaleX = (viewport.width - padding * 2) / imageW;
+    final scaleY = (viewport.height - padding * 2) / imageH;
+    final scale = scaleX < scaleY ? scaleX : scaleY;
+    final clampedScale = scale.clamp(0.01, 5.0);
+
+    final centerX = (minX + maxX) / 2;
+    final centerY = (minY + maxY) / 2;
+    final offsetX = (viewport.width / 2) - (centerX * clampedScale);
+    final offsetY = (viewport.height / 2) - (centerY * clampedScale);
+    _photoViewController.scale = clampedScale;
     _photoViewController.position = Offset(offsetX, offsetY);
   }
 
