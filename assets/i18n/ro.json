@@ -406,5 +406,6 @@
   "trip_export_map": "Exportă harta",
   "trip_zoom_extent": "Încadrează traseul",
   "trip_map_exported": "Harta traseului exportată",
-  "no_raster_maps": "Nu există hărți raster"
+  "no_raster_maps": "Nu există hărți raster",
+  "delete_selected_confirm": "Ștergeți {count} elemente selectate?"
 }

@@ -408,5 +408,6 @@
   "trip_export_map": "Export map",
   "trip_zoom_extent": "Fit trip",
   "trip_map_exported": "Trip map exported",
-  "no_raster_maps": "No raster maps available"
+  "no_raster_maps": "No raster maps available",
+  "delete_selected_confirm": "Delete the selected {count} item(s)?"
 }
