@@ -104,7 +104,11 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
           ..where((c) => c.id.equals(trip.caveId)))
         .getSingleOrNull();
     final points = await appDatabase.getTripPoints(widget.tripId);
-    final placeIds = points.map((p) => p.cavePlaceId).toSet().toList();
+    final placeIds = points
+      .map((p) => p.cavePlaceId)
+      .whereType<int>()
+      .toSet()
+      .toList();
     Map<int, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
       final places = await (appDatabase.select(appDatabase.cavePlaces)
@@ -544,7 +548,8 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
         else
           ...List.generate(_points.length, (i) {
             final pt = _points[i];
-            final place = _placesById[pt.cavePlaceId];
+            final place =
+              pt.cavePlaceId == null ? null : _placesById[pt.cavePlaceId!];
             final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
             return ListTile(
               dense: true,
@@ -580,8 +585,12 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     final imageFile = _rasterImageFile;
     // During playback, show only the first N points
     final visibleIds = _isPlayingRoute
-        ? _points.take(_animatedPointCount).map((p) => p.cavePlaceId).toList()
-        : _points.map((p) => p.cavePlaceId).toList();
+      ? _points
+        .take(_animatedPointCount)
+        .map((p) => p.cavePlaceId)
+        .whereType<int>()
+        .toList()
+      : _points.map((p) => p.cavePlaceId).whereType<int>().toList();
 
     return Column(
       children: [

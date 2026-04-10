@@ -31,7 +31,31 @@ class CavePlaceRepository {
 
   Future<void> deleteCavePlace(int id) async {
     try {
-      await (_database.delete(_database.cavePlaces)..where((cp) => cp.id.equals(id))).go();
+      await _database.transaction(() async {
+        // initial delete mechanism
+        //await (_database.delete(_database.cavePlaces)..where((cp) => cp.id.equals(id))).go();
+
+        // Remove direct FK references from map bindings.
+        await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
+              ..where((d) => d.cavePlaceId.equals(id)))
+            .go();
+
+        // Keep trip points but detach from removed cave place.
+        await (_database.update(_database.caveTripPoints)
+              ..where((tp) => tp.cavePlaceId.equals(id)))
+            .write(const CaveTripPointsCompanion(cavePlaceId: Value(null)));
+
+        // Remove pseudo links to this cave place from documentation links table.
+        await (_database.delete(_database.documentationFilesToGeofeatures)
+              ..where((g) =>
+                  g.geofeatureType.equals('cave_place') &
+                  g.geofeatureId.equals(id)))
+            .go();
+
+        await (_database.delete(_database.cavePlaces)
+              ..where((cp) => cp.id.equals(id)))
+            .go();
+      });
     } catch (e) {
       print('[CavePlaceRepository] Failed to delete cave place: $e');
       rethrow;

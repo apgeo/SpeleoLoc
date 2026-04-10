@@ -6532,10 +6532,10 @@ class CaveTripPoints extends Table
   late final GeneratedColumn<int> cavePlaceId = GeneratedColumn<int>(
     'cave_place_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES cave_places(id)',
+    requiredDuringInsert: false,
+    $customConstraints: 'REFERENCES cave_places(id)',
   );
   static const VerificationMeta _scannedAtMeta = const VerificationMeta(
     'scannedAt',
@@ -6635,8 +6635,6 @@ class CaveTripPoints extends Table
           _cavePlaceIdMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_cavePlaceIdMeta);
     }
     if (data.containsKey('scanned_at')) {
       context.handle(
@@ -6694,7 +6692,7 @@ class CaveTripPoints extends Table
       cavePlaceId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}cave_place_id'],
-      )!,
+      ),
       scannedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}scanned_at'],
@@ -6734,16 +6732,20 @@ class CaveTripPoints extends Table
 class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   final int id;
   final int caveTripId;
-  final int cavePlaceId;
+
+  /// todo: when cp deleted should we keep the trip point with cave_place_id null, or should we delete the trip point as well?
+  final int? cavePlaceId;
   final int scannedAt;
   final String? notes;
+
+  /// todo: decide whether to keep both scanned_at and created_at (could there be a scenario where scanned_at is different from created_at? e.g. if we want to allow users to manually add trip points after the trip, or edit scanned_at for existing trip points; if not, then we can remove scanned_at and just use created_at)
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const CaveTripPoint({
     required this.id,
     required this.caveTripId,
-    required this.cavePlaceId,
+    this.cavePlaceId,
     required this.scannedAt,
     this.notes,
     this.createdAt,
@@ -6755,7 +6757,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['cave_trip_id'] = Variable<int>(caveTripId);
-    map['cave_place_id'] = Variable<int>(cavePlaceId);
+    if (!nullToAbsent || cavePlaceId != null) {
+      map['cave_place_id'] = Variable<int>(cavePlaceId);
+    }
     map['scanned_at'] = Variable<int>(scannedAt);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
@@ -6776,7 +6780,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
     return CaveTripPointsCompanion(
       id: Value(id),
       caveTripId: Value(caveTripId),
-      cavePlaceId: Value(cavePlaceId),
+      cavePlaceId: cavePlaceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cavePlaceId),
       scannedAt: Value(scannedAt),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
@@ -6801,7 +6807,7 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
     return CaveTripPoint(
       id: serializer.fromJson<int>(json['id']),
       caveTripId: serializer.fromJson<int>(json['cave_trip_id']),
-      cavePlaceId: serializer.fromJson<int>(json['cave_place_id']),
+      cavePlaceId: serializer.fromJson<int?>(json['cave_place_id']),
       scannedAt: serializer.fromJson<int>(json['scanned_at']),
       notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
@@ -6815,7 +6821,7 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'cave_trip_id': serializer.toJson<int>(caveTripId),
-      'cave_place_id': serializer.toJson<int>(cavePlaceId),
+      'cave_place_id': serializer.toJson<int?>(cavePlaceId),
       'scanned_at': serializer.toJson<int>(scannedAt),
       'notes': serializer.toJson<String?>(notes),
       'created_at': serializer.toJson<int?>(createdAt),
@@ -6827,7 +6833,7 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   CaveTripPoint copyWith({
     int? id,
     int? caveTripId,
-    int? cavePlaceId,
+    Value<int?> cavePlaceId = const Value.absent(),
     int? scannedAt,
     Value<String?> notes = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
@@ -6836,7 +6842,7 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   }) => CaveTripPoint(
     id: id ?? this.id,
     caveTripId: caveTripId ?? this.caveTripId,
-    cavePlaceId: cavePlaceId ?? this.cavePlaceId,
+    cavePlaceId: cavePlaceId.present ? cavePlaceId.value : this.cavePlaceId,
     scannedAt: scannedAt ?? this.scannedAt,
     notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
@@ -6903,7 +6909,7 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
 class CaveTripPointsCompanion extends UpdateCompanion<CaveTripPoint> {
   final Value<int> id;
   final Value<int> caveTripId;
-  final Value<int> cavePlaceId;
+  final Value<int?> cavePlaceId;
   final Value<int> scannedAt;
   final Value<String?> notes;
   final Value<int?> createdAt;
@@ -6922,14 +6928,13 @@ class CaveTripPointsCompanion extends UpdateCompanion<CaveTripPoint> {
   CaveTripPointsCompanion.insert({
     this.id = const Value.absent(),
     required int caveTripId,
-    required int cavePlaceId,
+    this.cavePlaceId = const Value.absent(),
     required int scannedAt,
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
   }) : caveTripId = Value(caveTripId),
-       cavePlaceId = Value(cavePlaceId),
        scannedAt = Value(scannedAt);
   static Insertable<CaveTripPoint> custom({
     Expression<int>? id,
@@ -6956,7 +6961,7 @@ class CaveTripPointsCompanion extends UpdateCompanion<CaveTripPoint> {
   CaveTripPointsCompanion copyWith({
     Value<int>? id,
     Value<int>? caveTripId,
-    Value<int>? cavePlaceId,
+    Value<int?>? cavePlaceId,
     Value<int>? scannedAt,
     Value<String?>? notes,
     Value<int?>? createdAt,
@@ -13538,7 +13543,7 @@ typedef $CaveTripPointsCreateCompanionBuilder =
     CaveTripPointsCompanion Function({
       Value<int> id,
       required int caveTripId,
-      required int cavePlaceId,
+      Value<int?> cavePlaceId,
       required int scannedAt,
       Value<String?> notes,
       Value<int?> createdAt,
@@ -13549,7 +13554,7 @@ typedef $CaveTripPointsUpdateCompanionBuilder =
     CaveTripPointsCompanion Function({
       Value<int> id,
       Value<int> caveTripId,
-      Value<int> cavePlaceId,
+      Value<int?> cavePlaceId,
       Value<int> scannedAt,
       Value<String?> notes,
       Value<int?> createdAt,
@@ -13585,9 +13590,9 @@ final class $CaveTripPointsReferences
         $_aliasNameGenerator(db.caveTripPoints.cavePlaceId, db.cavePlaces.id),
       );
 
-  $CavePlacesProcessedTableManager get cavePlaceId {
-    final $_column = $_itemColumn<int>('cave_place_id')!;
-
+  $CavePlacesProcessedTableManager? get cavePlaceId {
+    final $_column = $_itemColumn<int>('cave_place_id');
+    if ($_column == null) return null;
     final manager = $CavePlacesTableManager(
       $_db,
       $_db.cavePlaces,
@@ -13876,7 +13881,7 @@ class $CaveTripPointsTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> caveTripId = const Value.absent(),
-                Value<int> cavePlaceId = const Value.absent(),
+                Value<int?> cavePlaceId = const Value.absent(),
                 Value<int> scannedAt = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
@@ -13896,7 +13901,7 @@ class $CaveTripPointsTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int caveTripId,
-                required int cavePlaceId,
+                Value<int?> cavePlaceId = const Value.absent(),
                 required int scannedAt,
                 Value<String?> notes = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),

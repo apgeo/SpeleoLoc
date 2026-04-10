@@ -187,13 +187,18 @@ CREATE TABLE IF NOT EXISTS cave_trips (
 CREATE TABLE IF NOT EXISTS cave_trip_points (
     id              INTEGER   PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
     cave_trip_id    INTEGER NOT NULL REFERENCES cave_trips (id),
-    cave_place_id   INTEGER NOT NULL REFERENCES cave_places (id),
-    scanned_at      INTEGER NOT NULL,
+	-- todo: when cp deleted should we keep the trip point with cave_place_id null, or should we delete the trip point as well?
+    cave_place_id   INTEGER REFERENCES cave_places (id),
+    
+	scanned_at      INTEGER NOT NULL,
     notes           TEXT,
+
+	-- todo: decide whether to keep both scanned_at and created_at (could there be a scenario where scanned_at is different from created_at? e.g. if we want to allow users to manually add trip points after the trip, or edit scanned_at for existing trip points; if not, then we can remove scanned_at and just use created_at)
     created_at      INTEGER,
     updated_at      INTEGER,
     deleted_at      INTEGER,
-    UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK
+    
+	UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK
 );
 
 -- Table: documentation_files_to_cave_trips

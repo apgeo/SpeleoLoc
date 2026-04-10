@@ -373,7 +373,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
 
   Future<String> _writeTempFile(String name, Uint8List bytes) async {
     final dir = await getTemporaryDirectory();
-    final path = '${dir.path}/$name';
+  final path = '${dir.path}/$name';
     await File(path).writeAsBytes(bytes, flush: true);
     return path;
   }

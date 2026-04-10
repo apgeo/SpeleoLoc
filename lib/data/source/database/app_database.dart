@@ -232,7 +232,7 @@ class AppDatabase extends _$AppDatabase {
           CREATE TABLE IF NOT EXISTS cave_trip_points (
             id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
             cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id),
-            cave_place_id INTEGER NOT NULL REFERENCES cave_places (id),
+            cave_place_id INTEGER REFERENCES cave_places (id),
             scanned_at INTEGER NOT NULL,
             notes TEXT,
             created_at INTEGER,
@@ -311,7 +311,7 @@ class AppDatabase extends _$AppDatabase {
     return into(caveTripPoints).insert(
       CaveTripPointsCompanion.insert(
         caveTripId: tripId,
-        cavePlaceId: cavePlaceId,
+        cavePlaceId: Value(cavePlaceId),
         scannedAt: DateTime.now().millisecondsSinceEpoch,
         notes: Value(notes),
         createdAt: Value(DateTime.now().millisecondsSinceEpoch),

@@ -533,7 +533,11 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
         .getSingleOrNull();
     final points = await appDatabase.getTripPoints(widget.tripId);
     final last5 = points.reversed.take(5).toList().reversed.toList();
-    final placeIds = last5.map((p) => p.cavePlaceId).toSet().toList();
+    final placeIds = last5
+      .map((p) => p.cavePlaceId)
+      .whereType<int>()
+      .toSet()
+      .toList();
     Map<int, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
       final places = await (appDatabase.select(appDatabase.cavePlaces)
