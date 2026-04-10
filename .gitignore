@@ -56,3 +56,4 @@ app.*.map.json
 /test_data/app_tests/
 
 .github/
+test_data/pictures/
