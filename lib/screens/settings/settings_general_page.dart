@@ -3,6 +3,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// General settings: app language.
 class SettingsGeneralPage extends StatefulWidget {
@@ -13,7 +14,17 @@ class SettingsGeneralPage extends StatefulWidget {
 }
 
 class _SettingsGeneralPageState extends State<SettingsGeneralPage>
-    with AppBarMenuMixin<SettingsGeneralPage> {
+    with AppBarMenuMixin<SettingsGeneralPage>, ProductTourMixin<SettingsGeneralPage> {
+  @override
+  String get tourId => 'settings_general';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_general_list_title', bodyLocKey: 'tour_settings_general_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_general_menu_title', bodyLocKey: 'tour_settings_general_menu_body'),
+  ];
+
   String? _appLanguage;
   bool _needsReload = false;
 
@@ -53,9 +64,10 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context, _needsReload),
           ),
-          actions: [buildAppBarMenuButton()],
+          actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
         ),
         body: ListView(
+          key: tourKeys['list'],
           padding: const EdgeInsets.all(16),
           children: [
             // App language
@@ -80,6 +92,20 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
                   }
                 },
               ),
+            ),
+            const Divider(),
+            // Reset tours
+            ListTile(
+              leading: const Icon(Icons.refresh),
+              title: Text(LocServ.inst.t('reset_tours')),
+              onTap: () async {
+                await resetAllTours(allTourIds);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(LocServ.inst.t('tours_reset_done'))),
+                  );
+                }
+              },
             ),
           ],
         ),

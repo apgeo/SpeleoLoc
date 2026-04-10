@@ -5,6 +5,7 @@ import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class CaveTripListPage extends StatefulWidget {
   const CaveTripListPage({super.key, required this.caveId});
@@ -14,7 +15,17 @@ class CaveTripListPage extends StatefulWidget {
   State<CaveTripListPage> createState() => _CaveTripListPageState();
 }
 
-class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixin<CaveTripListPage> {
+class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixin<CaveTripListPage>, ProductTourMixin<CaveTripListPage> {
+  @override
+  String get tourId => 'cave_trip_list';
+  @override
+  final tourKeys = TourKeySet(['toolbar', 'list', 'menu']);
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'toolbar', titleLocKey: 'tour_cave_trip_list_toolbar_title', bodyLocKey: 'tour_cave_trip_list_toolbar_body'),
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_cave_trip_list_list_title', bodyLocKey: 'tour_cave_trip_list_list_body', align: ContentAlign.top),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_trip_list_menu_title', bodyLocKey: 'tour_cave_trip_list_menu_body'),
+  ];
   Cave? _cave;
   List<CaveTrip> _endedTrips = [];
   Map<int, int> _pointCounts = {};
@@ -227,12 +238,12 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('trip_history')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildToolbar(),
+          KeyedSubtree(key: tourKeys['toolbar'], child: _buildToolbar()),
           if (activeTripId != null) _buildActiveTripCard(activeTripId),
           if (_endedTrips.isNotEmpty)
             Padding(
@@ -243,6 +254,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
               ),
             ),
           Expanded(
+            key: tourKeys['list'],
             child: _endedTrips.isEmpty
                 ? Center(child: Text(
                     activeTripId != null ? '' : LocServ.inst.t('trip_no_history'),

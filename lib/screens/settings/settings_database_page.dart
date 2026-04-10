@@ -8,6 +8,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Database management settings: reinitialize, export.
@@ -19,7 +20,17 @@ class SettingsDatabasePage extends StatefulWidget {
 }
 
 class _SettingsDatabasePageState extends State<SettingsDatabasePage>
-    with AppBarMenuMixin<SettingsDatabasePage> {
+    with AppBarMenuMixin<SettingsDatabasePage>, ProductTourMixin<SettingsDatabasePage> {
+  @override
+  String get tourId => 'settings_db';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_db_list_title', bodyLocKey: 'tour_settings_db_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_db_menu_title', bodyLocKey: 'tour_settings_db_menu_body'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,9 +38,10 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_database')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: ListView(
+        key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
           ElevatedButton.icon(

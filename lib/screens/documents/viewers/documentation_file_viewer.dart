@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Lightweight viewer that handles common file types inline (images, text)
 /// and embeds PDF rendering for `.pdf` files using `pdfx`.
@@ -19,7 +20,17 @@ class DocumentationFileViewer extends StatefulWidget {
 }
 
 class _DocumentationFileViewerState extends State<DocumentationFileViewer>
-    with AppBarMenuMixin<DocumentationFileViewer> {
+    with AppBarMenuMixin<DocumentationFileViewer>, ProductTourMixin<DocumentationFileViewer> {
+  @override
+  String get tourId => 'doc_file_viewer';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'content', titleLocKey: 'tour_doc_file_viewer_content_title', bodyLocKey: 'tour_doc_file_viewer_content_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_doc_file_viewer_menu_title', bodyLocKey: 'tour_doc_file_viewer_menu_body'),
+  ];
+
   PdfControllerPinch? _pdfController;
 
   @override
@@ -86,9 +97,9 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(widget.doc.title),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
-      body: body,
+      body: KeyedSubtree(key: tourKeys['content'], child: body),
     );
   }
 

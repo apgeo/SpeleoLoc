@@ -9,6 +9,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
@@ -31,7 +32,18 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
 }
 
 class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
-    with AppBarMenuMixin<RasterMapPlaceSelectorPage> {
+    with AppBarMenuMixin<RasterMapPlaceSelectorPage>, ProductTourMixin<RasterMapPlaceSelectorPage> {
+  @override
+  String get tourId => 'raster_map_place_selector';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'map', titleLocKey: 'tour_raster_map_selector_map_title', bodyLocKey: 'tour_raster_map_selector_map_body'),
+    TourStepDef(keyId: 'navbar', titleLocKey: 'tour_raster_map_selector_navbar_title', bodyLocKey: 'tour_raster_map_selector_navbar_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_raster_map_selector_menu_title', bodyLocKey: 'tour_raster_map_selector_menu_body'),
+  ];
+
   // Selected image-space coordinates received from the editor widget
   double? _imageSelectedX;
   double? _imageSelectedY;
@@ -341,7 +353,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
               SettingsHelper.saveStringConfig(compactNavBarKey, _compactNavBar.toString());
             },
           ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       // bottom controls: legend + zoom controls + save button — responsive layout
@@ -377,6 +389,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
                   children: [
                     // Editor handles image display, taps, overlays and zoom controls.
                     Expanded(
+                      key: tourKeys['map'],
                       child: ClipRect(
                         child: RasterMapPlacePointEditor(
                           controller: _editorController,

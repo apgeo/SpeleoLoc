@@ -7,6 +7,7 @@ import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Full data export / import page.
 ///
@@ -21,7 +22,17 @@ class DataExportImportPage extends StatefulWidget {
 }
 
 class _DataExportImportPageState extends State<DataExportImportPage>
-    with AppBarMenuMixin<DataExportImportPage> {
+    with AppBarMenuMixin<DataExportImportPage>, ProductTourMixin<DataExportImportPage> {
+  @override
+  String get tourId => 'data_export';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_data_export_list_title', bodyLocKey: 'tour_data_export_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_data_export_menu_title', bodyLocKey: 'tour_data_export_menu_body'),
+  ];
+
   bool _includeDocFiles = true;
   bool _includeRasterMaps = true;
   bool _diffExport = false;
@@ -33,9 +44,10 @@ class _DataExportImportPageState extends State<DataExportImportPage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('data_export_import')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: ListView(
+        key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
           // -- Export section --

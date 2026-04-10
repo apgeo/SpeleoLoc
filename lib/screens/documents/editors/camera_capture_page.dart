@@ -9,6 +9,7 @@ import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Captures a photo using [ImagePicker] (camera) and then optionally opens the
 /// [ImageEditorPage] for annotation / cropping before saving.
@@ -32,7 +33,18 @@ class CameraCapturePage extends StatefulWidget {
 }
 
 class _CameraCapturePageState extends State<CameraCapturePage>
-    with AppBarMenuMixin<CameraCapturePage> {
+    with AppBarMenuMixin<CameraCapturePage>, ProductTourMixin<CameraCapturePage> {
+  @override
+  String get tourId => 'camera_capture';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'preview', titleLocKey: 'tour_camera_capture_preview_title', bodyLocKey: 'tour_camera_capture_preview_body'),
+    TourStepDef(keyId: 'actions', titleLocKey: 'tour_camera_capture_actions_title', bodyLocKey: 'tour_camera_capture_actions_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_camera_capture_menu_title', bodyLocKey: 'tour_camera_capture_menu_body'),
+  ];
+
   final ImagePicker _picker = ImagePicker();
   bool _isSaving = false;
   File? _capturedFile;
@@ -163,7 +175,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
                 ),
               ),
             ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: _capturedFile == null
@@ -192,6 +204,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
           : Column(
               children: [
                 Expanded(
+                  key: tourKeys['preview'],
                   child: InteractiveViewer(
                     child: Image.file(
                       _capturedFile!,
@@ -200,6 +213,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
                   ),
                 ),
                 Padding(
+                  key: tourKeys['actions'],
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class SurfaceAreasPage extends StatefulWidget {
   const SurfaceAreasPage({super.key});
@@ -12,7 +13,18 @@ class SurfaceAreasPage extends StatefulWidget {
 }
 
 class _SurfaceAreasPageState extends State<SurfaceAreasPage>
-    with AppBarMenuMixin<SurfaceAreasPage> {
+    with AppBarMenuMixin<SurfaceAreasPage>, ProductTourMixin<SurfaceAreasPage> {
+  @override
+  String get tourId => 'surface_areas';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'add', titleLocKey: 'tour_surface_areas_add_title', bodyLocKey: 'tour_surface_areas_add_body'),
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_surface_areas_list_title', bodyLocKey: 'tour_surface_areas_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_surface_areas_menu_title', bodyLocKey: 'tour_surface_areas_menu_body'),
+  ];
+
   List<SurfaceArea> _areas = [];
   bool _changed = false;
 
@@ -119,11 +131,12 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
         appBar: AppBar(
           title: Text(LocServ.inst.t('manage_surface_areas')),
           actions: [
-            IconButton(onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
-            buildAppBarMenuButton(),
+            IconButton(key: tourKeys['add'], onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
           ],
         ),
         body: ListView.separated(
+          key: tourKeys['list'],
           itemCount: _areas.length,
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {

@@ -1313,7 +1313,7 @@ void main() async {
 /// Run sqlite3 CLI with a dot-command and capture output to a file.
 void _runSqlite3(String dbPath, String dotCommand, String outputPath) {
   final result = Process.runSync(
-    kSqlite3Cmd ?? 'sqlite3',
+    kSqlite3Cmd,
     [dbPath, dotCommand],
     stdoutEncoding: null,
   );
@@ -1332,7 +1332,7 @@ void _exportDataOnly(String dbPath, String outputPath) {
   buf.writeln();
   for (final table in kOrderedTables) {
     final result = Process.runSync(
-      kSqlite3Cmd ?? 'sqlite3',
+      kSqlite3Cmd,
       [dbPath, '.mode insert $table', 'SELECT * FROM $table;'],
     );
     if (result.exitCode != 0) {

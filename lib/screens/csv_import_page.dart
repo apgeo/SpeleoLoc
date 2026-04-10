@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Definition of a single CSV column that can be mapped by the user.
 class CSVColumnDefinition {
@@ -87,7 +88,19 @@ class CSVImportPage extends StatefulWidget {
 }
 
 class _CSVImportPageState extends State<CSVImportPage>
-    with AppBarMenuMixin<CSVImportPage> {
+    with AppBarMenuMixin<CSVImportPage>, ProductTourMixin<CSVImportPage> {
+  @override
+  String get tourId => 'csv_import';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'file_picker', titleLocKey: 'tour_csv_import_file_picker_title', bodyLocKey: 'tour_csv_import_file_picker_body'),
+    TourStepDef(keyId: 'column_mapping', titleLocKey: 'tour_csv_import_column_mapping_title', bodyLocKey: 'tour_csv_import_column_mapping_body'),
+    TourStepDef(keyId: 'preview', titleLocKey: 'tour_csv_import_preview_title', bodyLocKey: 'tour_csv_import_preview_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_csv_import_menu_title', bodyLocKey: 'tour_csv_import_menu_body'),
+  ];
+
   // CSV data
   String? _filePath;
   List<List<dynamic>>? _csvData;
@@ -263,7 +276,7 @@ class _CSVImportPageState extends State<CSVImportPage>
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -279,6 +292,7 @@ class _CSVImportPageState extends State<CSVImportPage>
                   ),
                   const SizedBox(height: 12),
                   Row(
+                    key: tourKeys['file_picker'],
                     children: [
                       ElevatedButton.icon(
                         onPressed: _pickFile,
@@ -313,6 +327,7 @@ class _CSVImportPageState extends State<CSVImportPage>
                     const SizedBox(height: 8),
                     Text(
                       LocServ.inst.t('csv_column_mappings'),
+                      key: tourKeys['column_mapping'],
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Text(
@@ -346,6 +361,7 @@ class _CSVImportPageState extends State<CSVImportPage>
                     const SizedBox(height: 8),
                     Text(
                       LocServ.inst.t('csv_data_preview'),
+                      key: tourKeys['preview'],
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),

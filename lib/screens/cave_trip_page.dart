@@ -12,6 +12,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 class CaveTripPage extends StatefulWidget {
@@ -22,7 +23,17 @@ class CaveTripPage extends StatefulWidget {
   State<CaveTripPage> createState() => _CaveTripPageState();
 }
 
-class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMixin, AppBarMenuMixin<CaveTripPage> {
+class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMixin, AppBarMenuMixin<CaveTripPage>, ProductTourMixin<CaveTripPage> {
+  @override
+  String get tourId => 'cave_trip';
+  @override
+  final tourKeys = TourKeySet(['toolbar', 'map', 'menu']);
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'toolbar', titleLocKey: 'tour_cave_trip_toolbar_title', bodyLocKey: 'tour_cave_trip_toolbar_body'),
+    TourStepDef(keyId: 'map', titleLocKey: 'tour_cave_trip_map_title', bodyLocKey: 'tour_cave_trip_map_body', align: ContentAlign.top),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_trip_menu_title', bodyLocKey: 'tour_cave_trip_menu_body'),
+  ];
   CaveTrip? _trip;
   Cave? _cave;
   List<CaveTripPoint> _points = [];
@@ -451,13 +462,14 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       appBar: AppBar(
         title: Text(trip.title),
         actions: [
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: Column(
         children: [
-          _buildActionToolbar(),
+          KeyedSubtree(key: tourKeys['toolbar'], child: _buildActionToolbar()),
           Expanded(
+            key: tourKeys['map'],
             child: _showMapView ? _buildMapView() : _buildListView(
               trip: trip,
               isPaused: isPaused,

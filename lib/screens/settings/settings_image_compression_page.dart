@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Settings page for image compression on import.
 class SettingsImageCompressionPage extends StatefulWidget {
@@ -14,7 +15,17 @@ class SettingsImageCompressionPage extends StatefulWidget {
 
 class _SettingsImageCompressionPageState
     extends State<SettingsImageCompressionPage>
-    with AppBarMenuMixin<SettingsImageCompressionPage> {
+    with AppBarMenuMixin<SettingsImageCompressionPage>, ProductTourMixin<SettingsImageCompressionPage> {
+  @override
+  String get tourId => 'settings_img_compress';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_img_compress_list_title', bodyLocKey: 'tour_settings_img_compress_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_img_compress_menu_title', bodyLocKey: 'tour_settings_img_compress_menu_body'),
+  ];
+
   ImageCompressionSettings? _settings;
   late TextEditingController _resolutionCtrl;
   late TextEditingController _qualityCtrl;
@@ -81,9 +92,10 @@ class _SettingsImageCompressionPageState
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('image_compression')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: ListView(
+        key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
           // Enable / disable toggle

@@ -14,6 +14,7 @@ import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class CavePlacePage extends StatefulWidget {
   const CavePlacePage({super.key, required this.caveId, this.cavePlaceId});
@@ -26,7 +27,20 @@ class CavePlacePage extends StatefulWidget {
 }
 
 class _CavePlacePageState extends State<CavePlacePage>
-    with TickerProviderStateMixin, AppBarMenuMixin<CavePlacePage> {
+    with TickerProviderStateMixin, AppBarMenuMixin<CavePlacePage>, ProductTourMixin<CavePlacePage> {
+  @override
+  String get tourId => 'cave_place';
+  @override
+  final tourKeys = TourKeySet(['title_field', 'desc_field', 'depth_field', 'qr_field', 'tabs', 'menu']);
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_cave_place_title_field_title', bodyLocKey: 'tour_cave_place_title_field_body'),
+    TourStepDef(keyId: 'desc_field', titleLocKey: 'tour_cave_place_desc_field_title', bodyLocKey: 'tour_cave_place_desc_field_body'),
+    TourStepDef(keyId: 'depth_field', titleLocKey: 'tour_cave_place_depth_field_title', bodyLocKey: 'tour_cave_place_depth_field_body'),
+    TourStepDef(keyId: 'qr_field', titleLocKey: 'tour_cave_place_qr_field_title', bodyLocKey: 'tour_cave_place_qr_field_body'),
+    TourStepDef(keyId: 'tabs', titleLocKey: 'tour_cave_place_tabs_title', bodyLocKey: 'tour_cave_place_tabs_body', align: ContentAlign.top),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_place_menu_title', bodyLocKey: 'tour_cave_place_menu_body'),
+  ];
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
@@ -746,7 +760,7 @@ class _CavePlacePageState extends State<CavePlacePage>
               constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               onPressed: () => _save(),
             ),
-            buildAppBarMenuButton(),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
           ],
         ),
         body: SingleChildScrollView(
@@ -755,6 +769,7 @@ class _CavePlacePageState extends State<CavePlacePage>
             child: Column(
               children: [
                 TextFormField(
+                  key: tourKeys['title_field'],
                   controller: _titleController,
                   decoration: InputDecoration(
                     labelText: LocServ.inst.t('title'),
@@ -771,6 +786,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                   children: [
                     Expanded(
                       child: TextFormField(
+                        key: tourKeys['desc_field'],
                         controller: _descriptionController,
                         decoration: InputDecoration(
                           labelText: LocServ.inst.t('description'),
@@ -810,6 +826,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                     SizedBox(
                       width: 80,
                       child: TextFormField(
+                        key: tourKeys['depth_field'],
                         controller: _depthController,
                         decoration: InputDecoration(
                           labelText: "Depth '+/-'",
@@ -912,9 +929,12 @@ class _CavePlacePageState extends State<CavePlacePage>
                 const SizedBox(height: 8),
                 // QR code identifier with edit toggle
                 Row(
+                  key: tourKeys['qr_field'],
                   children: [
                     IconButton(
-                      icon: Icon(_qrEditable ? Icons.check : Icons.edit),
+                      icon: Icon(
+                        _qrEditable ? Icons.lock_open : Icons.lock_outline,
+                      ),
                       tooltip: _qrEditable
                           ? LocServ.inst.t('disable_qr_edit')
                           : LocServ.inst.t('enable_qr_edit'),
@@ -1037,6 +1057,7 @@ class _CavePlacePageState extends State<CavePlacePage>
 
                         /// Raster maps tab bar controller section, with left/right header buttons
                         DefaultTabController(
+                          key: tourKeys['tabs'],
                           length: _rasterMaps.length,
                           child: Column(
                             children: [

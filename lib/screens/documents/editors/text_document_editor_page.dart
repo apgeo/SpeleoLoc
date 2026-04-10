@@ -4,6 +4,7 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// A simple plain-text editor that creates a new documentation file record.
 ///
@@ -33,7 +34,18 @@ class TextDocumentEditorPage extends StatefulWidget {
 }
 
 class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
-    with AppBarMenuMixin<TextDocumentEditorPage> {
+    with AppBarMenuMixin<TextDocumentEditorPage>, ProductTourMixin<TextDocumentEditorPage> {
+  @override
+  String get tourId => 'text_document_editor';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_text_doc_editor_title_field_title', bodyLocKey: 'tour_text_doc_editor_title_field_body'),
+    TourStepDef(keyId: 'content', titleLocKey: 'tour_text_doc_editor_content_title', bodyLocKey: 'tour_text_doc_editor_content_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_text_doc_editor_menu_title', bodyLocKey: 'tour_text_doc_editor_menu_body'),
+  ];
+
   final _titleCtrl = TextEditingController();
   final _contentCtrl = TextEditingController();
   bool _isSaving = false;
@@ -181,7 +193,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
               tooltip: LocServ.inst.t('save'),
               onPressed: _save,
             ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: _isLoading
@@ -191,6 +203,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
               child: Column(
                 children: [
                   TextField(
+                    key: tourKeys['title_field'],
                     controller: _titleCtrl,
                     decoration: InputDecoration(
                       labelText: LocServ.inst.t('title'),
@@ -200,6 +213,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
                   ),
                   const SizedBox(height: 12),
                   Expanded(
+                    key: tourKeys['content'],
                     child: TextField(
                       controller: _contentCtrl,
                       decoration: InputDecoration(

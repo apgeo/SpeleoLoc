@@ -407,5 +407,200 @@
   "trip_zoom_extent": "Încadrează traseul",
   "trip_map_exported": "Harta traseului exportată",
   "no_raster_maps": "Nu există hărți raster",
-  "delete_selected_confirm": "Ștergeți {count} elemente selectate?"
+  "delete_selected_confirm": "Ștergeți {count} elemente selectate?",
+
+  "help_tour": "Tur de ghidare",
+  "reset_tours": "Resetează tururile de ghidare",
+  "tours_reset_done": "Toate tururile de ghidare au fost resetate",
+
+  "tour_home_scan_qr_title": "Scanează cod QR",
+  "tour_home_scan_qr_body": "Scanează un cod QR pentru a găsi rapid o stație din peșteră.",
+  "tour_home_add_cave_title": "Adaugă peșteră",
+  "tour_home_add_cave_body": "Apasă aici pentru a înregistra o peșteră nouă în aplicație.",
+  "tour_home_docs_title": "Documentație",
+  "tour_home_docs_body": "Răsfoiește toate fișierele de documentare din toate peșterile — fotografii, audio, notițe.",
+  "tour_home_cave_list_title": "Peșterile tale",
+  "tour_home_cave_list_body": "Aceasta este lista tuturor peșterilor. Apasă o peșteră pentru a vedea stațiile și hărțile.",
+  "tour_home_menu_title": "Meniu",
+  "tour_home_menu_body": "Accesează opțiuni suplimentare: zone de suprafață, import CSV și navigare generală.",
+
+  "tour_cave_places_list_search_title": "Caută stații",
+  "tour_cave_places_list_search_body": "Filtrează lista de stații după nume sau cod QR.",
+  "tour_cave_places_list_add_title": "Adaugă stație",
+  "tour_cave_places_list_add_body": "Creează o stație nouă (intersecție, punct de interes) în această peșteră.",
+  "tour_cave_places_list_list_title": "Stații peșteră",
+  "tour_cave_places_list_list_body": "Toate stațiile din peșteră. Apasă una pentru detalii, coordonate sau documente.",
+  "tour_cave_places_list_menu_title": "Meniu peșteră",
+  "tour_cave_places_list_menu_body": "Pornește un traseu, editează detalii, importă stații din CSV sau șterge peștera.",
+
+  "tour_cave_place_title_field_title": "Numele stației",
+  "tour_cave_place_title_field_body": "Numele acestei stații din peșteră (ex. 'Intersecție principală', 'Camera A').",
+  "tour_cave_place_desc_field_title": "Descriere",
+  "tour_cave_place_desc_field_body": "Note opționale — trăsături geologice, observații, pericole.",
+  "tour_cave_place_depth_field_title": "Adâncime",
+  "tour_cave_place_depth_field_body": "Adâncimea stației față de intrarea peșterii. Valori negative pentru stații deasupra intrării.",
+  "tour_cave_place_qr_field_title": "Identificator QR",
+  "tour_cave_place_qr_field_body": "Codul QR numeric asociat stației. Scanează cu butonul QR sau introdu manual.",
+  "tour_cave_place_tabs_title": "Hărți raster",
+  "tour_cave_place_tabs_body": "Comută între hărțile raster pentru a vedea sau defini poziția stației pe fiecare hartă.",
+  "tour_cave_place_menu_title": "Opțiuni stație",
+  "tour_cave_place_menu_body": "Arată/ascunde câmpurile de coordonate GPS.",
+
+  "tour_cave_trip_toolbar_title": "Bara de instrumente traseu",
+  "tour_cave_trip_toolbar_body": "Controlează traseul: oprește, pauză/reluare, vezi jurnalul, comută între listă și hartă, sau redă ruta.",
+  "tour_cave_trip_map_title": "Hartă traseu",
+  "tour_cave_trip_map_body": "Vezi ruta traseului suprapusă pe harta raster. Punctele sunt afișate în ordine cronologică.",
+  "tour_cave_trip_menu_title": "Meniu traseu",
+  "tour_cave_trip_menu_body": "Șterge acest traseu sau accesează alte opțiuni.",
+
+  "tour_cave_trip_list_toolbar_title": "Comenzi traseu",
+  "tour_cave_trip_list_toolbar_body": "Pornește un traseu nou sau controlează traseul activ — pauză, reluare, oprire sau vizualizare.",
+  "tour_cave_trip_list_list_title": "Istoric trasee",
+  "tour_cave_trip_list_list_body": "Toate traseele din această peșteră, cele mai recente primele. Apasă un traseu pentru detalii.",
+  "tour_cave_trip_list_menu_title": "Meniu",
+  "tour_cave_trip_list_menu_body": "Opțiuni suplimentare pentru gestionarea traseelor.",
+
+  "tour_cave_trip_log_editor_title": "Jurnal traseu",
+  "tour_cave_trip_log_editor_body": "Scrie notițe libere despre traseu. Modificările se salvează la apăsarea butonului de salvare.",
+  "tour_cave_trip_log_save_title": "Salvează jurnalul",
+  "tour_cave_trip_log_save_body": "Salvează notițele din jurnalul traseului.",
+
+  "tour_add_new_cave_title_field_title": "Numele peșterii",
+  "tour_add_new_cave_title_field_body": "Introdu numele noii peșteri pe care o înregistrezi.",
+  "tour_add_new_cave_desc_field_title": "Descriere",
+  "tour_add_new_cave_desc_field_body": "Descriere opțională — indicii de localizare, regiune sau notițe despre peșteră.",
+  "tour_add_new_cave_area_dropdown_title": "Zonă de suprafață",
+  "tour_add_new_cave_area_dropdown_body": "Opțional, asociază peștera cu o zonă de suprafață pentru organizare.",
+
+  "tour_csv_import_file_picker_title": "Selectează fișier CSV",
+  "tour_csv_import_file_picker_body": "Alege un fișier CSV sau TXT de pe dispozitiv pentru a importa date.",
+  "tour_csv_import_column_mapping_title": "Mapare coloane",
+  "tour_csv_import_column_mapping_body": "Asociază fiecare coloană din CSV cu câmpul de date corespunzător.",
+  "tour_csv_import_preview_title": "Previzualizare date",
+  "tour_csv_import_preview_body": "Verifică datele mapate înainte de a confirma importul.",
+
+  "tour_csv_cave_place_import_content_title": "Import stații",
+  "tour_csv_cave_place_import_content_body": "Importă stații din fișier CSV. Mapează coloanele la nume, cod QR, adâncime și zonă.",
+
+  "tour_csv_caves_import_content_title": "Import peșteri",
+  "tour_csv_caves_import_content_body": "Importă peșteri din fișier CSV. Mapează coloanele la nume, descriere și zonă de suprafață.",
+
+  "tour_scanner_camera_title": "Scanner QR",
+  "tour_scanner_camera_body": "Îndreaptă camera spre un cod QR pentru a-l scana. Rezultatul este returnat automat.",
+  "tour_scanner_torch_title": "Lanternă",
+  "tour_scanner_torch_body": "Activează lanterna camerei pentru scanare în medii întunecate.",
+
+  "tour_map_viewer_map_title": "Hartă raster",
+  "tour_map_viewer_map_body": "Hartă interactivă a peșterii. Ciupește pentru zoom, trage pentru deplasare. Apasă un punct pentru a selecta stația.",
+  "tour_map_viewer_navbar_title": "Navigare stații",
+  "tour_map_viewer_navbar_body": "Derulează prin stații. Apasă una pentru a o evidenția pe hartă și a centra vizualizarea.",
+
+  "tour_raster_map_selector_map_title": "Editor hartă",
+  "tour_raster_map_selector_map_body": "Apasă pe hartă pentru a defini sau redefini unde se află o stație pe harta raster.",
+  "tour_raster_map_selector_navbar_title": "Selector stație",
+  "tour_raster_map_selector_navbar_body": "Selectează stația pe care dorești să o poziționezi pe hartă.",
+
+  "tour_generated_qr_viewer_pdf_title": "Previzualizare QR",
+  "tour_generated_qr_viewer_pdf_body": "Vizualizează PDF-ul cu coduri QR generate. Ciupește pentru zoom și derulează paginile.",
+  "tour_generated_qr_viewer_menu_title": "Opțiuni QR",
+  "tour_generated_qr_viewer_menu_body": "Regenerează codurile QR sau deschide setările de generare și ieșire PDF.",
+
+  "tour_geofeature_docs_toolbar_title": "Comenzi documente",
+  "tour_geofeature_docs_toolbar_body": "Schimbă modul de vizualizare (listă, grilă), sortează sau creează documente noi — text, text formatat, foto, audio.",
+  "tour_geofeature_docs_search_title": "Caută documente",
+  "tour_geofeature_docs_search_body": "Filtrează documentele după titlu, nume fișier sau descriere.",
+  "tour_geofeature_docs_list_title": "Documente",
+  "tour_geofeature_docs_list_body": "Toate fișierele de documentare. Apasă pentru vizualizare, apasă lung pentru opțiuni.",
+
+  "tour_cave_areas_add_title": "Adaugă zonă",
+  "tour_cave_areas_add_body": "Creează o zonă nouă pentru a grupa stațiile (ex. 'Galeria superioară', 'Camera principală').",
+  "tour_cave_areas_list_title": "Zone peșteră",
+  "tour_cave_areas_list_body": "Toate zonele definite. Editează sau șterge folosind pictogramele.",
+
+  "tour_surface_areas_add_title": "Adaugă zonă de suprafață",
+  "tour_surface_areas_add_body": "Creează o zonă de suprafață nouă pentru a grupa peșterile pe regiune geografică.",
+  "tour_surface_areas_list_title": "Zone de suprafață",
+  "tour_surface_areas_list_body": "Toate zonele de suprafață. Peșterile pot fi asociate unei zone pentru organizare.",
+
+  "tour_raster_maps_add_title": "Adaugă hartă raster",
+  "tour_raster_maps_add_body": "Încarcă o imagine de hartă raster (plan, profil sau secțiune transversală).",
+  "tour_raster_maps_list_title": "Hărți raster",
+  "tour_raster_maps_list_body": "Toate hărțile raster. Apasă pentru vizualizare, apasă lung pentru editare sau ștergere.",
+
+  "tour_raster_map_form_title_field_title": "Titlu hartă",
+  "tour_raster_map_form_title_field_body": "Dă un nume descriptiv acestei hărți raster.",
+  "tour_raster_map_form_type_dropdown_title": "Tip hartă",
+  "tour_raster_map_form_type_dropdown_body": "Selectează tipul: plan, profil proiectat sau profil desfășurat.",
+  "tour_raster_map_form_image_picker_title": "Imagine hartă",
+  "tour_raster_map_form_image_picker_body": "Selectează sau schimbă imaginea hărții raster de pe dispozitiv.",
+
+  "tour_edit_doc_file_title_field_title": "Titlu document",
+  "tour_edit_doc_file_title_field_body": "Stabilește un titlu descriptiv pentru acest fișier de documentare.",
+  "tour_edit_doc_file_file_picker_title": "Selecție fișier",
+  "tour_edit_doc_file_file_picker_body": "Alege un fișier de pe dispozitiv pentru a-l atașa ca documentație.",
+
+  "tour_camera_capture_preview_title": "Previzualizare cameră",
+  "tour_camera_capture_preview_body": "Fă o fotografie care va fi salvată ca documentație.",
+  "tour_camera_capture_actions_title": "Acțiuni foto",
+  "tour_camera_capture_actions_body": "Editează fotografia sau salvează-o direct ca document.",
+
+  "tour_image_editor_canvas_title": "Editor imagine",
+  "tour_image_editor_canvas_body": "Editează imaginea cu instrumente de desen, filtre, decupare/rotire și suprapunere text.",
+
+  "tour_text_doc_editor_title_field_title": "Titlu document",
+  "tour_text_doc_editor_title_field_body": "Numele documentului text.",
+  "tour_text_doc_editor_content_title": "Conținut text",
+  "tour_text_doc_editor_content_body": "Scrie conținutul documentului aici. Salvează cu butonul din bara de instrumente.",
+
+  "tour_rich_text_editor_title_field_title": "Titlu document",
+  "tour_rich_text_editor_title_field_body": "Numele documentului cu text formatat.",
+  "tour_rich_text_editor_quill_title": "Editor text formatat",
+  "tour_rich_text_editor_quill_body": "Formatează textul cu bold, italic, liste, titluri și altele folosind bara de instrumente.",
+
+  "tour_sound_recorder_controls_title": "Comenzi înregistrare",
+  "tour_sound_recorder_controls_body": "Înregistrează audio: apasă butonul roșu pentru a înregistra, pauză sau oprire. Poți reînregistra din orice punct.",
+  "tour_sound_recorder_title_field_title": "Titlu înregistrare",
+  "tour_sound_recorder_title_field_body": "Denumește înregistrarea audio înainte de salvare.",
+
+  "tour_doc_file_viewer_content_title": "Vizualizator document",
+  "tour_doc_file_viewer_content_body": "Vizualizează conținutul fișierului — imagini, text sau PDF.",
+
+  "tour_sound_file_viewer_player_title": "Player audio",
+  "tour_sound_file_viewer_player_body": "Redă înregistrarea audio. Folosește forma de undă pentru a naviga la o poziție specifică.",
+
+  "tour_settings_main_list_title": "Categorii setări",
+  "tour_settings_main_list_body": "Apasă o categorie: limbă, compresie imagini, generare QR, ieșire PDF, bază de date, export/import date.",
+
+  "tour_settings_general_language_title": "Limba aplicației",
+  "tour_settings_general_language_body": "Alege limba de afișare. Aplicația se actualizează imediat după schimbare.",
+
+  "tour_settings_img_compress_toggle_title": "Comutare compresie",
+  "tour_settings_img_compress_toggle_body": "Activează sau dezactivează compresia automată la importul fotografiilor.",
+  "tour_settings_img_compress_profile_title": "Profil compresie",
+  "tour_settings_img_compress_profile_body": "Selectează un preset (Redus, Mediu, Ridicat, Foarte ridicat) sau Manual pentru setări personalizate.",
+
+  "tour_settings_qr_gen_output_kind_title": "Format ieșire",
+  "tour_settings_qr_gen_output_kind_body": "Alege dacă se generează coduri QR ca document PDF sau ca imagini individuale.",
+  "tour_settings_qr_gen_size_title": "Dimensiune QR",
+  "tour_settings_qr_gen_size_body": "Stabilește dimensiunea în pixeli pentru fiecare cod QR generat.",
+  "tour_settings_qr_gen_colors_title": "Culori QR",
+  "tour_settings_qr_gen_colors_body": "Personalizează culorile de prim-plan și fundal ale codurilor QR.",
+
+  "tour_settings_pdf_grid_title": "Aranjament grilă",
+  "tour_settings_pdf_grid_body": "Stabilește câte coloane și rânduri de coduri QR apar pe fiecare pagină PDF.",
+  "tour_settings_pdf_template_title": "Șablon etichetă",
+  "tour_settings_pdf_template_body": "Personalizează textul de sub fiecare QR: @place_title, @place_qr, @cave_title, @area_title, @date.",
+
+  "tour_settings_db_actions_title": "Acțiuni bază de date",
+  "tour_settings_db_actions_body": "Reinițializează, exportă, restaurează sau execută comenzi SQL pe baza de date. Folosește cu prudență.",
+
+  "tour_sql_runner_input_title": "Intrare SQL",
+  "tour_sql_runner_input_body": "Scrie interogări sau comenzi SQL aici. Apasă Execută pentru a le rula pe baza de date.",
+  "tour_sql_runner_output_title": "Rezultat SQL",
+  "tour_sql_runner_output_body": "Rezultatele sau mesajele de eroare ale SQL-ului executat apar aici.",
+
+  "tour_data_export_export_title": "Exportă date",
+  "tour_data_export_export_body": "Exportă datele aplicației ca arhivă ZIP. Opțional include fișiere de documentare și hărți raster.",
+  "tour_data_export_import_title": "Importă date",
+  "tour_data_export_import_body": "Importă o arhivă exportată anterior. Alege modul îmbinare sau înlocuire pentru datele existente."
 }

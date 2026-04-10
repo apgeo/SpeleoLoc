@@ -11,6 +11,7 @@ import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:pdfx/pdfx.dart';
 
 /// Viewer screen for generated QR code PDFs.
@@ -33,7 +34,17 @@ class GeneratedQRCodeViewer extends StatefulWidget {
 }
 
 class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
-    with AppBarMenuMixin<GeneratedQRCodeViewer> {
+    with AppBarMenuMixin<GeneratedQRCodeViewer>, ProductTourMixin<GeneratedQRCodeViewer> {
+  @override
+  String get tourId => 'generated_qr_viewer';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'pdf', titleLocKey: 'tour_generated_qr_viewer_pdf_title', bodyLocKey: 'tour_generated_qr_viewer_pdf_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_generated_qr_viewer_menu_title', bodyLocKey: 'tour_generated_qr_viewer_menu_body'),
+  ];
+
   GenerationResult? _result;
   bool _isGenerating = false;
   String? _error;
@@ -184,10 +195,11 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
               tooltip: LocServ.inst.t('save'),
               onPressed: () => _exportResult(context),
             ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: Column(
+        key: tourKeys['pdf'],
         children: [
           // Toolbar
           Padding(

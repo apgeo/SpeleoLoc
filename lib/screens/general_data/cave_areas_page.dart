@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class CaveAreasPage extends StatefulWidget {
   const CaveAreasPage({super.key, required this.caveId});
@@ -14,7 +15,18 @@ class CaveAreasPage extends StatefulWidget {
 }
 
 class _CaveAreasPageState extends State<CaveAreasPage>
-    with AppBarMenuMixin<CaveAreasPage> {
+    with AppBarMenuMixin<CaveAreasPage>, ProductTourMixin<CaveAreasPage> {
+  @override
+  String get tourId => 'cave_areas';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'add', titleLocKey: 'tour_cave_areas_add_title', bodyLocKey: 'tour_cave_areas_add_body'),
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_cave_areas_list_title', bodyLocKey: 'tour_cave_areas_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_areas_menu_title', bodyLocKey: 'tour_cave_areas_menu_body'),
+  ];
+
   List<CaveArea> _areas = [];
   bool _changed = false;
 
@@ -108,11 +120,12 @@ class _CaveAreasPageState extends State<CaveAreasPage>
         appBar: AppBar(
           title: Text(LocServ.inst.t('manage_cave_areas')),
           actions: [
-            IconButton(onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
-            buildAppBarMenuButton(),
+            IconButton(key: tourKeys['add'], onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
           ],
         ),
         body: ListView.separated(
+          key: tourKeys['list'],
           itemCount: _areas.length,
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class SQLCommandRunner extends StatefulWidget {
   const SQLCommandRunner({super.key});
@@ -11,7 +12,18 @@ class SQLCommandRunner extends StatefulWidget {
 }
 
 class _SQLCommandRunnerState extends State<SQLCommandRunner>
-    with AppBarMenuMixin<SQLCommandRunner> {
+    with AppBarMenuMixin<SQLCommandRunner>, ProductTourMixin<SQLCommandRunner> {
+  @override
+  String get tourId => 'sql_runner';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'input', titleLocKey: 'tour_sql_runner_input_title', bodyLocKey: 'tour_sql_runner_input_body'),
+    TourStepDef(keyId: 'output', titleLocKey: 'tour_sql_runner_output_title', bodyLocKey: 'tour_sql_runner_output_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_sql_runner_menu_title', bodyLocKey: 'tour_sql_runner_menu_body'),
+  ];
+
   final TextEditingController _sqlController = TextEditingController();
   bool _isRunning = false;
   String _output = '';
@@ -91,13 +103,14 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('sql_command_runner')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextField(
+              key: tourKeys['input'],
               controller: _sqlController,
               decoration: InputDecoration(
                 labelText: LocServ.inst.t('sql_command'),
@@ -121,6 +134,7 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
             ),
             const SizedBox(height: 10),
             Expanded(
+              key: tourKeys['output'],
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),

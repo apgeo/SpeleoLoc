@@ -16,6 +16,7 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 // ---------------------------------------------------------------------------
 //  Enums
@@ -58,7 +59,19 @@ class GeofeatureDocumentsPage extends StatefulWidget {
 }
 
 class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
-    with AppBarMenuMixin<GeofeatureDocumentsPage> {
+    with AppBarMenuMixin<GeofeatureDocumentsPage>, ProductTourMixin<GeofeatureDocumentsPage> {
+  @override
+  String get tourId => 'geofeature_documents';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'toolbar', titleLocKey: 'tour_geofeature_docs_toolbar_title', bodyLocKey: 'tour_geofeature_docs_toolbar_body'),
+    TourStepDef(keyId: 'search', titleLocKey: 'tour_geofeature_docs_search_title', bodyLocKey: 'tour_geofeature_docs_search_body'),
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_geofeature_docs_list_title', bodyLocKey: 'tour_geofeature_docs_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_geofeature_docs_menu_title', bodyLocKey: 'tour_geofeature_docs_menu_body'),
+  ];
+
   // Data
   late final DocumentsController _controller;
   List<DocumentationFile> _filteredDocs = [];
@@ -757,7 +770,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
             ],
           ),
           ],
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: _isLoading
@@ -766,6 +779,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
               key: PageStorageKey<DocViewMode>(_viewMode),
               slivers: [
                 SliverPersistentHeader(
+                  key: tourKeys['toolbar'],
                   pinned: true,
                   delegate: _ControlsHeaderDelegate(
                     viewMode: _viewMode,

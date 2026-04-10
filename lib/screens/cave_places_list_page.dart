@@ -15,6 +15,7 @@ import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class CavePlacesListPage extends StatefulWidget {
   const CavePlacesListPage({super.key, required this.caveId});
@@ -25,7 +26,17 @@ class CavePlacesListPage extends StatefulWidget {
   State<CavePlacesListPage> createState() => _CavePlacesListPageState();
 }
 
-class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage> {
+class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage>, ProductTourMixin<CavePlacesListPage> {
+  @override
+  String get tourId => 'cave_places_list';
+  @override
+  final tourKeys = TourKeySet(['add', 'list', 'menu']);
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'add', titleLocKey: 'tour_cave_places_list_add_title', bodyLocKey: 'tour_cave_places_list_add_body'),
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_cave_places_list_list_title', bodyLocKey: 'tour_cave_places_list_list_body', align: ContentAlign.top),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_places_list_menu_title', bodyLocKey: 'tour_cave_places_list_menu_body'),
+  ];
   @override
   List<AppMenuItem> get screenMenuItems {
     final activeTripId = caveTripService.activeTripIdNotifier.value;
@@ -593,7 +604,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           ],
         ),
         actions: [
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: Stack(
@@ -621,9 +632,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                       ),
                       const SizedBox(width: 8),
                       IconActionButton(
+                        key: tourKeys['add'],
                         onPressed: () async {
-                          // print('');
-                          // print('[CavePlacesListPage] Navigating to CavePlacePage to add new place for caveId ${widget.caveId}');
 
                           final result = await Navigator.push(
                             context,
@@ -758,6 +768,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
 
                   const SizedBox(height: 2),
                   Row(
+                    key: tourKeys['list'],
                     children: [
                       Expanded(
                         child: Text(

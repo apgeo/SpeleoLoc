@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class CaveTripLogPage extends StatefulWidget {
   const CaveTripLogPage({super.key, required this.tripId});
@@ -10,7 +11,16 @@ class CaveTripLogPage extends StatefulWidget {
   State<CaveTripLogPage> createState() => _CaveTripLogPageState();
 }
 
-class _CaveTripLogPageState extends State<CaveTripLogPage> {
+class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin<CaveTripLogPage> {
+  @override
+  String get tourId => 'cave_trip_log';
+  @override
+  final tourKeys = TourKeySet(['editor', 'save']);
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'editor', titleLocKey: 'tour_cave_trip_log_editor_title', bodyLocKey: 'tour_cave_trip_log_editor_body', align: ContentAlign.top),
+    TourStepDef(keyId: 'save', titleLocKey: 'tour_cave_trip_log_save_title', bodyLocKey: 'tour_cave_trip_log_save_body'),
+  ];
   final TextEditingController _controller = TextEditingController();
   bool _loading = true;
   bool _saving = false;
@@ -67,6 +77,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> {
             )
           else
             IconButton(
+              key: tourKeys['save'],
               icon: const Icon(Icons.save),
               tooltip: LocServ.inst.t('save'),
               onPressed: _save,
@@ -78,6 +89,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> {
           : Padding(
               padding: const EdgeInsets.all(12),
               child: TextField(
+                key: tourKeys['editor'],
                 controller: _controller,
                 maxLines: null,
                 expands: true,

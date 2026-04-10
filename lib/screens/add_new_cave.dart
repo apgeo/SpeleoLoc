@@ -4,6 +4,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class AddNewCave extends StatefulWidget {
   final Cave? cave; // if provided, we're editing
@@ -15,7 +16,19 @@ class AddNewCave extends StatefulWidget {
 }
 
 class _AddNewCaveState extends State<AddNewCave>
-    with AppBarMenuMixin<AddNewCave> {
+    with AppBarMenuMixin<AddNewCave>, ProductTourMixin<AddNewCave> {
+  @override
+  String get tourId => 'add_new_cave';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_add_new_cave_title_field_title', bodyLocKey: 'tour_add_new_cave_title_field_body'),
+    TourStepDef(keyId: 'desc_field', titleLocKey: 'tour_add_new_cave_desc_field_title', bodyLocKey: 'tour_add_new_cave_desc_field_body'),
+    TourStepDef(keyId: 'area_dropdown', titleLocKey: 'tour_add_new_cave_area_dropdown_title', bodyLocKey: 'tour_add_new_cave_area_dropdown_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_add_new_cave_menu_title', bodyLocKey: 'tour_add_new_cave_menu_body'),
+  ];
+
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -77,7 +90,7 @@ class _AddNewCaveState extends State<AddNewCave>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(isEditing ? LocServ.inst.t('edit_cave') : LocServ.inst.t('add_new_cave')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -86,18 +99,21 @@ class _AddNewCaveState extends State<AddNewCave>
           child: Column(
             children: [
               TextFormField(
+                key: tourKeys['title_field'],
                 controller: _titleController,
                 decoration: InputDecoration(labelText: LocServ.inst.t('cave_title')),
                 validator: (v) => (v == null || v.trim().isEmpty) ? LocServ.inst.t('title_required') : null,
               ),
               const SizedBox(height: 10),
               TextFormField(
+                key: tourKeys['desc_field'],
                 controller: _descriptionController,
                 decoration: InputDecoration(labelText: LocServ.inst.t('description')),
                 maxLines: 3,
               ),
               const SizedBox(height: 10),
               Row(
+                key: tourKeys['area_dropdown'],
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<int?>(

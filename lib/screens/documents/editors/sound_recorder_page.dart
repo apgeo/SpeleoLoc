@@ -12,6 +12,7 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Audio recorder with waveform visualisation.
 ///
@@ -39,7 +40,18 @@ class SoundRecorderPage extends StatefulWidget {
 }
 
 class _SoundRecorderPageState extends State<SoundRecorderPage>
-    with AppBarMenuMixin<SoundRecorderPage> {
+    with AppBarMenuMixin<SoundRecorderPage>, ProductTourMixin<SoundRecorderPage> {
+  @override
+  String get tourId => 'sound_recorder';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'controls', titleLocKey: 'tour_sound_recorder_controls_title', bodyLocKey: 'tour_sound_recorder_controls_body'),
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_sound_recorder_title_field_title', bodyLocKey: 'tour_sound_recorder_title_field_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_sound_recorder_menu_title', bodyLocKey: 'tour_sound_recorder_menu_body'),
+  ];
+
   final _titleCtrl = TextEditingController();
 
   // flutter_sound
@@ -484,7 +496,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
                 ),
               ),
             ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: Padding(
@@ -493,6 +505,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
           children: [
             // ---- Title field ----
             TextField(
+              key: tourKeys['title_field'],
               controller: _titleCtrl,
               decoration: InputDecoration(
                 labelText: LocServ.inst.t('title'),
@@ -549,6 +562,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
 
             // ---- Controls ----
             Row(
+              key: tourKeys['controls'],
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (_hasRecording && !_isRecording)

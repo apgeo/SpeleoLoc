@@ -7,6 +7,7 @@ import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_database_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Master settings page with sections that navigate to subpages.
 class SettingsMainPage extends StatefulWidget {
@@ -17,7 +18,17 @@ class SettingsMainPage extends StatefulWidget {
 }
 
 class _SettingsMainPageState extends State<SettingsMainPage>
-    with AppBarMenuMixin<SettingsMainPage> {
+    with AppBarMenuMixin<SettingsMainPage>, ProductTourMixin<SettingsMainPage> {
+  @override
+  String get tourId => 'settings_main';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_main_list_title', bodyLocKey: 'tour_settings_main_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_main_menu_title', bodyLocKey: 'tour_settings_main_menu_body'),
+  ];
+
   bool shouldReloadUI = false;
 
   @override
@@ -34,9 +45,10 @@ class _SettingsMainPageState extends State<SettingsMainPage>
         endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           title: Text(LocServ.inst.t('settings')),
-          actions: [buildAppBarMenuButton()],
+          actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
         ),
         body: ListView(
+          key: tourKeys['list'],
           children: [
             _SettingsSection(
               icon: Icons.tune,

@@ -3,6 +3,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// QR code generation settings subpage: sizes, colors, error correction, etc.
 class SettingsQrGenerationPage extends StatefulWidget {
@@ -14,7 +15,17 @@ class SettingsQrGenerationPage extends StatefulWidget {
 }
 
 class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
-    with AppBarMenuMixin<SettingsQrGenerationPage> {
+    with AppBarMenuMixin<SettingsQrGenerationPage>, ProductTourMixin<SettingsQrGenerationPage> {
+  @override
+  String get tourId => 'settings_qr_gen';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_qr_gen_list_title', bodyLocKey: 'tour_settings_qr_gen_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_qr_gen_menu_title', bodyLocKey: 'tour_settings_qr_gen_menu_body'),
+  ];
+
   Map<String, dynamic>? _cfg;
   String _qrOutputKind = 'pdf';
 
@@ -78,9 +89,10 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_qr_generation')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: ListView(
+        key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
           // QR output kind

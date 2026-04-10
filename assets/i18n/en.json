@@ -409,5 +409,200 @@
   "trip_zoom_extent": "Fit trip",
   "trip_map_exported": "Trip map exported",
   "no_raster_maps": "No raster maps available",
-  "delete_selected_confirm": "Delete the selected {count} item(s)?"
+  "delete_selected_confirm": "Delete the selected {count} item(s)?",
+
+  "help_tour": "Help tour",
+  "reset_tours": "Reset help tours",
+  "tours_reset_done": "All help tours have been reset",
+
+  "tour_home_scan_qr_title": "Scan QR Code",
+  "tour_home_scan_qr_body": "Scan a QR code to quickly find and navigate to a cave place.",
+  "tour_home_add_cave_title": "Add New Cave",
+  "tour_home_add_cave_body": "Tap here to register a new cave in the system.",
+  "tour_home_docs_title": "Documentation",
+  "tour_home_docs_body": "Browse all documentation files across all caves — photos, audio, notes, and more.",
+  "tour_home_cave_list_title": "Your Caves",
+  "tour_home_cave_list_body": "This is the list of all your caves. Tap a cave to view its places and maps.",
+  "tour_home_menu_title": "Menu",
+  "tour_home_menu_body": "Access additional options: surface areas management, CSV import, and app-wide navigation.",
+
+  "tour_cave_places_list_search_title": "Search Places",
+  "tour_cave_places_list_search_body": "Filter the list of cave places by name or QR code.",
+  "tour_cave_places_list_add_title": "Add Cave Place",
+  "tour_cave_places_list_add_body": "Create a new place (station, junction, point of interest) inside this cave.",
+  "tour_cave_places_list_list_title": "Cave Places",
+  "tour_cave_places_list_list_body": "All registered places in this cave. Tap one to view details, edit coordinates, or manage its documents.",
+  "tour_cave_places_list_menu_title": "Cave Menu",
+  "tour_cave_places_list_menu_body": "Start a trip, edit cave details, import places from CSV, or delete this cave.",
+
+  "tour_cave_place_title_field_title": "Place Title",
+  "tour_cave_place_title_field_body": "The name of this place inside the cave (e.g. 'Main Junction', 'Chamber A').",
+  "tour_cave_place_desc_field_title": "Description",
+  "tour_cave_place_desc_field_body": "Optional notes about this place — geological features, observations, hazards.",
+  "tour_cave_place_depth_field_title": "Depth in Cave",
+  "tour_cave_place_depth_field_body": "The depth of this place relative to the cave entrance. Negative values for places above the entrance.",
+  "tour_cave_place_qr_field_title": "QR Code Identifier",
+  "tour_cave_place_qr_field_body": "The numeric QR code associated with this place. Scan with the QR button or enter manually.",
+  "tour_cave_place_tabs_title": "Raster Maps",
+  "tour_cave_place_tabs_body": "Switch between raster map views to see or define this place's position on each map.",
+  "tour_cave_place_menu_title": "Place Options",
+  "tour_cave_place_menu_body": "Toggle GPS coordinate fields for this place.",
+
+  "tour_cave_trip_toolbar_title": "Trip Toolbar",
+  "tour_cave_trip_toolbar_body": "Control your trip: stop, pause/resume, view the log, toggle between list and map views, or play back your route.",
+  "tour_cave_trip_map_title": "Trip Map View",
+  "tour_cave_trip_map_body": "See your trip route overlaid on the cave's raster map. Points are shown in chronological order.",
+  "tour_cave_trip_menu_title": "Trip Menu",
+  "tour_cave_trip_menu_body": "Delete this trip or access other trip-related options.",
+
+  "tour_cave_trip_list_toolbar_title": "Trip Controls",
+  "tour_cave_trip_list_toolbar_body": "Start a new trip, or control the active trip — pause, resume, stop, or view it.",
+  "tour_cave_trip_list_list_title": "Trip History",
+  "tour_cave_trip_list_list_body": "All trips for this cave, newest first. Tap a trip to view its details and route.",
+  "tour_cave_trip_list_menu_title": "Menu",
+  "tour_cave_trip_list_menu_body": "Access additional options for trip management.",
+
+  "tour_cave_trip_log_editor_title": "Trip Log",
+  "tour_cave_trip_log_editor_body": "Write free-form notes about your trip. Changes are saved when you press the save button.",
+  "tour_cave_trip_log_save_title": "Save Log",
+  "tour_cave_trip_log_save_body": "Save your trip log notes.",
+
+  "tour_add_new_cave_title_field_title": "Cave Name",
+  "tour_add_new_cave_title_field_body": "Enter the name of the new cave you are registering.",
+  "tour_add_new_cave_desc_field_title": "Description",
+  "tour_add_new_cave_desc_field_body": "Optional description — location hints, region, or any notes about the cave.",
+  "tour_add_new_cave_area_dropdown_title": "Surface Area",
+  "tour_add_new_cave_area_dropdown_body": "Optionally assign this cave to a geographic surface area for organization.",
+
+  "tour_csv_import_file_picker_title": "Select CSV File",
+  "tour_csv_import_file_picker_body": "Pick a CSV or TXT file from your device to import data from.",
+  "tour_csv_import_column_mapping_title": "Column Mapping",
+  "tour_csv_import_column_mapping_body": "Map each column from your CSV file to the corresponding data field.",
+  "tour_csv_import_preview_title": "Data Preview",
+  "tour_csv_import_preview_body": "Review the mapped data before confirming the import.",
+
+  "tour_csv_cave_place_import_content_title": "Import Cave Places",
+  "tour_csv_cave_place_import_content_body": "Import cave places from a CSV file. Map columns to place name, QR code, depth, and cave area.",
+
+  "tour_csv_caves_import_content_title": "Import Caves",
+  "tour_csv_caves_import_content_body": "Import caves from a CSV file. Map columns to cave name, description, and surface area.",
+
+  "tour_scanner_camera_title": "QR Scanner",
+  "tour_scanner_camera_body": "Point your camera at a QR code to scan it. The result is returned automatically.",
+  "tour_scanner_torch_title": "Flashlight",
+  "tour_scanner_torch_body": "Toggle the camera flashlight for scanning in dark environments.",
+
+  "tour_map_viewer_map_title": "Raster Map",
+  "tour_map_viewer_map_body": "Interactive cave map. Pinch to zoom, drag to pan. Tap a marked point to select that place.",
+  "tour_map_viewer_navbar_title": "Place Navigation",
+  "tour_map_viewer_navbar_body": "Scroll through cave places. Tap one to highlight it on the map and center the view.",
+
+  "tour_raster_map_selector_map_title": "Map Editor",
+  "tour_raster_map_selector_map_body": "Tap on the map to define or redefine where a cave place is located on this raster map.",
+  "tour_raster_map_selector_navbar_title": "Place Selector",
+  "tour_raster_map_selector_navbar_body": "Select which cave place you want to position on the map.",
+
+  "tour_generated_qr_viewer_pdf_title": "QR Code Preview",
+  "tour_generated_qr_viewer_pdf_body": "View the generated QR code PDF. Pinch to zoom and scroll through pages.",
+  "tour_generated_qr_viewer_menu_title": "QR Options",
+  "tour_generated_qr_viewer_menu_body": "Regenerate QR codes, or open QR generation and PDF output settings.",
+
+  "tour_geofeature_docs_toolbar_title": "Document Controls",
+  "tour_geofeature_docs_toolbar_body": "Change view mode (list, grid, categorized), sort documents, or create new ones — text, rich text, photo, audio.",
+  "tour_geofeature_docs_search_title": "Search Documents",
+  "tour_geofeature_docs_search_body": "Filter documents by title, file name, or description.",
+  "tour_geofeature_docs_list_title": "Documents",
+  "tour_geofeature_docs_list_body": "All documentation files linked to this feature. Tap to view, long-press for more options.",
+
+  "tour_cave_areas_add_title": "Add Cave Area",
+  "tour_cave_areas_add_body": "Create a new area to group cave places within this cave (e.g. 'Upper Gallery', 'Main Chamber').",
+  "tour_cave_areas_list_title": "Cave Areas",
+  "tour_cave_areas_list_body": "All defined areas in this cave. Edit or delete areas using the icons.",
+
+  "tour_surface_areas_add_title": "Add Surface Area",
+  "tour_surface_areas_add_body": "Create a new surface area to group caves by geographic region.",
+  "tour_surface_areas_list_title": "Surface Areas",
+  "tour_surface_areas_list_body": "All surface areas. Caves can be assigned to a surface area for organization.",
+
+  "tour_raster_maps_add_title": "Add Raster Map",
+  "tour_raster_maps_add_body": "Upload a new raster map image (plan view, profile, or cross-section) for this cave.",
+  "tour_raster_maps_list_title": "Raster Maps",
+  "tour_raster_maps_list_body": "All raster maps for this cave. Tap to view, long-press to edit or delete.",
+
+  "tour_raster_map_form_title_field_title": "Map Title",
+  "tour_raster_map_form_title_field_body": "Give this raster map a descriptive name.",
+  "tour_raster_map_form_type_dropdown_title": "Map Type",
+  "tour_raster_map_form_type_dropdown_body": "Select the type: plan view, projected profile, or extended profile.",
+  "tour_raster_map_form_image_picker_title": "Map Image",
+  "tour_raster_map_form_image_picker_body": "Select or change the raster map image from your device.",
+
+  "tour_edit_doc_file_title_field_title": "Document Title",
+  "tour_edit_doc_file_title_field_body": "Set a descriptive title for this documentation file.",
+  "tour_edit_doc_file_file_picker_title": "File Selection",
+  "tour_edit_doc_file_file_picker_body": "Pick a file from your device to attach as documentation.",
+
+  "tour_camera_capture_preview_title": "Camera Preview",
+  "tour_camera_capture_preview_body": "Take a photo that will be saved as documentation for the current feature.",
+  "tour_camera_capture_actions_title": "Photo Actions",
+  "tour_camera_capture_actions_body": "Edit the photo in the image editor, or save it directly as a document.",
+
+  "tour_image_editor_canvas_title": "Image Editor",
+  "tour_image_editor_canvas_body": "Edit the image with drawing tools, filters, crop/rotate, and text overlays.",
+
+  "tour_text_doc_editor_title_field_title": "Document Title",
+  "tour_text_doc_editor_title_field_body": "Name your text document.",
+  "tour_text_doc_editor_content_title": "Text Content",
+  "tour_text_doc_editor_content_body": "Write your document content here. Use the save button in the toolbar when done.",
+
+  "tour_rich_text_editor_title_field_title": "Document Title",
+  "tour_rich_text_editor_title_field_body": "Name your rich text document.",
+  "tour_rich_text_editor_quill_title": "Rich Text Editor",
+  "tour_rich_text_editor_quill_body": "Format your text with bold, italic, lists, headings, and more using the toolbar.",
+
+  "tour_sound_recorder_controls_title": "Recording Controls",
+  "tour_sound_recorder_controls_body": "Record audio: press the red button to record, pause, or stop. You can re-record from any point.",
+  "tour_sound_recorder_title_field_title": "Recording Title",
+  "tour_sound_recorder_title_field_body": "Name your audio recording before saving it.",
+
+  "tour_doc_file_viewer_content_title": "Document Viewer",
+  "tour_doc_file_viewer_content_body": "View the contents of this documentation file — images, text, or PDF.",
+
+  "tour_sound_file_viewer_player_title": "Audio Player",
+  "tour_sound_file_viewer_player_body": "Play back the audio recording. Use the waveform to scrub to a specific position.",
+
+  "tour_settings_main_list_title": "Settings Categories",
+  "tour_settings_main_list_body": "Tap a category to configure: language, image compression, QR code generation, PDF output, database, and data export/import.",
+
+  "tour_settings_general_language_title": "App Language",
+  "tour_settings_general_language_body": "Choose the app display language. The app will update immediately after changing.",
+
+  "tour_settings_img_compress_toggle_title": "Compression Toggle",
+  "tour_settings_img_compress_toggle_body": "Enable or disable automatic image compression when importing photos.",
+  "tour_settings_img_compress_profile_title": "Compression Profile",
+  "tour_settings_img_compress_profile_body": "Select a preset (Low, Medium, High, Very High) or use Manual for custom settings.",
+
+  "tour_settings_qr_gen_output_kind_title": "Output Format",
+  "tour_settings_qr_gen_output_kind_body": "Choose whether to generate QR codes as a PDF document or as individual images.",
+  "tour_settings_qr_gen_size_title": "QR Size",
+  "tour_settings_qr_gen_size_body": "Set the size in pixels for each generated QR code.",
+  "tour_settings_qr_gen_colors_title": "QR Colors",
+  "tour_settings_qr_gen_colors_body": "Customize the foreground and background colors of the generated QR codes.",
+
+  "tour_settings_pdf_grid_title": "Grid Layout",
+  "tour_settings_pdf_grid_body": "Set how many columns and rows of QR codes appear per PDF page.",
+  "tour_settings_pdf_template_title": "Label Template",
+  "tour_settings_pdf_template_body": "Customize the text under each QR code using variables: @place_title, @place_qr, @cave_title, @area_title, @date.",
+
+  "tour_settings_db_actions_title": "Database Actions",
+  "tour_settings_db_actions_body": "Reinitialize, export, restore, or run SQL commands on the app database. Use with care.",
+
+  "tour_sql_runner_input_title": "SQL Input",
+  "tour_sql_runner_input_body": "Type SQL queries or statements here. Press Run to execute them against the app database.",
+  "tour_sql_runner_output_title": "SQL Output",
+  "tour_sql_runner_output_body": "Results or error messages from the executed SQL appear here.",
+
+  "tour_data_export_export_title": "Export Data",
+  "tour_data_export_export_body": "Export your app data as a ZIP archive. Optionally include documentation files and raster maps.",
+  "tour_data_export_import_title": "Import Data",
+  "tour_data_export_import_body": "Import a previously exported archive. Choose merge or replace mode for existing data."
 }

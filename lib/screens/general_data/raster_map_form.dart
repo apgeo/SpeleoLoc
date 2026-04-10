@@ -8,6 +8,7 @@ import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Whether to apply image compression when picking raster map images.
 const bool kCompressRasterMapImages = false;
@@ -23,7 +24,19 @@ class RasterMapForm extends StatefulWidget {
 }
 
 class _RasterMapFormState extends State<RasterMapForm>
-    with AppBarMenuMixin<RasterMapForm> {
+    with AppBarMenuMixin<RasterMapForm>, ProductTourMixin<RasterMapForm> {
+  @override
+  String get tourId => 'raster_map_form';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_raster_map_form_title_field_title', bodyLocKey: 'tour_raster_map_form_title_field_body'),
+    TourStepDef(keyId: 'type_dropdown', titleLocKey: 'tour_raster_map_form_type_dropdown_title', bodyLocKey: 'tour_raster_map_form_type_dropdown_body'),
+    TourStepDef(keyId: 'image_picker', titleLocKey: 'tour_raster_map_form_image_picker_title', bodyLocKey: 'tour_raster_map_form_image_picker_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_raster_map_form_menu_title', bodyLocKey: 'tour_raster_map_form_menu_body'),
+  ];
+
   String? _selectedMapType;
   String? _imagePath;  String? _fullImagePath;  final _titleController = TextEditingController();
 
@@ -131,18 +144,20 @@ class _RasterMapFormState extends State<RasterMapForm>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(widget.rasterMap != null ? LocServ.inst.t('edit_raster_map') : LocServ.inst.t('add_raster_map')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextFormField(
+              key: tourKeys['title_field'],
               controller: _titleController,
               decoration: InputDecoration(labelText: '${LocServ.inst.t('title')} (${LocServ.inst.t('cave')})'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
+              key: tourKeys['image_picker'],
               onPressed: _pickImage,
               child: Text(LocServ.inst.t('select_image')),
             ),
@@ -162,6 +177,7 @@ class _RasterMapFormState extends State<RasterMapForm>
               ),
             const SizedBox(height: 20),
             DropdownButton<String>(
+              key: tourKeys['type_dropdown'],
               value: _selectedMapType,
               hint: Text(LocServ.inst.t('map_type')),
               items: [

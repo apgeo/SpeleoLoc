@@ -9,6 +9,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class RasterMapsPage extends StatefulWidget {
   const RasterMapsPage({super.key, required this.caveId});
@@ -20,7 +21,18 @@ class RasterMapsPage extends StatefulWidget {
 }
 
 class _RasterMapsPageState extends State<RasterMapsPage>
-    with AppBarMenuMixin<RasterMapsPage> {
+    with AppBarMenuMixin<RasterMapsPage>, ProductTourMixin<RasterMapsPage> {
+  @override
+  String get tourId => 'raster_maps';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'add', titleLocKey: 'tour_raster_maps_add_title', bodyLocKey: 'tour_raster_maps_add_body'),
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_raster_maps_list_title', bodyLocKey: 'tour_raster_maps_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_raster_maps_menu_title', bodyLocKey: 'tour_raster_maps_menu_body'),
+  ];
+
   List<RasterMap> _rasterMaps = [];
 
   bool _changed = false;
@@ -117,6 +129,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
         title: Text(LocServ.inst.t('raster_maps')),
         actions: [
           IconButton(
+            key: tourKeys['add'],
             icon: const Icon(Icons.add),
             tooltip: LocServ.inst.t('add_raster_map'),
             onPressed: () async {
@@ -130,10 +143,11 @@ class _RasterMapsPageState extends State<RasterMapsPage>
               }
             },
           ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: SingleChildScrollView(
+        key: tourKeys['list'],
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

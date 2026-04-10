@@ -14,6 +14,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
@@ -39,7 +40,18 @@ class MapViewerPage extends StatefulWidget {
   State<MapViewerPage> createState() => _MapViewerPageState();
 }
 
-class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage> {
+class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage>, ProductTourMixin<MapViewerPage> {
+  @override
+  String get tourId => 'map_viewer';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'map', titleLocKey: 'tour_map_viewer_map_title', bodyLocKey: 'tour_map_viewer_map_body'),
+    TourStepDef(keyId: 'navbar', titleLocKey: 'tour_map_viewer_navbar_title', bodyLocKey: 'tour_map_viewer_navbar_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_map_viewer_menu_title', bodyLocKey: 'tour_map_viewer_menu_body'),
+  ];
+
   CavePlace? _cavePlace;
   List<RasterMap> _rasterMaps = [];
   RasterMap? _selectedRasterMap;
@@ -309,7 +321,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
               },
             ),
           ],
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: _isLoading
@@ -353,8 +365,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
 
                 return Column(
                   children: [
-                    _buildNavBar(context),
+                    KeyedSubtree(key: tourKeys['navbar'], child: _buildNavBar(context)),
                     Expanded(
+                      key: tourKeys['map'],
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           Widget editor = _buildEditorWidget(file, imagePath);

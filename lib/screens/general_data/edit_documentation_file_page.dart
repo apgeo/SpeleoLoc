@@ -9,6 +9,7 @@ import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 class EditDocumentationFilePage extends StatefulWidget {
   const EditDocumentationFilePage({super.key, this.documentationFile, this.cavePlaceId, this.caveId, this.caveAreaId});
@@ -23,7 +24,18 @@ class EditDocumentationFilePage extends StatefulWidget {
 }
 
 class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
-    with AppBarMenuMixin<EditDocumentationFilePage> {
+    with AppBarMenuMixin<EditDocumentationFilePage>, ProductTourMixin<EditDocumentationFilePage> {
+  @override
+  String get tourId => 'edit_doc_file';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_edit_doc_file_title_field_title', bodyLocKey: 'tour_edit_doc_file_title_field_body'),
+    TourStepDef(keyId: 'file_picker', titleLocKey: 'tour_edit_doc_file_file_picker_title', bodyLocKey: 'tour_edit_doc_file_file_picker_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_edit_doc_file_menu_title', bodyLocKey: 'tour_edit_doc_file_menu_body'),
+  ];
+
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   File? _pickedFile;
@@ -157,19 +169,19 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(editing ? LocServ.inst.t('edit') : '${LocServ.inst.t('add')} ${LocServ.inst.t('documentation_files')}'),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            TextFormField(controller: _titleCtrl, decoration: InputDecoration(labelText: LocServ.inst.t('title'))),
+            TextFormField(key: tourKeys['title_field'], controller: _titleCtrl, decoration: InputDecoration(labelText: LocServ.inst.t('title'))),
             const SizedBox(height: 8),
             TextFormField(controller: _descCtrl, decoration: InputDecoration(labelText: LocServ.inst.t('description'))),
             const SizedBox(height: 12),
             Row(
               children: [
-                ElevatedButton.icon(onPressed: _pick, icon: const Icon(Icons.attach_file), label: Text(LocServ.inst.t('select_file'))),
+                ElevatedButton.icon(key: tourKeys['file_picker'], onPressed: _pick, icon: const Icon(Icons.attach_file), label: Text(LocServ.inst.t('select_file'))),
                 const SizedBox(width: 12),
                 if (_pickedFile != null) Flexible(child: Text(_pickedFile!.path.split(Platform.pathSeparator).last)),
                 if (_pickedFile == null && _storedFileName != null) Flexible(child: Text(_storedFileName!)),

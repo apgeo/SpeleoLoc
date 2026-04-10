@@ -10,6 +10,7 @@ import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Configuration key for the persisted menu mode preference.
 const String _menuModeConfigKey = 'app_menu_mode';
@@ -131,6 +132,12 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
           onScreenMenuItemSelected(item.value!);
         }
       },
+      onHelpPressed: this is ProductTourMixin
+          ? () {
+              Navigator.pop(context); // close drawer
+              (this as ProductTourMixin).startScreenTour();
+            }
+          : null,
     );
   }
 
@@ -141,6 +148,12 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
       onSelected: (value) {
         if (value == '_toggle_menu_mode') {
           _setMenuMode(AppMenuMode.drawer);
+          return;
+        }
+        if (value == '_help') {
+          if (this is ProductTourMixin) {
+            (this as ProductTourMixin).startScreenTour();
+          }
           return;
         }
         if (_handleGlobalMenuSelection(value)) return;
@@ -171,6 +184,21 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
 
         // Global navigation items — icon-only row
         items.add(_GlobalNavRow());
+
+        // Help tour
+        if (this is ProductTourMixin) {
+          items.add(const PopupMenuDivider());
+          items.add(PopupMenuItem<String>(
+            value: '_help',
+            child: Row(
+              children: [
+                const Icon(Icons.help_outline, size: 20),
+                const SizedBox(width: 8),
+                Text(LocServ.inst.t('help_tour')),
+              ],
+            ),
+          ));
+        }
 
         // Mode toggle
         items.add(const PopupMenuDivider());
@@ -325,10 +353,12 @@ class _GlobalNavRowState extends State<_GlobalNavRow> {
 class _AppMenuDrawer extends StatelessWidget {
   final List<AppMenuItem> screenItems;
   final void Function(AppMenuItem) onScreenItemTap;
+  final VoidCallback? onHelpPressed;
 
   const _AppMenuDrawer({
     required this.screenItems,
     required this.onScreenItemTap,
+    this.onHelpPressed,
   });
 
   @override
@@ -389,17 +419,28 @@ class _AppMenuDrawer extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            // Mode toggle icon + version label at bottom
+            // Help tour + Mode toggle icon + version label at bottom
             const Divider(),
             Column(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  tooltip: LocServ.inst.t('menu_use_popup'),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    AppBarMenuMixin._setMenuMode(AppMenuMode.popup);
-                  },
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (onHelpPressed != null)
+                      IconButton(
+                        icon: const Icon(Icons.help_outline),
+                        tooltip: LocServ.inst.t('help_tour'),
+                        onPressed: onHelpPressed,
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      tooltip: LocServ.inst.t('menu_use_popup'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        AppBarMenuMixin._setMenuMode(AppMenuMode.popup);
+                      },
+                    ),
+                  ],
                 ),
                 if (_appVersion.isNotEmpty)
                   Padding(

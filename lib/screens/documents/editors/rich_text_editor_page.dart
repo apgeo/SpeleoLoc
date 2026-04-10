@@ -7,6 +7,7 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Rich-text editor powered by `flutter_quill`.
 ///
@@ -34,7 +35,18 @@ class RichTextEditorPage extends StatefulWidget {
 }
 
 class _RichTextEditorPageState extends State<RichTextEditorPage>
-    with AppBarMenuMixin<RichTextEditorPage> {
+    with AppBarMenuMixin<RichTextEditorPage>, ProductTourMixin<RichTextEditorPage> {
+  @override
+  String get tourId => 'rich_text_editor';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_rich_text_editor_title_field_title', bodyLocKey: 'tour_rich_text_editor_title_field_body'),
+    TourStepDef(keyId: 'quill', titleLocKey: 'tour_rich_text_editor_quill_title', bodyLocKey: 'tour_rich_text_editor_quill_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_rich_text_editor_menu_title', bodyLocKey: 'tour_rich_text_editor_menu_body'),
+  ];
+
   final _titleCtrl = TextEditingController();
   late QuillController _quillController;
   final FocusNode _editorFocusNode = FocusNode();
@@ -173,7 +185,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
               tooltip: LocServ.inst.t('save'),
               onPressed: _save,
             ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: _isLoading
@@ -184,6 +196,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
                 children: [
                   // ---- Title field ----
                   TextField(
+                    key: tourKeys['title_field'],
                     controller: _titleCtrl,
                     decoration: InputDecoration(
                       labelText: LocServ.inst.t('title'),
@@ -204,6 +217,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
 
                   // ---- Quill editor ----
                   Expanded(
+                    key: tourKeys['quill'],
                     child: QuillEditor(
                       controller: _quillController,
                       focusNode: _editorFocusNode,

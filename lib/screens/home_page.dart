@@ -15,6 +15,7 @@ import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/screens/csv_caves_import_page.dart';
 
@@ -36,7 +37,19 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
+class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, ProductTourMixin<HomePage> {
+  @override
+  String get tourId => 'home';
+  @override
+  final tourKeys = TourKeySet(['scan_qr', 'add_cave', 'docs', 'cave_list', 'menu']);
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'scan_qr', titleLocKey: 'tour_home_scan_qr_title', bodyLocKey: 'tour_home_scan_qr_body'),
+    TourStepDef(keyId: 'add_cave', titleLocKey: 'tour_home_add_cave_title', bodyLocKey: 'tour_home_add_cave_body'),
+    TourStepDef(keyId: 'docs', titleLocKey: 'tour_home_docs_title', bodyLocKey: 'tour_home_docs_body'),
+    TourStepDef(keyId: 'cave_list', titleLocKey: 'tour_home_cave_list_title', bodyLocKey: 'tour_home_cave_list_body', align: ContentAlign.top),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_home_menu_title', bodyLocKey: 'tour_home_menu_body'),
+  ];
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
@@ -328,16 +341,19 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
         ),
         actions: [
           IconButton(
+            key: tourKeys['scan_qr'],
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: LocServ.inst.t('scan_qr'),
             onPressed: _scanAndLookupQr,
           ),
           IconButton(
+            key: tourKeys['add_cave'],
             icon: const Icon(Icons.add),
             tooltip: LocServ.inst.t('add_new_cave'),
             onPressed: _addNewCave,
           ),
           IconButton(
+            key: tourKeys['docs'],
             icon: const Icon(Icons.description),
             tooltip: LocServ.inst.t('documentation'),
             onPressed: () async {
@@ -362,7 +378,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
               }
             },
           ),
-          buildAppBarMenuButton(),
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
       body: SingleChildScrollView(
@@ -405,6 +421,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage> {
                 ),
               if (showActionButtons) const SizedBox(height: 10),
                Padding(
+                          key: tourKeys['cave_list'],
                           padding: const EdgeInsets.symmetric(horizontal: 28.0),
                           child: 
                             Align(

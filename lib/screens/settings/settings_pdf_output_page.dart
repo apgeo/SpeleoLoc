@@ -3,6 +3,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/product_tour.dart';
 
 /// PDF output settings: grid layout (rows/columns), QR label template.
 class SettingsPdfOutputPage extends StatefulWidget {
@@ -13,7 +14,17 @@ class SettingsPdfOutputPage extends StatefulWidget {
 }
 
 class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
-    with AppBarMenuMixin<SettingsPdfOutputPage> {
+    with AppBarMenuMixin<SettingsPdfOutputPage>, ProductTourMixin<SettingsPdfOutputPage> {
+  @override
+  String get tourId => 'settings_pdf';
+  @override
+  final TourKeySet tourKeys = TourKeySet();
+  @override
+  List<TourStepDef> get tourSteps => [
+    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_pdf_list_title', bodyLocKey: 'tour_settings_pdf_list_body'),
+    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_pdf_menu_title', bodyLocKey: 'tour_settings_pdf_menu_body'),
+  ];
+
   Map<String, dynamic>? _cfg;
   late TextEditingController _templateController;
   late TextEditingController _columnsController;
@@ -79,9 +90,10 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_pdf_output')),
-        actions: [buildAppBarMenuButton()],
+        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: ListView(
+        key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
           // Grid layout section
