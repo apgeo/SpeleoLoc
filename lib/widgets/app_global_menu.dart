@@ -20,12 +20,14 @@ class AppMenuItem {
   final IconData icon;
   final String? label;
   final VoidCallback? onTap;
+  final Color? color;
 
   const AppMenuItem({
     this.value,
     required this.icon,
     this.label,
     this.onTap,
+    this.color,
   });
 }
 
@@ -352,6 +354,7 @@ class _AppMenuDrawer extends StatelessWidget {
                     title: item.label != null ? Text(item.label!) : null,
                     dense: true,
                     onTap: () => onScreenItemTap(item),
+                    iconColor: item.color
                   )),
               const Divider(),
             ],

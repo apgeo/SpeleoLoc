@@ -35,6 +35,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           value: 'start_trip',
           icon: Icons.play_arrow,
           label: LocServ.inst.t('trip_start'),
+          color: Colors.green
+          // color: Colors.green.shade900
         )
       else ...[
         AppMenuItem(
