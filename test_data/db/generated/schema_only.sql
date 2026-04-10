@@ -58,17 +58,6 @@ CREATE TABLE cave_trips (
             updated_at INTEGER,
             deleted_at INTEGER
           , log TEXT);
-CREATE TABLE cave_trip_points (
-            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-            cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id),
-            cave_place_id INTEGER NOT NULL REFERENCES cave_places (id),
-            scanned_at INTEGER NOT NULL,
-            notes TEXT,
-            created_at INTEGER,
-            updated_at INTEGER,
-            deleted_at INTEGER,
-            UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK
-          );
 CREATE TABLE documentation_files_to_cave_trips (
             id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
             documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id),
@@ -77,3 +66,17 @@ CREATE TABLE documentation_files_to_cave_trips (
             deleted_at INTEGER,
             UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK
           );
+CREATE TABLE IF NOT EXISTS "cave_trip_points" (
+	"id"	INTEGER NOT NULL UNIQUE,
+	"cave_trip_id"	INTEGER NOT NULL,
+	"cave_place_id"	INTEGER,
+	"scanned_at"	INTEGER NOT NULL,
+	"notes"	TEXT,
+	"created_at"	INTEGER,
+	"updated_at"	INTEGER,
+	"deleted_at"	INTEGER,
+	UNIQUE("cave_trip_id","cave_place_id","scanned_at") ON CONFLICT ROLLBACK,
+	PRIMARY KEY("id" AUTOINCREMENT),
+	FOREIGN KEY("cave_place_id") REFERENCES "cave_places"("id"),
+	FOREIGN KEY("cave_trip_id") REFERENCES "cave_trips"("id")
+);

@@ -17,6 +17,10 @@ import 'dart:math';
 const String kSqlite3Cmd = 'D:\\dev\\Android\\Sdk\\platform-tools\\sqlite3.exe'; // Adjust if sqlite3 is not on PATH
 const String kSourceDbPath =
     'test_data/db/binaries/speleo_loc_export_20260301_tel2.sqlite';
+const List<String> kSourceDbFallbackPaths = [
+  'test_data/db/binaries/speleo_loc_export_20260410.sqlite',
+  'test_data/db/binaries/speleo_loc_export_20260301.sqlite',
+];
 const String kOutputDir = 'test_data/db/generated';
 const String kSchemaOnlyFile = '$kOutputDir/schema_only.sql';
 const String kDataOnlyFile = '$kOutputDir/data_only.sql';
@@ -98,6 +102,9 @@ const bool kGenerateDocuments = true;
 const bool kGeneratePictureDocuments = true;
 const bool kGenerateGeofeatureLinks = true;
 const bool kGenerateRasterMapsWithBindings = true;
+const bool kGenerateRasterForGeneratedCaves = true;
+const bool kGenerateRasterForEnrichedCaves = true;
+const bool kGenerateRasterForExistingCavesWithoutRaster = true;
 const bool kGenerateCaveTrips = true;
 const bool kEnrichExistingCavesWithoutData = true;
 const bool kGenerateSqliteDatabase = true;
@@ -650,6 +657,7 @@ const List<String> kCavePlacePrefixes = [
 
 void main() async {
   final rng = Random();
+  final sourceDbPath = _resolveSourceDbPath();
 
   // Ensure output directory exists
   Directory(kOutputDir).createSync(recursive: true);
@@ -659,30 +667,35 @@ void main() async {
   // ------------------------------------------------------------------
   print('=== Exporting existing database ===');
 
-  if (!File(kSourceDbPath).existsSync()) {
-    stderr.writeln('Source database not found: $kSourceDbPath');
+  if (sourceDbPath == null) {
+    stderr.writeln('Source database not found. Checked:');
+    stderr.writeln('  - $kSourceDbPath');
+    for (final path in kSourceDbFallbackPaths) {
+      stderr.writeln('  - $path');
+    }
     exit(2);
   }
+  print('  Source DB    -> $sourceDbPath');
 
-  _runSqlite3(kSourceDbPath, '.schema', kSchemaOnlyFile);
+  _runSqlite3(sourceDbPath, '.schema', kSchemaOnlyFile);
   print('  Schema only  -> $kSchemaOnlyFile');
 
-  _exportDataOnly(kSourceDbPath, kDataOnlyFile);
+  _exportDataOnly(sourceDbPath, kDataOnlyFile);
   print('  Data only    -> $kDataOnlyFile');
 
-  _runSqlite3(kSourceDbPath, '.dump', kSchemaAndDataFile);
+  _runSqlite3(sourceDbPath, '.dump', kSchemaAndDataFile);
   print('  Schema+Data  -> $kSchemaAndDataFile');
 
     final hasDocFileType =
-      _tableHasColumn(kSourceDbPath, 'documentation_files', 'file_type');
+      _tableHasColumn(sourceDbPath, 'documentation_files', 'file_type');
     final hasDocGeoTable =
-      _tableExists(kSourceDbPath, 'documentation_files_to_geofeatures');
+      _tableExists(sourceDbPath, 'documentation_files_to_geofeatures');
       final hasDocCaveId =
-        _tableHasColumn(kSourceDbPath, 'documentation_files', 'cave_id');
-    final hasTripsTable = _tableExists(kSourceDbPath, 'cave_trips');
-    final hasTripPointsTable = _tableExists(kSourceDbPath, 'cave_trip_points');
+      _tableHasColumn(sourceDbPath, 'documentation_files', 'cave_id');
+  final hasTripsTable = _tableExists(sourceDbPath, 'cave_trips');
+  final hasTripPointsTable = _tableExists(sourceDbPath, 'cave_trip_points');
     final hasDocToTripTable =
-      _tableExists(kSourceDbPath, 'documentation_files_to_cave_trips');
+      _tableExists(sourceDbPath, 'documentation_files_to_cave_trips');
 
   // ------------------------------------------------------------------
   //  Step 2: Determine max existing IDs from data export
@@ -947,9 +960,9 @@ void main() async {
 
   // ---------- 7. Enrich existing caves without data ----------
   if (kEnrichExistingCavesWithoutData) {
-    final caveTitles = _loadCaveTitles(kSourceDbPath);
+    final caveTitles = _loadCaveTitles(sourceDbPath);
     final missingStates = _loadCavesMissingData(
-      dbPath: kSourceDbPath,
+      dbPath: sourceDbPath,
       hasDocFileType: hasDocFileType,
       hasDocGeoTable: hasDocGeoTable,
       hasDocCaveId: hasDocCaveId,
@@ -976,9 +989,9 @@ void main() async {
       enrichedCaveIds.add(caveId);
 
       caveToAreaIds.putIfAbsent(caveId, () =>
-          _queryIntList(kSourceDbPath, 'SELECT id FROM cave_areas WHERE cave_id = $caveId;'));
+          _queryIntList(sourceDbPath, 'SELECT id FROM cave_areas WHERE cave_id = $caveId;'));
       caveToPlaceIds.putIfAbsent(caveId, () =>
-          _queryIntList(kSourceDbPath, 'SELECT id FROM cave_places WHERE cave_id = $caveId;'));
+          _queryIntList(sourceDbPath, 'SELECT id FROM cave_places WHERE cave_id = $caveId;'));
       caveToDocIds.putIfAbsent(caveId, () => []);
 
       if (state.needsAreas) {
@@ -1098,15 +1111,39 @@ void main() async {
 
   // ---------- 8. Raster maps cloned from existing + place points ----------
   if (kGenerateRasterMapsWithBindings) {
-    final templates = _loadRasterTemplates(kSourceDbPath);
+    final templates = _loadRasterTemplates(sourceDbPath);
     int totalMaps = 0;
     int totalMapPoints = 0;
-    final cavesForRaster = <int>{
-      ...generatedCaves.keys,
-      ...enrichedCaveIds,
-    };
+    int targetGenerated = 0;
+    int targetEnriched = 0;
+    int targetExistingNoRaster = 0;
+    final cavesForRaster = <int>{};
+    if (kGenerateRasterForGeneratedCaves) {
+      cavesForRaster.addAll(generatedCaves.keys);
+      targetGenerated = generatedCaves.length;
+    }
+    if (kGenerateRasterForEnrichedCaves) {
+      cavesForRaster.addAll(enrichedCaveIds);
+      targetEnriched = enrichedCaveIds.length;
+    }
+    if (kGenerateRasterForExistingCavesWithoutRaster) {
+      final missingRaster = _loadCavesWithoutRasterMaps(sourceDbPath);
+      cavesForRaster.addAll(missingRaster);
+      targetExistingNoRaster = missingRaster.length;
+    }
 
     for (final caveId in cavesForRaster) {
+      caveToPlaceIds.putIfAbsent(
+        caveId,
+        () => _queryIntList(
+          sourceDbPath, 'SELECT id FROM cave_places WHERE cave_id = $caveId;'),
+      );
+      caveToAreaIds.putIfAbsent(
+        caveId,
+        () => _queryIntList(
+          sourceDbPath, 'SELECT id FROM cave_areas WHERE cave_id = $caveId;'),
+      );
+
       final placeIds = caveToPlaceIds[caveId] ?? const <int>[];
       if (placeIds.isEmpty || templates.isEmpty) {
         continue;
@@ -1142,6 +1179,9 @@ void main() async {
       }
     }
 
+    print('  Raster target generated caves: $targetGenerated');
+    print('  Raster target enriched caves: $targetEnriched');
+    print('  Raster target existing without maps: $targetExistingNoRaster');
     print('  Raster maps added: $totalMaps');
     print('  Raster map place points added: $totalMapPoints');
     buf.writeln();
@@ -1233,7 +1273,7 @@ void main() async {
 
   // Write combined data (original + extra)
   final combined = StringBuffer();
-  combined.writeln('-- Original data from $kSourceDbPath');
+  combined.writeln('-- Original data from $sourceDbPath');
   combined.writeln(existingData);
   combined.writeln();
   combined.writeln('-- =========================================');
@@ -1247,7 +1287,7 @@ void main() async {
   // Write combined schema + original data + extra generated data.
   final schemaAndData = File(kSchemaAndDataFile).readAsStringSync();
   final combinedSchemaData = StringBuffer();
-  combinedSchemaData.writeln('-- Original schema+data from $kSourceDbPath');
+  combinedSchemaData.writeln('-- Original schema+data from $sourceDbPath');
   combinedSchemaData.writeln(schemaAndData);
   combinedSchemaData.writeln();
   combinedSchemaData.writeln('-- =========================================');
@@ -1397,6 +1437,18 @@ bool _tableExists(String dbPath, String tableName) {
   }
   final out = (result.stdout as String).trim();
   return out == '1';
+}
+
+String? _resolveSourceDbPath() {
+  if (File(kSourceDbPath).existsSync()) {
+    return kSourceDbPath;
+  }
+  for (final path in kSourceDbFallbackPaths) {
+    if (File(path).existsSync()) {
+      return path;
+    }
+  }
+  return null;
 }
 
 bool _tableHasColumn(String dbPath, String tableName, String columnName) {
@@ -1579,6 +1631,14 @@ List<RasterTemplate> _loadRasterTemplates(String dbPath) {
       .where((r) => r.length >= 3)
       .map((r) => RasterTemplate(title: r[0], mapType: r[1], fileName: r[2]))
       .toList();
+}
+
+List<int> _loadCavesWithoutRasterMaps(String dbPath) {
+  return _queryIntList(
+    dbPath,
+    'SELECT c.id FROM caves c LEFT JOIN raster_maps rm ON rm.cave_id = c.id '
+    'GROUP BY c.id HAVING COUNT(rm.id) = 0;',
+  );
 }
 
 List<int> _queryIntList(String dbPath, String sql) {
