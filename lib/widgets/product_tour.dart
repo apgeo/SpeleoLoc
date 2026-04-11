@@ -42,6 +42,19 @@ class TourStepDef {
 
 /// Config key prefix for tracking whether a screen tour has been seen.
 const String _tourSeenPrefix = 'tour_seen_';
+const String _autoToursDisabledKey = 'tour_auto_disabled';
+
+Future<void> setAutoToursDisabled(bool disabled) async {
+  await SettingsHelper.saveStringConfig(
+    _autoToursDisabledKey,
+    disabled ? 'true' : '',
+  );
+}
+
+Future<bool> areAutoToursDisabled() async {
+  final v = await SettingsHelper.loadStringConfig(_autoToursDisabledKey, '');
+  return v == 'true';
+}
 
 /// Resets all tour-seen flags so tours auto-start again.
 Future<void> resetAllTours(List<String> tourIds) async {
@@ -133,6 +146,8 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
   Future<void> _checkAutoStartTour() async {
     if (_tourAutoStartChecked) return;
     _tourAutoStartChecked = true;
+    final autoDisabled = await areAutoToursDisabled();
+    if (autoDisabled) return;
     final seen = await SettingsHelper.loadStringConfig('$_tourSeenPrefix$tourId');
     if (seen.isEmpty && mounted) {
       // Small delay to ensure layout is fully complete
@@ -163,6 +178,18 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
                 return _TourStepContent(
                   title: LocServ.inst.t(step.titleLocKey),
                   body: LocServ.inst.t(step.bodyLocKey),
+                  disableAutoToursLabel: LocServ.inst.t('disable_auto_tours'),
+                  onDisableAutoTours: () async {
+                    await setAutoToursDisabled(true);
+                    if (mounted) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(
+                          content: Text(LocServ.inst.t('auto_tours_disabled')),
+                        ),
+                      );
+                    }
+                    controller.skip();
+                  },
                 );
               },
             ),
@@ -174,10 +201,11 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
     TutorialCoachMark(
       targets: targets,
       colorShadow: Colors.black,
-      opacityShadow: 0.75,
+      opacityShadow: 0.62,
       hideSkip: false,
       textSkip: LocServ.inst.t('skip'),
       onFinish: () => _markTourSeen(),
+      alignSkip: Alignment.bottomRight,
       onSkip: () {
         _markTourSeen();
         return true;
@@ -194,8 +222,15 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
 class _TourStepContent extends StatelessWidget {
   final String title;
   final String body;
+  final String disableAutoToursLabel;
+  final Future<void> Function() onDisableAutoTours;
 
-  const _TourStepContent({required this.title, required this.body});
+  const _TourStepContent({
+    required this.title,
+    required this.body,
+    required this.disableAutoToursLabel,
+    required this.onDisableAutoTours,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +252,18 @@ class _TourStepContent extends StatelessWidget {
           Text(
             body,
             style: const TextStyle(color: Colors.white, fontSize: 14),
+          ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: TextButton.icon(
+              onPressed: onDisableAutoTours,
+              icon: const Icon(Icons.block, color: Colors.white, size: 16),
+              label: Text(
+                disableAutoToursLabel,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
           ),
         ],
       ),
