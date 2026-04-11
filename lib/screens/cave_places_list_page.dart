@@ -27,6 +27,7 @@ class CavePlacesListPage extends StatefulWidget {
 }
 
 class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage>, ProductTourMixin<CavePlacesListPage> {
+  static const bool _pinTopControls = true;
   @override
   String get tourId => 'cave_places_list';
   @override
@@ -609,357 +610,35 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            controller: _scrollController,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // toolbarsection (icon-only)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      IconActionButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ScannerPage(onScan: _onScan),
-                          ),
-                        ),
-                        icon: Icons.qr_code_scanner,
-                        tooltip: LocServ.inst.t('scan_qr'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconActionButton(
-                        key: tourKeys['add'],
-                        onPressed: () async {
-
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CavePlacePage(
-                                // //todo: remove if Unhandled Exception: Bad state: Too many elements solved
-                                // key: ValueKey('cave_place_page_${widget.caveId}'), // Force rebuild when caveId changes
-                                caveId: widget.caveId,
-                              ),
-                            ),
-                          );
-                          if (result == true) _loadCavePlaces();
-                        },
-                        icon: Icons.add,
-                        tooltip: LocServ.inst.t('add_cave_place'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconActionButton(
-                        onPressed: () async {
-                          final result = await Navigator.pushNamed(
-                            context,
-                            rasterMapsRoute,
-                            arguments: widget.caveId,
-                          );
-                          if (result == true) _loadCavePlaces();
-                        },
-                        icon: Icons.map,
-                        tooltip: LocServ.inst.t('view_raster_maps'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconActionButton(
-                        onPressed: _printQRCodes,
-                        icon: Icons.print,
-                        tooltip: LocServ.inst.t('print_qr_codes'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconActionButton(
-                        onPressed: () {
-                          setState(() {
-                            _showManualQrSection = !_showManualQrSection;
-                          });
-                        },
-                        icon: Icons.qr_code_rounded,
-                        tooltip: LocServ.inst.t('manual_qr_search'),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.layers),
-                        tooltip: LocServ.inst.t('manage_cave_areas'),
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CaveAreasPage(caveId: widget.caveId),
-                            ),
-                          );
-                          if (result == true) _loadCavePlaces();
-                        },
-                      )
-                      // ,
-                      // IconButton(
-                      //   icon: const Icon(Icons.landscape),
-                      //   tooltip: LocServ.inst.t('manage_surface_areas'),
-                      //   onPressed: () async {
-                      //     final result = await Navigator.push<bool?>(
-                      //       context,
-                      //       MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
-                      //     );
-                      //     if (result == true) {
-                      //       await _loadSurfaceAreas();
-                      //       _loadCavePlaces();
-                      //     }
-                      //   },
-                      // ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  if (_pastTripsCount > 0)
+          _pinTopControls
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 2),
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.history, size: 16),
-                        label: Text('${LocServ.inst.t('trip_history')} ($_pastTripsCount)'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          textStyle: const TextStyle(fontSize: 13),
-                        ),
-                        onPressed: () async {
-                          await Navigator.pushNamed(context, caveTripListRoute, arguments: widget.caveId);
-                          _loadTripCount();
-                        },
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: _buildTopControls(),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: _buildPlacesList(scrollable: true),
                       ),
                     ),
-
-                  if (_showManualQrSection)
-                    Column(
+                  ],
+                )
+              : SingleChildScrollView(
+                  controller: _scrollController,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _qrCodeController,
-                                decoration: InputDecoration(
-                                  labelText: LocServ.inst.t(
-                                    'qr_code_identifier',
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            ElevatedButton(
-                              onPressed: () {
-                                final code = _qrCodeController.text.trim();
-                                if (code.isNotEmpty) {
-                                  _onScan(code);
-                                }
-                              },
-                              child: Text(
-                                LocServ.inst.t(
-                                  'search_place_by_qr_code_by_identifier',
-                                ),
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-
-                  const SizedBox(height: 2),
-                  Row(
-                    key: tourKeys['list'],
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${LocServ.inst.t('cave_place')}:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                      if (_checkboxMode) ...[
-                        IconButton(
-                          icon: const Icon(Icons.select_all, size: 20),
-                          tooltip: LocServ.inst.t('select_all'),
-                          onPressed: () {
-                            setState(() {
-                              _selectedPlaceIds = _filteredCavePlaces.map((cp) => cp.id).toSet();
-                            });
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.flip, size: 20),
-                          tooltip: LocServ.inst.t('invert_selection'),
-                          onPressed: () {
-                            setState(() {
-                              final all = _filteredCavePlaces.map((cp) => cp.id).toSet();
-                              _selectedPlaceIds = all.difference(_selectedPlaceIds);
-                            });
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_sweep, size: 20),
-                          tooltip: LocServ.inst.t('delete_selected'),
-                          color: Colors.red,
-                          onPressed: _selectedPlaceIds.isEmpty ? null : _deleteSelectedPlaces,
-                        ),
-                      ],
-                      IconButton(
-                        icon: Icon(
-                          Icons.checklist,
-                          size: 20,
-                          color: _checkboxMode ? Theme.of(context).colorScheme.primary : null,
-                        ),
-                        tooltip: LocServ.inst.t('select_mode'),
-                        onPressed: () {
-                          setState(() {
-                            _checkboxMode = !_checkboxMode;
-                            if (!_checkboxMode) _selectedPlaceIds.clear();
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.filter_list, size: 20),
-                        tooltip: LocServ.inst.t('show_filter'),
-                        onPressed: () {
-                          setState(() {
-                            _showFilter = !_showFilter;
-                            if (!_showFilter) {
-                              _filterController.clear();
-                              _applyFilter();
-                            }
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  if (_showFilter)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: TextField(
-                        controller: _filterController,
-                        decoration: InputDecoration(
-                          labelText:
-                              LocServ.inst.t('filter_cave_places'),
-                        ),
-                        onChanged: (v) {
-                          setState(() {
-                            //todo: retest and fix filtering by QR code number if it was broken by the recent filter refactor (now supports partial matches, but maybe some parsing issue broke it);
-                            //todo: consider potential performance issues with large number of cave places (throttle/debounce, optimize _applyFilter, etc)
-                            _applyFilter();
-                          });
-                        },
-                      ),
-                    ),
-                  ..._filteredCavePlaces.map(
-                    (cp) => Column(
-                      children: [
-                        InkWell(
-                          onTap: () async {
-                            if (_checkboxMode) {
-                              setState(() {
-                                if (_selectedPlaceIds.contains(cp.id)) {
-                                  _selectedPlaceIds.remove(cp.id);
-                                } else {
-                                  _selectedPlaceIds.add(cp.id);
-                                }
-                              });
-                              return;
-                            }
-                            final result = await Navigator.pushNamed(
-                              context,
-                              cavePlaceRoute,
-                              arguments: {
-                                'caveId': widget.caveId,
-                                'cavePlaceId': cp.id,
-                              },
-                            );
-                            if (result == true) _loadCavePlaces();
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
-                            child: Row(
-                              children: [
-                                if (_checkboxMode)
-                                  Checkbox(
-                                    value: _selectedPlaceIds.contains(cp.id),
-                                    onChanged: (v) {
-                                      setState(() {
-                                        if (v == true) {
-                                          _selectedPlaceIds.add(cp.id);
-                                        } else {
-                                          _selectedPlaceIds.remove(cp.id);
-                                        }
-                                      });
-                                    },
-                                  ),
-                                // Title takes all available space
-                                Expanded(
-                                  child: Text(
-                                    cp.title,
-                                    style: const TextStyle(fontSize: 16),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                // Icons aligned to the right
-                                // QR presence indicator
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4.0, right: 2.0),
-                                  child: Icon(
-                                    cp.placeQrCodeIdentifier != null
-                                        ? Icons.qr_code
-                                        : Icons.qr_code_outlined,
-                                    color: cp.placeQrCodeIdentifier != null
-                                        ? Colors.green.withValues(alpha: 0.8)
-                                        : Colors.grey,
-                                    size: 20,
-                                  ),
-                                ),
-                                // Definitions count (clickable)
-                                Builder(
-                                  builder: (context) {
-                                    final count = _definitionCountByPlace[cp.id] ?? 0;
-                                    final Color col = (count == 0)
-                                        ? Colors.red.withValues(alpha: 0.8)
-                                        : (count == _rasterMapsCountForCave && _rasterMapsCountForCave > 0)
-                                            ? Colors.green.withValues(alpha: 0.8)
-                                            : Colors.grey;
-                                    return InkWell(
-                                      onTap: () => _showDefinitionsReport(cp.id),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.place, color: col, size: 18),
-                                            const SizedBox(width: 2),
-                                            Text('$count', style: TextStyle(color: col)),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                // Delete button
-                                IconActionButton(
-                                  onPressed: () => _confirmDeleteCavePlace(cp.id),
-                                  icon: Icons.delete,
-                                  tooltip: LocServ.inst.t('delete_cave_place'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Divider(height: 1, color: Colors.grey[300]),
+                        _buildTopControls(),
+                        _buildPlacesList(scrollable: false),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                ),
           // overlay down-arrow (bottom-center) — visible while content is scrollable
           if (_showDownArrow)
             Positioned(
@@ -992,5 +671,328 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         ],
       ),
     );
+  }
+
+  Widget _buildTopControls() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // toolbarsection (icon-only)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            IconActionButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ScannerPage(onScan: _onScan),
+                ),
+              ),
+              icon: Icons.qr_code_scanner,
+              tooltip: LocServ.inst.t('scan_qr'),
+            ),
+            const SizedBox(width: 8),
+            IconActionButton(
+              key: tourKeys['add'],
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CavePlacePage(caveId: widget.caveId),
+                  ),
+                );
+                if (result == true) _loadCavePlaces();
+              },
+              icon: Icons.add,
+              tooltip: LocServ.inst.t('add_cave_place'),
+            ),
+            const SizedBox(width: 8),
+            IconActionButton(
+              onPressed: () async {
+                final result = await Navigator.pushNamed(
+                  context,
+                  rasterMapsRoute,
+                  arguments: widget.caveId,
+                );
+                if (result == true) _loadCavePlaces();
+              },
+              icon: Icons.map,
+              tooltip: LocServ.inst.t('view_raster_maps'),
+            ),
+            const SizedBox(width: 8),
+            IconActionButton(
+              onPressed: _printQRCodes,
+              icon: Icons.print,
+              tooltip: LocServ.inst.t('print_qr_codes'),
+            ),
+            const SizedBox(width: 8),
+            IconActionButton(
+              onPressed: () {
+                setState(() {
+                  _showManualQrSection = !_showManualQrSection;
+                });
+              },
+              icon: Icons.qr_code_rounded,
+              tooltip: LocServ.inst.t('manual_qr_search'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.layers),
+              tooltip: LocServ.inst.t('manage_cave_areas'),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CaveAreasPage(caveId: widget.caveId),
+                  ),
+                );
+                if (result == true) _loadCavePlaces();
+              },
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 4),
+
+        if (_pastTripsCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.history, size: 16),
+              label: Text('${LocServ.inst.t('trip_history')} ($_pastTripsCount)'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                textStyle: const TextStyle(fontSize: 13),
+              ),
+              onPressed: () async {
+                await Navigator.pushNamed(context, caveTripListRoute, arguments: widget.caveId);
+                _loadTripCount();
+              },
+            ),
+          ),
+
+        if (_showManualQrSection)
+          Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _qrCodeController,
+                      decoration: InputDecoration(
+                        labelText: LocServ.inst.t('qr_code_identifier'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      final code = _qrCodeController.text.trim();
+                      if (code.isNotEmpty) {
+                        _onScan(code);
+                      }
+                    },
+                    child: Text(
+                      LocServ.inst.t('search_place_by_qr_code_by_identifier'),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+
+        const SizedBox(height: 2),
+        Row(
+          key: tourKeys['list'],
+          children: [
+            Expanded(
+              child: Text(
+                '${LocServ.inst.t('cave_place')}:',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
+            if (_checkboxMode) ...[
+              IconButton(
+                icon: const Icon(Icons.select_all, size: 20),
+                tooltip: LocServ.inst.t('select_all'),
+                onPressed: () {
+                  setState(() {
+                    _selectedPlaceIds = _filteredCavePlaces.map((cp) => cp.id).toSet();
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.flip, size: 20),
+                tooltip: LocServ.inst.t('invert_selection'),
+                onPressed: () {
+                  setState(() {
+                    final all = _filteredCavePlaces.map((cp) => cp.id).toSet();
+                    _selectedPlaceIds = all.difference(_selectedPlaceIds);
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_sweep, size: 20),
+                tooltip: LocServ.inst.t('delete_selected'),
+                color: Colors.red,
+                onPressed: _selectedPlaceIds.isEmpty ? null : _deleteSelectedPlaces,
+              ),
+            ],
+            IconButton(
+              icon: Icon(
+                Icons.checklist,
+                size: 20,
+                color: _checkboxMode ? Theme.of(context).colorScheme.primary : null,
+              ),
+              tooltip: LocServ.inst.t('select_mode'),
+              onPressed: () {
+                setState(() {
+                  _checkboxMode = !_checkboxMode;
+                  if (!_checkboxMode) _selectedPlaceIds.clear();
+                });
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.filter_list, size: 20),
+              tooltip: LocServ.inst.t('show_filter'),
+              onPressed: () {
+                setState(() {
+                  _showFilter = !_showFilter;
+                  if (!_showFilter) {
+                    _filterController.clear();
+                    _applyFilter();
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+        if (_showFilter)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: TextField(
+              controller: _filterController,
+              decoration: InputDecoration(labelText: LocServ.inst.t('filter_cave_places')),
+              onChanged: (v) {
+                setState(() {
+                  _applyFilter();
+                });
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPlacesList({required bool scrollable}) {
+    final children = _filteredCavePlaces
+        .map(
+          (cp) => Column(
+            children: [
+              InkWell(
+                onTap: () async {
+                  if (_checkboxMode) {
+                    setState(() {
+                      if (_selectedPlaceIds.contains(cp.id)) {
+                        _selectedPlaceIds.remove(cp.id);
+                      } else {
+                        _selectedPlaceIds.add(cp.id);
+                      }
+                    });
+                    return;
+                  }
+                  final result = await Navigator.pushNamed(
+                    context,
+                    cavePlaceRoute,
+                    arguments: {
+                      'caveId': widget.caveId,
+                      'cavePlaceId': cp.id,
+                    },
+                  );
+                  if (result == true) _loadCavePlaces();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
+                  child: Row(
+                    children: [
+                      if (_checkboxMode)
+                        Checkbox(
+                          value: _selectedPlaceIds.contains(cp.id),
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == true) {
+                                _selectedPlaceIds.add(cp.id);
+                              } else {
+                                _selectedPlaceIds.remove(cp.id);
+                              }
+                            });
+                          },
+                        ),
+                      Expanded(
+                        child: Text(
+                          cp.title,
+                          style: const TextStyle(fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4.0, right: 2.0),
+                        child: Icon(
+                          cp.placeQrCodeIdentifier != null
+                              ? Icons.qr_code
+                              : Icons.qr_code_outlined,
+                          color: cp.placeQrCodeIdentifier != null
+                              ? Colors.green.withValues(alpha: 0.8)
+                              : Colors.grey,
+                          size: 20,
+                        ),
+                      ),
+                      Builder(
+                        builder: (context) {
+                          final count = _definitionCountByPlace[cp.id] ?? 0;
+                          final Color col = (count == 0)
+                              ? Colors.red.withValues(alpha: 0.8)
+                              : (count == _rasterMapsCountForCave && _rasterMapsCountForCave > 0)
+                                  ? Colors.green.withValues(alpha: 0.8)
+                                  : Colors.grey;
+                          return InkWell(
+                            onTap: () => _showDefinitionsReport(cp.id),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.place, color: col, size: 18),
+                                  const SizedBox(width: 2),
+                                  Text('$count', style: TextStyle(color: col)),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      IconActionButton(
+                        onPressed: () => _confirmDeleteCavePlace(cp.id),
+                        icon: Icons.delete,
+                        tooltip: LocServ.inst.t('delete_cave_place'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[300]),
+            ],
+          ),
+        )
+        .toList();
+
+    if (scrollable) {
+      return ListView(
+        controller: _scrollController,
+        children: children,
+      );
+    }
+    return Column(children: children);
   }
 }
