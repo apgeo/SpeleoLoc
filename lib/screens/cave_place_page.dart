@@ -91,6 +91,10 @@ class _CavePlacePageState extends State<CavePlacePage>
   bool _qrModified = false;
   bool _latModified = false;
   bool _longModified = false;
+  bool _entranceModified = false;
+  bool _mainEntranceModified = false;
+  bool _isEntrance = false;
+  bool _isMainEntrance = false;
   int _descriptionLines = 1;
 
   static final TextInputFormatter _depthInputFormatter =
@@ -159,8 +163,12 @@ class _CavePlacePageState extends State<CavePlacePage>
       _latController.text = _cavePlace!.latitude?.toString() ?? '';
       _longController.text = _cavePlace!.longitude?.toString() ?? '';
       _selectedCaveAreaId = _cavePlace!.caveAreaId;
+      _isEntrance = (_cavePlace!.isEntrance ?? 0) == 1;
+      _isMainEntrance = (_cavePlace!.isMainEntrance ?? 0) == 1;
     } else {
       _descriptionLines = 1;
+      _isEntrance = false;
+      _isMainEntrance = false;
     }
     _rasterMaps = await (appDatabase.select(
       appDatabase.rasterMaps,
@@ -295,6 +303,8 @@ class _CavePlacePageState extends State<CavePlacePage>
               latitude: Value(lat),
               longitude: Value(long),
               caveAreaId: Value(_selectedCaveAreaId),
+              isEntrance: Value(_isEntrance ? 1 : 0),
+              isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
             ),
           );
 
@@ -319,6 +329,8 @@ class _CavePlacePageState extends State<CavePlacePage>
           latitude: Value(lat),
           longitude: Value(long),
           caveAreaId: Value(_selectedCaveAreaId),
+          isEntrance: Value(_isEntrance ? 1 : 0),
+          isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
         ),
       );
 
@@ -342,6 +354,8 @@ class _CavePlacePageState extends State<CavePlacePage>
       _currentCavePlaceId = cavePlaceId;
       _cavePlace = refreshed;
       _selectedCaveAreaId = refreshed.caveAreaId;
+      _isEntrance = (refreshed.isEntrance ?? 0) == 1;
+      _isMainEntrance = (refreshed.isMainEntrance ?? 0) == 1;
       _hasUnsavedChanges = false;
       _titleModified = false;
       _descriptionModified = false;
@@ -349,6 +363,8 @@ class _CavePlacePageState extends State<CavePlacePage>
       _qrModified = false;
       _latModified = false;
       _longModified = false;
+      _entranceModified = false;
+      _mainEntranceModified = false;
     });
   }
 
@@ -374,14 +390,163 @@ class _CavePlacePageState extends State<CavePlacePage>
       _longModified = _longController.text != orig;
     }
 
+    setState(_recomputeUnsavedChanges);
+  }
+
+  void _recomputeUnsavedChanges() {
+    _hasUnsavedChanges =
+        _titleModified ||
+        _descriptionModified ||
+        _depthModified ||
+        _qrModified ||
+        _latModified ||
+        _longModified ||
+        _entranceModified ||
+        _mainEntranceModified;
+  }
+
+  void _syncEntranceModifiedState() {
+    final origEntrance = (_cavePlace?.isEntrance ?? 0) == 1;
+    final origMainEntrance = (_cavePlace?.isMainEntrance ?? 0) == 1;
+    _entranceModified = _isEntrance != origEntrance;
+    _mainEntranceModified = _isMainEntrance != origMainEntrance;
+    _recomputeUnsavedChanges();
+  }
+
+  Future<List<CavePlace>> _findOtherEntrancePlaces({required bool mainOnly}) async {
+    final query = appDatabase.select(appDatabase.cavePlaces)
+      ..where((cp) {
+        final sameCave = cp.caveId.equals(widget.caveId);
+        final flag = mainOnly ? cp.isMainEntrance.equals(1) : cp.isEntrance.equals(1);
+        final notCurrent = _currentCavePlaceId != null
+            ? cp.id.equals(_currentCavePlaceId!).not()
+            : const Constant(true);
+        return sameCave & flag & notCurrent;
+      });
+    return query.get();
+  }
+
+  Future<void> _onEntranceToggleRequested(bool enabled) async {
+    if (enabled == _isEntrance) return;
+
+    if (enabled) {
+      final confirmEnable = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('confirm')),
+          content: Text(LocServ.inst.t('confirm_mark_as_entrance')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+          ],
+        ),
+      );
+      if (confirmEnable != true) return;
+
+      final otherEntrances = await _findOtherEntrancePlaces(mainOnly: false);
+      if (otherEntrances.isNotEmpty && mounted) {
+        final names = otherEntrances.map((e) => e.title).join(', ');
+        final confirmContinue = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(LocServ.inst.t('other_entrances_defined_title')),
+            content: Text(
+              LocServ.inst.t('other_entrances_defined_body').replaceAll('{names}', names),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+            ],
+          ),
+        );
+        if (confirmContinue != true) return;
+      }
+
+      setState(() {
+        _isEntrance = true;
+        _syncEntranceModifiedState();
+      });
+      return;
+    }
+
+    final confirmDisable = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('confirm')),
+        content: Text(LocServ.inst.t('confirm_unmark_as_entrance')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+        ],
+      ),
+    );
+    if (confirmDisable != true) return;
+
     setState(() {
-      _hasUnsavedChanges =
-          _titleModified ||
-          _descriptionModified ||
-          _depthModified ||
-          _qrModified ||
-          _latModified ||
-          _longModified;
+      _isEntrance = false;
+      _isMainEntrance = false;
+      _syncEntranceModifiedState();
+    });
+  }
+
+  Future<void> _onMainEntranceToggleRequested(bool enabled) async {
+    if (!_isEntrance || enabled == _isMainEntrance) return;
+
+    if (enabled) {
+      final confirmEnable = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('confirm')),
+          content: Text(LocServ.inst.t('confirm_mark_as_main_entrance')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+          ],
+        ),
+      );
+      if (confirmEnable != true) return;
+
+      final otherMainEntrances = await _findOtherEntrancePlaces(mainOnly: true);
+      if (otherMainEntrances.isNotEmpty && mounted) {
+        final names = otherMainEntrances.map((e) => e.title).join(', ');
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(LocServ.inst.t('main_entrance_already_defined_title')),
+            content: Text(
+              LocServ.inst.t('main_entrance_already_defined_body').replaceAll('{names}', names),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(LocServ.inst.t('ok'))),
+            ],
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isMainEntrance = true;
+        _syncEntranceModifiedState();
+      });
+      return;
+    }
+
+    final confirmDisable = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('confirm')),
+        content: Text(LocServ.inst.t('confirm_unmark_as_main_entrance')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+        ],
+      ),
+    );
+    if (confirmDisable != true) return;
+
+    setState(() {
+      _isMainEntrance = false;
+      _syncEntranceModifiedState();
     });
   }
 
@@ -1122,6 +1287,28 @@ class _CavePlacePageState extends State<CavePlacePage>
                   ),
                 ],
 
+                const SizedBox(height: 4),
+                CheckboxListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: _isEntrance,
+                  title: Text(LocServ.inst.t('is_cave_entrance')),
+                  onChanged: (v) => _onEntranceToggleRequested(v ?? false),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 24),
+                  child: CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _isMainEntrance,
+                    title: Text(LocServ.inst.t('is_main_cave_entrance')),
+                    onChanged: _isEntrance
+                        ? (v) => _onMainEntranceToggleRequested(v ?? false)
+                        : null,
+                  ),
+                ),
                 /*
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

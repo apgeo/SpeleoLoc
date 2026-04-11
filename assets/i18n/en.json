@@ -607,5 +607,19 @@
   "tour_data_export_import_body": "Import a previously exported archive. Choose merge or replace mode for existing data.",
 
   "show_home_toolbar": "Show home toolbar",
-  "show_home_toolbar_desc": "Display scan/add/docs/settings buttons in a toolbar on the home page"
+  "show_home_toolbar_desc": "Display scan/add/docs/settings buttons in a toolbar on the home page",
+
+  "is_cave_entrance": "Cave entrance",
+  "is_main_cave_entrance": "Main cave entrance",
+  "confirm_mark_as_entrance": "Mark this cave place as a cave entrance?",
+  "confirm_unmark_as_entrance": "This cave place will no longer be a cave entrance. Continue?",
+  "other_entrances_defined_title": "Other cave entrances exist",
+  "other_entrances_defined_body": "Other cave places are already marked as entrances: {names}.\n\nDo you still want to mark this one as an entrance?",
+  "confirm_mark_as_main_entrance": "Mark this cave place as the main cave entrance?",
+  "confirm_unmark_as_main_entrance": "This cave place will no longer be the main cave entrance. Continue?",
+  "main_entrance_already_defined_title": "Main cave entrance already defined",
+  "main_entrance_already_defined_body": "There can be only one main cave entrance. Current main entrance(s): {names}.\nSet the other one(s) as regular entrances first.",
+
+  "disable_auto_tours": "Disable auto tours",
+  "auto_tours_disabled": "Automatic tours were disabled. You can still start Help tour manually from the menu."
 }

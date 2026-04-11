@@ -605,5 +605,19 @@
   "tour_data_export_import_body": "Importă o arhivă exportată anterior. Alege modul îmbinare sau înlocuire pentru datele existente.",
 
   "show_home_toolbar": "Afișează bara de acțiuni pe pagina principală",
-  "show_home_toolbar_desc": "Afișează butoanele scanare/adăugare/documente/setări într-o bară pe pagina principală"
+  "show_home_toolbar_desc": "Afișează butoanele scanare/adăugare/documente/setări într-o bară pe pagina principală",
+
+  "is_cave_entrance": "Intrare în peșteră",
+  "is_main_cave_entrance": "Intrarea principală",
+  "confirm_mark_as_entrance": "Marchezi această stație ca intrare în peșteră?",
+  "confirm_unmark_as_entrance": "Această stație nu va mai fi intrare în peșteră. Continui?",
+  "other_entrances_defined_title": "Există alte intrări în peșteră",
+  "other_entrances_defined_body": "Alte stații sunt deja marcate ca intrări: {names}.\n\nVrei în continuare să o marchezi și pe aceasta ca intrare?",
+  "confirm_mark_as_main_entrance": "Marchezi această stație ca intrarea principală în peșteră?",
+  "confirm_unmark_as_main_entrance": "Această stație nu va mai fi intrarea principală. Continui?",
+  "main_entrance_already_defined_title": "Intrarea principală este deja definită",
+  "main_entrance_already_defined_body": "Poate exista o singură intrare principală. Intrarea principală curentă: {names}.\nDebifează cealaltă/celelalte ca fiind intrări mai întâi.",
+
+  "disable_auto_tours": "Dezactivează tururile automate",
+  "auto_tours_disabled": "Tururile automate au fost dezactivate. Poți porni oricând manual turul de ajutor din meniul lateral."
 }
