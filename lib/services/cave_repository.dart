@@ -46,7 +46,96 @@ class CaveRepository {
 
   Future<void> deleteCave(int id) async {
     try {
-      await (_database.delete(_database.caves)..where((c) => c.id.equals(id))).go();
+      await _database.transaction(() async {
+        final caveAreas = await (_database.select(_database.caveAreas)
+              ..where((ca) => ca.caveId.equals(id)))
+            .get();
+        final caveAreaIds = caveAreas.map((a) => a.id).toList();
+
+        final cavePlaces = await (_database.select(_database.cavePlaces)
+              ..where((cp) => cp.caveId.equals(id)))
+            .get();
+        final cavePlaceIds = cavePlaces.map((p) => p.id).toList();
+
+        final rasterMaps = await (_database.select(_database.rasterMaps)
+              ..where((rm) => rm.caveId.equals(id)))
+            .get();
+        final rasterMapIds = rasterMaps.map((rm) => rm.id).toList();
+
+        final caveTrips = await (_database.select(_database.caveTrips)
+              ..where((t) => t.caveId.equals(id)))
+            .get();
+        final caveTripIds = caveTrips.map((t) => t.id).toList();
+
+        // Remove geofeature links for cave, cave places and cave areas.
+        await (_database.delete(_database.documentationFilesToGeofeatures)
+              ..where((g) =>
+                  (g.geofeatureType.equals('cave') & g.geofeatureId.equals(id))))
+            .go();
+        if (cavePlaceIds.isNotEmpty) {
+          await (_database.delete(_database.documentationFilesToGeofeatures)
+                ..where((g) =>
+                    g.geofeatureType.equals('cave_place') &
+                    g.geofeatureId.isIn(cavePlaceIds)))
+              .go();
+        }
+        if (caveAreaIds.isNotEmpty) {
+          await (_database.delete(_database.documentationFilesToGeofeatures)
+                ..where((g) =>
+                    g.geofeatureType.equals('cave_area') &
+                    g.geofeatureId.isIn(caveAreaIds)))
+              .go();
+        }
+
+        // Remove place/map definitions tied to this cave.
+        if (cavePlaceIds.isNotEmpty || rasterMapIds.isNotEmpty) {
+          await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
+                ..where((d) {
+                  final byPlace = cavePlaceIds.isNotEmpty
+                      ? d.cavePlaceId.isIn(cavePlaceIds)
+                      : const Constant(false);
+                  final byMap = rasterMapIds.isNotEmpty
+                      ? d.rasterMapId.isIn(rasterMapIds)
+                      : const Constant(false);
+                  return byPlace | byMap;
+                }))
+              .go();
+        }
+
+        // Remove trip points and trips for this cave.
+        if (caveTripIds.isNotEmpty || cavePlaceIds.isNotEmpty) {
+          await (_database.delete(_database.caveTripPoints)
+                ..where((tp) {
+                  final byTrip = caveTripIds.isNotEmpty
+                      ? tp.caveTripId.isIn(caveTripIds)
+                      : const Constant(false);
+                  final byPlace = cavePlaceIds.isNotEmpty
+                      ? tp.cavePlaceId.isIn(cavePlaceIds)
+                      : const Constant(false);
+                  return byTrip | byPlace;
+                }))
+              .go();
+        }
+        await (_database.delete(_database.caveTrips)
+              ..where((t) => t.caveId.equals(id)))
+            .go();
+
+        // Remove cave-linked base data.
+        await (_database.delete(_database.caveEntrances)
+              ..where((e) => e.caveId.equals(id)))
+            .go();
+        await (_database.delete(_database.rasterMaps)
+              ..where((rm) => rm.caveId.equals(id)))
+            .go();
+        await (_database.delete(_database.cavePlaces)
+              ..where((cp) => cp.caveId.equals(id)))
+            .go();
+        await (_database.delete(_database.caveAreas)
+              ..where((ca) => ca.caveId.equals(id)))
+            .go();
+
+        await (_database.delete(_database.caves)..where((c) => c.id.equals(id))).go();
+      });
     } catch (e) {
       print('[CaveRepository] Failed to delete cave: $e');
       rethrow;
