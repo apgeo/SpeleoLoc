@@ -18,3 +18,7 @@ The application is under development, in an alpha stage - some functions are not
 ## Future development
 Dedicated web server for synchronization (now sync is done by sending files / FTP)
 Multiple data workflows
+
+## Publishing
+
+See [docs/PUBLISHING.md](docs/PUBLISHING.md) for guidance on app store versioning, including whether pre-1.0.0 version names (e.g. `0.2.5`) are accepted by Google Play and the Apple App Store.
