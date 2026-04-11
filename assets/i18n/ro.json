@@ -571,6 +571,9 @@
   "tour_settings_main_list_title": "Categorii setări",
   "tour_settings_main_list_body": "Apasă o categorie: limbă, compresie imagini, generare QR, ieșire PDF, bază de date, export/import date.",
 
+  "tour_settings_main_menu_title": "Meniu Se  tări",
+  "tour_settings_main_menu_body": "Accesează meniul de setări de pe ecranul principal pentru a-ți personaliza preferințele aplicației și a gestiona datele.",
+
   "tour_settings_general_language_title": "Limba aplicației",
   "tour_settings_general_language_body": "Alege limba de afișare. Aplicația se actualizează imediat după schimbare.",
 

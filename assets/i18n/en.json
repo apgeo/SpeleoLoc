@@ -573,6 +573,9 @@
   "tour_settings_main_list_title": "Settings Categories",
   "tour_settings_main_list_body": "Tap a category to configure: language, image compression, QR code generation, PDF output, database, and data export/import.",
 
+  "tour_settings_main_menu_title": "Settings Menu",
+  "tour_settings_main_menu_body": "Access the settings menu from the home screen to customize your app preferences and manage data.",
+
   "tour_settings_general_language_title": "App Language",
   "tour_settings_general_language_body": "Choose the app display language. The app will update immediately after changing.",
 
