@@ -26,6 +26,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
   ];
 
   String? _appLanguage;
+  bool _showHomeToolbar = false;
   bool _needsReload = false;
 
   @override
@@ -35,9 +36,14 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
   }
 
   Future<void> _load() async {
+    final showToolbar = await SettingsHelper.loadStringConfig(
+      showHomeToolbarKey,
+      'false',
+    );
     if (mounted) {
       setState(() {
         _appLanguage = LocServ.inst.locale;
+        _showHomeToolbar = showToolbar == 'true';
       });
     }
   }
@@ -92,6 +98,25 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
                   }
                 },
               ),
+            ),
+            const Divider(),
+            SwitchListTile(
+              title: Text(LocServ.inst.t('show_home_toolbar')),
+              subtitle: Text(LocServ.inst.t('show_home_toolbar_desc')),
+              value: _showHomeToolbar,
+              onChanged: (value) async {
+                await SettingsHelper.saveStringConfig(
+                  showHomeToolbarKey,
+                  value ? 'true' : 'false',
+                );
+                homePageRefreshNotifier.value++;
+                if (mounted) {
+                  setState(() {
+                    _showHomeToolbar = value;
+                    _needsReload = true;
+                  });
+                }
+              },
             ),
             const Divider(),
             // Reset tours

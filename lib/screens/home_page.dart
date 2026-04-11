@@ -5,6 +5,7 @@ import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
@@ -53,14 +54,19 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
+      value: 'add_cave',
+      icon: Icons.add,
+      label: LocServ.inst.t('add_new_cave'),
+    ),
+    AppMenuItem(
+      value: 'documents',
+      icon: Icons.description,
+      label: LocServ.inst.t('documentation'),
+    ),
+    AppMenuItem(
       value: 'surface_areas',
       icon: Icons.landscape,
       label: LocServ.inst.t('manage_surface_areas'),
-    ),
-    AppMenuItem(
-      value: 'csv_import',
-      icon: Icons.upload_file,
-      label: LocServ.inst.t('csv_import_places'),
     ),
     AppMenuItem(
       value: 'csv_import_caves',
@@ -72,6 +78,12 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   @override
   void onScreenMenuItemSelected(String value) async {
     switch (value) {
+      case 'add_cave':
+        _addNewCave();
+        break;
+      case 'documents':
+        await _openDocumentationFiles();
+        break;
       case 'surface_areas':
         final result = await Navigator.push<bool?>(
           context,
@@ -100,7 +112,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   Map<int, int> _cavePlaceCounts = {};
   Map<int, int> _caveRasterMapCounts = {};
   Map<int, String?> _surfaceAreaTitles = {}; // surface_area_id -> title
-  bool showActionButtons = false;
+  bool _showMainToolbar = false;
 
   bool _testDataPromptShown = false;
 
@@ -132,7 +144,33 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   @override
   void initState() {
     super.initState();
+    homePageRefreshNotifier.addListener(_onHomePageRefreshRequested);
+    _loadUiSettings();
     _loadCaves();
+  }
+
+  @override
+  void dispose() {
+    homePageRefreshNotifier.removeListener(_onHomePageRefreshRequested);
+    super.dispose();
+  }
+
+  void _onHomePageRefreshRequested() {
+    if (!mounted) return;
+    _loadUiSettings();
+    _loadCaves();
+    setState(() {});
+  }
+
+  Future<void> _loadUiSettings() async {
+    final showToolbar = await SettingsHelper.loadStringConfig(
+      showHomeToolbarKey,
+      'false',
+    );
+    if (!mounted) return;
+    setState(() {
+      _showMainToolbar = showToolbar == 'true';
+    });
   }
 
   Future<void> _loadCaves() async {
@@ -225,60 +263,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     }
   }
 
-  Future<void> _openScannerWithPermission() async {
-    final status = await Permission.camera.status;
-    PermissionStatus resultStatus = status;
-    if (!status.isGranted) {
-      resultStatus = await Permission.camera.request();
-    }
-
-    if (!mounted) return;
-
-    if (resultStatus.isGranted) {
-      await Navigator.push<String?>(
-        context,
-        MaterialPageRoute(builder: (_) => ScannerPage(onScan: (code) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${LocServ.inst.t('scan_result')}: $code')),
-            );
-            Navigator.pop(context, code);
-          }
-        })),
-      );
-    } else if (resultStatus.isPermanentlyDenied) {
-      // Permission permanently denied, open app settings
-      if (mounted) {
-        showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(LocServ.inst.t('permission_required')),
-            content: Text(LocServ.inst.t('camera_permission_required')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              TextButton(
-                onPressed: () {
-                  openAppSettings();
-                  Navigator.of(context).pop();
-                },
-                child: Text(LocServ.inst.t('open_settings')),
-              ),
-            ],
-          ),
-        );
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('camera_permission_denied'))),
-        );
-      }
-    }
-  }
-
   void _addNewCave() async {
     // Open AddNewCave screen to let user enter title and area
     try {
@@ -297,6 +281,24 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${LocServ.inst.t('error_adding_cave')}: $e')));
       }
     }
+  }
+
+  Future<void> _openDocumentationFiles() async {
+    final result = await Navigator.push<bool?>(
+      context,
+      MaterialPageRoute(builder: (_) => const DocumentationFilesPage()),
+    );
+    if (result == true) _loadCaves();
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.push<bool?>(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsMainPage()),
+    );
+    await _loadUiSettings();
+    _loadCaves();
+    if (mounted) setState(() {});
   }
 
   void _deleteCave(int caveId) async {
@@ -340,44 +342,33 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           child: Text(widget.title),
         ),
         actions: [
-          IconButton(
-            key: tourKeys['scan_qr'],
-            icon: const Icon(Icons.qr_code_scanner),
-            tooltip: LocServ.inst.t('scan_qr'),
-            onPressed: _scanAndLookupQr,
-          ),
-          IconButton(
-            key: tourKeys['add_cave'],
-            icon: const Icon(Icons.add),
-            tooltip: LocServ.inst.t('add_new_cave'),
-            onPressed: _addNewCave,
-          ),
-          IconButton(
-            key: tourKeys['docs'],
-            icon: const Icon(Icons.description),
-            tooltip: LocServ.inst.t('documentation'),
-            onPressed: () async {
-              final result = await Navigator.push<bool?>(
-                context,
-                MaterialPageRoute(builder: (_) => const DocumentationFilesPage()),
-              );
-              if (result == true) _loadCaves();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              final result = await Navigator.push<bool?>(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsMainPage()),
-              );
-              if (result == true || true) {
-                print('[HomePage] _loadCaves triggered after returning from SettingsMainPage');
-                _loadCaves();
-                if (mounted) setState(() {});
-              }
-            },
-          ),
+          if (!_showMainToolbar)
+            IconButton(
+              key: tourKeys['scan_qr'],
+              icon: const Icon(Icons.qr_code_scanner),
+              tooltip: LocServ.inst.t('scan_qr'),
+              onPressed: _scanAndLookupQr,
+            ),
+          if (!_showMainToolbar)
+            IconButton(
+              key: tourKeys['add_cave'],
+              icon: const Icon(Icons.add),
+              tooltip: LocServ.inst.t('add_new_cave'),
+              onPressed: _addNewCave,
+            ),
+          // if (!_showMainToolbar)
+          //   IconButton(
+          //     key: tourKeys['docs'],
+          //     icon: const Icon(Icons.description),
+          //     tooltip: LocServ.inst.t('documentation'),
+          //     onPressed: _openDocumentationFiles,
+          //   ),
+          // if (!_showMainToolbar)
+          //   IconButton(
+          //     icon: const Icon(Icons.settings),
+          //     tooltip: LocServ.inst.t('settings'),
+          //     onPressed: _openSettings,
+          //   ),
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
@@ -402,24 +393,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               //   onChanged: _updateCounterWithSlider,
               // ),
               // const SizedBox(height: 10),
-              if (showActionButtons)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _openScannerWithPermission,
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: Text(LocServ.inst.t('scan_qr')),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: _addNewCave,
-                      icon: const Icon(Icons.add),
-                      label: Text(LocServ.inst.t('add_new_cave')),
-                    ),
-                  ],
-                ),
-              if (showActionButtons) const SizedBox(height: 10),
+              if (_showMainToolbar) _buildMainToolbar(),
+              if (_showMainToolbar) const SizedBox(height: 10),
                Padding(
                           key: tourKeys['cave_list'],
                           padding: const EdgeInsets.symmetric(horizontal: 28.0),
@@ -538,9 +513,76 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
     final result = await Navigator.pushNamed(context, caveRoute, arguments: cave.id);
-    if (result == true) {
-      _loadCaves();
-    }
+    // Always refresh cave list summary after returning: cave places/areas/maps/definitions may have changed.
+    _loadCaves();
     return result;
   }
+
+  Widget _buildMainToolbar() {
+    final buttons = <_HomeToolbarBtn>[
+      _HomeToolbarBtn(
+        icon: Icons.qr_code_scanner,
+        tooltip: LocServ.inst.t('scan_qr'),
+        onTap: _scanAndLookupQr,
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.add_circle,
+        tooltip: LocServ.inst.t('add_new_cave'),
+        onTap: _addNewCave,
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.description,
+        tooltip: LocServ.inst.t('documentation'),
+        onTap: _openDocumentationFiles,
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.settings,
+        tooltip: LocServ.inst.t('settings'),
+        onTap: _openSettings,
+      ),
+    ];
+
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      // color: Theme.of(context).colorScheme.surfaceContainerHighest, 
+      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(buttons.length, (i) {
+            final b = buttons[i];
+            return Padding(
+              padding: EdgeInsets.only(right: i == buttons.length - 1 ? 0 : 3),
+              child: IconButton(
+                icon: Icon(
+                  b.icon,
+                  size: 28,
+                  color: Colors.blue[400],
+                ),
+                tooltip: b.tooltip,
+                visualDensity: VisualDensity.compact,
+                splashRadius: 18,
+                padding: const EdgeInsets.all(2),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                onPressed: b.onTap,
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeToolbarBtn {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _HomeToolbarBtn({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
 }

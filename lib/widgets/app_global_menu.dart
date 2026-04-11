@@ -649,6 +649,14 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                 return Text('$time ${place?.title ?? '#${pt.cavePlaceId}'}',
                     style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis);
               }),
+              if (_totalPoints > _points.length)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    '+${_totalPoints - _points.length} cps',
+                    style: TextStyle(fontSize: 9, color: Colors.grey[700]),
+                  ),
+                ),
             ],
             const SizedBox(height: 4),
             Row(

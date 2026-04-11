@@ -604,5 +604,8 @@
   "tour_data_export_export_title": "Export Data",
   "tour_data_export_export_body": "Export your app data as a ZIP archive. Optionally include documentation files and raster maps.",
   "tour_data_export_import_title": "Import Data",
-  "tour_data_export_import_body": "Import a previously exported archive. Choose merge or replace mode for existing data."
+  "tour_data_export_import_body": "Import a previously exported archive. Choose merge or replace mode for existing data.",
+
+  "show_home_toolbar": "Show home toolbar",
+  "show_home_toolbar_desc": "Display scan/add/docs/settings buttons in a toolbar on the home page"
 }

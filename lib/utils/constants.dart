@@ -51,6 +51,12 @@ const String lastExportTimestampKey = 'last_export_timestamp';
 // Saved app language for localization
 const String appLanguageKey = 'app_language';
 
+// Home page UI
+const String showHomeToolbarKey = 'show_home_toolbar';
+
+/// Increment to request HomePage layout/state refresh from settings screens.
+final ValueNotifier<int> homePageRefreshNotifier = ValueNotifier<int>(0);
+
 // Image compression settings
 const String imageCompressionConfigKey = 'image_compression';
 
