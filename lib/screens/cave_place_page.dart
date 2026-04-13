@@ -884,18 +884,6 @@ class _CavePlacePageState extends State<CavePlacePage>
             ],
           ),
           actions: [
-            // QR code preview – only for existing places with a QR identifier.
-            if (_currentCavePlaceId != null &&
-                _cavePlace?.placeQrCodeIdentifier != null)
-              IconButton(
-                icon: const Icon(Icons.qr_code),
-                tooltip: LocServ.inst.t('view_qr_code'),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                onPressed: () {
-                  CavePlaceQrPreviewDialog.show(context, _cavePlace!);
-                },
-              ),
             // Documents button – only for existing (saved) cave places.
             if (_currentCavePlaceId != null)
               IconButton(
@@ -1096,6 +1084,19 @@ class _CavePlacePageState extends State<CavePlacePage>
                 Row(
                   key: tourKeys['qr_field'],
                   children: [
+                    // QR code preview – only for existing places with a QR identifier.
+                    if (_currentCavePlaceId != null &&
+                        _cavePlace?.placeQrCodeIdentifier != null)
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_2),
+                        tooltip: LocServ.inst.t('view_qr_code'),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        onPressed: () {
+                          CavePlaceQrPreviewDialog.show(context, _cavePlace!);
+                        },
+                      ),
+
                     IconButton(
                       icon: Icon(
                         _qrEditable ? Icons.lock_open : Icons.lock_outline,
