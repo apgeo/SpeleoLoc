@@ -13,7 +13,7 @@ class QrCodeLookupHandler {
   QrCodeLookupHandler(this._service);
 
   /// Looks up [rawCode], shows a disambiguation popup if needed, and navigates
-  /// to [CavePlacePage] via the named route.
+  /// to [MapViewerPage] via the named route.
   ///
   /// [currentCaveId] restricts the search to a single cave when provided.
   /// Returns the [CavePlace] that was opened, or `null` if none was found/selected.
@@ -49,7 +49,7 @@ class QrCodeLookupHandler {
 
     await Navigator.pushNamed(
       context,
-      cavePlaceRoute,
+      cavePlaceViewRoute,
       arguments: {
         'caveId': selected.cavePlace.caveId,
         'cavePlaceId': selected.cavePlace.id,
@@ -69,19 +69,30 @@ class QrCodeLookupHandler {
         title: Text(LocServ.inst.t('multiple_qr_matches')),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: results.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-              final r = results[i];
-              return ListTile(
-                title: Text(r.cavePlace.title),
-                subtitle: Text(r.caveTitle),
-                leading: const Icon(Icons.place),
-                onTap: () => Navigator.pop(ctx, r),
-              );
-            },
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(LocServ.inst.t('multiple_qr_matches_explanation')),
+                const SizedBox(height: 8),
+                ...List.generate(results.length, (i) {
+                  final r = results[i];
+                  final tile = ListTile(
+                    title: Text(r.cavePlace.title),
+                    subtitle: Text(r.caveTitle),
+                    leading: const Icon(Icons.place),
+                    onTap: () => Navigator.pop(ctx, r),
+                  );
+                  return i == 0
+                      ? tile
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [const Divider(height: 1), tile],
+                        );
+                }),
+              ],
+            ),
           ),
         ),
         actions: [

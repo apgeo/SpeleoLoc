@@ -195,7 +195,8 @@
   "cave_place_not_found": "Locul din peșteră nu a fost găsit",
   "invalid_qr_code_detail": "Cod QR invalid (nu poate fi interpretat conform regulilor)",
   "cave_place_identified": "Locul din peșteră a fost identificat",
-  "multiple_qr_matches": "Mai multe locuri găsite",
+  "multiple_qr_matches": "Alege punctul / peșteră",
+  "multiple_qr_matches_explanation": "Au fost găsite mai multe locuri cu același cod de identificare în peșteri diferite. Deschide unul din ele.",
   "manual_qr_search": "Căutare manuală cod QR",
   "show_filter": "Arată filtrul",
   "filter_cave_places": "Filtrează locurile după titlu sau număr cod QR",
@@ -610,6 +611,8 @@
   "show_home_toolbar": "Afișează bara de acțiuni pe pagina principală",
   "show_home_toolbar_desc": "Afișează butoanele scanare/adăugare/documente/setări într-o bară pe pagina principală",
 
+  "entrance": "Intrare",
+  "main_entrance": "Intrare principală",
   "is_cave_entrance": "Intrare în peșteră",
   "is_main_cave_entrance": "Intrarea principală",
   "confirm_mark_as_entrance": "Marchezi această stație ca intrare în peșteră?",

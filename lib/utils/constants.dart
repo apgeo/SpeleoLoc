@@ -23,12 +23,17 @@ const String deleteSuccess = 'Item deleted successfully';
 const String homeRoute = '/';
 const String caveRoute = '/cave';
 const String cavePlaceRoute = '/cave_place';
+const String cavePlaceViewRoute = '/cave_place_view';
 const String rasterMapsRoute = '/raster_maps';
 const String settingsRoute = '/settings';
 const double zoomTextThreshold = 2.0;
 
 // Feature flags
 const bool showCaveDeleteButtons = false;
+
+/// When true, holding the QR scan button for 2.5 s on the home screen opens
+/// a manual QR-code input dialog (for testing without a physical scanner).
+const bool enableQrManualInput = true;
 
 /// Runtime debug mode activated by tapping the home-page title 9 times.
 /// Listen via [debugModeNotifier] to react to changes.

@@ -196,7 +196,8 @@
   "auto_save_on_switch": "Save the current point automatically when switching to another place or map?",
   "cave_place_deleted": "Cave place deleted",
   "cave_place_not_found": "Cave place not found",
-  "multiple_qr_matches": "Multiple places found",
+  "multiple_qr_matches": "Choose point / cave",
+  "multiple_qr_matches_explanation": "Multiple places with the same QR code identifier were found in different caves. Open one of them.",
   "invalid_qr_code_detail": "Invalid QR code (not parsable per rules)",
   "cave_place_identified": "Cave place has been identified",
   "manual_qr_search": "Manual QR code search",
@@ -612,6 +613,8 @@
   "show_home_toolbar": "Show home toolbar",
   "show_home_toolbar_desc": "Display scan/add/docs/settings buttons in a toolbar on the home page",
 
+  "entrance": "Entrance",
+  "main_entrance": "Main entrance",
   "is_cave_entrance": "Cave entrance",
   "is_main_cave_entrance": "Main cave entrance",
   "confirm_mark_as_entrance": "Mark this cave place as a cave entrance?",

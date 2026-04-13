@@ -5,9 +5,9 @@ import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/cave_trip_page.dart';
 import 'package:speleoloc/screens/cave_trip_list_page.dart';
 import 'package:speleoloc/screens/cave_trip_log_page.dart';
-// fix import as bellow
-// import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
-import 'screens/general_data/raster_maps_page.dart';
+import 'package:speleoloc/screens/map_viewer_page.dart';
+import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
+// import 'screens/general_data/raster_maps_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
@@ -53,6 +53,10 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         cavePlaceRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, int>?;
           return CavePlacePage(caveId: args?['caveId'] ?? 0, cavePlaceId: args?['cavePlaceId']);
+        },
+        cavePlaceViewRoute: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, int>?;
+          return MapViewerPage(cavePlaceId: args?['cavePlaceId'] ?? 0, caveId: args?['caveId']);
         },
         rasterMapsRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as int?;

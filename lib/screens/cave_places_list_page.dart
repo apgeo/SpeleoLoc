@@ -574,7 +574,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MapViewerPage(cavePlaceId: cavePlace.id),
+        builder: (_) => MapViewerPage(cavePlaceId: cavePlace.id, caveId: widget.caveId),
       ),
     );
     if (!mounted) return;
@@ -888,7 +888,12 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   Widget _buildPlacesList({required bool scrollable}) {
     final children = _filteredCavePlaces
         .map(
-          (cp) => Column(
+          (cp) {
+            final bool isMainEntrance = cp.isMainEntrance == 1;
+            final bool isEntrance = isMainEntrance || cp.isEntrance == 1;
+            return ColoredBox(
+              color: isEntrance ? const Color(0xFFF5F5F5) : const Color(0x00000000),
+              child: Column(
             children: [
               InkWell(
                 onTap: () async {
@@ -930,10 +935,39 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                           },
                         ),
                       Expanded(
-                        child: Text(
-                          cp.title,
-                          style: const TextStyle(fontSize: 16),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                if (isMainEntrance) ...[
+                                  const Icon(Icons.door_front_door, size: 15, color: Colors.blue),
+                                  const SizedBox(width: 4),
+                                ] else if (isEntrance) ...[
+                                  Icon(Icons.door_front_door_outlined, size: 15, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    cp.title,
+                                    style: const TextStyle(fontSize: 16),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (isMainEntrance)
+                              Text(
+                                LocServ.inst.t('main_entrance'),
+                                style: const TextStyle(fontSize: 11, color: Colors.blue),
+                              )
+                            else if (isEntrance)
+                              Text(
+                                LocServ.inst.t('entrance'),
+                                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                              ),
+                          ],
                         ),
                       ),
                       Padding(
@@ -984,7 +1018,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
               Divider(height: 1, color: Colors.grey[300]),
             ],
           ),
-        )
+        );
+      },
+    )
         .toList();
 
     if (scrollable) {

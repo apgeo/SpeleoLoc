@@ -20,11 +20,16 @@ class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
     super.key,
     required this.cavePlaceId,
+    this.caveId,
     this.placesListAlignment = 0.5,
     this.allowEditorOverflow = false,
   });
 
   final int cavePlaceId;
+
+  /// Optional cave context. When provided and [cavePlaceId] resolves to null
+  /// (e.g. id == 0), raster maps for this cave are still loaded.
+  final int? caveId;
 
   /// Horizontal alignment used when bringing a cave-place item into view
   /// (0.0 = left, 0.5 = center, 1.0 = right).
@@ -103,6 +108,14 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     // Load cave place and raster maps for its cave
     _cavePlace = await cavePlaceRepository.findById(widget.cavePlaceId);
     if (_cavePlace == null) {
+      // If an explicit caveId was provided, still load raster maps for that cave.
+      if (widget.caveId != null) {
+        _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveId!);
+        if (_rasterMaps.isNotEmpty) {
+          _selectedRasterMap = _rasterMaps.first;
+          await _loadDefinitionsForSelected();
+        }
+      }
       _isLoading = false;
       if (mounted) setState(() {});
       return;

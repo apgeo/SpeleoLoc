@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -117,6 +118,22 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
   bool _testDataPromptShown = false;
 
+  // --- Long-press QR manual input (enabled by [enableQrManualInput]) ---
+  Timer? _qrScanLongPressTimer;
+  final TextEditingController _manualQrController = TextEditingController();
+
+  void _startQrScanLongPress() {
+    _qrScanLongPressTimer?.cancel();
+    _qrScanLongPressTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) _showManualQrInputDialog();
+    });
+  }
+
+  void _cancelQrScanLongPress() {
+    _qrScanLongPressTimer?.cancel();
+    _qrScanLongPressTimer = null;
+  }
+
   int _titleTapCount = 0;
   DateTime _lastTitleTap = DateTime(0);
 
@@ -152,6 +169,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
   @override
   void dispose() {
+    _qrScanLongPressTimer?.cancel();
+    _manualQrController.dispose();
     homePageRefreshNotifier.removeListener(_onHomePageRefreshRequested);
     super.dispose();
   }
@@ -344,11 +363,16 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         ),
         actions: [
           if (!_showMainToolbar)
-            IconButton(
-              key: tourKeys['scan_qr'],
-              icon: const Icon(Icons.qr_code_scanner),
-              tooltip: LocServ.inst.t('scan_qr'),
-              onPressed: _scanAndLookupQr,
+            Listener(
+              onPointerDown: enableQrManualInput ? (_) => _startQrScanLongPress() : null,
+              onPointerUp: enableQrManualInput ? (_) => _cancelQrScanLongPress() : null,
+              onPointerCancel: enableQrManualInput ? (_) => _cancelQrScanLongPress() : null,
+              child: IconButton(
+                key: tourKeys['scan_qr'],
+                icon: const Icon(Icons.qr_code_scanner),
+                tooltip: LocServ.inst.t('scan_qr'),
+                onPressed: _scanAndLookupQr,
+              ),
             ),
           if (!_showMainToolbar)
             IconButton(
@@ -426,6 +450,39 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       //   child: const Icon(Icons.add),
       // ),
     );
+  }
+
+  Future<void> _showManualQrInputDialog() async {
+    _manualQrController.clear();
+    final confirmed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('manual_qr_search')),
+        content: TextField(
+          controller: _manualQrController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('qr_code_identifier'),
+          ),
+          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, _manualQrController.text.trim()),
+            child: Text(LocServ.inst.t('search_place_by_qr_code_by_identifier')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != null && confirmed.isNotEmpty && mounted) {
+      final handler = QrCodeLookupHandler(QrCodeLookupService(appDatabase));
+      final result = await handler.handleScannedCode(context, confirmed);
+      if (result != null) _loadCaves();
+    }
   }
 
   Future<void> _scanAndLookupQr() async {
@@ -524,7 +581,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           mainAxisSize: MainAxisSize.min,
           children: List.generate(buttons.length, (i) {
             final b = buttons[i];
-            return Padding(
+            Widget btn = Padding(
               padding: EdgeInsets.only(right: i == buttons.length - 1 ? 0 : 3),
               child: IconButton(
                 icon: Icon(
@@ -540,6 +597,15 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                 onPressed: b.onTap,
               ),
             );
+            if (i == 0 && enableQrManualInput) {
+              btn = Listener(
+                onPointerDown: (_) => _startQrScanLongPress(),
+                onPointerUp: (_) => _cancelQrScanLongPress(),
+                onPointerCancel: (_) => _cancelQrScanLongPress(),
+                child: btn,
+              );
+            }
+            return btn;
           }),
         ),
       ),

@@ -370,13 +370,6 @@ class _AppMenuDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12),
-            ValueListenableBuilder<int?>(
-              valueListenable: caveTripService.activeTripIdNotifier,
-              builder: (context, tripId, _) {
-                if (tripId == null) return const SizedBox.shrink();
-                return _ActiveTripCard(tripId: tripId, onClose: () => Navigator.pop(context));
-              },
-            ),
             // Screen-specific items
             if (screenItems.isNotEmpty) ...[
               ...screenItems.map((item) => ListTile(
@@ -419,6 +412,13 @@ class _AppMenuDrawer extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            ValueListenableBuilder<int?>(
+              valueListenable: caveTripService.activeTripIdNotifier,
+              builder: (context, tripId, _) {
+                if (tripId == null) return const SizedBox.shrink();
+                return _ActiveTripCard(tripId: tripId, onClose: () => Navigator.pop(context));
+              },
+            ),
             // Help tour + Mode toggle icon + version label at bottom
             const Divider(),
             Column(
