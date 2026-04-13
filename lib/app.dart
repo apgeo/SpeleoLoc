@@ -7,7 +7,6 @@ import 'package:speleoloc/screens/cave_trip_list_page.dart';
 import 'package:speleoloc/screens/cave_trip_log_page.dart';
 import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
-// import 'screens/general_data/raster_maps_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
