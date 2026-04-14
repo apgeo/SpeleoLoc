@@ -7409,6 +7409,258 @@ class DocumentationFilesToCaveTripsCompanion
   }
 }
 
+// ---------------------------------------------------------------------------
+//  trip_report_templates (generated manually – run build_runner to regenerate)
+// ---------------------------------------------------------------------------
+
+class TripReportTemplates extends Table
+    with TableInfo<TripReportTemplates, TripReportTemplate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  TripReportTemplates(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id', aliasedName, false,
+    hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false,
+    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title', aliasedName, false,
+    type: DriftSqlType.string, requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _fileNameMeta = const VerificationMeta('fileName');
+  late final GeneratedColumn<String> fileName = GeneratedColumn<String>(
+    'file_name', aliasedName, false,
+    type: DriftSqlType.string, requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _fileSizeMeta = const VerificationMeta('fileSize');
+  late final GeneratedColumn<int> fileSize = GeneratedColumn<int>(
+    'file_size', aliasedName, false,
+    type: DriftSqlType.int, requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _formatMeta = const VerificationMeta('format');
+  late final GeneratedColumn<String> format = GeneratedColumn<String>(
+    'format', aliasedName, false,
+    type: DriftSqlType.string, requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at', aliasedName, true,
+    type: DriftSqlType.int, requiredDuringInsert: false, $customConstraints: '',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at', aliasedName, true,
+    type: DriftSqlType.int, requiredDuringInsert: false, $customConstraints: '',
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta('deletedAt');
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+    'deleted_at', aliasedName, true,
+    type: DriftSqlType.int, requiredDuringInsert: false, $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, title, fileName, fileSize, format, createdAt, updatedAt, deletedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trip_report_templates';
+  @override
+  VerificationContext validateIntegrity(Insertable<TripReportTemplate> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) { context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta)); }
+    if (data.containsKey('title')) { context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta)); } else if (isInserting) { context.missing(_titleMeta); }
+    if (data.containsKey('file_name')) { context.handle(_fileNameMeta, fileName.isAcceptableOrUnknown(data['file_name']!, _fileNameMeta)); } else if (isInserting) { context.missing(_fileNameMeta); }
+    if (data.containsKey('file_size')) { context.handle(_fileSizeMeta, fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta)); } else if (isInserting) { context.missing(_fileSizeMeta); }
+    if (data.containsKey('format')) { context.handle(_formatMeta, format.isAcceptableOrUnknown(data['format']!, _formatMeta)); } else if (isInserting) { context.missing(_formatMeta); }
+    if (data.containsKey('created_at')) { context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta)); }
+    if (data.containsKey('updated_at')) { context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta)); }
+    if (data.containsKey('deleted_at')) { context.handle(_deletedAtMeta, deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta)); }
+    return context;
+  }
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [{title}];
+  @override
+  TripReportTemplate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TripReportTemplate(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      fileName: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}file_name'])!,
+      fileSize: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}file_size'])!,
+      format: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}format'])!,
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}created_at']),
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}updated_at']),
+      deletedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
+    );
+  }
+  @override
+  TripReportTemplates createAlias(String alias) => TripReportTemplates(attachedDatabase, alias);
+  @override
+  List<String> get customConstraints => const ['UNIQUE(title)ON CONFLICT ROLLBACK'];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class TripReportTemplate extends DataClass implements Insertable<TripReportTemplate> {
+  final int id;
+  final String title;
+  final String fileName;
+  final int fileSize;
+  final String format;
+  final int? createdAt;
+  final int? updatedAt;
+  final int? deletedAt;
+  const TripReportTemplate({
+    required this.id, required this.title, required this.fileName,
+    required this.fileSize, required this.format,
+    this.createdAt, this.updatedAt, this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['title'] = Variable<String>(title);
+    map['file_name'] = Variable<String>(fileName);
+    map['file_size'] = Variable<int>(fileSize);
+    map['format'] = Variable<String>(format);
+    if (!nullToAbsent || createdAt != null) map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || updatedAt != null) map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) map['deleted_at'] = Variable<int>(deletedAt);
+    return map;
+  }
+  TripReportTemplatesCompanion toCompanion(bool nullToAbsent) {
+    return TripReportTemplatesCompanion(
+      id: Value(id), title: Value(title), fileName: Value(fileName),
+      fileSize: Value(fileSize), format: Value(format),
+      createdAt: createdAt == null && nullToAbsent ? const Value.absent() : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent ? const Value.absent() : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent ? const Value.absent() : Value(deletedAt),
+    );
+  }
+  factory TripReportTemplate.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TripReportTemplate(
+      id: serializer.fromJson<int>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      fileName: serializer.fromJson<String>(json['file_name']),
+      fileSize: serializer.fromJson<int>(json['file_size']),
+      format: serializer.fromJson<String>(json['format']),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      updatedAt: serializer.fromJson<int?>(json['updated_at']),
+      deletedAt: serializer.fromJson<int?>(json['deleted_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'title': serializer.toJson<String>(title),
+      'file_name': serializer.toJson<String>(fileName),
+      'file_size': serializer.toJson<int>(fileSize),
+      'format': serializer.toJson<String>(format),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'updated_at': serializer.toJson<int?>(updatedAt),
+      'deleted_at': serializer.toJson<int?>(deletedAt),
+    };
+  }
+  TripReportTemplate copyWith({
+    int? id, String? title, String? fileName, int? fileSize, String? format,
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> updatedAt = const Value.absent(),
+    Value<int?> deletedAt = const Value.absent(),
+  }) => TripReportTemplate(
+    id: id ?? this.id, title: title ?? this.title,
+    fileName: fileName ?? this.fileName, fileSize: fileSize ?? this.fileSize,
+    format: format ?? this.format,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  @override
+  String toString() => 'TripReportTemplate(id: $id, title: $title, fileName: $fileName, fileSize: $fileSize, format: $format, createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt)';
+  @override
+  int get hashCode => Object.hash(id, title, fileName, fileSize, format, createdAt, updatedAt, deletedAt);
+  @override
+  bool operator ==(Object other) => identical(this, other) ||
+      (other is TripReportTemplate && other.id == id && other.title == title && other.fileName == fileName && other.fileSize == fileSize && other.format == format && other.createdAt == createdAt && other.updatedAt == updatedAt && other.deletedAt == deletedAt);
+}
+
+class TripReportTemplatesCompanion extends UpdateCompanion<TripReportTemplate> {
+  final Value<int> id;
+  final Value<String> title;
+  final Value<String> fileName;
+  final Value<int> fileSize;
+  final Value<String> format;
+  final Value<int?> createdAt;
+  final Value<int?> updatedAt;
+  final Value<int?> deletedAt;
+  const TripReportTemplatesCompanion({
+    this.id = const Value.absent(), this.title = const Value.absent(),
+    this.fileName = const Value.absent(), this.fileSize = const Value.absent(),
+    this.format = const Value.absent(), this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(), this.deletedAt = const Value.absent(),
+  });
+  TripReportTemplatesCompanion.insert({
+    this.id = const Value.absent(),
+    required String title, required String fileName,
+    required int fileSize, required String format,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  }) : title = Value(title), fileName = Value(fileName),
+       fileSize = Value(fileSize), format = Value(format);
+  static Insertable<TripReportTemplate> custom({
+    Expression<int>? id, Expression<String>? title, Expression<String>? fileName,
+    Expression<int>? fileSize, Expression<String>? format,
+    Expression<int>? createdAt, Expression<int>? updatedAt, Expression<int>? deletedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id, if (title != null) 'title': title,
+      if (fileName != null) 'file_name': fileName, if (fileSize != null) 'file_size': fileSize,
+      if (format != null) 'format': format, if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt, if (deletedAt != null) 'deleted_at': deletedAt,
+    });
+  }
+  TripReportTemplatesCompanion copyWith({
+    Value<int>? id, Value<String>? title, Value<String>? fileName,
+    Value<int>? fileSize, Value<String>? format,
+    Value<int?>? createdAt, Value<int?>? updatedAt, Value<int?>? deletedAt,
+  }) {
+    return TripReportTemplatesCompanion(
+      id: id ?? this.id, title: title ?? this.title,
+      fileName: fileName ?? this.fileName, fileSize: fileSize ?? this.fileSize,
+      format: format ?? this.format, createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt, deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) map['id'] = Variable<int>(id.value);
+    if (title.present) map['title'] = Variable<String>(title.value);
+    if (fileName.present) map['file_name'] = Variable<String>(fileName.value);
+    if (fileSize.present) map['file_size'] = Variable<int>(fileSize.value);
+    if (format.present) map['format'] = Variable<String>(format.value);
+    if (createdAt.present) map['created_at'] = Variable<int>(createdAt.value);
+    if (updatedAt.present) map['updated_at'] = Variable<int>(updatedAt.value);
+    if (deletedAt.present) map['deleted_at'] = Variable<int>(deletedAt.value);
+    return map;
+  }
+  @override
+  String toString() => 'TripReportTemplatesCompanion(id: $id, title: $title, fileName: $fileName, fileSize: $fileSize, format: $format, createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt)';
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7429,6 +7681,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CaveTripPoints caveTripPoints = CaveTripPoints(this);
   late final DocumentationFilesToCaveTrips documentationFilesToCaveTrips =
       DocumentationFilesToCaveTrips(this);
+  late final TripReportTemplates tripReportTemplates =
+      TripReportTemplates(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7448,6 +7702,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTrips,
     caveTripPoints,
     documentationFilesToCaveTrips,
+    tripReportTemplates,
   ];
 }
 

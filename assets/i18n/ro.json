@@ -625,5 +625,20 @@
   "main_entrance_already_defined_body": "Poate exista o singură intrare principală. Intrarea principală curentă: {names}.\nDebifează cealaltă/celelalte ca fiind intrări mai întâi.",
 
   "disable_auto_tours": "Dezactivează tururile automate",
-  "auto_tours_disabled": "Tururile automate au fost dezactivate. Poți porni oricând manual turul de ajutor din meniul lateral."
+  "auto_tours_disabled": "Tururile automate au fost dezactivate. Poți porni oricând manual turul de ajutor din meniul lateral.",
+
+  "template_manage_title": "Șabloane documente",
+  "template_add_title": "Adaugă șablon",
+  "template_name": "Numele șablonului",
+  "template_added": "Șablon adăugat",
+  "template_deleted": "Șablon șters",
+  "template_delete_confirm": "Ștergi șablonul \"{name}\"?",
+  "template_none": "Nu există șabloane. Apasă + pentru a adăuga un șablon ODF sau DOCX.",
+  "template_unsupported_format": "Format nesuportat. Selectați un fișier ODT sau DOCX.",
+  "trip_export_report": "Export raport",
+  "trip_export_select_template": "Selectează un șablon",
+  "trip_export_no_templates": "Nu există șabloane. Adăugați un șablon mai întâi.",
+  "trip_export_success": "Raport exportat cu succes",
+  "trip_export_no_log": "Nu există jurnal de excursie de exportat",
+  "manage_templates": "Administrare șabloane"
 }

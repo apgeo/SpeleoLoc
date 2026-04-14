@@ -627,5 +627,20 @@
   "main_entrance_already_defined_body": "There can be only one main cave entrance. Current main entrance(s): {names}.\nSet the other one(s) as regular entrances first.",
 
   "disable_auto_tours": "Disable auto tours",
-  "auto_tours_disabled": "Automatic tours were disabled. You can still start Help tour manually from the menu."
+  "auto_tours_disabled": "Automatic tours were disabled. You can still start Help tour manually from the menu.",
+
+  "template_manage_title": "Document Templates",
+  "template_add_title": "Add Template",
+  "template_name": "Template name",
+  "template_added": "Template added",
+  "template_deleted": "Template deleted",
+  "template_delete_confirm": "Delete template \"{name}\"?",
+  "template_none": "No templates defined. Tap + to add an ODF or DOCX template.",
+  "template_unsupported_format": "Unsupported format. Please select an ODT or DOCX file.",
+  "trip_export_report": "Export report",
+  "trip_export_select_template": "Select a template",
+  "trip_export_no_templates": "No templates available. Add a template first.",
+  "trip_export_success": "Report exported successfully",
+  "trip_export_no_log": "No trip log to export",
+  "manage_templates": "Manage templates"
 }

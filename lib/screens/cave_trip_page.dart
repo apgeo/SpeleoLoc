@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -246,6 +248,141 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     }
   }
 
+  Future<void> _exportTripReport() async {
+    final trip = _trip;
+    if (trip == null) return;
+
+    final log = trip.log;
+    if (log == null || log.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LocServ.inst.t('trip_export_no_log'))),
+        );
+      }
+      return;
+    }
+
+    // Show template selection dialog
+    final template = await _showTemplateSelectionDialog();
+    if (template == null || !mounted) return;
+
+    // Ask user where to save the exported file
+    final ext = template.format; // 'odt' or 'docx'
+    final tripTitle = trip.title.replaceAll(RegExp(r'[^\w\-]'), '_');
+    final defaultName = 'trip_report_$tripTitle.$ext';
+    final outputPath = await FilePicker.platform.saveFile(
+      dialogTitle: LocServ.inst.t('trip_export_report'),
+      fileName: defaultName,
+      type: FileType.custom,
+      allowedExtensions: [ext],
+    );
+    if (outputPath == null || !mounted) return;
+
+    // Ensure correct extension
+    final finalPath = outputPath.endsWith('.$ext') ? outputPath : '$outputPath.$ext';
+
+    try {
+      await TripReportExportService.instance.exportReport(
+        templateFileName: template.fileName,
+        text: log,
+        outputPath: finalPath,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LocServ.inst.t('trip_export_success'))),
+        );
+      }
+
+      // Open with system handler
+      await TripReportExportService.instance.openWithSystem(finalPath);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
+        );
+      }
+    }
+  }
+
+  Future<TripReportTemplate?> _showTemplateSelectionDialog() async {
+    final templates = await appDatabase.getTripReportTemplates();
+
+    if (!mounted) return null;
+
+    if (templates.isEmpty) {
+      final goToManage = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('trip_export_select_template')),
+          content: Text(LocServ.inst.t('trip_export_no_templates')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(LocServ.inst.t('manage_templates')),
+            ),
+          ],
+        ),
+      );
+      if (goToManage == true && mounted) {
+        await Navigator.pushNamed(context, tripReportTemplatesRoute);
+      }
+      return null;
+    }
+
+    return showDialog<TripReportTemplate>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('trip_export_select_template')),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: templates.length,
+                  itemBuilder: (context, index) {
+                    final t = templates[index];
+                    return ListTile(
+                      leading: Icon(
+                        t.format == 'odt' ? Icons.description : Icons.article,
+                        color: t.format == 'odt' ? Colors.blue : Colors.indigo,
+                      ),
+                      title: Text(t.title),
+                      subtitle: Text(t.format.toUpperCase()),
+                      onTap: () => Navigator.pop(ctx, t),
+                    );
+                  },
+                ),
+              ),
+              const Divider(),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx, null);
+                  Navigator.pushNamed(context, tripReportTemplatesRoute);
+                },
+                icon: const Icon(Icons.settings),
+                label: Text(LocServ.inst.t('manage_templates')),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _stopTrip() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -371,6 +508,13 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       label: LocServ.inst.t('trip_log'),
       color: Colors.grey[700]!,
       onTap: () => Navigator.pushNamed(context, caveTripLogRoute, arguments: widget.tripId),
+    ));
+
+    buttons.add(_TripToolbarButton(
+      icon: Icons.file_download_outlined,
+      label: LocServ.inst.t('trip_export_report'),
+      color: Colors.grey[700]!,
+      onTap: _exportTripReport,
     ));
 
     // List/map toggle

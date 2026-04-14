@@ -210,3 +210,20 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
     deleted_at              INTEGER,
     UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK
 );
+
+-- Table: trip_report_templates
+-- Stores metadata for user-defined document templates (ODF/DOCX) used for
+-- exporting trip reports. The actual template files live on disk under the
+-- "<app_docs>/templates/" directory; `file_name` is the basename within
+-- that folder.
+CREATE TABLE IF NOT EXISTS trip_report_templates (
+    id          INTEGER   PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+    title       TEXT(255) NOT NULL,
+    file_name   TEXT(255) NOT NULL,
+    file_size   INTEGER NOT NULL,
+    format      TEXT(10) NOT NULL, -- 'odt' or 'docx'
+    created_at  INTEGER,
+    updated_at  INTEGER,
+    deleted_at  INTEGER,
+    UNIQUE(title) ON CONFLICT ROLLBACK
+);

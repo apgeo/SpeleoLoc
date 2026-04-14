@@ -102,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5; // Schema version
+  int get schemaVersion => 6; // Schema version
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -257,6 +257,22 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         await customStatement('ALTER TABLE cave_trips ADD COLUMN log TEXT');
       }
+
+      if (from < 6) {
+        await customStatement('''
+          CREATE TABLE IF NOT EXISTS trip_report_templates (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+            title       TEXT(255) NOT NULL,
+            file_name   TEXT(255) NOT NULL,
+            file_size   INTEGER NOT NULL,
+            format      TEXT(10) NOT NULL,
+            created_at  INTEGER,
+            updated_at  INTEGER,
+            deleted_at  INTEGER,
+            UNIQUE(title) ON CONFLICT ROLLBACK
+          )
+        ''');
+      }
     },
   );
 
@@ -385,6 +401,40 @@ class AppDatabase extends _$AppDatabase {
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
+  }
+
+  // ---- Trip report templates ----
+
+  Future<List<TripReportTemplate>> getTripReportTemplates() async {
+    return (select(tripReportTemplates)
+          ..orderBy([(t) => OrderingTerm.asc(t.title)]))
+        .get();
+  }
+
+  Future<TripReportTemplate?> getTripReportTemplate(int id) async {
+    return (select(tripReportTemplates)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  Future<int> insertTripReportTemplate({
+    required String title,
+    required String fileName,
+    required int fileSize,
+    required String format,
+  }) async {
+    return into(tripReportTemplates).insert(
+      TripReportTemplatesCompanion.insert(
+        title: title,
+        fileName: fileName,
+        fileSize: fileSize,
+        format: format,
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> deleteTripReportTemplate(int id) async {
+    await (delete(tripReportTemplates)..where((t) => t.id.equals(id))).go();
   }
 
   Future<bool> _geofeatureExists(GeofeatureType type, int geofeatureId) async {
