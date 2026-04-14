@@ -8,11 +8,14 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 const String _defaultTestDbPath =
     'test_data/db/binaries/speleo_loc_export_20260414.sqlite';
 const String _defaultTestMapsDir = 'test_data/maps';
+const String _defaultTestReportTemplatesDir = 'test_data/report_templates';
 
 const String testDbPath =
     String.fromEnvironment('test_db_path', defaultValue: _defaultTestDbPath);
 const String testMapsDir =
     String.fromEnvironment('test_maps_dir', defaultValue: _defaultTestMapsDir);
+const String testReportTemplatesDir =
+    String.fromEnvironment('test_report_templates_dir', defaultValue: _defaultTestReportTemplatesDir);
 
 /// Loads a pre-built SQLite database binary and copies referenced resource
 /// files (raster map images, documentation files) into the app documents
@@ -80,6 +83,24 @@ class TestDatabaseLoader {
     } catch (e) {
       print(
           '[TestDatabaseLoader] Warning: could not load documentation files: $e');
+    }
+
+    // ---- 5. Copy template files ----
+    try {
+      final templateFiles = await db.select(db.tripReportTemplates).get();
+      print(
+          '[TestDatabaseLoader] Found ${templateFiles.length} template file records');
+      for (final tf in templateFiles) {
+        await _copyResourceFile(
+          sourceDir: testReportTemplatesDir, // docs may share source folder or have their own
+          storedFileName: tf.fileName,
+          title: tf.title,
+          documentsDir: documentsDir,
+        );
+      }
+    } catch (e) {
+      print(
+          '[TestDatabaseLoader] Warning: could not load template files: $e');
     }
 
     stopwatch.stop();
