@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
@@ -270,23 +271,29 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     final ext = template.format; // 'odt' or 'docx'
     final tripTitle = trip.title.replaceAll(RegExp(r'[^\w\-]'), '_');
     final defaultName = 'trip_report_$tripTitle.$ext';
-    final outputPath = await FilePicker.platform.saveFile(
-      dialogTitle: LocServ.inst.t('trip_export_report'),
-      fileName: defaultName,
-      type: FileType.custom,
-      allowedExtensions: [ext],
-    );
-    if (outputPath == null || !mounted) return;
-
-    // Ensure correct extension
-    final finalPath = outputPath.endsWith('.$ext') ? outputPath : '$outputPath.$ext';
 
     try {
-      await TripReportExportService.instance.exportReport(
+      // Build document bytes first (required by FilePicker on Android/iOS)
+      final docBytes = await TripReportExportService.instance.buildReportBytes(
         templateFileName: template.fileName,
         text: log,
-        outputPath: finalPath,
       );
+
+      final outputPath = await FilePicker.platform.saveFile(
+        dialogTitle: LocServ.inst.t('trip_export_report'),
+        fileName: defaultName,
+        type: FileType.custom,
+        allowedExtensions: [ext],
+        bytes: Uint8List.fromList(docBytes),
+      );
+      if (outputPath == null || !mounted) return;
+
+      // On desktop, FilePicker returns a path but does NOT write the file
+      // (bytes param is ignored). Write it ourselves.
+      final finalPath = outputPath.endsWith('.$ext') ? outputPath : '$outputPath.$ext';
+      if (!File(finalPath).existsSync()) {
+        await File(finalPath).writeAsBytes(docBytes);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

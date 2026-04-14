@@ -67,17 +67,11 @@ class TripReportExportService {
     return null;
   }
 
-  /// Exports a trip report document by cloning the template and appending [text].
-  ///
-  /// [templateFileName] is the basename inside the templates directory.
-  /// [text] is the content to append (trip log or custom text).
-  /// [outputPath] is the full path where the exported file will be saved.
-  ///
-  /// Returns the output file path on success.
-  Future<String> exportReport({
+  /// Builds the report bytes by cloning the template and appending [text].
+  /// Returns the raw bytes of the resulting document.
+  Future<List<int>> buildReportBytes({
     required String templateFileName,
     required String text,
-    required String outputPath,
   }) async {
     final dir = await getTemplatesDir();
     final templateFile = File(p.join(dir, templateFileName));
@@ -93,7 +87,7 @@ class TripReportExportService {
     final bytes = await templateFile.readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
 
-    Archive modifiedArchive;
+    final Archive modifiedArchive;
     if (format == 'odt') {
       modifiedArchive = _appendTextToOdt(archive, text);
     } else {
@@ -104,7 +98,25 @@ class TripReportExportService {
     if (outputBytes == null) {
       throw StateError('Failed to encode modified archive');
     }
+    return outputBytes;
+  }
 
+  /// Exports a trip report document by cloning the template and appending [text].
+  ///
+  /// [templateFileName] is the basename inside the templates directory.
+  /// [text] is the content to append (trip log or custom text).
+  /// [outputPath] is the full path where the exported file will be saved.
+  ///
+  /// Returns the output file path on success.
+  Future<String> exportReport({
+    required String templateFileName,
+    required String text,
+    required String outputPath,
+  }) async {
+    final outputBytes = await buildReportBytes(
+      templateFileName: templateFileName,
+      text: text,
+    );
     final outputFile = File(outputPath);
     await outputFile.writeAsBytes(outputBytes);
     return outputPath;
