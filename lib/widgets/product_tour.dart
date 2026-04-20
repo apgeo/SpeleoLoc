@@ -201,7 +201,7 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
     TutorialCoachMark(
       targets: targets,
       colorShadow: Colors.black,
-      opacityShadow: 0.62,
+      opacityShadow: 0.75,
       hideSkip: false,
       textSkip: LocServ.inst.t('skip'),
       onFinish: () => _markTourSeen(),
