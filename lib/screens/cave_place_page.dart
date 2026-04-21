@@ -1,16 +1,14 @@
-import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:drift/drift.dart' hide Column;
-import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
-import 'package:speleoloc/screens/raster_map_place_selector.dart';
-import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -65,9 +63,6 @@ class _CavePlacePageState extends State<CavePlacePage>
   Cave? _cave;
   List<RasterMap> _rasterMaps = [];
   List<CaveArea> _caveAreas = [];
-  final Map<String, Future<String>> _imagePathFutures = {};
-  final Map<int, Future<List<CavePlaceWithDefinition>>>
-      _rasterDefinitionFutures = {};
 
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -97,17 +92,6 @@ class _CavePlacePageState extends State<CavePlacePage>
   bool _isMainEntrance = false;
   int _descriptionLines = 1;
 
-  static final TextInputFormatter _depthInputFormatter =
-      TextInputFormatter.withFunction((oldValue, newValue) {
-        final text = newValue.text;
-        if (text.isEmpty || text == '-' || text == '.' || text == '-.') {
-          return newValue;
-        }
-        final normalized = text.replaceAll(',', '.');
-        final pattern = RegExp(r'^-?\d{0,4}(?:\.\d{0,1})?$');
-        return pattern.hasMatch(normalized) ? newValue : oldValue;
-      });
-
   // Feature toggle: show interactive RasterMapPlacePointEditor in the
   // "Raster maps" tab of CavePlacePage. Disabled by default so the
   // page shows a plain `Image` as before the refactor.
@@ -117,8 +101,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   void initState() {
     super.initState();
     _currentCavePlaceId = widget.cavePlaceId;
-    print('');
-    print('[CavePlacePage] caveId ${widget.caveId}');
+    AppLogger.of('CavePlacePage').fine('initState caveId=${widget.caveId}');
     _loadData();
 
     _titleController.addListener(() => _onFieldEdited('title'));
@@ -550,22 +533,11 @@ class _CavePlacePageState extends State<CavePlacePage>
     });
   }
 
-  String _formatDepthValue(double? value) {
-    if (value == null) return '';
-    return value.toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), '');
-  }
+  String _formatDepthValue(double? value) => formatDepthValue(value);
 
-  int _computeDescriptionLines(String text) {
-    if (text.isEmpty) return 1;
-    final lines = '\n'.allMatches(text).length + 1;
-    return lines.clamp(1, 5);
-  }
+  int _computeDescriptionLines(String text) => computeDescriptionLines(text);
 
-  double? _parseDepthValue(String input) {
-    final trimmed = input.trim();
-    if (trimmed.isEmpty || trimmed == '-') return null;
-    return double.tryParse(trimmed.replaceAll(',', '.'));
-  }
+  double? _parseDepthValue(String input) => parseDepthValue(input);
 
   Future<bool> _onWillPop() async {
     if (!_hasUnsavedChanges) return true;
@@ -682,171 +654,14 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
   }
 
-  Widget _buildImage(RasterMap rm) {
-    return FutureBuilder<String>(
-      future: _imagePathFutures[rm.fileName] ??= _getImagePath(rm.fileName),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text(LocServ.inst.t('error')));
-        }
-        if (snapshot.connectionState == ConnectionState.done &&
-            snapshot.hasData) {
-          final file = File(snapshot.data!);
-          if (file.existsSync()) {
-            // Show readonly editor (no legend, no zoom controls) so users can still
-            // view raster with existing cave-place markers.
-            return FutureBuilder<List<CavePlaceWithDefinition>>(
-              future: _rasterDefinitionFutures[rm.id] ??=
-                  appDatabase.getCavePlacesWithDefinitionsForRasterMap(
-                widget.caveId,
-                rm.id,
-              ),
-              builder: (context, defsSnap) {
-                if (!defsSnap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final defs = defsSnap.data!;
-                if (USE_RASTER_EDITOR_IN_CAVEPLACE) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: SizedBox(
-                      height: 300, // keep aspect similar to previous Image display area
-                      child: RasterMapPlacePointEditor(
-                        controller: RasterMapPlacePointEditorController(
-                          showLegend: false,
-                          showZoomControls: false,
-                          gestureZoomEnabled: false,
-                        ),
-                        imageFile: file,
-                        cavePlacesWithDefinitions: defs,
-                        isReadonly: true,
-                        debugUi: false,
-                      ),
-                    ),
-                  );
-                }
-
-                // Default (legacy) rendering: plain Image widget without the
-                // interactive editor. This is the default behaviour and keeps
-                // the previous visual appearance.
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: SizedBox(
-                    height: 300,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.file(
-                        file,
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          } else {
-            return Text(LocServ.inst.t('image_not_found'));
-          }
-        }
-        return const CircularProgressIndicator();
-      },
-    );
-  }
-
-  // tab page builder 
   Widget _buildMapTab(RasterMap rm) {
-    return Column(
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              GestureDetector(
-                onTap: () => _definePlace(rm),
-                child: _buildImage(rm),
-              ),
-              Positioned(
-                left: 4,
-                top: 4,
-                child: Opacity(
-                  opacity: 0.65,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      onPressed: () => _definePlace(rm),
-                      icon: const Icon(Icons.edit_location_alt, color: Colors.white),
-                      tooltip: LocServ.inst.t('define_place_on_map'),
-                      iconSize: 20,
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return CavePlaceMapTab(
+      caveId: widget.caveId,
+      cavePlaceId: _currentCavePlaceId,
+      rasterMap: rm,
+      useInteractiveEditor: USE_RASTER_EDITOR_IN_CAVEPLACE,
+      onSaveRequired: () => _save(closeAfterSave: false),
     );
-  }
-
-  void _definePlace(RasterMap rm) async {
-    print('_definePlace rasterMapId ${rm.id}');
-    var cavePlaceId = _currentCavePlaceId;
-    if (cavePlaceId == null) {
-      cavePlaceId = await _save(closeAfterSave: false);
-      if (cavePlaceId == null) {
-        return;
-      }
-    }
-
-    print(
-      'Opening place selector for cavePlaceId $cavePlaceId and rasterMapId ${rm.id}',
-    );
-    final existing = await appDatabase.getDefinition(
-      cavePlaceId,
-      rm.id,
-    );
-    final cavePlacesWithDefs = await appDatabase
-        .getCavePlacesWithDefinitionsForRasterMap(widget.caveId, rm.id);
-    print(
-      'after db retrievals cavePlaceId=${existing?.cavePlaceId ?? 'xnull'}',
-    );
-
-    if (!mounted) return;
-    final navContext = context;
-    await Navigator.push(
-      navContext,
-      MaterialPageRoute(
-        builder: (_) => RasterMapPlaceSelectorPage(
-          key: ValueKey(
-            'place_selector_widget_${cavePlaceId}_${rm.id}_${Random().nextInt(100000000)}',
-          ), // Force rebuild when cavePlaceId or rasterMap changes
-          rasterMap: rm,
-          cavePlaceId: cavePlaceId!,
-          cavePlacesWithDefinitions: cavePlacesWithDefs,
-          existingDefinition: existing,
-        ),
-      ),
-    );
-
-    _invalidateRasterDefinitionCache(rm.id);
-  }
-
-  void _invalidateRasterDefinitionCache(int rasterMapId) {
-    if (!mounted) return;
-    setState(() {
-      _rasterDefinitionFutures.remove(rasterMapId);
-    });
-  }
-
-  Future<String> _getImagePath(String fileName) async {
-    final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/$fileName';
   }
 
   @override
@@ -992,7 +807,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                           decimal: true,
                           signed: true,
                         ),
-                        inputFormatters: [_depthInputFormatter],
+                        inputFormatters: [depthInputFormatter],
                       ),
                     ),
 
