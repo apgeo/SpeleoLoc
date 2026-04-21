@@ -1,5 +1,6 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class RasterMapRepository implements IRasterMapRepository {
@@ -14,7 +15,7 @@ class RasterMapRepository implements IRasterMapRepository {
       return await (_database.select(_database.rasterMaps)..where((rm) => rm.caveId.equals(caveId))).get();
     } catch (e, st) {
       _log.severe('Failed to load raster maps', e, st);
-      rethrow;
+      throw DbException('Failed to load raster maps', cause: e, stackTrace: st);
     }
   }
 
@@ -24,7 +25,7 @@ class RasterMapRepository implements IRasterMapRepository {
       return await _database.getCavePlacesWithDefinitionsForRasterMap(caveId, rasterMapId);
     } catch (e, st) {
       _log.severe('Failed to load definitions', e, st);
-      rethrow;
+      throw DbException('Failed to load definitions', cause: e, stackTrace: st);
     }
   }
 
@@ -34,7 +35,7 @@ class RasterMapRepository implements IRasterMapRepository {
       await _database.into(_database.rasterMaps).insert(companion);
     } catch (e, st) {
       _log.severe('Failed to add raster map', e, st);
-      rethrow;
+      throw DbException('Failed to add raster map', cause: e, stackTrace: st);
     }
   }
 
@@ -44,7 +45,7 @@ class RasterMapRepository implements IRasterMapRepository {
       await _database.update(_database.rasterMaps).replace(rasterMap);
     } catch (e, st) {
       _log.severe('Failed to update raster map', e, st);
-      rethrow;
+      throw DbException('Failed to update raster map', cause: e, stackTrace: st);
     }
   }
 
@@ -54,7 +55,7 @@ class RasterMapRepository implements IRasterMapRepository {
       await (_database.delete(_database.rasterMaps)..where((rm) => rm.id.equals(id))).go();
     } catch (e, st) {
       _log.severe('Failed to delete raster map', e, st);
-      rethrow;
+      throw DbException('Failed to delete raster map', cause: e, stackTrace: st);
     }
   }
 }

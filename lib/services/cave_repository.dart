@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class CaveRepository implements ICaveRepository {
@@ -15,7 +16,7 @@ class CaveRepository implements ICaveRepository {
       return await _database.select(_database.caves).get();
     } catch (e, st) {
       _log.severe('Failed to load caves', e, st);
-      rethrow;
+      throw DbException('Failed to load caves', cause: e, stackTrace: st);
     }
   }
 
@@ -35,7 +36,7 @@ class CaveRepository implements ICaveRepository {
       return await _database.into(_database.caves).insert(companion);
     } catch (e, st) {
       _log.severe('Failed to add cave', e, st);
-      rethrow;
+      throw DbException('Failed to add cave', cause: e, stackTrace: st);
     }
   }
 
@@ -51,7 +52,7 @@ class CaveRepository implements ICaveRepository {
       );
     } catch (e, st) {
       _log.severe('Failed to update cave', e, st);
-      rethrow;
+      throw DbException('Failed to update cave', cause: e, stackTrace: st);
     }
   }
 
@@ -150,7 +151,7 @@ class CaveRepository implements ICaveRepository {
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave', e, st);
-      rethrow;
+      throw DbException('Failed to delete cave', cause: e, stackTrace: st);
     }
   }
 
@@ -160,7 +161,7 @@ class CaveRepository implements ICaveRepository {
       return await (_database.select(_database.caveAreas)..where((ca) => ca.caveId.equals(caveId))).get();
     } catch (e, st) {
       _log.severe('Failed to load cave areas', e, st);
-      rethrow;
+      throw DbException('Failed to load cave areas', cause: e, stackTrace: st);
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class CavePlaceRepository implements ICavePlaceRepository {
@@ -15,7 +16,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
       return await (_database.select(_database.cavePlaces)..where((cp) => cp.caveId.equals(caveId))).get();
     } catch (e, st) {
       _log.severe('Failed to load cave places', e, st);
-      rethrow;
+      throw DbException('Failed to load cave places', cause: e, stackTrace: st);
     }
   }
 
@@ -37,7 +38,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
       );
     } catch (e, st) {
       _log.severe('Failed to add cave place', e, st);
-      rethrow;
+      throw DbException('Failed to add cave place', cause: e, stackTrace: st);
     }
   }
 
@@ -71,7 +72,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave place', e, st);
-      rethrow;
+      throw DbException('Failed to delete cave place', cause: e, stackTrace: st);
     }
   }
 
@@ -81,7 +82,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
       return await (_database.select(_database.cavePlaces)..where((cp) => cp.id.equals(id))).getSingleOrNull();
     } catch (e, st) {
       _log.severe('Failed to find cave place', e, st);
-      rethrow;
+      throw DbException('Failed to find cave place', cause: e, stackTrace: st);
     }
   }
 
@@ -95,7 +96,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
           .getSingleOrNull();
     } catch (e, st) {
       _log.severe('Failed to find cave place by QR', e, st);
-      rethrow;
+      throw DbException('Failed to find cave place by QR', cause: e, stackTrace: st);
     }
   }
 }

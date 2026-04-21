@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// Repository for [CavePlaceToRasterMapDefinition] — querying and persisting
@@ -17,7 +18,7 @@ class DefinitionRepository implements IDefinitionRepository {
       return await _database.getDefinition(cavePlaceId, rasterMapId);
     } catch (e, st) {
       _log.severe('findDefinition error', e, st);
-      rethrow;
+      throw DbException('Failed to find definition', cause: e, stackTrace: st);
     }
   }
 
@@ -27,7 +28,11 @@ class DefinitionRepository implements IDefinitionRepository {
       return await _database.getCavePlacesWithDefinitionsForRasterMap(caveId, rasterMapId);
     } catch (e, st) {
       _log.severe('getCavePlacesWithDefinitionsForRasterMap error', e, st);
-      rethrow;
+      throw DbException(
+        'Failed to load cave-place definitions',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -74,7 +79,7 @@ class DefinitionRepository implements IDefinitionRepository {
       });
     } catch (e, st) {
       _log.severe('saveDefinition error', e, st);
-      rethrow;
+      throw DbException('Failed to save definition', cause: e, stackTrace: st);
     }
   }
 
@@ -89,7 +94,7 @@ class DefinitionRepository implements IDefinitionRepository {
       return rows > 0;
     } catch (e, st) {
       _log.severe('deleteDefinition error', e, st);
-      rethrow;
+      throw DbException('Failed to delete definition', cause: e, stackTrace: st);
     }
   }
 }
