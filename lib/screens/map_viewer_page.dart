@@ -122,13 +122,16 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     }
     final int caveId = _cavePlace!.caveId;
     _rasterMaps = await rasterMapRepository.getRasterMaps(caveId);
+
+    // default selected place is the one passed in (must be set BEFORE
+    // loading definitions so the editor controller is informed about which
+    // cave place should be highlighted as selected).
+    _selectedPlaceId = widget.cavePlaceId;
+
     if (_rasterMaps.isNotEmpty) {
       _selectedRasterMap = _rasterMaps.first;
       await _loadDefinitionsForSelected();
     }
-
-    // default selected place is the one passed in
-    _selectedPlaceId = widget.cavePlaceId;
 
     _isLoading = false;
     if (mounted) setState(() {});

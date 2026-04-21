@@ -534,6 +534,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       if (oldWidget.controller?._state == this) oldWidget.controller?._state = null;
       widget.controller?._state = this;
     }
+
+    // If the cave-places list was replaced (e.g. after async DB reload in the
+    // parent), re-apply the controller's cavePlaceId so the blue selected-place
+    // marker is built with the up-to-date coordinate data.
+    if (widget.cavePlacesWithDefinitions != oldWidget.cavePlacesWithDefinitions) {
+      _applyControllerCavePlaceId();
+    }
   }
 
   // Methods used by controller to update state at runtime
