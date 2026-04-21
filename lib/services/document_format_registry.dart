@@ -80,6 +80,28 @@ class DocumentFormatHandler {
   bool get hasEditor => buildEditor != null;
   bool get hasViewer => buildViewer != null;
 
+  /// Build an editor widget for a [DocumentationGeofeatureLink], unwrapping
+  /// the (caveId / cavePlaceId / caveAreaId) fields from the link.
+  /// Returns `null` when no editor is registered or [link] is null.
+  Widget? buildEditorForLink({
+    DocumentationGeofeatureLink? link,
+    DocumentationFile? existingDoc,
+  }) {
+    if (buildEditor == null) return null;
+    final cavePlaceId =
+        link?.type == GeofeatureType.cavePlace ? link!.geofeatureId : null;
+    final caveId =
+        link?.type == GeofeatureType.cave ? link!.geofeatureId : null;
+    final caveAreaId =
+        link?.type == GeofeatureType.caveArea ? link!.geofeatureId : null;
+    return buildEditor!(
+      cavePlaceId: cavePlaceId,
+      caveId: caveId,
+      caveAreaId: caveAreaId,
+      existingDoc: existingDoc,
+    );
+  }
+
   /// Builds a viewer widget wrapped with a floating edit button when an editor
   /// is available for this format. Returns `null` when no viewer is registered.
   Widget? buildEditableViewer({
@@ -156,6 +178,26 @@ class DocumentFormatRegistry {
   /// Returns all handlers that have a viewer factory.
   List<DocumentFormatHandler> get viewableFormats =>
       _handlers.where((h) => h.hasViewer).toList();
+
+  /// Resolves the best widget to open [doc] on disk at [file]:
+  /// editor (when available and a [link] is provided) → editable viewer →
+  /// null (caller should fall back to a generic viewer).
+  Widget? buildBestOpener({
+    required File file,
+    required DocumentationFile doc,
+    DocumentationGeofeatureLink? link,
+  }) {
+    final handler = handlerForDoc(doc);
+    if (handler == null) return null;
+    if (handler.hasEditor && link != null) {
+      return handler.buildEditorForLink(link: link, existingDoc: doc);
+    }
+    return handler.buildEditableViewer(
+      file: file,
+      doc: doc,
+      geofeatureLink: link,
+    );
+  }
 
   /// Builds a thumbnail widget for a document using the registered strategy.
   Widget buildThumbnail({

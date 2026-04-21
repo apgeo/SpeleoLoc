@@ -219,25 +219,11 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     if (!mounted) return;
 
     final registry = DocumentFormatRegistry.instance;
-    final handler = registry.handlerForDoc(doc);
-
-    // Prefer editor; fall back to viewer with edit FAB.
-    Widget? page;
-    if (handler?.buildEditor != null && widget.source.geofeatureLink != null) {
-      final link = widget.source.geofeatureLink!;
-      page = handler!.buildEditor!(
-        cavePlaceId: link.type == GeofeatureType.cavePlace ? link.geofeatureId : null,
-        caveId: link.type == GeofeatureType.cave ? link.geofeatureId : null,
-        caveAreaId: link.type == GeofeatureType.caveArea ? link.geofeatureId : null,
-        existingDoc: doc,
-      );
-    } else if (handler?.buildViewer != null) {
-      page = handler!.buildEditableViewer(
-        file: file,
-        doc: doc,
-        geofeatureLink: widget.source.geofeatureLink,
-      );
-    }
+    final page = registry.buildBestOpener(
+      file: file,
+      doc: doc,
+      link: widget.source.geofeatureLink,
+    );
 
     if (page != null) {
       _navigateAndRefresh(page);
@@ -439,17 +425,11 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   Future<void> _openDocumentForEditing(DocumentationFile doc) async {
     if (doc.fileName.isEmpty) return;
     final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
-    if (handler?.buildEditor == null) return;
-
-    final link = widget.source.geofeatureLink;
-    final editor = handler!.buildEditor!(
-      cavePlaceId:
-          link?.type == GeofeatureType.cavePlace ? link!.geofeatureId : null,
-      caveId: link?.type == GeofeatureType.cave ? link!.geofeatureId : null,
-      caveAreaId:
-          link?.type == GeofeatureType.caveArea ? link!.geofeatureId : null,
+    final editor = handler?.buildEditorForLink(
+      link: widget.source.geofeatureLink,
       existingDoc: doc,
     );
+    if (editor == null) return;
     _navigateAndRefresh(editor);
   }
 
