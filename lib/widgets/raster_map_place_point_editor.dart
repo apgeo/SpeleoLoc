@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
 import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_image_cache.dart';
@@ -775,17 +776,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   }
 
   void zoomIn() {
-    _photoViewController.scale = (_photoViewController.scale! * 1.2).clamp(
-      0.01,
-      5.0,
-    );
+    _photoViewController.scale = clampZoom(_photoViewController.scale! * 1.2);
   }
 
   void zoomOut() {
-    _photoViewController.scale = (_photoViewController.scale! / 1.2).clamp(
-      0.01,
-      5.0,
-    );
+    _photoViewController.scale = clampZoom(_photoViewController.scale! / 1.2);
   }
 
   void resetZoom() {
@@ -801,38 +796,17 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // Prefer the actual PhotoView viewport size; fall back to full screen if
     // not available (defensive).
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
-    final offsetX = (viewport.width / 2) - (imageX * zoomLevel);
-    final offsetY = (viewport.height / 2) - (imageY * zoomLevel);
-    _photoViewController.position = Offset(offsetX, offsetY);
+    _photoViewController.position =
+        offsetForPoint(imageX, imageY, zoomLevel, viewport);
   }
 
   /// Zoom/pan to fit a bounding box of image-space points with padding.
   void _zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) {
-    if (imagePoints.isEmpty) return;
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
-
-    double minX = imagePoints.first.dx, maxX = minX;
-    double minY = imagePoints.first.dy, maxY = minY;
-    for (final p in imagePoints) {
-      if (p.dx < minX) minX = p.dx;
-      if (p.dx > maxX) maxX = p.dx;
-      if (p.dy < minY) minY = p.dy;
-      if (p.dy > maxY) maxY = p.dy;
-    }
-
-    final imageW = (maxX - minX).clamp(1.0, double.infinity);
-    final imageH = (maxY - minY).clamp(1.0, double.infinity);
-    final scaleX = (viewport.width - padding * 2) / imageW;
-    final scaleY = (viewport.height - padding * 2) / imageH;
-    final scale = scaleX < scaleY ? scaleX : scaleY;
-    final clampedScale = scale.clamp(0.01, 5.0);
-
-    final centerX = (minX + maxX) / 2;
-    final centerY = (minY + maxY) / 2;
-    final offsetX = (viewport.width / 2) - (centerX * clampedScale);
-    final offsetY = (viewport.height / 2) - (centerY * clampedScale);
-    _photoViewController.scale = clampedScale;
-    _photoViewController.position = Offset(offsetX, offsetY);
+    final transform = fitPointsTransform(imagePoints, viewport, padding: padding);
+    if (transform == null) return;
+    _photoViewController.scale = transform.scale;
+    _photoViewController.position = transform.offset;
   }
 
   bool _isZoomed() {
@@ -841,9 +815,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   Offset _offsetForPoint(double imageX, double imageY, double scale) {
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
-    final offsetX = (viewport.width / 2) - (imageX * scale);
-    final offsetY = (viewport.height / 2) - (imageY * scale);
-    return Offset(offsetX, offsetY);
+    return offsetForPoint(imageX, imageY, scale, viewport);
   }
 
   void _moveToPoint(
