@@ -5,6 +5,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/utils/cave_place_qr_generator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/qr_generation_defaults.dart';
 
 /// Dialog that renders and displays the QR code image for a given [CavePlace].
 ///
@@ -50,14 +51,16 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
 
       final prefs = GenerationPreferences(
         includeTitle: cfg['includeTitle'] ?? true,
-        qrSizePx: cfg['qrSizePx'] ?? 400,
-        imagePaddingPx: cfg['imagePaddingPx'] ?? 24,
+        qrSizePx: cfg['qrSizePx'] ?? QrGenerationDefaults.qrSizePx,
+        imagePaddingPx:
+            cfg['imagePaddingPx'] ?? QrGenerationDefaults.imagePaddingPx,
         labelFontSize: (cfg['labelFontSize'] is num)
             ? (cfg['labelFontSize'] as num).toDouble()
-            : 18.0,
-        qrBgColor: cfg['qrBgColor'] ?? 0xFFFFFFFF,
-        qrFgColor: cfg['qrFgColor'] ?? 0xFF000000,
-        qrErrorCorrectionLevel: cfg['qrErrorCorrectionLevel'] ?? 'M',
+            : QrGenerationDefaults.labelFontSize,
+        qrBgColor: cfg['qrBgColor'] ?? QrGenerationDefaults.qrBgColor,
+        qrFgColor: cfg['qrFgColor'] ?? QrGenerationDefaults.qrFgColor,
+        qrErrorCorrectionLevel: cfg['qrErrorCorrectionLevel'] ??
+            QrGenerationDefaults.errorCorrectionLevel,
       );
 
       final bytes = await QrImageRenderer.render(widget.cavePlace, prefs);

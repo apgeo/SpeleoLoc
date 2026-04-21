@@ -6,6 +6,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -265,7 +266,11 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   /// Public function to zoom and pan to a specific cave place point
-  void zoomToPoint(double imageX, double imageY, {double zoomLevel = 2.5}) {
+  void zoomToPoint(
+    double imageX,
+    double imageY, {
+    double zoomLevel = RasterMapEditorConstants.defaultZoomToPointLevel,
+  }) {
     // Use the typed controller to programmatically pan/zoom the editor.
     try {
       _editorController.zoomToPoint(imageX, imageY, zoomLevel: zoomLevel);
@@ -295,7 +300,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(LocServ.inst.t('define_place_on_map')),
-          duration: const Duration(seconds: 1),
+          duration: RasterMapEditorConstants.shortSnackbarDuration,
         ),
       );
       Navigator.pop(context);

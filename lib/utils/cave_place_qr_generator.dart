@@ -9,6 +9,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:barcode/barcode.dart' show BarcodeQRCorrectionLevel;
 
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/qr_generation_defaults.dart';
 import 'package:speleoloc/utils/qr_label_template_engine.dart';
 
 // ---------------------------------------------------------------------------
@@ -80,22 +81,22 @@ class GenerationPreferences {
   const GenerationPreferences({
     this.asPdf = true,
     this.includeTitle = true,
-    this.dpi = 300,
-    this.backgroundColor = 0xFFFFFFFF,
-    this.imageFormat = 'png',
-    this.qrSizePx = 400,
-    this.imagePaddingPx = 24,
-    this.labelFontSize = 18.0,
-    this.labelFontFamily = 'Helvetica',
-    this.qrBgColor = 0xFFFFFFFF,
-    this.qrFgColor = 0xFF000000,
+    this.dpi = QrGenerationDefaults.dpi,
+    this.backgroundColor = QrGenerationDefaults.backgroundColor,
+    this.imageFormat = QrGenerationDefaults.imageFormat,
+    this.qrSizePx = QrGenerationDefaults.qrSizePx,
+    this.imagePaddingPx = QrGenerationDefaults.imagePaddingPx,
+    this.labelFontSize = QrGenerationDefaults.labelFontSize,
+    this.labelFontFamily = QrGenerationDefaults.labelFontFamily,
+    this.qrBgColor = QrGenerationDefaults.qrBgColor,
+    this.qrFgColor = QrGenerationDefaults.qrFgColor,
     this.exportImagesAsZip = true,
-    this.qrErrorCorrectionLevel = 'M',
-    this.pdfGridColumns = 4,
-    this.pdfGridRows = 5,
+    this.qrErrorCorrectionLevel = QrGenerationDefaults.errorCorrectionLevel,
+    this.pdfGridColumns = QrGenerationDefaults.pdfGridColumns,
+    this.pdfGridRows = QrGenerationDefaults.pdfGridRows,
     this.labelTemplate = '@place_title, @depth',
-    this.pdfQrPaddingH = 18.0,
-    this.pdfQrPaddingV = 18.0,
+    this.pdfQrPaddingH = QrGenerationDefaults.pdfQrPaddingH,
+    this.pdfQrPaddingV = QrGenerationDefaults.pdfQrPaddingV,
     this.caveTitle,
     this.areaTitle,
   });

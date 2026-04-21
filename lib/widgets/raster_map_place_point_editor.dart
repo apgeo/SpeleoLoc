@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
 import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
@@ -72,12 +73,13 @@ class RasterMapPlacePointEditorController {
     this.showTapModeCheckbox = false,
     this.autoZoomToPoints = true,
     this.animatePointTransitions = false,
-    this.autoSaveSnackbarNotificationDuration = const Duration(seconds: 1),
+    this.autoSaveSnackbarNotificationDuration =
+        RasterMapEditorConstants.shortSnackbarDuration,
     this.textOutlineEnabled = true,
-    this.textOutlineWidth = 2.0,
+    this.textOutlineWidth = RasterMapEditorConstants.defaultTextOutlineWidth,
     this.textBackgroundEnabled = false,
     this.keepZoomOnNavigation = false,
-    this.initialZoomLevel = 1.0,
+    this.initialZoomLevel = RasterMapEditorConstants.defaultInitialZoomLevel,
   });
 
   _RasterMapPlacePointEditorState? _state;
@@ -166,8 +168,11 @@ class RasterMapPlacePointEditorController {
   }
 
   /// Zooms/pans to center the provided image-space point.
-  void zoomToPoint(double imageX, double imageY, {double zoomLevel = 2.5}) =>
-      _state?.zoomToPoint(imageX, imageY, zoomLevel: zoomLevel);
+  void zoomToPoint(
+    double imageX,
+    double imageY, {
+    double zoomLevel = RasterMapEditorConstants.defaultZoomToPointLevel,
+  }) => _state?.zoomToPoint(imageX, imageY, zoomLevel: zoomLevel);
 
   /// Pans to center the given image-space point while keeping the current zoom.
   void panToPoint(double imageX, double imageY) =>
@@ -178,8 +183,10 @@ class RasterMapPlacePointEditorController {
   void resetZoom() => _state?.resetZoom();
 
   /// Zoom/pan to fit a bounding box of image-space points.
-  void zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) =>
-      _state?._zoomToFitPoints(imagePoints, padding: padding);
+  void zoomToFitPoints(
+    List<Offset> imagePoints, {
+    double padding = RasterMapEditorConstants.defaultZoomToFitPadding,
+  }) => _state?._zoomToFitPoints(imagePoints, padding: padding);
 
   void setShowNavBar(bool v) {
     showNavBar = v;
@@ -428,12 +435,17 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     });
 
     // pulse animation controller for marker-tap feedback
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420))
-      ..addListener(() {
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: RasterMapEditorConstants.pulseAnimationDuration,
+    )..addListener(() {
         if (mounted) setState(() {});
       });
 
-    _panZoomController = AnimationController(vsync: this, duration: const Duration(milliseconds: 220))
+    _panZoomController = AnimationController(
+      vsync: this,
+      duration: RasterMapEditorConstants.panZoomAnimationDuration,
+    )
       ..addListener(() {
         final t = _panZoomController.value;
         final start = _panStart ?? _photoViewController.position;
@@ -714,7 +726,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(LocServ.inst.t('cave_place_added')),
-            duration: const Duration(seconds: 1),
+            duration: RasterMapEditorConstants.shortSnackbarDuration,
           ),
         );
         widget.onCavePlaceAdded?.call();
@@ -726,7 +738,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // if the tap is within a threshold distance and select it instead of
     // defining a new point.
     if (!_tapDefinesNewPoint) {
-      const double hitThreshold = 30.0; // viewport pixels
+      const double hitThreshold = RasterMapEditorConstants.markerHitThreshold;
       CavePlaceWithDefinition? nearest;
       double nearestDist = double.infinity;
       for (final cpwd in widget.cavePlacesWithDefinitions) {
@@ -875,7 +887,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             .firstOrNull;
         if (match != null) title = match.cavePlace.title;
         if (title.isNotEmpty) {
-          final dur = widget.controller?.autoSaveSnackbarNotificationDuration ?? const Duration(seconds: 1);
+          final dur = widget.controller?.autoSaveSnackbarNotificationDuration ??
+              RasterMapEditorConstants.shortSnackbarDuration;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${LocServ.inst.t('new_point_saved_for')} $title'),
@@ -956,7 +969,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(LocServ.inst.t('point_reset')),
-          duration: const Duration(seconds: 1),
+          duration: RasterMapEditorConstants.shortSnackbarDuration,
         ),
       );
     }
@@ -1001,7 +1014,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(LocServ.inst.t('definition_removed')),
-          duration: const Duration(seconds: 1),
+          duration: RasterMapEditorConstants.shortSnackbarDuration,
         ),
       );
     }
@@ -1015,7 +1028,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(LocServ.inst.t('tap_on_map_to_define_place')),
-        duration: const Duration(seconds: 3),
+        duration: RasterMapEditorConstants.longSnackbarDuration,
       ),
     );
   }
@@ -1078,7 +1091,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(LocServ.inst.t('long_tap_detected', {'cavePlaceTitle': cavePlaceTitle})),
-        duration: const Duration(seconds: 2),
+        duration: RasterMapEditorConstants.mediumSnackbarDuration,
       ),
     );
   }
