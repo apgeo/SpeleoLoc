@@ -1,6 +1,10 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
+// Re-export moved ValueNotifiers so existing import of `constants.dart`
+// keeps resolving `debugModeNotifier` / `homePageRefreshNotifier`.
+export 'package:speleoloc/state/app_notifiers.dart';
+
 final dateFormat = DateFormat('yyyy/MM/dd');
 
 // App-wide constants
@@ -35,10 +39,6 @@ const bool showCaveDeleteButtons = false;
 /// a manual QR-code input dialog (for testing without a physical scanner).
 const bool enableQrManualInput = true;
 
-/// Runtime debug mode activated by tapping the home-page title 9 times.
-/// Listen via [debugModeNotifier] to react to changes.
-final ValueNotifier<bool> debugModeNotifier = ValueNotifier<bool>(false);
-
 // Configuration keys
 const String qrGenerationConfigKey = 'qr_code_generation';
 const String pdfOutputConfigKey = 'pdf_output_config';
@@ -58,9 +58,6 @@ const String appLanguageKey = 'app_language';
 
 // Home page UI
 const String showHomeToolbarKey = 'show_home_toolbar';
-
-/// Increment to request HomePage layout/state refresh from settings screens.
-final ValueNotifier<int> homePageRefreshNotifier = ValueNotifier<int>(0);
 
 // Image compression settings
 const String imageCompressionConfigKey = 'image_compression';

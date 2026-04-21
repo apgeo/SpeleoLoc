@@ -1,25 +1,47 @@
-import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/cave_repository.dart';
-import 'package:speleoloc/services/cave_place_repository.dart';
-import 'package:speleoloc/services/raster_map_repository.dart';
-import 'package:speleoloc/services/definition_repository.dart';
+/// Legacy global accessors, kept during the Phase 1 → Phase 3 migration.
+///
+/// New code should depend on the matching Riverpod provider from
+/// [lib/providers/providers.dart](providers.dart) via `ref.read`/`ref.watch`.
+/// These top-level accessors are a stop-gap so imperative services and
+/// non-widget code (e.g. [CaveTripService.instance]) can still reach
+/// repositories during migration. They resolve against the root
+/// [ProviderContainer] created in `main.dart`.
+library;
 
-// Global repository instances (can be replaced with a DI container later)
-final caveRepository = CaveRepository(appDatabase);
-final cavePlaceRepository = CavePlaceRepository(appDatabase);
-final rasterMapRepository = RasterMapRepository(appDatabase);
-final definitionRepository = DefinitionRepository(appDatabase);
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/repository_interfaces.dart';
 
-/// Session-level preferences that persist for the lifetime of the app process.
-class SessionPrefs {
-  SessionPrefs._();
-  static final SessionPrefs instance = SessionPrefs._();
+// Re-export SessionPrefs so callers importing this file keep working.
+export 'package:speleoloc/providers/providers.dart' show SessionPrefs;
 
-  /// User has confirmed auto-save when switching map/place.
-  /// Resets on app restart.
-  bool autoSaveConfirmed = false;
-
-  void reset() {
-    autoSaveConfirmed = false;
+/// Root [ProviderContainer] assigned once in `main.dart` and shared with the
+/// widget tree via `UncontrolledProviderScope`. Throws if accessed before
+/// [initRootContainer] has run.
+ProviderContainer get rootContainer {
+  final c = _rootContainer;
+  if (c == null) {
+    throw StateError(
+      'rootContainer accessed before initRootContainer() was called.',
+    );
   }
+  return c;
 }
+
+ProviderContainer? _rootContainer;
+
+void initRootContainer(ProviderContainer container) {
+  _rootContainer = container;
+}
+
+// Convenience shortcuts matching the previous `service_locator.dart` globals.
+// Prefer `ref.read(xxxProvider)` inside widgets; use these only in code that
+// has no access to a `Ref`.
+ICaveRepository get caveRepository =>
+    rootContainer.read(caveRepositoryProvider);
+ICavePlaceRepository get cavePlaceRepository =>
+    rootContainer.read(cavePlaceRepositoryProvider);
+IRasterMapRepository get rasterMapRepository =>
+    rootContainer.read(rasterMapRepositoryProvider);
+IDefinitionRepository get definitionRepository =>
+    rootContainer.read(definitionRepositoryProvider);

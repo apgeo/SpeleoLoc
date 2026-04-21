@@ -1,20 +1,30 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
-class CaveRepository {
+class CaveRepository implements ICaveRepository {
   final AppDatabase _database;
+  final _log = AppLogger.of('CaveRepository');
 
   CaveRepository(this._database);
 
+  @override
   Future<List<Cave>> getCaves() async {
     try {
       return await _database.select(_database.caves).get();
-    } catch (e) {
-      print('[CaveRepository] Failed to load caves: $e');
+    } catch (e, st) {
+      _log.severe('Failed to load caves', e, st);
       rethrow;
     }
   }
 
+  @override
+  Stream<List<Cave>> watchCaves() {
+    return _database.select(_database.caves).watch();
+  }
+
+  @override
   Future<int> addCave(String title, {int? surfaceAreaId, String? description}) async {
     try {
       final companion = CavesCompanion(
@@ -23,12 +33,13 @@ class CaveRepository {
         description: Value(description),
       );
       return await _database.into(_database.caves).insert(companion);
-    } catch (e) {
-      print('[CaveRepository] Failed to add cave: $e');
+    } catch (e, st) {
+      _log.severe('Failed to add cave', e, st);
       rethrow;
     }
   }
 
+  @override
   Future<void> updateCave(int id, String title, {int? surfaceAreaId, String? description}) async {
     try {
       await (_database.update(_database.caves)..where((c) => c.id.equals(id))).write(
@@ -38,12 +49,13 @@ class CaveRepository {
           description: Value(description),
         ),
       );
-    } catch (e) {
-      print('[CaveRepository] Failed to update cave: $e');
+    } catch (e, st) {
+      _log.severe('Failed to update cave', e, st);
       rethrow;
     }
   }
 
+  @override
   Future<void> deleteCave(int id) async {
     try {
       await _database.transaction(() async {
@@ -136,17 +148,18 @@ class CaveRepository {
 
         await (_database.delete(_database.caves)..where((c) => c.id.equals(id))).go();
       });
-    } catch (e) {
-      print('[CaveRepository] Failed to delete cave: $e');
+    } catch (e, st) {
+      _log.severe('Failed to delete cave', e, st);
       rethrow;
     }
   }
 
+  @override
   Future<List<CaveArea>> getCaveAreas(int caveId) async {
     try {
       return await (_database.select(_database.caveAreas)..where((ca) => ca.caveId.equals(caveId))).get();
-    } catch (e) {
-      print('[CaveRepository] Failed to load cave areas: $e');
+    } catch (e, st) {
+      _log.severe('Failed to load cave areas', e, st);
       rethrow;
     }
   }

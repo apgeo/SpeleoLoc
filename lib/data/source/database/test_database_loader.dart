@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// Configurable paths — override via `--dart-define-from-file=build_settings.json`
 const String _defaultTestDbPath =
@@ -21,6 +22,8 @@ const String testReportTemplatesDir =
 /// files (raster map images, documentation files) into the app documents
 /// folder so the database records point to valid local paths.
 class TestDatabaseLoader {
+  static final _log = AppLogger.of('TestDatabaseLoader');
+
   /// Main entry-point.
   ///
   /// 1. Copies the SQLite binary to the documents directory.
@@ -31,7 +34,7 @@ class TestDatabaseLoader {
   /// Returns the new [AppDatabase] instance.
   static Future<AppDatabase> loadTestDatabase() async {
     final stopwatch = Stopwatch()..start();
-    print('[TestDatabaseLoader] Starting loadTestDatabase ...');
+    _log.info('Starting loadTestDatabase ...');
 
     final documentsDir = await getApplicationDocumentsDirectory();
     final dbTargetPath = p.join(documentsDir.path, 'speleo_loc.sqlite');
@@ -44,8 +47,7 @@ class TestDatabaseLoader {
     }
     final dbFile = File(dbTargetPath);
     await dbFile.writeAsBytes(dbBytes, flush: true);
-    print(
-        '[TestDatabaseLoader] Database binary copied (${dbBytes.length} bytes) → $dbTargetPath');
+    _log.info('Database binary copied (${dbBytes.length} bytes) → $dbTargetPath');
 
     // ---- 2. Open the database ----
     final db = AppDatabase();
@@ -53,8 +55,7 @@ class TestDatabaseLoader {
     // ---- 3. Copy raster map images ----
     try {
       final rasterMaps = await db.select(db.rasterMaps).get();
-      print(
-          '[TestDatabaseLoader] Found ${rasterMaps.length} raster map records');
+      _log.info('Found ${rasterMaps.length} raster map records');
       for (final rm in rasterMaps) {
         await _copyResourceFile(
           sourceDir: testMapsDir,
@@ -64,14 +65,13 @@ class TestDatabaseLoader {
         );
       }
     } catch (e) {
-      print('[TestDatabaseLoader] Warning: could not load raster map files: $e');
+      _log.warning('could not load raster map files: $e');
     }
 
     // ---- 4. Copy documentation files ----
     try {
       final docFiles = await db.select(db.documentationFiles).get();
-      print(
-          '[TestDatabaseLoader] Found ${docFiles.length} documentation file records');
+      _log.info('Found ${docFiles.length} documentation file records');
       for (final df in docFiles) {
         await _copyResourceFile(
           sourceDir: testMapsDir, // docs may share source folder or have their own
@@ -81,15 +81,13 @@ class TestDatabaseLoader {
         );
       }
     } catch (e) {
-      print(
-          '[TestDatabaseLoader] Warning: could not load documentation files: $e');
+      _log.warning('could not load documentation files: $e');
     }
 
     // ---- 5. Copy template files ----
     try {
       final templateFiles = await db.select(db.tripReportTemplates).get();
-      print(
-          '[TestDatabaseLoader] Found ${templateFiles.length} template file records');
+      _log.info('Found ${templateFiles.length} template file records');
       for (final tf in templateFiles) {
         await _copyResourceFile(
           sourceDir: testReportTemplatesDir, // docs may share source folder or have their own
@@ -99,13 +97,11 @@ class TestDatabaseLoader {
         );
       }
     } catch (e) {
-      print(
-          '[TestDatabaseLoader] Warning: could not load template files: $e');
+      _log.warning('could not load template files: $e');
     }
 
     stopwatch.stop();
-    print(
-        '[TestDatabaseLoader] loadTestDatabase completed in ${stopwatch.elapsedMilliseconds} ms');
+    _log.info('loadTestDatabase completed in ${stopwatch.elapsedMilliseconds} ms');
     return db;
   }
 
@@ -167,10 +163,9 @@ class TestDatabaseLoader {
 
     if (bytes != null) {
       await targetFile.writeAsBytes(bytes, flush: true);
-      print('[TestDatabaseLoader] Copied resource → $storedFileName');
+      _log.info('Copied resource → $storedFileName');
     } else {
-      print(
-          '[TestDatabaseLoader] Warning: source not found for "$storedFileName" (title: "$title")');
+      _log.warning('source not found for "$storedFileName" (title: "$title")');
     }
   }
 

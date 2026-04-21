@@ -6,26 +6,29 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 class TestDataHelper {
+  static final _log = AppLogger.of('TestDataHelper');
+
   static Future<void> populateTestData(AppDatabase db) async {
     final stopwatch = Stopwatch()..start();
-    print('[TestDataHelper] Starting populateTestData...');
+    _log.info('Starting populateTestData...');
     
     try {
       // Use a transaction to wrap all inserts for better performance
       await db.transaction(() async {
         // Insert caves
-        print('[TestDataHelper] Inserting caves...');
+        _log.info('Inserting caves...');
         final caveInsertStart = Stopwatch()..start();
         final cave1Id = await db.into(db.caves).insert(CavesCompanion.insert(title: 'P. Ponorul Suspendat'));
         final cave2Id = await db.into(db.caves).insert(CavesCompanion.insert(title: 'P. Ponorul Nou'));
         final cave3Id = await db.into(db.caves).insert(CavesCompanion.insert(title: 'P. Gaura cu Vâjgău'));
         caveInsertStart.stop();
-        print('[TestDataHelper] Caves inserted in ${caveInsertStart.elapsedMilliseconds} ms');
+        _log.info('Caves inserted in ${caveInsertStart.elapsedMilliseconds} ms');
 
         // Insert cave areas
-        print('[TestDataHelper] Inserting cave areas...');
+        _log.info('Inserting cave areas...');
         final areaInsertStart = Stopwatch()..start();
         final area1Id = await db.into(db.caveAreas).insert(CaveAreasCompanion.insert(title: 'Galeria Cascadelor', caveId: cave1Id));
         final area2Id = await db.into(db.caveAreas).insert(CaveAreasCompanion.insert(title: 'Colectorul Mare', caveId: cave1Id));
@@ -34,14 +37,14 @@ class TestDataHelper {
         final area4Id = await db.into(db.caveAreas).insert(CaveAreasCompanion.insert(title: 'verticale intrare', caveId: cave2Id));
         final area5Id = await db.into(db.caveAreas).insert(CaveAreasCompanion.insert(title: 'activ', caveId: cave2Id));
         areaInsertStart.stop();
-        print('[TestDataHelper] Cave areas inserted in ${areaInsertStart.elapsedMilliseconds} ms');
+        _log.info('Cave areas inserted in ${areaInsertStart.elapsedMilliseconds} ms');
 
         // Local helper to generate random QR codes (0..99_999_999)
         int generateRandomQr(Random r) => r.nextInt(100000000);
         final rand = Random();
 
         // Insert cave places
-        print('[TestDataHelper] Inserting cave places...');
+        _log.info('Inserting cave places...');
         final placeInsertStart = Stopwatch()..start();
         final cavePlace1Id = await db.into(db.cavePlaces).insert(CavePlacesCompanion.insert(title: 'Intrare', caveId: cave1Id, placeQrCodeIdentifier: Value(generateRandomQr(rand))));
         final cavePlace2Id = await db.into(db.cavePlaces).insert(CavePlacesCompanion.insert(title: 'S. Sorbului', caveId: cave1Id, placeQrCodeIdentifier: Value(generateRandomQr(rand))));
@@ -68,10 +71,10 @@ class TestDataHelper {
         final cavePlace22Id = await db.into(db.cavePlaces).insert(CavePlacesCompanion.insert(title: 'intrare pe activ', caveId: cave3Id, placeQrCodeIdentifier: Value(generateRandomQr(rand))));
         final cavePlace23Id = await db.into(db.cavePlaces).insert(CavePlacesCompanion.insert(title: 'baza puturi activ', caveId: cave3Id, placeQrCodeIdentifier: Value(generateRandomQr(rand))));
         placeInsertStart.stop();
-        print('[TestDataHelper] Cave places inserted ($cavePlace1Id...$cavePlace23Id) in ${placeInsertStart.elapsedMilliseconds} ms');
+        _log.info('Cave places inserted ($cavePlace1Id...$cavePlace23Id) in ${placeInsertStart.elapsedMilliseconds} ms');
 
         // Insert surface places
-        print('[TestDataHelper] Inserting surface places...');
+        _log.info('Inserting surface places...');
         final surfaceInsertStart = Stopwatch()..start();
         await db.into(db.surfacePlaces).insert(SurfacePlacesCompanion.insert(
           title: 'Parking Lot',
@@ -88,10 +91,10 @@ class TestDataHelper {
           longitude: Value(2.0),
         ));
         surfaceInsertStart.stop();
-        print('[TestDataHelper] Surface places inserted in ${surfaceInsertStart.elapsedMilliseconds} ms');
+        _log.info('Surface places inserted in ${surfaceInsertStart.elapsedMilliseconds} ms');
 
         // Insert cave entrances
-        print('[TestDataHelper] Inserting cave entrances...');
+        _log.info('Inserting cave entrances...');
         final entranceInsertStart = Stopwatch()..start();
         await db.into(db.caveEntrances).insert(CaveEntrancesCompanion.insert(
           caveId: cave1Id,
@@ -100,10 +103,10 @@ class TestDataHelper {
           title: Value('Main Entrance'),
         ));
         entranceInsertStart.stop();
-        print('[TestDataHelper] Cave entrances inserted in ${entranceInsertStart.elapsedMilliseconds} ms');
+        _log.info('Cave entrances inserted in ${entranceInsertStart.elapsedMilliseconds} ms');
 
         // Insert raster maps
-        print('[TestDataHelper] Starting raster maps population...');
+        _log.info('Starting raster maps population...');
         final rasterInsertStart = Stopwatch()..start();
         
         // Copy test maps from assets and insert raster maps (3 per cave)
@@ -150,7 +153,7 @@ class TestDataHelper {
           }
           
             loadAssetBytesStart.stop();
-            print('[TestDataHelper] Loading asset $assetFile took ${loadAssetBytesStart.elapsedMilliseconds} ms');
+            _log.info('Loading asset $assetFile took ${loadAssetBytesStart.elapsedMilliseconds} ms');
 
             final saveFileStart = Stopwatch()..start();
             // Ensure cave folder exists
@@ -165,7 +168,7 @@ class TestDataHelper {
             await file.writeAsBytes(bytes, flush: true);
 
             saveFileStart.stop();
-            print('[TestDataHelper] Saving file $fileName took ${saveFileStart.elapsedMilliseconds} ms');
+            _log.info('Saving file $fileName took ${saveFileStart.elapsedMilliseconds} ms');
           
 
           final insertRasterMapRowStart = Stopwatch()..start();
@@ -179,7 +182,7 @@ class TestDataHelper {
           ));
 
           insertRasterMapRowStart.stop();
-          print('[TestDataHelper] Inserting raster map row for $assetFile took ${insertRasterMapRowStart.elapsedMilliseconds} ms');
+          _log.info('Inserting raster map row for $assetFile took ${insertRasterMapRowStart.elapsedMilliseconds} ms');
 
           // Decode image to get dimensions
           try {
@@ -256,7 +259,7 @@ class TestDataHelper {
             // final defsCount = 3 + rand.nextInt(3); // 3-5 definitions
 
             decodeImageStart.stop();
-            print('[TestDataHelper] Reading image dims for $assetFile took ${decodeImageStart.elapsedMilliseconds} ms');
+            _log.info('Reading image dims for $assetFile took ${decodeImageStart.elapsedMilliseconds} ms');
 
             final addCavePlaceToRasterMapDefinitionsStart = Stopwatch()..start();
  
@@ -284,11 +287,11 @@ class TestDataHelper {
             }
 
             addCavePlaceToRasterMapDefinitionsStart.stop();
-            print('[TestDataHelper] Adding cave place to raster map definition= ($definitionCount records) took ${addCavePlaceToRasterMapDefinitionsStart.elapsedMilliseconds} ms');
+            _log.info('Adding cave place to raster map definition= ($definitionCount records) took ${addCavePlaceToRasterMapDefinitionsStart.elapsedMilliseconds} ms');
           } catch (_) {}
           
           addRasterForCaveStart.stop();
-          print('[TestDataHelper] Added raster map for caveId $caveId with asset $assetFile in ${addRasterForCaveStart.elapsedMilliseconds} ms');
+          _log.info('Added raster map for caveId $caveId with asset $assetFile in ${addRasterForCaveStart.elapsedMilliseconds} ms');
           return rasterId;
         }
 
@@ -319,25 +322,25 @@ class TestDataHelper {
           }
         }
         rasterInsertStart.stop();
-        print('[TestDataHelper] Raster maps population completed: $rasterMapsAdded maps added in ${rasterInsertStart.elapsedMilliseconds} ms');
+        _log.info('Raster maps population completed: $rasterMapsAdded maps added in ${rasterInsertStart.elapsedMilliseconds} ms');
 
         // Insert configurations
-        print('[TestDataHelper] Inserting configurations...');
+        _log.info('Inserting configurations...');
         final configInsertStart = Stopwatch()..start();
         await db.into(db.configurations).insert(ConfigurationsCompanion.insert(
           title: 'version',
           value: Value('1.0'),
         ));
         configInsertStart.stop();
-        print('[TestDataHelper] Configurations inserted in ${configInsertStart.elapsedMilliseconds} ms');
+        _log.info('Configurations inserted in ${configInsertStart.elapsedMilliseconds} ms');
       });
     } catch (e, stackTrace) {
-      print('[TestDataHelper] ERROR during populateTestData: $e');
-      print('[TestDataHelper] Stack trace: $stackTrace');
+      _log.info('ERROR during populateTestData: $e');
+      _log.info('Stack trace: $stackTrace');
       rethrow;
     } finally {
       stopwatch.stop();
-      print('[TestDataHelper] populateTestData completed in ${stopwatch.elapsedMilliseconds} ms');
+      _log.info('populateTestData completed in ${stopwatch.elapsedMilliseconds} ms');
     }
   }
 }

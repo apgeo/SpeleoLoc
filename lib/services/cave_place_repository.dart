@@ -1,20 +1,32 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:drift/drift.dart';
+import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
-class CavePlaceRepository {
+class CavePlaceRepository implements ICavePlaceRepository {
   final AppDatabase _database;
+  final _log = AppLogger.of('CavePlaceRepository');
 
   CavePlaceRepository(this._database);
 
+  @override
   Future<List<CavePlace>> getCavePlaces(int caveId) async {
     try {
       return await (_database.select(_database.cavePlaces)..where((cp) => cp.caveId.equals(caveId))).get();
-    } catch (e) {
-      print('[CavePlaceRepository] Failed to load cave places: $e');
+    } catch (e, st) {
+      _log.severe('Failed to load cave places', e, st);
       rethrow;
     }
   }
 
+  @override
+  Stream<List<CavePlace>> watchCavePlaces(int caveId) {
+    return (_database.select(_database.cavePlaces)
+          ..where((cp) => cp.caveId.equals(caveId)))
+        .watch();
+  }
+
+  @override
   Future<void> addCavePlace(int caveId, String title) async {
     try {
       await _database.into(_database.cavePlaces).insert(
@@ -23,12 +35,13 @@ class CavePlaceRepository {
           caveId: caveId
         ),
       );
-    } catch (e) {
-      print('[CavePlaceRepository] Failed to add cave place: $e');
+    } catch (e, st) {
+      _log.severe('Failed to add cave place', e, st);
       rethrow;
     }
   }
 
+  @override
   Future<void> deleteCavePlace(int id) async {
     try {
       await _database.transaction(() async {
@@ -56,21 +69,23 @@ class CavePlaceRepository {
               ..where((cp) => cp.id.equals(id)))
             .go();
       });
-    } catch (e) {
-      print('[CavePlaceRepository] Failed to delete cave place: $e');
+    } catch (e, st) {
+      _log.severe('Failed to delete cave place', e, st);
       rethrow;
     }
   }
 
+  @override
   Future<CavePlace?> findById(int id) async {
     try {
       return await (_database.select(_database.cavePlaces)..where((cp) => cp.id.equals(id))).getSingleOrNull();
-    } catch (e) {
-      print('[CavePlaceRepository] Failed to find cave place: $e');
+    } catch (e, st) {
+      _log.severe('Failed to find cave place', e, st);
       rethrow;
     }
   }
 
+  @override
   Future<CavePlace?> findCavePlaceByQrCode(int qrCode, int caveId) async {
     try {
       return await (_database.select(_database.cavePlaces)
@@ -78,8 +93,8 @@ class CavePlaceRepository {
                 cp.placeQrCodeIdentifier.equals(qrCode) &
                 cp.caveId.equals(caveId)))
           .getSingleOrNull();
-    } catch (e) {
-      print('[CavePlaceRepository] Failed to find cave place by QR: $e');
+    } catch (e, st) {
+      _log.severe('Failed to find cave place by QR', e, st);
       rethrow;
     }
   }

@@ -159,24 +159,36 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     }
   }
 
+  // Subscription to Drift's live cave stream — replaces manual post-mutation
+  // _loadCaves() calls. Derived data (counts, surface area titles) is still
+  // pulled imperatively on each emission.
+  StreamSubscription<List<Cave>>? _cavesSub;
+
   @override
   void initState() {
     super.initState();
     homePageRefreshNotifier.addListener(_onHomePageRefreshRequested);
     _loadUiSettings();
-    _loadCaves();
+    _cavesSub = caveRepository.watchCaves().listen((_) {
+      if (!mounted) return;
+      _loadCaves();
+    });
   }
 
   @override
   void dispose() {
     _qrScanLongPressTimer?.cancel();
     _manualQrController.dispose();
+    _cavesSub?.cancel();
     homePageRefreshNotifier.removeListener(_onHomePageRefreshRequested);
     super.dispose();
   }
 
   void _onHomePageRefreshRequested() {
     if (!mounted) return;
+    // Full refresh path used after destructive operations (e.g. DB restore)
+    // where the underlying sqlite file was swapped and stream subscriptions
+    // on the previous connection no longer emit.
     _loadUiSettings();
     _loadCaves();
     setState(() {});
@@ -291,7 +303,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         MaterialPageRoute(builder: (_) => const AddNewCave()),
       );
       if (result != null) {
-        _loadCaves();
+        // Stream subscription refreshes the list; just show the snackbar.
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('new_cave_added'))));
         }
@@ -324,7 +336,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   void _deleteCave(int caveId) async {
     try {
       await caveRepository.deleteCave(caveId);
-      _loadCaves();
+      // Stream subscription auto-refreshes _caves.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LocServ.inst.t('cave_deleted'))),

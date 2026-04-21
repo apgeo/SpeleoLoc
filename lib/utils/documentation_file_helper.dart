@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// Shared helper for documentation file storage, hashing, and DB insertion.
 ///
@@ -179,7 +180,8 @@ class DocumentationFileHelper {
     final effectiveType =
         fileType ?? detectFileType(savedFile.relativePath);
 
-    print(  '[DocumentationFileHelper] Inserting record: title="$title", file="${savedFile.relativePath}", size=${savedFile.fileSize}, hash=${savedFile.fileHash}, type=$effectiveType, parentLink=${parentLink != null ? 'geofeatureId=${parentLink.geofeatureId}' : 'none'}');
+    AppLogger.of('DocumentationFileHelper').fine(
+        'Inserting record: title="$title", file="${savedFile.relativePath}", size=${savedFile.fileSize}, hash=${savedFile.fileHash}, type=$effectiveType, parentLink=${parentLink != null ? 'geofeatureId=${parentLink.geofeatureId}' : 'none'}');
     final companion = DocumentationFilesCompanion.insert(
       title: title,
       fileName: savedFile.relativePath,

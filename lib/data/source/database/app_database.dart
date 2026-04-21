@@ -101,6 +101,10 @@ class AppDatabase extends _$AppDatabase {
     // Future(() async => await populateTestData());
   }
 
+  /// Test-only constructor accepting a custom executor (e.g. in-memory
+  /// [NativeDatabase.memory]).
+  AppDatabase.forTesting(super.executor);
+
   @override
   int get schemaVersion => 6; // Schema version
 
