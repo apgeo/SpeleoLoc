@@ -5,283 +5,14 @@ import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
-import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 
-// =============================================================================
-//  Models
-// =============================================================================
+import 'package:speleoloc/services/archive/archive_models.dart';
+import 'package:speleoloc/services/archive/archive_table_configs.dart';
 
-/// Parametrises what is included in an export archive.
-class ExportSettings {
-  final bool includeDocumentationFiles;
-  final bool includeRasterMaps;
-  final bool diffOnly;
-  final List<int>? caveIds; // null = all caves (future use)
-
-  const ExportSettings({
-    this.includeDocumentationFiles = true,
-    this.includeRasterMaps = true,
-    this.diffOnly = false,
-    this.caveIds,
-  });
-}
-
-/// What to do when an imported row conflicts with an existing one.
-enum ConflictAction { skip, overwrite }
-
-/// Describes a single unique-constraint collision detected during merge.
-class ImportConflict {
-  final String tableName;
-  final String humanTableName;
-  final Map<String, dynamic> existingRecord;
-  final Map<String, dynamic> importedRecord;
-  final List<String> conflictingColumns;
-
-  const ImportConflict({
-    required this.tableName,
-    required this.humanTableName,
-    required this.existingRecord,
-    required this.importedRecord,
-    required this.conflictingColumns,
-  });
-}
-
-/// Replace vs Merge when importing into an existing database.
-enum ImportMode { replace, merge }
-
-/// Summary returned after a merge-import completes.
-class ImportResult {
-  final int tablesProcessed;
-  final int recordsImported;
-  final int recordsSkipped;
-  final int recordsOverwritten;
-  final int filesCopied;
-  final List<String> warnings;
-
-  const ImportResult({
-    this.tablesProcessed = 0,
-    this.recordsImported = 0,
-    this.recordsSkipped = 0,
-    this.recordsOverwritten = 0,
-    this.filesCopied = 0,
-    this.warnings = const [],
-  });
-}
-
-/// Callback the sync engine invokes per conflict.
-/// Return [ConflictAction] to continue, or `null` to cancel import.
-typedef ConflictResolver = Future<ConflictAction?> Function(
-    ImportConflict conflict);
-
-/// Optional progress reporting.
-typedef ProgressCallback = void Function(String message);
-
-// =============================================================================
-//  Table import configurations (order respects FK dependencies)
-// =============================================================================
-
-class _TableCfg {
-  final String name;
-  final String humanName;
-  final List<String> columns; // all columns except 'id'
-  final List<List<String>> uniqueConstraints;
-  final Map<String, String> foreignKeys; // column → referenced table
-
-  const _TableCfg({
-    required this.name,
-    required this.humanName,
-    required this.columns,
-    this.uniqueConstraints = const [],
-    this.foreignKeys = const {},
-  });
-}
-
-const List<_TableCfg> _tableConfigs = [
-  _TableCfg(
-    name: 'surface_areas',
-    humanName: 'Surface Areas',
-    columns: [
-      'title', 'description', 'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title']
-    ],
-  ),
-  _TableCfg(
-    name: 'surface_places',
-    humanName: 'Surface Places',
-    columns: [
-      'title', 'description', 'type', 'surface_place_qr_code_identifier',
-      'latitude', 'longitude', 'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title'] // best-effort match by title
-    ],
-  ),
-  _TableCfg(
-    name: 'caves',
-    humanName: 'Caves',
-    columns: [
-      'title', 'description', 'surface_area_id', 'created_at', 'updated_at',
-      'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title', 'surface_area_id']
-    ],
-    foreignKeys: {'surface_area_id': 'surface_areas'},
-  ),
-  _TableCfg(
-    name: 'cave_areas',
-    humanName: 'Cave Areas',
-    columns: [
-      'title', 'description', 'cave_id', 'created_at', 'updated_at',
-      'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title', 'cave_id']
-    ],
-    foreignKeys: {'cave_id': 'caves'},
-  ),
-  _TableCfg(
-    name: 'cave_entrances',
-    humanName: 'Cave Entrances',
-    columns: [
-      'cave_id', 'surface_place_id', 'is_main_entrance', 'title',
-      'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['cave_id', 'title']
-    ],
-    foreignKeys: {'cave_id': 'caves', 'surface_place_id': 'surface_places'},
-  ),
-  _TableCfg(
-    name: 'cave_places',
-    humanName: 'Cave Places',
-    columns: [
-      'title', 'description', 'cave_id', 'place_qr_code_identifier',
-      'cave_area_id', 'latitude', 'longitude', 'depth_in_cave', 'created_at',
-      'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title', 'cave_id', 'cave_area_id']
-    ],
-    foreignKeys: {'cave_id': 'caves', 'cave_area_id': 'cave_areas'},
-  ),
-  _TableCfg(
-    name: 'raster_maps',
-    humanName: 'Raster Maps',
-    columns: [
-      'title', 'map_type', 'file_name', 'cave_id', 'cave_area_id',
-      'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title', 'map_type', 'cave_id'],
-      ['file_name', 'map_type', 'cave_id'],
-    ],
-    foreignKeys: {'cave_id': 'caves', 'cave_area_id': 'cave_areas'},
-  ),
-  _TableCfg(
-    name: 'cave_place_to_raster_map_definitions',
-    humanName: 'Map Point Definitions',
-    columns: [
-      'x_coordinate', 'y_coordinate', 'cave_place_id', 'raster_map_id',
-      'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['cave_place_id', 'raster_map_id']
-    ],
-    foreignKeys: {
-      'cave_place_id': 'cave_places',
-      'raster_map_id': 'raster_maps',
-    },
-  ),
-  _TableCfg(
-    name: 'documentation_files',
-    humanName: 'Documentation Files',
-    columns: [
-      'title', 'description', 'file_name', 'file_size', 'file_hash',
-      'file_type', 'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['title', 'file_name', 'file_size', 'file_hash']
-    ],
-  ),
-  _TableCfg(
-    name: 'documentation_files_to_geofeatures',
-    humanName: 'Document Links',
-    columns: [
-      'geofeature_id', 'geofeature_type', 'documentation_file_id',
-      'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['geofeature_id', 'geofeature_type', 'documentation_file_id']
-    ],
-    foreignKeys: {'documentation_file_id': 'documentation_files'},
-    // geofeature_id FK depends on geofeature_type – handled specially.
-  ),
-  _TableCfg(
-    name: 'configurations',
-    humanName: 'Configurations',
-    columns: ['title', 'value', 'created_at', 'updated_at'],
-    uniqueConstraints: [
-      ['title']
-    ],
-  ),
-  _TableCfg(
-    name: 'cave_trips',
-    humanName: 'Cave Trips',
-    columns: [
-      'cave_id', 'title', 'description', 'trip_started_at', 'trip_ended_at',
-      'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [],
-    foreignKeys: {'cave_id': 'caves'},
-  ),
-  _TableCfg(
-    name: 'cave_trip_points',
-    humanName: 'Cave Trip Points',
-    columns: [
-      'cave_trip_id', 'cave_place_id', 'scanned_at', 'notes',
-      'created_at', 'updated_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['cave_trip_id', 'cave_place_id', 'scanned_at']
-    ],
-    foreignKeys: {'cave_trip_id': 'cave_trips', 'cave_place_id': 'cave_places'},
-  ),
-  _TableCfg(
-    name: 'documentation_files_to_cave_trips',
-    humanName: 'Document-Trip Links',
-    columns: [
-      'documentation_file_id', 'cave_trip_id', 'created_at', 'deleted_at'
-    ],
-    uniqueConstraints: [
-      ['documentation_file_id', 'cave_trip_id']
-    ],
-    foreignKeys: {
-      'documentation_file_id': 'documentation_files',
-      'cave_trip_id': 'cave_trips',
-    },
-  ),
-];
-
-/// Configuration keys that should *not* be imported (device-local settings).
-const Set<String> _skipConfigKeys = {lastOpenCaveKey, lastExportTimestampKey, activeTripConfigKey};
-
-/// Maps geofeature_type DB value to the table name used for id-remapping.
-String? _geofeatureTypeToTable(String type) {
-  switch (type) {
-    case 'cave':
-      return 'caves';
-    case 'cave_place':
-      return 'cave_places';
-    case 'cave_area':
-      return 'cave_areas';
-    default:
-      return null;
-  }
-}
+// Re-export so existing callers (e.g. UI code, tests) that import models
+// via data_archive_service.dart keep working after the Phase 2.4 split.
+export 'package:speleoloc/services/archive/archive_models.dart';
 
 // =============================================================================
 //  Service
@@ -476,7 +207,7 @@ class DataArchiveService {
     await _repo.attachImportedDb(importedDbPath);
 
     try {
-      for (final cfg in _tableConfigs) {
+      for (final cfg in tableConfigs) {
         onProgress?.call('Syncing ${cfg.humanName}...');
         idMappings[cfg.name] = {};
 
@@ -495,7 +226,7 @@ class DataArchiveService {
           // Skip device-local configuration keys.
           if (cfg.name == 'configurations') {
             final title = row['title'] as String?;
-            if (title != null && _skipConfigKeys.contains(title)) continue;
+            if (title != null && skipConfigKeys.contains(title)) continue;
           }
 
           // Build a mutable copy without 'id' (auto-generated on insert).
@@ -519,7 +250,7 @@ class DataArchiveService {
             final geoType = remapped['geofeature_type'] as String?;
             final geoId = remapped['geofeature_id'];
             if (geoType != null && geoId != null && geoId is int) {
-              final refTable = _geofeatureTypeToTable(geoType);
+              final refTable = geofeatureTypeToTable(geoType);
               if (refTable != null) {
                 remapped['geofeature_id'] = idMappings[refTable]?[geoId];
               }
@@ -582,7 +313,7 @@ class DataArchiveService {
     final filesCopied = await _copyNewFiles(extractDir, warnings);
 
     return ImportResult(
-      tablesProcessed: _tableConfigs.length,
+      tablesProcessed: tableConfigs.length,
       recordsImported: imported,
       recordsSkipped: skipped,
       recordsOverwritten: overwritten,
@@ -719,3 +450,4 @@ class _ImportCancelledException implements Exception {
   @override
   String toString() => 'Import cancelled by user';
 }
+
