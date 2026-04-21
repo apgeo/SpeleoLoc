@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_places/cave_place_filter.dart';
+import 'package:speleoloc/screens/cave_places/past_trips_button.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
@@ -16,6 +19,7 @@ import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 class CavePlacesListPage extends StatefulWidget {
   const CavePlacesListPage({super.key, required this.caveId});
@@ -154,6 +158,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   int _rasterMapsCountForCave = 0;
   late ScrollController _scrollController;
   bool _showDownArrow = false;
+  StreamSubscription<List<CavePlace>>? _cavePlacesSub;
 
   @override
   void initState() {
@@ -164,6 +169,15 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     _loadSurfaceAreas();
     _loadCavePlaces();
     _loadTripCount();
+    // Live-refresh when cave_places table changes from any source (this
+    // screen's mutations, other screens, imports, DB merges).
+    _cavePlacesSub = cavePlaceRepository
+        .watchCavePlaces(widget.caveId)
+        .skip(1) // initial load is handled by explicit _loadCavePlaces above
+        .listen((_) {
+      if (!mounted) return;
+      _loadCavePlaces();
+    });
   }
 
   Future<void> _loadSurfaceAreas() async {
@@ -306,6 +320,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     _filterController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _cavePlacesSub?.cancel();
     caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     super.dispose();
   }
@@ -321,7 +336,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _loadCavePlaces() async {
-    print('[CavePlacesListPage] _loadCavePlaces() for caveId ${widget.caveId}');
+    AppLogger.of('CavePlacesListPage').fine('_loadCavePlaces() for caveId=${widget.caveId}');
 
     _cavePlaces = await cavePlaceRepository.getCavePlaces(widget.caveId);
     await _loadCaveAreas();
@@ -479,25 +494,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   void _applyFilter() {
-    final q = _filterController.text.trim();
-    final qLower = q.toLowerCase();
-    // final qNum = int.tryParse(q);
-    if (q.isEmpty) {
-      _filteredCavePlaces = List.from(_cavePlaces);
-      return;
-    }
-
-    _filteredCavePlaces = _cavePlaces.where((cp) {
-      final titleMatch = cp.title.toLowerCase().contains(qLower);
-      final qrMatch =
-          cp.placeQrCodeIdentifier?.toString().contains(qLower) ?? false;
-      // final qrMatch = (qNum != null && cp.placeQrCodeIdentifier != null && cp.placeQrCodeIdentifier == qNum);
-      final areaTitle = (cp.caveAreaId != null)
-          ? (_areaTitles[cp.caveAreaId] ?? '')
-          : '';
-      final areaMatch = areaTitle.toLowerCase().contains(qLower);
-      return titleMatch || qrMatch || areaMatch;
-    }).toList();
+    _filteredCavePlaces = filterCavePlaces(
+      _cavePlaces,
+      _filterController.text,
+      _areaTitles,
+    );
   }
 
   Future<void> _deleteCavePlace(int id) async {
@@ -754,20 +755,13 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         const SizedBox(height: 4),
 
         if (_pastTripsCount > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 2),
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.history, size: 16),
-              label: Text('${LocServ.inst.t('trip_history')} ($_pastTripsCount)'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                textStyle: const TextStyle(fontSize: 13),
-              ),
-              onPressed: () async {
-                await Navigator.pushNamed(context, caveTripListRoute, arguments: widget.caveId);
-                _loadTripCount();
-              },
-            ),
+          PastTripsButton(
+            pastTripsCount: _pastTripsCount,
+            onPressed: () async {
+              await Navigator.pushNamed(context, caveTripListRoute,
+                  arguments: widget.caveId);
+              _loadTripCount();
+            },
           ),
 
         if (_showManualQrSection)
