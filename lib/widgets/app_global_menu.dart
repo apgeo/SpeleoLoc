@@ -11,6 +11,7 @@ import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Configuration key for the persisted menu mode preference.
 const String _menuModeConfigKey = 'app_menu_mode';
@@ -433,6 +434,11 @@ class _AppMenuDrawer extends StatelessWidget {
                         onPressed: onHelpPressed,
                       ),
                     IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      tooltip: LocServ.inst.t('about'),
+                      onPressed: () => _showAboutDialog(context),
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.more_vert),
                       tooltip: LocServ.inst.t('menu_use_popup'),
                       onPressed: () {
@@ -479,6 +485,59 @@ class _AppMenuDrawer extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('about')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('A project by '),
+                GestureDetector(
+                  onTap: () => launchUrl(
+                    Uri.parse('https://speosilex.ro'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: const Text(
+                    'SpeoSilex',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () => launchUrl(
+                Uri.parse('https://github.com/apgeo/SpeleoLoc'),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: const Text(
+                'SpeoLoc on GitHub',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
