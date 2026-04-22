@@ -89,11 +89,12 @@ class CavePlaceRepository implements ICavePlaceRepository {
   @override
   Future<CavePlace?> findCavePlaceByQrCode(int qrCode, int caveId) async {
     try {
-      return await (_database.select(_database.cavePlaces)
+      final results = await (_database.select(_database.cavePlaces)
             ..where((cp) =>
                 cp.placeQrCodeIdentifier.equals(qrCode) &
                 cp.caveId.equals(caveId)))
-          .getSingleOrNull();
+          .get();
+      return results.firstOrNull;
     } catch (e, st) {
       _log.severe('Failed to find cave place by QR', e, st);
       throw DbException('Failed to find cave place by QR', cause: e, stackTrace: st);
