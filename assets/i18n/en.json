@@ -642,5 +642,8 @@
   "trip_export_no_templates": "No templates available. Add a template first.",
   "trip_export_success": "Report exported successfully",
   "trip_export_no_log": "No trip log to export",
-  "manage_templates": "Manage templates"
+  "manage_templates": "Manage templates",
+  "status_define_point": "Click on the map to define a new point or change the interaction mode",
+  "status_select_place": "Click on another point to select it",
+  "about": "About"
 }

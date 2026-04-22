@@ -1264,13 +1264,48 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                     },
                   ),
                 ),
-                // Legend overlay (bottom-left corner)
-                if (_showLegend)
-                  const Positioned(
-                    left: 8,
-                    bottom: 8,
-                    child: RasterMapPointsLegend(),
+                // Status message + Legend overlay (bottom-left corner)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!widget.isReadonly && _showTapModeCheckbox)
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 220),
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 5, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: const [
+                              BoxShadow(
+                                  color: Colors.black26, blurRadius: 4)
+                            ],
+                          ),
+                          child: Text(
+                            _tapDefinesNewPoint
+                                ? LocServ.inst.t('status_define_point')
+                                : LocServ.inst.t('status_select_place'),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black87,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.white70,
+                                  blurRadius: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_showLegend) const RasterMapPointsLegend(),
+                    ],
                   ),
+                ),
                 // Zoom controls overlay (bottom-right corner)
                 if (_showZoomControls)
                   Positioned(

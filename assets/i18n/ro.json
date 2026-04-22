@@ -640,5 +640,8 @@
   "trip_export_no_templates": "Nu există șabloane. Adăugați un șablon mai întâi.",
   "trip_export_success": "Raport exportat cu succes",
   "trip_export_no_log": "Nu există jurnal de excursie de exportat",
-  "manage_templates": "Administrare șabloane"
+  "manage_templates": "Administrare șabloane",
+  "status_define_point": "Apăsați pe hartă pentru a defini un punct nou sau schimbați modul de interacțiune",
+  "status_select_place": "Apăsați pe un alt punct pentru a îl selecta",
+  "about": "Despre"
 }
