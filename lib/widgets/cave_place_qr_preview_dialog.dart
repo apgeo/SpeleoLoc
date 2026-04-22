@@ -7,10 +7,10 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/qr_generation_defaults.dart';
 
-/// Dialog that renders and displays the QR code image for a given [CavePlace].
+/// Full-featured QR code preview dialog for a [CavePlace].
 ///
-/// Uses [QrImageRenderer] with the current generation settings from the
-/// database to produce the preview.
+/// Renders the QR image using [QrImageRenderer] with the current generation
+/// settings and displays it in a properly sized, zoomable dialog.
 class CavePlaceQrPreviewDialog extends StatefulWidget {
   final CavePlace cavePlace;
 
@@ -83,29 +83,92 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(LocServ.inst.t('qr_code_preview')),
-      content: _loading
-          ? const SizedBox(
-              width: 200,
-              height: 200,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : _error != null
-              ? Text('${LocServ.inst.t('error')}: $_error')
-              : _imageBytes != null
-                  ? InteractiveViewer(
-                      minScale: 0.5,
-                      maxScale: 4.0,
-                      child: Image.memory(_imageBytes!, fit: BoxFit.contain),
-                    )
-                  : Text(LocServ.inst.t('no_qr_code_defined')),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(LocServ.inst.t('close')),
+    final screenSize = MediaQuery.of(context).size;
+    final dialogSize = screenSize.shortestSide * 0.85;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.cavePlace.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // QR image area
+            SizedBox(
+              width: dialogSize,
+              height: dialogSize,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Text(
+                            '${LocServ.inst.t('error')}: $_error',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : _imageBytes != null
+                          ? InteractiveViewer(
+                              minScale: 0.8,
+                              maxScale: 6.0,
+                              child: Image.memory(
+                                _imageBytes!,
+                                fit: BoxFit.contain,
+                                width: dialogSize,
+                                height: dialogSize,
+                              ),
+                            )
+                          : Center(
+                              child: Text(LocServ.inst.t('no_qr_code_defined')),
+                            ),
+            ),
+            const SizedBox(height: 4),
+            // QR code number label
+            if (widget.cavePlace.placeQrCodeIdentifier != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '#${widget.cavePlace.placeQrCodeIdentifier}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                ),
+              ),
+            // Close button
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(LocServ.inst.t('close')),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
+
