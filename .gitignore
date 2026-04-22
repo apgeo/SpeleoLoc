@@ -57,3 +57,6 @@ app.*.map.json
 
 .github/
 test_data/pictures/
+
+# for now contributing-docs.md is not in public repo
+docs/contributing-docs.md
