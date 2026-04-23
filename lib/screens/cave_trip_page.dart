@@ -19,8 +19,8 @@ import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 class CaveTripPage extends StatefulWidget {
-  const CaveTripPage({super.key, required this.tripId});
-  final int tripId;
+  const CaveTripPage({super.key, required this.tripUuid});
+  final Uuid tripUuid;
 
   @override
   State<CaveTripPage> createState() => _CaveTripPageState();
@@ -40,7 +40,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   CaveTrip? _trip;
   Cave? _cave;
   List<CaveTripPoint> _points = [];
-  Map<int, CavePlace> _placesById = {};
+  Map<Uuid, CavePlace> _placesById = {};
 
   // Raster map state for the trip map view
   List<RasterMap> _rasterMaps = [];
@@ -108,33 +108,33 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
 
   Future<void> _load() async {
     final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.id.equals(widget.tripId)))
+          ..where((t) => t.uuid.equalsValue(widget.tripUuid)))
         .getSingleOrNull();
     if (trip == null) {
       if (mounted) Navigator.pop(context);
       return;
     }
     final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.id.equals(trip.caveId)))
+          ..where((c) => c.uuid.equalsValue(trip.caveUuid)))
         .getSingleOrNull();
-    final points = await appDatabase.getTripPoints(widget.tripId);
+    final points = await appDatabase.getTripPoints(widget.tripUuid);
     final placeIds = points
-      .map((p) => p.cavePlaceId)
-      .whereType<int>()
+      .map((p) => p.cavePlaceUuid)
+      .whereType<Uuid>()
       .toSet()
       .toList();
-    Map<int, CavePlace> placesById = {};
+    Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
       final places = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) => cp.id.isIn(placeIds)))
+            ..where((cp) => cp.uuid.isInValues(placeIds)))
           .get();
-      placesById = {for (var p in places) p.id: p};
+      placesById = {for (var p in places) p.uuid: p};
     }
 
     // Load raster maps for the cave
     List<RasterMap> rasterMaps = [];
     if (cave != null) {
-      rasterMaps = await rasterMapRepository.getRasterMaps(cave.id);
+      rasterMaps = await rasterMapRepository.getRasterMaps(cave.uuid);
     }
 
     if (mounted) {
@@ -159,7 +159,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     if (rm == null || cave == null) return;
 
     final defs = await rasterMapRepository
-        .getCavePlacesWithDefinitionsForRasterMap(cave.id, rm.id);
+        .getCavePlacesWithDefinitionsForRasterMap(cave.uuid, rm.uuid);
 
     File? imageFile;
     try {
@@ -216,7 +216,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   void _zoomToTripExtent() {
     final imagePoints = <Offset>[];
     for (final pt in _points) {
-      final cpwd = _placesWithDefs.where((c) => c.cavePlace.id == pt.cavePlaceId).firstOrNull;
+      final cpwd = _placesWithDefs.where((c) => c.cavePlace.uuid == pt.cavePlaceUuid).firstOrNull;
       final def = cpwd?.definition;
       if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
         imagePoints.add(Offset(def.xCoordinate!.toDouble(), def.yCoordinate!.toDouble()));
@@ -425,7 +425,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     );
     if (confirmed == true) {
       if (_isActive) await caveTripService.stopTrip();
-      await appDatabase.deleteCaveTrip(widget.tripId);
+      await appDatabase.deleteCaveTrip(widget.tripUuid);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_deleted'))));
         Navigator.pop(context, true);
@@ -456,7 +456,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     );
     if (confirmed == true && mounted) {
       final newTitle = controller.text.trim().isNotEmpty ? controller.text.trim() : defaultTitle;
-      final newTripId = await caveTripService.startTrip(trip.caveId, newTitle);
+      final newTripId = await caveTripService.startTrip(trip.caveUuid, newTitle);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LocServ.inst.t('trip_restarted'))),
@@ -514,7 +514,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       icon: Icons.article_outlined,
       label: LocServ.inst.t('trip_log'),
       color: Colors.grey[700]!,
-      onTap: () => Navigator.pushNamed(context, caveTripLogRoute, arguments: widget.tripId),
+      onTap: () => Navigator.pushNamed(context, caveTripLogRoute, arguments: widget.tripUuid),
     ));
 
     buttons.add(_TripToolbarButton(
@@ -712,7 +712,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
           ...List.generate(_points.length, (i) {
             final pt = _points[i];
             final place =
-              pt.cavePlaceId == null ? null : _placesById[pt.cavePlaceId!];
+              pt.cavePlaceUuid == null ? null : _placesById[pt.cavePlaceUuid!];
             final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
             return ListTile(
               dense: true,
@@ -722,7 +722,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
                 radius: 14,
                 child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
               ),
-              title: Text(place?.title ?? '#${pt.cavePlaceId}'),
+              title: Text(place?.title ?? '#${pt.cavePlaceUuid}'),
               subtitle: Text(dateTimeFormat.format(dt), style: const TextStyle(fontSize: 11)),
               trailing: place?.depthInCave != null
                   ? Text(
@@ -733,7 +733,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
               onTap: place == null
                   ? null
                   : () => Navigator.pushNamed(context, cavePlaceRoute,
-                      arguments: {'caveId': place.caveId, 'cavePlaceId': place.id}),
+                      arguments: {'caveUuid': place.caveUuid, 'cavePlaceUuid': place.uuid}),
             );
           }),
       ],
@@ -750,10 +750,10 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     final visibleIds = _isPlayingRoute
       ? _points
         .take(_animatedPointCount)
-        .map((p) => p.cavePlaceId)
+        .map((p) => p.cavePlaceUuid)
         .whereType<int>()
         .toList()
-      : _points.map((p) => p.cavePlaceId).whereType<int>().toList();
+      : _points.map((p) => p.cavePlaceUuid).whereType<int>().toList();
 
     return Column(
       children: [
@@ -767,7 +767,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
               itemCount: _rasterMaps.length,
               itemBuilder: (context, i) {
                 final rm = _rasterMaps[i];
-                final isSelected = rm.id == _selectedRasterMap?.id;
+                final isSelected = rm.uuid == _selectedRasterMap?.uuid;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: ChoiceChip(

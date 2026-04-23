@@ -17,16 +17,16 @@ import 'package:speleoloc/utils/localization.dart';
 class ImageEditorPage extends StatefulWidget {
   const ImageEditorPage({
     super.key,
-    this.cavePlaceId,
-    this.caveId,
-    this.caveAreaId,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
     this.existingDoc,
     this.initialFile,
   });
 
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
 
   /// Non-null when editing an already-persisted image.
   final DocumentationFile? existingDoc;
@@ -81,7 +81,7 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
           bytes: editedBytes,
         );
         await DocumentationFileHelper.updateRecord(
-          id: doc.id,
+          id: doc.uuid,
           title: doc.title,
           description: doc.description,
           savedFile: saved,
@@ -95,9 +95,9 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
         );
 
         final parentLink = await appDatabase.getDocumentationParentLink(
-          cavePlaceId: widget.cavePlaceId,
-          caveId: widget.caveId,
-          caveAreaId: widget.caveAreaId,
+          cavePlaceUuid: widget.cavePlaceUuid,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.caveAreaUuid,
         );
 
         await DocumentationFileHelper.insertRecord(

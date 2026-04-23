@@ -19,15 +19,15 @@ import 'package:speleoloc/widgets/product_tour.dart';
 class RichTextEditorPage extends StatefulWidget {
   const RichTextEditorPage({
     super.key,
-    this.cavePlaceId,
-    this.caveId,
-    this.caveAreaId,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
     this.existingDoc,
   });
 
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
   final DocumentationFile? existingDoc;
 
   @override
@@ -113,7 +113,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
           content: deltaJson,
         );
         await DocumentationFileHelper.updateRecord(
-          id: doc.id,
+          id: doc.uuid,
           title: title,
           description: doc.description,
           savedFile: saved,
@@ -131,9 +131,9 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
         );
 
         final parentLink = await appDatabase.getDocumentationParentLink(
-          cavePlaceId: widget.cavePlaceId,
-          caveId: widget.caveId,
-          caveAreaId: widget.caveAreaId,
+          cavePlaceUuid: widget.cavePlaceUuid,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.caveAreaUuid,
         );
 
         await DocumentationFileHelper.insertRecord(

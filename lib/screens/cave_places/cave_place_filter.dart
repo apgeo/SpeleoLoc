@@ -11,7 +11,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 List<CavePlace> filterCavePlaces(
   List<CavePlace> places,
   String query,
-  Map<int, String> areaTitles,
+  Map<Uuid, String> areaTitles,
 ) {
   final q = query.trim();
   if (q.isEmpty) return List.of(places);
@@ -21,8 +21,8 @@ List<CavePlace> filterCavePlaces(
     final titleMatch = cp.title.toLowerCase().contains(qLower);
     final qrMatch =
         cp.placeQrCodeIdentifier?.toString().contains(qLower) ?? false;
-    final areaTitle = (cp.caveAreaId != null)
-        ? (areaTitles[cp.caveAreaId] ?? '')
+    final areaTitle = (cp.caveAreaUuid != null)
+        ? (areaTitles[cp.caveAreaUuid] ?? '')
         : '';
     final areaMatch = areaTitle.toLowerCase().contains(qLower);
     return titleMatch || qrMatch || areaMatch;

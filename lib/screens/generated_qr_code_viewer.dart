@@ -20,13 +20,13 @@ import 'package:pdfx/pdfx.dart';
 /// Provides toolbar buttons to regenerate, open QR settings, and open PDF
 /// output settings.
 class GeneratedQRCodeViewer extends StatefulWidget {
-  final int? caveId;
+  final Uuid? caveUuid;
   final List<CavePlace>? cavePlaces;
 
-  const GeneratedQRCodeViewer({super.key, this.caveId, this.cavePlaces})
+  const GeneratedQRCodeViewer({super.key, this.caveUuid, this.cavePlaces})
       : assert(
-          (caveId == null) != (cavePlaces == null),
-          'Provide exactly one of caveId or cavePlaces, not both or neither.',
+          (caveUuid == null) != (cavePlaces == null),
+          'Provide exactly one of caveUuid or cavePlaces, not both or neither.',
         );
 
   @override
@@ -73,10 +73,10 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
     _pdfController = null;
 
     try {
-      // Load cave (only if caveId is provided)
-      final cave = widget.caveId != null
+      // Load cave (only if caveUuid is provided)
+      final cave = widget.caveUuid != null
           ? await (appDatabase.select(appDatabase.caves)
-                ..where((c) => c.id.equals(widget.caveId!)))
+                ..where((c) => c.uuid.equalsValue(widget.caveUuid!)))
               .getSingleOrNull()
           : null;
 
@@ -115,7 +115,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
       // Get cave places
       final cavePlaces = widget.cavePlaces ??
           await (appDatabase.select(appDatabase.cavePlaces)
-                ..where((cp) => cp.caveId.equals(widget.caveId!)))
+                ..where((cp) => cp.caveUuid.equalsValue(widget.caveUuid!)))
               .get();
 
       // Build generation preferences from config

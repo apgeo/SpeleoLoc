@@ -52,7 +52,7 @@ class EditableDocumentViewer extends StatelessWidget {
           right: 16,
           bottom: 16,
           child: FloatingActionButton.small(
-            heroTag: 'editableDocViewer_${doc.id}',
+            heroTag: 'editableDocViewer_${doc.uuid}',
             tooltip: LocServ.inst.t('edit'),
             onPressed: () => _openEditor(context, handler!),
             child: const Icon(Icons.edit),
@@ -65,11 +65,11 @@ class EditableDocumentViewer extends StatelessWidget {
   void _openEditor(BuildContext context, DocumentFormatHandler handler) {
     final link = geofeatureLink;
     final editor = handler.buildEditor!(
-      cavePlaceId:
-          link?.type == GeofeatureType.cavePlace ? link!.geofeatureId : null,
-      caveId: link?.type == GeofeatureType.cave ? link!.geofeatureId : null,
-      caveAreaId:
-          link?.type == GeofeatureType.caveArea ? link!.geofeatureId : null,
+      cavePlaceUuid:
+          link?.type == GeofeatureType.cavePlace ? link!.geofeatureUuid : null,
+      caveUuid: link?.type == GeofeatureType.cave ? link!.geofeatureUuid : null,
+      caveAreaUuid:
+          link?.type == GeofeatureType.caveArea ? link!.geofeatureUuid : null,
       existingDoc: doc,
     );
 

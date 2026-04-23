@@ -68,7 +68,7 @@ class RasterMapPlacePointEditorController {
     this.showZoomControls = true,
     this.gestureZoomEnabled = true,
     this.useImageTextColor = false,
-    this.cavePlaceId,
+    this.cavePlaceUuid,
     this.showNavBar = false,
     this.showTapModeCheckbox = false,
     this.autoZoomToPoints = true,
@@ -99,9 +99,9 @@ class RasterMapPlacePointEditorController {
   /// color instead (improves performance / reduces memory usage).
   bool useImageTextColor;
 
-  /// Optional default cavePlaceId to indicate which cave place should be
+  /// Optional default cavePlaceUuid to indicate which cave place should be
   /// considered the initial selected place (editor will highlight it).
-  int? cavePlaceId;
+  Uuid? cavePlaceUuid;
 
   /// Whether the embedded navigation bar (raster maps + cave places lists)
   /// is visible.
@@ -161,9 +161,9 @@ class RasterMapPlacePointEditorController {
     _state?._setUseImageTextColor(v);
   }
 
-  /// Update the default cavePlaceId at runtime and notify the state.
-  void setCavePlaceId(int? id) {
-    cavePlaceId = id;
+  /// Update the default cavePlaceUuid at runtime and notify the state.
+  void setCavePlaceId(Uuid? id) {
+    cavePlaceUuid = id;
     _state?._applyControllerCavePlaceId();
   }
 
@@ -239,7 +239,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.showNavBar = false,
     this.showTapModeCheckbox = false,
     this.rasterMaps = const [],
-    this.selectedRasterMapId,
+    this.selectedRasterMapUuid,
     this.navBarStyle = const RasterMapNavBarStyle.compact(),
     this.onRasterMapSelected,
     this.onCavePlaceSelected,
@@ -247,7 +247,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.onRemoveDefinitionRequested,
     this.onCavePlaceAdded,
     this.onSaveDefinitionRequested,
-    this.caveId,
+    this.caveUuid,
     this.tripOverlay,
   });
 
@@ -293,7 +293,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   final List<RasterMap> rasterMaps;
 
   /// Currently selected raster map id (for nav bar highlight).
-  final int? selectedRasterMapId;
+  final Uuid? selectedRasterMapUuid;
 
   /// Visual style for the embedded nav bar (defaults to compact).
   final RasterMapNavBarStyle navBarStyle;
@@ -306,14 +306,14 @@ class RasterMapPlacePointEditor extends StatefulWidget {
 
   /// Called before switching cave place / raster map in editor mode so the
   /// parent can auto-save the current new-point selection. The callback
-  /// receives (cavePlaceId, rasterMapId, imageX, imageY) of the pending
+  /// receives (cavePlaceUuid, rasterMapUuid, imageX, imageY) of the pending
   /// point and returns whether the switch should proceed.
-  final Future<bool> Function(int cavePlaceId, int rasterMapId, double imageX, double imageY)? onAutoSaveRequested;
+  final Future<bool> Function(Uuid cavePlaceUuid, Uuid rasterMapUuid, double imageX, double imageY)? onAutoSaveRequested;
 
   /// Called when the user requests to remove the current cave place definition
-  /// for the selected raster map. The callback receives (cavePlaceId, rasterMapId).
+  /// for the selected raster map. The callback receives (cavePlaceUuid, rasterMapUuid).
   /// Should return true if the definition was successfully removed.
-  final Future<bool> Function(int cavePlaceId, int rasterMapId)? onRemoveDefinitionRequested;
+  final Future<bool> Function(Uuid cavePlaceUuid, Uuid rasterMapUuid)? onRemoveDefinitionRequested;
 
   /// Called after a new cave place has been created from the inline add-place
   /// popup. The parent should refresh its cave places list.
@@ -325,7 +325,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
 
   /// Cave id — needed for the add-cave-place popup to know which cave to add
   /// a place to. Only required when [onCavePlaceAdded] is provided.
-  final int? caveId;
+  final Uuid? caveUuid;
 
   /// Optional trip overlay data. When provided, the editor draws the trip
   /// route (lines, direction arrows, and incremental point numbers) on top
@@ -362,7 +362,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   late bool _gestureZoomEnabled;
   late bool _useImageTextColor;
 
-  // If controller provided a cavePlaceId, the editor will show the
+  // If controller provided a cavePlaceUuid, the editor will show the
   // coordinates for that cave place here (initial highlight). This is
   // separate from _imageSelectedX/Y which represent user selection.
   double? _initialControllerCavePlaceX;
@@ -423,7 +423,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // wire controller -> state if controller provided
     widget.controller?._state = this;
 
-    // apply controller's cavePlaceId (if any) so initial highlight shows
+    // apply controller's cavePlaceUuid (if any) so initial highlight shows
     _applyControllerCavePlaceId();
 
     _photoViewController = PhotoViewController();
@@ -549,7 +549,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     }
 
     // If the cave-places list was replaced (e.g. after async DB reload in the
-    // parent), re-apply the controller's cavePlaceId so the blue selected-place
+    // parent), re-apply the controller's cavePlaceUuid so the blue selected-place
     // marker is built with the up-to-date coordinate data.
     if (widget.cavePlacesWithDefinitions != oldWidget.cavePlacesWithDefinitions) {
       _applyControllerCavePlaceId();
@@ -608,11 +608,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     }
   }
 
-  /// Apply controller-provided `cavePlaceId` by locating the corresponding
+  /// Apply controller-provided `cavePlaceUuid` by locating the corresponding
   /// definition (if present) in `widget.cavePlacesWithDefinitions` and
   /// storing its image-space coordinates in `_initialControllerCavePlaceX/Y`.
   void _applyControllerCavePlaceId() {
-    final id = widget.controller?.cavePlaceId;
+    final id = widget.controller?.cavePlaceUuid;
     if (id == null) {
       if (_initialControllerCavePlaceX != null || _initialControllerCavePlaceY != null) {
         if (mounted) {
@@ -627,7 +627,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     }
 
     try {
-      final cpwd = widget.cavePlacesWithDefinitions.where((c) => c.cavePlace.id == id).firstOrNull;
+      final cpwd = widget.cavePlacesWithDefinitions.where((c) => c.cavePlace.uuid == id).firstOrNull;
       if (cpwd == null) return;
       final def = cpwd.definition;
       if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
@@ -668,10 +668,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       return _initialControllerCavePlaceTitle!;
     }
 
-    final controllerId = widget.controller?.cavePlaceId;
+    final controllerId = widget.controller?.cavePlaceUuid;
     if (controllerId != null) {
       final match = widget.cavePlacesWithDefinitions
-          .where((c) => c.cavePlace.id == controllerId)
+          .where((c) => c.cavePlace.uuid == controllerId)
           .firstOrNull;
       if (match != null) return match.cavePlace.title;
     }
@@ -714,14 +714,14 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       final cy = rawY.clamp(0.0, mxY);
       setState(() => _waitingForNewCavePlaceTap = false);
 
-      if (widget.caveId == null) return;
-      final newId = await showDialog<int?>(
+      if (widget.caveUuid == null) return;
+      final newId = await showDialog<Uuid?>(
         context: context,
-        builder: (ctx) => AddCavePlacePopup(caveId: widget.caveId!),
+        builder: (ctx) => AddCavePlacePopup(caveUuid: widget.caveUuid!),
       );
       if (newId != null && mounted) {
-        if (widget.onAutoSaveRequested != null && widget.selectedRasterMapId != null) {
-          await widget.onAutoSaveRequested!(newId, widget.selectedRasterMapId!, cx, cy);
+        if (widget.onAutoSaveRequested != null && widget.selectedRasterMapUuid != null) {
+          await widget.onAutoSaveRequested!(newId, widget.selectedRasterMapUuid!, cx, cy);
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -761,7 +761,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           nearest.definition!.yCoordinate!.toDouble(),
         );
         await _handleNavCavePlaceSelected(nearest, notifyMarkerTap: true);
-        _navBarKey.currentState?.setSelectedPlaceId(nearest.cavePlace.id);
+        _navBarKey.currentState?.setSelectedPlaceId(nearest.cavePlace.uuid);
       }
       return;
     }
@@ -866,14 +866,14 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     if (!_userHasSelectedNewPoint) return true;
     if (_imageSelectedX == null || _imageSelectedY == null) return true;
 
-    final cavePlaceId = widget.controller?.cavePlaceId;
-    final rasterMapId = widget.selectedRasterMapId;
-    if (cavePlaceId == null || rasterMapId == null) return true;
+    final cavePlaceUuid = widget.controller?.cavePlaceUuid;
+    final rasterMapUuid = widget.selectedRasterMapUuid;
+    if (cavePlaceUuid == null || rasterMapUuid == null) return true;
 
     if (widget.onAutoSaveRequested != null) {
       final allowed = await widget.onAutoSaveRequested!(
-        cavePlaceId,
-        rasterMapId,
+        cavePlaceUuid,
+        rasterMapUuid,
         _imageSelectedX!,
         _imageSelectedY!,
       );
@@ -883,7 +883,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       if (mounted) {
         String title = '';
         final match = widget.cavePlacesWithDefinitions
-            .where((c) => c.cavePlace.id == cavePlaceId)
+            .where((c) => c.cavePlace.uuid == cavePlaceUuid)
             .firstOrNull;
         if (match != null) title = match.cavePlace.title;
         if (title.isNotEmpty) {
@@ -921,7 +921,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
     // Update controller to highlight the new cave place
     try {
-      widget.controller?.setCavePlaceId(cpwd.cavePlace.id);
+      widget.controller?.setCavePlaceId(cpwd.cavePlace.uuid);
     } catch (_) {}
 
     // Zoom/pan to the new place's definition coordinates if available
@@ -977,9 +977,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   /// Show a confirmation dialog and remove the definition if confirmed.
   Future<void> _handleRemoveDefinition() async {
-    final cavePlaceId = widget.controller?.cavePlaceId;
-    final rasterMapId = widget.selectedRasterMapId;
-    if (cavePlaceId == null || rasterMapId == null) return;
+    final cavePlaceUuid = widget.controller?.cavePlaceUuid;
+    final rasterMapUuid = widget.selectedRasterMapUuid;
+    if (cavePlaceUuid == null || rasterMapUuid == null) return;
     if (widget.onRemoveDefinitionRequested == null) return;
 
     final confirmed = await showDialog<bool>(
@@ -1001,7 +1001,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     );
     if (confirmed != true || !mounted) return;
 
-    final removed = await widget.onRemoveDefinitionRequested!(cavePlaceId, rasterMapId);
+    final removed = await widget.onRemoveDefinitionRequested!(cavePlaceUuid, rasterMapUuid);
     if (removed && mounted) {
       setState(() {
         _userHasSelectedNewPoint = false;
@@ -1023,7 +1023,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// Activate add-cave-place flow: highlight button, show snackbar,
   /// and wait for user to tap on the map.
   void _handleAddCavePlace() {
-    if (widget.caveId == null) return;
+    if (widget.caveUuid == null) return;
     setState(() => _waitingForNewCavePlaceTap = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1043,26 +1043,26 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// Open CavePlacePage for the currently selected cave place.
   Future<void> _openCavePlacePage() async {
     _saveDefinitionIfNeeded();
-    final cavePlaceId = widget.controller?.cavePlaceId;
-    if (cavePlaceId == null) return;
+    final cavePlaceUuid = widget.controller?.cavePlaceUuid;
+    if (cavePlaceUuid == null) return;
 
-    // Resolve caveId: use widget prop if available, otherwise look it up
-    // from the cave places list (covers MapViewerPage where caveId is not passed).
-    int? caveId = widget.caveId;
-    if (caveId == null) {
+    // Resolve caveUuid: use widget prop if available, otherwise look it up
+    // from the cave places list (covers MapViewerPage where caveUuid is not passed).
+    Uuid? caveUuid = widget.caveUuid;
+    if (caveUuid == null) {
       final match = widget.cavePlacesWithDefinitions
-          .where((c) => c.cavePlace.id == cavePlaceId)
+          .where((c) => c.cavePlace.uuid == cavePlaceUuid)
           .firstOrNull;
-      caveId = match?.cavePlace.caveId;
+      caveUuid = match?.cavePlace.caveUuid;
     }
-    if (caveId == null) return;
+    if (caveUuid == null) return;
 
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CavePlacePage(
-          caveId: caveId!,
-          cavePlaceId: cavePlaceId,
+          caveUuid: caveUuid!,
+          cavePlaceUuid: cavePlaceUuid,
         ),
       ),
     );
@@ -1075,12 +1075,12 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// Open DocumentationFilesPage for the currently selected cave place.
   Future<void> _openCavePlaceDocuments() async {
     _saveDefinitionIfNeeded();
-    final cavePlaceId = widget.controller?.cavePlaceId;
-    if (cavePlaceId == null) return;
+    final cavePlaceUuid = widget.controller?.cavePlaceUuid;
+    if (cavePlaceUuid == null) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DocumentationFilesPage(cavePlaceId: cavePlaceId),
+        builder: (_) => DocumentationFilesPage(cavePlaceUuid: cavePlaceUuid),
       ),
     );
   }
@@ -1106,8 +1106,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             key: _navBarKey,
             rasterMaps: widget.rasterMaps,
             cavePlacesWithDefinitions: widget.cavePlacesWithDefinitions,
-            selectedRasterMapId: widget.selectedRasterMapId,
-            selectedPlaceId: widget.controller?.cavePlaceId,
+            selectedRasterMapUuid: widget.selectedRasterMapUuid,
+            selectedPlaceId: widget.controller?.cavePlaceUuid,
             style: widget.navBarStyle,
             onRasterMapSelected: (rm) => _handleNavRasterMapSelected(rm),
             onCavePlaceSelected: (cpwd) => _handleNavCavePlaceSelected(cpwd),
@@ -1397,7 +1397,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                   style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 ),
               // Add new cave place (tap-to-define)
-              if (widget.caveId != null && widget.onCavePlaceAdded != null)
+              if (widget.caveUuid != null && widget.onCavePlaceAdded != null)
                 IconButton(
                   onPressed: _waitingForNewCavePlaceTap
                       ? () => setState(() => _waitingForNewCavePlaceTap = false)
@@ -1427,7 +1427,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                 ),
             ],
             // View-mode actions (always available)
-            if (widget.controller?.cavePlaceId != null)
+            if (widget.controller?.cavePlaceUuid != null)
               IconButton(
                 onPressed: _openCavePlacePage,
                 icon: const Icon(Icons.open_in_new, size: 20),
@@ -1436,7 +1436,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
               ),
-            if (widget.controller?.cavePlaceId != null)
+            if (widget.controller?.cavePlaceUuid != null)
               IconButton(
                 onPressed: _openCavePlaceDocuments,
                 icon: const Icon(Icons.description, size: 20),

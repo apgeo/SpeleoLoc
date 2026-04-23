@@ -14,9 +14,9 @@ import 'package:speleoloc/widgets/product_tour.dart';
 const bool kCompressRasterMapImages = false;
 
 class RasterMapForm extends StatefulWidget {
-  const RasterMapForm({super.key, required this.caveId, this.rasterMap});
+  const RasterMapForm({super.key, required this.caveUuid, this.rasterMap});
 
-  final int caveId;
+  final Uuid caveUuid;
   final RasterMap? rasterMap;
 
   @override
@@ -85,7 +85,7 @@ class _RasterMapFormState extends State<RasterMapForm>
     if (pickedFile != null) {
       // Save to local documents directory in subfolder
       final directory = await getApplicationDocumentsDirectory();
-      final subfolder = Directory('${directory.path}/cave_${widget.caveId}');
+      final subfolder = Directory('${directory.path}/cave_${widget.caveUuid}');
       if (!await subfolder.exists()) {
         await subfolder.create(recursive: true);
       }
@@ -99,7 +99,7 @@ class _RasterMapFormState extends State<RasterMapForm>
       }
 
       setState(() {
-        _imagePath = 'cave_${widget.caveId}/$fileName';
+        _imagePath = 'cave_${widget.caveUuid}/$fileName';
         _fullImagePath = savedFile.path;
       });
     }
@@ -111,21 +111,22 @@ class _RasterMapFormState extends State<RasterMapForm>
       if (widget.rasterMap != null) {
         // Update
         final updated = RasterMap(
-          id: widget.rasterMap!.id,
+          uuid: widget.rasterMap!.uuid,
           title: title ?? widget.rasterMap!.title,
           mapType: _selectedMapType!,
           fileName: _imagePath!,
-          caveId: widget.caveId,
-          caveAreaId: widget.rasterMap!.caveAreaId,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.rasterMap!.caveAreaUuid,
         );
         await rasterMapRepository.updateRasterMap(updated);
       } else {
         // Insert
         final companion = RasterMapsCompanion.insert(
+          uuid: Uuid.v7(),
           title: title ?? '?????', //todo: fix this
           mapType: _selectedMapType!,
           fileName: _imagePath!,
-          caveId: widget.caveId,
+          caveUuid: widget.caveUuid,
         );
         await rasterMapRepository.addRasterMap(companion);
       }

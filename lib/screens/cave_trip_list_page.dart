@@ -8,8 +8,8 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class CaveTripListPage extends StatefulWidget {
-  const CaveTripListPage({super.key, required this.caveId});
-  final int caveId;
+  const CaveTripListPage({super.key, required this.caveUuid});
+  final Uuid caveUuid;
 
   @override
   State<CaveTripListPage> createState() => _CaveTripListPageState();
@@ -28,7 +28,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
   ];
   Cave? _cave;
   List<CaveTrip> _endedTrips = [];
-  Map<int, int> _pointCounts = {};
+  Map<Uuid, int> _pointCounts = {};
 
   @override
   void initState() {
@@ -51,14 +51,14 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
 
   Future<void> _load() async {
     final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.id.equals(widget.caveId)))
+          ..where((c) => c.uuid.equalsValue(widget.caveUuid)))
         .getSingleOrNull();
-    final allTrips = await appDatabase.getCaveTrips(widget.caveId);
+    final allTrips = await appDatabase.getCaveTrips(widget.caveUuid);
     final ended = allTrips.where((t) => t.tripEndedAt != null).toList();
-    Map<int, int> counts = {};
+    Map<Uuid, int> counts = {};
     for (final trip in ended) {
-      final points = await appDatabase.getTripPoints(trip.id);
-      counts[trip.id] = points.length;
+      final points = await appDatabase.getTripPoints(trip.uuid);
+      counts[trip.uuid] = points.length;
     }
     if (mounted) {
       setState(() {
@@ -73,7 +73,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     final caveName = _cave?.title ?? '';
     final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
     final defaultTitle = '$caveName $dateStr';
-    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveId);
+    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
     final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
@@ -93,7 +93,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     );
     if (confirmed == true && mounted) {
       final title = controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle;
-      final tripId = await caveTripService.startTrip(widget.caveId, title);
+      final tripId = await caveTripService.startTrip(widget.caveUuid, title);
       if (mounted) {
         await Navigator.pushNamed(context, caveTripRoute, arguments: tripId);
         _load();
@@ -195,14 +195,14 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     );
   }
 
-  Widget _buildActiveTripCard(int tripId) {
+  Widget _buildActiveTripCard(Uuid tripId) {
     return FutureBuilder<CaveTrip?>(
-      future: (appDatabase.select(appDatabase.caveTrips)..where((t) => t.id.equals(tripId))).getSingleOrNull(),
+      future: (appDatabase.select(appDatabase.caveTrips)..where((t) => t.uuid.equalsValue(tripId))).getSingleOrNull(),
       builder: (context, snap) {
         final trip = snap.data;
         if (trip == null) return const SizedBox.shrink();
         final isPaused = caveTripService.isPausedNotifier.value;
-        final pts = _pointCounts[trip.id] ?? 0;
+        final pts = _pointCounts[trip.uuid] ?? 0;
         return Card(
           margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
           color: isPaused
@@ -266,13 +266,13 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
                     itemBuilder: (context, i) {
                       final trip = _endedTrips[i];
                       final dt = DateTime.fromMillisecondsSinceEpoch(trip.tripStartedAt);
-                      final count = _pointCounts[trip.id] ?? 0;
+                      final count = _pointCounts[trip.uuid] ?? 0;
                       return ListTile(
                         title: Text(trip.title),
                         subtitle: Text(dateFormat.format(dt)),
                         trailing: Text('$count pts', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                         onTap: () async {
-                          await Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
+                          await Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
                           _load();
                         },
                       );

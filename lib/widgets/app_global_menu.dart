@@ -413,7 +413,7 @@ class _AppMenuDrawer extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            ValueListenableBuilder<int?>(
+            ValueListenableBuilder<Uuid?>(
               valueListenable: caveTripService.activeTripIdNotifier,
               builder: (context, tripId, _) {
                 if (tripId == null) return const SizedBox.shrink();
@@ -591,7 +591,7 @@ class _AppMenuDrawer extends StatelessWidget {
 }
 
 class _ActiveTripCard extends StatefulWidget {
-  final int tripId;
+  final Uuid tripId;
   final VoidCallback onClose;
   const _ActiveTripCard({required this.tripId, required this.onClose});
 
@@ -603,7 +603,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
   CaveTrip? _trip;
   Cave? _cave;
   List<CaveTripPoint> _points = [];
-  Map<int, CavePlace> _placesById = {};
+  Map<Uuid, CavePlace> _placesById = {};
   int _totalPoints = 0;
 
   @override
@@ -625,25 +625,25 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
 
   Future<void> _load() async {
     final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.id.equals(widget.tripId)))
+          ..where((t) => t.uuid.equalsValue(widget.tripId)))
         .getSingleOrNull();
     if (trip == null) return;
     final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.id.equals(trip.caveId)))
+          ..where((c) => c.uuid.equalsValue(trip.caveUuid)))
         .getSingleOrNull();
     final points = await appDatabase.getTripPoints(widget.tripId);
     final last5 = points.reversed.take(5).toList().reversed.toList();
     final placeIds = last5
-      .map((p) => p.cavePlaceId)
-      .whereType<int>()
+      .map((p) => p.cavePlaceUuid)
+      .whereType<Uuid>()
       .toSet()
       .toList();
-    Map<int, CavePlace> placesById = {};
+    Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
       final places = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) => cp.id.isIn(placeIds)))
+            ..where((cp) => cp.uuid.isInValues(placeIds)))
           .get();
-      placesById = {for (var p in places) p.id: p};
+      placesById = {for (var p in places) p.uuid: p};
     }
     if (mounted) setState(() {
       _trip = trip;
@@ -676,7 +676,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
         borderRadius: BorderRadius.circular(12),
         onTap: () {
           widget.onClose();
-          Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
+          Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
         },
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -703,9 +703,9 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
             if (_points.isNotEmpty) ...[
               const Divider(height: 8),
               ..._points.map((pt) {
-                final place = _placesById[pt.cavePlaceId];
+                final place = _placesById[pt.cavePlaceUuid];
                 final time = dateTimeFormat.format(DateTime.fromMillisecondsSinceEpoch(pt.scannedAt));
-                return Text('$time ${place?.title ?? '#${pt.cavePlaceId}'}',
+                return Text('$time ${place?.title ?? '#${pt.cavePlaceUuid}'}',
                     style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis);
               }),
               if (_totalPoints > _points.length)
@@ -729,7 +729,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                   tooltip: LocServ.inst.t('trip_view'),
                   onPressed: () {
                     widget.onClose();
-                    Navigator.pushNamed(context, caveTripRoute, arguments: trip.id);
+                    Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
                   },
                 ),
                 IconButton(

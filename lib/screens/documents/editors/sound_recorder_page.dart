@@ -24,15 +24,15 @@ import 'package:speleoloc/widgets/product_tour.dart';
 class SoundRecorderPage extends StatefulWidget {
   const SoundRecorderPage({
     super.key,
-    this.cavePlaceId,
-    this.caveId,
-    this.caveAreaId,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
     this.existingDoc,
   });
 
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
   final DocumentationFile? existingDoc;
 
   @override
@@ -417,7 +417,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
           bytes: bytes,
         );
         await DocumentationFileHelper.updateRecord(
-          id: doc.id,
+          id: doc.uuid,
           title: title,
           description: doc.description,
           savedFile: saved,
@@ -427,9 +427,9 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         final saved =
             await DocumentationFileHelper.saveExternalFile(recordedFile);
         final parentLink = await appDatabase.getDocumentationParentLink(
-          cavePlaceId: widget.cavePlaceId,
-          caveId: widget.caveId,
-          caveAreaId: widget.caveAreaId,
+          cavePlaceUuid: widget.cavePlaceUuid,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.caveAreaUuid,
         );
         await DocumentationFileHelper.insertRecord(
           title: title,

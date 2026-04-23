@@ -6,18 +6,18 @@ import 'package:speleoloc/utils/localization.dart';
 
 /// Page that lists documentation files.
 ///
-/// When [cavePlaceId], [caveId], or [caveAreaId] is provided the page shows
+/// When [cavePlaceUuid], [caveUuid], or [caveAreaUuid] is provided the page shows
 /// documents for that specific geofeature.  When none is provided it shows
 /// **all** documents from every cave (using [DocumentsSource.all]).
 ///
 /// Internally this builds a [GeofeatureDocumentsPage] so all display logic
 /// is shared.
 class DocumentationFilesPage extends StatefulWidget {
-  const DocumentationFilesPage({super.key, this.cavePlaceId, this.caveId, this.caveAreaId});
+  const DocumentationFilesPage({super.key, this.cavePlaceUuid, this.caveUuid, this.caveAreaUuid});
 
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
 
   @override
   State<DocumentationFilesPage> createState() => _DocumentationFilesPageState();
@@ -34,9 +34,9 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
   }
 
   Future<void> _resolveSource() async {
-    final hasFilter = widget.cavePlaceId != null ||
-        widget.caveId != null ||
-        widget.caveAreaId != null;
+    final hasFilter = widget.cavePlaceUuid != null ||
+        widget.caveUuid != null ||
+        widget.caveAreaUuid != null;
 
     if (!hasFilter) {
       // Show all documents from every cave.
@@ -48,39 +48,39 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
       String title = '';
       String? parentTitle;
 
-      if (widget.cavePlaceId != null) {
+      if (widget.cavePlaceUuid != null) {
         final cp = await (appDatabase.select(appDatabase.cavePlaces)
-              ..where((t) => t.id.equals(widget.cavePlaceId!)))
+              ..where((t) => t.uuid.equalsValue(widget.cavePlaceUuid!)))
             .getSingleOrNull();
         title = cp?.title ?? '';
         // Try to get cave title as parent.
         if (cp != null) {
           final c = await (appDatabase.select(appDatabase.caves)
-                ..where((t) => t.id.equals(cp.caveId)))
+                ..where((t) => t.uuid.equalsValue(cp.caveUuid)))
               .getSingleOrNull();
           parentTitle = c?.title;
         }
         _source = DocumentsSource.cavePlace(
-          cavePlaceId: widget.cavePlaceId!,
+          cavePlaceUuid: widget.cavePlaceUuid!,
           cavePlaceTitle: title,
           caveTitle: parentTitle,
         );
-      } else if (widget.caveId != null) {
+      } else if (widget.caveUuid != null) {
         final c = await (appDatabase.select(appDatabase.caves)
-              ..where((t) => t.id.equals(widget.caveId!)))
+              ..where((t) => t.uuid.equalsValue(widget.caveUuid!)))
             .getSingleOrNull();
         title = c?.title ?? '';
         _source = DocumentsSource.cave(
-          caveId: widget.caveId!,
+          caveUuid: widget.caveUuid!,
           caveTitle: title,
         );
-      } else if (widget.caveAreaId != null) {
+      } else if (widget.caveAreaUuid != null) {
         final a = await (appDatabase.select(appDatabase.caveAreas)
-              ..where((t) => t.id.equals(widget.caveAreaId!)))
+              ..where((t) => t.uuid.equalsValue(widget.caveAreaUuid!)))
             .getSingleOrNull();
         title = a?.title ?? '';
         _source = DocumentsSource.caveArea(
-          caveAreaId: widget.caveAreaId!,
+          caveAreaUuid: widget.caveAreaUuid!,
           caveAreaTitle: title,
         );
       }

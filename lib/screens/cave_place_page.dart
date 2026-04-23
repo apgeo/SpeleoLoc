@@ -15,10 +15,10 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class CavePlacePage extends StatefulWidget {
-  const CavePlacePage({super.key, required this.caveId, this.cavePlaceId});
+  const CavePlacePage({super.key, required this.caveUuid, this.cavePlaceUuid});
 
-  final int caveId;
-  final int? cavePlaceId;
+  final Uuid caveUuid;
+  final Uuid? cavePlaceUuid;
 
   @override
   State<CavePlacePage> createState() => _CavePlacePageState();
@@ -59,7 +59,7 @@ class _CavePlacePageState extends State<CavePlacePage>
 
   // Using global appDatabase instance
   CavePlace? _cavePlace;
-  int? _currentCavePlaceId;
+  Uuid? _currentCavePlaceId;
   Cave? _cave;
   List<RasterMap> _rasterMaps = [];
   List<CaveArea> _caveAreas = [];
@@ -76,7 +76,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   TabController? _tabController;
   bool _showLatLngFields = false;
   int _currentTabIndex = 0;
-  int? _selectedCaveAreaId;
+  Uuid? _selectedCaveAreaId;
   // bool _qrEnabled = false;
 
   bool _hasUnsavedChanges = false;
@@ -100,8 +100,8 @@ class _CavePlacePageState extends State<CavePlacePage>
   @override
   void initState() {
     super.initState();
-    _currentCavePlaceId = widget.cavePlaceId;
-    AppLogger.of('CavePlacePage').fine('initState caveId=${widget.caveId}');
+    _currentCavePlaceId = widget.cavePlaceUuid;
+    AppLogger.of('CavePlacePage').fine('initState caveUuid=${widget.caveUuid}');
     _loadData();
 
     _titleController.addListener(() => _onFieldEdited('title'));
@@ -129,11 +129,11 @@ class _CavePlacePageState extends State<CavePlacePage>
   void _loadData() async {
     _cave = await (appDatabase.select(
       appDatabase.caves,
-    )..where((c) => c.id.equals(widget.caveId))).getSingleOrNull();
+    )..where((c) => c.uuid.equalsValue(widget.caveUuid))).getSingleOrNull();
     if (_currentCavePlaceId != null) {
       _cavePlace = await (appDatabase.select(
         appDatabase.cavePlaces,
-      )..where((cp) => cp.id.equals(_currentCavePlaceId!))).getSingleOrNull();
+      )..where((cp) => cp.uuid.equalsValue(_currentCavePlaceId!))).getSingleOrNull();
       if (_cavePlace == null) {
         if (mounted) Navigator.pop(context);
         return;
@@ -145,7 +145,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       _qrController.text = _cavePlace!.placeQrCodeIdentifier?.toString() ?? '';
       _latController.text = _cavePlace!.latitude?.toString() ?? '';
       _longController.text = _cavePlace!.longitude?.toString() ?? '';
-      _selectedCaveAreaId = _cavePlace!.caveAreaId;
+      _selectedCaveAreaId = _cavePlace!.caveAreaUuid;
       _isEntrance = (_cavePlace!.isEntrance ?? 0) == 1;
       _isMainEntrance = (_cavePlace!.isMainEntrance ?? 0) == 1;
     } else {
@@ -155,12 +155,12 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
     _rasterMaps = await (appDatabase.select(
       appDatabase.rasterMaps,
-    )..where((rm) => rm.caveId.equals(widget.caveId))).get();
+    )..where((rm) => rm.caveUuid.equalsValue(widget.caveUuid))).get();
 
     // Load cave areas for the cave (used in the dropdown)
     _caveAreas = await (appDatabase.select(
       appDatabase.caveAreas,
-    )..where((ca) => ca.caveId.equals(widget.caveId))).get();
+    )..where((ca) => ca.caveUuid.equalsValue(widget.caveUuid))).get();
 
     if (!mounted) return;
     setState(() {
@@ -177,7 +177,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
   }
 
-  Future<int?> _save({bool closeAfterSave = true}) async {
+  Future<Uuid?> _save({bool closeAfterSave = true}) async {
     final title = _titleController.text;
     final description = _descriptionController.text.isEmpty
         ? null
@@ -237,10 +237,10 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (qr != null) {
       final duplicates = await (appDatabase.select(appDatabase.cavePlaces)
             ..where((cp) =>
-                cp.caveId.equals(widget.caveId) &
+                cp.caveUuid.equalsValue(widget.caveUuid) &
                 cp.placeQrCodeIdentifier.equals(qr) &
                 (_currentCavePlaceId != null
-                    ? cp.id.equals(_currentCavePlaceId!).not()
+                    ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
                     : const Constant(true))))
           .get();
       if (duplicates.isNotEmpty && mounted) {
@@ -272,12 +272,14 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
 
     if (_currentCavePlaceId == null) {
-      final newId = await appDatabase
+      final newUuid = Uuid.v7();
+      await appDatabase
           .into(appDatabase.cavePlaces)
           .insert(
             CavePlacesCompanion.insert(
+              uuid: newUuid,
               title: title,
-              caveId: widget.caveId,
+              caveUuid: widget.caveUuid,
               description: description == null
                   ? const Value.absent()
                   : Value(description),
@@ -285,23 +287,23 @@ class _CavePlacePageState extends State<CavePlacePage>
               placeQrCodeIdentifier: Value(qr),
               latitude: Value(lat),
               longitude: Value(long),
-              caveAreaId: Value(_selectedCaveAreaId),
+              caveAreaUuid: Value(_selectedCaveAreaId),
               isEntrance: Value(_isEntrance ? 1 : 0),
               isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
             ),
           );
 
-      if (!mounted) return newId;
+      if (!mounted) return newUuid;
       if (closeAfterSave) {
         Navigator.pop(context, true);
       } else {
-        await _refreshCavePlaceState(newId);
+        await _refreshCavePlaceState(newUuid);
       }
-      return newId;
+      return newUuid;
     } else {
       await (appDatabase.update(
         appDatabase.cavePlaces,
-      )..where((cp) => cp.id.equals(_currentCavePlaceId!))).write(
+      )..where((cp) => cp.uuid.equalsValue(_currentCavePlaceId!))).write(
         CavePlacesCompanion(
           title: Value(title),
           description: description == null
@@ -311,7 +313,7 @@ class _CavePlacePageState extends State<CavePlacePage>
           placeQrCodeIdentifier: Value(qr),
           latitude: Value(lat),
           longitude: Value(long),
-          caveAreaId: Value(_selectedCaveAreaId),
+          caveAreaUuid: Value(_selectedCaveAreaId),
           isEntrance: Value(_isEntrance ? 1 : 0),
           isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
         ),
@@ -327,16 +329,16 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
   }
 
-  Future<void> _refreshCavePlaceState(int cavePlaceId) async {
+  Future<void> _refreshCavePlaceState(Uuid cavePlaceUuid) async {
     final refreshed = await (appDatabase.select(
       appDatabase.cavePlaces,
-    )..where((cp) => cp.id.equals(cavePlaceId))).getSingleOrNull();
+    )..where((cp) => cp.uuid.equalsValue(cavePlaceUuid))).getSingleOrNull();
 
     if (!mounted || refreshed == null) return;
     setState(() {
-      _currentCavePlaceId = cavePlaceId;
+      _currentCavePlaceId = cavePlaceUuid;
       _cavePlace = refreshed;
-      _selectedCaveAreaId = refreshed.caveAreaId;
+      _selectedCaveAreaId = refreshed.caveAreaUuid;
       _isEntrance = (refreshed.isEntrance ?? 0) == 1;
       _isMainEntrance = (refreshed.isMainEntrance ?? 0) == 1;
       _hasUnsavedChanges = false;
@@ -399,10 +401,10 @@ class _CavePlacePageState extends State<CavePlacePage>
   Future<List<CavePlace>> _findOtherEntrancePlaces({required bool mainOnly}) async {
     final query = appDatabase.select(appDatabase.cavePlaces)
       ..where((cp) {
-        final sameCave = cp.caveId.equals(widget.caveId);
+        final sameCave = cp.caveUuid.equalsValue(widget.caveUuid);
         final flag = mainOnly ? cp.isMainEntrance.equals(1) : cp.isEntrance.equals(1);
         final notCurrent = _currentCavePlaceId != null
-            ? cp.id.equals(_currentCavePlaceId!).not()
+            ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
             : const Constant(true);
         return sameCave & flag & notCurrent;
       });
@@ -594,7 +596,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       final query = appDatabase.select(appDatabase.cavePlaces)
         ..where((cp) => cp.placeQrCodeIdentifier.equals(qr));
       if (_currentCavePlaceId != null) {
-        query.where((cp) => cp.id.isNotValue(_currentCavePlaceId!));
+        query.where((cp) => cp.uuid.equalsValue(_currentCavePlaceId!).not());
       }
       final existing = await query.getSingleOrNull();
 
@@ -656,8 +658,8 @@ class _CavePlacePageState extends State<CavePlacePage>
 
   Widget _buildMapTab(RasterMap rm) {
     return CavePlaceMapTab(
-      caveId: widget.caveId,
-      cavePlaceId: _currentCavePlaceId,
+      caveUuid: widget.caveUuid,
+      cavePlaceUuid: _currentCavePlaceId,
       rasterMap: rm,
       useInteractiveEditor: USE_RASTER_EDITOR_IN_CAVEPLACE,
       onSaveRequired: () => _save(closeAfterSave: false),
@@ -712,7 +714,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                     MaterialPageRoute(
                       builder: (_) => GeofeatureDocumentsPage(
                         source: DocumentsSource.cavePlace(
-                          cavePlaceId: _currentCavePlaceId!,
+                          cavePlaceUuid: _currentCavePlaceId!,
                           cavePlaceTitle: _cavePlace?.title ?? '',
                           caveTitle: _cave?.title,
                         ),
@@ -814,19 +816,19 @@ class _CavePlacePageState extends State<CavePlacePage>
                     const SizedBox(width: 28),
 
                     Expanded(
-                      child: DropdownButtonFormField<int?>(
+                      child: DropdownButtonFormField<Uuid?>(
                         initialValue: _selectedCaveAreaId,
                         decoration: InputDecoration(
                           labelText: LocServ.inst.t('area_title'),
                         ),
                         items: [
-                          DropdownMenuItem<int?>(
+                          DropdownMenuItem<Uuid?>(
                             value: null,
                             child: Text(LocServ.inst.t('none')),
                           ),
                           ..._caveAreas.map(
-                            (a) => DropdownMenuItem<int?>(
-                              value: a.id,
+                            (a) => DropdownMenuItem<Uuid?>(
+                              value: a.uuid,
                               child: Text(a.title),
                             ),
                           ),
@@ -876,14 +878,14 @@ class _CavePlacePageState extends State<CavePlacePage>
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
-                                CaveAreasPage(caveId: widget.caveId),
+                                CaveAreasPage(caveUuid: widget.caveUuid),
                           ),
                         );
                         // reload areas after return
                         final areas =
                             await (appDatabase.select(appDatabase.caveAreas)
                                   ..where(
-                                    (ca) => ca.caveId.equals(widget.caveId),
+                                    (ca) => ca.caveUuid.equalsValue(widget.caveUuid),
                                   ))
                                 .get();
                         setState(() {

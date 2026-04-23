@@ -9,17 +9,17 @@ import 'package:speleoloc/utils/localization.dart';
 /// Uses [CSVImportPage] to handle file selection and column mapping,
 /// then processes the resulting data to import cave places.
 ///
-/// Pass [caveId] for single-cave import mode, or omit/null for multiple-cave mode.
+/// Pass [caveUuid] for single-cave import mode, or omit/null for multiple-cave mode.
 class CSVCavePlacesImportPage extends StatefulWidget {
   /// If non-null, import is scoped to this single cave.
-  final int? caveId;
+  final Uuid? caveUuid;
 
   /// Maximum number of duplicate matches to preview (default 5).
   final int maxPreviewDuplicates;
 
   const CSVCavePlacesImportPage({
     super.key,
-    this.caveId,
+    this.caveUuid,
     this.maxPreviewDuplicates = 5,
   });
 
@@ -32,7 +32,7 @@ class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
   bool _isProcessing = false;
   bool _hasNavigated = false;
 
-  bool get _isMultipleCaveMode => widget.caveId == null;
+  bool get _isMultipleCaveMode => widget.caveUuid == null;
 
   List<CSVColumnDefinition> get _columnDefinitions => [
         if (_isMultipleCaveMode)
@@ -96,7 +96,7 @@ class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
 
     try {
       final config = CSVCavePlacesImportConfig(
-        caveId: widget.caveId,
+        caveUuid: widget.caveUuid,
         caveNameColumn: _isMultipleCaveMode ? csvResult.columnMappings['cave_name'] : null,
         cavePlaceNameColumn: csvResult.columnMappings['place_name'],
         qrCodeColumn: csvResult.columnMappings['qr_code'],

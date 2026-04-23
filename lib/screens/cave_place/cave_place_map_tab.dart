@@ -19,28 +19,28 @@ import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 ///   3. Displays either a plain [Image] (default) or the interactive
 ///      [RasterMapPlacePointEditor] depending on [useInteractiveEditor].
 ///   4. Offers an edit-location button that opens
-///      [RasterMapPlaceSelectorPage] for the given [cavePlaceId].
+///      [RasterMapPlaceSelectorPage] for the given [cavePlaceUuid].
 ///
-/// When [cavePlaceId] is `null` the caller is responsible for saving the
+/// When [cavePlaceUuid] is `null` the caller is responsible for saving the
 /// cave-place first; [onSaveRequired] is invoked and must return the newly
 /// created cave-place id (or `null` to abort).
 class CavePlaceMapTab extends StatefulWidget {
   const CavePlaceMapTab({
     super.key,
-    required this.caveId,
-    required this.cavePlaceId,
+    required this.caveUuid,
+    required this.cavePlaceUuid,
     required this.rasterMap,
     required this.onSaveRequired,
     this.useInteractiveEditor = false,
   });
 
-  final int caveId;
-  final int? cavePlaceId;
+  final Uuid caveUuid;
+  final Uuid? cavePlaceUuid;
   final RasterMap rasterMap;
 
   /// Called when the user taps "define place" while no cave-place exists yet.
   /// Must return the id of the newly saved cave-place, or `null` to abort.
-  final Future<int?> Function() onSaveRequired;
+  final Future<Uuid?> Function() onSaveRequired;
 
   /// Toggle: show the interactive [RasterMapPlacePointEditor] (readonly)
   /// instead of a plain [Image] in the tab body.
@@ -66,7 +66,7 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
   @override
   void didUpdateWidget(covariant CavePlaceMapTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.rasterMap.id != widget.rasterMap.id ||
+    if (oldWidget.rasterMap.uuid != widget.rasterMap.uuid ||
         oldWidget.rasterMap.fileName != widget.rasterMap.fileName) {
       _imagePathFuture = _resolveImagePath(widget.rasterMap.fileName);
       _definitionsFuture = _loadDefinitions();
@@ -80,8 +80,8 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
 
   Future<List<CavePlaceWithDefinition>> _loadDefinitions() {
     return appDatabase.getCavePlacesWithDefinitionsForRasterMap(
-      widget.caveId,
-      widget.rasterMap.id,
+      widget.caveUuid,
+      widget.rasterMap.uuid,
     );
   }
 
@@ -94,32 +94,32 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
 
   Future<void> _definePlace() async {
     final rm = widget.rasterMap;
-    _log.fine('_definePlace rasterMapId=${rm.id}');
+    _log.fine('_definePlace rasterMapUuid=${rm.uuid}');
 
-    var cavePlaceId = widget.cavePlaceId;
-    if (cavePlaceId == null) {
-      cavePlaceId = await widget.onSaveRequired();
-      if (cavePlaceId == null) return;
+    var cavePlaceUuid = widget.cavePlaceUuid;
+    if (cavePlaceUuid == null) {
+      cavePlaceUuid = await widget.onSaveRequired();
+      if (cavePlaceUuid == null) return;
     }
 
     _log.fine(
-      'Opening place selector for cavePlaceId=$cavePlaceId rasterMapId=${rm.id}',
+      'Opening place selector for cavePlaceUuid=$cavePlaceUuid rasterMapUuid=${rm.uuid}',
     );
-    final existing = await appDatabase.getDefinition(cavePlaceId, rm.id);
+    final existing = await appDatabase.getDefinition(cavePlaceUuid, rm.uuid);
     final cavePlacesWithDefs = await appDatabase
-        .getCavePlacesWithDefinitionsForRasterMap(widget.caveId, rm.id);
+        .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
 
     if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => RasterMapPlaceSelectorPage(
-          // Force rebuild when cavePlaceId or rasterMap changes.
+          // Force rebuild when cavePlaceUuid or rasterMap changes.
           key: ValueKey(
-            'place_selector_widget_${cavePlaceId}_${rm.id}_${Random().nextInt(100000000)}',
+            'place_selector_widget_${cavePlaceUuid}_${rm.uuid}_${Random().nextInt(100000000)}',
           ),
           rasterMap: rm,
-          cavePlaceId: cavePlaceId!,
+          cavePlaceUuid: cavePlaceUuid!,
           cavePlacesWithDefinitions: cavePlacesWithDefs,
           existingDefinition: existing,
         ),

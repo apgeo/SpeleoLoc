@@ -111,9 +111,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
   // Using global appDatabase instance
   List<Cave> _caves = [];
-  Map<int, int> _cavePlaceCounts = {};
-  Map<int, int> _caveRasterMapCounts = {};
-  Map<int, String?> _surfaceAreaTitles = {}; // surface_area_id -> title
+  Map<Uuid, int> _cavePlaceCounts = {};
+  Map<Uuid, int> _caveRasterMapCounts = {};
+  Map<Uuid, String?> _surfaceAreaTitles = {}; // surface_area_id -> title
   bool _showMainToolbar = false;
 
   bool _testDataPromptShown = false;
@@ -212,18 +212,18 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       final allPlaces = await (appDatabase.select(appDatabase.cavePlaces)).get();
       _cavePlaceCounts = {};
       for (var p in allPlaces) {
-        _cavePlaceCounts[p.caveId] = (_cavePlaceCounts[p.caveId] ?? 0) + 1;
+        _cavePlaceCounts[p.caveUuid] = (_cavePlaceCounts[p.caveUuid] ?? 0) + 1;
       }
       // compute raster map counts
       final allRasterMaps = await (appDatabase.select(appDatabase.rasterMaps)).get();
       _caveRasterMapCounts = {};
       for (var rm in allRasterMaps) {
-        _caveRasterMapCounts[rm.caveId] = (_caveRasterMapCounts[rm.caveId] ?? 0) + 1;
+        _caveRasterMapCounts[rm.caveUuid] = (_caveRasterMapCounts[rm.caveUuid] ?? 0) + 1;
       }
 
       // load surface area titles for display on the cave list
       final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
-      _surfaceAreaTitles = {for (var a in areas) a.id: a.title};
+      _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
 
       if (!mounted) return;
       setState(() {});
@@ -298,7 +298,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   void _addNewCave() async {
     // Open AddNewCave screen to let user enter title and area
     try {
-      final result = await Navigator.push<int?>(
+      final result = await Navigator.push<Uuid?>(
         context,
         MaterialPageRoute(builder: (_) => const AddNewCave()),
       );
@@ -333,9 +333,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     if (mounted) setState(() {});
   }
 
-  void _deleteCave(int caveId) async {
+  void _deleteCave(Uuid caveUuid) async {
     try {
-      await caveRepository.deleteCave(caveId);
+      await caveRepository.deleteCave(caveUuid);
       // Stream subscription auto-refreshes _caves.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -553,7 +553,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
-    final result = await Navigator.pushNamed(context, caveRoute, arguments: cave.id);
+    final result = await Navigator.pushNamed(context, caveRoute, arguments: cave.uuid);
     // Always refresh cave list summary after returning: cave places/areas/maps/definitions may have changed.
     _loadCaves();
     return result;
@@ -632,9 +632,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           children: [
             ListTile(
               title: Text(cave.title),
-              subtitle: cave.surfaceAreaId != null && _surfaceAreaTitles[cave.surfaceAreaId] != null
+              subtitle: cave.surfaceAreaUuid != null && _surfaceAreaTitles[cave.surfaceAreaUuid] != null
                   ? Text(
-                      _surfaceAreaTitles[cave.surfaceAreaId]!,
+                      _surfaceAreaTitles[cave.surfaceAreaUuid]!,
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     )
                   : null,
@@ -646,17 +646,17 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                   Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Text('${_cavePlaceCounts[cave.id] ?? 0}'),
+                    child: Text('${_cavePlaceCounts[cave.uuid] ?? 0}'),
                   ),
                   const SizedBox(width: 8),
                   Icon(Icons.map, size: 16, color: Colors.grey[600]),
                   Padding(
                     padding: const EdgeInsets.only(left: 4.0, right: 8.0),
-                    child: Text('${_caveRasterMapCounts[cave.id] ?? 0}'),
+                    child: Text('${_caveRasterMapCounts[cave.uuid] ?? 0}'),
                   ),
                   if (showCaveDeleteButtons)
                     IconActionButton(
-                      onPressed: () => _deleteCave(cave.id),
+                      onPressed: () => _deleteCave(cave.uuid),
                       icon: Icons.delete,
                       tooltip: LocServ.inst.t('delete_cave'),
                     ),

@@ -12,9 +12,9 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class RasterMapsPage extends StatefulWidget {
-  const RasterMapsPage({super.key, required this.caveId});
+  const RasterMapsPage({super.key, required this.caveUuid});
 
-  final int caveId;
+  final Uuid caveUuid;
 
   @override
   State<RasterMapsPage> createState() => _RasterMapsPageState();
@@ -44,11 +44,11 @@ class _RasterMapsPageState extends State<RasterMapsPage>
   }
 
   void _loadRasterMaps() async {
-    _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveId);
+    _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
     if (mounted) setState(() {});
   }
 
-  void _deleteRasterMap(int id) async {
+  void _deleteRasterMap(Uuid id) async {
     await rasterMapRepository.deleteRasterMap(id);
     _changed = true;
     _loadRasterMaps();
@@ -59,7 +59,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
     }
   }
 
-  Future<void> _confirmDeleteRasterMap(int id) async {
+  Future<void> _confirmDeleteRasterMap(Uuid id) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -107,7 +107,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
   void _editRasterMap(RasterMap rm) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RasterMapForm(caveId: widget.caveId, rasterMap: rm)),
+      MaterialPageRoute(builder: (_) => RasterMapForm(caveUuid: widget.caveUuid, rasterMap: rm)),
     );
     if (result == true) {
       _changed = true;
@@ -135,7 +135,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
             onPressed: () async {
               final result = await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => RasterMapForm(caveId: widget.caveId)),
+                MaterialPageRoute(builder: (_) => RasterMapForm(caveUuid: widget.caveUuid)),
               );
               if (result == true) {
                 _changed = true;
@@ -187,7 +187,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
                         ),
                         const SizedBox(width: 8),
                         IconActionButton(
-                          onPressed: () => _confirmDeleteRasterMap(rm.id),
+                          onPressed: () => _confirmDeleteRasterMap(rm.uuid),
                           icon: Icons.delete,
                           tooltip: LocServ.inst.t('delete_raster_map'),
                         ),

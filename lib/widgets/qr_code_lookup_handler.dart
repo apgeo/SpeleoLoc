@@ -20,7 +20,7 @@ class QrCodeLookupHandler {
   Future<CavePlace?> handleScannedCode(
     BuildContext context,
     String rawCode, {
-    int? currentCaveId,
+    Uuid? currentCaveId,
   }) async {
     final results = await _service.lookup(rawCode, currentCaveId: currentCaveId);
 
@@ -51,8 +51,8 @@ class QrCodeLookupHandler {
       context,
       cavePlaceViewRoute,
       arguments: {
-        'caveId': selected.cavePlace.caveId,
-        'cavePlaceId': selected.cavePlace.id,
+        'caveUuid': selected.cavePlace.caveUuid,
+        'cavePlaceUuid': selected.cavePlace.uuid,
       },
     );
 

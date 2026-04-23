@@ -6,9 +6,9 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class CaveAreasPage extends StatefulWidget {
-  const CaveAreasPage({super.key, required this.caveId});
+  const CaveAreasPage({super.key, required this.caveUuid});
 
-  final int caveId;
+  final Uuid caveUuid;
 
   @override
   State<CaveAreasPage> createState() => _CaveAreasPageState();
@@ -37,7 +37,7 @@ class _CaveAreasPageState extends State<CaveAreasPage>
   }
 
   void _loadAreas() async {
-    final areas = await (appDatabase.select(appDatabase.caveAreas)..where((a) => a.caveId.equals(widget.caveId))).get();
+    final areas = await (appDatabase.select(appDatabase.caveAreas)..where((a) => a.caveUuid.equalsValue(widget.caveUuid))).get();
     if (!mounted) return;
     setState(() {
       _areas = areas;
@@ -62,10 +62,10 @@ class _CaveAreasPageState extends State<CaveAreasPage>
               if (title.isEmpty) return;
               if (existing == null) {
                 await appDatabase.into(appDatabase.caveAreas).insert(
-                  CaveAreasCompanion.insert(title: title, caveId: widget.caveId),
+                  CaveAreasCompanion.insert(uuid: Uuid.v7(), title: title, caveUuid: widget.caveUuid),
                 );
               } else {
-                await (appDatabase.update(appDatabase.caveAreas)..where((a) => a.id.equals(existing.id))).write(
+                await (appDatabase.update(appDatabase.caveAreas)..where((a) => a.uuid.equalsValue(existing.uuid))).write(
                   CaveAreasCompanion(title: Value(title)),
                 );
               }
@@ -99,7 +99,7 @@ class _CaveAreasPageState extends State<CaveAreasPage>
     );
 
     if (confirmed == true) {
-      await (appDatabase.delete(appDatabase.caveAreas)..where((a) => a.id.equals(area.id))).go();
+      await (appDatabase.delete(appDatabase.caveAreas)..where((a) => a.uuid.equalsValue(area.uuid))).go();
       _changed = true;
       _loadAreas();
       if (!mounted) return;

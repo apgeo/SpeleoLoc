@@ -15,15 +15,15 @@ import 'package:speleoloc/widgets/product_tour.dart';
 class TextDocumentEditorPage extends StatefulWidget {
   const TextDocumentEditorPage({
     super.key,
-    this.cavePlaceId,
-    this.caveId,
-    this.caveAreaId,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
     this.existingDoc,
   });
 
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
 
   /// When non-null the editor opens in *edit* mode: it loads the existing file
   /// content and on save overwrites the record instead of inserting a new one.
@@ -111,7 +111,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
         );
 
         await DocumentationFileHelper.updateRecord(
-          id: existingDoc.id,
+          id: existingDoc.uuid,
           title: title,
           description: existingDoc.description,
           savedFile: savedFile,
@@ -143,9 +143,9 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
         }
 
         final parentLink = await appDatabase.getDocumentationParentLink(
-          cavePlaceId: widget.cavePlaceId,
-          caveId: widget.caveId,
-          caveAreaId: widget.caveAreaId,
+          cavePlaceUuid: widget.cavePlaceUuid,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.caveAreaUuid,
         );
 
         await DocumentationFileHelper.insertRecord(

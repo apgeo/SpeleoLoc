@@ -73,10 +73,10 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
               final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
               if (existing == null) {
                 await appDatabase.into(appDatabase.surfaceAreas).insert(
-                  SurfaceAreasCompanion.insert(title: title, description: Value(desc)),
+                  SurfaceAreasCompanion.insert(uuid: Uuid.v7(), title: title, description: Value(desc)),
                 );
               } else {
-                await (appDatabase.update(appDatabase.surfaceAreas)..where((a) => a.id.equals(existing.id))).write(
+                await (appDatabase.update(appDatabase.surfaceAreas)..where((a) => a.uuid.equalsValue(existing.uuid))).write(
                   SurfaceAreasCompanion(title: Value(title), description: Value(desc)),
                 );
               }
@@ -110,7 +110,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
     );
 
     if (confirmed == true) {
-      await (appDatabase.delete(appDatabase.surfaceAreas)..where((a) => a.id.equals(area.id))).go();
+      await (appDatabase.delete(appDatabase.surfaceAreas)..where((a) => a.uuid.equalsValue(area.uuid))).go();
       _changed = true;
       _loadAreas();
       if (!mounted) return;
