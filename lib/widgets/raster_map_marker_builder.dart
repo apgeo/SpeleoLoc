@@ -185,7 +185,7 @@ class RasterMapMarkerBuilder {
           left: viewportPos.dx + 10,
           top: viewportPos.dy - 10,
           child: buildLabel(
-            '${cpwd.cavePlace.title} ${cpwd.definition?.cavePlaceId ?? ''}',
+            '${cpwd.cavePlace.title} ${cpwd.definition?.cavePlaceUuid ?? ''}',
             textColor,
             outlineEnabled: outlineEnabled,
             outlineWidth: outlineWidth,
@@ -494,12 +494,12 @@ class RasterMapMarkerBuilder {
   }) {
     final List<Widget> widgets = [];
 
-    // Build a map from cavePlaceId -> image (x, y)
-    final Map<int, Offset> coordsById = {};
+    // Build a map from cavePlaceUuid -> image (x, y)
+    final Map<Uuid, Offset> coordsById = {};
     for (final cpwd in definitions) {
       final def = cpwd.definition;
       if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
-        coordsById[cpwd.cavePlace.id] = Offset(
+        coordsById[cpwd.cavePlace.uuid] = Offset(
           def.xCoordinate!.toDouble(),
           def.yCoordinate!.toDouble(),
         );

@@ -339,53 +339,53 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   void _onCreateNew(String type) {
     final link = widget.source.geofeatureLink;
     if (link == null) return;
-    final cavePlaceId = link.type == GeofeatureType.cavePlace ? link.geofeatureId : null;
-    final caveId = link.type == GeofeatureType.cave ? link.geofeatureId : null;
-    final caveAreaId = link.type == GeofeatureType.caveArea ? link.geofeatureId : null;
+    final cavePlaceUuid = link.type == GeofeatureType.cavePlace ? link.geofeatureUuid : null;
+    final caveUuid = link.type == GeofeatureType.cave ? link.geofeatureUuid : null;
+    final caveAreaUuid = link.type == GeofeatureType.caveArea ? link.geofeatureUuid : null;
 
     switch (type) {
       case 'text':
         _navigateAndRefresh(
           TextDocumentEditorPage(
-            cavePlaceId: cavePlaceId,
-            caveId: caveId,
-            caveAreaId: caveAreaId,
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
           ),
         );
         break;
       case 'rich_text':
         _navigateAndRefresh(
           RichTextEditorPage(
-            cavePlaceId: cavePlaceId,
-            caveId: caveId,
-            caveAreaId: caveAreaId,
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
           ),
         );
         break;
       case 'image_edit':
         _navigateAndRefresh(
           ImageEditorPage(
-            cavePlaceId: cavePlaceId,
-            caveId: caveId,
-            caveAreaId: caveAreaId,
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
           ),
         );
         break;
       case 'camera':
         _navigateAndRefresh(
           CameraCapturePage(
-            cavePlaceId: cavePlaceId,
-            caveId: caveId,
-            caveAreaId: caveAreaId,
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
           ),
         );
         break;
       case 'audio':
         _navigateAndRefresh(
           SoundRecorderPage(
-            cavePlaceId: cavePlaceId,
-            caveId: caveId,
-            caveAreaId: caveAreaId,
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
           ),
         );
         break;
@@ -398,9 +398,9 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     if (link == null) return;
     _navigateAndRefresh(
       EditDocumentationFilePage(
-        cavePlaceId: link.type == GeofeatureType.cavePlace ? link.geofeatureId : null,
-        caveId: link.type == GeofeatureType.cave ? link.geofeatureId : null,
-        caveAreaId: link.type == GeofeatureType.caveArea ? link.geofeatureId : null,
+        cavePlaceUuid: link.type == GeofeatureType.cavePlace ? link.geofeatureUuid : null,
+        caveUuid: link.type == GeofeatureType.cave ? link.geofeatureUuid : null,
+        caveAreaUuid: link.type == GeofeatureType.caveArea ? link.geofeatureUuid : null,
       ),
     );
   }

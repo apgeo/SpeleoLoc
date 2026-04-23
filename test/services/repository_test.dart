@@ -32,7 +32,7 @@ void main() {
       final id = await caveRepo.addCave('Test Cave', description: 'd');
       final caves = await caveRepo.getCaves();
       expect(caves, hasLength(1));
-      expect(caves.single.id, id);
+      expect(caves.single.uuid, id);
       expect(caves.single.title, 'Test Cave');
       expect(caves.single.description, 'd');
     });
@@ -46,40 +46,40 @@ void main() {
     });
 
     test('deleteCave removes cascaded rows', () async {
-      final caveId = await caveRepo.addCave('C');
-      await cavePlaceRepo.addCavePlace(caveId, 'P1');
-      await caveRepo.deleteCave(caveId);
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'P1');
+      await caveRepo.deleteCave(caveUuid);
       expect(await caveRepo.getCaves(), isEmpty);
-      expect(await cavePlaceRepo.getCavePlaces(caveId), isEmpty);
+      expect(await cavePlaceRepo.getCavePlaces(caveUuid), isEmpty);
     });
   });
 
   group('CavePlaceRepository', () {
     test('add + list + findById', () async {
-      final caveId = await caveRepo.addCave('C');
-      await cavePlaceRepo.addCavePlace(caveId, 'Entry');
-      final list = await cavePlaceRepo.getCavePlaces(caveId);
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Entry');
+      final list = await cavePlaceRepo.getCavePlaces(caveUuid);
       expect(list, hasLength(1));
-      final fetched = await cavePlaceRepo.findById(list.single.id);
+      final fetched = await cavePlaceRepo.findById(list.single.uuid);
       expect(fetched?.title, 'Entry');
     });
 
     test('findById returns null for unknown id', () async {
-      expect(await cavePlaceRepo.findById(999), isNull);
+      expect(await cavePlaceRepo.findById(Uuid.v7()), isNull);
     });
 
     test('watchCavePlaces emits on insert and delete', () async {
-      final caveId = await caveRepo.addCave('C');
-      final stream = cavePlaceRepo.watchCavePlaces(caveId);
+      final caveUuid = await caveRepo.addCave('C');
+      final stream = cavePlaceRepo.watchCavePlaces(caveUuid);
 
       final emissions = <int>[];
       final sub = stream.listen((list) => emissions.add(list.length));
 
       // Initial emission is empty.
       await Future<void>.delayed(const Duration(milliseconds: 20));
-      await cavePlaceRepo.addCavePlace(caveId, 'A');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'A');
       await Future<void>.delayed(const Duration(milliseconds: 20));
-      await cavePlaceRepo.addCavePlace(caveId, 'B');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'B');
       await Future<void>.delayed(const Duration(milliseconds: 20));
 
       await sub.cancel();
@@ -103,9 +103,9 @@ void main() {
 
   group('DefinitionRepository', () {
     test('saveDefinition + findDefinition + deleteDefinition', () async {
-      final caveId = await caveRepo.addCave('C');
-      await cavePlaceRepo.addCavePlace(caveId, 'P');
-      final placeId = (await cavePlaceRepo.getCavePlaces(caveId)).single.id;
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'P');
+      final placeId = (await cavePlaceRepo.getCavePlaces(caveUuid)).single.uuid;
 
       // Need a raster map row to link against — create directly via repo.
       // RasterMapsCompanion requires a file name + title; inject minimal values.
@@ -118,18 +118,18 @@ void main() {
       // Skip the full insert here if the RasterMapsCompanion requires fields
       // beyond the ones exposed by the repo; rely on the simpler
       // findDefinition-returns-null path to verify the repo wiring.
-      final missing = await defRepo.findDefinition(placeId, 42);
+      final missing = await defRepo.findDefinition(placeId, Uuid.v7());
       expect(missing, isNull);
 
-      final deleted = await defRepo.deleteDefinition(placeId, 42);
+      final deleted = await defRepo.deleteDefinition(placeId, Uuid.v7());
       expect(deleted, isFalse);
     });
   });
 
   group('RasterMapRepository', () {
     test('getRasterMaps returns empty for new cave', () async {
-      final caveId = await caveRepo.addCave('C');
-      expect(await rasterMapRepo.getRasterMaps(caveId), isEmpty);
+      final caveUuid = await caveRepo.addCave('C');
+      expect(await rasterMapRepo.getRasterMaps(caveUuid), isEmpty);
     });
   });
 }

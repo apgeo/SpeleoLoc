@@ -24,8 +24,10 @@ void main() {
     file.writeAsBytesSync(img.encodePng(im));
 
     // Create a cave place + definition to show a marker at (50,50)
-    final cavePlace = CavePlace(id: 1, caveId: 1, title: 'P1');
-    final def = CavePlaceToRasterMapDefinition(id: 1, cavePlaceId: 1, rasterMapId: 1, xCoordinate: 50, yCoordinate: 50);
+    final cavePlaceUuid = Uuid.v7();
+    final rasterMapUuid = Uuid.v7();
+    final cavePlace = CavePlace(uuid: cavePlaceUuid, caveUuid: Uuid.v7(), title: 'P1');
+    final def = CavePlaceToRasterMapDefinition(uuid: Uuid.v7(), cavePlaceUuid: cavePlaceUuid, rasterMapUuid: rasterMapUuid, xCoordinate: 50, yCoordinate: 50);
     final cpwd = CavePlaceWithDefinition(cavePlace, def);
 
     final controller = RasterMapPlacePointEditorController();
@@ -49,7 +51,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Overlay text is "<title> <cavePlaceId>" in the implementation
+    // Overlay text is "<title> <cavePlaceUuid>" in the implementation
     expect(find.text('P1 1'), findsOneWidget);
 
     // Programmatic zoom shouldn't remove the overlay

@@ -11,9 +11,9 @@ class CavePlaceRepository implements ICavePlaceRepository {
   CavePlaceRepository(this._database);
 
   @override
-  Future<List<CavePlace>> getCavePlaces(int caveId) async {
+  Future<List<CavePlace>> getCavePlaces(Uuid caveUuid) async {
     try {
-      return await (_database.select(_database.cavePlaces)..where((cp) => cp.caveId.equals(caveId))).get();
+      return await (_database.select(_database.cavePlaces)..where((cp) => cp.caveUuid.equalsValue(caveUuid))).get();
     } catch (e, st) {
       _log.severe('Failed to load cave places', e, st);
       throw DbException('Failed to load cave places', cause: e, stackTrace: st);
@@ -21,19 +21,20 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
-  Stream<List<CavePlace>> watchCavePlaces(int caveId) {
+  Stream<List<CavePlace>> watchCavePlaces(Uuid caveUuid) {
     return (_database.select(_database.cavePlaces)
-          ..where((cp) => cp.caveId.equals(caveId)))
+          ..where((cp) => cp.caveUuid.equalsValue(caveUuid)))
         .watch();
   }
 
   @override
-  Future<void> addCavePlace(int caveId, String title) async {
+  Future<void> addCavePlace(Uuid caveUuid, String title) async {
     try {
       await _database.into(_database.cavePlaces).insert(
         CavePlacesCompanion.insert(
+          uuid: Uuid.v7(),
           title: title,
-          caveId: caveId
+          caveUuid: caveUuid,
         ),
       );
     } catch (e, st) {
@@ -43,31 +44,31 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
-  Future<void> deleteCavePlace(int id) async {
+  Future<void> deleteCavePlace(Uuid id) async {
     try {
       await _database.transaction(() async {
         // initial delete mechanism
-        //await (_database.delete(_database.cavePlaces)..where((cp) => cp.id.equals(id))).go();
+        //await (_database.delete(_database.cavePlaces)..where((cp) => cp.uuid.equalsValue(id))).go();
 
         // Remove direct FK references from map bindings.
         await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
-              ..where((d) => d.cavePlaceId.equals(id)))
+              ..where((d) => d.cavePlaceUuid.equalsValue(id)))
             .go();
 
         // Keep trip points but detach from removed cave place.
         await (_database.update(_database.caveTripPoints)
-              ..where((tp) => tp.cavePlaceId.equals(id)))
-            .write(const CaveTripPointsCompanion(cavePlaceId: Value(null)));
+              ..where((tp) => tp.cavePlaceUuid.equalsValue(id)))
+            .write(const CaveTripPointsCompanion(cavePlaceUuid: Value(null)));
 
         // Remove pseudo links to this cave place from documentation links table.
         await (_database.delete(_database.documentationFilesToGeofeatures)
               ..where((g) =>
                   g.geofeatureType.equals('cave_place') &
-                  g.geofeatureId.equals(id)))
+                  g.geofeatureUuid.equalsValue(id)))
             .go();
 
         await (_database.delete(_database.cavePlaces)
-              ..where((cp) => cp.id.equals(id)))
+              ..where((cp) => cp.uuid.equalsValue(id)))
             .go();
       });
     } catch (e, st) {
@@ -77,9 +78,9 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
-  Future<CavePlace?> findById(int id) async {
+  Future<CavePlace?> findById(Uuid id) async {
     try {
-      return await (_database.select(_database.cavePlaces)..where((cp) => cp.id.equals(id))).getSingleOrNull();
+      return await (_database.select(_database.cavePlaces)..where((cp) => cp.uuid.equalsValue(id))).getSingleOrNull();
     } catch (e, st) {
       _log.severe('Failed to find cave place', e, st);
       throw DbException('Failed to find cave place', cause: e, stackTrace: st);
@@ -87,12 +88,12 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
-  Future<CavePlace?> findCavePlaceByQrCode(int qrCode, int caveId) async {
+  Future<CavePlace?> findCavePlaceByQrCode(int qrCode, Uuid caveUuid) async {
     try {
       final results = await (_database.select(_database.cavePlaces)
             ..where((cp) =>
                 cp.placeQrCodeIdentifier.equals(qrCode) &
-                cp.caveId.equals(caveId)))
+                cp.caveUuid.equalsValue(caveUuid)))
           .get();
       return results.firstOrNull;
     } catch (e, st) {

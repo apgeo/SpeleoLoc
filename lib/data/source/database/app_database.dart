@@ -1,20 +1,20 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/data/source/database/legacy_v6_migration.dart';
 import 'package:speleoloc/data/source/database/test_data_helper.dart';
+import 'package:speleoloc/utils/uuid.dart';
+
+export 'package:speleoloc/utils/uuid.dart' show Uuid, UuidConverter;
 
 part 'app_database.g.dart';
 
-//?
-// final appDatabase = AppDatabase();
 AppDatabase appDatabase = AppDatabase();
 
-/// Captures migration events performed while opening the database.
-///
-/// Restore flows can consume the latest event and write a dedicated log line.
 class DatabaseMigrationEvent {
   const DatabaseMigrationEvent({
     required this.fromVersion,
@@ -43,7 +43,6 @@ class DatabaseMigrationMonitor {
     );
   }
 
-  /// Returns and clears the latest migration event.
   static DatabaseMigrationEvent? consumeLatest() {
     final event = _lastEvent;
     _lastEvent = null;
@@ -70,11 +69,11 @@ enum GeofeatureType {
 
 class DocumentationGeofeatureLink {
   final GeofeatureType type;
-  final int geofeatureId;
+  final Uuid geofeatureUuid;
 
   const DocumentationGeofeatureLink({
     required this.type,
-    required this.geofeatureId,
+    required this.geofeatureUuid,
   });
 }
 
@@ -85,221 +84,62 @@ class CavePlaceWithDefinition {
   CavePlaceWithDefinition(this.cavePlace, this.definition);
 }
 
-@DriftDatabase(
-  // relative import for the drift file. Drift also supports `package:`
-  // imports
-  include: {'./tables.drift'},
-)
+@DriftDatabase(include: {'./tables.drift'})
 class AppDatabase extends _$AppDatabase {
-  // static final AppDatabase _instance = AppDatabase();
-  // static AppDatabase instance() => _instance;
+  AppDatabase() : super(_openConnection());
 
-  AppDatabase() : super(_openConnection()) {
-    // Populate test data asynchronously after the database is opened.
-    // Schedule without awaiting so constructor remains synchronous.
-    
-    // Future(() async => await populateTestData());
-  }
-
-  /// Test-only constructor accepting a custom executor (e.g. in-memory
-  /// [NativeDatabase.memory]).
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6; // Schema version
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    beforeOpen: (details) async {
-      await customStatement('PRAGMA foreign_keys = ON');
+        beforeOpen: (details) async {
+          await customStatement('PRAGMA foreign_keys = ON');
+          if (details.hadUpgrade) {
+            DatabaseMigrationMonitor.record(
+              fromVersion: details.versionBefore ?? 0,
+              toVersion: details.versionNow,
+            );
+          }
+        },
+        onUpgrade: (migrator, from, to) async {
+          if (from < 7) {
+            // Pre-v7 schemas used INTEGER PKs. Convert to UUID PKs while
+            // preserving all rows and FK relationships.
+            final snap = await snapshotLegacyV6(this);
+            await dropLegacyV6Tables(this);
+            await migrator.createAll();
+            if (snap.totalRows > 0) {
+              await reinsertLegacyData(this, snap);
+            }
+          }
+        },
+      );
 
-      // Use dynamic access so this remains robust across Drift versions.
-      final dynamic d = details;
-      int fromVersion = 0;
-      int toVersion = schemaVersion;
-      bool hadUpgrade = false;
-
-      try {
-        final dynamic v = d.versionBefore;
-        if (v is int) fromVersion = v;
-      } catch (_) {}
-
-      try {
-        final dynamic v = d.versionNow;
-        if (v is int) toVersion = v;
-      } catch (_) {}
-
-      try {
-        final dynamic v = d.hadUpgrade;
-        if (v is bool) hadUpgrade = v;
-      } catch (_) {}
-
-      if (hadUpgrade || toVersion > fromVersion) {
-        DatabaseMigrationMonitor.record(
-          fromVersion: fromVersion,
-          toVersion: toVersion,
-        );
-      }
-    },
-    onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
-        // Add depth_in_cave column to cave_places (introduced in schema v2).
-        // The column is NUMERIC(7,2) and nullable, matching the drift definition.
-        await customStatement(
-          'ALTER TABLE cave_places ADD COLUMN depth_in_cave NUMERIC(7, 2)',
-        );
-      }
-
-      if (from < 3) {
-        await transaction(() async {
-          await customStatement('''
-            CREATE TABLE IF NOT EXISTS documentation_files__new (
-              id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-              title TEXT(50) NOT NULL,
-              description TEXT,
-              file_name TEXT(255) NOT NULL,
-              file_size INTEGER NOT NULL,
-              file_hash TEXT(64),
-              file_type TEXT(25) NOT NULL,
-              created_at INTEGER,
-              updated_at INTEGER,
-              deleted_at INTEGER,
-              UNIQUE(title, file_name, file_size, file_hash) ON CONFLICT ROLLBACK
-            )
-          ''');
-
-          await customStatement('''
-            INSERT INTO documentation_files__new
-              (id, title, description, file_name, file_size, file_hash, file_type, created_at, updated_at, deleted_at)
-            SELECT
-              id, title, description, file_name, COALESCE(file_size, 0), file_hash, 'unknown', created_at, updated_at, deleted_at
-            FROM documentation_files
-          ''');
-
-          await customStatement('''
-            CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (
-              id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-              geofeature_id INTEGER,
-              geofeature_type TEXT(10) NOT NULL,
-              documentation_file_id INTEGER NOT NULL REFERENCES documentation_files(id),
-              updated_at INTEGER,
-              deleted_at INTEGER,
-              UNIQUE(geofeature_id, geofeature_type, documentation_file_id) ON CONFLICT ROLLBACK
-            )
-          ''');
-
-          await customStatement('''
-            INSERT INTO documentation_files_to_geofeatures
-              (geofeature_id, geofeature_type, documentation_file_id, updated_at, deleted_at)
-            SELECT cave_id, 'cave', id, updated_at, deleted_at
-            FROM documentation_files
-            WHERE cave_id IS NOT NULL
-          ''');
-
-          await customStatement('''
-            INSERT INTO documentation_files_to_geofeatures
-              (geofeature_id, geofeature_type, documentation_file_id, updated_at, deleted_at)
-            SELECT cave_place_id, 'cave_place', id, updated_at, deleted_at
-            FROM documentation_files
-            WHERE cave_place_id IS NOT NULL
-          ''');
-
-          await customStatement('''
-            INSERT INTO documentation_files_to_geofeatures
-              (geofeature_id, geofeature_type, documentation_file_id, updated_at, deleted_at)
-            SELECT cave_area_id, 'cave_area', id, updated_at, deleted_at
-            FROM documentation_files
-            WHERE cave_area_id IS NOT NULL
-          ''');
-
-          await customStatement('DROP TABLE documentation_files');
-          await customStatement('ALTER TABLE documentation_files__new RENAME TO documentation_files');
-        });
-      }
-
-      if (from < 4) {
-        await customStatement('''
-          CREATE TABLE IF NOT EXISTS cave_trips (
-            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-            cave_id INTEGER NOT NULL REFERENCES caves (id),
-            title TEXT(255) NOT NULL,
-            description TEXT,
-            trip_started_at INTEGER NOT NULL,
-            trip_ended_at INTEGER,
-            created_at INTEGER,
-            updated_at INTEGER,
-            deleted_at INTEGER
-          )
-        ''');
-
-        await customStatement('''
-          CREATE TABLE IF NOT EXISTS cave_trip_points (
-            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-            cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id),
-            cave_place_id INTEGER REFERENCES cave_places (id),
-            scanned_at INTEGER NOT NULL,
-            notes TEXT,
-            created_at INTEGER,
-            updated_at INTEGER,
-            deleted_at INTEGER,
-            UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK
-          )
-        ''');
-
-        await customStatement('''
-          CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
-            id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-            documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id),
-            cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id),
-            created_at INTEGER,
-            deleted_at INTEGER,
-            UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK
-          )
-        ''');
-      }
-
-      if (from < 5) {
-        await customStatement('ALTER TABLE cave_trips ADD COLUMN log TEXT');
-      }
-
-      if (from < 6) {
-        await customStatement('''
-          CREATE TABLE IF NOT EXISTS trip_report_templates (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-            title       TEXT(255) NOT NULL,
-            file_name   TEXT(255) NOT NULL,
-            file_size   INTEGER NOT NULL,
-            format      TEXT(10) NOT NULL,
-            created_at  INTEGER,
-            updated_at  INTEGER,
-            deleted_at  INTEGER,
-            UNIQUE(title) ON CONFLICT ROLLBACK
-          )
-        ''');
-      }
-    },
-  );
-
-  // Cave trips
-  Future<int> insertCaveTrip({
-    required int caveId,
+  Future<Uuid> insertCaveTrip({
+    required Uuid caveUuid,
     required String title,
     String? description,
     required int startedAt,
   }) async {
-    return into(caveTrips).insert(
+    final uuid = Uuid.v7();
+    await into(caveTrips).insert(
       CaveTripsCompanion.insert(
-        caveId: caveId,
+        uuid: uuid,
+        caveUuid: caveUuid,
         title: title,
         description: Value(description),
         tripStartedAt: startedAt,
         createdAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
+    return uuid;
   }
 
-  Future<void> endCaveTrip(int tripId) async {
-    await (update(caveTrips)..where((t) => t.id.equals(tripId))).write(
+  Future<void> endCaveTrip(Uuid tripUuid) async {
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
       CaveTripsCompanion(
         tripEndedAt: Value(DateTime.now().millisecondsSinceEpoch),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
@@ -307,88 +147,95 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<CaveTrip?> getActiveTripForCave(int caveId) async {
+  Future<CaveTrip?> getActiveTripForCave(Uuid caveUuid) async {
     return (select(caveTrips)
-      ..where((t) => t.caveId.equals(caveId) & t.tripEndedAt.isNull())
-      ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
-      ..limit(1))
+          ..where((t) => t.caveUuid.equalsValue(caveUuid) & t.tripEndedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
+          ..limit(1))
         .getSingleOrNull();
   }
 
   Future<CaveTrip?> getActiveTrip() async {
     return (select(caveTrips)
-      ..where((t) => t.tripEndedAt.isNull())
-      ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
-      ..limit(1))
+          ..where((t) => t.tripEndedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
+          ..limit(1))
         .getSingleOrNull();
   }
 
-  Future<int> insertTripPoint({
-    required int tripId,
-    required int cavePlaceId,
+  Future<Uuid> insertTripPoint({
+    required Uuid tripUuid,
+    required Uuid cavePlaceUuid,
     String? notes,
   }) async {
-    return into(caveTripPoints).insert(
+    final uuid = Uuid.v7();
+    await into(caveTripPoints).insert(
       CaveTripPointsCompanion.insert(
-        caveTripId: tripId,
-        cavePlaceId: Value(cavePlaceId),
+        uuid: uuid,
+        caveTripUuid: tripUuid,
+        cavePlaceUuid: Value(cavePlaceUuid),
         scannedAt: DateTime.now().millisecondsSinceEpoch,
         notes: Value(notes),
         createdAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
+    return uuid;
   }
 
-  Future<List<CaveTripPoint>> getTripPoints(int tripId) async {
+  Future<List<CaveTripPoint>> getTripPoints(Uuid tripUuid) async {
     return (select(caveTripPoints)
-      ..where((t) => t.caveTripId.equals(tripId))
-      ..orderBy([(t) => OrderingTerm.asc(t.scannedAt)]))
+          ..where((t) => t.caveTripUuid.equalsValue(tripUuid))
+          ..orderBy([(t) => OrderingTerm.asc(t.scannedAt)]))
         .get();
   }
 
-  Future<List<CaveTrip>> getCaveTrips(int caveId) async {
+  Future<List<CaveTrip>> getCaveTrips(Uuid caveUuid) async {
     return (select(caveTrips)
-      ..where((t) => t.caveId.equals(caveId))
-      ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)]))
+          ..where((t) => t.caveUuid.equalsValue(caveUuid))
+          ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)]))
         .get();
   }
 
-  /// Returns all trip titles for [caveId].
-  Future<List<String>> getCaveTripTitles(int caveId) async {
+  Future<List<String>> getCaveTripTitles(Uuid caveUuid) async {
     final trips = await (select(caveTrips)
-          ..where((t) => t.caveId.equals(caveId)))
+          ..where((t) => t.caveUuid.equalsValue(caveUuid)))
         .get();
     return trips.map((t) => t.title).toList();
   }
 
-  Future<void> linkDocumentToTrip(int docId, int tripId) async {
+  Future<void> linkDocumentToTrip(Uuid docUuid, Uuid tripUuid) async {
     await into(documentationFilesToCaveTrips).insertOnConflictUpdate(
       DocumentationFilesToCaveTripsCompanion.insert(
-        documentationFileId: docId,
-        caveTripId: tripId,
+        uuid: Uuid.v7(),
+        documentationFileUuid: docUuid,
+        caveTripUuid: tripUuid,
         createdAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
   }
 
-  Future<void> deleteCaveTrip(int tripId) async {
+  Future<void> deleteCaveTrip(Uuid tripUuid) async {
     await transaction(() async {
       await (delete(documentationFilesToCaveTrips)
-        ..where((t) => t.caveTripId.equals(tripId))).go();
+            ..where((t) => t.caveTripUuid.equalsValue(tripUuid)))
+          .go();
       await (delete(caveTripPoints)
-        ..where((t) => t.caveTripId.equals(tripId))).go();
-      await (delete(caveTrips)..where((t) => t.id.equals(tripId))).go();
+            ..where((t) => t.caveTripUuid.equalsValue(tripUuid)))
+          .go();
+      await (delete(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).go();
     });
   }
 
-  /// Atomically appends [formattedLine] to the trip log (reads then writes in a transaction).
-  Future<void> appendToTripLog(int tripId, String formattedLine) async {
+  Future<void> appendToTripLog(Uuid tripUuid, String formattedLine) async {
     await transaction(() async {
-      final trip = await (select(caveTrips)..where((t) => t.id.equals(tripId))).getSingleOrNull();
+      final trip = await (select(caveTrips)
+            ..where((t) => t.uuid.equalsValue(tripUuid)))
+          .getSingleOrNull();
       if (trip == null) return;
       final current = trip.log ?? '';
-      final newLog = current.isEmpty ? formattedLine : '$current\n$formattedLine';
-      await (update(caveTrips)..where((t) => t.id.equals(tripId))).write(
+      final newLog =
+          current.isEmpty ? formattedLine : '$current\n$formattedLine';
+      await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
         CaveTripsCompanion(
           log: Value(newLog),
           updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
@@ -397,9 +244,8 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  /// Replaces the entire log for a trip (used by editable log page).
-  Future<void> updateTripLog(int tripId, String log) async {
-    await (update(caveTrips)..where((t) => t.id.equals(tripId))).write(
+  Future<void> updateTripLog(Uuid tripUuid, String log) async {
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
       CaveTripsCompanion(
         log: Value(log),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
@@ -407,27 +253,27 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  // ---- Trip report templates ----
-
   Future<List<TripReportTemplate>> getTripReportTemplates() async {
     return (select(tripReportTemplates)
           ..orderBy([(t) => OrderingTerm.asc(t.title)]))
         .get();
   }
 
-  Future<TripReportTemplate?> getTripReportTemplate(int id) async {
-    return (select(tripReportTemplates)..where((t) => t.id.equals(id)))
+  Future<TripReportTemplate?> getTripReportTemplate(Uuid uuid) async {
+    return (select(tripReportTemplates)..where((t) => t.uuid.equalsValue(uuid)))
         .getSingleOrNull();
   }
 
-  Future<int> insertTripReportTemplate({
+  Future<Uuid> insertTripReportTemplate({
     required String title,
     required String fileName,
     required int fileSize,
     required String format,
   }) async {
-    return into(tripReportTemplates).insert(
+    final uuid = Uuid.v7();
+    await into(tripReportTemplates).insert(
       TripReportTemplatesCompanion.insert(
+        uuid: uuid,
         title: title,
         fileName: fileName,
         fileSize: fileSize,
@@ -435,83 +281,100 @@ class AppDatabase extends _$AppDatabase {
         createdAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
+    return uuid;
   }
 
-  Future<void> deleteTripReportTemplate(int id) async {
-    await (delete(tripReportTemplates)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteTripReportTemplate(Uuid uuid) async {
+    await (delete(tripReportTemplates)..where((t) => t.uuid.equalsValue(uuid))).go();
   }
 
-  Future<bool> _geofeatureExists(GeofeatureType type, int geofeatureId) async {
+  Future<bool> _geofeatureExists(
+      GeofeatureType type, Uuid geofeatureUuid) async {
     switch (type) {
       case GeofeatureType.cave:
-        final cave = await (select(caves)..where((t) => t.id.equals(geofeatureId))).getSingleOrNull();
+        final cave =
+            await (select(caves)..where((t) => t.uuid.equalsValue(geofeatureUuid)))
+                .getSingleOrNull();
         return cave != null;
       case GeofeatureType.cavePlace:
-        final cavePlace = await (select(cavePlaces)..where((t) => t.id.equals(geofeatureId))).getSingleOrNull();
+        final cavePlace = await (select(cavePlaces)
+              ..where((t) => t.uuid.equalsValue(geofeatureUuid)))
+            .getSingleOrNull();
         return cavePlace != null;
       case GeofeatureType.caveArea:
-        final caveArea = await (select(caveAreas)..where((t) => t.id.equals(geofeatureId))).getSingleOrNull();
+        final caveArea = await (select(caveAreas)
+              ..where((t) => t.uuid.equalsValue(geofeatureUuid)))
+            .getSingleOrNull();
         return caveArea != null;
     }
   }
 
-  Future<void> _assertValidGeofeatureLink(DocumentationGeofeatureLink link) async {
-    final exists = await _geofeatureExists(link.type, link.geofeatureId);
+  Future<void> _assertValidGeofeatureLink(
+      DocumentationGeofeatureLink link) async {
+    final exists = await _geofeatureExists(link.type, link.geofeatureUuid);
     if (!exists) {
-      throw StateError('Invalid geofeature link: ${link.type.dbValue}(${link.geofeatureId}) does not exist.');
+      throw StateError(
+          'Invalid geofeature link: ${link.type.dbValue}(${link.geofeatureUuid}) does not exist.');
     }
   }
 
   Future<DocumentationGeofeatureLink?> getDocumentationParentLink({
-    int? caveId,
-    int? cavePlaceId,
-    int? caveAreaId,
+    Uuid? caveUuid,
+    Uuid? cavePlaceUuid,
+    Uuid? caveAreaUuid,
   }) async {
-    final provided = [caveId, cavePlaceId, caveAreaId].where((v) => v != null).length;
+    final provided =
+        [caveUuid, cavePlaceUuid, caveAreaUuid].where((v) => v != null).length;
     if (provided == 0) return null;
     if (provided > 1) {
-      throw ArgumentError('Only one of caveId, cavePlaceId, caveAreaId can be provided.');
+      throw ArgumentError(
+          'Only one of caveUuid, cavePlaceUuid, caveAreaUuid can be provided.');
     }
 
-    if (caveId != null) {
-      return DocumentationGeofeatureLink(type: GeofeatureType.cave, geofeatureId: caveId);
+    if (caveUuid != null) {
+      return DocumentationGeofeatureLink(
+          type: GeofeatureType.cave, geofeatureUuid: caveUuid);
     }
-    if (cavePlaceId != null) {
-      return DocumentationGeofeatureLink(type: GeofeatureType.cavePlace, geofeatureId: cavePlaceId);
+    if (cavePlaceUuid != null) {
+      return DocumentationGeofeatureLink(
+          type: GeofeatureType.cavePlace, geofeatureUuid: cavePlaceUuid);
     }
-    return DocumentationGeofeatureLink(type: GeofeatureType.caveArea, geofeatureId: caveAreaId!);
+    return DocumentationGeofeatureLink(
+        type: GeofeatureType.caveArea, geofeatureUuid: caveAreaUuid!);
   }
 
   Future<void> insertDocumentationLink({
-    required int documentationFileId,
+    required Uuid documentationFileUuid,
     required DocumentationGeofeatureLink link,
   }) async {
     await _assertValidGeofeatureLink(link);
 
-    // UNIQUE(geofeature_id, geofeature_type, documentation_file_id) ON CONFLICT ROLLBACK
-    // prevents duplicates at the DB level.
     await into(documentationFilesToGeofeatures).insert(
       DocumentationFilesToGeofeaturesCompanion.insert(
+        uuid: Uuid.v7(),
         geofeatureType: link.type.dbValue,
-        documentationFileId: documentationFileId,
-        geofeatureId: Value(link.geofeatureId),
+        documentationFileUuid: documentationFileUuid,
+        geofeatureUuid: Value(link.geofeatureUuid),
       ),
     );
   }
 
-  Future<int> insertDocumentationFile({
+  Future<Uuid> insertDocumentationFile({
     required DocumentationFilesCompanion companion,
     DocumentationGeofeatureLink? parentLink,
   }) async {
     return transaction(() async {
-      final docId = await into(documentationFiles).insert(companion);
+      final uuidValue =
+          companion.uuid.present ? companion.uuid.value : Uuid.v7();
+      final effective = companion.copyWith(uuid: Value(uuidValue));
+      await into(documentationFiles).insert(effective);
       if (parentLink != null) {
         await insertDocumentationLink(
-          documentationFileId: docId,
+          documentationFileUuid: uuidValue,
           link: parentLink,
         );
       }
-      return docId;
+      return uuidValue;
     });
   }
 
@@ -525,39 +388,52 @@ class AppDatabase extends _$AppDatabase {
     await _assertValidGeofeatureLink(parentLink);
 
     final rows = await (select(documentationFilesToGeofeatures)
-      ..where(
-        (t) =>
-            t.geofeatureType.equals(parentLink.type.dbValue) &
-            t.geofeatureId.equals(parentLink.geofeatureId),
-      )).get();
+          ..where(
+            (t) =>
+                t.geofeatureType.equals(parentLink.type.dbValue) &
+                t.geofeatureUuid.equalsValue(parentLink.geofeatureUuid),
+          ))
+        .get();
 
-    final documentIds = rows.map((r) => r.documentationFileId).toSet().toList();
-    if (documentIds.isEmpty) return const <DocumentationFile>[];
+    final documentUuids =
+        rows.map((r) => r.documentationFileUuid).toSet().toList();
+    if (documentUuids.isEmpty) return const <DocumentationFile>[];
 
-    return (select(documentationFiles)..where((t) => t.id.isIn(documentIds))).get();
+    return (select(documentationFiles)
+          ..where((t) => t.uuid.isInValues(documentUuids)))
+        .get();
   }
 
-  Future<void> deleteDocumentationFileById(int id) async {
+  Future<void> deleteDocumentationFileByUuid(Uuid uuid) async {
     await transaction(() async {
       await (delete(documentationFilesToGeofeatures)
-        ..where((t) => t.documentationFileId.equals(id))).go();
-      await (delete(documentationFiles)..where((t) => t.id.equals(id))).go();
+            ..where((t) => t.documentationFileUuid.equalsValue(uuid)))
+          .go();
+      await (delete(documentationFiles)..where((t) => t.uuid.equalsValue(uuid)))
+          .go();
     });
   }
 
-  /// Updates an existing documentation file record (title, file metadata, etc.).
   Future<void> updateDocumentationFile({
-    required int id,
+    required Uuid uuid,
     required DocumentationFilesCompanion companion,
   }) async {
-    await (update(documentationFiles)..where((t) => t.id.equals(id)))
+    await (update(documentationFiles)..where((t) => t.uuid.equalsValue(uuid)))
         .write(companion);
   }
 
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(int caveId, int rasterMapId) async {
+  Future<List<CavePlaceWithDefinition>>
+      getCavePlacesWithDefinitionsForRasterMap(
+          Uuid caveUuid, Uuid rasterMapUuid) async {
     final query = select(cavePlaces).join([
-      leftOuterJoin(cavePlaceToRasterMapDefinitions, cavePlaceToRasterMapDefinitions.cavePlaceId.equalsExp(cavePlaces.id) & cavePlaceToRasterMapDefinitions.rasterMapId.equals(rasterMapId)),
-    ])..where(cavePlaces.caveId.equals(caveId));
+      leftOuterJoin(
+        cavePlaceToRasterMapDefinitions,
+        cavePlaceToRasterMapDefinitions.cavePlaceUuid
+                .equalsExp(cavePlaces.uuid) &
+            cavePlaceToRasterMapDefinitions.rasterMapUuid.equalsValue(rasterMapUuid),
+      ),
+    ])
+      ..where(cavePlaces.caveUuid.equalsValue(caveUuid));
 
     return query.map((row) {
       final cavePlace = row.readTable(cavePlaces);
@@ -566,8 +442,13 @@ class AppDatabase extends _$AppDatabase {
     }).get();
   }
 
-  Future<CavePlaceToRasterMapDefinition?> getDefinition(int cavePlaceId, int rasterMapId) async {
-    return (select(cavePlaceToRasterMapDefinitions)..where((d) => d.cavePlaceId.equals(cavePlaceId) & d.rasterMapId.equals(rasterMapId))).getSingleOrNull();
+  Future<CavePlaceToRasterMapDefinition?> getDefinition(
+      Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
+    return (select(cavePlaceToRasterMapDefinitions)
+          ..where((d) =>
+              d.cavePlaceUuid.equalsValue(cavePlaceUuid) &
+              d.rasterMapUuid.equalsValue(rasterMapUuid)))
+        .getSingleOrNull();
   }
 
   Future<void> populateTestData() async {
@@ -575,8 +456,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> populateTestDataIfEmpty() async {
-    final caves = await select(this.caves).get();
-    if (caves.isEmpty) {
+    final existing = await select(caves).get();
+    if (existing.isEmpty) {
       await TestDataHelper.populateTestData(this);
     }
   }
@@ -586,21 +467,6 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final filePath = File(p.join(dbFolder.path, 'speleo_loc.sqlite'));
-    // put the database file, called db.sqlite here, into the documents folder
-    // for your app.
-    
-    // // Also work around limitations on old Android versions
-    // if (Platform.isAndroid) {
-    //   await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-    // }
-
-    // // Make sqlite3 pick a more suitable location for temporary files - the
-    // // one from the system may be inaccessible due to sandboxing.
-    // final cachebase = (await getTemporaryDirectory()).path;
-    // // We can't access /tmp on Android, which sqlite3 would try by default.
-    // // Explicitly tell it about the correct temporary directory.
-    // sqlite3.tempDirectory = cachebase;
-
     return NativeDatabase.createInBackground(filePath, enableMigrations: true);
   });
 }

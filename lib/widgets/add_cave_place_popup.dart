@@ -17,10 +17,10 @@ import 'package:speleoloc/utils/localization.dart';
 class AddCavePlacePopup extends StatefulWidget {
   const AddCavePlacePopup({
     super.key,
-    required this.caveId,
+    required this.caveUuid,
   });
 
-  final int caveId;
+  final Uuid caveUuid;
 
   @override
   State<AddCavePlacePopup> createState() => _AddCavePlacePopupState();
@@ -29,7 +29,7 @@ class AddCavePlacePopup extends StatefulWidget {
 class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
   final _titleController = TextEditingController();
   final _qrController = TextEditingController();
-  int? _selectedCaveAreaId;
+  Uuid? _selectedCaveAreaId;
   List<CaveArea> _caveAreas = [];
   bool _isSaving = false;
   String? _titleError;
@@ -50,7 +50,7 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
 
   Future<void> _loadCaveAreas() async {
     final areas = await (appDatabase.select(appDatabase.caveAreas)
-          ..where((ca) => ca.caveId.equals(widget.caveId)))
+          ..where((ca) => ca.caveUuid.equalsValue(widget.caveUuid)))
         .get();
     if (mounted) setState(() => _caveAreas = areas);
   }
@@ -64,7 +64,7 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     // Check uniqueness
     final existing = await (appDatabase.select(appDatabase.cavePlaces)
           ..where((cp) =>
-              cp.caveId.equals(widget.caveId) &
+              cp.caveUuid.equalsValue(widget.caveUuid) &
               cp.title.equals(title)))
         .getSingleOrNull();
     if (existing != null) {
@@ -91,7 +91,7 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     // Check uniqueness within cave
     final existing = await (appDatabase.select(appDatabase.cavePlaces)
           ..where((cp) =>
-              cp.caveId.equals(widget.caveId) &
+              cp.caveUuid.equalsValue(widget.caveUuid) &
               cp.placeQrCodeIdentifier.equals(qr)))
         .getSingleOrNull();
     if (existing != null) {
@@ -126,10 +126,11 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
           .into(appDatabase.cavePlaces)
           .insert(
             CavePlacesCompanion.insert(
+              uuid: Uuid.v7(),
               title: title,
-              caveId: widget.caveId,
+              caveUuid: widget.caveUuid,
               placeQrCodeIdentifier: Value(qr),
-              caveAreaId: Value(_selectedCaveAreaId),
+              caveAreaUuid: Value(_selectedCaveAreaId),
             ),
           );
       if (mounted) {
@@ -185,18 +186,18 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
             ),
             const SizedBox(height: 12),
             // Cave area dropdown
-            DropdownButtonFormField<int?>(
+            DropdownButtonFormField<Uuid?>(
               initialValue: _selectedCaveAreaId,
               decoration: InputDecoration(
                 labelText: LocServ.inst.t('cave_area'),
               ),
               items: [
-                DropdownMenuItem<int?>(
+                DropdownMenuItem<Uuid?>(
                   value: null,
                   child: Text(LocServ.inst.t('none')),
                 ),
-                ..._caveAreas.map((a) => DropdownMenuItem<int?>(
-                      value: a.id,
+                ..._caveAreas.map((a) => DropdownMenuItem<Uuid?>(
+                      value: a.uuid,
                       child: Text(a.title),
                     )),
               ],

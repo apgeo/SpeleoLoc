@@ -19,17 +19,17 @@ import 'package:speleoloc/widgets/product_tour.dart';
 class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
     super.key,
-    required this.cavePlaceId,
-    this.caveId,
+    required this.cavePlaceUuid,
+    this.caveUuid,
     this.placesListAlignment = 0.5,
     this.allowEditorOverflow = false,
   });
 
-  final int cavePlaceId;
+  final Uuid cavePlaceUuid;
 
-  /// Optional cave context. When provided and [cavePlaceId] resolves to null
+  /// Optional cave context. When provided and [cavePlaceUuid] resolves to null
   /// (e.g. id == 0), raster maps for this cave are still loaded.
-  final int? caveId;
+  final Uuid? caveUuid;
 
   /// Horizontal alignment used when bringing a cave-place item into view
   /// (0.0 = left, 0.5 = center, 1.0 = right).
@@ -61,7 +61,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   List<RasterMap> _rasterMaps = [];
   RasterMap? _selectedRasterMap;
   List<CavePlaceWithDefinition> _placesWithDefs = [];
-  int? _selectedPlaceId;
+  Uuid? _selectedPlaceId;
 
   static const bool SHOW_CAVE_PLACE_ACTIONS_IN_APP_BAR = false;
 
@@ -106,11 +106,11 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
 
   Future<void> _loadAll() async {
     // Load cave place and raster maps for its cave
-    _cavePlace = await cavePlaceRepository.findById(widget.cavePlaceId);
+    _cavePlace = await cavePlaceRepository.findById(widget.cavePlaceUuid);
     if (_cavePlace == null) {
-      // If an explicit caveId was provided, still load raster maps for that cave.
-      if (widget.caveId != null) {
-        _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveId!);
+      // If an explicit caveUuid was provided, still load raster maps for that cave.
+      if (widget.caveUuid != null) {
+        _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid!);
         if (_rasterMaps.isNotEmpty) {
           _selectedRasterMap = _rasterMaps.first;
           await _loadDefinitionsForSelected();
@@ -120,13 +120,13 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       if (mounted) setState(() {});
       return;
     }
-    final int caveId = _cavePlace!.caveId;
-    _rasterMaps = await rasterMapRepository.getRasterMaps(caveId);
+    final Uuid caveUuid = _cavePlace!.caveUuid;
+    _rasterMaps = await rasterMapRepository.getRasterMaps(caveUuid);
 
     // default selected place is the one passed in (must be set BEFORE
     // loading definitions so the editor controller is informed about which
     // cave place should be highlighted as selected).
-    _selectedPlaceId = widget.cavePlaceId;
+    _selectedPlaceId = widget.cavePlaceUuid;
 
     if (_rasterMaps.isNotEmpty) {
       _selectedRasterMap = _rasterMaps.first;
@@ -140,7 +140,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   Future<void> _loadDefinitionsForSelected() async {
     if (_selectedRasterMap == null || _cavePlace == null) return;
     // get cave places with definitions for this cave and raster map
-    _placesWithDefs = await definitionRepository.getCavePlacesWithDefinitionsForRasterMap(_cavePlace!.caveId, _selectedRasterMap!.id);
+    _placesWithDefs = await definitionRepository.getCavePlacesWithDefinitionsForRasterMap(_cavePlace!.caveUuid, _selectedRasterMap!.uuid);
 
     // inform persistent editor controller about the currently selected place
     // (so it can highlight the corresponding cave place marker without
@@ -180,7 +180,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // delegate centering to inner editor's PhotoView controller
       if (_selectedPlaceId == null) return;
-      final matches = _placesWithDefs.where((p) => p.cavePlace.id == _selectedPlaceId).toList();
+      final matches = _placesWithDefs.where((p) => p.cavePlace.uuid == _selectedPlaceId).toList();
       if (matches.isEmpty) return;
       final cpwd = matches.first;
       if (cpwd.definition == null) return;
@@ -201,8 +201,8 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     super.dispose();
   }
 
-  void _ensurePlaceItemVisible(int cavePlaceId) {
-    _navBarKey.currentState?.ensurePlaceItemVisible(cavePlaceId);
+  void _ensurePlaceItemVisible(Uuid cavePlaceUuid) {
+    _navBarKey.currentState?.ensurePlaceItemVisible(cavePlaceUuid);
   }
 
   /// Builds the readonly [RasterMapPlacePointEditor] for the given image.
@@ -220,10 +220,10 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
           if (cpwd.definition == null) return;
           // update selection UI only — editor handles controller selection
           // and centering itself (mirrors behavior of the nav bar list).
-          _selectedPlaceId = cpwd.cavePlace.id;
-          _navBarKey.currentState?.setSelectedPlaceId(cpwd.cavePlace.id);
+          _selectedPlaceId = cpwd.cavePlace.uuid;
+          _navBarKey.currentState?.setSelectedPlaceId(cpwd.cavePlace.uuid);
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _ensurePlaceItemVisible(cpwd.cavePlace.id);
+            _ensurePlaceItemVisible(cpwd.cavePlace.uuid);
           });
         },
       ),
@@ -235,7 +235,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       key: _navBarKey,
       rasterMaps: _rasterMaps,
       cavePlacesWithDefinitions: _placesWithDefs,
-      selectedRasterMapId: _selectedRasterMap?.id,
+      selectedRasterMapUuid: _selectedRasterMap?.uuid,
       selectedPlaceId: _selectedPlaceId,
       imageProviderCache: _imageProviderCache,
       placesListAlignment: widget.placesListAlignment,
@@ -254,7 +254,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
             cpwd.definition!.xCoordinate != null &&
             cpwd.definition!.yCoordinate != null;
 
-        _selectedPlaceId = cpwd.cavePlace.id;
+        _selectedPlaceId = cpwd.cavePlace.uuid;
 
         try {
           _editorController.setCavePlaceId(_selectedPlaceId);
@@ -273,7 +273,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         }
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _ensurePlaceItemVisible(cpwd.cavePlace.id);
+          _ensurePlaceItemVisible(cpwd.cavePlace.uuid);
         });
       },
     );
@@ -316,7 +316,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
                   MaterialPageRoute(
                     builder: (_) => GeofeatureDocumentsPage(
                       source: DocumentsSource.cavePlace(
-                        cavePlaceId: _selectedPlaceId ?? _cavePlace!.id,
+                        cavePlaceUuid: _selectedPlaceId ?? _cavePlace!.uuid,
                         cavePlaceTitle: _cavePlace!.title,
                       ),
                     ),
@@ -332,7 +332,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
                 if (_cavePlace == null) return;
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => CavePlacePage(caveId: _cavePlace!.caveId, cavePlaceId: _selectedPlaceId ?? _cavePlace!.id)),
+                  MaterialPageRoute(builder: (_) => CavePlacePage(caveUuid: _cavePlace!.caveUuid, cavePlaceUuid: _selectedPlaceId ?? _cavePlace!.uuid)),
                 );
               },
             ),

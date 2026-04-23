@@ -137,7 +137,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
 
     try {
       await TripReportExportService.instance.deleteTemplateFile(template.fileName);
-      await appDatabase.deleteTripReportTemplate(template.id);
+      await appDatabase.deleteTripReportTemplate(template.uuid);
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

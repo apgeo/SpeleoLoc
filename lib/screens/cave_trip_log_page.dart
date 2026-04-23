@@ -4,8 +4,8 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class CaveTripLogPage extends StatefulWidget {
-  const CaveTripLogPage({super.key, required this.tripId});
-  final int tripId;
+  const CaveTripLogPage({super.key, required this.tripUuid});
+  final Uuid tripUuid;
 
   @override
   State<CaveTripLogPage> createState() => _CaveTripLogPageState();
@@ -39,7 +39,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
 
   Future<void> _load() async {
     final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.id.equals(widget.tripId)))
+          ..where((t) => t.uuid.equalsValue(widget.tripUuid)))
         .getSingleOrNull();
     if (mounted) {
       setState(() {
@@ -52,7 +52,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await appDatabase.updateTripLog(widget.tripId, _controller.text);
+      await appDatabase.updateTripLog(widget.tripUuid, _controller.text);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LocServ.inst.t('trip_log_saved'))),

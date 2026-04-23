@@ -16,14 +16,14 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
     super.key,
     required this.rasterMap,
-    required this.cavePlaceId,
+    required this.cavePlaceUuid,
     required this.cavePlacesWithDefinitions,
     this.existingDefinition,
     this.isReadonly = false,
   });
 
   final RasterMap rasterMap;
-  final int cavePlaceId;
+  final Uuid cavePlaceUuid;
   final List<CavePlaceWithDefinition> cavePlacesWithDefinitions;
   final CavePlaceToRasterMapDefinition? existingDefinition;
   final bool isReadonly;
@@ -75,7 +75,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   List<RasterMap> _rasterMaps = [];
   late RasterMap _selectedRasterMap;
-  late int _selectedCavePlaceId;
+  late Uuid _selectedCavePlaceId;
   List<CavePlaceWithDefinition> _placesWithDefinitions = [];
   CavePlaceToRasterMapDefinition? _selectedDefinition;
 
@@ -83,13 +83,13 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   File? _imageFile;
   bool _imageLoaded = false;
 
-  Map<int, String> _caveAreaTitles = {};
+  Map<Uuid, String> _caveAreaTitles = {};
 
   @override
   void initState() {
     super.initState();
     _selectedRasterMap = widget.rasterMap;
-    _selectedCavePlaceId = widget.cavePlaceId;
+    _selectedCavePlaceId = widget.cavePlaceUuid;
     _placesWithDefinitions = widget.cavePlacesWithDefinitions;
     _selectedDefinition = widget.existingDefinition;
     _loadRasterMaps();
@@ -118,16 +118,16 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _loadCaveAreas() async {
-    final areas = await caveRepository.getCaveAreas(widget.rasterMap.caveId);
+    final areas = await caveRepository.getCaveAreas(widget.rasterMap.caveUuid);
     if (mounted) {
       setState(() {
-        _caveAreaTitles = {for (final a in areas) a.id: a.title};
+        _caveAreaTitles = {for (final a in areas) a.uuid: a.title};
       });
     }
   }
 
   Future<void> _loadRasterMaps() async {
-    final maps = await rasterMapRepository.getRasterMaps(widget.rasterMap.caveId);
+    final maps = await rasterMapRepository.getRasterMaps(widget.rasterMap.caveUuid);
     if (mounted) {
       setState(() {
         _rasterMaps = maps;
@@ -137,8 +137,8 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   Future<void> _loadDefinitionsForSelected() async {
     final defs = await definitionRepository.getCavePlacesWithDefinitionsForRasterMap(
-      _selectedRasterMap.caveId,
-      _selectedRasterMap.id,
+      _selectedRasterMap.caveUuid,
+      _selectedRasterMap.uuid,
     );
     final file = await getDocumentsFile(_selectedRasterMap.fileName);
     if (!mounted) return;
@@ -159,10 +159,10 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   CavePlaceToRasterMapDefinition? _findDefinition(
-    int cavePlaceId,
+    Uuid cavePlaceUuid,
     List<CavePlaceWithDefinition> list,
   ) {
-    return list.where((c) => c.cavePlace.id == cavePlaceId).firstOrNull?.definition;
+    return list.where((c) => c.cavePlace.uuid == cavePlaceUuid).firstOrNull?.definition;
   }
 
   Future<bool> _confirmAutoSaveIfNeeded() async {
@@ -192,36 +192,36 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _saveDefinition(
-    int cavePlaceId,
-    int rasterMapId,
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
     double imageX,
     double imageY,
   ) async {
-    final saved = await definitionRepository.saveDefinition(cavePlaceId, rasterMapId, imageX, imageY);
+    final saved = await definitionRepository.saveDefinition(cavePlaceUuid, rasterMapUuid, imageX, imageY);
     // keep local list in sync so subsequent navigation reflects the persisted state
-    final idx = _placesWithDefinitions.indexWhere((c) => c.cavePlace.id == cavePlaceId);
+    final idx = _placesWithDefinitions.indexWhere((c) => c.cavePlace.uuid == cavePlaceUuid);
     if (idx >= 0) {
       _placesWithDefinitions[idx] = CavePlaceWithDefinition(_placesWithDefinitions[idx].cavePlace, saved);
     }
   }
 
   Future<bool> _handleAutoSaveRequested(
-    int cavePlaceId,
-    int rasterMapId,
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
     double imageX,
     double imageY,
   ) async {
     final shouldSave = await _confirmAutoSaveIfNeeded();
     if (!shouldSave) return false;
-    await _saveDefinition(cavePlaceId, rasterMapId, imageX, imageY);
+    await _saveDefinition(cavePlaceUuid, rasterMapUuid, imageX, imageY);
     return true;
   }
 
-  Future<bool> _handleRemoveDefinition(int cavePlaceId, int rasterMapId) async {
-    final removed = await definitionRepository.deleteDefinition(cavePlaceId, rasterMapId);
+  Future<bool> _handleRemoveDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
+    final removed = await definitionRepository.deleteDefinition(cavePlaceUuid, rasterMapUuid);
     if (removed) {
       // Update local list so the UI reflects the deletion immediately.
-      final idx = _placesWithDefinitions.indexWhere((c) => c.cavePlace.id == cavePlaceId);
+      final idx = _placesWithDefinitions.indexWhere((c) => c.cavePlace.uuid == cavePlaceUuid);
       if (idx >= 0) {
         _placesWithDefinitions[idx] = CavePlaceWithDefinition(
           _placesWithDefinitions[idx].cavePlace,
@@ -240,7 +240,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _onRasterMapSelected(RasterMap rm) async {
-    if (rm.id == _selectedRasterMap.id) return;
+    if (rm.uuid == _selectedRasterMap.uuid) return;
     setState(() {
       _selectedRasterMap = rm;
       _imageFile = null;
@@ -250,9 +250,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   void _onCavePlaceSelected(CavePlaceWithDefinition cpwd) {
-    if (_selectedCavePlaceId == cpwd.cavePlace.id) return;
+    if (_selectedCavePlaceId == cpwd.cavePlace.uuid) return;
     setState(() {
-      _selectedCavePlaceId = cpwd.cavePlace.id;
+      _selectedCavePlaceId = cpwd.cavePlace.uuid;
       _selectedDefinition = cpwd.definition;
       _imageSelectedX = _selectedDefinition?.xCoordinate?.toDouble();
       _imageSelectedY = _selectedDefinition?.yCoordinate?.toDouble();
@@ -291,7 +291,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
     await _saveDefinition(
       _selectedCavePlaceId,
-      _selectedRasterMap.id,
+      _selectedRasterMap.uuid,
       saveX,
       saveY,
     );
@@ -310,17 +310,17 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   @override
   Widget build(BuildContext context) {
     final String? cavePlaceTitle = _placesWithDefinitions
-        .where((c) => c.cavePlace.id == _selectedCavePlaceId)
+        .where((c) => c.cavePlace.uuid == _selectedCavePlaceId)
         .map((c) => c.cavePlace.title)
         .firstOrNull;
 
     final selectedCp = _placesWithDefinitions
-        .where((c) => c.cavePlace.id == _selectedCavePlaceId)
+        .where((c) => c.cavePlace.uuid == _selectedCavePlaceId)
         .map((c) => c.cavePlace)
         .firstOrNull;
-    final caveAreaSuffix = (selectedCp?.caveAreaId != null &&
-            _caveAreaTitles.containsKey(selectedCp!.caveAreaId))
-        ? ' (${_caveAreaTitles[selectedCp.caveAreaId!]})'
+    final caveAreaSuffix = (selectedCp?.caveAreaUuid != null &&
+            _caveAreaTitles.containsKey(selectedCp!.caveAreaUuid))
+        ? ' (${_caveAreaTitles[selectedCp.caveAreaUuid!]})'
         : '';
 
     return Scaffold(
@@ -405,14 +405,14 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
                           isReadonly: widget.isReadonly,
                           debugUi: DEBUG_UI,
                           rasterMaps: _rasterMaps,
-                          selectedRasterMapId: _selectedRasterMap.id,
+                          selectedRasterMapUuid: _selectedRasterMap.uuid,
                           navBarStyle: _compactNavBar ? const RasterMapNavBarStyle.compact() : const RasterMapNavBarStyle(),
                           onRasterMapSelected: _onRasterMapSelected,
                           onCavePlaceSelected: _onCavePlaceSelected,
                           onAutoSaveRequested: _handleAutoSaveRequested,
                           onRemoveDefinitionRequested: _handleRemoveDefinition,
                           onSaveDefinitionRequested: widget.isReadonly ? null : _definePlace,
-                          caveId: widget.rasterMap.caveId,
+                          caveUuid: widget.rasterMap.caveUuid,
                           onCavePlaceAdded: () {
                             _loadDefinitionsForSelected();
                           },

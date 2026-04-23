@@ -84,7 +84,7 @@ class RasterMapNavBar extends StatefulWidget {
     super.key,
     required this.rasterMaps,
     required this.cavePlacesWithDefinitions,
-    required this.selectedRasterMapId,
+    required this.selectedRasterMapUuid,
     required this.selectedPlaceId,
     required this.onRasterMapSelected,
     required this.onCavePlaceSelected,
@@ -97,8 +97,8 @@ class RasterMapNavBar extends StatefulWidget {
 
   final List<RasterMap> rasterMaps;
   final List<CavePlaceWithDefinition> cavePlacesWithDefinitions;
-  final int? selectedRasterMapId;
-  final int? selectedPlaceId;
+  final Uuid? selectedRasterMapUuid;
+  final Uuid? selectedPlaceId;
   final void Function(RasterMap rm) onRasterMapSelected;
   final void Function(CavePlaceWithDefinition cpwd) onCavePlaceSelected;
   final RasterMapNavBarStyle style;
@@ -119,10 +119,10 @@ class RasterMapNavBar extends StatefulWidget {
 class RasterMapNavBarState extends State<RasterMapNavBar> {
   // scroll controller + keys for the horizontal cave-places list
   final ScrollController _placesScrollController = ScrollController();
-  final Map<int, GlobalKey> _placeItemKeys = {};
+  final Map<Uuid, GlobalKey> _placeItemKeys = {};
 
   // Notifier so the places list updates efficiently without full rebuild.
-  final ValueNotifier<int?> _selectedPlaceNotifier = ValueNotifier<int?>(null);
+  final ValueNotifier<Uuid?> _selectedPlaceNotifier = ValueNotifier<Uuid?>(null);
 
   // Cache for image path futures so they're not re-awaited on rebuild
   final Map<String, Future<String>> _imagePathFutures = {};
@@ -149,7 +149,7 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
   }
 
   /// Programmatically update the selected place id and scroll to it.
-  void setSelectedPlaceId(int? id) {
+  void setSelectedPlaceId(Uuid? id) {
     _selectedPlaceNotifier.value = id;
     if (id != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -158,8 +158,8 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     }
   }
 
-  void ensurePlaceItemVisible(int cavePlaceId) {
-    final key = _placeItemKeys[cavePlaceId];
+  void ensurePlaceItemVisible(Uuid cavePlaceUuid) {
+    final key = _placeItemKeys[cavePlaceUuid];
     if (key == null) return;
     final ctx = key.currentContext;
     if (ctx == null) return;
@@ -209,7 +209,7 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                 itemCount: widget.rasterMaps.length,
                 itemBuilder: (context, i) {
                   final rm = widget.rasterMaps[i];
-                  final isSelected = widget.selectedRasterMapId == rm.id;
+                  final isSelected = widget.selectedRasterMapUuid == rm.uuid;
                   return GestureDetector(
                     onTap: () => widget.onRasterMapSelected(rm),
                     child: Container(
@@ -299,7 +299,7 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: SizedBox(
         height: listHeight,
-        child: ValueListenableBuilder<int?>(
+        child: ValueListenableBuilder<Uuid?>(
           valueListenable: _selectedPlaceNotifier,
           builder: (context, selectedId, _) {
             return ListView.builder(
@@ -311,17 +311,17 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                 final hasDef = cpwd.definition != null &&
                     cpwd.definition!.xCoordinate != null &&
                     cpwd.definition!.yCoordinate != null;
-                final isSelected = selectedId != null && selectedId == cpwd.cavePlace.id;
+                final isSelected = selectedId != null && selectedId == cpwd.cavePlace.uuid;
 
-                final key = _placeItemKeys.putIfAbsent(cpwd.cavePlace.id, () => GlobalKey());
+                final key = _placeItemKeys.putIfAbsent(cpwd.cavePlace.uuid, () => GlobalKey());
 
                 return GestureDetector(
                   onTap: () {
-                    _selectedPlaceNotifier.value = cpwd.cavePlace.id;
+                    _selectedPlaceNotifier.value = cpwd.cavePlace.uuid;
                     widget.onCavePlaceSelected(cpwd);
 
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      ensurePlaceItemVisible(cpwd.cavePlace.id);
+                      ensurePlaceItemVisible(cpwd.cavePlace.uuid);
                     });
                   },
                   child: Container(

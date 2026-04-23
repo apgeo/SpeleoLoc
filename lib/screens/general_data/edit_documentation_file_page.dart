@@ -12,12 +12,12 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class EditDocumentationFilePage extends StatefulWidget {
-  const EditDocumentationFilePage({super.key, this.documentationFile, this.cavePlaceId, this.caveId, this.caveAreaId});
+  const EditDocumentationFilePage({super.key, this.documentationFile, this.cavePlaceUuid, this.caveUuid, this.caveAreaUuid});
 
   final DocumentationFile? documentationFile;
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
 
   @override
   State<EditDocumentationFilePage> createState() => _EditDocumentationFilePageState();
@@ -125,13 +125,14 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
     }
 
     final parentLink = await appDatabase.getDocumentationParentLink(
-      cavePlaceId: widget.cavePlaceId,
-      caveId: widget.caveId,
-      caveAreaId: widget.caveAreaId,
+      cavePlaceUuid: widget.cavePlaceUuid,
+      caveUuid: widget.caveUuid,
+      caveAreaUuid: widget.caveAreaUuid,
     );
 
     // Insert new (use insert ctor which expects plain values for required fields)
     final companion = DocumentationFilesCompanion.insert(
+      uuid: Uuid.v7(),
       title: title ?? '',
       fileName: fileNameToStore,
       fileSize: _fileSize ?? 0,

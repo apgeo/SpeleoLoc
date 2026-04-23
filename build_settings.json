@@ -1,5 +1,5 @@
 {
-  "test_db_path": "test_data/db/binaries/speleo_loc_export_20260414.sqlite",
+  "test_db_path": "test_data/db/binaries/speleo_loc_export_20260423.sqlite",
   "test_maps_dir": "test_data/maps",
   "test_report_templates_dir": "test_data/report_templates"
 }

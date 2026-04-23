@@ -19,14 +19,14 @@ import 'package:speleoloc/widgets/product_tour.dart';
 class CameraCapturePage extends StatefulWidget {
   const CameraCapturePage({
     super.key,
-    this.cavePlaceId,
-    this.caveId,
-    this.caveAreaId,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
   });
 
-  final int? cavePlaceId;
-  final int? caveId;
-  final int? caveAreaId;
+  final Uuid? cavePlaceUuid;
+  final Uuid? caveUuid;
+  final Uuid? caveAreaUuid;
 
   @override
   State<CameraCapturePage> createState() => _CameraCapturePageState();
@@ -104,9 +104,9 @@ class _CameraCapturePageState extends State<CameraCapturePage>
 
       final saved = await DocumentationFileHelper.saveExternalFile(_capturedFile!);
       final parentLink = await appDatabase.getDocumentationParentLink(
-        cavePlaceId: widget.cavePlaceId,
-        caveId: widget.caveId,
-        caveAreaId: widget.caveAreaId,
+        cavePlaceUuid: widget.cavePlaceUuid,
+        caveUuid: widget.caveUuid,
+        caveAreaUuid: widget.caveAreaUuid,
       );
       await DocumentationFileHelper.insertRecord(
         title: 'Photo ${DateTime.now().toIso8601String().substring(0, 19)}',
@@ -132,9 +132,9 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       context,
       MaterialPageRoute(
         builder: (_) => ImageEditorPage(
-          cavePlaceId: widget.cavePlaceId,
-          caveId: widget.caveId,
-          caveAreaId: widget.caveAreaId,
+          cavePlaceUuid: widget.cavePlaceUuid,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.caveAreaUuid,
           initialFile: _capturedFile,
         ),
       ),

@@ -26,14 +26,17 @@ class CaveRepository implements ICaveRepository {
   }
 
   @override
-  Future<int> addCave(String title, {int? surfaceAreaId, String? description}) async {
+  Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description}) async {
     try {
-      final companion = CavesCompanion(
-        title: Value(title),
-        surfaceAreaId: Value(surfaceAreaId),
+      final newUuid = Uuid.v7();
+      final companion = CavesCompanion.insert(
+        uuid: newUuid,
+        title: title,
+        surfaceAreaUuid: Value(surfaceAreaUuid),
         description: Value(description),
       );
-      return await _database.into(_database.caves).insert(companion);
+      await _database.into(_database.caves).insert(companion);
+      return newUuid;
     } catch (e, st) {
       _log.severe('Failed to add cave', e, st);
       throw DbException('Failed to add cave', cause: e, stackTrace: st);
@@ -41,12 +44,12 @@ class CaveRepository implements ICaveRepository {
   }
 
   @override
-  Future<void> updateCave(int id, String title, {int? surfaceAreaId, String? description}) async {
+  Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description}) async {
     try {
-      await (_database.update(_database.caves)..where((c) => c.id.equals(id))).write(
+      await (_database.update(_database.caves)..where((c) => c.uuid.equalsValue(id))).write(
         CavesCompanion(
           title: Value(title),
-          surfaceAreaId: Value(surfaceAreaId),
+          surfaceAreaUuid: Value(surfaceAreaUuid),
           description: Value(description),
         ),
       );
@@ -57,46 +60,46 @@ class CaveRepository implements ICaveRepository {
   }
 
   @override
-  Future<void> deleteCave(int id) async {
+  Future<void> deleteCave(Uuid id) async {
     try {
       await _database.transaction(() async {
         final caveAreas = await (_database.select(_database.caveAreas)
-              ..where((ca) => ca.caveId.equals(id)))
+              ..where((ca) => ca.caveUuid.equalsValue(id)))
             .get();
-        final caveAreaIds = caveAreas.map((a) => a.id).toList();
+        final caveAreaIds = caveAreas.map((a) => a.uuid).toList();
 
         final cavePlaces = await (_database.select(_database.cavePlaces)
-              ..where((cp) => cp.caveId.equals(id)))
+              ..where((cp) => cp.caveUuid.equalsValue(id)))
             .get();
-        final cavePlaceIds = cavePlaces.map((p) => p.id).toList();
+        final cavePlaceIds = cavePlaces.map((p) => p.uuid).toList();
 
         final rasterMaps = await (_database.select(_database.rasterMaps)
-              ..where((rm) => rm.caveId.equals(id)))
+              ..where((rm) => rm.caveUuid.equalsValue(id)))
             .get();
-        final rasterMapIds = rasterMaps.map((rm) => rm.id).toList();
+        final rasterMapIds = rasterMaps.map((rm) => rm.uuid).toList();
 
         final caveTrips = await (_database.select(_database.caveTrips)
-              ..where((t) => t.caveId.equals(id)))
+              ..where((t) => t.caveUuid.equalsValue(id)))
             .get();
-        final caveTripIds = caveTrips.map((t) => t.id).toList();
+        final caveTripIds = caveTrips.map((t) => t.uuid).toList();
 
         // Remove geofeature links for cave, cave places and cave areas.
         await (_database.delete(_database.documentationFilesToGeofeatures)
               ..where((g) =>
-                  (g.geofeatureType.equals('cave') & g.geofeatureId.equals(id))))
+                  (g.geofeatureType.equals('cave') & g.geofeatureUuid.equalsValue(id))))
             .go();
         if (cavePlaceIds.isNotEmpty) {
           await (_database.delete(_database.documentationFilesToGeofeatures)
                 ..where((g) =>
                     g.geofeatureType.equals('cave_place') &
-                    g.geofeatureId.isIn(cavePlaceIds)))
+                    g.geofeatureUuid.isInValues(cavePlaceIds)))
               .go();
         }
         if (caveAreaIds.isNotEmpty) {
           await (_database.delete(_database.documentationFilesToGeofeatures)
                 ..where((g) =>
                     g.geofeatureType.equals('cave_area') &
-                    g.geofeatureId.isIn(caveAreaIds)))
+                    g.geofeatureUuid.isInValues(caveAreaIds)))
               .go();
         }
 
@@ -105,10 +108,10 @@ class CaveRepository implements ICaveRepository {
           await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
                 ..where((d) {
                   final byPlace = cavePlaceIds.isNotEmpty
-                      ? d.cavePlaceId.isIn(cavePlaceIds)
+                      ? d.cavePlaceUuid.isInValues(cavePlaceIds)
                       : const Constant(false);
                   final byMap = rasterMapIds.isNotEmpty
-                      ? d.rasterMapId.isIn(rasterMapIds)
+                      ? d.rasterMapUuid.isInValues(rasterMapIds)
                       : const Constant(false);
                   return byPlace | byMap;
                 }))
@@ -120,34 +123,34 @@ class CaveRepository implements ICaveRepository {
           await (_database.delete(_database.caveTripPoints)
                 ..where((tp) {
                   final byTrip = caveTripIds.isNotEmpty
-                      ? tp.caveTripId.isIn(caveTripIds)
+                      ? tp.caveTripUuid.isInValues(caveTripIds)
                       : const Constant(false);
                   final byPlace = cavePlaceIds.isNotEmpty
-                      ? tp.cavePlaceId.isIn(cavePlaceIds)
+                      ? tp.cavePlaceUuid.isInValues(cavePlaceIds)
                       : const Constant(false);
                   return byTrip | byPlace;
                 }))
               .go();
         }
         await (_database.delete(_database.caveTrips)
-              ..where((t) => t.caveId.equals(id)))
+              ..where((t) => t.caveUuid.equalsValue(id)))
             .go();
 
         // Remove cave-linked base data.
         await (_database.delete(_database.caveEntrances)
-              ..where((e) => e.caveId.equals(id)))
+              ..where((e) => e.caveUuid.equalsValue(id)))
             .go();
         await (_database.delete(_database.rasterMaps)
-              ..where((rm) => rm.caveId.equals(id)))
+              ..where((rm) => rm.caveUuid.equalsValue(id)))
             .go();
         await (_database.delete(_database.cavePlaces)
-              ..where((cp) => cp.caveId.equals(id)))
+              ..where((cp) => cp.caveUuid.equalsValue(id)))
             .go();
         await (_database.delete(_database.caveAreas)
-              ..where((ca) => ca.caveId.equals(id)))
+              ..where((ca) => ca.caveUuid.equalsValue(id)))
             .go();
 
-        await (_database.delete(_database.caves)..where((c) => c.id.equals(id))).go();
+        await (_database.delete(_database.caves)..where((c) => c.uuid.equalsValue(id))).go();
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave', e, st);
@@ -156,9 +159,9 @@ class CaveRepository implements ICaveRepository {
   }
 
   @override
-  Future<List<CaveArea>> getCaveAreas(int caveId) async {
+  Future<List<CaveArea>> getCaveAreas(Uuid caveUuid) async {
     try {
-      return await (_database.select(_database.caveAreas)..where((ca) => ca.caveId.equals(caveId))).get();
+      return await (_database.select(_database.caveAreas)..where((ca) => ca.caveUuid.equalsValue(caveUuid))).get();
     } catch (e, st) {
       _log.severe('Failed to load cave areas', e, st);
       throw DbException('Failed to load cave areas', cause: e, stackTrace: st);

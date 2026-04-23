@@ -13,9 +13,9 @@ class DefinitionRepository implements IDefinitionRepository {
   DefinitionRepository(this._database);
 
   @override
-  Future<CavePlaceToRasterMapDefinition?> findDefinition(int cavePlaceId, int rasterMapId) async {
+  Future<CavePlaceToRasterMapDefinition?> findDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
     try {
-      return await _database.getDefinition(cavePlaceId, rasterMapId);
+      return await _database.getDefinition(cavePlaceUuid, rasterMapUuid);
     } catch (e, st) {
       _log.severe('findDefinition error', e, st);
       throw DbException('Failed to find definition', cause: e, stackTrace: st);
@@ -23,9 +23,9 @@ class DefinitionRepository implements IDefinitionRepository {
   }
 
   @override
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(int caveId, int rasterMapId) async {
+  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(Uuid caveUuid, Uuid rasterMapUuid) async {
     try {
-      return await _database.getCavePlacesWithDefinitionsForRasterMap(caveId, rasterMapId);
+      return await _database.getCavePlacesWithDefinitionsForRasterMap(caveUuid, rasterMapUuid);
     } catch (e, st) {
       _log.severe('getCavePlacesWithDefinitionsForRasterMap error', e, st);
       throw DbException(
@@ -39,41 +39,43 @@ class DefinitionRepository implements IDefinitionRepository {
   /// Upsert a definition. Returns the persisted [CavePlaceToRasterMapDefinition].
   ///
   /// Wrapped in a transaction to prevent duplicate inserts from concurrent
-  /// saves for the same (cavePlaceId, rasterMapId) pair.
+  /// saves for the same (cavePlaceUuid, rasterMapUuid) pair.
   @override
   Future<CavePlaceToRasterMapDefinition> saveDefinition(
-    int cavePlaceId,
-    int rasterMapId,
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
     double imageX,
     double imageY,
   ) async {
     try {
       return await _database.transaction(() async {
-        final existing = await findDefinition(cavePlaceId, rasterMapId);
+        final existing = await findDefinition(cavePlaceUuid, rasterMapUuid);
         if (existing != null) {
           final updated = CavePlaceToRasterMapDefinition(
-            id: existing.id,
+            uuid: existing.uuid,
             xCoordinate: imageX.toInt(),
             yCoordinate: imageY.toInt(),
-            cavePlaceId: cavePlaceId,
-            rasterMapId: rasterMapId,
+            cavePlaceUuid: cavePlaceUuid,
+            rasterMapUuid: rasterMapUuid,
           );
           await _database.update(_database.cavePlaceToRasterMapDefinitions).replace(updated);
           return updated;
         } else {
-          final companion = CavePlaceToRasterMapDefinitionsCompanion(
+          final newUuid = Uuid.v7();
+          final companion = CavePlaceToRasterMapDefinitionsCompanion.insert(
+            uuid: newUuid,
             xCoordinate: Value(imageX.toInt()),
             yCoordinate: Value(imageY.toInt()),
-            cavePlaceId: Value(cavePlaceId),
-            rasterMapId: Value(rasterMapId),
+            cavePlaceUuid: cavePlaceUuid,
+            rasterMapUuid: rasterMapUuid,
           );
-          final newId = await _database.into(_database.cavePlaceToRasterMapDefinitions).insert(companion);
+          await _database.into(_database.cavePlaceToRasterMapDefinitions).insert(companion);
           return CavePlaceToRasterMapDefinition(
-            id: newId,
+            uuid: newUuid,
             xCoordinate: imageX.toInt(),
             yCoordinate: imageY.toInt(),
-            cavePlaceId: cavePlaceId,
-            rasterMapId: rasterMapId,
+            cavePlaceUuid: cavePlaceUuid,
+            rasterMapUuid: rasterMapUuid,
           );
         }
       });
@@ -83,13 +85,13 @@ class DefinitionRepository implements IDefinitionRepository {
     }
   }
 
-  /// Delete the definition that links [cavePlaceId] to [rasterMapId].
+  /// Delete the definition that links [cavePlaceUuid] to [rasterMapUuid].
   /// Returns `true` when a row was actually deleted.
   @override
-  Future<bool> deleteDefinition(int cavePlaceId, int rasterMapId) async {
+  Future<bool> deleteDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
     try {
       final rows = await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) => d.cavePlaceId.equals(cavePlaceId) & d.rasterMapId.equals(rasterMapId)))
+            ..where((d) => d.cavePlaceUuid.equalsValue(cavePlaceUuid) & d.rasterMapUuid.equalsValue(rasterMapUuid)))
           .go();
       return rows > 0;
     } catch (e, st) {
