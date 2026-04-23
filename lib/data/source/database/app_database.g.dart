@@ -8,16 +8,15 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   SurfaceAreas(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(SurfaceAreas.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -73,7 +72,7 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     description,
     createdAt,
@@ -92,9 +91,6 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -134,15 +130,17 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   SurfaceArea map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return SurfaceArea(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: SurfaceAreas.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -171,19 +169,20 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
     return SurfaceAreas(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
   @override
   bool get dontWriteConstraints => true;
 }
 
 class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String? description;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const SurfaceArea({
-    required this.id,
+    required this.uuid,
     required this.title,
     this.description,
     this.createdAt,
@@ -193,7 +192,11 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        SurfaceAreas.$converteruuid.toSql(uuid),
+      );
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -212,7 +215,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
 
   SurfaceAreasCompanion toCompanion(bool nullToAbsent) {
     return SurfaceAreasCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -235,7 +238,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SurfaceArea(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
@@ -247,7 +250,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'created_at': serializer.toJson<int?>(createdAt),
@@ -257,14 +260,14 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   }
 
   SurfaceArea copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => SurfaceArea(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
@@ -273,7 +276,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   );
   SurfaceArea copyWithCompanion(SurfaceAreasCompanion data) {
     return SurfaceArea(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -287,7 +290,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   @override
   String toString() {
     return (StringBuffer('SurfaceArea(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
@@ -299,12 +302,12 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
 
   @override
   int get hashCode =>
-      Object.hash(id, title, description, createdAt, updatedAt, deletedAt);
+      Object.hash(uuid, title, description, createdAt, updatedAt, deletedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SurfaceArea &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
           other.createdAt == this.createdAt &&
@@ -313,69 +316,79 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
 }
 
 class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const SurfaceAreasCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   SurfaceAreasCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title);
   static Insertable<SurfaceArea> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   SurfaceAreasCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return SurfaceAreasCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        SurfaceAreas.$converteruuid.toSql(uuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -392,18 +405,22 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('SurfaceAreasCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -414,16 +431,15 @@ class Caves extends Table with TableInfo<Caves, Cave> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   Caves(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(Caves.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -444,17 +460,15 @@ class Caves extends Table with TableInfo<Caves, Cave> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
-  static const VerificationMeta _surfaceAreaIdMeta = const VerificationMeta(
-    'surfaceAreaId',
-  );
-  late final GeneratedColumn<int> surfaceAreaId = GeneratedColumn<int>(
-    'surface_area_id',
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  surfaceAreaUuid = GeneratedColumn<Uint8List>(
+    'surface_area_uuid',
     aliasedName,
     true,
-    type: DriftSqlType.int,
+    type: DriftSqlType.blob,
     requiredDuringInsert: false,
-    $customConstraints: 'REFERENCES surface_areas(id)',
-  );
+    $customConstraints: 'REFERENCES surface_areas(uuid)',
+  ).withConverter<Uuid?>(Caves.$convertersurfaceAreaUuidn);
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -490,10 +504,10 @@ class Caves extends Table with TableInfo<Caves, Cave> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     description,
-    surfaceAreaId,
+    surfaceAreaUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -510,9 +524,6 @@ class Caves extends Table with TableInfo<Caves, Cave> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -527,15 +538,6 @@ class Caves extends Table with TableInfo<Caves, Cave> {
         description.isAcceptableOrUnknown(
           data['description']!,
           _descriptionMeta,
-        ),
-      );
-    }
-    if (data.containsKey('surface_area_id')) {
-      context.handle(
-        _surfaceAreaIdMeta,
-        surfaceAreaId.isAcceptableOrUnknown(
-          data['surface_area_id']!,
-          _surfaceAreaIdMeta,
         ),
       );
     }
@@ -561,19 +563,21 @@ class Caves extends Table with TableInfo<Caves, Cave> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {title, surfaceAreaId},
+    {title, surfaceAreaUuid},
   ];
   @override
   Cave map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Cave(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: Caves.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -582,9 +586,11 @@ class Caves extends Table with TableInfo<Caves, Cave> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
-      surfaceAreaId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}surface_area_id'],
+      surfaceAreaUuid: Caves.$convertersurfaceAreaUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}surface_area_uuid'],
+        ),
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -606,27 +612,32 @@ class Caves extends Table with TableInfo<Caves, Cave> {
     return Caves(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertersurfaceAreaUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertersurfaceAreaUuidn =
+      NullAwareTypeConverter.wrap($convertersurfaceAreaUuid);
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(title, surface_area_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(title, surface_area_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
 }
 
 class Cave extends DataClass implements Insertable<Cave> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String? description;
-  final int? surfaceAreaId;
+  final Uuid? surfaceAreaUuid;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const Cave({
-    required this.id,
+    required this.uuid,
     required this.title,
     this.description,
-    this.surfaceAreaId,
+    this.surfaceAreaUuid,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -634,13 +645,17 @@ class Cave extends DataClass implements Insertable<Cave> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(Caves.$converteruuid.toSql(uuid));
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
-    if (!nullToAbsent || surfaceAreaId != null) {
-      map['surface_area_id'] = Variable<int>(surfaceAreaId);
+    if (!nullToAbsent || surfaceAreaUuid != null) {
+      map['surface_area_uuid'] = Variable<Uint8List>(
+        Caves.$convertersurfaceAreaUuidn.toSql(surfaceAreaUuid),
+      );
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -656,14 +671,14 @@ class Cave extends DataClass implements Insertable<Cave> {
 
   CavesCompanion toCompanion(bool nullToAbsent) {
     return CavesCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
-      surfaceAreaId: surfaceAreaId == null && nullToAbsent
+      surfaceAreaUuid: surfaceAreaUuid == null && nullToAbsent
           ? const Value.absent()
-          : Value(surfaceAreaId),
+          : Value(surfaceAreaUuid),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -682,10 +697,10 @@ class Cave extends DataClass implements Insertable<Cave> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Cave(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
-      surfaceAreaId: serializer.fromJson<int?>(json['surface_area_id']),
+      surfaceAreaUuid: serializer.fromJson<Uuid?>(json['surface_area_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -695,10 +710,10 @@ class Cave extends DataClass implements Insertable<Cave> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
-      'surface_area_id': serializer.toJson<int?>(surfaceAreaId),
+      'surface_area_uuid': serializer.toJson<Uuid?>(surfaceAreaUuid),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -706,34 +721,34 @@ class Cave extends DataClass implements Insertable<Cave> {
   }
 
   Cave copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
-    Value<int?> surfaceAreaId = const Value.absent(),
+    Value<Uuid?> surfaceAreaUuid = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => Cave(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
-    surfaceAreaId: surfaceAreaId.present
-        ? surfaceAreaId.value
-        : this.surfaceAreaId,
+    surfaceAreaUuid: surfaceAreaUuid.present
+        ? surfaceAreaUuid.value
+        : this.surfaceAreaUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Cave copyWithCompanion(CavesCompanion data) {
     return Cave(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
           : this.description,
-      surfaceAreaId: data.surfaceAreaId.present
-          ? data.surfaceAreaId.value
-          : this.surfaceAreaId,
+      surfaceAreaUuid: data.surfaceAreaUuid.present
+          ? data.surfaceAreaUuid.value
+          : this.surfaceAreaUuid,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -743,10 +758,10 @@ class Cave extends DataClass implements Insertable<Cave> {
   @override
   String toString() {
     return (StringBuffer('Cave(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
-          ..write('surfaceAreaId: $surfaceAreaId, ')
+          ..write('surfaceAreaUuid: $surfaceAreaUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -756,10 +771,10 @@ class Cave extends DataClass implements Insertable<Cave> {
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     title,
     description,
-    surfaceAreaId,
+    surfaceAreaUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -768,86 +783,94 @@ class Cave extends DataClass implements Insertable<Cave> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Cave &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
-          other.surfaceAreaId == this.surfaceAreaId &&
+          other.surfaceAreaUuid == this.surfaceAreaUuid &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
 }
 
 class CavesCompanion extends UpdateCompanion<Cave> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
-  final Value<int?> surfaceAreaId;
+  final Value<Uuid?> surfaceAreaUuid;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CavesCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
-    this.surfaceAreaId = const Value.absent(),
+    this.surfaceAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CavesCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
-    this.surfaceAreaId = const Value.absent(),
+    this.surfaceAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title);
   static Insertable<Cave> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
-    Expression<int>? surfaceAreaId,
+    Expression<Uint8List>? surfaceAreaUuid,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
-      if (surfaceAreaId != null) 'surface_area_id': surfaceAreaId,
+      if (surfaceAreaUuid != null) 'surface_area_uuid': surfaceAreaUuid,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CavesCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
-    Value<int?>? surfaceAreaId,
+    Value<Uuid?>? surfaceAreaUuid,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CavesCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
-      surfaceAreaId: surfaceAreaId ?? this.surfaceAreaId,
+      surfaceAreaUuid: surfaceAreaUuid ?? this.surfaceAreaUuid,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(Caves.$converteruuid.toSql(uuid.value));
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -855,8 +878,10 @@ class CavesCompanion extends UpdateCompanion<Cave> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
-    if (surfaceAreaId.present) {
-      map['surface_area_id'] = Variable<int>(surfaceAreaId.value);
+    if (surfaceAreaUuid.present) {
+      map['surface_area_uuid'] = Variable<Uint8List>(
+        Caves.$convertersurfaceAreaUuidn.toSql(surfaceAreaUuid.value),
+      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -867,19 +892,23 @@ class CavesCompanion extends UpdateCompanion<Cave> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CavesCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
-          ..write('surfaceAreaId: $surfaceAreaId, ')
+          ..write('surfaceAreaUuid: $surfaceAreaUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -890,16 +919,15 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CaveAreas(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CaveAreas.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -920,15 +948,15 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
-  static const VerificationMeta _caveIdMeta = const VerificationMeta('caveId');
-  late final GeneratedColumn<int> caveId = GeneratedColumn<int>(
-    'cave_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES caves(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(CaveAreas.$convertercaveUuid);
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -964,10 +992,10 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     description,
-    caveId,
+    caveUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -984,9 +1012,6 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -1003,14 +1028,6 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
           _descriptionMeta,
         ),
       );
-    }
-    if (data.containsKey('cave_id')) {
-      context.handle(
-        _caveIdMeta,
-        caveId.isAcceptableOrUnknown(data['cave_id']!, _caveIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_caveIdMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -1034,19 +1051,21 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {title, caveId},
+    {title, caveUuid},
   ];
   @override
   CaveArea map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CaveArea(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: CaveAreas.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -1055,10 +1074,12 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
-      caveId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_id'],
-      )!,
+      caveUuid: CaveAreas.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -1079,27 +1100,30 @@ class CaveAreas extends Table with TableInfo<CaveAreas, CaveArea> {
     return CaveAreas(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(title, cave_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(title, cave_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
 }
 
 class CaveArea extends DataClass implements Insertable<CaveArea> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String? description;
-  final int caveId;
+  final Uuid caveUuid;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const CaveArea({
-    required this.id,
+    required this.uuid,
     required this.title,
     this.description,
-    required this.caveId,
+    required this.caveUuid,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -1107,12 +1131,18 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(CaveAreas.$converteruuid.toSql(uuid));
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
-    map['cave_id'] = Variable<int>(caveId);
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveAreas.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
     }
@@ -1127,12 +1157,12 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
 
   CaveAreasCompanion toCompanion(bool nullToAbsent) {
     return CaveAreasCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
-      caveId: Value(caveId),
+      caveUuid: Value(caveUuid),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -1151,10 +1181,10 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CaveArea(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
-      caveId: serializer.fromJson<int>(json['cave_id']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -1164,10 +1194,10 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
-      'cave_id': serializer.toJson<int>(caveId),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -1175,30 +1205,30 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
   }
 
   CaveArea copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
-    int? caveId,
+    Uuid? caveUuid,
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => CaveArea(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
-    caveId: caveId ?? this.caveId,
+    caveUuid: caveUuid ?? this.caveUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   CaveArea copyWithCompanion(CaveAreasCompanion data) {
     return CaveArea(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
           : this.description,
-      caveId: data.caveId.present ? data.caveId.value : this.caveId,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -1208,10 +1238,10 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
   @override
   String toString() {
     return (StringBuffer('CaveArea(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
-          ..write('caveId: $caveId, ')
+          ..write('caveUuid: $caveUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -1221,10 +1251,10 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     title,
     description,
-    caveId,
+    caveUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1233,87 +1263,97 @@ class CaveArea extends DataClass implements Insertable<CaveArea> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CaveArea &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
-          other.caveId == this.caveId &&
+          other.caveUuid == this.caveUuid &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
 }
 
 class CaveAreasCompanion extends UpdateCompanion<CaveArea> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
-  final Value<int> caveId;
+  final Value<Uuid> caveUuid;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CaveAreasCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
-    this.caveId = const Value.absent(),
+    this.caveUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CaveAreasCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
-    required int caveId,
+    required Uuid caveUuid,
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title),
-       caveId = Value(caveId);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title),
+       caveUuid = Value(caveUuid);
   static Insertable<CaveArea> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
-    Expression<int>? caveId,
+    Expression<Uint8List>? caveUuid,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
-      if (caveId != null) 'cave_id': caveId,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CaveAreasCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
-    Value<int>? caveId,
+    Value<Uuid>? caveUuid,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CaveAreasCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
-      caveId: caveId ?? this.caveId,
+      caveUuid: caveUuid ?? this.caveUuid,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CaveAreas.$converteruuid.toSql(uuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -1321,8 +1361,10 @@ class CaveAreasCompanion extends UpdateCompanion<CaveArea> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
-    if (caveId.present) {
-      map['cave_id'] = Variable<int>(caveId.value);
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveAreas.$convertercaveUuid.toSql(caveUuid.value),
+      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -1333,19 +1375,23 @@ class CaveAreasCompanion extends UpdateCompanion<CaveArea> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CaveAreasCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
-          ..write('caveId: $caveId, ')
+          ..write('caveUuid: $caveUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1356,16 +1402,15 @@ class SurfacePlaces extends Table with TableInfo<SurfacePlaces, SurfacePlace> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   SurfacePlaces(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(SurfacePlaces.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -1464,7 +1509,7 @@ class SurfacePlaces extends Table with TableInfo<SurfacePlaces, SurfacePlace> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     description,
     type,
@@ -1487,9 +1532,6 @@ class SurfacePlaces extends Table with TableInfo<SurfacePlaces, SurfacePlace> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -1556,15 +1598,17 @@ class SurfacePlaces extends Table with TableInfo<SurfacePlaces, SurfacePlace> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   SurfacePlace map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return SurfacePlace(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: SurfacePlaces.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -1609,12 +1653,13 @@ class SurfacePlaces extends Table with TableInfo<SurfacePlaces, SurfacePlace> {
     return SurfacePlaces(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
   @override
   bool get dontWriteConstraints => true;
 }
 
 class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String? description;
   final String? type;
@@ -1625,7 +1670,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   final int? updatedAt;
   final int? deletedAt;
   const SurfacePlace({
-    required this.id,
+    required this.uuid,
     required this.title,
     this.description,
     this.type,
@@ -1639,7 +1684,11 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        SurfacePlaces.$converteruuid.toSql(uuid),
+      );
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -1672,7 +1721,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
 
   SurfacePlacesCompanion toCompanion(bool nullToAbsent) {
     return SurfacePlacesCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -1706,7 +1755,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SurfacePlace(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       type: serializer.fromJson<String?>(json['type']),
@@ -1724,7 +1773,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'type': serializer.toJson<String?>(type),
@@ -1740,7 +1789,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   }
 
   SurfacePlace copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
     Value<String?> type = const Value.absent(),
@@ -1751,7 +1800,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => SurfacePlace(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     type: type.present ? type.value : this.type,
@@ -1766,7 +1815,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   );
   SurfacePlace copyWithCompanion(SurfacePlacesCompanion data) {
     return SurfacePlace(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -1786,7 +1835,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   @override
   String toString() {
     return (StringBuffer('SurfacePlace(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('type: $type, ')
@@ -1804,7 +1853,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     title,
     description,
     type,
@@ -1819,7 +1868,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SurfacePlace &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
           other.type == this.type &&
@@ -1833,7 +1882,7 @@ class SurfacePlace extends DataClass implements Insertable<SurfacePlace> {
 }
 
 class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
   final Value<String?> type;
@@ -1843,8 +1892,9 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const SurfacePlacesCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.type = const Value.absent(),
@@ -1854,9 +1904,10 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   SurfacePlacesCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
     this.type = const Value.absent(),
@@ -1866,9 +1917,11 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title);
   static Insertable<SurfacePlace> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
     Expression<String>? type,
@@ -1878,9 +1931,10 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (type != null) 'type': type,
@@ -1891,11 +1945,12 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   SurfacePlacesCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
     Value<String?>? type,
@@ -1905,9 +1960,10 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return SurfacePlacesCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
       type: type ?? this.type,
@@ -1918,14 +1974,17 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        SurfacePlaces.$converteruuid.toSql(uuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -1956,13 +2015,16 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('SurfacePlacesCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('type: $type, ')
@@ -1973,7 +2035,8 @@ class SurfacePlacesCompanion extends UpdateCompanion<SurfacePlace> {
           ..write('longitude: $longitude, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1984,36 +2047,33 @@ class CaveEntrances extends Table with TableInfo<CaveEntrances, CaveEntrance> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CaveEntrances(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
-  static const VerificationMeta _caveIdMeta = const VerificationMeta('caveId');
-  late final GeneratedColumn<int> caveId = GeneratedColumn<int>(
-    'cave_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES caves(id)',
-  );
-  static const VerificationMeta _surfacePlaceIdMeta = const VerificationMeta(
-    'surfacePlaceId',
-  );
-  late final GeneratedColumn<int> surfacePlaceId = GeneratedColumn<int>(
-    'surface_place_id',
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CaveEntrances.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(CaveEntrances.$convertercaveUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  surfacePlaceUuid = GeneratedColumn<Uint8List>(
+    'surface_place_uuid',
     aliasedName,
     true,
-    type: DriftSqlType.int,
+    type: DriftSqlType.blob,
     requiredDuringInsert: false,
-    $customConstraints: 'REFERENCES surface_places(id)',
-  );
+    $customConstraints: 'REFERENCES surface_places(uuid)',
+  ).withConverter<Uuid?>(CaveEntrances.$convertersurfacePlaceUuidn);
   static const VerificationMeta _isMainEntranceMeta = const VerificationMeta(
     'isMainEntrance',
   );
@@ -2069,9 +2129,9 @@ class CaveEntrances extends Table with TableInfo<CaveEntrances, CaveEntrance> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
-    caveId,
-    surfacePlaceId,
+    uuid,
+    caveUuid,
+    surfacePlaceUuid,
     isMainEntrance,
     title,
     createdAt,
@@ -2090,26 +2150,6 @@ class CaveEntrances extends Table with TableInfo<CaveEntrances, CaveEntrance> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('cave_id')) {
-      context.handle(
-        _caveIdMeta,
-        caveId.isAcceptableOrUnknown(data['cave_id']!, _caveIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_caveIdMeta);
-    }
-    if (data.containsKey('surface_place_id')) {
-      context.handle(
-        _surfacePlaceIdMeta,
-        surfacePlaceId.isAcceptableOrUnknown(
-          data['surface_place_id']!,
-          _surfacePlaceIdMeta,
-        ),
-      );
-    }
     if (data.containsKey('is_main_entrance')) {
       context.handle(
         _isMainEntranceMeta,
@@ -2147,26 +2187,32 @@ class CaveEntrances extends Table with TableInfo<CaveEntrances, CaveEntrance> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {caveId, title},
+    {caveUuid, title},
   ];
   @override
   CaveEntrance map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CaveEntrance(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      caveId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_id'],
-      )!,
-      surfacePlaceId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}surface_place_id'],
+      uuid: CaveEntrances.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      caveUuid: CaveEntrances.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
+      surfacePlaceUuid: CaveEntrances.$convertersurfacePlaceUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}surface_place_uuid'],
+        ),
       ),
       isMainEntrance: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -2196,27 +2242,34 @@ class CaveEntrances extends Table with TableInfo<CaveEntrances, CaveEntrance> {
     return CaveEntrances(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertersurfacePlaceUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertersurfacePlaceUuidn =
+      NullAwareTypeConverter.wrap($convertersurfacePlaceUuid);
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(cave_id, title)ON CONFLICT ROLLBACK',
+    'UNIQUE(cave_uuid, title)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
 }
 
 class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
-  final int id;
-  final int caveId;
-  final int? surfacePlaceId;
+  final Uuid uuid;
+  final Uuid caveUuid;
+  final Uuid? surfacePlaceUuid;
   final int? isMainEntrance;
   final String? title;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const CaveEntrance({
-    required this.id,
-    required this.caveId,
-    this.surfacePlaceId,
+    required this.uuid,
+    required this.caveUuid,
+    this.surfacePlaceUuid,
     this.isMainEntrance,
     this.title,
     this.createdAt,
@@ -2226,10 +2279,20 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['cave_id'] = Variable<int>(caveId);
-    if (!nullToAbsent || surfacePlaceId != null) {
-      map['surface_place_id'] = Variable<int>(surfacePlaceId);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        CaveEntrances.$converteruuid.toSql(uuid),
+      );
+    }
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveEntrances.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
+    if (!nullToAbsent || surfacePlaceUuid != null) {
+      map['surface_place_uuid'] = Variable<Uint8List>(
+        CaveEntrances.$convertersurfacePlaceUuidn.toSql(surfacePlaceUuid),
+      );
     }
     if (!nullToAbsent || isMainEntrance != null) {
       map['is_main_entrance'] = Variable<int>(isMainEntrance);
@@ -2251,11 +2314,11 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
 
   CaveEntrancesCompanion toCompanion(bool nullToAbsent) {
     return CaveEntrancesCompanion(
-      id: Value(id),
-      caveId: Value(caveId),
-      surfacePlaceId: surfacePlaceId == null && nullToAbsent
+      uuid: Value(uuid),
+      caveUuid: Value(caveUuid),
+      surfacePlaceUuid: surfacePlaceUuid == null && nullToAbsent
           ? const Value.absent()
-          : Value(surfacePlaceId),
+          : Value(surfacePlaceUuid),
       isMainEntrance: isMainEntrance == null && nullToAbsent
           ? const Value.absent()
           : Value(isMainEntrance),
@@ -2280,9 +2343,9 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CaveEntrance(
-      id: serializer.fromJson<int>(json['id']),
-      caveId: serializer.fromJson<int>(json['cave_id']),
-      surfacePlaceId: serializer.fromJson<int?>(json['surface_place_id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
+      surfacePlaceUuid: serializer.fromJson<Uuid?>(json['surface_place_uuid']),
       isMainEntrance: serializer.fromJson<int?>(json['is_main_entrance']),
       title: serializer.fromJson<String?>(json['title']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
@@ -2294,9 +2357,9 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'cave_id': serializer.toJson<int>(caveId),
-      'surface_place_id': serializer.toJson<int?>(surfacePlaceId),
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
+      'surface_place_uuid': serializer.toJson<Uuid?>(surfacePlaceUuid),
       'is_main_entrance': serializer.toJson<int?>(isMainEntrance),
       'title': serializer.toJson<String?>(title),
       'created_at': serializer.toJson<int?>(createdAt),
@@ -2306,20 +2369,20 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   }
 
   CaveEntrance copyWith({
-    int? id,
-    int? caveId,
-    Value<int?> surfacePlaceId = const Value.absent(),
+    Uuid? uuid,
+    Uuid? caveUuid,
+    Value<Uuid?> surfacePlaceUuid = const Value.absent(),
     Value<int?> isMainEntrance = const Value.absent(),
     Value<String?> title = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => CaveEntrance(
-    id: id ?? this.id,
-    caveId: caveId ?? this.caveId,
-    surfacePlaceId: surfacePlaceId.present
-        ? surfacePlaceId.value
-        : this.surfacePlaceId,
+    uuid: uuid ?? this.uuid,
+    caveUuid: caveUuid ?? this.caveUuid,
+    surfacePlaceUuid: surfacePlaceUuid.present
+        ? surfacePlaceUuid.value
+        : this.surfacePlaceUuid,
     isMainEntrance: isMainEntrance.present
         ? isMainEntrance.value
         : this.isMainEntrance,
@@ -2330,11 +2393,11 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   );
   CaveEntrance copyWithCompanion(CaveEntrancesCompanion data) {
     return CaveEntrance(
-      id: data.id.present ? data.id.value : this.id,
-      caveId: data.caveId.present ? data.caveId.value : this.caveId,
-      surfacePlaceId: data.surfacePlaceId.present
-          ? data.surfacePlaceId.value
-          : this.surfacePlaceId,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
+      surfacePlaceUuid: data.surfacePlaceUuid.present
+          ? data.surfacePlaceUuid.value
+          : this.surfacePlaceUuid,
       isMainEntrance: data.isMainEntrance.present
           ? data.isMainEntrance.value
           : this.isMainEntrance,
@@ -2348,9 +2411,9 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   @override
   String toString() {
     return (StringBuffer('CaveEntrance(')
-          ..write('id: $id, ')
-          ..write('caveId: $caveId, ')
-          ..write('surfacePlaceId: $surfacePlaceId, ')
+          ..write('uuid: $uuid, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('surfacePlaceUuid: $surfacePlaceUuid, ')
           ..write('isMainEntrance: $isMainEntrance, ')
           ..write('title: $title, ')
           ..write('createdAt: $createdAt, ')
@@ -2362,9 +2425,9 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
 
   @override
   int get hashCode => Object.hash(
-    id,
-    caveId,
-    surfacePlaceId,
+    uuid,
+    caveUuid,
+    surfacePlaceUuid,
     isMainEntrance,
     title,
     createdAt,
@@ -2375,9 +2438,9 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CaveEntrance &&
-          other.id == this.id &&
-          other.caveId == this.caveId &&
-          other.surfacePlaceId == this.surfacePlaceId &&
+          other.uuid == this.uuid &&
+          other.caveUuid == this.caveUuid &&
+          other.surfacePlaceUuid == this.surfacePlaceUuid &&
           other.isMainEntrance == this.isMainEntrance &&
           other.title == this.title &&
           other.createdAt == this.createdAt &&
@@ -2386,89 +2449,103 @@ class CaveEntrance extends DataClass implements Insertable<CaveEntrance> {
 }
 
 class CaveEntrancesCompanion extends UpdateCompanion<CaveEntrance> {
-  final Value<int> id;
-  final Value<int> caveId;
-  final Value<int?> surfacePlaceId;
+  final Value<Uuid> uuid;
+  final Value<Uuid> caveUuid;
+  final Value<Uuid?> surfacePlaceUuid;
   final Value<int?> isMainEntrance;
   final Value<String?> title;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CaveEntrancesCompanion({
-    this.id = const Value.absent(),
-    this.caveId = const Value.absent(),
-    this.surfacePlaceId = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.caveUuid = const Value.absent(),
+    this.surfacePlaceUuid = const Value.absent(),
     this.isMainEntrance = const Value.absent(),
     this.title = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CaveEntrancesCompanion.insert({
-    this.id = const Value.absent(),
-    required int caveId,
-    this.surfacePlaceId = const Value.absent(),
+    required Uuid uuid,
+    required Uuid caveUuid,
+    this.surfacePlaceUuid = const Value.absent(),
     this.isMainEntrance = const Value.absent(),
     this.title = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : caveId = Value(caveId);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       caveUuid = Value(caveUuid);
   static Insertable<CaveEntrance> custom({
-    Expression<int>? id,
-    Expression<int>? caveId,
-    Expression<int>? surfacePlaceId,
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? caveUuid,
+    Expression<Uint8List>? surfacePlaceUuid,
     Expression<int>? isMainEntrance,
     Expression<String>? title,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (caveId != null) 'cave_id': caveId,
-      if (surfacePlaceId != null) 'surface_place_id': surfacePlaceId,
+      if (uuid != null) 'uuid': uuid,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
+      if (surfacePlaceUuid != null) 'surface_place_uuid': surfacePlaceUuid,
       if (isMainEntrance != null) 'is_main_entrance': isMainEntrance,
       if (title != null) 'title': title,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CaveEntrancesCompanion copyWith({
-    Value<int>? id,
-    Value<int>? caveId,
-    Value<int?>? surfacePlaceId,
+    Value<Uuid>? uuid,
+    Value<Uuid>? caveUuid,
+    Value<Uuid?>? surfacePlaceUuid,
     Value<int?>? isMainEntrance,
     Value<String?>? title,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CaveEntrancesCompanion(
-      id: id ?? this.id,
-      caveId: caveId ?? this.caveId,
-      surfacePlaceId: surfacePlaceId ?? this.surfacePlaceId,
+      uuid: uuid ?? this.uuid,
+      caveUuid: caveUuid ?? this.caveUuid,
+      surfacePlaceUuid: surfacePlaceUuid ?? this.surfacePlaceUuid,
       isMainEntrance: isMainEntrance ?? this.isMainEntrance,
       title: title ?? this.title,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CaveEntrances.$converteruuid.toSql(uuid.value),
+      );
     }
-    if (caveId.present) {
-      map['cave_id'] = Variable<int>(caveId.value);
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveEntrances.$convertercaveUuid.toSql(caveUuid.value),
+      );
     }
-    if (surfacePlaceId.present) {
-      map['surface_place_id'] = Variable<int>(surfacePlaceId.value);
+    if (surfacePlaceUuid.present) {
+      map['surface_place_uuid'] = Variable<Uint8List>(
+        CaveEntrances.$convertersurfacePlaceUuidn.toSql(surfacePlaceUuid.value),
+      );
     }
     if (isMainEntrance.present) {
       map['is_main_entrance'] = Variable<int>(isMainEntrance.value);
@@ -2485,20 +2562,24 @@ class CaveEntrancesCompanion extends UpdateCompanion<CaveEntrance> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CaveEntrancesCompanion(')
-          ..write('id: $id, ')
-          ..write('caveId: $caveId, ')
-          ..write('surfacePlaceId: $surfacePlaceId, ')
+          ..write('uuid: $uuid, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('surfacePlaceUuid: $surfacePlaceUuid, ')
           ..write('isMainEntrance: $isMainEntrance, ')
           ..write('title: $title, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -2509,16 +2590,15 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CavePlaces(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CavePlaces.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -2539,15 +2619,15 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
-  static const VerificationMeta _caveIdMeta = const VerificationMeta('caveId');
-  late final GeneratedColumn<int> caveId = GeneratedColumn<int>(
-    'cave_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES caves(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(CavePlaces.$convertercaveUuid);
   static const VerificationMeta _placeQrCodeIdentifierMeta =
       const VerificationMeta('placeQrCodeIdentifier');
   late final GeneratedColumn<int> placeQrCodeIdentifier = GeneratedColumn<int>(
@@ -2558,17 +2638,15 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
-  static const VerificationMeta _caveAreaIdMeta = const VerificationMeta(
-    'caveAreaId',
-  );
-  late final GeneratedColumn<int> caveAreaId = GeneratedColumn<int>(
-    'cave_area_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'REFERENCES cave_areas(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> caveAreaUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_area_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES cave_areas(uuid)',
+      ).withConverter<Uuid?>(CavePlaces.$convertercaveAreaUuidn);
   static const VerificationMeta _latitudeMeta = const VerificationMeta(
     'latitude',
   );
@@ -2659,12 +2737,12 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     description,
-    caveId,
+    caveUuid,
     placeQrCodeIdentifier,
-    caveAreaId,
+    caveAreaUuid,
     latitude,
     longitude,
     depthInCave,
@@ -2686,9 +2764,6 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -2706,29 +2781,12 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         ),
       );
     }
-    if (data.containsKey('cave_id')) {
-      context.handle(
-        _caveIdMeta,
-        caveId.isAcceptableOrUnknown(data['cave_id']!, _caveIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_caveIdMeta);
-    }
     if (data.containsKey('place_qr_code_identifier')) {
       context.handle(
         _placeQrCodeIdentifierMeta,
         placeQrCodeIdentifier.isAcceptableOrUnknown(
           data['place_qr_code_identifier']!,
           _placeQrCodeIdentifierMeta,
-        ),
-      );
-    }
-    if (data.containsKey('cave_area_id')) {
-      context.handle(
-        _caveAreaIdMeta,
-        caveAreaId.isAcceptableOrUnknown(
-          data['cave_area_id']!,
-          _caveAreaIdMeta,
         ),
       );
     }
@@ -2790,19 +2848,21 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {title, caveId, caveAreaId},
+    {title, caveUuid, caveAreaUuid},
   ];
   @override
   CavePlace map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CavePlace(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: CavePlaces.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -2811,17 +2871,21 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
-      caveId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_id'],
-      )!,
+      caveUuid: CavePlaces.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
       placeQrCodeIdentifier: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}place_qr_code_identifier'],
       ),
-      caveAreaId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_area_id'],
+      caveAreaUuid: CavePlaces.$convertercaveAreaUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_area_uuid'],
+        ),
       ),
       latitude: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
@@ -2863,46 +2927,43 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     return CavePlaces(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveAreaUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercaveAreaUuidn =
+      NullAwareTypeConverter.wrap($convertercaveAreaUuid);
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(title, cave_id, cave_area_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(title, cave_uuid, cave_area_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
 }
 
 class CavePlace extends DataClass implements Insertable<CavePlace> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String? description;
-  final int caveId;
+  final Uuid caveUuid;
   final int? placeQrCodeIdentifier;
-  final int? caveAreaId;
+  final Uuid? caveAreaUuid;
   final double? latitude;
-
-  /// GPS in WGS84
   final double? longitude;
-
-  /// GPS in WGS84
   final double? depthInCave;
-
-  /// can be positive or negative, e.g. for places above the entrance or in a pit
   final int? isEntrance;
-
-  /// if 1, this place is an entrance;
   final int? isMainEntrance;
-
-  /// if 1, this place is the main entrance
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const CavePlace({
-    required this.id,
+    required this.uuid,
     required this.title,
     this.description,
-    required this.caveId,
+    required this.caveUuid,
     this.placeQrCodeIdentifier,
-    this.caveAreaId,
+    this.caveAreaUuid,
     this.latitude,
     this.longitude,
     this.depthInCave,
@@ -2915,17 +2976,25 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(CavePlaces.$converteruuid.toSql(uuid));
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
-    map['cave_id'] = Variable<int>(caveId);
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CavePlaces.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
     if (!nullToAbsent || placeQrCodeIdentifier != null) {
       map['place_qr_code_identifier'] = Variable<int>(placeQrCodeIdentifier);
     }
-    if (!nullToAbsent || caveAreaId != null) {
-      map['cave_area_id'] = Variable<int>(caveAreaId);
+    if (!nullToAbsent || caveAreaUuid != null) {
+      map['cave_area_uuid'] = Variable<Uint8List>(
+        CavePlaces.$convertercaveAreaUuidn.toSql(caveAreaUuid),
+      );
     }
     if (!nullToAbsent || latitude != null) {
       map['latitude'] = Variable<double>(latitude);
@@ -2956,18 +3025,18 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
 
   CavePlacesCompanion toCompanion(bool nullToAbsent) {
     return CavePlacesCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
-      caveId: Value(caveId),
+      caveUuid: Value(caveUuid),
       placeQrCodeIdentifier: placeQrCodeIdentifier == null && nullToAbsent
           ? const Value.absent()
           : Value(placeQrCodeIdentifier),
-      caveAreaId: caveAreaId == null && nullToAbsent
+      caveAreaUuid: caveAreaUuid == null && nullToAbsent
           ? const Value.absent()
-          : Value(caveAreaId),
+          : Value(caveAreaUuid),
       latitude: latitude == null && nullToAbsent
           ? const Value.absent()
           : Value(latitude),
@@ -3001,14 +3070,14 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CavePlace(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
-      caveId: serializer.fromJson<int>(json['cave_id']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
       placeQrCodeIdentifier: serializer.fromJson<int?>(
         json['place_qr_code_identifier'],
       ),
-      caveAreaId: serializer.fromJson<int?>(json['cave_area_id']),
+      caveAreaUuid: serializer.fromJson<Uuid?>(json['cave_area_uuid']),
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
       depthInCave: serializer.fromJson<double?>(json['depth_in_cave']),
@@ -3023,14 +3092,14 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
-      'cave_id': serializer.toJson<int>(caveId),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
       'place_qr_code_identifier': serializer.toJson<int?>(
         placeQrCodeIdentifier,
       ),
-      'cave_area_id': serializer.toJson<int?>(caveAreaId),
+      'cave_area_uuid': serializer.toJson<Uuid?>(caveAreaUuid),
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
       'depth_in_cave': serializer.toJson<double?>(depthInCave),
@@ -3043,12 +3112,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   }
 
   CavePlace copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
-    int? caveId,
+    Uuid? caveUuid,
     Value<int?> placeQrCodeIdentifier = const Value.absent(),
-    Value<int?> caveAreaId = const Value.absent(),
+    Value<Uuid?> caveAreaUuid = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
     Value<double?> depthInCave = const Value.absent(),
@@ -3058,14 +3127,14 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => CavePlace(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
-    caveId: caveId ?? this.caveId,
+    caveUuid: caveUuid ?? this.caveUuid,
     placeQrCodeIdentifier: placeQrCodeIdentifier.present
         ? placeQrCodeIdentifier.value
         : this.placeQrCodeIdentifier,
-    caveAreaId: caveAreaId.present ? caveAreaId.value : this.caveAreaId,
+    caveAreaUuid: caveAreaUuid.present ? caveAreaUuid.value : this.caveAreaUuid,
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
     depthInCave: depthInCave.present ? depthInCave.value : this.depthInCave,
@@ -3079,18 +3148,18 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   );
   CavePlace copyWithCompanion(CavePlacesCompanion data) {
     return CavePlace(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
           : this.description,
-      caveId: data.caveId.present ? data.caveId.value : this.caveId,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
       placeQrCodeIdentifier: data.placeQrCodeIdentifier.present
           ? data.placeQrCodeIdentifier.value
           : this.placeQrCodeIdentifier,
-      caveAreaId: data.caveAreaId.present
-          ? data.caveAreaId.value
-          : this.caveAreaId,
+      caveAreaUuid: data.caveAreaUuid.present
+          ? data.caveAreaUuid.value
+          : this.caveAreaUuid,
       latitude: data.latitude.present ? data.latitude.value : this.latitude,
       longitude: data.longitude.present ? data.longitude.value : this.longitude,
       depthInCave: data.depthInCave.present
@@ -3111,12 +3180,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   @override
   String toString() {
     return (StringBuffer('CavePlace(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
-          ..write('caveId: $caveId, ')
+          ..write('caveUuid: $caveUuid, ')
           ..write('placeQrCodeIdentifier: $placeQrCodeIdentifier, ')
-          ..write('caveAreaId: $caveAreaId, ')
+          ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
           ..write('depthInCave: $depthInCave, ')
@@ -3131,12 +3200,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     title,
     description,
-    caveId,
+    caveUuid,
     placeQrCodeIdentifier,
-    caveAreaId,
+    caveAreaUuid,
     latitude,
     longitude,
     depthInCave,
@@ -3150,12 +3219,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CavePlace &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
-          other.caveId == this.caveId &&
+          other.caveUuid == this.caveUuid &&
           other.placeQrCodeIdentifier == this.placeQrCodeIdentifier &&
-          other.caveAreaId == this.caveAreaId &&
+          other.caveAreaUuid == this.caveAreaUuid &&
           other.latitude == this.latitude &&
           other.longitude == this.longitude &&
           other.depthInCave == this.depthInCave &&
@@ -3167,12 +3236,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
 }
 
 class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
-  final Value<int> caveId;
+  final Value<Uuid> caveUuid;
   final Value<int?> placeQrCodeIdentifier;
-  final Value<int?> caveAreaId;
+  final Value<Uuid?> caveAreaUuid;
   final Value<double?> latitude;
   final Value<double?> longitude;
   final Value<double?> depthInCave;
@@ -3181,13 +3250,14 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CavePlacesCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
-    this.caveId = const Value.absent(),
+    this.caveUuid = const Value.absent(),
     this.placeQrCodeIdentifier = const Value.absent(),
-    this.caveAreaId = const Value.absent(),
+    this.caveAreaUuid = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
     this.depthInCave = const Value.absent(),
@@ -3196,14 +3266,15 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CavePlacesCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
-    required int caveId,
+    required Uuid caveUuid,
     this.placeQrCodeIdentifier = const Value.absent(),
-    this.caveAreaId = const Value.absent(),
+    this.caveAreaUuid = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
     this.depthInCave = const Value.absent(),
@@ -3212,15 +3283,17 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title),
-       caveId = Value(caveId);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title),
+       caveUuid = Value(caveUuid);
   static Insertable<CavePlace> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
-    Expression<int>? caveId,
+    Expression<Uint8List>? caveUuid,
     Expression<int>? placeQrCodeIdentifier,
-    Expression<int>? caveAreaId,
+    Expression<Uint8List>? caveAreaUuid,
     Expression<double>? latitude,
     Expression<double>? longitude,
     Expression<double>? depthInCave,
@@ -3229,15 +3302,16 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
-      if (caveId != null) 'cave_id': caveId,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
       if (placeQrCodeIdentifier != null)
         'place_qr_code_identifier': placeQrCodeIdentifier,
-      if (caveAreaId != null) 'cave_area_id': caveAreaId,
+      if (caveAreaUuid != null) 'cave_area_uuid': caveAreaUuid,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (depthInCave != null) 'depth_in_cave': depthInCave,
@@ -3246,16 +3320,17 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CavePlacesCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
-    Value<int>? caveId,
+    Value<Uuid>? caveUuid,
     Value<int?>? placeQrCodeIdentifier,
-    Value<int?>? caveAreaId,
+    Value<Uuid?>? caveAreaUuid,
     Value<double?>? latitude,
     Value<double?>? longitude,
     Value<double?>? depthInCave,
@@ -3264,15 +3339,16 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CavePlacesCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
-      caveId: caveId ?? this.caveId,
+      caveUuid: caveUuid ?? this.caveUuid,
       placeQrCodeIdentifier:
           placeQrCodeIdentifier ?? this.placeQrCodeIdentifier,
-      caveAreaId: caveAreaId ?? this.caveAreaId,
+      caveAreaUuid: caveAreaUuid ?? this.caveAreaUuid,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       depthInCave: depthInCave ?? this.depthInCave,
@@ -3281,14 +3357,17 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CavePlaces.$converteruuid.toSql(uuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -3296,16 +3375,20 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
-    if (caveId.present) {
-      map['cave_id'] = Variable<int>(caveId.value);
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CavePlaces.$convertercaveUuid.toSql(caveUuid.value),
+      );
     }
     if (placeQrCodeIdentifier.present) {
       map['place_qr_code_identifier'] = Variable<int>(
         placeQrCodeIdentifier.value,
       );
     }
-    if (caveAreaId.present) {
-      map['cave_area_id'] = Variable<int>(caveAreaId.value);
+    if (caveAreaUuid.present) {
+      map['cave_area_uuid'] = Variable<Uint8List>(
+        CavePlaces.$convertercaveAreaUuidn.toSql(caveAreaUuid.value),
+      );
     }
     if (latitude.present) {
       map['latitude'] = Variable<double>(latitude.value);
@@ -3331,18 +3414,21 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CavePlacesCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
-          ..write('caveId: $caveId, ')
+          ..write('caveUuid: $caveUuid, ')
           ..write('placeQrCodeIdentifier: $placeQrCodeIdentifier, ')
-          ..write('caveAreaId: $caveAreaId, ')
+          ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
           ..write('depthInCave: $depthInCave, ')
@@ -3350,7 +3436,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
           ..write('isMainEntrance: $isMainEntrance, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -3361,16 +3448,15 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   RasterMaps(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(RasterMaps.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -3402,26 +3488,24 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
-  static const VerificationMeta _caveIdMeta = const VerificationMeta('caveId');
-  late final GeneratedColumn<int> caveId = GeneratedColumn<int>(
-    'cave_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES caves(id)',
-  );
-  static const VerificationMeta _caveAreaIdMeta = const VerificationMeta(
-    'caveAreaId',
-  );
-  late final GeneratedColumn<int> caveAreaId = GeneratedColumn<int>(
-    'cave_area_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'REFERENCES cave_areas(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(RasterMaps.$convertercaveUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> caveAreaUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_area_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES cave_areas(uuid)',
+      ).withConverter<Uuid?>(RasterMaps.$convertercaveAreaUuidn);
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3457,12 +3541,12 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     mapType,
     fileName,
-    caveId,
-    caveAreaId,
+    caveUuid,
+    caveAreaUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -3479,9 +3563,6 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -3506,23 +3587,6 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     } else if (isInserting) {
       context.missing(_fileNameMeta);
     }
-    if (data.containsKey('cave_id')) {
-      context.handle(
-        _caveIdMeta,
-        caveId.isAcceptableOrUnknown(data['cave_id']!, _caveIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_caveIdMeta);
-    }
-    if (data.containsKey('cave_area_id')) {
-      context.handle(
-        _caveAreaIdMeta,
-        caveAreaId.isAcceptableOrUnknown(
-          data['cave_area_id']!,
-          _caveAreaIdMeta,
-        ),
-      );
-    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3545,20 +3609,22 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {title, mapType, caveId},
-    {fileName, mapType, caveId},
+    {title, mapType, caveUuid},
+    {fileName, mapType, caveUuid},
   ];
   @override
   RasterMap map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return RasterMap(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: RasterMaps.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -3571,13 +3637,17 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
         DriftSqlType.string,
         data['${effectivePrefix}file_name'],
       )!,
-      caveId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_id'],
-      )!,
-      caveAreaId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_area_id'],
+      caveUuid: RasterMaps.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
+      caveAreaUuid: RasterMaps.$convertercaveAreaUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_area_uuid'],
+        ),
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3599,32 +3669,39 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     return RasterMaps(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveAreaUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercaveAreaUuidn =
+      NullAwareTypeConverter.wrap($convertercaveAreaUuid);
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(title, map_type, cave_id)ON CONFLICT ROLLBACK',
-    'UNIQUE(file_name, map_type, cave_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(title, map_type, cave_uuid)ON CONFLICT ROLLBACK',
+    'UNIQUE(file_name, map_type, cave_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
 }
 
 class RasterMap extends DataClass implements Insertable<RasterMap> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String mapType;
   final String fileName;
-  final int caveId;
-  final int? caveAreaId;
+  final Uuid caveUuid;
+  final Uuid? caveAreaUuid;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const RasterMap({
-    required this.id,
+    required this.uuid,
     required this.title,
     required this.mapType,
     required this.fileName,
-    required this.caveId,
-    this.caveAreaId,
+    required this.caveUuid,
+    this.caveAreaUuid,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -3632,13 +3709,21 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(RasterMaps.$converteruuid.toSql(uuid));
+    }
     map['title'] = Variable<String>(title);
     map['map_type'] = Variable<String>(mapType);
     map['file_name'] = Variable<String>(fileName);
-    map['cave_id'] = Variable<int>(caveId);
-    if (!nullToAbsent || caveAreaId != null) {
-      map['cave_area_id'] = Variable<int>(caveAreaId);
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        RasterMaps.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
+    if (!nullToAbsent || caveAreaUuid != null) {
+      map['cave_area_uuid'] = Variable<Uint8List>(
+        RasterMaps.$convertercaveAreaUuidn.toSql(caveAreaUuid),
+      );
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -3654,14 +3739,14 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
 
   RasterMapsCompanion toCompanion(bool nullToAbsent) {
     return RasterMapsCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       mapType: Value(mapType),
       fileName: Value(fileName),
-      caveId: Value(caveId),
-      caveAreaId: caveAreaId == null && nullToAbsent
+      caveUuid: Value(caveUuid),
+      caveAreaUuid: caveAreaUuid == null && nullToAbsent
           ? const Value.absent()
-          : Value(caveAreaId),
+          : Value(caveAreaUuid),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -3680,12 +3765,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RasterMap(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       mapType: serializer.fromJson<String>(json['map_type']),
       fileName: serializer.fromJson<String>(json['file_name']),
-      caveId: serializer.fromJson<int>(json['cave_id']),
-      caveAreaId: serializer.fromJson<int?>(json['cave_area_id']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
+      caveAreaUuid: serializer.fromJson<Uuid?>(json['cave_area_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -3695,12 +3780,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'map_type': serializer.toJson<String>(mapType),
       'file_name': serializer.toJson<String>(fileName),
-      'cave_id': serializer.toJson<int>(caveId),
-      'cave_area_id': serializer.toJson<int?>(caveAreaId),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
+      'cave_area_uuid': serializer.toJson<Uuid?>(caveAreaUuid),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -3708,36 +3793,36 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   }
 
   RasterMap copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     String? mapType,
     String? fileName,
-    int? caveId,
-    Value<int?> caveAreaId = const Value.absent(),
+    Uuid? caveUuid,
+    Value<Uuid?> caveAreaUuid = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => RasterMap(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     mapType: mapType ?? this.mapType,
     fileName: fileName ?? this.fileName,
-    caveId: caveId ?? this.caveId,
-    caveAreaId: caveAreaId.present ? caveAreaId.value : this.caveAreaId,
+    caveUuid: caveUuid ?? this.caveUuid,
+    caveAreaUuid: caveAreaUuid.present ? caveAreaUuid.value : this.caveAreaUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   RasterMap copyWithCompanion(RasterMapsCompanion data) {
     return RasterMap(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       mapType: data.mapType.present ? data.mapType.value : this.mapType,
       fileName: data.fileName.present ? data.fileName.value : this.fileName,
-      caveId: data.caveId.present ? data.caveId.value : this.caveId,
-      caveAreaId: data.caveAreaId.present
-          ? data.caveAreaId.value
-          : this.caveAreaId,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
+      caveAreaUuid: data.caveAreaUuid.present
+          ? data.caveAreaUuid.value
+          : this.caveAreaUuid,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -3747,12 +3832,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   @override
   String toString() {
     return (StringBuffer('RasterMap(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('mapType: $mapType, ')
           ..write('fileName: $fileName, ')
-          ..write('caveId: $caveId, ')
-          ..write('caveAreaId: $caveAreaId, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -3762,12 +3847,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     title,
     mapType,
     fileName,
-    caveId,
-    caveAreaId,
+    caveUuid,
+    caveAreaUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -3776,105 +3861,115 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RasterMap &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.mapType == this.mapType &&
           other.fileName == this.fileName &&
-          other.caveId == this.caveId &&
-          other.caveAreaId == this.caveAreaId &&
+          other.caveUuid == this.caveUuid &&
+          other.caveAreaUuid == this.caveAreaUuid &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
 }
 
 class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String> mapType;
   final Value<String> fileName;
-  final Value<int> caveId;
-  final Value<int?> caveAreaId;
+  final Value<Uuid> caveUuid;
+  final Value<Uuid?> caveAreaUuid;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const RasterMapsCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.mapType = const Value.absent(),
     this.fileName = const Value.absent(),
-    this.caveId = const Value.absent(),
-    this.caveAreaId = const Value.absent(),
+    this.caveUuid = const Value.absent(),
+    this.caveAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   RasterMapsCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     required String mapType,
     required String fileName,
-    required int caveId,
-    this.caveAreaId = const Value.absent(),
+    required Uuid caveUuid,
+    this.caveAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title),
        mapType = Value(mapType),
        fileName = Value(fileName),
-       caveId = Value(caveId);
+       caveUuid = Value(caveUuid);
   static Insertable<RasterMap> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? mapType,
     Expression<String>? fileName,
-    Expression<int>? caveId,
-    Expression<int>? caveAreaId,
+    Expression<Uint8List>? caveUuid,
+    Expression<Uint8List>? caveAreaUuid,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (mapType != null) 'map_type': mapType,
       if (fileName != null) 'file_name': fileName,
-      if (caveId != null) 'cave_id': caveId,
-      if (caveAreaId != null) 'cave_area_id': caveAreaId,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
+      if (caveAreaUuid != null) 'cave_area_uuid': caveAreaUuid,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   RasterMapsCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String>? mapType,
     Value<String>? fileName,
-    Value<int>? caveId,
-    Value<int?>? caveAreaId,
+    Value<Uuid>? caveUuid,
+    Value<Uuid?>? caveAreaUuid,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return RasterMapsCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       mapType: mapType ?? this.mapType,
       fileName: fileName ?? this.fileName,
-      caveId: caveId ?? this.caveId,
-      caveAreaId: caveAreaId ?? this.caveAreaId,
+      caveUuid: caveUuid ?? this.caveUuid,
+      caveAreaUuid: caveAreaUuid ?? this.caveAreaUuid,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        RasterMaps.$converteruuid.toSql(uuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -3885,11 +3980,15 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     if (fileName.present) {
       map['file_name'] = Variable<String>(fileName.value);
     }
-    if (caveId.present) {
-      map['cave_id'] = Variable<int>(caveId.value);
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        RasterMaps.$convertercaveUuid.toSql(caveUuid.value),
+      );
     }
-    if (caveAreaId.present) {
-      map['cave_area_id'] = Variable<int>(caveAreaId.value);
+    if (caveAreaUuid.present) {
+      map['cave_area_uuid'] = Variable<Uint8List>(
+        RasterMaps.$convertercaveAreaUuidn.toSql(caveAreaUuid.value),
+      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -3900,21 +3999,25 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('RasterMapsCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('mapType: $mapType, ')
           ..write('fileName: $fileName, ')
-          ..write('caveId: $caveId, ')
-          ..write('caveAreaId: $caveAreaId, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -3930,16 +4033,15 @@ class CavePlaceToRasterMapDefinitions extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CavePlaceToRasterMapDefinitions(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CavePlaceToRasterMapDefinitions.$converteruuid);
   static const VerificationMeta _xCoordinateMeta = const VerificationMeta(
     'xCoordinate',
   );
@@ -3962,28 +4064,28 @@ class CavePlaceToRasterMapDefinitions extends Table
     requiredDuringInsert: false,
     $customConstraints: '',
   );
-  static const VerificationMeta _cavePlaceIdMeta = const VerificationMeta(
-    'cavePlaceId',
-  );
-  late final GeneratedColumn<int> cavePlaceId = GeneratedColumn<int>(
-    'cave_place_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES cave_places(id)',
-  );
-  static const VerificationMeta _rasterMapIdMeta = const VerificationMeta(
-    'rasterMapId',
-  );
-  late final GeneratedColumn<int> rasterMapId = GeneratedColumn<int>(
-    'raster_map_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES raster_maps(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> cavePlaceUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_place_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES cave_places(uuid)',
+      ).withConverter<Uuid>(
+        CavePlaceToRasterMapDefinitions.$convertercavePlaceUuid,
+      );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> rasterMapUuid =
+      GeneratedColumn<Uint8List>(
+        'raster_map_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES raster_maps(uuid)',
+      ).withConverter<Uuid>(
+        CavePlaceToRasterMapDefinitions.$converterrasterMapUuid,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4019,11 +4121,11 @@ class CavePlaceToRasterMapDefinitions extends Table
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     xCoordinate,
     yCoordinate,
-    cavePlaceId,
-    rasterMapId,
+    cavePlaceUuid,
+    rasterMapUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -4040,9 +4142,6 @@ class CavePlaceToRasterMapDefinitions extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('x_coordinate')) {
       context.handle(
         _xCoordinateMeta,
@@ -4060,28 +4159,6 @@ class CavePlaceToRasterMapDefinitions extends Table
           _yCoordinateMeta,
         ),
       );
-    }
-    if (data.containsKey('cave_place_id')) {
-      context.handle(
-        _cavePlaceIdMeta,
-        cavePlaceId.isAcceptableOrUnknown(
-          data['cave_place_id']!,
-          _cavePlaceIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_cavePlaceIdMeta);
-    }
-    if (data.containsKey('raster_map_id')) {
-      context.handle(
-        _rasterMapIdMeta,
-        rasterMapId.isAcceptableOrUnknown(
-          data['raster_map_id']!,
-          _rasterMapIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_rasterMapIdMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -4105,10 +4182,10 @@ class CavePlaceToRasterMapDefinitions extends Table
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {cavePlaceId, rasterMapId},
+    {cavePlaceUuid, rasterMapUuid},
   ];
   @override
   CavePlaceToRasterMapDefinition map(
@@ -4117,10 +4194,12 @@ class CavePlaceToRasterMapDefinitions extends Table
   }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CavePlaceToRasterMapDefinition(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: CavePlaceToRasterMapDefinitions.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       xCoordinate: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}x_coordinate'],
@@ -4129,14 +4208,20 @@ class CavePlaceToRasterMapDefinitions extends Table
         DriftSqlType.int,
         data['${effectivePrefix}y_coordinate'],
       ),
-      cavePlaceId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_place_id'],
-      )!,
-      rasterMapId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}raster_map_id'],
-      )!,
+      cavePlaceUuid: CavePlaceToRasterMapDefinitions.$convertercavePlaceUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}cave_place_uuid'],
+            )!,
+          ),
+      rasterMapUuid: CavePlaceToRasterMapDefinitions.$converterrasterMapUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}raster_map_uuid'],
+            )!,
+          ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -4157,9 +4242,14 @@ class CavePlaceToRasterMapDefinitions extends Table
     return CavePlaceToRasterMapDefinitions(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercavePlaceUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterrasterMapUuid =
+      const UuidConverter();
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(cave_place_id, raster_map_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(cave_place_uuid, raster_map_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
@@ -4167,24 +4257,20 @@ class CavePlaceToRasterMapDefinitions extends Table
 
 class CavePlaceToRasterMapDefinition extends DataClass
     implements Insertable<CavePlaceToRasterMapDefinition> {
-  final int id;
+  final Uuid uuid;
   final int? xCoordinate;
-
-  /// x coordinate of the place's point on the raster map image; can be null if the place is not defined on a raster map; otherwise, it is required and should be a non-negative integer
   final int? yCoordinate;
-
-  /// y coordinate of the place's point on the raster map image; can be null if the place is not defined on a raster map; otherwise, it is required and should be a non-negative integer
-  final int cavePlaceId;
-  final int rasterMapId;
+  final Uuid cavePlaceUuid;
+  final Uuid rasterMapUuid;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const CavePlaceToRasterMapDefinition({
-    required this.id,
+    required this.uuid,
     this.xCoordinate,
     this.yCoordinate,
-    required this.cavePlaceId,
-    required this.rasterMapId,
+    required this.cavePlaceUuid,
+    required this.rasterMapUuid,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -4192,15 +4278,31 @@ class CavePlaceToRasterMapDefinition extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        CavePlaceToRasterMapDefinitions.$converteruuid.toSql(uuid),
+      );
+    }
     if (!nullToAbsent || xCoordinate != null) {
       map['x_coordinate'] = Variable<int>(xCoordinate);
     }
     if (!nullToAbsent || yCoordinate != null) {
       map['y_coordinate'] = Variable<int>(yCoordinate);
     }
-    map['cave_place_id'] = Variable<int>(cavePlaceId);
-    map['raster_map_id'] = Variable<int>(rasterMapId);
+    {
+      map['cave_place_uuid'] = Variable<Uint8List>(
+        CavePlaceToRasterMapDefinitions.$convertercavePlaceUuid.toSql(
+          cavePlaceUuid,
+        ),
+      );
+    }
+    {
+      map['raster_map_uuid'] = Variable<Uint8List>(
+        CavePlaceToRasterMapDefinitions.$converterrasterMapUuid.toSql(
+          rasterMapUuid,
+        ),
+      );
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
     }
@@ -4215,15 +4317,15 @@ class CavePlaceToRasterMapDefinition extends DataClass
 
   CavePlaceToRasterMapDefinitionsCompanion toCompanion(bool nullToAbsent) {
     return CavePlaceToRasterMapDefinitionsCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       xCoordinate: xCoordinate == null && nullToAbsent
           ? const Value.absent()
           : Value(xCoordinate),
       yCoordinate: yCoordinate == null && nullToAbsent
           ? const Value.absent()
           : Value(yCoordinate),
-      cavePlaceId: Value(cavePlaceId),
-      rasterMapId: Value(rasterMapId),
+      cavePlaceUuid: Value(cavePlaceUuid),
+      rasterMapUuid: Value(rasterMapUuid),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -4242,11 +4344,11 @@ class CavePlaceToRasterMapDefinition extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CavePlaceToRasterMapDefinition(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       xCoordinate: serializer.fromJson<int?>(json['x_coordinate']),
       yCoordinate: serializer.fromJson<int?>(json['y_coordinate']),
-      cavePlaceId: serializer.fromJson<int>(json['cave_place_id']),
-      rasterMapId: serializer.fromJson<int>(json['raster_map_id']),
+      cavePlaceUuid: serializer.fromJson<Uuid>(json['cave_place_uuid']),
+      rasterMapUuid: serializer.fromJson<Uuid>(json['raster_map_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -4256,11 +4358,11 @@ class CavePlaceToRasterMapDefinition extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'x_coordinate': serializer.toJson<int?>(xCoordinate),
       'y_coordinate': serializer.toJson<int?>(yCoordinate),
-      'cave_place_id': serializer.toJson<int>(cavePlaceId),
-      'raster_map_id': serializer.toJson<int>(rasterMapId),
+      'cave_place_uuid': serializer.toJson<Uuid>(cavePlaceUuid),
+      'raster_map_uuid': serializer.toJson<Uuid>(rasterMapUuid),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -4268,20 +4370,20 @@ class CavePlaceToRasterMapDefinition extends DataClass
   }
 
   CavePlaceToRasterMapDefinition copyWith({
-    int? id,
+    Uuid? uuid,
     Value<int?> xCoordinate = const Value.absent(),
     Value<int?> yCoordinate = const Value.absent(),
-    int? cavePlaceId,
-    int? rasterMapId,
+    Uuid? cavePlaceUuid,
+    Uuid? rasterMapUuid,
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => CavePlaceToRasterMapDefinition(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     xCoordinate: xCoordinate.present ? xCoordinate.value : this.xCoordinate,
     yCoordinate: yCoordinate.present ? yCoordinate.value : this.yCoordinate,
-    cavePlaceId: cavePlaceId ?? this.cavePlaceId,
-    rasterMapId: rasterMapId ?? this.rasterMapId,
+    cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
+    rasterMapUuid: rasterMapUuid ?? this.rasterMapUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -4290,19 +4392,19 @@ class CavePlaceToRasterMapDefinition extends DataClass
     CavePlaceToRasterMapDefinitionsCompanion data,
   ) {
     return CavePlaceToRasterMapDefinition(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       xCoordinate: data.xCoordinate.present
           ? data.xCoordinate.value
           : this.xCoordinate,
       yCoordinate: data.yCoordinate.present
           ? data.yCoordinate.value
           : this.yCoordinate,
-      cavePlaceId: data.cavePlaceId.present
-          ? data.cavePlaceId.value
-          : this.cavePlaceId,
-      rasterMapId: data.rasterMapId.present
-          ? data.rasterMapId.value
-          : this.rasterMapId,
+      cavePlaceUuid: data.cavePlaceUuid.present
+          ? data.cavePlaceUuid.value
+          : this.cavePlaceUuid,
+      rasterMapUuid: data.rasterMapUuid.present
+          ? data.rasterMapUuid.value
+          : this.rasterMapUuid,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -4312,11 +4414,11 @@ class CavePlaceToRasterMapDefinition extends DataClass
   @override
   String toString() {
     return (StringBuffer('CavePlaceToRasterMapDefinition(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('xCoordinate: $xCoordinate, ')
           ..write('yCoordinate: $yCoordinate, ')
-          ..write('cavePlaceId: $cavePlaceId, ')
-          ..write('rasterMapId: $rasterMapId, ')
+          ..write('cavePlaceUuid: $cavePlaceUuid, ')
+          ..write('rasterMapUuid: $rasterMapUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -4326,11 +4428,11 @@ class CavePlaceToRasterMapDefinition extends DataClass
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     xCoordinate,
     yCoordinate,
-    cavePlaceId,
-    rasterMapId,
+    cavePlaceUuid,
+    rasterMapUuid,
     createdAt,
     updatedAt,
     deletedAt,
@@ -4339,11 +4441,11 @@ class CavePlaceToRasterMapDefinition extends DataClass
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CavePlaceToRasterMapDefinition &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.xCoordinate == this.xCoordinate &&
           other.yCoordinate == this.yCoordinate &&
-          other.cavePlaceId == this.cavePlaceId &&
-          other.rasterMapId == this.rasterMapId &&
+          other.cavePlaceUuid == this.cavePlaceUuid &&
+          other.rasterMapUuid == this.rasterMapUuid &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
@@ -4351,84 +4453,94 @@ class CavePlaceToRasterMapDefinition extends DataClass
 
 class CavePlaceToRasterMapDefinitionsCompanion
     extends UpdateCompanion<CavePlaceToRasterMapDefinition> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<int?> xCoordinate;
   final Value<int?> yCoordinate;
-  final Value<int> cavePlaceId;
-  final Value<int> rasterMapId;
+  final Value<Uuid> cavePlaceUuid;
+  final Value<Uuid> rasterMapUuid;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CavePlaceToRasterMapDefinitionsCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.xCoordinate = const Value.absent(),
     this.yCoordinate = const Value.absent(),
-    this.cavePlaceId = const Value.absent(),
-    this.rasterMapId = const Value.absent(),
+    this.cavePlaceUuid = const Value.absent(),
+    this.rasterMapUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CavePlaceToRasterMapDefinitionsCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     this.xCoordinate = const Value.absent(),
     this.yCoordinate = const Value.absent(),
-    required int cavePlaceId,
-    required int rasterMapId,
+    required Uuid cavePlaceUuid,
+    required Uuid rasterMapUuid,
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : cavePlaceId = Value(cavePlaceId),
-       rasterMapId = Value(rasterMapId);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       cavePlaceUuid = Value(cavePlaceUuid),
+       rasterMapUuid = Value(rasterMapUuid);
   static Insertable<CavePlaceToRasterMapDefinition> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<int>? xCoordinate,
     Expression<int>? yCoordinate,
-    Expression<int>? cavePlaceId,
-    Expression<int>? rasterMapId,
+    Expression<Uint8List>? cavePlaceUuid,
+    Expression<Uint8List>? rasterMapUuid,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (xCoordinate != null) 'x_coordinate': xCoordinate,
       if (yCoordinate != null) 'y_coordinate': yCoordinate,
-      if (cavePlaceId != null) 'cave_place_id': cavePlaceId,
-      if (rasterMapId != null) 'raster_map_id': rasterMapId,
+      if (cavePlaceUuid != null) 'cave_place_uuid': cavePlaceUuid,
+      if (rasterMapUuid != null) 'raster_map_uuid': rasterMapUuid,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CavePlaceToRasterMapDefinitionsCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<int?>? xCoordinate,
     Value<int?>? yCoordinate,
-    Value<int>? cavePlaceId,
-    Value<int>? rasterMapId,
+    Value<Uuid>? cavePlaceUuid,
+    Value<Uuid>? rasterMapUuid,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CavePlaceToRasterMapDefinitionsCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       xCoordinate: xCoordinate ?? this.xCoordinate,
       yCoordinate: yCoordinate ?? this.yCoordinate,
-      cavePlaceId: cavePlaceId ?? this.cavePlaceId,
-      rasterMapId: rasterMapId ?? this.rasterMapId,
+      cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
+      rasterMapUuid: rasterMapUuid ?? this.rasterMapUuid,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CavePlaceToRasterMapDefinitions.$converteruuid.toSql(uuid.value),
+      );
     }
     if (xCoordinate.present) {
       map['x_coordinate'] = Variable<int>(xCoordinate.value);
@@ -4436,11 +4548,19 @@ class CavePlaceToRasterMapDefinitionsCompanion
     if (yCoordinate.present) {
       map['y_coordinate'] = Variable<int>(yCoordinate.value);
     }
-    if (cavePlaceId.present) {
-      map['cave_place_id'] = Variable<int>(cavePlaceId.value);
+    if (cavePlaceUuid.present) {
+      map['cave_place_uuid'] = Variable<Uint8List>(
+        CavePlaceToRasterMapDefinitions.$convertercavePlaceUuid.toSql(
+          cavePlaceUuid.value,
+        ),
+      );
     }
-    if (rasterMapId.present) {
-      map['raster_map_id'] = Variable<int>(rasterMapId.value);
+    if (rasterMapUuid.present) {
+      map['raster_map_uuid'] = Variable<Uint8List>(
+        CavePlaceToRasterMapDefinitions.$converterrasterMapUuid.toSql(
+          rasterMapUuid.value,
+        ),
+      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -4451,20 +4571,24 @@ class CavePlaceToRasterMapDefinitionsCompanion
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CavePlaceToRasterMapDefinitionsCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('xCoordinate: $xCoordinate, ')
           ..write('yCoordinate: $yCoordinate, ')
-          ..write('cavePlaceId: $cavePlaceId, ')
-          ..write('rasterMapId: $rasterMapId, ')
+          ..write('cavePlaceUuid: $cavePlaceUuid, ')
+          ..write('rasterMapUuid: $rasterMapUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -4476,16 +4600,15 @@ class DocumentationFiles extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   DocumentationFiles(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(DocumentationFiles.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -4585,7 +4708,7 @@ class DocumentationFiles extends Table
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
+    uuid,
     title,
     description,
     fileName,
@@ -4608,9 +4731,6 @@ class DocumentationFiles extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -4680,7 +4800,7 @@ class DocumentationFiles extends Table
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {title, fileName, fileSize, fileHash},
@@ -4689,10 +4809,12 @@ class DocumentationFiles extends Table
   DocumentationFile map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return DocumentationFile(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
+      uuid: DocumentationFiles.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -4737,6 +4859,7 @@ class DocumentationFiles extends Table
     return DocumentationFiles(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
   @override
   List<String> get customConstraints => const [
     'UNIQUE(title, file_name, file_size, file_hash)ON CONFLICT ROLLBACK',
@@ -4747,20 +4870,18 @@ class DocumentationFiles extends Table
 
 class DocumentationFile extends DataClass
     implements Insertable<DocumentationFile> {
-  final int id;
+  final Uuid uuid;
   final String title;
   final String? description;
   final String fileName;
   final int fileSize;
   final String? fileHash;
   final String fileType;
-
-  /// "photo", "video", "audio", "text_document", "web_link", etc.
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const DocumentationFile({
-    required this.id,
+    required this.uuid,
     required this.title,
     this.description,
     required this.fileName,
@@ -4774,7 +4895,11 @@ class DocumentationFile extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFiles.$converteruuid.toSql(uuid),
+      );
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -4799,7 +4924,7 @@ class DocumentationFile extends DataClass
 
   DocumentationFilesCompanion toCompanion(bool nullToAbsent) {
     return DocumentationFilesCompanion(
-      id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -4828,7 +4953,7 @@ class DocumentationFile extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DocumentationFile(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       fileName: serializer.fromJson<String>(json['file_name']),
@@ -4844,7 +4969,7 @@ class DocumentationFile extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'file_name': serializer.toJson<String>(fileName),
@@ -4858,7 +4983,7 @@ class DocumentationFile extends DataClass
   }
 
   DocumentationFile copyWith({
-    int? id,
+    Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
     String? fileName,
@@ -4869,7 +4994,7 @@ class DocumentationFile extends DataClass
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => DocumentationFile(
-    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     fileName: fileName ?? this.fileName,
@@ -4882,7 +5007,7 @@ class DocumentationFile extends DataClass
   );
   DocumentationFile copyWithCompanion(DocumentationFilesCompanion data) {
     return DocumentationFile(
-      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -4900,7 +5025,7 @@ class DocumentationFile extends DataClass
   @override
   String toString() {
     return (StringBuffer('DocumentationFile(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('fileName: $fileName, ')
@@ -4916,7 +5041,7 @@ class DocumentationFile extends DataClass
 
   @override
   int get hashCode => Object.hash(
-    id,
+    uuid,
     title,
     description,
     fileName,
@@ -4931,7 +5056,7 @@ class DocumentationFile extends DataClass
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DocumentationFile &&
-          other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
           other.fileName == this.fileName &&
@@ -4944,7 +5069,7 @@ class DocumentationFile extends DataClass
 }
 
 class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
   final Value<String> fileName;
@@ -4954,8 +5079,9 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const DocumentationFilesCompanion({
-    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.fileName = const Value.absent(),
@@ -4965,9 +5091,10 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   DocumentationFilesCompanion.insert({
-    this.id = const Value.absent(),
+    required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
     required String fileName,
@@ -4977,12 +5104,14 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title),
        fileName = Value(fileName),
        fileSize = Value(fileSize),
        fileType = Value(fileType);
   static Insertable<DocumentationFile> custom({
-    Expression<int>? id,
+    Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
     Expression<String>? fileName,
@@ -4992,9 +5121,10 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (fileName != null) 'file_name': fileName,
@@ -5004,11 +5134,12 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   DocumentationFilesCompanion copyWith({
-    Value<int>? id,
+    Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
     Value<String>? fileName,
@@ -5018,9 +5149,10 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return DocumentationFilesCompanion(
-      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
       fileName: fileName ?? this.fileName,
@@ -5030,14 +5162,17 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFiles.$converteruuid.toSql(uuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -5066,13 +5201,16 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('DocumentationFilesCompanion(')
-          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('fileName: $fileName, ')
@@ -5081,7 +5219,8 @@ class DocumentationFilesCompanion extends UpdateCompanion<DocumentationFile> {
           ..write('fileType: $fileType, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -5097,27 +5236,26 @@ class DocumentationFilesToGeofeatures extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   DocumentationFilesToGeofeatures(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
-  static const VerificationMeta _geofeatureIdMeta = const VerificationMeta(
-    'geofeatureId',
-  );
-  late final GeneratedColumn<int> geofeatureId = GeneratedColumn<int>(
-    'geofeature_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: '',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(DocumentationFilesToGeofeatures.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> geofeatureUuid =
+      GeneratedColumn<Uint8List>(
+        'geofeature_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      ).withConverter<Uuid?>(
+        DocumentationFilesToGeofeatures.$convertergeofeatureUuidn,
+      );
   static const VerificationMeta _geofeatureTypeMeta = const VerificationMeta(
     'geofeatureType',
   );
@@ -5129,16 +5267,18 @@ class DocumentationFilesToGeofeatures extends Table
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
-  static const VerificationMeta _documentationFileIdMeta =
-      const VerificationMeta('documentationFileId');
-  late final GeneratedColumn<int> documentationFileId = GeneratedColumn<int>(
-    'documentation_file_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES documentation_files(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List>
+  documentationFileUuid =
+      GeneratedColumn<Uint8List>(
+        'documentation_file_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES documentation_files(uuid)',
+      ).withConverter<Uuid>(
+        DocumentationFilesToGeofeatures.$converterdocumentationFileUuid,
+      );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -5163,10 +5303,10 @@ class DocumentationFilesToGeofeatures extends Table
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
-    geofeatureId,
+    uuid,
+    geofeatureUuid,
     geofeatureType,
-    documentationFileId,
+    documentationFileUuid,
     updatedAt,
     deletedAt,
   ];
@@ -5182,18 +5322,6 @@ class DocumentationFilesToGeofeatures extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('geofeature_id')) {
-      context.handle(
-        _geofeatureIdMeta,
-        geofeatureId.isAcceptableOrUnknown(
-          data['geofeature_id']!,
-          _geofeatureIdMeta,
-        ),
-      );
-    }
     if (data.containsKey('geofeature_type')) {
       context.handle(
         _geofeatureTypeMeta,
@@ -5204,17 +5332,6 @@ class DocumentationFilesToGeofeatures extends Table
       );
     } else if (isInserting) {
       context.missing(_geofeatureTypeMeta);
-    }
-    if (data.containsKey('documentation_file_id')) {
-      context.handle(
-        _documentationFileIdMeta,
-        documentationFileId.isAcceptableOrUnknown(
-          data['documentation_file_id']!,
-          _documentationFileIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_documentationFileIdMeta);
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -5232,10 +5349,10 @@ class DocumentationFilesToGeofeatures extends Table
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {geofeatureId, geofeatureType, documentationFileId},
+    {geofeatureUuid, geofeatureType, documentationFileUuid},
   ];
   @override
   DocumentationFilesToGeofeature map(
@@ -5244,22 +5361,31 @@ class DocumentationFilesToGeofeatures extends Table
   }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return DocumentationFilesToGeofeature(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      geofeatureId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}geofeature_id'],
+      uuid: DocumentationFilesToGeofeatures.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
       ),
+      geofeatureUuid: DocumentationFilesToGeofeatures.$convertergeofeatureUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}geofeature_uuid'],
+            ),
+          ),
       geofeatureType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}geofeature_type'],
       )!,
-      documentationFileId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}documentation_file_id'],
-      )!,
+      documentationFileUuid: DocumentationFilesToGeofeatures
+          .$converterdocumentationFileUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}documentation_file_uuid'],
+            )!,
+          ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -5276,9 +5402,16 @@ class DocumentationFilesToGeofeatures extends Table
     return DocumentationFilesToGeofeatures(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertergeofeatureUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertergeofeatureUuidn =
+      NullAwareTypeConverter.wrap($convertergeofeatureUuid);
+  static TypeConverter<Uuid, Uint8List> $converterdocumentationFileUuid =
+      const UuidConverter();
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(geofeature_id, geofeature_type, documentation_file_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(geofeature_uuid, geofeature_type, documentation_file_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
@@ -5286,35 +5419,43 @@ class DocumentationFilesToGeofeatures extends Table
 
 class DocumentationFilesToGeofeature extends DataClass
     implements Insertable<DocumentationFilesToGeofeature> {
-  final int id;
-  final int? geofeatureId;
-
-  /// pseudo foreign key to one of these tables: {caves, cave_places, cave_areas}; enforced by code
+  final Uuid uuid;
+  final Uuid? geofeatureUuid;
   final String geofeatureType;
-
-  /// can be "cave", "cave_place", or "cave_area"; enforced by code
-  final int documentationFileId;
-
-  /// created_at 				INTEGER,
+  final Uuid documentationFileUuid;
   final int? updatedAt;
   final int? deletedAt;
   const DocumentationFilesToGeofeature({
-    required this.id,
-    this.geofeatureId,
+    required this.uuid,
+    this.geofeatureUuid,
     required this.geofeatureType,
-    required this.documentationFileId,
+    required this.documentationFileUuid,
     this.updatedAt,
     this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    if (!nullToAbsent || geofeatureId != null) {
-      map['geofeature_id'] = Variable<int>(geofeatureId);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFilesToGeofeatures.$converteruuid.toSql(uuid),
+      );
+    }
+    if (!nullToAbsent || geofeatureUuid != null) {
+      map['geofeature_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToGeofeatures.$convertergeofeatureUuidn.toSql(
+          geofeatureUuid,
+        ),
+      );
     }
     map['geofeature_type'] = Variable<String>(geofeatureType);
-    map['documentation_file_id'] = Variable<int>(documentationFileId);
+    {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToGeofeatures.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid,
+        ),
+      );
+    }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<int>(updatedAt);
     }
@@ -5326,12 +5467,12 @@ class DocumentationFilesToGeofeature extends DataClass
 
   DocumentationFilesToGeofeaturesCompanion toCompanion(bool nullToAbsent) {
     return DocumentationFilesToGeofeaturesCompanion(
-      id: Value(id),
-      geofeatureId: geofeatureId == null && nullToAbsent
+      uuid: Value(uuid),
+      geofeatureUuid: geofeatureUuid == null && nullToAbsent
           ? const Value.absent()
-          : Value(geofeatureId),
+          : Value(geofeatureUuid),
       geofeatureType: Value(geofeatureType),
-      documentationFileId: Value(documentationFileId),
+      documentationFileUuid: Value(documentationFileUuid),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -5347,11 +5488,11 @@ class DocumentationFilesToGeofeature extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DocumentationFilesToGeofeature(
-      id: serializer.fromJson<int>(json['id']),
-      geofeatureId: serializer.fromJson<int?>(json['geofeature_id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      geofeatureUuid: serializer.fromJson<Uuid?>(json['geofeature_uuid']),
       geofeatureType: serializer.fromJson<String>(json['geofeature_type']),
-      documentationFileId: serializer.fromJson<int>(
-        json['documentation_file_id'],
+      documentationFileUuid: serializer.fromJson<Uuid>(
+        json['documentation_file_uuid'],
       ),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -5361,27 +5502,29 @@ class DocumentationFilesToGeofeature extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'geofeature_id': serializer.toJson<int?>(geofeatureId),
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'geofeature_uuid': serializer.toJson<Uuid?>(geofeatureUuid),
       'geofeature_type': serializer.toJson<String>(geofeatureType),
-      'documentation_file_id': serializer.toJson<int>(documentationFileId),
+      'documentation_file_uuid': serializer.toJson<Uuid>(documentationFileUuid),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
     };
   }
 
   DocumentationFilesToGeofeature copyWith({
-    int? id,
-    Value<int?> geofeatureId = const Value.absent(),
+    Uuid? uuid,
+    Value<Uuid?> geofeatureUuid = const Value.absent(),
     String? geofeatureType,
-    int? documentationFileId,
+    Uuid? documentationFileUuid,
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => DocumentationFilesToGeofeature(
-    id: id ?? this.id,
-    geofeatureId: geofeatureId.present ? geofeatureId.value : this.geofeatureId,
+    uuid: uuid ?? this.uuid,
+    geofeatureUuid: geofeatureUuid.present
+        ? geofeatureUuid.value
+        : this.geofeatureUuid,
     geofeatureType: geofeatureType ?? this.geofeatureType,
-    documentationFileId: documentationFileId ?? this.documentationFileId,
+    documentationFileUuid: documentationFileUuid ?? this.documentationFileUuid,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
@@ -5389,16 +5532,16 @@ class DocumentationFilesToGeofeature extends DataClass
     DocumentationFilesToGeofeaturesCompanion data,
   ) {
     return DocumentationFilesToGeofeature(
-      id: data.id.present ? data.id.value : this.id,
-      geofeatureId: data.geofeatureId.present
-          ? data.geofeatureId.value
-          : this.geofeatureId,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      geofeatureUuid: data.geofeatureUuid.present
+          ? data.geofeatureUuid.value
+          : this.geofeatureUuid,
       geofeatureType: data.geofeatureType.present
           ? data.geofeatureType.value
           : this.geofeatureType,
-      documentationFileId: data.documentationFileId.present
-          ? data.documentationFileId.value
-          : this.documentationFileId,
+      documentationFileUuid: data.documentationFileUuid.present
+          ? data.documentationFileUuid.value
+          : this.documentationFileUuid,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
@@ -5407,10 +5550,10 @@ class DocumentationFilesToGeofeature extends DataClass
   @override
   String toString() {
     return (StringBuffer('DocumentationFilesToGeofeature(')
-          ..write('id: $id, ')
-          ..write('geofeatureId: $geofeatureId, ')
+          ..write('uuid: $uuid, ')
+          ..write('geofeatureUuid: $geofeatureUuid, ')
           ..write('geofeatureType: $geofeatureType, ')
-          ..write('documentationFileId: $documentationFileId, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
           ..write(')'))
@@ -5419,10 +5562,10 @@ class DocumentationFilesToGeofeature extends DataClass
 
   @override
   int get hashCode => Object.hash(
-    id,
-    geofeatureId,
+    uuid,
+    geofeatureUuid,
     geofeatureType,
-    documentationFileId,
+    documentationFileUuid,
     updatedAt,
     deletedAt,
   );
@@ -5430,90 +5573,109 @@ class DocumentationFilesToGeofeature extends DataClass
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DocumentationFilesToGeofeature &&
-          other.id == this.id &&
-          other.geofeatureId == this.geofeatureId &&
+          other.uuid == this.uuid &&
+          other.geofeatureUuid == this.geofeatureUuid &&
           other.geofeatureType == this.geofeatureType &&
-          other.documentationFileId == this.documentationFileId &&
+          other.documentationFileUuid == this.documentationFileUuid &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
 }
 
 class DocumentationFilesToGeofeaturesCompanion
     extends UpdateCompanion<DocumentationFilesToGeofeature> {
-  final Value<int> id;
-  final Value<int?> geofeatureId;
+  final Value<Uuid> uuid;
+  final Value<Uuid?> geofeatureUuid;
   final Value<String> geofeatureType;
-  final Value<int> documentationFileId;
+  final Value<Uuid> documentationFileUuid;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const DocumentationFilesToGeofeaturesCompanion({
-    this.id = const Value.absent(),
-    this.geofeatureId = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.geofeatureUuid = const Value.absent(),
     this.geofeatureType = const Value.absent(),
-    this.documentationFileId = const Value.absent(),
+    this.documentationFileUuid = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   DocumentationFilesToGeofeaturesCompanion.insert({
-    this.id = const Value.absent(),
-    this.geofeatureId = const Value.absent(),
+    required Uuid uuid,
+    this.geofeatureUuid = const Value.absent(),
     required String geofeatureType,
-    required int documentationFileId,
+    required Uuid documentationFileUuid,
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : geofeatureType = Value(geofeatureType),
-       documentationFileId = Value(documentationFileId);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       geofeatureType = Value(geofeatureType),
+       documentationFileUuid = Value(documentationFileUuid);
   static Insertable<DocumentationFilesToGeofeature> custom({
-    Expression<int>? id,
-    Expression<int>? geofeatureId,
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? geofeatureUuid,
     Expression<String>? geofeatureType,
-    Expression<int>? documentationFileId,
+    Expression<Uint8List>? documentationFileUuid,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (geofeatureId != null) 'geofeature_id': geofeatureId,
+      if (uuid != null) 'uuid': uuid,
+      if (geofeatureUuid != null) 'geofeature_uuid': geofeatureUuid,
       if (geofeatureType != null) 'geofeature_type': geofeatureType,
-      if (documentationFileId != null)
-        'documentation_file_id': documentationFileId,
+      if (documentationFileUuid != null)
+        'documentation_file_uuid': documentationFileUuid,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   DocumentationFilesToGeofeaturesCompanion copyWith({
-    Value<int>? id,
-    Value<int?>? geofeatureId,
+    Value<Uuid>? uuid,
+    Value<Uuid?>? geofeatureUuid,
     Value<String>? geofeatureType,
-    Value<int>? documentationFileId,
+    Value<Uuid>? documentationFileUuid,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return DocumentationFilesToGeofeaturesCompanion(
-      id: id ?? this.id,
-      geofeatureId: geofeatureId ?? this.geofeatureId,
+      uuid: uuid ?? this.uuid,
+      geofeatureUuid: geofeatureUuid ?? this.geofeatureUuid,
       geofeatureType: geofeatureType ?? this.geofeatureType,
-      documentationFileId: documentationFileId ?? this.documentationFileId,
+      documentationFileUuid:
+          documentationFileUuid ?? this.documentationFileUuid,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFilesToGeofeatures.$converteruuid.toSql(uuid.value),
+      );
     }
-    if (geofeatureId.present) {
-      map['geofeature_id'] = Variable<int>(geofeatureId.value);
+    if (geofeatureUuid.present) {
+      map['geofeature_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToGeofeatures.$convertergeofeatureUuidn.toSql(
+          geofeatureUuid.value,
+        ),
+      );
     }
     if (geofeatureType.present) {
       map['geofeature_type'] = Variable<String>(geofeatureType.value);
     }
-    if (documentationFileId.present) {
-      map['documentation_file_id'] = Variable<int>(documentationFileId.value);
+    if (documentationFileUuid.present) {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToGeofeatures.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid.value,
+        ),
+      );
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
@@ -5521,18 +5683,22 @@ class DocumentationFilesToGeofeaturesCompanion
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('DocumentationFilesToGeofeaturesCompanion(')
-          ..write('id: $id, ')
-          ..write('geofeatureId: $geofeatureId, ')
+          ..write('uuid: $uuid, ')
+          ..write('geofeatureUuid: $geofeatureUuid, ')
           ..write('geofeatureType: $geofeatureType, ')
-          ..write('documentationFileId: $documentationFileId, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -5894,25 +6060,24 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CaveTrips(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
-  static const VerificationMeta _caveIdMeta = const VerificationMeta('caveId');
-  late final GeneratedColumn<int> caveId = GeneratedColumn<int>(
-    'cave_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES caves(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CaveTrips.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(CaveTrips.$convertercaveUuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
     'title',
@@ -5999,8 +6164,8 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
-    caveId,
+    uuid,
+    caveUuid,
     title,
     description,
     tripStartedAt,
@@ -6022,17 +6187,6 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('cave_id')) {
-      context.handle(
-        _caveIdMeta,
-        caveId.isAcceptableOrUnknown(data['cave_id']!, _caveIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_caveIdMeta);
-    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -6098,19 +6252,23 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   CaveTrip map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CaveTrip(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      caveId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_id'],
-      )!,
+      uuid: CaveTrips.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      caveUuid: CaveTrips.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -6151,13 +6309,16 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
     return CaveTrips(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
   @override
   bool get dontWriteConstraints => true;
 }
 
 class CaveTrip extends DataClass implements Insertable<CaveTrip> {
-  final int id;
-  final int caveId;
+  final Uuid uuid;
+  final Uuid caveUuid;
   final String title;
   final String? description;
   final int tripStartedAt;
@@ -6167,8 +6328,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   final int? updatedAt;
   final int? deletedAt;
   const CaveTrip({
-    required this.id,
-    required this.caveId,
+    required this.uuid,
+    required this.caveUuid,
     required this.title,
     this.description,
     required this.tripStartedAt,
@@ -6181,8 +6342,14 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['cave_id'] = Variable<int>(caveId);
+    {
+      map['uuid'] = Variable<Uint8List>(CaveTrips.$converteruuid.toSql(uuid));
+    }
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveTrips.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -6208,8 +6375,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
 
   CaveTripsCompanion toCompanion(bool nullToAbsent) {
     return CaveTripsCompanion(
-      id: Value(id),
-      caveId: Value(caveId),
+      uuid: Value(uuid),
+      caveUuid: Value(caveUuid),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -6237,8 +6404,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CaveTrip(
-      id: serializer.fromJson<int>(json['id']),
-      caveId: serializer.fromJson<int>(json['cave_id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       tripStartedAt: serializer.fromJson<int>(json['trip_started_at']),
@@ -6253,8 +6420,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'cave_id': serializer.toJson<int>(caveId),
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'trip_started_at': serializer.toJson<int>(tripStartedAt),
@@ -6267,8 +6434,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   }
 
   CaveTrip copyWith({
-    int? id,
-    int? caveId,
+    Uuid? uuid,
+    Uuid? caveUuid,
     String? title,
     Value<String?> description = const Value.absent(),
     int? tripStartedAt,
@@ -6278,8 +6445,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => CaveTrip(
-    id: id ?? this.id,
-    caveId: caveId ?? this.caveId,
+    uuid: uuid ?? this.uuid,
+    caveUuid: caveUuid ?? this.caveUuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     tripStartedAt: tripStartedAt ?? this.tripStartedAt,
@@ -6291,8 +6458,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   );
   CaveTrip copyWithCompanion(CaveTripsCompanion data) {
     return CaveTrip(
-      id: data.id.present ? data.id.value : this.id,
-      caveId: data.caveId.present ? data.caveId.value : this.caveId,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -6313,8 +6480,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   @override
   String toString() {
     return (StringBuffer('CaveTrip(')
-          ..write('id: $id, ')
-          ..write('caveId: $caveId, ')
+          ..write('uuid: $uuid, ')
+          ..write('caveUuid: $caveUuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('tripStartedAt: $tripStartedAt, ')
@@ -6329,8 +6496,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
 
   @override
   int get hashCode => Object.hash(
-    id,
-    caveId,
+    uuid,
+    caveUuid,
     title,
     description,
     tripStartedAt,
@@ -6344,8 +6511,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CaveTrip &&
-          other.id == this.id &&
-          other.caveId == this.caveId &&
+          other.uuid == this.uuid &&
+          other.caveUuid == this.caveUuid &&
           other.title == this.title &&
           other.description == this.description &&
           other.tripStartedAt == this.tripStartedAt &&
@@ -6357,8 +6524,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
 }
 
 class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
-  final Value<int> id;
-  final Value<int> caveId;
+  final Value<Uuid> uuid;
+  final Value<Uuid> caveUuid;
   final Value<String> title;
   final Value<String?> description;
   final Value<int> tripStartedAt;
@@ -6367,9 +6534,10 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CaveTripsCompanion({
-    this.id = const Value.absent(),
-    this.caveId = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.caveUuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.tripStartedAt = const Value.absent(),
@@ -6378,10 +6546,11 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CaveTripsCompanion.insert({
-    this.id = const Value.absent(),
-    required int caveId,
+    required Uuid uuid,
+    required Uuid caveUuid,
     required String title,
     this.description = const Value.absent(),
     required int tripStartedAt,
@@ -6390,12 +6559,14 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : caveId = Value(caveId),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       caveUuid = Value(caveUuid),
        title = Value(title),
        tripStartedAt = Value(tripStartedAt);
   static Insertable<CaveTrip> custom({
-    Expression<int>? id,
-    Expression<int>? caveId,
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? caveUuid,
     Expression<String>? title,
     Expression<String>? description,
     Expression<int>? tripStartedAt,
@@ -6404,10 +6575,11 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (caveId != null) 'cave_id': caveId,
+      if (uuid != null) 'uuid': uuid,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (tripStartedAt != null) 'trip_started_at': tripStartedAt,
@@ -6416,12 +6588,13 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CaveTripsCompanion copyWith({
-    Value<int>? id,
-    Value<int>? caveId,
+    Value<Uuid>? uuid,
+    Value<Uuid>? caveUuid,
     Value<String>? title,
     Value<String?>? description,
     Value<int>? tripStartedAt,
@@ -6430,10 +6603,11 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CaveTripsCompanion(
-      id: id ?? this.id,
-      caveId: caveId ?? this.caveId,
+      uuid: uuid ?? this.uuid,
+      caveUuid: caveUuid ?? this.caveUuid,
       title: title ?? this.title,
       description: description ?? this.description,
       tripStartedAt: tripStartedAt ?? this.tripStartedAt,
@@ -6442,17 +6616,22 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CaveTrips.$converteruuid.toSql(uuid.value),
+      );
     }
-    if (caveId.present) {
-      map['cave_id'] = Variable<int>(caveId.value);
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveTrips.$convertercaveUuid.toSql(caveUuid.value),
+      );
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -6478,14 +6657,17 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CaveTripsCompanion(')
-          ..write('id: $id, ')
-          ..write('caveId: $caveId, ')
+          ..write('uuid: $uuid, ')
+          ..write('caveUuid: $caveUuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('tripStartedAt: $tripStartedAt, ')
@@ -6493,7 +6675,8 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
           ..write('log: $log, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -6505,38 +6688,33 @@ class CaveTripPoints extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CaveTripPoints(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
-  static const VerificationMeta _caveTripIdMeta = const VerificationMeta(
-    'caveTripId',
-  );
-  late final GeneratedColumn<int> caveTripId = GeneratedColumn<int>(
-    'cave_trip_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES cave_trips(id)',
-  );
-  static const VerificationMeta _cavePlaceIdMeta = const VerificationMeta(
-    'cavePlaceId',
-  );
-  late final GeneratedColumn<int> cavePlaceId = GeneratedColumn<int>(
-    'cave_place_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'REFERENCES cave_places(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CaveTripPoints.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveTripUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_trip_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES cave_trips(uuid)',
+      ).withConverter<Uuid>(CaveTripPoints.$convertercaveTripUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> cavePlaceUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_place_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES cave_places(uuid)',
+      ).withConverter<Uuid?>(CaveTripPoints.$convertercavePlaceUuidn);
   static const VerificationMeta _scannedAtMeta = const VerificationMeta(
     'scannedAt',
   );
@@ -6592,9 +6770,9 @@ class CaveTripPoints extends Table
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
-    caveTripId,
-    cavePlaceId,
+    uuid,
+    caveTripUuid,
+    cavePlaceUuid,
     scannedAt,
     notes,
     createdAt,
@@ -6613,29 +6791,6 @@ class CaveTripPoints extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('cave_trip_id')) {
-      context.handle(
-        _caveTripIdMeta,
-        caveTripId.isAcceptableOrUnknown(
-          data['cave_trip_id']!,
-          _caveTripIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_caveTripIdMeta);
-    }
-    if (data.containsKey('cave_place_id')) {
-      context.handle(
-        _cavePlaceIdMeta,
-        cavePlaceId.isAcceptableOrUnknown(
-          data['cave_place_id']!,
-          _cavePlaceIdMeta,
-        ),
-      );
-    }
     if (data.containsKey('scanned_at')) {
       context.handle(
         _scannedAtMeta,
@@ -6672,26 +6827,32 @@ class CaveTripPoints extends Table
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {caveTripId, cavePlaceId, scannedAt},
+    {caveTripUuid, cavePlaceUuid, scannedAt},
   ];
   @override
   CaveTripPoint map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CaveTripPoint(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      caveTripId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_trip_id'],
-      )!,
-      cavePlaceId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_place_id'],
+      uuid: CaveTripPoints.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      caveTripUuid: CaveTripPoints.$convertercaveTripUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_trip_uuid'],
+        )!,
+      ),
+      cavePlaceUuid: CaveTripPoints.$convertercavePlaceUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_place_uuid'],
+        ),
       ),
       scannedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -6721,31 +6882,34 @@ class CaveTripPoints extends Table
     return CaveTripPoints(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveTripUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercavePlaceUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercavePlaceUuidn =
+      NullAwareTypeConverter.wrap($convertercavePlaceUuid);
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(cave_trip_id, cave_place_id, scanned_at)ON CONFLICT ROLLBACK',
+    'UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
 }
 
 class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
-  final int id;
-  final int caveTripId;
-
-  /// todo: when cp deleted should we keep the trip point with cave_place_id null, or should we delete the trip point as well?
-  final int? cavePlaceId;
+  final Uuid uuid;
+  final Uuid caveTripUuid;
+  final Uuid? cavePlaceUuid;
   final int scannedAt;
   final String? notes;
-
-  /// todo: decide whether to keep both scanned_at and created_at (could there be a scenario where scanned_at is different from created_at? e.g. if we want to allow users to manually add trip points after the trip, or edit scanned_at for existing trip points; if not, then we can remove scanned_at and just use created_at)
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const CaveTripPoint({
-    required this.id,
-    required this.caveTripId,
-    this.cavePlaceId,
+    required this.uuid,
+    required this.caveTripUuid,
+    this.cavePlaceUuid,
     required this.scannedAt,
     this.notes,
     this.createdAt,
@@ -6755,10 +6919,20 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['cave_trip_id'] = Variable<int>(caveTripId);
-    if (!nullToAbsent || cavePlaceId != null) {
-      map['cave_place_id'] = Variable<int>(cavePlaceId);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        CaveTripPoints.$converteruuid.toSql(uuid),
+      );
+    }
+    {
+      map['cave_trip_uuid'] = Variable<Uint8List>(
+        CaveTripPoints.$convertercaveTripUuid.toSql(caveTripUuid),
+      );
+    }
+    if (!nullToAbsent || cavePlaceUuid != null) {
+      map['cave_place_uuid'] = Variable<Uint8List>(
+        CaveTripPoints.$convertercavePlaceUuidn.toSql(cavePlaceUuid),
+      );
     }
     map['scanned_at'] = Variable<int>(scannedAt);
     if (!nullToAbsent || notes != null) {
@@ -6778,11 +6952,11 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
 
   CaveTripPointsCompanion toCompanion(bool nullToAbsent) {
     return CaveTripPointsCompanion(
-      id: Value(id),
-      caveTripId: Value(caveTripId),
-      cavePlaceId: cavePlaceId == null && nullToAbsent
+      uuid: Value(uuid),
+      caveTripUuid: Value(caveTripUuid),
+      cavePlaceUuid: cavePlaceUuid == null && nullToAbsent
           ? const Value.absent()
-          : Value(cavePlaceId),
+          : Value(cavePlaceUuid),
       scannedAt: Value(scannedAt),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
@@ -6805,9 +6979,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CaveTripPoint(
-      id: serializer.fromJson<int>(json['id']),
-      caveTripId: serializer.fromJson<int>(json['cave_trip_id']),
-      cavePlaceId: serializer.fromJson<int?>(json['cave_place_id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      caveTripUuid: serializer.fromJson<Uuid>(json['cave_trip_uuid']),
+      cavePlaceUuid: serializer.fromJson<Uuid?>(json['cave_place_uuid']),
       scannedAt: serializer.fromJson<int>(json['scanned_at']),
       notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
@@ -6819,9 +6993,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'cave_trip_id': serializer.toJson<int>(caveTripId),
-      'cave_place_id': serializer.toJson<int?>(cavePlaceId),
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'cave_trip_uuid': serializer.toJson<Uuid>(caveTripUuid),
+      'cave_place_uuid': serializer.toJson<Uuid?>(cavePlaceUuid),
       'scanned_at': serializer.toJson<int>(scannedAt),
       'notes': serializer.toJson<String?>(notes),
       'created_at': serializer.toJson<int?>(createdAt),
@@ -6831,18 +7005,20 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   }
 
   CaveTripPoint copyWith({
-    int? id,
-    int? caveTripId,
-    Value<int?> cavePlaceId = const Value.absent(),
+    Uuid? uuid,
+    Uuid? caveTripUuid,
+    Value<Uuid?> cavePlaceUuid = const Value.absent(),
     int? scannedAt,
     Value<String?> notes = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => CaveTripPoint(
-    id: id ?? this.id,
-    caveTripId: caveTripId ?? this.caveTripId,
-    cavePlaceId: cavePlaceId.present ? cavePlaceId.value : this.cavePlaceId,
+    uuid: uuid ?? this.uuid,
+    caveTripUuid: caveTripUuid ?? this.caveTripUuid,
+    cavePlaceUuid: cavePlaceUuid.present
+        ? cavePlaceUuid.value
+        : this.cavePlaceUuid,
     scannedAt: scannedAt ?? this.scannedAt,
     notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
@@ -6851,13 +7027,13 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   );
   CaveTripPoint copyWithCompanion(CaveTripPointsCompanion data) {
     return CaveTripPoint(
-      id: data.id.present ? data.id.value : this.id,
-      caveTripId: data.caveTripId.present
-          ? data.caveTripId.value
-          : this.caveTripId,
-      cavePlaceId: data.cavePlaceId.present
-          ? data.cavePlaceId.value
-          : this.cavePlaceId,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      caveTripUuid: data.caveTripUuid.present
+          ? data.caveTripUuid.value
+          : this.caveTripUuid,
+      cavePlaceUuid: data.cavePlaceUuid.present
+          ? data.cavePlaceUuid.value
+          : this.cavePlaceUuid,
       scannedAt: data.scannedAt.present ? data.scannedAt.value : this.scannedAt,
       notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -6869,9 +7045,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   @override
   String toString() {
     return (StringBuffer('CaveTripPoint(')
-          ..write('id: $id, ')
-          ..write('caveTripId: $caveTripId, ')
-          ..write('cavePlaceId: $cavePlaceId, ')
+          ..write('uuid: $uuid, ')
+          ..write('caveTripUuid: $caveTripUuid, ')
+          ..write('cavePlaceUuid: $cavePlaceUuid, ')
           ..write('scannedAt: $scannedAt, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
@@ -6883,9 +7059,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
 
   @override
   int get hashCode => Object.hash(
-    id,
-    caveTripId,
-    cavePlaceId,
+    uuid,
+    caveTripUuid,
+    cavePlaceUuid,
     scannedAt,
     notes,
     createdAt,
@@ -6896,9 +7072,9 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CaveTripPoint &&
-          other.id == this.id &&
-          other.caveTripId == this.caveTripId &&
-          other.cavePlaceId == this.cavePlaceId &&
+          other.uuid == this.uuid &&
+          other.caveTripUuid == this.caveTripUuid &&
+          other.cavePlaceUuid == this.cavePlaceUuid &&
           other.scannedAt == this.scannedAt &&
           other.notes == this.notes &&
           other.createdAt == this.createdAt &&
@@ -6907,90 +7083,104 @@ class CaveTripPoint extends DataClass implements Insertable<CaveTripPoint> {
 }
 
 class CaveTripPointsCompanion extends UpdateCompanion<CaveTripPoint> {
-  final Value<int> id;
-  final Value<int> caveTripId;
-  final Value<int?> cavePlaceId;
+  final Value<Uuid> uuid;
+  final Value<Uuid> caveTripUuid;
+  final Value<Uuid?> cavePlaceUuid;
   final Value<int> scannedAt;
   final Value<String?> notes;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const CaveTripPointsCompanion({
-    this.id = const Value.absent(),
-    this.caveTripId = const Value.absent(),
-    this.cavePlaceId = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.caveTripUuid = const Value.absent(),
+    this.cavePlaceUuid = const Value.absent(),
     this.scannedAt = const Value.absent(),
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CaveTripPointsCompanion.insert({
-    this.id = const Value.absent(),
-    required int caveTripId,
-    this.cavePlaceId = const Value.absent(),
+    required Uuid uuid,
+    required Uuid caveTripUuid,
+    this.cavePlaceUuid = const Value.absent(),
     required int scannedAt,
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : caveTripId = Value(caveTripId),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       caveTripUuid = Value(caveTripUuid),
        scannedAt = Value(scannedAt);
   static Insertable<CaveTripPoint> custom({
-    Expression<int>? id,
-    Expression<int>? caveTripId,
-    Expression<int>? cavePlaceId,
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? caveTripUuid,
+    Expression<Uint8List>? cavePlaceUuid,
     Expression<int>? scannedAt,
     Expression<String>? notes,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (caveTripId != null) 'cave_trip_id': caveTripId,
-      if (cavePlaceId != null) 'cave_place_id': cavePlaceId,
+      if (uuid != null) 'uuid': uuid,
+      if (caveTripUuid != null) 'cave_trip_uuid': caveTripUuid,
+      if (cavePlaceUuid != null) 'cave_place_uuid': cavePlaceUuid,
       if (scannedAt != null) 'scanned_at': scannedAt,
       if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CaveTripPointsCompanion copyWith({
-    Value<int>? id,
-    Value<int>? caveTripId,
-    Value<int?>? cavePlaceId,
+    Value<Uuid>? uuid,
+    Value<Uuid>? caveTripUuid,
+    Value<Uuid?>? cavePlaceUuid,
     Value<int>? scannedAt,
     Value<String?>? notes,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return CaveTripPointsCompanion(
-      id: id ?? this.id,
-      caveTripId: caveTripId ?? this.caveTripId,
-      cavePlaceId: cavePlaceId ?? this.cavePlaceId,
+      uuid: uuid ?? this.uuid,
+      caveTripUuid: caveTripUuid ?? this.caveTripUuid,
+      cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
       scannedAt: scannedAt ?? this.scannedAt,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CaveTripPoints.$converteruuid.toSql(uuid.value),
+      );
     }
-    if (caveTripId.present) {
-      map['cave_trip_id'] = Variable<int>(caveTripId.value);
+    if (caveTripUuid.present) {
+      map['cave_trip_uuid'] = Variable<Uint8List>(
+        CaveTripPoints.$convertercaveTripUuid.toSql(caveTripUuid.value),
+      );
     }
-    if (cavePlaceId.present) {
-      map['cave_place_id'] = Variable<int>(cavePlaceId.value);
+    if (cavePlaceUuid.present) {
+      map['cave_place_uuid'] = Variable<Uint8List>(
+        CaveTripPoints.$convertercavePlaceUuidn.toSql(cavePlaceUuid.value),
+      );
     }
     if (scannedAt.present) {
       map['scanned_at'] = Variable<int>(scannedAt.value);
@@ -7007,20 +7197,24 @@ class CaveTripPointsCompanion extends UpdateCompanion<CaveTripPoint> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CaveTripPointsCompanion(')
-          ..write('id: $id, ')
-          ..write('caveTripId: $caveTripId, ')
-          ..write('cavePlaceId: $cavePlaceId, ')
+          ..write('uuid: $uuid, ')
+          ..write('caveTripUuid: $caveTripUuid, ')
+          ..write('cavePlaceUuid: $cavePlaceUuid, ')
           ..write('scannedAt: $scannedAt, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -7033,37 +7227,38 @@ class DocumentationFilesToCaveTrips extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   DocumentationFilesToCaveTrips(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
-  static const VerificationMeta _documentationFileIdMeta =
-      const VerificationMeta('documentationFileId');
-  late final GeneratedColumn<int> documentationFileId = GeneratedColumn<int>(
-    'documentation_file_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES documentation_files(id)',
-  );
-  static const VerificationMeta _caveTripIdMeta = const VerificationMeta(
-    'caveTripId',
-  );
-  late final GeneratedColumn<int> caveTripId = GeneratedColumn<int>(
-    'cave_trip_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES cave_trips(id)',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(DocumentationFilesToCaveTrips.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List>
+  documentationFileUuid =
+      GeneratedColumn<Uint8List>(
+        'documentation_file_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES documentation_files(uuid)',
+      ).withConverter<Uuid>(
+        DocumentationFilesToCaveTrips.$converterdocumentationFileUuid,
+      );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveTripUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_trip_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES cave_trips(uuid)',
+      ).withConverter<Uuid>(
+        DocumentationFilesToCaveTrips.$convertercaveTripUuid,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -7088,9 +7283,9 @@ class DocumentationFilesToCaveTrips extends Table
   );
   @override
   List<GeneratedColumn> get $columns => [
-    id,
-    documentationFileId,
-    caveTripId,
+    uuid,
+    documentationFileUuid,
+    caveTripUuid,
     createdAt,
     deletedAt,
   ];
@@ -7106,31 +7301,6 @@ class DocumentationFilesToCaveTrips extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('documentation_file_id')) {
-      context.handle(
-        _documentationFileIdMeta,
-        documentationFileId.isAcceptableOrUnknown(
-          data['documentation_file_id']!,
-          _documentationFileIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_documentationFileIdMeta);
-    }
-    if (data.containsKey('cave_trip_id')) {
-      context.handle(
-        _caveTripIdMeta,
-        caveTripId.isAcceptableOrUnknown(
-          data['cave_trip_id']!,
-          _caveTripIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_caveTripIdMeta);
-    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -7147,10 +7317,10 @@ class DocumentationFilesToCaveTrips extends Table
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {documentationFileId, caveTripId},
+    {documentationFileUuid, caveTripUuid},
   ];
   @override
   DocumentationFilesToCaveTrip map(
@@ -7159,18 +7329,27 @@ class DocumentationFilesToCaveTrips extends Table
   }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return DocumentationFilesToCaveTrip(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      documentationFileId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}documentation_file_id'],
-      )!,
-      caveTripId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}cave_trip_id'],
-      )!,
+      uuid: DocumentationFilesToCaveTrips.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      documentationFileUuid: DocumentationFilesToCaveTrips
+          .$converterdocumentationFileUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}documentation_file_uuid'],
+            )!,
+          ),
+      caveTripUuid: DocumentationFilesToCaveTrips.$convertercaveTripUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}cave_trip_uuid'],
+            )!,
+          ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -7187,9 +7366,14 @@ class DocumentationFilesToCaveTrips extends Table
     return DocumentationFilesToCaveTrips(attachedDatabase, alias);
   }
 
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterdocumentationFileUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveTripUuid =
+      const UuidConverter();
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(documentation_file_id, cave_trip_id)ON CONFLICT ROLLBACK',
+    'UNIQUE(documentation_file_uuid, cave_trip_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
@@ -7197,24 +7381,40 @@ class DocumentationFilesToCaveTrips extends Table
 
 class DocumentationFilesToCaveTrip extends DataClass
     implements Insertable<DocumentationFilesToCaveTrip> {
-  final int id;
-  final int documentationFileId;
-  final int caveTripId;
+  final Uuid uuid;
+  final Uuid documentationFileUuid;
+  final Uuid caveTripUuid;
   final int? createdAt;
   final int? deletedAt;
   const DocumentationFilesToCaveTrip({
-    required this.id,
-    required this.documentationFileId,
-    required this.caveTripId,
+    required this.uuid,
+    required this.documentationFileUuid,
+    required this.caveTripUuid,
     this.createdAt,
     this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['documentation_file_id'] = Variable<int>(documentationFileId);
-    map['cave_trip_id'] = Variable<int>(caveTripId);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTrips.$converteruuid.toSql(uuid),
+      );
+    }
+    {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTrips.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid,
+        ),
+      );
+    }
+    {
+      map['cave_trip_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTrips.$convertercaveTripUuid.toSql(
+          caveTripUuid,
+        ),
+      );
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
     }
@@ -7226,9 +7426,9 @@ class DocumentationFilesToCaveTrip extends DataClass
 
   DocumentationFilesToCaveTripsCompanion toCompanion(bool nullToAbsent) {
     return DocumentationFilesToCaveTripsCompanion(
-      id: Value(id),
-      documentationFileId: Value(documentationFileId),
-      caveTripId: Value(caveTripId),
+      uuid: Value(uuid),
+      documentationFileUuid: Value(documentationFileUuid),
+      caveTripUuid: Value(caveTripUuid),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -7244,11 +7444,11 @@ class DocumentationFilesToCaveTrip extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DocumentationFilesToCaveTrip(
-      id: serializer.fromJson<int>(json['id']),
-      documentationFileId: serializer.fromJson<int>(
-        json['documentation_file_id'],
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      documentationFileUuid: serializer.fromJson<Uuid>(
+        json['documentation_file_uuid'],
       ),
-      caveTripId: serializer.fromJson<int>(json['cave_trip_id']),
+      caveTripUuid: serializer.fromJson<Uuid>(json['cave_trip_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
     );
@@ -7257,24 +7457,24 @@ class DocumentationFilesToCaveTrip extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'documentation_file_id': serializer.toJson<int>(documentationFileId),
-      'cave_trip_id': serializer.toJson<int>(caveTripId),
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'documentation_file_uuid': serializer.toJson<Uuid>(documentationFileUuid),
+      'cave_trip_uuid': serializer.toJson<Uuid>(caveTripUuid),
       'created_at': serializer.toJson<int?>(createdAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
     };
   }
 
   DocumentationFilesToCaveTrip copyWith({
-    int? id,
-    int? documentationFileId,
-    int? caveTripId,
+    Uuid? uuid,
+    Uuid? documentationFileUuid,
+    Uuid? caveTripUuid,
     Value<int?> createdAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => DocumentationFilesToCaveTrip(
-    id: id ?? this.id,
-    documentationFileId: documentationFileId ?? this.documentationFileId,
-    caveTripId: caveTripId ?? this.caveTripId,
+    uuid: uuid ?? this.uuid,
+    documentationFileUuid: documentationFileUuid ?? this.documentationFileUuid,
+    caveTripUuid: caveTripUuid ?? this.caveTripUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
@@ -7282,13 +7482,13 @@ class DocumentationFilesToCaveTrip extends DataClass
     DocumentationFilesToCaveTripsCompanion data,
   ) {
     return DocumentationFilesToCaveTrip(
-      id: data.id.present ? data.id.value : this.id,
-      documentationFileId: data.documentationFileId.present
-          ? data.documentationFileId.value
-          : this.documentationFileId,
-      caveTripId: data.caveTripId.present
-          ? data.caveTripId.value
-          : this.caveTripId,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      documentationFileUuid: data.documentationFileUuid.present
+          ? data.documentationFileUuid.value
+          : this.documentationFileUuid,
+      caveTripUuid: data.caveTripUuid.present
+          ? data.caveTripUuid.value
+          : this.caveTripUuid,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
@@ -7297,9 +7497,9 @@ class DocumentationFilesToCaveTrip extends DataClass
   @override
   String toString() {
     return (StringBuffer('DocumentationFilesToCaveTrip(')
-          ..write('id: $id, ')
-          ..write('documentationFileId: $documentationFileId, ')
-          ..write('caveTripId: $caveTripId, ')
+          ..write('uuid: $uuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('caveTripUuid: $caveTripUuid, ')
           ..write('createdAt: $createdAt, ')
           ..write('deletedAt: $deletedAt')
           ..write(')'))
@@ -7307,85 +7507,109 @@ class DocumentationFilesToCaveTrip extends DataClass
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, documentationFileId, caveTripId, createdAt, deletedAt);
+  int get hashCode => Object.hash(
+    uuid,
+    documentationFileUuid,
+    caveTripUuid,
+    createdAt,
+    deletedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DocumentationFilesToCaveTrip &&
-          other.id == this.id &&
-          other.documentationFileId == this.documentationFileId &&
-          other.caveTripId == this.caveTripId &&
+          other.uuid == this.uuid &&
+          other.documentationFileUuid == this.documentationFileUuid &&
+          other.caveTripUuid == this.caveTripUuid &&
           other.createdAt == this.createdAt &&
           other.deletedAt == this.deletedAt);
 }
 
 class DocumentationFilesToCaveTripsCompanion
     extends UpdateCompanion<DocumentationFilesToCaveTrip> {
-  final Value<int> id;
-  final Value<int> documentationFileId;
-  final Value<int> caveTripId;
+  final Value<Uuid> uuid;
+  final Value<Uuid> documentationFileUuid;
+  final Value<Uuid> caveTripUuid;
   final Value<int?> createdAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const DocumentationFilesToCaveTripsCompanion({
-    this.id = const Value.absent(),
-    this.documentationFileId = const Value.absent(),
-    this.caveTripId = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.documentationFileUuid = const Value.absent(),
+    this.caveTripUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   DocumentationFilesToCaveTripsCompanion.insert({
-    this.id = const Value.absent(),
-    required int documentationFileId,
-    required int caveTripId,
+    required Uuid uuid,
+    required Uuid documentationFileUuid,
+    required Uuid caveTripUuid,
     this.createdAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : documentationFileId = Value(documentationFileId),
-       caveTripId = Value(caveTripId);
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       documentationFileUuid = Value(documentationFileUuid),
+       caveTripUuid = Value(caveTripUuid);
   static Insertable<DocumentationFilesToCaveTrip> custom({
-    Expression<int>? id,
-    Expression<int>? documentationFileId,
-    Expression<int>? caveTripId,
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? documentationFileUuid,
+    Expression<Uint8List>? caveTripUuid,
     Expression<int>? createdAt,
     Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (documentationFileId != null)
-        'documentation_file_id': documentationFileId,
-      if (caveTripId != null) 'cave_trip_id': caveTripId,
+      if (uuid != null) 'uuid': uuid,
+      if (documentationFileUuid != null)
+        'documentation_file_uuid': documentationFileUuid,
+      if (caveTripUuid != null) 'cave_trip_uuid': caveTripUuid,
       if (createdAt != null) 'created_at': createdAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
   DocumentationFilesToCaveTripsCompanion copyWith({
-    Value<int>? id,
-    Value<int>? documentationFileId,
-    Value<int>? caveTripId,
+    Value<Uuid>? uuid,
+    Value<Uuid>? documentationFileUuid,
+    Value<Uuid>? caveTripUuid,
     Value<int?>? createdAt,
     Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return DocumentationFilesToCaveTripsCompanion(
-      id: id ?? this.id,
-      documentationFileId: documentationFileId ?? this.documentationFileId,
-      caveTripId: caveTripId ?? this.caveTripId,
+      uuid: uuid ?? this.uuid,
+      documentationFileUuid:
+          documentationFileUuid ?? this.documentationFileUuid,
+      caveTripUuid: caveTripUuid ?? this.caveTripUuid,
       createdAt: createdAt ?? this.createdAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTrips.$converteruuid.toSql(uuid.value),
+      );
     }
-    if (documentationFileId.present) {
-      map['documentation_file_id'] = Variable<int>(documentationFileId.value);
+    if (documentationFileUuid.present) {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTrips.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid.value,
+        ),
+      );
     }
-    if (caveTripId.present) {
-      map['cave_trip_id'] = Variable<int>(caveTripId.value);
+    if (caveTripUuid.present) {
+      map['cave_trip_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTrips.$convertercaveTripUuid.toSql(
+          caveTripUuid.value,
+        ),
+      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -7393,25 +7617,25 @@ class DocumentationFilesToCaveTripsCompanion
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('DocumentationFilesToCaveTripsCompanion(')
-          ..write('id: $id, ')
-          ..write('documentationFileId: $documentationFileId, ')
-          ..write('caveTripId: $caveTripId, ')
+          ..write('uuid: $uuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('caveTripUuid: $caveTripUuid, ')
           ..write('createdAt: $createdAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
-
-// ---------------------------------------------------------------------------
-//  trip_report_templates (generated manually – run build_runner to regenerate)
-// ---------------------------------------------------------------------------
 
 class TripReportTemplates extends Table
     with TableInfo<TripReportTemplates, TripReportTemplate> {
@@ -7419,100 +7643,228 @@ class TripReportTemplates extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   TripReportTemplates(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id', aliasedName, false,
-    hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
-  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(TripReportTemplates.$converteruuid);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
-    'title', aliasedName, false,
-    type: DriftSqlType.string, requiredDuringInsert: true,
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
-  static const VerificationMeta _fileNameMeta = const VerificationMeta('fileName');
+  static const VerificationMeta _fileNameMeta = const VerificationMeta(
+    'fileName',
+  );
   late final GeneratedColumn<String> fileName = GeneratedColumn<String>(
-    'file_name', aliasedName, false,
-    type: DriftSqlType.string, requiredDuringInsert: true,
+    'file_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
-  static const VerificationMeta _fileSizeMeta = const VerificationMeta('fileSize');
+  static const VerificationMeta _fileSizeMeta = const VerificationMeta(
+    'fileSize',
+  );
   late final GeneratedColumn<int> fileSize = GeneratedColumn<int>(
-    'file_size', aliasedName, false,
-    type: DriftSqlType.int, requiredDuringInsert: true,
+    'file_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
   static const VerificationMeta _formatMeta = const VerificationMeta('format');
   late final GeneratedColumn<String> format = GeneratedColumn<String>(
-    'format', aliasedName, false,
-    type: DriftSqlType.string, requiredDuringInsert: true,
+    'format',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
   late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
-    'created_at', aliasedName, true,
-    type: DriftSqlType.int, requiredDuringInsert: false, $customConstraints: '',
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
   late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
-    'updated_at', aliasedName, true,
-    type: DriftSqlType.int, requiredDuringInsert: false, $customConstraints: '',
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta('deletedAt');
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
   late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
-    'deleted_at', aliasedName, true,
-    type: DriftSqlType.int, requiredDuringInsert: false, $customConstraints: '',
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
   @override
-  List<GeneratedColumn> get $columns => [id, title, fileName, fileSize, format, createdAt, updatedAt, deletedAt];
+  List<GeneratedColumn> get $columns => [
+    uuid,
+    title,
+    fileName,
+    fileSize,
+    format,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'trip_report_templates';
   @override
-  VerificationContext validateIntegrity(Insertable<TripReportTemplate> instance, {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<TripReportTemplate> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('id')) { context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta)); }
-    if (data.containsKey('title')) { context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta)); } else if (isInserting) { context.missing(_titleMeta); }
-    if (data.containsKey('file_name')) { context.handle(_fileNameMeta, fileName.isAcceptableOrUnknown(data['file_name']!, _fileNameMeta)); } else if (isInserting) { context.missing(_fileNameMeta); }
-    if (data.containsKey('file_size')) { context.handle(_fileSizeMeta, fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta)); } else if (isInserting) { context.missing(_fileSizeMeta); }
-    if (data.containsKey('format')) { context.handle(_formatMeta, format.isAcceptableOrUnknown(data['format']!, _formatMeta)); } else if (isInserting) { context.missing(_formatMeta); }
-    if (data.containsKey('created_at')) { context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta)); }
-    if (data.containsKey('updated_at')) { context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta)); }
-    if (data.containsKey('deleted_at')) { context.handle(_deletedAtMeta, deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta)); }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('file_name')) {
+      context.handle(
+        _fileNameMeta,
+        fileName.isAcceptableOrUnknown(data['file_name']!, _fileNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileNameMeta);
+    }
+    if (data.containsKey('file_size')) {
+      context.handle(
+        _fileSizeMeta,
+        fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileSizeMeta);
+    }
+    if (data.containsKey('format')) {
+      context.handle(
+        _formatMeta,
+        format.isAcceptableOrUnknown(data['format']!, _formatMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_formatMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
+
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [{title}];
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {title},
+  ];
   @override
   TripReportTemplate map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return TripReportTemplate(
-      id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      fileName: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}file_name'])!,
-      fileSize: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}file_size'])!,
-      format: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}format'])!,
-      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}created_at']),
-      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}updated_at']),
-      deletedAt: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
+      uuid: TripReportTemplates.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      fileName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_name'],
+      )!,
+      fileSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}file_size'],
+      )!,
+      format: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}format'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
+
   @override
-  TripReportTemplates createAlias(String alias) => TripReportTemplates(attachedDatabase, alias);
+  TripReportTemplates createAlias(String alias) {
+    return TripReportTemplates(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
   @override
-  List<String> get customConstraints => const ['UNIQUE(title)ON CONFLICT ROLLBACK'];
+  List<String> get customConstraints => const [
+    'UNIQUE(title)ON CONFLICT ROLLBACK',
+  ];
   @override
   bool get dontWriteConstraints => true;
 }
 
-class TripReportTemplate extends DataClass implements Insertable<TripReportTemplate> {
-  final int id;
+class TripReportTemplate extends DataClass
+    implements Insertable<TripReportTemplate> {
+  final Uuid uuid;
   final String title;
   final String fileName;
   final int fileSize;
@@ -7521,36 +7873,65 @@ class TripReportTemplate extends DataClass implements Insertable<TripReportTempl
   final int? updatedAt;
   final int? deletedAt;
   const TripReportTemplate({
-    required this.id, required this.title, required this.fileName,
-    required this.fileSize, required this.format,
-    this.createdAt, this.updatedAt, this.deletedAt,
+    required this.uuid,
+    required this.title,
+    required this.fileName,
+    required this.fileSize,
+    required this.format,
+    this.createdAt,
+    this.updatedAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
+    {
+      map['uuid'] = Variable<Uint8List>(
+        TripReportTemplates.$converteruuid.toSql(uuid),
+      );
+    }
     map['title'] = Variable<String>(title);
     map['file_name'] = Variable<String>(fileName);
     map['file_size'] = Variable<int>(fileSize);
     map['format'] = Variable<String>(format);
-    if (!nullToAbsent || createdAt != null) map['created_at'] = Variable<int>(createdAt);
-    if (!nullToAbsent || updatedAt != null) map['updated_at'] = Variable<int>(updatedAt);
-    if (!nullToAbsent || deletedAt != null) map['deleted_at'] = Variable<int>(deletedAt);
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
     return map;
   }
+
   TripReportTemplatesCompanion toCompanion(bool nullToAbsent) {
     return TripReportTemplatesCompanion(
-      id: Value(id), title: Value(title), fileName: Value(fileName),
-      fileSize: Value(fileSize), format: Value(format),
-      createdAt: createdAt == null && nullToAbsent ? const Value.absent() : Value(createdAt),
-      updatedAt: updatedAt == null && nullToAbsent ? const Value.absent() : Value(updatedAt),
-      deletedAt: deletedAt == null && nullToAbsent ? const Value.absent() : Value(deletedAt),
+      uuid: Value(uuid),
+      title: Value(title),
+      fileName: Value(fileName),
+      fileSize: Value(fileSize),
+      format: Value(format),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
-  factory TripReportTemplate.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+
+  factory TripReportTemplate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return TripReportTemplate(
-      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       fileName: serializer.fromJson<String>(json['file_name']),
       fileSize: serializer.fromJson<int>(json['file_size']),
@@ -7564,7 +7945,7 @@ class TripReportTemplate extends DataClass implements Insertable<TripReportTempl
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'file_name': serializer.toJson<String>(fileName),
       'file_size': serializer.toJson<int>(fileSize),
@@ -7574,30 +7955,81 @@ class TripReportTemplate extends DataClass implements Insertable<TripReportTempl
       'deleted_at': serializer.toJson<int?>(deletedAt),
     };
   }
+
   TripReportTemplate copyWith({
-    int? id, String? title, String? fileName, int? fileSize, String? format,
+    Uuid? uuid,
+    String? title,
+    String? fileName,
+    int? fileSize,
+    String? format,
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => TripReportTemplate(
-    id: id ?? this.id, title: title ?? this.title,
-    fileName: fileName ?? this.fileName, fileSize: fileSize ?? this.fileSize,
+    uuid: uuid ?? this.uuid,
+    title: title ?? this.title,
+    fileName: fileName ?? this.fileName,
+    fileSize: fileSize ?? this.fileSize,
     format: format ?? this.format,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
+  TripReportTemplate copyWithCompanion(TripReportTemplatesCompanion data) {
+    return TripReportTemplate(
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      title: data.title.present ? data.title.value : this.title,
+      fileName: data.fileName.present ? data.fileName.value : this.fileName,
+      fileSize: data.fileSize.present ? data.fileSize.value : this.fileSize,
+      format: data.format.present ? data.format.value : this.format,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
   @override
-  String toString() => 'TripReportTemplate(id: $id, title: $title, fileName: $fileName, fileSize: $fileSize, format: $format, createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt)';
+  String toString() {
+    return (StringBuffer('TripReportTemplate(')
+          ..write('uuid: $uuid, ')
+          ..write('title: $title, ')
+          ..write('fileName: $fileName, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('format: $format, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
   @override
-  int get hashCode => Object.hash(id, title, fileName, fileSize, format, createdAt, updatedAt, deletedAt);
+  int get hashCode => Object.hash(
+    uuid,
+    title,
+    fileName,
+    fileSize,
+    format,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
   @override
-  bool operator ==(Object other) => identical(this, other) ||
-      (other is TripReportTemplate && other.id == id && other.title == title && other.fileName == fileName && other.fileSize == fileSize && other.format == format && other.createdAt == createdAt && other.updatedAt == updatedAt && other.deletedAt == deletedAt);
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TripReportTemplate &&
+          other.uuid == this.uuid &&
+          other.title == this.title &&
+          other.fileName == this.fileName &&
+          other.fileSize == this.fileSize &&
+          other.format == this.format &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class TripReportTemplatesCompanion extends UpdateCompanion<TripReportTemplate> {
-  final Value<int> id;
+  final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String> fileName;
   final Value<int> fileSize;
@@ -7605,60 +8037,131 @@ class TripReportTemplatesCompanion extends UpdateCompanion<TripReportTemplate> {
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
+  final Value<int> rowid;
   const TripReportTemplatesCompanion({
-    this.id = const Value.absent(), this.title = const Value.absent(),
-    this.fileName = const Value.absent(), this.fileSize = const Value.absent(),
-    this.format = const Value.absent(), this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(), this.deletedAt = const Value.absent(),
-  });
-  TripReportTemplatesCompanion.insert({
-    this.id = const Value.absent(),
-    required String title, required String fileName,
-    required int fileSize, required String format,
+    this.uuid = const Value.absent(),
+    this.title = const Value.absent(),
+    this.fileName = const Value.absent(),
+    this.fileSize = const Value.absent(),
+    this.format = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-  }) : title = Value(title), fileName = Value(fileName),
-       fileSize = Value(fileSize), format = Value(format);
+    this.rowid = const Value.absent(),
+  });
+  TripReportTemplatesCompanion.insert({
+    required Uuid uuid,
+    required String title,
+    required String fileName,
+    required int fileSize,
+    required String format,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       title = Value(title),
+       fileName = Value(fileName),
+       fileSize = Value(fileSize),
+       format = Value(format);
   static Insertable<TripReportTemplate> custom({
-    Expression<int>? id, Expression<String>? title, Expression<String>? fileName,
-    Expression<int>? fileSize, Expression<String>? format,
-    Expression<int>? createdAt, Expression<int>? updatedAt, Expression<int>? deletedAt,
+    Expression<Uint8List>? uuid,
+    Expression<String>? title,
+    Expression<String>? fileName,
+    Expression<int>? fileSize,
+    Expression<String>? format,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? deletedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (id != null) 'id': id, if (title != null) 'title': title,
-      if (fileName != null) 'file_name': fileName, if (fileSize != null) 'file_size': fileSize,
-      if (format != null) 'format': format, if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt, if (deletedAt != null) 'deleted_at': deletedAt,
+      if (uuid != null) 'uuid': uuid,
+      if (title != null) 'title': title,
+      if (fileName != null) 'file_name': fileName,
+      if (fileSize != null) 'file_size': fileSize,
+      if (format != null) 'format': format,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
+
   TripReportTemplatesCompanion copyWith({
-    Value<int>? id, Value<String>? title, Value<String>? fileName,
-    Value<int>? fileSize, Value<String>? format,
-    Value<int?>? createdAt, Value<int?>? updatedAt, Value<int?>? deletedAt,
+    Value<Uuid>? uuid,
+    Value<String>? title,
+    Value<String>? fileName,
+    Value<int>? fileSize,
+    Value<String>? format,
+    Value<int?>? createdAt,
+    Value<int?>? updatedAt,
+    Value<int?>? deletedAt,
+    Value<int>? rowid,
   }) {
     return TripReportTemplatesCompanion(
-      id: id ?? this.id, title: title ?? this.title,
-      fileName: fileName ?? this.fileName, fileSize: fileSize ?? this.fileSize,
-      format: format ?? this.format, createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt, deletedAt: deletedAt ?? this.deletedAt,
+      uuid: uuid ?? this.uuid,
+      title: title ?? this.title,
+      fileName: fileName ?? this.fileName,
+      fileSize: fileSize ?? this.fileSize,
+      format: format ?? this.format,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
+
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (id.present) map['id'] = Variable<int>(id.value);
-    if (title.present) map['title'] = Variable<String>(title.value);
-    if (fileName.present) map['file_name'] = Variable<String>(fileName.value);
-    if (fileSize.present) map['file_size'] = Variable<int>(fileSize.value);
-    if (format.present) map['format'] = Variable<String>(format.value);
-    if (createdAt.present) map['created_at'] = Variable<int>(createdAt.value);
-    if (updatedAt.present) map['updated_at'] = Variable<int>(updatedAt.value);
-    if (deletedAt.present) map['deleted_at'] = Variable<int>(deletedAt.value);
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        TripReportTemplates.$converteruuid.toSql(uuid.value),
+      );
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (fileName.present) {
+      map['file_name'] = Variable<String>(fileName.value);
+    }
+    if (fileSize.present) {
+      map['file_size'] = Variable<int>(fileSize.value);
+    }
+    if (format.present) {
+      map['format'] = Variable<String>(format.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
+
   @override
-  String toString() => 'TripReportTemplatesCompanion(id: $id, title: $title, fileName: $fileName, fileSize: $fileSize, format: $format, createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt)';
+  String toString() {
+    return (StringBuffer('TripReportTemplatesCompanion(')
+          ..write('uuid: $uuid, ')
+          ..write('title: $title, ')
+          ..write('fileName: $fileName, ')
+          ..write('fileSize: $fileSize, ')
+          ..write('format: $format, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
 }
 
 abstract class _$AppDatabase extends GeneratedDatabase {
@@ -7681,8 +8184,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CaveTripPoints caveTripPoints = CaveTripPoints(this);
   late final DocumentationFilesToCaveTrips documentationFilesToCaveTrips =
       DocumentationFilesToCaveTrips(this);
-  late final TripReportTemplates tripReportTemplates =
-      TripReportTemplates(this);
+  late final TripReportTemplates tripReportTemplates = TripReportTemplates(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7708,21 +8212,23 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 
 typedef $SurfaceAreasCreateCompanionBuilder =
     SurfaceAreasCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       Value<String?> description,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $SurfaceAreasUpdateCompanionBuilder =
     SurfaceAreasCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $SurfaceAreasReferences
@@ -7733,14 +8239,16 @@ final class $SurfaceAreasReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.caves,
-    aliasName: $_aliasNameGenerator(db.surfaceAreas.id, db.caves.surfaceAreaId),
+    aliasName: $_aliasNameGenerator(
+      db.surfaceAreas.uuid,
+      db.caves.surfaceAreaUuid,
+    ),
   );
 
   $CavesProcessedTableManager get cavesRefs {
-    final manager = $CavesTableManager(
-      $_db,
-      $_db.caves,
-    ).filter((f) => f.surfaceAreaId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CavesTableManager($_db, $_db.caves).filter(
+      (f) => f.surfaceAreaUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_cavesRefsTable($_db));
     return ProcessedTableManager(
@@ -7758,10 +8266,11 @@ class $SurfaceAreasFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -7793,9 +8302,9 @@ class $SurfaceAreasFilterComposer
   ) {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.surfaceAreaId,
+      getReferencedColumn: (t) => t.surfaceAreaUuid,
       builder:
           (
             joinBuilder, {
@@ -7823,8 +8332,8 @@ class $SurfaceAreasOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7863,8 +8372,8 @@ class $SurfaceAreasAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -7888,9 +8397,9 @@ class $SurfaceAreasAnnotationComposer
   ) {
     final $CavesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.surfaceAreaId,
+      getReferencedColumn: (t) => t.surfaceAreaUuid,
       builder:
           (
             joinBuilder, {
@@ -7937,35 +8446,39 @@ class $SurfaceAreasTableManager
               $SurfaceAreasAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => SurfaceAreasCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => SurfaceAreasCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -7990,7 +8503,7 @@ class $SurfaceAreasTableManager
                           $SurfaceAreasReferences(db, table, p0).cavesRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where(
-                            (e) => e.surfaceAreaId == item.id,
+                            (e) => e.surfaceAreaUuid == item.uuid,
                           ),
                       typedResults: items,
                     ),
@@ -8018,42 +8531,44 @@ typedef $SurfaceAreasProcessedTableManager =
     >;
 typedef $CavesCreateCompanionBuilder =
     CavesCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       Value<String?> description,
-      Value<int?> surfaceAreaId,
+      Value<Uuid?> surfaceAreaUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CavesUpdateCompanionBuilder =
     CavesCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
-      Value<int?> surfaceAreaId,
+      Value<Uuid?> surfaceAreaUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CavesReferences
     extends BaseReferences<_$AppDatabase, Caves, Cave> {
   $CavesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static SurfaceAreas _surfaceAreaIdTable(_$AppDatabase db) =>
+  static SurfaceAreas _surfaceAreaUuidTable(_$AppDatabase db) =>
       db.surfaceAreas.createAlias(
-        $_aliasNameGenerator(db.caves.surfaceAreaId, db.surfaceAreas.id),
+        $_aliasNameGenerator(db.caves.surfaceAreaUuid, db.surfaceAreas.uuid),
       );
 
-  $SurfaceAreasProcessedTableManager? get surfaceAreaId {
-    final $_column = $_itemColumn<int>('surface_area_id');
+  $SurfaceAreasProcessedTableManager? get surfaceAreaUuid {
+    final $_column = $_itemColumn<Uint8List>('surface_area_uuid');
     if ($_column == null) return null;
     final manager = $SurfaceAreasTableManager(
       $_db,
       $_db.surfaceAreas,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_surfaceAreaIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_surfaceAreaUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -8064,14 +8579,13 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.caveAreas,
-    aliasName: $_aliasNameGenerator(db.caves.id, db.caveAreas.caveId),
+    aliasName: $_aliasNameGenerator(db.caves.uuid, db.caveAreas.caveUuid),
   );
 
   $CaveAreasProcessedTableManager get caveAreasRefs {
-    final manager = $CaveAreasTableManager(
-      $_db,
-      $_db.caveAreas,
-    ).filter((f) => f.caveId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CaveAreasTableManager($_db, $_db.caveAreas).filter(
+      (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_caveAreasRefsTable($_db));
     return ProcessedTableManager(
@@ -8082,14 +8596,13 @@ final class $CavesReferences
   static MultiTypedResultKey<CaveEntrances, List<CaveEntrance>>
   _caveEntrancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveEntrances,
-    aliasName: $_aliasNameGenerator(db.caves.id, db.caveEntrances.caveId),
+    aliasName: $_aliasNameGenerator(db.caves.uuid, db.caveEntrances.caveUuid),
   );
 
   $CaveEntrancesProcessedTableManager get caveEntrancesRefs {
-    final manager = $CaveEntrancesTableManager(
-      $_db,
-      $_db.caveEntrances,
-    ).filter((f) => f.caveId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CaveEntrancesTableManager($_db, $_db.caveEntrances).filter(
+      (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_caveEntrancesRefsTable($_db));
     return ProcessedTableManager(
@@ -8101,14 +8614,13 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.cavePlaces,
-    aliasName: $_aliasNameGenerator(db.caves.id, db.cavePlaces.caveId),
+    aliasName: $_aliasNameGenerator(db.caves.uuid, db.cavePlaces.caveUuid),
   );
 
   $CavePlacesProcessedTableManager get cavePlacesRefs {
-    final manager = $CavePlacesTableManager(
-      $_db,
-      $_db.cavePlaces,
-    ).filter((f) => f.caveId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CavePlacesTableManager($_db, $_db.cavePlaces).filter(
+      (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_cavePlacesRefsTable($_db));
     return ProcessedTableManager(
@@ -8120,14 +8632,13 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rasterMaps,
-    aliasName: $_aliasNameGenerator(db.caves.id, db.rasterMaps.caveId),
+    aliasName: $_aliasNameGenerator(db.caves.uuid, db.rasterMaps.caveUuid),
   );
 
   $RasterMapsProcessedTableManager get rasterMapsRefs {
-    final manager = $RasterMapsTableManager(
-      $_db,
-      $_db.rasterMaps,
-    ).filter((f) => f.caveId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $RasterMapsTableManager($_db, $_db.rasterMaps).filter(
+      (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_rasterMapsRefsTable($_db));
     return ProcessedTableManager(
@@ -8139,14 +8650,13 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.caveTrips,
-    aliasName: $_aliasNameGenerator(db.caves.id, db.caveTrips.caveId),
+    aliasName: $_aliasNameGenerator(db.caves.uuid, db.caveTrips.caveUuid),
   );
 
   $CaveTripsProcessedTableManager get caveTripsRefs {
-    final manager = $CaveTripsTableManager(
-      $_db,
-      $_db.caveTrips,
-    ).filter((f) => f.caveId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CaveTripsTableManager($_db, $_db.caveTrips).filter(
+      (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_caveTripsRefsTable($_db));
     return ProcessedTableManager(
@@ -8163,10 +8673,11 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -8193,12 +8704,12 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $SurfaceAreasFilterComposer get surfaceAreaId {
+  $SurfaceAreasFilterComposer get surfaceAreaUuid {
     final $SurfaceAreasFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.surfaceAreaId,
+      getCurrentColumn: (t) => t.surfaceAreaUuid,
       referencedTable: $db.surfaceAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -8221,9 +8732,9 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CaveAreasFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8246,9 +8757,9 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CaveEntrancesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveEntrances,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8271,9 +8782,9 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CavePlacesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8296,9 +8807,9 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $RasterMapsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8321,9 +8832,9 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CaveTripsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8350,8 +8861,8 @@ class $CavesOrderingComposer extends Composer<_$AppDatabase, Caves> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -8380,12 +8891,12 @@ class $CavesOrderingComposer extends Composer<_$AppDatabase, Caves> {
     builder: (column) => ColumnOrderings(column),
   );
 
-  $SurfaceAreasOrderingComposer get surfaceAreaId {
+  $SurfaceAreasOrderingComposer get surfaceAreaUuid {
     final $SurfaceAreasOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.surfaceAreaId,
+      getCurrentColumn: (t) => t.surfaceAreaUuid,
       referencedTable: $db.surfaceAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -8412,8 +8923,8 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -8432,12 +8943,12 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $SurfaceAreasAnnotationComposer get surfaceAreaId {
+  $SurfaceAreasAnnotationComposer get surfaceAreaUuid {
     final $SurfaceAreasAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.surfaceAreaId,
+      getCurrentColumn: (t) => t.surfaceAreaUuid,
       referencedTable: $db.surfaceAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -8460,9 +8971,9 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CaveAreasAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8485,9 +8996,9 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CaveEntrancesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveEntrances,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8510,9 +9021,9 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CavePlacesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8535,9 +9046,9 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $RasterMapsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8560,9 +9071,9 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
   ) {
     final $CaveTripsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.caveId,
+      getReferencedColumn: (t) => t.caveUuid,
       builder:
           (
             joinBuilder, {
@@ -8595,7 +9106,7 @@ class $CavesTableManager
           (Cave, $CavesReferences),
           Cave,
           PrefetchHooks Function({
-            bool surfaceAreaId,
+            bool surfaceAreaUuid,
             bool caveAreasRefs,
             bool caveEntrancesRefs,
             bool cavePlacesRefs,
@@ -8616,46 +9127,50 @@ class $CavesTableManager
               $CavesAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
-                Value<int?> surfaceAreaId = const Value.absent(),
+                Value<Uuid?> surfaceAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CavesCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
-                surfaceAreaId: surfaceAreaId,
+                surfaceAreaUuid: surfaceAreaUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
-                Value<int?> surfaceAreaId = const Value.absent(),
+                Value<Uuid?> surfaceAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CavesCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
-                surfaceAreaId: surfaceAreaId,
+                surfaceAreaUuid: surfaceAreaUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), $CavesReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback:
               ({
-                surfaceAreaId = false,
+                surfaceAreaUuid = false,
                 caveAreasRefs = false,
                 caveEntrancesRefs = false,
                 cavePlacesRefs = false,
@@ -8687,16 +9202,16 @@ class $CavesTableManager
                           dynamic
                         >
                       >(state) {
-                        if (surfaceAreaId) {
+                        if (surfaceAreaUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.surfaceAreaId,
+                                    currentColumn: table.surfaceAreaUuid,
                                     referencedTable: $CavesReferences
-                                        ._surfaceAreaIdTable(db),
+                                        ._surfaceAreaUuidTable(db),
                                     referencedColumn: $CavesReferences
-                                        ._surfaceAreaIdTable(db)
-                                        .id,
+                                        ._surfaceAreaUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
@@ -8715,7 +9230,7 @@ class $CavesTableManager
                               $CavesReferences(db, table, p0).caveAreasRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveId == item.id,
+                                (e) => e.caveUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -8728,7 +9243,7 @@ class $CavesTableManager
                               $CavesReferences(db, table, p0).caveEntrancesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveId == item.id,
+                                (e) => e.caveUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -8741,7 +9256,7 @@ class $CavesTableManager
                               $CavesReferences(db, table, p0).cavePlacesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveId == item.id,
+                                (e) => e.caveUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -8754,7 +9269,7 @@ class $CavesTableManager
                               $CavesReferences(db, table, p0).rasterMapsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveId == item.id,
+                                (e) => e.caveUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -8768,7 +9283,7 @@ class $CavesTableManager
                               $CavesReferences(db, table, p0).caveTripsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveId == item.id,
+                                (e) => e.caveUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -8793,7 +9308,7 @@ typedef $CavesProcessedTableManager =
       (Cave, $CavesReferences),
       Cave,
       PrefetchHooks Function({
-        bool surfaceAreaId,
+        bool surfaceAreaUuid,
         bool caveAreasRefs,
         bool caveEntrancesRefs,
         bool cavePlacesRefs,
@@ -8803,41 +9318,43 @@ typedef $CavesProcessedTableManager =
     >;
 typedef $CaveAreasCreateCompanionBuilder =
     CaveAreasCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       Value<String?> description,
-      required int caveId,
+      required Uuid caveUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CaveAreasUpdateCompanionBuilder =
     CaveAreasCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
-      Value<int> caveId,
+      Value<Uuid> caveUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CaveAreasReferences
     extends BaseReferences<_$AppDatabase, CaveAreas, CaveArea> {
   $CaveAreasReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveIdTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.caveAreas.caveId, db.caves.id),
+  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
+    $_aliasNameGenerator(db.caveAreas.caveUuid, db.caves.uuid),
   );
 
-  $CavesProcessedTableManager get caveId {
-    final $_column = $_itemColumn<int>('cave_id')!;
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
 
     final manager = $CavesTableManager(
       $_db,
       $_db.caves,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -8848,14 +9365,16 @@ final class $CaveAreasReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.cavePlaces,
-    aliasName: $_aliasNameGenerator(db.caveAreas.id, db.cavePlaces.caveAreaId),
+    aliasName: $_aliasNameGenerator(
+      db.caveAreas.uuid,
+      db.cavePlaces.caveAreaUuid,
+    ),
   );
 
   $CavePlacesProcessedTableManager get cavePlacesRefs {
-    final manager = $CavePlacesTableManager(
-      $_db,
-      $_db.cavePlaces,
-    ).filter((f) => f.caveAreaId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CavePlacesTableManager($_db, $_db.cavePlaces).filter(
+      (f) => f.caveAreaUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_cavePlacesRefsTable($_db));
     return ProcessedTableManager(
@@ -8867,14 +9386,16 @@ final class $CaveAreasReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rasterMaps,
-    aliasName: $_aliasNameGenerator(db.caveAreas.id, db.rasterMaps.caveAreaId),
+    aliasName: $_aliasNameGenerator(
+      db.caveAreas.uuid,
+      db.rasterMaps.caveAreaUuid,
+    ),
   );
 
   $RasterMapsProcessedTableManager get rasterMapsRefs {
-    final manager = $RasterMapsTableManager(
-      $_db,
-      $_db.rasterMaps,
-    ).filter((f) => f.caveAreaId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $RasterMapsTableManager($_db, $_db.rasterMaps).filter(
+      (f) => f.caveAreaUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_rasterMapsRefsTable($_db));
     return ProcessedTableManager(
@@ -8891,10 +9412,11 @@ class $CaveAreasFilterComposer extends Composer<_$AppDatabase, CaveAreas> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -8921,12 +9443,12 @@ class $CaveAreasFilterComposer extends Composer<_$AppDatabase, CaveAreas> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $CavesFilterComposer get caveId {
+  $CavesFilterComposer get caveUuid {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -8949,9 +9471,9 @@ class $CaveAreasFilterComposer extends Composer<_$AppDatabase, CaveAreas> {
   ) {
     final $CavePlacesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.caveAreaId,
+      getReferencedColumn: (t) => t.caveAreaUuid,
       builder:
           (
             joinBuilder, {
@@ -8974,9 +9496,9 @@ class $CaveAreasFilterComposer extends Composer<_$AppDatabase, CaveAreas> {
   ) {
     final $RasterMapsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.caveAreaId,
+      getReferencedColumn: (t) => t.caveAreaUuid,
       builder:
           (
             joinBuilder, {
@@ -9003,8 +9525,8 @@ class $CaveAreasOrderingComposer extends Composer<_$AppDatabase, CaveAreas> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9033,12 +9555,12 @@ class $CaveAreasOrderingComposer extends Composer<_$AppDatabase, CaveAreas> {
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CavesOrderingComposer get caveId {
+  $CavesOrderingComposer get caveUuid {
     final $CavesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -9065,8 +9587,8 @@ class $CaveAreasAnnotationComposer extends Composer<_$AppDatabase, CaveAreas> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -9085,12 +9607,12 @@ class $CaveAreasAnnotationComposer extends Composer<_$AppDatabase, CaveAreas> {
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CavesAnnotationComposer get caveId {
+  $CavesAnnotationComposer get caveUuid {
     final $CavesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -9113,9 +9635,9 @@ class $CaveAreasAnnotationComposer extends Composer<_$AppDatabase, CaveAreas> {
   ) {
     final $CavePlacesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.caveAreaId,
+      getReferencedColumn: (t) => t.caveAreaUuid,
       builder:
           (
             joinBuilder, {
@@ -9138,9 +9660,9 @@ class $CaveAreasAnnotationComposer extends Composer<_$AppDatabase, CaveAreas> {
   ) {
     final $RasterMapsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.caveAreaId,
+      getReferencedColumn: (t) => t.caveAreaUuid,
       builder:
           (
             joinBuilder, {
@@ -9173,7 +9695,7 @@ class $CaveAreasTableManager
           (CaveArea, $CaveAreasReferences),
           CaveArea,
           PrefetchHooks Function({
-            bool caveId,
+            bool caveUuid,
             bool cavePlacesRefs,
             bool rasterMapsRefs,
           })
@@ -9191,39 +9713,43 @@ class $CaveAreasTableManager
               $CaveAreasAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
-                Value<int> caveId = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveAreasCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
-                caveId: caveId,
+                caveUuid: caveUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
-                required int caveId,
+                required Uuid caveUuid,
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveAreasCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
-                caveId: caveId,
+                caveUuid: caveUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -9232,7 +9758,7 @@ class $CaveAreasTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                caveId = false,
+                caveUuid = false,
                 cavePlacesRefs = false,
                 rasterMapsRefs = false,
               }) {
@@ -9258,16 +9784,16 @@ class $CaveAreasTableManager
                           dynamic
                         >
                       >(state) {
-                        if (caveId) {
+                        if (caveUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveId,
+                                    currentColumn: table.caveUuid,
                                     referencedTable: $CaveAreasReferences
-                                        ._caveIdTable(db),
+                                        ._caveUuidTable(db),
                                     referencedColumn: $CaveAreasReferences
-                                        ._caveIdTable(db)
-                                        .id,
+                                        ._caveUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
@@ -9292,7 +9818,7 @@ class $CaveAreasTableManager
                           ).cavePlacesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveAreaId == item.id,
+                                (e) => e.caveAreaUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -9312,7 +9838,7 @@ class $CaveAreasTableManager
                           ).rasterMapsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveAreaId == item.id,
+                                (e) => e.caveAreaUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -9337,14 +9863,14 @@ typedef $CaveAreasProcessedTableManager =
       (CaveArea, $CaveAreasReferences),
       CaveArea,
       PrefetchHooks Function({
-        bool caveId,
+        bool caveUuid,
         bool cavePlacesRefs,
         bool rasterMapsRefs,
       })
     >;
 typedef $SurfacePlacesCreateCompanionBuilder =
     SurfacePlacesCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       Value<String?> description,
       Value<String?> type,
@@ -9354,10 +9880,11 @@ typedef $SurfacePlacesCreateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $SurfacePlacesUpdateCompanionBuilder =
     SurfacePlacesCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
       Value<String?> type,
@@ -9367,6 +9894,7 @@ typedef $SurfacePlacesUpdateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $SurfacePlacesReferences
@@ -9377,16 +9905,16 @@ final class $SurfacePlacesReferences
   _caveEntrancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveEntrances,
     aliasName: $_aliasNameGenerator(
-      db.surfacePlaces.id,
-      db.caveEntrances.surfacePlaceId,
+      db.surfacePlaces.uuid,
+      db.caveEntrances.surfacePlaceUuid,
     ),
   );
 
   $CaveEntrancesProcessedTableManager get caveEntrancesRefs {
-    final manager = $CaveEntrancesTableManager(
-      $_db,
-      $_db.caveEntrances,
-    ).filter((f) => f.surfacePlaceId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CaveEntrancesTableManager($_db, $_db.caveEntrances).filter(
+      (f) =>
+          f.surfacePlaceUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_caveEntrancesRefsTable($_db));
     return ProcessedTableManager(
@@ -9404,10 +9932,11 @@ class $SurfacePlacesFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -9459,9 +9988,9 @@ class $SurfacePlacesFilterComposer
   ) {
     final $CaveEntrancesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveEntrances,
-      getReferencedColumn: (t) => t.surfacePlaceId,
+      getReferencedColumn: (t) => t.surfacePlaceUuid,
       builder:
           (
             joinBuilder, {
@@ -9489,8 +10018,8 @@ class $SurfacePlacesOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9549,8 +10078,8 @@ class $SurfacePlacesAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -9588,9 +10117,9 @@ class $SurfacePlacesAnnotationComposer
   ) {
     final $CaveEntrancesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveEntrances,
-      getReferencedColumn: (t) => t.surfacePlaceId,
+      getReferencedColumn: (t) => t.surfacePlaceUuid,
       builder:
           (
             joinBuilder, {
@@ -9637,7 +10166,7 @@ class $SurfacePlacesTableManager
               $SurfacePlacesAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String?> type = const Value.absent(),
@@ -9647,8 +10176,9 @@ class $SurfacePlacesTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => SurfacePlacesCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 type: type,
@@ -9658,10 +10188,11 @@ class $SurfacePlacesTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
                 Value<String?> type = const Value.absent(),
@@ -9671,8 +10202,9 @@ class $SurfacePlacesTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => SurfacePlacesCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 type: type,
@@ -9682,6 +10214,7 @@ class $SurfacePlacesTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -9716,7 +10249,7 @@ class $SurfacePlacesTableManager
                       ).caveEntrancesRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where(
-                            (e) => e.surfacePlaceId == item.id,
+                            (e) => e.surfacePlaceUuid == item.uuid,
                           ),
                       typedResults: items,
                     ),
@@ -9744,65 +10277,67 @@ typedef $SurfacePlacesProcessedTableManager =
     >;
 typedef $CaveEntrancesCreateCompanionBuilder =
     CaveEntrancesCompanion Function({
-      Value<int> id,
-      required int caveId,
-      Value<int?> surfacePlaceId,
+      required Uuid uuid,
+      required Uuid caveUuid,
+      Value<Uuid?> surfacePlaceUuid,
       Value<int?> isMainEntrance,
       Value<String?> title,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CaveEntrancesUpdateCompanionBuilder =
     CaveEntrancesCompanion Function({
-      Value<int> id,
-      Value<int> caveId,
-      Value<int?> surfacePlaceId,
+      Value<Uuid> uuid,
+      Value<Uuid> caveUuid,
+      Value<Uuid?> surfacePlaceUuid,
       Value<int?> isMainEntrance,
       Value<String?> title,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CaveEntrancesReferences
     extends BaseReferences<_$AppDatabase, CaveEntrances, CaveEntrance> {
   $CaveEntrancesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveIdTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.caveEntrances.caveId, db.caves.id),
+  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
+    $_aliasNameGenerator(db.caveEntrances.caveUuid, db.caves.uuid),
   );
 
-  $CavesProcessedTableManager get caveId {
-    final $_column = $_itemColumn<int>('cave_id')!;
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
 
     final manager = $CavesTableManager(
       $_db,
       $_db.caves,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
 
-  static SurfacePlaces _surfacePlaceIdTable(_$AppDatabase db) =>
+  static SurfacePlaces _surfacePlaceUuidTable(_$AppDatabase db) =>
       db.surfacePlaces.createAlias(
         $_aliasNameGenerator(
-          db.caveEntrances.surfacePlaceId,
-          db.surfacePlaces.id,
+          db.caveEntrances.surfacePlaceUuid,
+          db.surfacePlaces.uuid,
         ),
       );
 
-  $SurfacePlacesProcessedTableManager? get surfacePlaceId {
-    final $_column = $_itemColumn<int>('surface_place_id');
+  $SurfacePlacesProcessedTableManager? get surfacePlaceUuid {
+    final $_column = $_itemColumn<Uint8List>('surface_place_uuid');
     if ($_column == null) return null;
     final manager = $SurfacePlacesTableManager(
       $_db,
       $_db.surfacePlaces,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_surfacePlaceIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_surfacePlaceUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -9819,10 +10354,11 @@ class $CaveEntrancesFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<int> get isMainEntrance => $composableBuilder(
     column: $table.isMainEntrance,
@@ -9849,12 +10385,12 @@ class $CaveEntrancesFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $CavesFilterComposer get caveId {
+  $CavesFilterComposer get caveUuid {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -9872,12 +10408,12 @@ class $CaveEntrancesFilterComposer
     return composer;
   }
 
-  $SurfacePlacesFilterComposer get surfacePlaceId {
+  $SurfacePlacesFilterComposer get surfacePlaceUuid {
     final $SurfacePlacesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.surfacePlaceId,
+      getCurrentColumn: (t) => t.surfacePlaceUuid,
       referencedTable: $db.surfacePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -9905,8 +10441,8 @@ class $CaveEntrancesOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9935,12 +10471,12 @@ class $CaveEntrancesOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CavesOrderingComposer get caveId {
+  $CavesOrderingComposer get caveUuid {
     final $CavesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -9958,12 +10494,12 @@ class $CaveEntrancesOrderingComposer
     return composer;
   }
 
-  $SurfacePlacesOrderingComposer get surfacePlaceId {
+  $SurfacePlacesOrderingComposer get surfacePlaceUuid {
     final $SurfacePlacesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.surfacePlaceId,
+      getCurrentColumn: (t) => t.surfacePlaceUuid,
       referencedTable: $db.surfacePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -9991,8 +10527,8 @@ class $CaveEntrancesAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<int> get isMainEntrance => $composableBuilder(
     column: $table.isMainEntrance,
@@ -10011,12 +10547,12 @@ class $CaveEntrancesAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CavesAnnotationComposer get caveId {
+  $CavesAnnotationComposer get caveUuid {
     final $CavesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10034,12 +10570,12 @@ class $CaveEntrancesAnnotationComposer
     return composer;
   }
 
-  $SurfacePlacesAnnotationComposer get surfacePlaceId {
+  $SurfacePlacesAnnotationComposer get surfacePlaceUuid {
     final $SurfacePlacesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.surfacePlaceId,
+      getCurrentColumn: (t) => t.surfacePlaceUuid,
       referencedTable: $db.surfacePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10071,7 +10607,7 @@ class $CaveEntrancesTableManager
           $CaveEntrancesUpdateCompanionBuilder,
           (CaveEntrance, $CaveEntrancesReferences),
           CaveEntrance,
-          PrefetchHooks Function({bool caveId, bool surfacePlaceId})
+          PrefetchHooks Function({bool caveUuid, bool surfacePlaceUuid})
         > {
   $CaveEntrancesTableManager(_$AppDatabase db, CaveEntrances table)
     : super(
@@ -10086,43 +10622,47 @@ class $CaveEntrancesTableManager
               $CaveEntrancesAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<int> caveId = const Value.absent(),
-                Value<int?> surfacePlaceId = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
+                Value<Uuid?> surfacePlaceUuid = const Value.absent(),
                 Value<int?> isMainEntrance = const Value.absent(),
                 Value<String?> title = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveEntrancesCompanion(
-                id: id,
-                caveId: caveId,
-                surfacePlaceId: surfacePlaceId,
+                uuid: uuid,
+                caveUuid: caveUuid,
+                surfacePlaceUuid: surfacePlaceUuid,
                 isMainEntrance: isMainEntrance,
                 title: title,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required int caveId,
-                Value<int?> surfacePlaceId = const Value.absent(),
+                required Uuid uuid,
+                required Uuid caveUuid,
+                Value<Uuid?> surfacePlaceUuid = const Value.absent(),
                 Value<int?> isMainEntrance = const Value.absent(),
                 Value<String?> title = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveEntrancesCompanion.insert(
-                id: id,
-                caveId: caveId,
-                surfacePlaceId: surfacePlaceId,
+                uuid: uuid,
+                caveUuid: caveUuid,
+                surfacePlaceUuid: surfacePlaceUuid,
                 isMainEntrance: isMainEntrance,
                 title: title,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -10132,60 +10672,61 @@ class $CaveEntrancesTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({caveId = false, surfacePlaceId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (caveId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.caveId,
-                                referencedTable: $CaveEntrancesReferences
-                                    ._caveIdTable(db),
-                                referencedColumn: $CaveEntrancesReferences
-                                    ._caveIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-                    if (surfacePlaceId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.surfacePlaceId,
-                                referencedTable: $CaveEntrancesReferences
-                                    ._surfacePlaceIdTable(db),
-                                referencedColumn: $CaveEntrancesReferences
-                                    ._surfacePlaceIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({caveUuid = false, surfacePlaceUuid = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (caveUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveUuid,
+                                    referencedTable: $CaveEntrancesReferences
+                                        ._caveUuidTable(db),
+                                    referencedColumn: $CaveEntrancesReferences
+                                        ._caveUuidTable(db)
+                                        .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (surfacePlaceUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.surfacePlaceUuid,
+                                    referencedTable: $CaveEntrancesReferences
+                                        ._surfacePlaceUuidTable(db),
+                                    referencedColumn: $CaveEntrancesReferences
+                                        ._surfacePlaceUuidTable(db)
+                                        .uuid,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -10202,16 +10743,16 @@ typedef $CaveEntrancesProcessedTableManager =
       $CaveEntrancesUpdateCompanionBuilder,
       (CaveEntrance, $CaveEntrancesReferences),
       CaveEntrance,
-      PrefetchHooks Function({bool caveId, bool surfacePlaceId})
+      PrefetchHooks Function({bool caveUuid, bool surfacePlaceUuid})
     >;
 typedef $CavePlacesCreateCompanionBuilder =
     CavePlacesCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       Value<String?> description,
-      required int caveId,
+      required Uuid caveUuid,
       Value<int?> placeQrCodeIdentifier,
-      Value<int?> caveAreaId,
+      Value<Uuid?> caveAreaUuid,
       Value<double?> latitude,
       Value<double?> longitude,
       Value<double?> depthInCave,
@@ -10220,15 +10761,16 @@ typedef $CavePlacesCreateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CavePlacesUpdateCompanionBuilder =
     CavePlacesCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
-      Value<int> caveId,
+      Value<Uuid> caveUuid,
       Value<int?> placeQrCodeIdentifier,
-      Value<int?> caveAreaId,
+      Value<Uuid?> caveAreaUuid,
       Value<double?> latitude,
       Value<double?> longitude,
       Value<double?> depthInCave,
@@ -10237,43 +10779,44 @@ typedef $CavePlacesUpdateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CavePlacesReferences
     extends BaseReferences<_$AppDatabase, CavePlaces, CavePlace> {
   $CavePlacesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveIdTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.cavePlaces.caveId, db.caves.id),
+  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
+    $_aliasNameGenerator(db.cavePlaces.caveUuid, db.caves.uuid),
   );
 
-  $CavesProcessedTableManager get caveId {
-    final $_column = $_itemColumn<int>('cave_id')!;
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
 
     final manager = $CavesTableManager(
       $_db,
       $_db.caves,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
 
-  static CaveAreas _caveAreaIdTable(_$AppDatabase db) =>
+  static CaveAreas _caveAreaUuidTable(_$AppDatabase db) =>
       db.caveAreas.createAlias(
-        $_aliasNameGenerator(db.cavePlaces.caveAreaId, db.caveAreas.id),
+        $_aliasNameGenerator(db.cavePlaces.caveAreaUuid, db.caveAreas.uuid),
       );
 
-  $CaveAreasProcessedTableManager? get caveAreaId {
-    final $_column = $_itemColumn<int>('cave_area_id');
+  $CaveAreasProcessedTableManager? get caveAreaUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_area_uuid');
     if ($_column == null) return null;
     final manager = $CaveAreasTableManager(
       $_db,
       $_db.caveAreas,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveAreaIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveAreaUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -10288,17 +10831,21 @@ final class $CavePlacesReferences
       MultiTypedResultKey.fromTable(
         db.cavePlaceToRasterMapDefinitions,
         aliasName: $_aliasNameGenerator(
-          db.cavePlaces.id,
-          db.cavePlaceToRasterMapDefinitions.cavePlaceId,
+          db.cavePlaces.uuid,
+          db.cavePlaceToRasterMapDefinitions.cavePlaceUuid,
         ),
       );
 
   $CavePlaceToRasterMapDefinitionsProcessedTableManager
   get cavePlaceToRasterMapDefinitionsRefs {
-    final manager = $CavePlaceToRasterMapDefinitionsTableManager(
-      $_db,
-      $_db.cavePlaceToRasterMapDefinitions,
-    ).filter((f) => f.cavePlaceId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager =
+        $CavePlaceToRasterMapDefinitionsTableManager(
+          $_db,
+          $_db.cavePlaceToRasterMapDefinitions,
+        ).filter(
+          (f) =>
+              f.cavePlaceUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
 
     final cache = $_typedResult.readTableOrNull(
       _cavePlaceToRasterMapDefinitionsRefsTable($_db),
@@ -10312,16 +10859,17 @@ final class $CavePlacesReferences
   _caveTripPointsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveTripPoints,
     aliasName: $_aliasNameGenerator(
-      db.cavePlaces.id,
-      db.caveTripPoints.cavePlaceId,
+      db.cavePlaces.uuid,
+      db.caveTripPoints.cavePlaceUuid,
     ),
   );
 
   $CaveTripPointsProcessedTableManager get caveTripPointsRefs {
-    final manager = $CaveTripPointsTableManager(
-      $_db,
-      $_db.caveTripPoints,
-    ).filter((f) => f.cavePlaceId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CaveTripPointsTableManager($_db, $_db.caveTripPoints)
+        .filter(
+          (f) =>
+              f.cavePlaceUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
 
     final cache = $_typedResult.readTableOrNull(_caveTripPointsRefsTable($_db));
     return ProcessedTableManager(
@@ -10338,10 +10886,11 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -10398,12 +10947,12 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $CavesFilterComposer get caveId {
+  $CavesFilterComposer get caveUuid {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10421,12 +10970,12 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
     return composer;
   }
 
-  $CaveAreasFilterComposer get caveAreaId {
+  $CaveAreasFilterComposer get caveAreaUuid {
     final $CaveAreasFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveAreaId,
+      getCurrentColumn: (t) => t.caveAreaUuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10451,9 +11000,9 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
     final $CavePlaceToRasterMapDefinitionsFilterComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.cavePlaceToRasterMapDefinitions,
-          getReferencedColumn: (t) => t.cavePlaceId,
+          getReferencedColumn: (t) => t.cavePlaceUuid,
           builder:
               (
                 joinBuilder, {
@@ -10476,9 +11025,9 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
   ) {
     final $CaveTripPointsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveTripPoints,
-      getReferencedColumn: (t) => t.cavePlaceId,
+      getReferencedColumn: (t) => t.cavePlaceUuid,
       builder:
           (
             joinBuilder, {
@@ -10505,8 +11054,8 @@ class $CavePlacesOrderingComposer extends Composer<_$AppDatabase, CavePlaces> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -10565,12 +11114,12 @@ class $CavePlacesOrderingComposer extends Composer<_$AppDatabase, CavePlaces> {
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CavesOrderingComposer get caveId {
+  $CavesOrderingComposer get caveUuid {
     final $CavesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10588,12 +11137,12 @@ class $CavePlacesOrderingComposer extends Composer<_$AppDatabase, CavePlaces> {
     return composer;
   }
 
-  $CaveAreasOrderingComposer get caveAreaId {
+  $CaveAreasOrderingComposer get caveAreaUuid {
     final $CaveAreasOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveAreaId,
+      getCurrentColumn: (t) => t.caveAreaUuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10621,8 +11170,8 @@ class $CavePlacesAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -10667,12 +11216,12 @@ class $CavePlacesAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CavesAnnotationComposer get caveId {
+  $CavesAnnotationComposer get caveUuid {
     final $CavesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10690,12 +11239,12 @@ class $CavePlacesAnnotationComposer
     return composer;
   }
 
-  $CaveAreasAnnotationComposer get caveAreaId {
+  $CaveAreasAnnotationComposer get caveAreaUuid {
     final $CaveAreasAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveAreaId,
+      getCurrentColumn: (t) => t.caveAreaUuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -10720,9 +11269,9 @@ class $CavePlacesAnnotationComposer
     final $CavePlaceToRasterMapDefinitionsAnnotationComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.cavePlaceToRasterMapDefinitions,
-          getReferencedColumn: (t) => t.cavePlaceId,
+          getReferencedColumn: (t) => t.cavePlaceUuid,
           builder:
               (
                 joinBuilder, {
@@ -10745,9 +11294,9 @@ class $CavePlacesAnnotationComposer
   ) {
     final $CaveTripPointsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveTripPoints,
-      getReferencedColumn: (t) => t.cavePlaceId,
+      getReferencedColumn: (t) => t.cavePlaceUuid,
       builder:
           (
             joinBuilder, {
@@ -10780,8 +11329,8 @@ class $CavePlacesTableManager
           (CavePlace, $CavePlacesReferences),
           CavePlace,
           PrefetchHooks Function({
-            bool caveId,
-            bool caveAreaId,
+            bool caveUuid,
+            bool caveAreaUuid,
             bool cavePlaceToRasterMapDefinitionsRefs,
             bool caveTripPointsRefs,
           })
@@ -10799,12 +11348,12 @@ class $CavePlacesTableManager
               $CavePlacesAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
-                Value<int> caveId = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
                 Value<int?> placeQrCodeIdentifier = const Value.absent(),
-                Value<int?> caveAreaId = const Value.absent(),
+                Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
@@ -10813,13 +11362,14 @@ class $CavePlacesTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CavePlacesCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
-                caveId: caveId,
+                caveUuid: caveUuid,
                 placeQrCodeIdentifier: placeQrCodeIdentifier,
-                caveAreaId: caveAreaId,
+                caveAreaUuid: caveAreaUuid,
                 latitude: latitude,
                 longitude: longitude,
                 depthInCave: depthInCave,
@@ -10828,15 +11378,16 @@ class $CavePlacesTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
-                required int caveId,
+                required Uuid caveUuid,
                 Value<int?> placeQrCodeIdentifier = const Value.absent(),
-                Value<int?> caveAreaId = const Value.absent(),
+                Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
@@ -10845,13 +11396,14 @@ class $CavePlacesTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CavePlacesCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
-                caveId: caveId,
+                caveUuid: caveUuid,
                 placeQrCodeIdentifier: placeQrCodeIdentifier,
-                caveAreaId: caveAreaId,
+                caveAreaUuid: caveAreaUuid,
                 latitude: latitude,
                 longitude: longitude,
                 depthInCave: depthInCave,
@@ -10860,6 +11412,7 @@ class $CavePlacesTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -10869,8 +11422,8 @@ class $CavePlacesTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                caveId = false,
-                caveAreaId = false,
+                caveUuid = false,
+                caveAreaUuid = false,
                 cavePlaceToRasterMapDefinitionsRefs = false,
                 caveTripPointsRefs = false,
               }) {
@@ -10897,29 +11450,29 @@ class $CavePlacesTableManager
                           dynamic
                         >
                       >(state) {
-                        if (caveId) {
+                        if (caveUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveId,
+                                    currentColumn: table.caveUuid,
                                     referencedTable: $CavePlacesReferences
-                                        ._caveIdTable(db),
+                                        ._caveUuidTable(db),
                                     referencedColumn: $CavePlacesReferences
-                                        ._caveIdTable(db)
-                                        .id,
+                                        ._caveUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
-                        if (caveAreaId) {
+                        if (caveAreaUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveAreaId,
+                                    currentColumn: table.caveAreaUuid,
                                     referencedTable: $CavePlacesReferences
-                                        ._caveAreaIdTable(db),
+                                        ._caveAreaUuidTable(db),
                                     referencedColumn: $CavePlacesReferences
-                                        ._caveAreaIdTable(db)
-                                        .id,
+                                        ._caveAreaUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
@@ -10944,7 +11497,7 @@ class $CavePlacesTableManager
                           ).cavePlaceToRasterMapDefinitionsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.cavePlaceId == item.id,
+                                (e) => e.cavePlaceUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -10964,7 +11517,7 @@ class $CavePlacesTableManager
                           ).caveTripPointsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.cavePlaceId == item.id,
+                                (e) => e.cavePlaceUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -10989,72 +11542,74 @@ typedef $CavePlacesProcessedTableManager =
       (CavePlace, $CavePlacesReferences),
       CavePlace,
       PrefetchHooks Function({
-        bool caveId,
-        bool caveAreaId,
+        bool caveUuid,
+        bool caveAreaUuid,
         bool cavePlaceToRasterMapDefinitionsRefs,
         bool caveTripPointsRefs,
       })
     >;
 typedef $RasterMapsCreateCompanionBuilder =
     RasterMapsCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       required String mapType,
       required String fileName,
-      required int caveId,
-      Value<int?> caveAreaId,
+      required Uuid caveUuid,
+      Value<Uuid?> caveAreaUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $RasterMapsUpdateCompanionBuilder =
     RasterMapsCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String> mapType,
       Value<String> fileName,
-      Value<int> caveId,
-      Value<int?> caveAreaId,
+      Value<Uuid> caveUuid,
+      Value<Uuid?> caveAreaUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $RasterMapsReferences
     extends BaseReferences<_$AppDatabase, RasterMaps, RasterMap> {
   $RasterMapsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveIdTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.rasterMaps.caveId, db.caves.id),
+  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
+    $_aliasNameGenerator(db.rasterMaps.caveUuid, db.caves.uuid),
   );
 
-  $CavesProcessedTableManager get caveId {
-    final $_column = $_itemColumn<int>('cave_id')!;
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
 
     final manager = $CavesTableManager(
       $_db,
       $_db.caves,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
 
-  static CaveAreas _caveAreaIdTable(_$AppDatabase db) =>
+  static CaveAreas _caveAreaUuidTable(_$AppDatabase db) =>
       db.caveAreas.createAlias(
-        $_aliasNameGenerator(db.rasterMaps.caveAreaId, db.caveAreas.id),
+        $_aliasNameGenerator(db.rasterMaps.caveAreaUuid, db.caveAreas.uuid),
       );
 
-  $CaveAreasProcessedTableManager? get caveAreaId {
-    final $_column = $_itemColumn<int>('cave_area_id');
+  $CaveAreasProcessedTableManager? get caveAreaUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_area_uuid');
     if ($_column == null) return null;
     final manager = $CaveAreasTableManager(
       $_db,
       $_db.caveAreas,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveAreaIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveAreaUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -11069,17 +11624,21 @@ final class $RasterMapsReferences
       MultiTypedResultKey.fromTable(
         db.cavePlaceToRasterMapDefinitions,
         aliasName: $_aliasNameGenerator(
-          db.rasterMaps.id,
-          db.cavePlaceToRasterMapDefinitions.rasterMapId,
+          db.rasterMaps.uuid,
+          db.cavePlaceToRasterMapDefinitions.rasterMapUuid,
         ),
       );
 
   $CavePlaceToRasterMapDefinitionsProcessedTableManager
   get cavePlaceToRasterMapDefinitionsRefs {
-    final manager = $CavePlaceToRasterMapDefinitionsTableManager(
-      $_db,
-      $_db.cavePlaceToRasterMapDefinitions,
-    ).filter((f) => f.rasterMapId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager =
+        $CavePlaceToRasterMapDefinitionsTableManager(
+          $_db,
+          $_db.cavePlaceToRasterMapDefinitions,
+        ).filter(
+          (f) =>
+              f.rasterMapUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
 
     final cache = $_typedResult.readTableOrNull(
       _cavePlaceToRasterMapDefinitionsRefsTable($_db),
@@ -11098,10 +11657,11 @@ class $RasterMapsFilterComposer extends Composer<_$AppDatabase, RasterMaps> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -11133,12 +11693,12 @@ class $RasterMapsFilterComposer extends Composer<_$AppDatabase, RasterMaps> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $CavesFilterComposer get caveId {
+  $CavesFilterComposer get caveUuid {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11156,12 +11716,12 @@ class $RasterMapsFilterComposer extends Composer<_$AppDatabase, RasterMaps> {
     return composer;
   }
 
-  $CaveAreasFilterComposer get caveAreaId {
+  $CaveAreasFilterComposer get caveAreaUuid {
     final $CaveAreasFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveAreaId,
+      getCurrentColumn: (t) => t.caveAreaUuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11186,9 +11746,9 @@ class $RasterMapsFilterComposer extends Composer<_$AppDatabase, RasterMaps> {
     final $CavePlaceToRasterMapDefinitionsFilterComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.cavePlaceToRasterMapDefinitions,
-          getReferencedColumn: (t) => t.rasterMapId,
+          getReferencedColumn: (t) => t.rasterMapUuid,
           builder:
               (
                 joinBuilder, {
@@ -11215,8 +11775,8 @@ class $RasterMapsOrderingComposer extends Composer<_$AppDatabase, RasterMaps> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11250,12 +11810,12 @@ class $RasterMapsOrderingComposer extends Composer<_$AppDatabase, RasterMaps> {
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CavesOrderingComposer get caveId {
+  $CavesOrderingComposer get caveUuid {
     final $CavesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11273,12 +11833,12 @@ class $RasterMapsOrderingComposer extends Composer<_$AppDatabase, RasterMaps> {
     return composer;
   }
 
-  $CaveAreasOrderingComposer get caveAreaId {
+  $CaveAreasOrderingComposer get caveAreaUuid {
     final $CaveAreasOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveAreaId,
+      getCurrentColumn: (t) => t.caveAreaUuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11306,8 +11866,8 @@ class $RasterMapsAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -11327,12 +11887,12 @@ class $RasterMapsAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CavesAnnotationComposer get caveId {
+  $CavesAnnotationComposer get caveUuid {
     final $CavesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11350,12 +11910,12 @@ class $RasterMapsAnnotationComposer
     return composer;
   }
 
-  $CaveAreasAnnotationComposer get caveAreaId {
+  $CaveAreasAnnotationComposer get caveAreaUuid {
     final $CaveAreasAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveAreaId,
+      getCurrentColumn: (t) => t.caveAreaUuid,
       referencedTable: $db.caveAreas,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11380,9 +11940,9 @@ class $RasterMapsAnnotationComposer
     final $CavePlaceToRasterMapDefinitionsAnnotationComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.cavePlaceToRasterMapDefinitions,
-          getReferencedColumn: (t) => t.rasterMapId,
+          getReferencedColumn: (t) => t.rasterMapUuid,
           builder:
               (
                 joinBuilder, {
@@ -11415,8 +11975,8 @@ class $RasterMapsTableManager
           (RasterMap, $RasterMapsReferences),
           RasterMap,
           PrefetchHooks Function({
-            bool caveId,
-            bool caveAreaId,
+            bool caveUuid,
+            bool caveAreaUuid,
             bool cavePlaceToRasterMapDefinitionsRefs,
           })
         > {
@@ -11433,47 +11993,51 @@ class $RasterMapsTableManager
               $RasterMapsAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> mapType = const Value.absent(),
                 Value<String> fileName = const Value.absent(),
-                Value<int> caveId = const Value.absent(),
-                Value<int?> caveAreaId = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
+                Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => RasterMapsCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 mapType: mapType,
                 fileName: fileName,
-                caveId: caveId,
-                caveAreaId: caveAreaId,
+                caveUuid: caveUuid,
+                caveAreaUuid: caveAreaUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 required String mapType,
                 required String fileName,
-                required int caveId,
-                Value<int?> caveAreaId = const Value.absent(),
+                required Uuid caveUuid,
+                Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => RasterMapsCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 mapType: mapType,
                 fileName: fileName,
-                caveId: caveId,
-                caveAreaId: caveAreaId,
+                caveUuid: caveUuid,
+                caveAreaUuid: caveAreaUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -11483,8 +12047,8 @@ class $RasterMapsTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                caveId = false,
-                caveAreaId = false,
+                caveUuid = false,
+                caveAreaUuid = false,
                 cavePlaceToRasterMapDefinitionsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -11509,29 +12073,29 @@ class $RasterMapsTableManager
                           dynamic
                         >
                       >(state) {
-                        if (caveId) {
+                        if (caveUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveId,
+                                    currentColumn: table.caveUuid,
                                     referencedTable: $RasterMapsReferences
-                                        ._caveIdTable(db),
+                                        ._caveUuidTable(db),
                                     referencedColumn: $RasterMapsReferences
-                                        ._caveIdTable(db)
-                                        .id,
+                                        ._caveUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
-                        if (caveAreaId) {
+                        if (caveAreaUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveAreaId,
+                                    currentColumn: table.caveAreaUuid,
                                     referencedTable: $RasterMapsReferences
-                                        ._caveAreaIdTable(db),
+                                        ._caveAreaUuidTable(db),
                                     referencedColumn: $RasterMapsReferences
-                                        ._caveAreaIdTable(db)
-                                        .id,
+                                        ._caveAreaUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
@@ -11556,7 +12120,7 @@ class $RasterMapsTableManager
                           ).cavePlaceToRasterMapDefinitionsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.rasterMapId == item.id,
+                                (e) => e.rasterMapUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -11581,32 +12145,34 @@ typedef $RasterMapsProcessedTableManager =
       (RasterMap, $RasterMapsReferences),
       RasterMap,
       PrefetchHooks Function({
-        bool caveId,
-        bool caveAreaId,
+        bool caveUuid,
+        bool caveAreaUuid,
         bool cavePlaceToRasterMapDefinitionsRefs,
       })
     >;
 typedef $CavePlaceToRasterMapDefinitionsCreateCompanionBuilder =
     CavePlaceToRasterMapDefinitionsCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       Value<int?> xCoordinate,
       Value<int?> yCoordinate,
-      required int cavePlaceId,
-      required int rasterMapId,
+      required Uuid cavePlaceUuid,
+      required Uuid rasterMapUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CavePlaceToRasterMapDefinitionsUpdateCompanionBuilder =
     CavePlaceToRasterMapDefinitionsCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<int?> xCoordinate,
       Value<int?> yCoordinate,
-      Value<int> cavePlaceId,
-      Value<int> rasterMapId,
+      Value<Uuid> cavePlaceUuid,
+      Value<Uuid> rasterMapUuid,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CavePlaceToRasterMapDefinitionsReferences
@@ -11622,44 +12188,44 @@ final class $CavePlaceToRasterMapDefinitionsReferences
     super.$_typedResult,
   );
 
-  static CavePlaces _cavePlaceIdTable(_$AppDatabase db) =>
+  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) =>
       db.cavePlaces.createAlias(
         $_aliasNameGenerator(
-          db.cavePlaceToRasterMapDefinitions.cavePlaceId,
-          db.cavePlaces.id,
+          db.cavePlaceToRasterMapDefinitions.cavePlaceUuid,
+          db.cavePlaces.uuid,
         ),
       );
 
-  $CavePlacesProcessedTableManager get cavePlaceId {
-    final $_column = $_itemColumn<int>('cave_place_id')!;
+  $CavePlacesProcessedTableManager get cavePlaceUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_place_uuid')!;
 
     final manager = $CavePlacesTableManager(
       $_db,
       $_db.cavePlaces,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_cavePlaceIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cavePlaceUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
 
-  static RasterMaps _rasterMapIdTable(_$AppDatabase db) =>
+  static RasterMaps _rasterMapUuidTable(_$AppDatabase db) =>
       db.rasterMaps.createAlias(
         $_aliasNameGenerator(
-          db.cavePlaceToRasterMapDefinitions.rasterMapId,
-          db.rasterMaps.id,
+          db.cavePlaceToRasterMapDefinitions.rasterMapUuid,
+          db.rasterMaps.uuid,
         ),
       );
 
-  $RasterMapsProcessedTableManager get rasterMapId {
-    final $_column = $_itemColumn<int>('raster_map_id')!;
+  $RasterMapsProcessedTableManager get rasterMapUuid {
+    final $_column = $_itemColumn<Uint8List>('raster_map_uuid')!;
 
     final manager = $RasterMapsTableManager(
       $_db,
       $_db.rasterMaps,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_rasterMapIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_rasterMapUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -11676,10 +12242,11 @@ class $CavePlaceToRasterMapDefinitionsFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<int> get xCoordinate => $composableBuilder(
     column: $table.xCoordinate,
@@ -11706,12 +12273,12 @@ class $CavePlaceToRasterMapDefinitionsFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $CavePlacesFilterComposer get cavePlaceId {
+  $CavePlacesFilterComposer get cavePlaceUuid {
     final $CavePlacesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.cavePlaceId,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11729,12 +12296,12 @@ class $CavePlaceToRasterMapDefinitionsFilterComposer
     return composer;
   }
 
-  $RasterMapsFilterComposer get rasterMapId {
+  $RasterMapsFilterComposer get rasterMapUuid {
     final $RasterMapsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.rasterMapId,
+      getCurrentColumn: (t) => t.rasterMapUuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11762,8 +12329,8 @@ class $CavePlaceToRasterMapDefinitionsOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11792,12 +12359,12 @@ class $CavePlaceToRasterMapDefinitionsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CavePlacesOrderingComposer get cavePlaceId {
+  $CavePlacesOrderingComposer get cavePlaceUuid {
     final $CavePlacesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.cavePlaceId,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11815,12 +12382,12 @@ class $CavePlaceToRasterMapDefinitionsOrderingComposer
     return composer;
   }
 
-  $RasterMapsOrderingComposer get rasterMapId {
+  $RasterMapsOrderingComposer get rasterMapUuid {
     final $RasterMapsOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.rasterMapId,
+      getCurrentColumn: (t) => t.rasterMapUuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11848,8 +12415,8 @@ class $CavePlaceToRasterMapDefinitionsAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<int> get xCoordinate => $composableBuilder(
     column: $table.xCoordinate,
@@ -11870,12 +12437,12 @@ class $CavePlaceToRasterMapDefinitionsAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CavePlacesAnnotationComposer get cavePlaceId {
+  $CavePlacesAnnotationComposer get cavePlaceUuid {
     final $CavePlacesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.cavePlaceId,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11893,12 +12460,12 @@ class $CavePlaceToRasterMapDefinitionsAnnotationComposer
     return composer;
   }
 
-  $RasterMapsAnnotationComposer get rasterMapId {
+  $RasterMapsAnnotationComposer get rasterMapUuid {
     final $RasterMapsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.rasterMapId,
+      getCurrentColumn: (t) => t.rasterMapUuid,
       referencedTable: $db.rasterMaps,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -11933,7 +12500,7 @@ class $CavePlaceToRasterMapDefinitionsTableManager
             $CavePlaceToRasterMapDefinitionsReferences,
           ),
           CavePlaceToRasterMapDefinition,
-          PrefetchHooks Function({bool cavePlaceId, bool rasterMapId})
+          PrefetchHooks Function({bool cavePlaceUuid, bool rasterMapUuid})
         > {
   $CavePlaceToRasterMapDefinitionsTableManager(
     _$AppDatabase db,
@@ -11959,43 +12526,47 @@ class $CavePlaceToRasterMapDefinitionsTableManager
               ),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<int?> xCoordinate = const Value.absent(),
                 Value<int?> yCoordinate = const Value.absent(),
-                Value<int> cavePlaceId = const Value.absent(),
-                Value<int> rasterMapId = const Value.absent(),
+                Value<Uuid> cavePlaceUuid = const Value.absent(),
+                Value<Uuid> rasterMapUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CavePlaceToRasterMapDefinitionsCompanion(
-                id: id,
+                uuid: uuid,
                 xCoordinate: xCoordinate,
                 yCoordinate: yCoordinate,
-                cavePlaceId: cavePlaceId,
-                rasterMapId: rasterMapId,
+                cavePlaceUuid: cavePlaceUuid,
+                rasterMapUuid: rasterMapUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 Value<int?> xCoordinate = const Value.absent(),
                 Value<int?> yCoordinate = const Value.absent(),
-                required int cavePlaceId,
-                required int rasterMapId,
+                required Uuid cavePlaceUuid,
+                required Uuid rasterMapUuid,
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CavePlaceToRasterMapDefinitionsCompanion.insert(
-                id: id,
+                uuid: uuid,
                 xCoordinate: xCoordinate,
                 yCoordinate: yCoordinate,
-                cavePlaceId: cavePlaceId,
-                rasterMapId: rasterMapId,
+                cavePlaceUuid: cavePlaceUuid,
+                rasterMapUuid: rasterMapUuid,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -12005,7 +12576,7 @@ class $CavePlaceToRasterMapDefinitionsTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({cavePlaceId = false, rasterMapId = false}) {
+          prefetchHooksCallback: ({cavePlaceUuid = false, rasterMapUuid = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -12025,33 +12596,33 @@ class $CavePlaceToRasterMapDefinitionsTableManager
                       dynamic
                     >
                   >(state) {
-                    if (cavePlaceId) {
+                    if (cavePlaceUuid) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.cavePlaceId,
+                                currentColumn: table.cavePlaceUuid,
                                 referencedTable:
                                     $CavePlaceToRasterMapDefinitionsReferences
-                                        ._cavePlaceIdTable(db),
+                                        ._cavePlaceUuidTable(db),
                                 referencedColumn:
                                     $CavePlaceToRasterMapDefinitionsReferences
-                                        ._cavePlaceIdTable(db)
-                                        .id,
+                                        ._cavePlaceUuidTable(db)
+                                        .uuid,
                               )
                               as T;
                     }
-                    if (rasterMapId) {
+                    if (rasterMapUuid) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.rasterMapId,
+                                currentColumn: table.rasterMapUuid,
                                 referencedTable:
                                     $CavePlaceToRasterMapDefinitionsReferences
-                                        ._rasterMapIdTable(db),
+                                        ._rasterMapUuidTable(db),
                                 referencedColumn:
                                     $CavePlaceToRasterMapDefinitionsReferences
-                                        ._rasterMapIdTable(db)
-                                        .id,
+                                        ._rasterMapUuidTable(db)
+                                        .uuid,
                               )
                               as T;
                     }
@@ -12082,11 +12653,11 @@ typedef $CavePlaceToRasterMapDefinitionsProcessedTableManager =
         $CavePlaceToRasterMapDefinitionsReferences,
       ),
       CavePlaceToRasterMapDefinition,
-      PrefetchHooks Function({bool cavePlaceId, bool rasterMapId})
+      PrefetchHooks Function({bool cavePlaceUuid, bool rasterMapUuid})
     >;
 typedef $DocumentationFilesCreateCompanionBuilder =
     DocumentationFilesCompanion Function({
-      Value<int> id,
+      required Uuid uuid,
       required String title,
       Value<String?> description,
       required String fileName,
@@ -12096,10 +12667,11 @@ typedef $DocumentationFilesCreateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $DocumentationFilesUpdateCompanionBuilder =
     DocumentationFilesCompanion Function({
-      Value<int> id,
+      Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
       Value<String> fileName,
@@ -12109,6 +12681,7 @@ typedef $DocumentationFilesUpdateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $DocumentationFilesReferences
@@ -12124,8 +12697,8 @@ final class $DocumentationFilesReferences
       MultiTypedResultKey.fromTable(
         db.documentationFilesToGeofeatures,
         aliasName: $_aliasNameGenerator(
-          db.documentationFiles.id,
-          db.documentationFilesToGeofeatures.documentationFileId,
+          db.documentationFiles.uuid,
+          db.documentationFilesToGeofeatures.documentationFileUuid,
         ),
       );
 
@@ -12136,7 +12709,9 @@ final class $DocumentationFilesReferences
           $_db,
           $_db.documentationFilesToGeofeatures,
         ).filter(
-          (f) => f.documentationFileId.id.sqlEquals($_itemColumn<int>('id')!),
+          (f) => f.documentationFileUuid.uuid.sqlEquals(
+            $_itemColumn<Uint8List>('uuid')!,
+          ),
         );
 
     final cache = $_typedResult.readTableOrNull(
@@ -12155,8 +12730,8 @@ final class $DocumentationFilesReferences
       MultiTypedResultKey.fromTable(
         db.documentationFilesToCaveTrips,
         aliasName: $_aliasNameGenerator(
-          db.documentationFiles.id,
-          db.documentationFilesToCaveTrips.documentationFileId,
+          db.documentationFiles.uuid,
+          db.documentationFilesToCaveTrips.documentationFileUuid,
         ),
       );
 
@@ -12167,7 +12742,9 @@ final class $DocumentationFilesReferences
           $_db,
           $_db.documentationFilesToCaveTrips,
         ).filter(
-          (f) => f.documentationFileId.id.sqlEquals($_itemColumn<int>('id')!),
+          (f) => f.documentationFileUuid.uuid.sqlEquals(
+            $_itemColumn<Uint8List>('uuid')!,
+          ),
         );
 
     final cache = $_typedResult.readTableOrNull(
@@ -12188,10 +12765,11 @@ class $DocumentationFilesFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -12245,9 +12823,9 @@ class $DocumentationFilesFilterComposer
     final $DocumentationFilesToGeofeaturesFilterComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.documentationFilesToGeofeatures,
-          getReferencedColumn: (t) => t.documentationFileId,
+          getReferencedColumn: (t) => t.documentationFileUuid,
           builder:
               (
                 joinBuilder, {
@@ -12271,9 +12849,9 @@ class $DocumentationFilesFilterComposer
     final $DocumentationFilesToCaveTripsFilterComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.documentationFilesToCaveTrips,
-          getReferencedColumn: (t) => t.documentationFileId,
+          getReferencedColumn: (t) => t.documentationFileUuid,
           builder:
               (
                 joinBuilder, {
@@ -12301,8 +12879,8 @@ class $DocumentationFilesOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12361,8 +12939,8 @@ class $DocumentationFilesAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -12400,9 +12978,9 @@ class $DocumentationFilesAnnotationComposer
     final $DocumentationFilesToGeofeaturesAnnotationComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.documentationFilesToGeofeatures,
-          getReferencedColumn: (t) => t.documentationFileId,
+          getReferencedColumn: (t) => t.documentationFileUuid,
           builder:
               (
                 joinBuilder, {
@@ -12427,9 +13005,9 @@ class $DocumentationFilesAnnotationComposer
     final $DocumentationFilesToCaveTripsAnnotationComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.documentationFilesToCaveTrips,
-          getReferencedColumn: (t) => t.documentationFileId,
+          getReferencedColumn: (t) => t.documentationFileUuid,
           builder:
               (
                 joinBuilder, {
@@ -12479,7 +13057,7 @@ class $DocumentationFilesTableManager
               $DocumentationFilesAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String> fileName = const Value.absent(),
@@ -12489,8 +13067,9 @@ class $DocumentationFilesTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => DocumentationFilesCompanion(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 fileName: fileName,
@@ -12500,10 +13079,11 @@ class $DocumentationFilesTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
+                required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
                 required String fileName,
@@ -12513,8 +13093,9 @@ class $DocumentationFilesTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => DocumentationFilesCompanion.insert(
-                id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 fileName: fileName,
@@ -12524,6 +13105,7 @@ class $DocumentationFilesTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -12566,7 +13148,7 @@ class $DocumentationFilesTableManager
                               ).documentationFilesToGeofeaturesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.documentationFileId == item.id,
+                                (e) => e.documentationFileUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -12587,7 +13169,7 @@ class $DocumentationFilesTableManager
                               ).documentationFilesToCaveTripsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.documentationFileId == item.id,
+                                (e) => e.documentationFileUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -12618,21 +13200,23 @@ typedef $DocumentationFilesProcessedTableManager =
     >;
 typedef $DocumentationFilesToGeofeaturesCreateCompanionBuilder =
     DocumentationFilesToGeofeaturesCompanion Function({
-      Value<int> id,
-      Value<int?> geofeatureId,
+      required Uuid uuid,
+      Value<Uuid?> geofeatureUuid,
       required String geofeatureType,
-      required int documentationFileId,
+      required Uuid documentationFileUuid,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $DocumentationFilesToGeofeaturesUpdateCompanionBuilder =
     DocumentationFilesToGeofeaturesCompanion Function({
-      Value<int> id,
-      Value<int?> geofeatureId,
+      Value<Uuid> uuid,
+      Value<Uuid?> geofeatureUuid,
       Value<String> geofeatureType,
-      Value<int> documentationFileId,
+      Value<Uuid> documentationFileUuid,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $DocumentationFilesToGeofeaturesReferences
@@ -12648,22 +13232,24 @@ final class $DocumentationFilesToGeofeaturesReferences
     super.$_typedResult,
   );
 
-  static DocumentationFiles _documentationFileIdTable(_$AppDatabase db) =>
+  static DocumentationFiles _documentationFileUuidTable(_$AppDatabase db) =>
       db.documentationFiles.createAlias(
         $_aliasNameGenerator(
-          db.documentationFilesToGeofeatures.documentationFileId,
-          db.documentationFiles.id,
+          db.documentationFilesToGeofeatures.documentationFileUuid,
+          db.documentationFiles.uuid,
         ),
       );
 
-  $DocumentationFilesProcessedTableManager get documentationFileId {
-    final $_column = $_itemColumn<int>('documentation_file_id')!;
+  $DocumentationFilesProcessedTableManager get documentationFileUuid {
+    final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
 
     final manager = $DocumentationFilesTableManager(
       $_db,
       $_db.documentationFiles,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_documentationFileIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _documentationFileUuidTable($_db),
+    );
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -12680,15 +13266,17 @@ class $DocumentationFilesToGeofeaturesFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<int> get geofeatureId => $composableBuilder(
-    column: $table.geofeatureId,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid?, Uuid, Uint8List> get geofeatureUuid =>
+      $composableBuilder(
+        column: $table.geofeatureUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get geofeatureType => $composableBuilder(
     column: $table.geofeatureType,
@@ -12705,12 +13293,12 @@ class $DocumentationFilesToGeofeaturesFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $DocumentationFilesFilterComposer get documentationFileId {
+  $DocumentationFilesFilterComposer get documentationFileUuid {
     final $DocumentationFilesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.documentationFileId,
+      getCurrentColumn: (t) => t.documentationFileUuid,
       referencedTable: $db.documentationFiles,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -12738,13 +13326,13 @@ class $DocumentationFilesToGeofeaturesOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get geofeatureId => $composableBuilder(
-    column: $table.geofeatureId,
+  ColumnOrderings<Uint8List> get geofeatureUuid => $composableBuilder(
+    column: $table.geofeatureUuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12763,12 +13351,12 @@ class $DocumentationFilesToGeofeaturesOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $DocumentationFilesOrderingComposer get documentationFileId {
+  $DocumentationFilesOrderingComposer get documentationFileUuid {
     final $DocumentationFilesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.documentationFileId,
+      getCurrentColumn: (t) => t.documentationFileUuid,
       referencedTable: $db.documentationFiles,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -12796,13 +13384,14 @@ class $DocumentationFilesToGeofeaturesAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
-  GeneratedColumn<int> get geofeatureId => $composableBuilder(
-    column: $table.geofeatureId,
-    builder: (column) => column,
-  );
+  GeneratedColumnWithTypeConverter<Uuid?, Uint8List> get geofeatureUuid =>
+      $composableBuilder(
+        column: $table.geofeatureUuid,
+        builder: (column) => column,
+      );
 
   GeneratedColumn<String> get geofeatureType => $composableBuilder(
     column: $table.geofeatureType,
@@ -12815,12 +13404,12 @@ class $DocumentationFilesToGeofeaturesAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $DocumentationFilesAnnotationComposer get documentationFileId {
+  $DocumentationFilesAnnotationComposer get documentationFileUuid {
     final $DocumentationFilesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.documentationFileId,
+      getCurrentColumn: (t) => t.documentationFileUuid,
       referencedTable: $db.documentationFiles,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -12855,7 +13444,7 @@ class $DocumentationFilesToGeofeaturesTableManager
             $DocumentationFilesToGeofeaturesReferences,
           ),
           DocumentationFilesToGeofeature,
-          PrefetchHooks Function({bool documentationFileId})
+          PrefetchHooks Function({bool documentationFileUuid})
         > {
   $DocumentationFilesToGeofeaturesTableManager(
     _$AppDatabase db,
@@ -12881,35 +13470,39 @@ class $DocumentationFilesToGeofeaturesTableManager
               ),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<int?> geofeatureId = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid?> geofeatureUuid = const Value.absent(),
                 Value<String> geofeatureType = const Value.absent(),
-                Value<int> documentationFileId = const Value.absent(),
+                Value<Uuid> documentationFileUuid = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => DocumentationFilesToGeofeaturesCompanion(
-                id: id,
-                geofeatureId: geofeatureId,
+                uuid: uuid,
+                geofeatureUuid: geofeatureUuid,
                 geofeatureType: geofeatureType,
-                documentationFileId: documentationFileId,
+                documentationFileUuid: documentationFileUuid,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<int?> geofeatureId = const Value.absent(),
+                required Uuid uuid,
+                Value<Uuid?> geofeatureUuid = const Value.absent(),
                 required String geofeatureType,
-                required int documentationFileId,
+                required Uuid documentationFileUuid,
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => DocumentationFilesToGeofeaturesCompanion.insert(
-                id: id,
-                geofeatureId: geofeatureId,
+                uuid: uuid,
+                geofeatureUuid: geofeatureUuid,
                 geofeatureType: geofeatureType,
-                documentationFileId: documentationFileId,
+                documentationFileUuid: documentationFileUuid,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -12919,7 +13512,7 @@ class $DocumentationFilesToGeofeaturesTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({documentationFileId = false}) {
+          prefetchHooksCallback: ({documentationFileUuid = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -12939,18 +13532,18 @@ class $DocumentationFilesToGeofeaturesTableManager
                       dynamic
                     >
                   >(state) {
-                    if (documentationFileId) {
+                    if (documentationFileUuid) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.documentationFileId,
+                                currentColumn: table.documentationFileUuid,
                                 referencedTable:
                                     $DocumentationFilesToGeofeaturesReferences
-                                        ._documentationFileIdTable(db),
+                                        ._documentationFileUuidTable(db),
                                 referencedColumn:
                                     $DocumentationFilesToGeofeaturesReferences
-                                        ._documentationFileIdTable(db)
-                                        .id,
+                                        ._documentationFileUuidTable(db)
+                                        .uuid,
                               )
                               as T;
                     }
@@ -12981,7 +13574,7 @@ typedef $DocumentationFilesToGeofeaturesProcessedTableManager =
         $DocumentationFilesToGeofeaturesReferences,
       ),
       DocumentationFilesToGeofeature,
-      PrefetchHooks Function({bool documentationFileId})
+      PrefetchHooks Function({bool documentationFileUuid})
     >;
 typedef $ConfigurationsCreateCompanionBuilder =
     ConfigurationsCompanion Function({
@@ -13179,8 +13772,8 @@ typedef $ConfigurationsProcessedTableManager =
     >;
 typedef $CaveTripsCreateCompanionBuilder =
     CaveTripsCompanion Function({
-      Value<int> id,
-      required int caveId,
+      required Uuid uuid,
+      required Uuid caveUuid,
       required String title,
       Value<String?> description,
       required int tripStartedAt,
@@ -13189,11 +13782,12 @@ typedef $CaveTripsCreateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CaveTripsUpdateCompanionBuilder =
     CaveTripsCompanion Function({
-      Value<int> id,
-      Value<int> caveId,
+      Value<Uuid> uuid,
+      Value<Uuid> caveUuid,
       Value<String> title,
       Value<String?> description,
       Value<int> tripStartedAt,
@@ -13202,24 +13796,25 @@ typedef $CaveTripsUpdateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CaveTripsReferences
     extends BaseReferences<_$AppDatabase, CaveTrips, CaveTrip> {
   $CaveTripsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveIdTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.caveTrips.caveId, db.caves.id),
+  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
+    $_aliasNameGenerator(db.caveTrips.caveUuid, db.caves.uuid),
   );
 
-  $CavesProcessedTableManager get caveId {
-    final $_column = $_itemColumn<int>('cave_id')!;
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
 
     final manager = $CavesTableManager(
       $_db,
       $_db.caves,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -13230,16 +13825,17 @@ final class $CaveTripsReferences
   _caveTripPointsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveTripPoints,
     aliasName: $_aliasNameGenerator(
-      db.caveTrips.id,
-      db.caveTripPoints.caveTripId,
+      db.caveTrips.uuid,
+      db.caveTripPoints.caveTripUuid,
     ),
   );
 
   $CaveTripPointsProcessedTableManager get caveTripPointsRefs {
-    final manager = $CaveTripPointsTableManager(
-      $_db,
-      $_db.caveTripPoints,
-    ).filter((f) => f.caveTripId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager = $CaveTripPointsTableManager($_db, $_db.caveTripPoints)
+        .filter(
+          (f) =>
+              f.caveTripUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
 
     final cache = $_typedResult.readTableOrNull(_caveTripPointsRefsTable($_db));
     return ProcessedTableManager(
@@ -13255,17 +13851,21 @@ final class $CaveTripsReferences
       MultiTypedResultKey.fromTable(
         db.documentationFilesToCaveTrips,
         aliasName: $_aliasNameGenerator(
-          db.caveTrips.id,
-          db.documentationFilesToCaveTrips.caveTripId,
+          db.caveTrips.uuid,
+          db.documentationFilesToCaveTrips.caveTripUuid,
         ),
       );
 
   $DocumentationFilesToCaveTripsProcessedTableManager
   get documentationFilesToCaveTripsRefs {
-    final manager = $DocumentationFilesToCaveTripsTableManager(
-      $_db,
-      $_db.documentationFilesToCaveTrips,
-    ).filter((f) => f.caveTripId.id.sqlEquals($_itemColumn<int>('id')!));
+    final manager =
+        $DocumentationFilesToCaveTripsTableManager(
+          $_db,
+          $_db.documentationFilesToCaveTrips,
+        ).filter(
+          (f) =>
+              f.caveTripUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
 
     final cache = $_typedResult.readTableOrNull(
       _documentationFilesToCaveTripsRefsTable($_db),
@@ -13284,10 +13884,11 @@ class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
@@ -13329,12 +13930,12 @@ class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $CavesFilterComposer get caveId {
+  $CavesFilterComposer get caveUuid {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -13357,9 +13958,9 @@ class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
   ) {
     final $CaveTripPointsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveTripPoints,
-      getReferencedColumn: (t) => t.caveTripId,
+      getReferencedColumn: (t) => t.caveTripUuid,
       builder:
           (
             joinBuilder, {
@@ -13383,9 +13984,9 @@ class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
     final $DocumentationFilesToCaveTripsFilterComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.documentationFilesToCaveTrips,
-          getReferencedColumn: (t) => t.caveTripId,
+          getReferencedColumn: (t) => t.caveTripUuid,
           builder:
               (
                 joinBuilder, {
@@ -13412,8 +14013,8 @@ class $CaveTripsOrderingComposer extends Composer<_$AppDatabase, CaveTrips> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13457,12 +14058,12 @@ class $CaveTripsOrderingComposer extends Composer<_$AppDatabase, CaveTrips> {
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CavesOrderingComposer get caveId {
+  $CavesOrderingComposer get caveUuid {
     final $CavesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -13489,8 +14090,8 @@ class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -13522,12 +14123,12 @@ class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CavesAnnotationComposer get caveId {
+  $CavesAnnotationComposer get caveUuid {
     final $CavesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveId,
+      getCurrentColumn: (t) => t.caveUuid,
       referencedTable: $db.caves,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -13550,9 +14151,9 @@ class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
   ) {
     final $CaveTripPointsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
+      getCurrentColumn: (t) => t.uuid,
       referencedTable: $db.caveTripPoints,
-      getReferencedColumn: (t) => t.caveTripId,
+      getReferencedColumn: (t) => t.caveTripUuid,
       builder:
           (
             joinBuilder, {
@@ -13577,9 +14178,9 @@ class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
     final $DocumentationFilesToCaveTripsAnnotationComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.id,
+          getCurrentColumn: (t) => t.uuid,
           referencedTable: $db.documentationFilesToCaveTrips,
-          getReferencedColumn: (t) => t.caveTripId,
+          getReferencedColumn: (t) => t.caveTripUuid,
           builder:
               (
                 joinBuilder, {
@@ -13612,7 +14213,7 @@ class $CaveTripsTableManager
           (CaveTrip, $CaveTripsReferences),
           CaveTrip,
           PrefetchHooks Function({
-            bool caveId,
+            bool caveUuid,
             bool caveTripPointsRefs,
             bool documentationFilesToCaveTripsRefs,
           })
@@ -13630,8 +14231,8 @@ class $CaveTripsTableManager
               $CaveTripsAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<int> caveId = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<int> tripStartedAt = const Value.absent(),
@@ -13640,9 +14241,10 @@ class $CaveTripsTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveTripsCompanion(
-                id: id,
-                caveId: caveId,
+                uuid: uuid,
+                caveUuid: caveUuid,
                 title: title,
                 description: description,
                 tripStartedAt: tripStartedAt,
@@ -13651,11 +14253,12 @@ class $CaveTripsTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required int caveId,
+                required Uuid uuid,
+                required Uuid caveUuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
                 required int tripStartedAt,
@@ -13664,9 +14267,10 @@ class $CaveTripsTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveTripsCompanion.insert(
-                id: id,
-                caveId: caveId,
+                uuid: uuid,
+                caveUuid: caveUuid,
                 title: title,
                 description: description,
                 tripStartedAt: tripStartedAt,
@@ -13675,6 +14279,7 @@ class $CaveTripsTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -13683,7 +14288,7 @@ class $CaveTripsTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                caveId = false,
+                caveUuid = false,
                 caveTripPointsRefs = false,
                 documentationFilesToCaveTripsRefs = false,
               }) {
@@ -13710,16 +14315,16 @@ class $CaveTripsTableManager
                           dynamic
                         >
                       >(state) {
-                        if (caveId) {
+                        if (caveUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveId,
+                                    currentColumn: table.caveUuid,
                                     referencedTable: $CaveTripsReferences
-                                        ._caveIdTable(db),
+                                        ._caveUuidTable(db),
                                     referencedColumn: $CaveTripsReferences
-                                        ._caveIdTable(db)
-                                        .id,
+                                        ._caveUuidTable(db)
+                                        .uuid,
                                   )
                                   as T;
                         }
@@ -13744,7 +14349,7 @@ class $CaveTripsTableManager
                           ).caveTripPointsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveTripId == item.id,
+                                (e) => e.caveTripUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -13764,7 +14369,7 @@ class $CaveTripsTableManager
                           ).documentationFilesToCaveTripsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.caveTripId == item.id,
+                                (e) => e.caveTripUuid == item.uuid,
                               ),
                           typedResults: items,
                         ),
@@ -13789,70 +14394,75 @@ typedef $CaveTripsProcessedTableManager =
       (CaveTrip, $CaveTripsReferences),
       CaveTrip,
       PrefetchHooks Function({
-        bool caveId,
+        bool caveUuid,
         bool caveTripPointsRefs,
         bool documentationFilesToCaveTripsRefs,
       })
     >;
 typedef $CaveTripPointsCreateCompanionBuilder =
     CaveTripPointsCompanion Function({
-      Value<int> id,
-      required int caveTripId,
-      Value<int?> cavePlaceId,
+      required Uuid uuid,
+      required Uuid caveTripUuid,
+      Value<Uuid?> cavePlaceUuid,
       required int scannedAt,
       Value<String?> notes,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $CaveTripPointsUpdateCompanionBuilder =
     CaveTripPointsCompanion Function({
-      Value<int> id,
-      Value<int> caveTripId,
-      Value<int?> cavePlaceId,
+      Value<Uuid> uuid,
+      Value<Uuid> caveTripUuid,
+      Value<Uuid?> cavePlaceUuid,
       Value<int> scannedAt,
       Value<String?> notes,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $CaveTripPointsReferences
     extends BaseReferences<_$AppDatabase, CaveTripPoints, CaveTripPoint> {
   $CaveTripPointsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static CaveTrips _caveTripIdTable(_$AppDatabase db) =>
+  static CaveTrips _caveTripUuidTable(_$AppDatabase db) =>
       db.caveTrips.createAlias(
-        $_aliasNameGenerator(db.caveTripPoints.caveTripId, db.caveTrips.id),
+        $_aliasNameGenerator(db.caveTripPoints.caveTripUuid, db.caveTrips.uuid),
       );
 
-  $CaveTripsProcessedTableManager get caveTripId {
-    final $_column = $_itemColumn<int>('cave_trip_id')!;
+  $CaveTripsProcessedTableManager get caveTripUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_trip_uuid')!;
 
     final manager = $CaveTripsTableManager(
       $_db,
       $_db.caveTrips,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveTripIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveTripUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
 
-  static CavePlaces _cavePlaceIdTable(_$AppDatabase db) =>
+  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) =>
       db.cavePlaces.createAlias(
-        $_aliasNameGenerator(db.caveTripPoints.cavePlaceId, db.cavePlaces.id),
+        $_aliasNameGenerator(
+          db.caveTripPoints.cavePlaceUuid,
+          db.cavePlaces.uuid,
+        ),
       );
 
-  $CavePlacesProcessedTableManager? get cavePlaceId {
-    final $_column = $_itemColumn<int>('cave_place_id');
+  $CavePlacesProcessedTableManager? get cavePlaceUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_place_uuid');
     if ($_column == null) return null;
     final manager = $CavePlacesTableManager(
       $_db,
       $_db.cavePlaces,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_cavePlaceIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cavePlaceUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -13869,10 +14479,11 @@ class $CaveTripPointsFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<int> get scannedAt => $composableBuilder(
     column: $table.scannedAt,
@@ -13899,12 +14510,12 @@ class $CaveTripPointsFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $CaveTripsFilterComposer get caveTripId {
+  $CaveTripsFilterComposer get caveTripUuid {
     final $CaveTripsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveTripId,
+      getCurrentColumn: (t) => t.caveTripUuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -13922,12 +14533,12 @@ class $CaveTripPointsFilterComposer
     return composer;
   }
 
-  $CavePlacesFilterComposer get cavePlaceId {
+  $CavePlacesFilterComposer get cavePlaceUuid {
     final $CavePlacesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.cavePlaceId,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -13955,8 +14566,8 @@ class $CaveTripPointsOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13985,12 +14596,12 @@ class $CaveTripPointsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $CaveTripsOrderingComposer get caveTripId {
+  $CaveTripsOrderingComposer get caveTripUuid {
     final $CaveTripsOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveTripId,
+      getCurrentColumn: (t) => t.caveTripUuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14008,12 +14619,12 @@ class $CaveTripPointsOrderingComposer
     return composer;
   }
 
-  $CavePlacesOrderingComposer get cavePlaceId {
+  $CavePlacesOrderingComposer get cavePlaceUuid {
     final $CavePlacesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.cavePlaceId,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14041,8 +14652,8 @@ class $CaveTripPointsAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<int> get scannedAt =>
       $composableBuilder(column: $table.scannedAt, builder: (column) => column);
@@ -14059,12 +14670,12 @@ class $CaveTripPointsAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $CaveTripsAnnotationComposer get caveTripId {
+  $CaveTripsAnnotationComposer get caveTripUuid {
     final $CaveTripsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveTripId,
+      getCurrentColumn: (t) => t.caveTripUuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14082,12 +14693,12 @@ class $CaveTripPointsAnnotationComposer
     return composer;
   }
 
-  $CavePlacesAnnotationComposer get cavePlaceId {
+  $CavePlacesAnnotationComposer get cavePlaceUuid {
     final $CavePlacesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.cavePlaceId,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
       referencedTable: $db.cavePlaces,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14119,7 +14730,7 @@ class $CaveTripPointsTableManager
           $CaveTripPointsUpdateCompanionBuilder,
           (CaveTripPoint, $CaveTripPointsReferences),
           CaveTripPoint,
-          PrefetchHooks Function({bool caveTripId, bool cavePlaceId})
+          PrefetchHooks Function({bool caveTripUuid, bool cavePlaceUuid})
         > {
   $CaveTripPointsTableManager(_$AppDatabase db, CaveTripPoints table)
     : super(
@@ -14134,43 +14745,47 @@ class $CaveTripPointsTableManager
               $CaveTripPointsAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<int> caveTripId = const Value.absent(),
-                Value<int?> cavePlaceId = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> caveTripUuid = const Value.absent(),
+                Value<Uuid?> cavePlaceUuid = const Value.absent(),
                 Value<int> scannedAt = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveTripPointsCompanion(
-                id: id,
-                caveTripId: caveTripId,
-                cavePlaceId: cavePlaceId,
+                uuid: uuid,
+                caveTripUuid: caveTripUuid,
+                cavePlaceUuid: cavePlaceUuid,
                 scannedAt: scannedAt,
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required int caveTripId,
-                Value<int?> cavePlaceId = const Value.absent(),
+                required Uuid uuid,
+                required Uuid caveTripUuid,
+                Value<Uuid?> cavePlaceUuid = const Value.absent(),
                 required int scannedAt,
                 Value<String?> notes = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => CaveTripPointsCompanion.insert(
-                id: id,
-                caveTripId: caveTripId,
-                cavePlaceId: cavePlaceId,
+                uuid: uuid,
+                caveTripUuid: caveTripUuid,
+                cavePlaceUuid: cavePlaceUuid,
                 scannedAt: scannedAt,
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -14180,60 +14795,61 @@ class $CaveTripPointsTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({caveTripId = false, cavePlaceId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (caveTripId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.caveTripId,
-                                referencedTable: $CaveTripPointsReferences
-                                    ._caveTripIdTable(db),
-                                referencedColumn: $CaveTripPointsReferences
-                                    ._caveTripIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-                    if (cavePlaceId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.cavePlaceId,
-                                referencedTable: $CaveTripPointsReferences
-                                    ._cavePlaceIdTable(db),
-                                referencedColumn: $CaveTripPointsReferences
-                                    ._cavePlaceIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({caveTripUuid = false, cavePlaceUuid = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (caveTripUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveTripUuid,
+                                    referencedTable: $CaveTripPointsReferences
+                                        ._caveTripUuidTable(db),
+                                    referencedColumn: $CaveTripPointsReferences
+                                        ._caveTripUuidTable(db)
+                                        .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (cavePlaceUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cavePlaceUuid,
+                                    referencedTable: $CaveTripPointsReferences
+                                        ._cavePlaceUuidTable(db),
+                                    referencedColumn: $CaveTripPointsReferences
+                                        ._cavePlaceUuidTable(db)
+                                        .uuid,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -14250,23 +14866,25 @@ typedef $CaveTripPointsProcessedTableManager =
       $CaveTripPointsUpdateCompanionBuilder,
       (CaveTripPoint, $CaveTripPointsReferences),
       CaveTripPoint,
-      PrefetchHooks Function({bool caveTripId, bool cavePlaceId})
+      PrefetchHooks Function({bool caveTripUuid, bool cavePlaceUuid})
     >;
 typedef $DocumentationFilesToCaveTripsCreateCompanionBuilder =
     DocumentationFilesToCaveTripsCompanion Function({
-      Value<int> id,
-      required int documentationFileId,
-      required int caveTripId,
+      required Uuid uuid,
+      required Uuid documentationFileUuid,
+      required Uuid caveTripUuid,
       Value<int?> createdAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 typedef $DocumentationFilesToCaveTripsUpdateCompanionBuilder =
     DocumentationFilesToCaveTripsCompanion Function({
-      Value<int> id,
-      Value<int> documentationFileId,
-      Value<int> caveTripId,
+      Value<Uuid> uuid,
+      Value<Uuid> documentationFileUuid,
+      Value<Uuid> caveTripUuid,
       Value<int?> createdAt,
       Value<int?> deletedAt,
+      Value<int> rowid,
     });
 
 final class $DocumentationFilesToCaveTripsReferences
@@ -14282,44 +14900,46 @@ final class $DocumentationFilesToCaveTripsReferences
     super.$_typedResult,
   );
 
-  static DocumentationFiles _documentationFileIdTable(_$AppDatabase db) =>
+  static DocumentationFiles _documentationFileUuidTable(_$AppDatabase db) =>
       db.documentationFiles.createAlias(
         $_aliasNameGenerator(
-          db.documentationFilesToCaveTrips.documentationFileId,
-          db.documentationFiles.id,
+          db.documentationFilesToCaveTrips.documentationFileUuid,
+          db.documentationFiles.uuid,
         ),
       );
 
-  $DocumentationFilesProcessedTableManager get documentationFileId {
-    final $_column = $_itemColumn<int>('documentation_file_id')!;
+  $DocumentationFilesProcessedTableManager get documentationFileUuid {
+    final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
 
     final manager = $DocumentationFilesTableManager(
       $_db,
       $_db.documentationFiles,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_documentationFileIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _documentationFileUuidTable($_db),
+    );
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
 
-  static CaveTrips _caveTripIdTable(_$AppDatabase db) =>
+  static CaveTrips _caveTripUuidTable(_$AppDatabase db) =>
       db.caveTrips.createAlias(
         $_aliasNameGenerator(
-          db.documentationFilesToCaveTrips.caveTripId,
-          db.caveTrips.id,
+          db.documentationFilesToCaveTrips.caveTripUuid,
+          db.caveTrips.uuid,
         ),
       );
 
-  $CaveTripsProcessedTableManager get caveTripId {
-    final $_column = $_itemColumn<int>('cave_trip_id')!;
+  $CaveTripsProcessedTableManager get caveTripUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_trip_uuid')!;
 
     final manager = $CaveTripsTableManager(
       $_db,
       $_db.caveTrips,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_caveTripIdTable($_db));
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveTripUuidTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -14336,10 +14956,11 @@ class $DocumentationFilesToCaveTripsFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
@@ -14351,12 +14972,12 @@ class $DocumentationFilesToCaveTripsFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $DocumentationFilesFilterComposer get documentationFileId {
+  $DocumentationFilesFilterComposer get documentationFileUuid {
     final $DocumentationFilesFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.documentationFileId,
+      getCurrentColumn: (t) => t.documentationFileUuid,
       referencedTable: $db.documentationFiles,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14374,12 +14995,12 @@ class $DocumentationFilesToCaveTripsFilterComposer
     return composer;
   }
 
-  $CaveTripsFilterComposer get caveTripId {
+  $CaveTripsFilterComposer get caveTripUuid {
     final $CaveTripsFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveTripId,
+      getCurrentColumn: (t) => t.caveTripUuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14407,8 +15028,8 @@ class $DocumentationFilesToCaveTripsOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14422,12 +15043,12 @@ class $DocumentationFilesToCaveTripsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $DocumentationFilesOrderingComposer get documentationFileId {
+  $DocumentationFilesOrderingComposer get documentationFileUuid {
     final $DocumentationFilesOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.documentationFileId,
+      getCurrentColumn: (t) => t.documentationFileUuid,
       referencedTable: $db.documentationFiles,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14445,12 +15066,12 @@ class $DocumentationFilesToCaveTripsOrderingComposer
     return composer;
   }
 
-  $CaveTripsOrderingComposer get caveTripId {
+  $CaveTripsOrderingComposer get caveTripUuid {
     final $CaveTripsOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveTripId,
+      getCurrentColumn: (t) => t.caveTripUuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14478,8 +15099,8 @@ class $DocumentationFilesToCaveTripsAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -14487,12 +15108,12 @@ class $DocumentationFilesToCaveTripsAnnotationComposer
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  $DocumentationFilesAnnotationComposer get documentationFileId {
+  $DocumentationFilesAnnotationComposer get documentationFileUuid {
     final $DocumentationFilesAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.documentationFileId,
+      getCurrentColumn: (t) => t.documentationFileUuid,
       referencedTable: $db.documentationFiles,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14510,12 +15131,12 @@ class $DocumentationFilesToCaveTripsAnnotationComposer
     return composer;
   }
 
-  $CaveTripsAnnotationComposer get caveTripId {
+  $CaveTripsAnnotationComposer get caveTripUuid {
     final $CaveTripsAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.caveTripId,
+      getCurrentColumn: (t) => t.caveTripUuid,
       referencedTable: $db.caveTrips,
-      getReferencedColumn: (t) => t.id,
+      getReferencedColumn: (t) => t.uuid,
       builder:
           (
             joinBuilder, {
@@ -14550,7 +15171,10 @@ class $DocumentationFilesToCaveTripsTableManager
             $DocumentationFilesToCaveTripsReferences,
           ),
           DocumentationFilesToCaveTrip,
-          PrefetchHooks Function({bool documentationFileId, bool caveTripId})
+          PrefetchHooks Function({
+            bool documentationFileUuid,
+            bool caveTripUuid,
+          })
         > {
   $DocumentationFilesToCaveTripsTableManager(
     _$AppDatabase db,
@@ -14576,31 +15200,35 @@ class $DocumentationFilesToCaveTripsTableManager
               ),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<int> documentationFileId = const Value.absent(),
-                Value<int> caveTripId = const Value.absent(),
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> documentationFileUuid = const Value.absent(),
+                Value<Uuid> caveTripUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => DocumentationFilesToCaveTripsCompanion(
-                id: id,
-                documentationFileId: documentationFileId,
-                caveTripId: caveTripId,
+                uuid: uuid,
+                documentationFileUuid: documentationFileUuid,
+                caveTripUuid: caveTripUuid,
                 createdAt: createdAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required int documentationFileId,
-                required int caveTripId,
+                required Uuid uuid,
+                required Uuid documentationFileUuid,
+                required Uuid caveTripUuid,
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
               }) => DocumentationFilesToCaveTripsCompanion.insert(
-                id: id,
-                documentationFileId: documentationFileId,
-                caveTripId: caveTripId,
+                uuid: uuid,
+                documentationFileUuid: documentationFileUuid,
+                caveTripUuid: caveTripUuid,
                 createdAt: createdAt,
                 deletedAt: deletedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -14611,7 +15239,7 @@ class $DocumentationFilesToCaveTripsTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({documentationFileId = false, caveTripId = false}) {
+              ({documentationFileUuid = false, caveTripUuid = false}) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [],
@@ -14631,33 +15259,33 @@ class $DocumentationFilesToCaveTripsTableManager
                           dynamic
                         >
                       >(state) {
-                        if (documentationFileId) {
+                        if (documentationFileUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.documentationFileId,
+                                    currentColumn: table.documentationFileUuid,
                                     referencedTable:
                                         $DocumentationFilesToCaveTripsReferences
-                                            ._documentationFileIdTable(db),
+                                            ._documentationFileUuidTable(db),
                                     referencedColumn:
                                         $DocumentationFilesToCaveTripsReferences
-                                            ._documentationFileIdTable(db)
-                                            .id,
+                                            ._documentationFileUuidTable(db)
+                                            .uuid,
                                   )
                                   as T;
                         }
-                        if (caveTripId) {
+                        if (caveTripUuid) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.caveTripId,
+                                    currentColumn: table.caveTripUuid,
                                     referencedTable:
                                         $DocumentationFilesToCaveTripsReferences
-                                            ._caveTripIdTable(db),
+                                            ._caveTripUuidTable(db),
                                     referencedColumn:
                                         $DocumentationFilesToCaveTripsReferences
-                                            ._caveTripIdTable(db)
-                                            .id,
+                                            ._caveTripUuidTable(db)
+                                            .uuid,
                                   )
                                   as T;
                         }
@@ -14685,7 +15313,269 @@ typedef $DocumentationFilesToCaveTripsProcessedTableManager =
       $DocumentationFilesToCaveTripsUpdateCompanionBuilder,
       (DocumentationFilesToCaveTrip, $DocumentationFilesToCaveTripsReferences),
       DocumentationFilesToCaveTrip,
-      PrefetchHooks Function({bool documentationFileId, bool caveTripId})
+      PrefetchHooks Function({bool documentationFileUuid, bool caveTripUuid})
+    >;
+typedef $TripReportTemplatesCreateCompanionBuilder =
+    TripReportTemplatesCompanion Function({
+      required Uuid uuid,
+      required String title,
+      required String fileName,
+      required int fileSize,
+      required String format,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $TripReportTemplatesUpdateCompanionBuilder =
+    TripReportTemplatesCompanion Function({
+      Value<Uuid> uuid,
+      Value<String> title,
+      Value<String> fileName,
+      Value<int> fileSize,
+      Value<String> format,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $TripReportTemplatesFilterComposer
+    extends Composer<_$AppDatabase, TripReportTemplates> {
+  $TripReportTemplatesFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileName => $composableBuilder(
+    column: $table.fileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $TripReportTemplatesOrderingComposer
+    extends Composer<_$AppDatabase, TripReportTemplates> {
+  $TripReportTemplatesOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fileName => $composableBuilder(
+    column: $table.fileName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $TripReportTemplatesAnnotationComposer
+    extends Composer<_$AppDatabase, TripReportTemplates> {
+  $TripReportTemplatesAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get fileName =>
+      $composableBuilder(column: $table.fileName, builder: (column) => column);
+
+  GeneratedColumn<int> get fileSize =>
+      $composableBuilder(column: $table.fileSize, builder: (column) => column);
+
+  GeneratedColumn<String> get format =>
+      $composableBuilder(column: $table.format, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $TripReportTemplatesTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          TripReportTemplates,
+          TripReportTemplate,
+          $TripReportTemplatesFilterComposer,
+          $TripReportTemplatesOrderingComposer,
+          $TripReportTemplatesAnnotationComposer,
+          $TripReportTemplatesCreateCompanionBuilder,
+          $TripReportTemplatesUpdateCompanionBuilder,
+          (
+            TripReportTemplate,
+            BaseReferences<
+              _$AppDatabase,
+              TripReportTemplates,
+              TripReportTemplate
+            >,
+          ),
+          TripReportTemplate,
+          PrefetchHooks Function()
+        > {
+  $TripReportTemplatesTableManager(_$AppDatabase db, TripReportTemplates table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $TripReportTemplatesFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $TripReportTemplatesOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $TripReportTemplatesAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<Uuid> uuid = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> fileName = const Value.absent(),
+                Value<int> fileSize = const Value.absent(),
+                Value<String> format = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TripReportTemplatesCompanion(
+                uuid: uuid,
+                title: title,
+                fileName: fileName,
+                fileSize: fileSize,
+                format: format,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uuid uuid,
+                required String title,
+                required String fileName,
+                required int fileSize,
+                required String format,
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TripReportTemplatesCompanion.insert(
+                uuid: uuid,
+                title: title,
+                fileName: fileName,
+                fileSize: fileSize,
+                format: format,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $TripReportTemplatesProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      TripReportTemplates,
+      TripReportTemplate,
+      $TripReportTemplatesFilterComposer,
+      $TripReportTemplatesOrderingComposer,
+      $TripReportTemplatesAnnotationComposer,
+      $TripReportTemplatesCreateCompanionBuilder,
+      $TripReportTemplatesUpdateCompanionBuilder,
+      (
+        TripReportTemplate,
+        BaseReferences<_$AppDatabase, TripReportTemplates, TripReportTemplate>,
+      ),
+      TripReportTemplate,
+      PrefetchHooks Function()
     >;
 
 class $AppDatabaseManager {
@@ -14730,4 +15620,6 @@ class $AppDatabaseManager {
         _db,
         _db.documentationFilesToCaveTrips,
       );
+  $TripReportTemplatesTableManager get tripReportTemplates =>
+      $TripReportTemplatesTableManager(_db, _db.tripReportTemplates);
 }
