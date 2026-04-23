@@ -46,22 +46,28 @@ void main() {
   });
 
   group('filterCavePlaces', () {
-    CavePlace mk(int id, String title,
-        {int? qr, int? areaId}) =>
+    final caveUuid = Uuid.v7();
+    final areaUuid10 = Uuid.v7();
+    final areaUuid20 = Uuid.v7();
+    CavePlace mk(Uuid id, String title,
+        {int? qr, Uuid? areaId}) =>
         CavePlace(
-          id: id,
+          uuid: id,
           title: title,
-          caveId: 1,
+          caveUuid: caveUuid,
           placeQrCodeIdentifier: qr,
-          caveAreaId: areaId,
+          caveAreaUuid: areaId,
         );
 
+    final u1 = Uuid.v7();
+    final u2 = Uuid.v7();
+    final u3 = Uuid.v7();
     final places = [
-      mk(1, 'Entrance', qr: 1001, areaId: 10),
-      mk(2, 'Sump Room', qr: 2002, areaId: 20),
-      mk(3, 'Crystal Hall', qr: 3003),
+      mk(u1, 'Entrance', qr: 1001, areaId: areaUuid10),
+      mk(u2, 'Sump Room', qr: 2002, areaId: areaUuid20),
+      mk(u3, 'Crystal Hall', qr: 3003),
     ];
-    final areaTitles = {10: 'Main Gallery', 20: 'Deep Section'};
+    final areaTitles = {areaUuid10: 'Main Gallery', areaUuid20: 'Deep Section'};
 
     test('empty query returns a copy of all', () {
       final r = filterCavePlaces(places, '', areaTitles);
@@ -70,18 +76,18 @@ void main() {
     });
 
     test('filters by title (case-insensitive)', () {
-      expect(filterCavePlaces(places, 'sump', areaTitles).map((p) => p.id),
-          [2]);
+      expect(filterCavePlaces(places, 'sump', areaTitles).map((p) => p.uuid),
+          [u2]);
     });
 
     test('filters by qr code substring', () {
       expect(
-          filterCavePlaces(places, '2002', areaTitles).map((p) => p.id), [2]);
+          filterCavePlaces(places, '2002', areaTitles).map((p) => p.uuid), [u2]);
     });
 
     test('filters by area title', () {
-      expect(filterCavePlaces(places, 'deep', areaTitles).map((p) => p.id),
-          [2]);
+      expect(filterCavePlaces(places, 'deep', areaTitles).map((p) => p.uuid),
+          [u2]);
     });
 
     test('whitespace-only query returns all', () {
