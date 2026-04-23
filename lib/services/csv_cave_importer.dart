@@ -113,13 +113,13 @@ class CSVCaveImporter {
 
     final caves = await _database.select(_database.caves).get();
     final surfaceAreas = await _database.select(_database.surfaceAreas).get();
-    final surfaceAreaMap = {for (var s in surfaceAreas) s.id: s.title};
+    final surfaceAreaMap = {for (var s in surfaceAreas) s.uuid: s.title};
 
     // Build lookup: "title.lower|surfaceAreaTitle.lower" -> exists
     final caveSet = <String>{};
     for (var c in caves) {
-      final saTitle = c.surfaceAreaId != null
-          ? surfaceAreaMap[c.surfaceAreaId]?.toLowerCase()
+      final saTitle = c.surfaceAreaUuid != null
+          ? surfaceAreaMap[c.surfaceAreaUuid]?.toLowerCase()
           : null;
       final key = '${c.title.toLowerCase()}|${saTitle ?? ''}';
       caveSet.add(key);
@@ -151,45 +151,49 @@ class CSVCaveImporter {
       int skippedDuplicates = 0;
 
       // Cache existing data
-      final surfaceAreaCache = <String, int>{}; // title.lower -> id
+      final surfaceAreaCache = <String, Uuid>{}; // title.lower -> uuid
       final existingSAs = await _database.select(_database.surfaceAreas).get();
       for (var s in existingSAs) {
-        surfaceAreaCache[s.title.toLowerCase()] = s.id;
+        surfaceAreaCache[s.title.toLowerCase()] = s.uuid;
       }
 
-      final caveCache = <String, int>{}; // "title.lower|saId" -> id
+      final caveCache = <String, Uuid>{}; // "title.lower|saUuid" -> uuid
       final existingCaves = await _database.select(_database.caves).get();
       for (var c in existingCaves) {
-        final key = '${c.title.toLowerCase()}|${c.surfaceAreaId ?? ''}';
-        caveCache[key] = c.id;
+        final key = '${c.title.toLowerCase()}|${c.surfaceAreaUuid ?? ''}';
+        caveCache[key] = c.uuid;
       }
 
       for (final row in rows) {
         if (row.caveName == null || row.caveName!.isEmpty) continue;
 
         // Resolve surface area
-        int? surfaceAreaId;
+        Uuid? surfaceAreaUuid;
         if (row.surfaceArea != null && row.surfaceArea!.isNotEmpty) {
           final saKey = row.surfaceArea!.toLowerCase();
           if (surfaceAreaCache.containsKey(saKey)) {
-            surfaceAreaId = surfaceAreaCache[saKey]!;
+            surfaceAreaUuid = surfaceAreaCache[saKey]!;
           } else {
-            final newId = await _database.into(_database.surfaceAreas).insert(
-              SurfaceAreasCompanion(title: Value(row.surfaceArea!)),
-            );
-            surfaceAreaCache[saKey] = newId;
-            surfaceAreaId = newId;
+            final newUuid = Uuid.v7();
+            await _database.into(_database.surfaceAreas).insert(
+                  SurfaceAreasCompanion.insert(
+                    uuid: newUuid,
+                    title: row.surfaceArea!,
+                  ),
+                );
+            surfaceAreaCache[saKey] = newUuid;
+            surfaceAreaUuid = newUuid;
             surfaceAreasCreated++;
           }
         }
 
-        // Check if cave already exists (title + surface_area_id is unique)
-        final caveKey = '${row.caveName!.toLowerCase()}|${surfaceAreaId ?? ''}';
+        // Check if cave already exists (title + surface_area_uuid is unique)
+        final caveKey = '${row.caveName!.toLowerCase()}|${surfaceAreaUuid ?? ''}';
         if (caveCache.containsKey(caveKey)) {
           // Update description if provided and cave exists
           if (row.description != null && row.description!.isNotEmpty) {
             await (_database.update(_database.caves)
-                  ..where((c) => c.id.equals(caveCache[caveKey]!)))
+                  ..where((c) => c.uuid.equalsValue(caveCache[caveKey]!)))
                 .write(CavesCompanion(description: Value(row.description)));
           }
           skippedDuplicates++;
@@ -197,14 +201,16 @@ class CSVCaveImporter {
         }
 
         // Create new cave
-        final newId = await _database.into(_database.caves).insert(
-          CavesCompanion(
-            title: Value(row.caveName!),
-            description: Value(row.description),
-            surfaceAreaId: Value(surfaceAreaId),
-          ),
-        );
-        caveCache[caveKey] = newId;
+        final newUuid = Uuid.v7();
+        await _database.into(_database.caves).insert(
+              CavesCompanion.insert(
+                uuid: newUuid,
+                title: row.caveName!,
+                description: Value(row.description),
+                surfaceAreaUuid: Value(surfaceAreaUuid),
+              ),
+            );
+        caveCache[caveKey] = newUuid;
         cavesCreated++;
       }
 

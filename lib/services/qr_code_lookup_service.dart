@@ -21,7 +21,7 @@ class QrCodeLookupService {
   /// Parses [rawCode] as an integer QR identifier and returns matching cave places.
   ///
   /// Returns an empty list if [rawCode] is not a valid integer.
-  Future<List<QrLookupResult>> lookup(String rawCode, {int? currentCaveId}) async {
+  Future<List<QrLookupResult>> lookup(String rawCode, {Uuid? currentCaveId}) async {
     final qrCode = int.tryParse(rawCode);
     if (qrCode == null) return [];
 
@@ -30,7 +30,7 @@ class QrCodeLookupService {
       places = await (_db.select(_db.cavePlaces)
             ..where((cp) =>
                 cp.placeQrCodeIdentifier.equals(qrCode) &
-                cp.caveId.equals(currentCaveId)))
+                cp.caveUuid.equalsValue(currentCaveId)))
           .get();
     } else {
       places = await (_db.select(_db.cavePlaces)
@@ -41,16 +41,16 @@ class QrCodeLookupService {
     if (places.isEmpty) return [];
 
     // Fetch cave titles for all matching places
-    final caveIds = places.map((p) => p.caveId).toSet();
+    final caveIds = places.map((p) => p.caveUuid).toSet();
     final caves = await (_db.select(_db.caves)
-          ..where((c) => c.id.isIn(caveIds)))
+          ..where((c) => c.uuid.isInValues(caveIds)))
         .get();
-    final caveTitles = {for (final c in caves) c.id: c.title};
+    final caveTitles = {for (final c in caves) c.uuid: c.title};
 
     return places
         .map((p) => QrLookupResult(
               cavePlace: p,
-              caveTitle: caveTitles[p.caveId] ?? '',
+              caveTitle: caveTitles[p.caveUuid] ?? '',
             ))
         .toList();
   }

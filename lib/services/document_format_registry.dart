@@ -59,9 +59,9 @@ class DocumentFormatHandler {
   /// new-file creation, and an optional [DocumentationFile] for editing an
   /// existing record. Returns a [Widget] that pops with `true` on success.
   final Widget Function({
-    int? cavePlaceId,
-    int? caveId,
-    int? caveAreaId,
+    Uuid? cavePlaceUuid,
+    Uuid? caveUuid,
+    Uuid? caveAreaUuid,
     DocumentationFile? existingDoc,
   })? buildEditor;
 
@@ -81,23 +81,23 @@ class DocumentFormatHandler {
   bool get hasViewer => buildViewer != null;
 
   /// Build an editor widget for a [DocumentationGeofeatureLink], unwrapping
-  /// the (caveId / cavePlaceId / caveAreaId) fields from the link.
+  /// the (caveUuid / cavePlaceUuid / caveAreaUuid) fields from the link.
   /// Returns `null` when no editor is registered or [link] is null.
   Widget? buildEditorForLink({
     DocumentationGeofeatureLink? link,
     DocumentationFile? existingDoc,
   }) {
     if (buildEditor == null) return null;
-    final cavePlaceId =
-        link?.type == GeofeatureType.cavePlace ? link!.geofeatureId : null;
-    final caveId =
-        link?.type == GeofeatureType.cave ? link!.geofeatureId : null;
-    final caveAreaId =
-        link?.type == GeofeatureType.caveArea ? link!.geofeatureId : null;
+    final cavePlaceUuid =
+        link?.type == GeofeatureType.cavePlace ? link!.geofeatureUuid : null;
+    final caveUuid =
+        link?.type == GeofeatureType.cave ? link!.geofeatureUuid : null;
+    final caveAreaUuid =
+        link?.type == GeofeatureType.caveArea ? link!.geofeatureUuid : null;
     return buildEditor!(
-      cavePlaceId: cavePlaceId,
-      caveId: caveId,
-      caveAreaId: caveAreaId,
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      caveAreaUuid: caveAreaUuid,
       existingDoc: existingDoc,
     );
   }
@@ -289,11 +289,11 @@ void registerBuiltInDocumentFormats() {
     label: 'Text document',
     icon: Icons.text_snippet,
     extensions: {'txt', 'md', 'csv', 'rtf'},
-    buildEditor: ({cavePlaceId, caveId, caveAreaId, existingDoc}) =>
+    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
         TextDocumentEditorPage(
-      cavePlaceId: cavePlaceId,
-      caveId: caveId,
-      caveAreaId: caveAreaId,
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      caveAreaUuid: caveAreaUuid,
       existingDoc: existingDoc,
     ),
     buildViewer: ({required file, required doc}) =>
@@ -307,11 +307,11 @@ void registerBuiltInDocumentFormats() {
     label: 'Image',
     icon: Icons.image,
     extensions: {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'heic'},
-    buildEditor: ({cavePlaceId, caveId, caveAreaId, existingDoc}) =>
+    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
         ImageEditorPage(
-      cavePlaceId: cavePlaceId,
-      caveId: caveId,
-      caveAreaId: caveAreaId,
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      caveAreaUuid: caveAreaUuid,
       existingDoc: existingDoc,
     ),
     buildViewer: ({required file, required doc}) =>
@@ -325,11 +325,11 @@ void registerBuiltInDocumentFormats() {
     label: 'Take photo',
     icon: Icons.camera_alt,
     extensions: {},  // no file-extension mapping; creation-only
-    buildEditor: ({cavePlaceId, caveId, caveAreaId, existingDoc}) =>
+    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
         CameraCapturePage(
-      cavePlaceId: cavePlaceId,
-      caveId: caveId,
-      caveAreaId: caveAreaId,
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      caveAreaUuid: caveAreaUuid,
     ),
   ));
 
@@ -339,11 +339,11 @@ void registerBuiltInDocumentFormats() {
     label: 'Rich text',
     icon: Icons.text_format,
     extensions: {'qldoc'},
-    buildEditor: ({cavePlaceId, caveId, caveAreaId, existingDoc}) =>
+    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
         RichTextEditorPage(
-      cavePlaceId: cavePlaceId,
-      caveId: caveId,
-      caveAreaId: caveAreaId,
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      caveAreaUuid: caveAreaUuid,
       existingDoc: existingDoc,
     ),
     buildViewer: ({required file, required doc}) =>
@@ -368,11 +368,11 @@ void registerBuiltInDocumentFormats() {
     label: 'Audio',
     icon: Icons.audiotrack,
     extensions: {'mp3', 'wav', 'ogg', 'm4a', 'flac'},
-    buildEditor: ({cavePlaceId, caveId, caveAreaId, existingDoc}) =>
+    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
         SoundRecorderPage(
-      cavePlaceId: cavePlaceId,
-      caveId: caveId,
-      caveAreaId: caveAreaId,
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      caveAreaUuid: caveAreaUuid,
       existingDoc: existingDoc,
     ),
     buildViewer: ({required file, required doc}) =>

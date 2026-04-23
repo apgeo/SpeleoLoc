@@ -68,8 +68,8 @@ final cavesStreamProvider = StreamProvider<List<Cave>>((ref) {
 
 /// Live stream of cave places filtered by cave id.
 final cavePlacesStreamProvider =
-    StreamProvider.family<List<CavePlace>, int>((ref, caveId) {
-  return ref.watch(cavePlaceRepositoryProvider).watchCavePlaces(caveId);
+    StreamProvider.family<List<CavePlace>, Uuid>((ref, caveUuid) {
+  return ref.watch(cavePlaceRepositoryProvider).watchCavePlaces(caveUuid);
 });
 
 // -----------------------------------------------------------------------------
@@ -87,7 +87,7 @@ final homePageRefreshProvider = ChangeNotifierProvider<ValueNotifier<int>>(
   (ref) => homePageRefreshNotifier,
 );
 
-final activeTripIdProvider = ChangeNotifierProvider<ValueNotifier<int?>>(
+final activeTripIdProvider = ChangeNotifierProvider<ValueNotifier<Uuid?>>(
   (ref) => ref.watch(caveTripServiceProvider).activeTripIdNotifier,
 );
 

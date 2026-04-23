@@ -169,7 +169,7 @@ class DocumentationFileHelper {
   /// [title] and [description] are the user-facing metadata.
   /// [savedFile] comes from one of the `save*` helpers above.
   /// [parentLink] connects the file to a cave / cave-place / cave-area.
-  static Future<int> insertRecord({
+  static Future<Uuid> insertRecord({
     required String title,
     String? description,
     required SavedFileInfo savedFile,
@@ -181,8 +181,9 @@ class DocumentationFileHelper {
         fileType ?? detectFileType(savedFile.relativePath);
 
     AppLogger.of('DocumentationFileHelper').fine(
-        'Inserting record: title="$title", file="${savedFile.relativePath}", size=${savedFile.fileSize}, hash=${savedFile.fileHash}, type=$effectiveType, parentLink=${parentLink != null ? 'geofeatureId=${parentLink.geofeatureId}' : 'none'}');
+        'Inserting record: title="$title", file="${savedFile.relativePath}", size=${savedFile.fileSize}, hash=${savedFile.fileHash}, type=$effectiveType, parentLink=${parentLink != null ? 'geofeatureUuid=${parentLink.geofeatureUuid}' : 'none'}');
     final companion = DocumentationFilesCompanion.insert(
+      uuid: Uuid.v7(),
       title: title,
       fileName: savedFile.relativePath,
       fileSize: savedFile.fileSize,
@@ -208,12 +209,13 @@ class DocumentationFileHelper {
   /// Updates an existing documentation-file DB record with new file metadata
   /// and/or title. Used when editing a document in-place.
   static Future<void> updateRecord({
-    required int id,
+    required Uuid id,
     required String title,
     String? description,
     required SavedFileInfo savedFile,
   }) async {
     final companion = DocumentationFilesCompanion(
+      uuid: drift.Value(id),
       title: drift.Value(title),
       description: drift.Value(description),
       fileName: drift.Value(savedFile.relativePath),
@@ -222,7 +224,7 @@ class DocumentationFileHelper {
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     );
 
-    await appDatabase.updateDocumentationFile(id: id, companion: companion);
+    await appDatabase.updateDocumentationFile(uuid: id, companion: companion);
   }
 
   // -----------------------------------------------------------------------

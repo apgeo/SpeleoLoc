@@ -80,7 +80,7 @@ class DeepLinkHandler {
       // Multiple matches — prefer the last open cave
       final lastCaveId = await _getLastOpenCaveId();
       final inLastCave =
-          matches.where((cp) => cp.caveId == lastCaveId).toList();
+          matches.where((cp) => cp.caveUuid == lastCaveId).toList();
       if (inLastCave.isNotEmpty) {
         target = inLastCave.first;
       } else {
@@ -92,7 +92,7 @@ class DeepLinkHandler {
     if (context.mounted) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => MapViewerPage(cavePlaceId: target.id),
+          builder: (_) => MapViewerPage(cavePlaceUuid: target.uuid),
         ),
       );
     }
@@ -109,7 +109,7 @@ class DeepLinkHandler {
   }
 
   /// Save the last opened cave ID to configurations.
-  static Future<void> saveLastOpenCave(int caveId) async {
+  static Future<void> saveLastOpenCave(Uuid caveUuid) async {
     final existing = await (appDatabase.select(appDatabase.configurations)
           ..where((c) => c.title.equals(lastOpenCaveKey)))
         .getSingleOrNull();
@@ -117,13 +117,13 @@ class DeepLinkHandler {
       await appDatabase.into(appDatabase.configurations).insert(
           ConfigurationsCompanion.insert(
               title: lastOpenCaveKey,
-              value: drift.Value(caveId.toString())));
+              value: drift.Value(caveUuid.toString())));
     } else {
       await appDatabase.update(appDatabase.configurations).replace(
           Configuration(
               id: existing.id,
               title: lastOpenCaveKey,
-              value: caveId.toString()));
+              value: caveUuid.toString()));
     }
   }
 

@@ -9,7 +9,7 @@ class CaveTripService {
   CaveTripService._();
   static final CaveTripService instance = CaveTripService._();
 
-  final ValueNotifier<int?> activeTripIdNotifier = ValueNotifier<int?>(null);
+  final ValueNotifier<Uuid?> activeTripIdNotifier = ValueNotifier<Uuid?>(null);
   final ValueNotifier<bool> isPausedNotifier = ValueNotifier<bool>(false);
 
   static final _logTimeFmt = DateFormat('yyyy/MM/dd HH:mm:ss');
@@ -22,26 +22,28 @@ class CaveTripService {
       final row = await (appDatabase.select(appDatabase.configurations)
             ..where((c) => c.title.equals(activeTripConfigKey)))
           .getSingleOrNull();
-      final id = int.tryParse(row?.value ?? '');
-      if (id != null) {
+      final parsed = Uuid.tryParse(row?.value);
+      if (parsed != null) {
         final trip = await appDatabase.getActiveTrip();
-        activeTripIdNotifier.value = (trip?.id == id) ? id : null;
-        if (trip?.id != id) await _clearConfig();
+        activeTripIdNotifier.value = (trip?.uuid == parsed) ? parsed : null;
+        if (trip?.uuid != parsed) await _clearConfig();
       }
     } catch (_) {}
   }
 
-  Future<int> startTrip(int caveId, String title) async {
+  Future<Uuid> startTrip(Uuid caveUuid, String title) async {
     isPausedNotifier.value = false;
-    final tripId = await appDatabase.insertCaveTrip(
-      caveId: caveId,
+    final tripUuid = await appDatabase.insertCaveTrip(
+      caveUuid: caveUuid,
       title: title,
       startedAt: DateTime.now().millisecondsSinceEpoch,
     );
-    await _saveConfig(tripId);
-    activeTripIdNotifier.value = tripId;
-    await _append(_logLine(LocServ.inst.t('trip_log_started', {'title': title})), tripId);
-    return tripId;
+    await _saveConfig(tripUuid);
+    activeTripIdNotifier.value = tripUuid;
+    await _append(
+        _logLine(LocServ.inst.t('trip_log_started', {'title': title})),
+        tripUuid);
+    return tripUuid;
   }
 
   Future<void> stopTrip() async {
@@ -58,32 +60,41 @@ class CaveTripService {
   void pauseTrip() {
     if (activeTripIdNotifier.value == null) return;
     isPausedNotifier.value = true;
-    _append(_logLine(LocServ.inst.t('trip_log_paused')), activeTripIdNotifier.value!);
+    _append(_logLine(LocServ.inst.t('trip_log_paused')),
+        activeTripIdNotifier.value!);
   }
 
   void resumeTrip() {
     if (activeTripIdNotifier.value == null) return;
     isPausedNotifier.value = false;
-    _append(_logLine(LocServ.inst.t('trip_log_resumed')), activeTripIdNotifier.value!);
+    _append(_logLine(LocServ.inst.t('trip_log_resumed')),
+        activeTripIdNotifier.value!);
   }
 
-  Future<void> recordPoint(int cavePlaceId, {String? placeTitle}) async {
+  Future<void> recordPoint(Uuid cavePlaceUuid, {String? placeTitle}) async {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
-      await appDatabase.insertTripPoint(tripId: id, cavePlaceId: cavePlaceId);
-      final label = placeTitle != null ? '"$placeTitle"' : 'place #$cavePlaceId';
-      await _append(_logLine(LocServ.inst.t('trip_log_qr_scanned', {'label': label})), id);
+      await appDatabase.insertTripPoint(
+          tripUuid: id, cavePlaceUuid: cavePlaceUuid);
+      final label =
+          placeTitle != null ? '"$placeTitle"' : 'place $cavePlaceUuid';
+      await _append(
+          _logLine(LocServ.inst.t('trip_log_qr_scanned', {'label': label})),
+          id);
     } catch (_) {}
   }
 
-  Future<void> linkDocument(int docId, {String? documentTitle, String? textContent}) async {
+  Future<void> linkDocument(Uuid docUuid,
+      {String? documentTitle, String? textContent}) async {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
-      await appDatabase.linkDocumentToTrip(docId, id);
-      final label = documentTitle != null ? '"$documentTitle"' : 'doc #$docId';
-      final sb = StringBuffer(_logLine(LocServ.inst.t('trip_log_document_added', {'label': label})));
+      await appDatabase.linkDocumentToTrip(docUuid, id);
+      final label =
+          documentTitle != null ? '"$documentTitle"' : 'doc $docUuid';
+      final sb = StringBuffer(_logLine(
+          LocServ.inst.t('trip_log_document_added', {'label': label})));
       if (textContent != null && textContent.trim().isNotEmpty) {
         sb.write('\n');
         for (final line in textContent.split('\n')) {
@@ -96,25 +107,25 @@ class CaveTripService {
 
   Future<CaveTrip?> getActiveTrip() => appDatabase.getActiveTrip();
 
-  Future<int?> getActiveTripCaveId() async {
+  Future<Uuid?> getActiveTripCaveId() async {
     final trip = await getActiveTrip();
-    return trip?.caveId;
+    return trip?.caveUuid;
   }
 
-  Future<void> _append(String line, int tripId) async {
+  Future<void> _append(String line, Uuid tripUuid) async {
     try {
-      await appDatabase.appendToTripLog(tripId, line);
+      await appDatabase.appendToTripLog(tripUuid, line);
     } catch (_) {}
   }
 
-  Future<void> _saveConfig(int tripId) async {
+  Future<void> _saveConfig(Uuid tripUuid) async {
     await appDatabase.into(appDatabase.configurations).insertOnConflictUpdate(
-      ConfigurationsCompanion.insert(
-        title: activeTripConfigKey,
-        value: Value(tripId.toString()),
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
-      ),
-    );
+          ConfigurationsCompanion.insert(
+            title: activeTripConfigKey,
+            value: Value(tripUuid.toString()),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
   }
 
   Future<void> _clearConfig() async {
@@ -123,15 +134,8 @@ class CaveTripService {
         .go();
   }
 
-  /// Regex to match a trailing ` [N]` suffix.
   static final _suffixRe = RegExp(r'\s+\[\d+\]$');
 
-  /// Returns a unique trip title given [proposed] and [existingTitles].
-  ///
-  /// If [proposed] is not in [existingTitles], it is returned as-is.
-  /// Otherwise, strips any existing ` [N]` suffix from [proposed] to get a
-  /// base title, then appends ` [2]`, ` [3]`, … until a title is found that
-  /// is not in [existingTitles].
   static String uniqueTripTitle(String proposed, List<String> existingTitles) {
     final titles = existingTitles.toSet();
     if (!titles.contains(proposed)) return proposed;

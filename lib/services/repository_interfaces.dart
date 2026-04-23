@@ -1,64 +1,62 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/uuid.dart';
 
 /// Abstract contract for the cave repository.
-///
-/// Consumers (screens, services, providers) should depend on this interface
-/// rather than the concrete Drift implementation — enables fakes in tests.
 abstract class ICaveRepository {
   Future<List<Cave>> getCaves();
   Stream<List<Cave>> watchCaves();
-  Future<int> addCave(
+  Future<Uuid> addCave(
     String title, {
-    int? surfaceAreaId,
+    Uuid? surfaceAreaUuid,
     String? description,
   });
   Future<void> updateCave(
-    int id,
+    Uuid uuid,
     String title, {
-    int? surfaceAreaId,
+    Uuid? surfaceAreaUuid,
     String? description,
   });
-  Future<void> deleteCave(int id);
-  Future<List<CaveArea>> getCaveAreas(int caveId);
+  Future<void> deleteCave(Uuid uuid);
+  Future<List<CaveArea>> getCaveAreas(Uuid caveUuid);
 }
 
 /// Abstract contract for the cave-place repository.
 abstract class ICavePlaceRepository {
-  Future<List<CavePlace>> getCavePlaces(int caveId);
-  Stream<List<CavePlace>> watchCavePlaces(int caveId);
-  Future<void> addCavePlace(int caveId, String title);
-  Future<void> deleteCavePlace(int id);
-  Future<CavePlace?> findById(int id);
-  Future<CavePlace?> findCavePlaceByQrCode(int qrCode, int caveId);
+  Future<List<CavePlace>> getCavePlaces(Uuid caveUuid);
+  Stream<List<CavePlace>> watchCavePlaces(Uuid caveUuid);
+  Future<void> addCavePlace(Uuid caveUuid, String title);
+  Future<void> deleteCavePlace(Uuid uuid);
+  Future<CavePlace?> findById(Uuid uuid);
+  Future<CavePlace?> findCavePlaceByQrCode(int qrCode, Uuid caveUuid);
 }
 
 /// Abstract contract for the raster-map repository.
 abstract class IRasterMapRepository {
-  Future<List<RasterMap>> getRasterMaps(int caveId);
+  Future<List<RasterMap>> getRasterMaps(Uuid caveUuid);
   Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(
-    int caveId,
-    int rasterMapId,
+    Uuid caveUuid,
+    Uuid rasterMapUuid,
   );
   Future<void> addRasterMap(RasterMapsCompanion companion);
   Future<void> updateRasterMap(RasterMap rasterMap);
-  Future<void> deleteRasterMap(int id);
+  Future<void> deleteRasterMap(Uuid uuid);
 }
 
 /// Abstract contract for the cave-place ↔ raster-map definition repository.
 abstract class IDefinitionRepository {
   Future<CavePlaceToRasterMapDefinition?> findDefinition(
-    int cavePlaceId,
-    int rasterMapId,
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
   );
   Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(
-    int caveId,
-    int rasterMapId,
+    Uuid caveUuid,
+    Uuid rasterMapUuid,
   );
   Future<CavePlaceToRasterMapDefinition> saveDefinition(
-    int cavePlaceId,
-    int rasterMapId,
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
     double imageX,
     double imageY,
   );
-  Future<bool> deleteDefinition(int cavePlaceId, int rasterMapId);
+  Future<bool> deleteDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid);
 }

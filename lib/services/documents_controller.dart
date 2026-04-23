@@ -33,7 +33,7 @@ class DocumentsSource {
   GeofeatureType? get type => geofeatureLink?.type;
 
   /// Convenience — the geofeature id (null when showing all documents).
-  int? get geofeatureId => geofeatureLink?.geofeatureId;
+  Uuid? get geofeatureUuid => geofeatureLink?.geofeatureUuid;
 
   /// Whether this source represents all documents (no geofeature filter).
   bool get isAll => geofeatureLink == null;
@@ -48,14 +48,14 @@ class DocumentsSource {
 
   /// Documents belonging to a **cave place**.
   factory DocumentsSource.cavePlace({
-    required int cavePlaceId,
+    required Uuid cavePlaceUuid,
     required String cavePlaceTitle,
     String? caveTitle,
   }) {
     return DocumentsSource(
       geofeatureLink: DocumentationGeofeatureLink(
         type: GeofeatureType.cavePlace,
-        geofeatureId: cavePlaceId,
+        geofeatureUuid: cavePlaceUuid,
       ),
       geofeatureTitle: cavePlaceTitle,
       parentTitle: caveTitle,
@@ -64,13 +64,13 @@ class DocumentsSource {
 
   /// Documents belonging to a **cave**.
   factory DocumentsSource.cave({
-    required int caveId,
+    required Uuid caveUuid,
     required String caveTitle,
   }) {
     return DocumentsSource(
       geofeatureLink: DocumentationGeofeatureLink(
         type: GeofeatureType.cave,
-        geofeatureId: caveId,
+        geofeatureUuid: caveUuid,
       ),
       geofeatureTitle: caveTitle,
     );
@@ -78,14 +78,14 @@ class DocumentsSource {
 
   /// Documents belonging to a **cave area**.
   factory DocumentsSource.caveArea({
-    required int caveAreaId,
+    required Uuid caveAreaUuid,
     required String caveAreaTitle,
     String? caveTitle,
   }) {
     return DocumentsSource(
       geofeatureLink: DocumentationGeofeatureLink(
         type: GeofeatureType.caveArea,
-        geofeatureId: caveAreaId,
+        geofeatureUuid: caveAreaUuid,
       ),
       geofeatureTitle: caveAreaTitle,
       parentTitle: caveTitle,

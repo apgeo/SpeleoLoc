@@ -5,7 +5,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 /// Configuration for CSV cave place import.
 class CSVCavePlacesImportConfig {
   /// If non-null, import is in single-cave mode for this cave id.
-  final int? caveId;
+  final Uuid? caveUuid;
 
   /// Column index for the cave name field, or null to skip.
   final int? caveNameColumn;
@@ -22,10 +22,10 @@ class CSVCavePlacesImportConfig {
   /// Maximum number of existing duplicate entries to preview before import.
   final int maxPreviewDuplicates;
 
-  bool get isMultipleCaveMode => caveId == null;
+  bool get isMultipleCaveMode => caveUuid == null;
 
   CSVCavePlacesImportConfig({
-    this.caveId,
+    this.caveUuid,
     this.caveNameColumn,
     this.cavePlaceNameColumn,
     this.qrCodeColumn,
@@ -162,20 +162,20 @@ class CSVCavePlaceImporter {
       final caveMap = {for (var c in caves) c.title.toLowerCase(): c};
 
       final areas = await _database.select(_database.caveAreas).get();
-      // Map: caveId -> (areaTitle.lowercase -> CaveArea)
-      final areaMap = <int, Map<String, CaveArea>>{};
+      // Map: caveUuid -> (areaTitle.lowercase -> CaveArea)
+      final areaMap = <Uuid, Map<String, CaveArea>>{};
       for (var a in areas) {
-        areaMap.putIfAbsent(a.caveId, () => {});
-        areaMap[a.caveId]![a.title.toLowerCase()] = a;
+        areaMap.putIfAbsent(a.caveUuid, () => {});
+        areaMap[a.caveUuid]![a.title.toLowerCase()] = a;
       }
 
       final places = await _database.select(_database.cavePlaces).get();
-      // Map: caveId -> (placeTitle.lowercase -> list of CavePlace)
-      final placeMap = <int, Map<String, List<CavePlace>>>{};
+      // Map: caveUuid -> (placeTitle.lowercase -> list of CavePlace)
+      final placeMap = <Uuid, Map<String, List<CavePlace>>>{};
       for (var p in places) {
-        placeMap.putIfAbsent(p.caveId, () => {});
-        placeMap[p.caveId]!.putIfAbsent(p.title.toLowerCase(), () => []);
-        placeMap[p.caveId]![p.title.toLowerCase()]!.add(p);
+        placeMap.putIfAbsent(p.caveUuid, () => {});
+        placeMap[p.caveUuid]!.putIfAbsent(p.title.toLowerCase(), () => []);
+        placeMap[p.caveUuid]![p.title.toLowerCase()]!.add(p);
       }
 
       for (final row in rows) {
@@ -185,14 +185,14 @@ class CSVCavePlaceImporter {
 
         // Check area match if area column is mapped
         if (row.caveArea != null && config.caveAreaColumn != null) {
-          final caveAreas = areaMap[cave.id];
+          final caveAreas = areaMap[cave.uuid];
           if (caveAreas != null && caveAreas.containsKey(row.caveArea!.toLowerCase())) {
             // area exists
           }
         }
 
         // Check place match
-        final cavePlaces = placeMap[cave.id];
+        final cavePlaces = placeMap[cave.uuid];
         if (cavePlaces != null && row.cavePlaceName != null) {
           final matchingPlaces = cavePlaces[row.cavePlaceName!.toLowerCase()];
           if (matchingPlaces != null && matchingPlaces.isNotEmpty) {
@@ -210,7 +210,7 @@ class CSVCavePlaceImporter {
     } else {
       // Single cave mode: match cave place within the specified cave
       final cavePlaces = await (_database.select(_database.cavePlaces)
-            ..where((cp) => cp.caveId.equals(config.caveId!)))
+            ..where((cp) => cp.caveUuid.equalsValue(config.caveUuid!)))
           .get();
       final placeMap = <String, List<CavePlace>>{};
       for (var p in cavePlaces) {
@@ -220,7 +220,7 @@ class CSVCavePlaceImporter {
 
       // Get cave name for display
       final cave = await (_database.select(_database.caves)
-            ..where((c) => c.id.equals(config.caveId!)))
+            ..where((c) => c.uuid.equalsValue(config.caveUuid!)))
           .getSingleOrNull();
       final caveName = cave?.title ?? '';
 
@@ -261,7 +261,7 @@ class CSVCavePlaceImporter {
         // Determine the cave name for display
         String caveName = '';
         final cave = await (_database.select(_database.caves)
-              ..where((c) => c.id.equals(existing.caveId)))
+              ..where((c) => c.uuid.equalsValue(existing.caveUuid)))
             .getSingleOrNull();
         caveName = cave?.title ?? '';
         conflicts.add(CavePlaceExistingMatch(
@@ -289,60 +289,64 @@ class CSVCavePlaceImporter {
     int qrCodesUpdated = 0;
 
     // Caches to avoid duplicate DB lookups / inserts within one import
-    final caveCache = <String, int>{}; // title.lower -> id
-    final areaCache = <String, int>{}; // "caveId:areaTitle.lower" -> id
+    final caveCache = <String, Uuid>{}; // title.lower -> uuid
+    final areaCache = <String, Uuid>{}; // "caveUuid:areaTitle.lower" -> uuid
 
     // Pre-populate caches from DB
     final existingCaves = await _database.select(_database.caves).get();
     for (var c in existingCaves) {
-      caveCache[c.title.toLowerCase()] = c.id;
+      caveCache[c.title.toLowerCase()] = c.uuid;
     }
     final existingAreas = await _database.select(_database.caveAreas).get();
     for (var a in existingAreas) {
-      areaCache['${a.caveId}:${a.title.toLowerCase()}'] = a.id;
+      areaCache['${a.caveUuid}:${a.title.toLowerCase()}'] = a.uuid;
     }
 
     for (final row in rows) {
       if (row.cavePlaceName == null || row.cavePlaceName!.isEmpty) continue;
 
-      int? targetCaveId = config.caveId;
+      Uuid? targetCaveUuid = config.caveUuid;
 
       // In multiple cave mode, resolve or create the cave
       if (config.isMultipleCaveMode) {
         if (row.caveName == null || row.caveName!.isEmpty) continue;
         final caveKey = row.caveName!.toLowerCase();
         if (caveCache.containsKey(caveKey)) {
-          targetCaveId = caveCache[caveKey]!;
+          targetCaveUuid = caveCache[caveKey]!;
         } else {
           // Create new cave
-          final newId = await _database.into(_database.caves).insert(
-            CavesCompanion(
-              title: Value(row.caveName!),
-            ),
-          );
-          caveCache[caveKey] = newId;
-          targetCaveId = newId;
+          final newUuid = Uuid.v7();
+          await _database.into(_database.caves).insert(
+                CavesCompanion.insert(
+                  uuid: newUuid,
+                  title: row.caveName!,
+                ),
+              );
+          caveCache[caveKey] = newUuid;
+          targetCaveUuid = newUuid;
           cavesCreated++;
         }
       }
 
-      if (targetCaveId == null) continue;
+      if (targetCaveUuid == null) continue;
 
       // Resolve or create cave area if mapped
-      int? targetAreaId;
+      Uuid? targetAreaUuid;
       if (row.caveArea != null && row.caveArea!.isNotEmpty) {
-        final areaKey = '$targetCaveId:${row.caveArea!.toLowerCase()}';
+        final areaKey = '$targetCaveUuid:${row.caveArea!.toLowerCase()}';
         if (areaCache.containsKey(areaKey)) {
-          targetAreaId = areaCache[areaKey]!;
+          targetAreaUuid = areaCache[areaKey]!;
         } else {
-          final newId = await _database.into(_database.caveAreas).insert(
-            CaveAreasCompanion(
-              title: Value(row.caveArea!),
-              caveId: Value(targetCaveId),
-            ),
-          );
-          areaCache[areaKey] = newId;
-          targetAreaId = newId;
+          final newUuid = Uuid.v7();
+          await _database.into(_database.caveAreas).insert(
+                CaveAreasCompanion.insert(
+                  uuid: newUuid,
+                  title: row.caveArea!,
+                  caveUuid: targetCaveUuid,
+                ),
+              );
+          areaCache[areaKey] = newUuid;
+          targetAreaUuid = newUuid;
           caveAreasCreated++;
         }
       }
@@ -350,7 +354,7 @@ class CSVCavePlaceImporter {
       // Check if a cave place with same title already exists in this cave
       final existingPlace = await (_database.select(_database.cavePlaces)
             ..where((cp) =>
-                cp.caveId.equals(targetCaveId!) &
+                cp.caveUuid.equalsValue(targetCaveUuid!) &
                 cp.title.equals(row.cavePlaceName!)))
           .getSingleOrNull();
 
@@ -359,7 +363,7 @@ class CSVCavePlaceImporter {
         if (row.qrCode != null && config.qrCodeColumn != null) {
           if (existingPlace.placeQrCodeIdentifier != row.qrCode && overwriteQr) {
             await (_database.update(_database.cavePlaces)
-                  ..where((cp) => cp.id.equals(existingPlace.id)))
+                  ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
                 .write(CavePlacesCompanion(
               placeQrCodeIdentifier: Value(row.qrCode),
             ));
@@ -367,23 +371,25 @@ class CSVCavePlaceImporter {
           }
         }
         // Update area if mapped and not yet set
-        if (targetAreaId != null && existingPlace.caveAreaId != targetAreaId) {
+        if (targetAreaUuid != null &&
+            existingPlace.caveAreaUuid != targetAreaUuid) {
           await (_database.update(_database.cavePlaces)
-                ..where((cp) => cp.id.equals(existingPlace.id)))
+                ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
               .write(CavePlacesCompanion(
-            caveAreaId: Value(targetAreaId),
+            caveAreaUuid: Value(targetAreaUuid),
           ));
         }
       } else {
         // Create new cave place
         await _database.into(_database.cavePlaces).insert(
-          CavePlacesCompanion(
-            title: Value(row.cavePlaceName!),
-            caveId: Value(targetCaveId),
-            caveAreaId: Value(targetAreaId),
-            placeQrCodeIdentifier: Value(row.qrCode),
-          ),
-        );
+              CavePlacesCompanion.insert(
+                uuid: Uuid.v7(),
+                title: row.cavePlaceName!,
+                caveUuid: targetCaveUuid,
+                caveAreaUuid: Value(targetAreaUuid),
+                placeQrCodeIdentifier: Value(row.qrCode),
+              ),
+            );
         cavePlacesCreated++;
       }
     }

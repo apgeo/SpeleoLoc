@@ -10,9 +10,9 @@ class RasterMapRepository implements IRasterMapRepository {
   RasterMapRepository(this._database);
 
   @override
-  Future<List<RasterMap>> getRasterMaps(int caveId) async {
+  Future<List<RasterMap>> getRasterMaps(Uuid caveUuid) async {
     try {
-      return await (_database.select(_database.rasterMaps)..where((rm) => rm.caveId.equals(caveId))).get();
+      return await (_database.select(_database.rasterMaps)..where((rm) => rm.caveUuid.equalsValue(caveUuid))).get();
     } catch (e, st) {
       _log.severe('Failed to load raster maps', e, st);
       throw DbException('Failed to load raster maps', cause: e, stackTrace: st);
@@ -20,9 +20,9 @@ class RasterMapRepository implements IRasterMapRepository {
   }
 
   @override
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(int caveId, int rasterMapId) async {
+  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(Uuid caveUuid, Uuid rasterMapUuid) async {
     try {
-      return await _database.getCavePlacesWithDefinitionsForRasterMap(caveId, rasterMapId);
+      return await _database.getCavePlacesWithDefinitionsForRasterMap(caveUuid, rasterMapUuid);
     } catch (e, st) {
       _log.severe('Failed to load definitions', e, st);
       throw DbException('Failed to load definitions', cause: e, stackTrace: st);
@@ -50,9 +50,9 @@ class RasterMapRepository implements IRasterMapRepository {
   }
 
   @override
-  Future<void> deleteRasterMap(int id) async {
+  Future<void> deleteRasterMap(Uuid id) async {
     try {
-      await (_database.delete(_database.rasterMaps)..where((rm) => rm.id.equals(id))).go();
+      await (_database.delete(_database.rasterMaps)..where((rm) => rm.uuid.equalsValue(id))).go();
     } catch (e, st) {
       _log.severe('Failed to delete raster map', e, st);
       throw DbException('Failed to delete raster map', cause: e, stackTrace: st);
