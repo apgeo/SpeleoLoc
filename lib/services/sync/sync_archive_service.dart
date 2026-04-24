@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:drift/drift.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
@@ -11,7 +12,11 @@ import 'package:speleoloc/utils/app_logger.dart';
 
 /// Current on-disk sync archive format version. Bump when the layout
 /// changes in a non-backwards-compatible way.
-const int kSyncArchiveVersion = 1;
+///
+/// v2: asset files (documentation_files, raster_maps) are shipped inside
+///     the zip under `assets/<relative path>` mirroring the app's
+///     documents directory layout.
+const int kSyncArchiveVersion = 2;
 
 /// Database schema version this archive format targets. Imports with a
 /// different `schema_version` are refused (rather than silently mis-merging).
@@ -24,6 +29,8 @@ class SyncImportReport {
   final int rowsSkipped; // local copy already newer
   final int deletesApplied;
   final int changeLogMerged;
+  final int filesCopied;
+  final int filesSkipped; // already present locally
   final List<String> warnings;
 
   const SyncImportReport({
@@ -32,6 +39,8 @@ class SyncImportReport {
     required this.rowsSkipped,
     required this.deletesApplied,
     required this.changeLogMerged,
+    required this.filesCopied,
+    required this.filesSkipped,
     required this.warnings,
   });
 
@@ -39,7 +48,8 @@ class SyncImportReport {
   String toString() =>
       'SyncImportReport(inserted=$rowsInserted, updated=$rowsUpdated, '
       'skipped=$rowsSkipped, deletes=$deletesApplied, '
-      'changeLog=$changeLogMerged, warnings=${warnings.length})';
+      'changeLog=$changeLogMerged, filesCopied=$filesCopied, '
+      'filesSkipped=$filesSkipped, warnings=${warnings.length})';
 }
 
 /// Offline archive-based sync across devices.
@@ -54,13 +64,20 @@ class SyncImportReport {
 /// The whole import runs inside [ChangeLogger.runSuspended] so replay does
 /// not double-log into the local `change_log`.
 class SyncArchiveService {
-  SyncArchiveService(this._db, this._logger);
+  SyncArchiveService(
+    this._db,
+    this._logger, {
+    Future<Directory> Function()? assetsBaseDirResolver,
+  }) : _assetsBaseDirResolver =
+            assetsBaseDirResolver ?? getApplicationDocumentsDirectory;
 
   final AppDatabase _db;
   final ChangeLogger _logger;
+  final Future<Directory> Function() _assetsBaseDirResolver;
   final _log = AppLogger.of('SyncArchiveService');
 
   static const _serializer = SyncValueSerializer();
+  static const _assetsPrefix = 'assets/';
 
   // Tables exported (in FK-dependency order). Each entry is a small struct
   // holding dump/restore callbacks so the big ordered list is the single
@@ -162,6 +179,94 @@ class SyncArchiveService {
             _db.cavePlaceToRasterMapDefinitions,
           ),
         ),
+        _SyncTable(
+          name: 'cave_trips',
+          dump: () async => (await _db.select(_db.caveTrips).get())
+              .map((r) => r.toJson(serializer: _serializer))
+              .toList(),
+          upsert: (rows) async => _upsertRows<CaveTrip>(
+            rows,
+            (j) => CaveTrip.fromJson(j, serializer: _serializer),
+            (r) => r.uuid,
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.caveTrips,
+          ),
+        ),
+        _SyncTable(
+          name: 'cave_trip_points',
+          dump: () async => (await _db.select(_db.caveTripPoints).get())
+              .map((r) => r.toJson(serializer: _serializer))
+              .toList(),
+          upsert: (rows) async => _upsertRows<CaveTripPoint>(
+            rows,
+            (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
+            (r) => r.uuid,
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.caveTripPoints,
+          ),
+        ),
+        _SyncTable(
+          name: 'documentation_files',
+          dump: () async => (await _db.select(_db.documentationFiles).get())
+              .map((r) => r.toJson(serializer: _serializer))
+              .toList(),
+          upsert: (rows) async => _upsertRows<DocumentationFile>(
+            rows,
+            (j) => DocumentationFile.fromJson(j, serializer: _serializer),
+            (r) => r.uuid,
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.documentationFiles,
+          ),
+        ),
+        _SyncTable(
+          name: 'documentation_files_to_geofeatures',
+          dump: () async =>
+              (await _db.select(_db.documentationFilesToGeofeatures).get())
+                  .map((r) => r.toJson(serializer: _serializer))
+                  .toList(),
+          upsert: (rows) async => _upsertRows<DocumentationFilesToGeofeature>(
+            rows,
+            (j) => DocumentationFilesToGeofeature.fromJson(
+              j,
+              serializer: _serializer,
+            ),
+            (r) => r.uuid,
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.documentationFilesToGeofeatures,
+          ),
+        ),
+        _SyncTable(
+          name: 'documentation_files_to_cave_trips',
+          dump: () async =>
+              (await _db.select(_db.documentationFilesToCaveTrips).get())
+                  .map((r) => r.toJson(serializer: _serializer))
+                  .toList(),
+          upsert: (rows) async => _upsertRows<DocumentationFilesToCaveTrip>(
+            rows,
+            (j) => DocumentationFilesToCaveTrip.fromJson(
+              j,
+              serializer: _serializer,
+            ),
+            (r) => r.uuid,
+            // Link table has no updated_at; LWW falls back to created_at.
+            (r) => r.createdAt,
+            _db.documentationFilesToCaveTrips,
+          ),
+        ),
+        _SyncTable(
+          name: 'trip_report_templates',
+          dump: () async =>
+              (await _db.select(_db.tripReportTemplates).get())
+                  .map((r) => r.toJson(serializer: _serializer))
+                  .toList(),
+          upsert: (rows) async => _upsertRows<TripReportTemplate>(
+            rows,
+            (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
+            (r) => r.uuid,
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.tripReportTemplates,
+          ),
+        ),
       ];
 
   // ---------------------------------------------------------------------------
@@ -169,7 +274,16 @@ class SyncArchiveService {
   // ---------------------------------------------------------------------------
 
   /// Writes a sync archive to [outputDir] and returns the file.
-  Future<File> exportToZip(String outputDir, {String? filenameHint}) async {
+  ///
+  /// Optionally bundles asset files (documentation files, raster map images)
+  /// under `assets/<relative path>` in the zip, mirroring the app's documents
+  /// directory layout.
+  Future<File> exportToZip(
+    String outputDir, {
+    String? filenameHint,
+    bool includeDocumentationFiles = true,
+    bool includeRasterMaps = true,
+  }) async {
     final archive = Archive();
     final tables = _syncedTables();
 
@@ -190,6 +304,36 @@ class SyncArchiveService {
         .toList();
     archive.addFile(_jsonlFile('change_log_field.jsonl', fieldRows));
 
+    // Asset files: read from the app's documents directory and add them
+    // under `assets/<relative path>`.
+    var assetCount = 0;
+    Directory? baseDir;
+    try {
+      baseDir = await _assetsBaseDirResolver();
+    } catch (e) {
+      _log.warning('assets base dir unavailable, skipping asset files: $e');
+    }
+    if (baseDir != null) {
+      if (includeDocumentationFiles) {
+        final paths = (await _db.customSelect(
+          'SELECT DISTINCT file_name FROM documentation_files '
+          'WHERE deleted_at IS NULL',
+        ).get())
+            .map((r) => r.read<String>('file_name'))
+            .toList();
+        assetCount += await _addAssetsToArchive(archive, baseDir.path, paths);
+      }
+      if (includeRasterMaps) {
+        final paths = (await _db.customSelect(
+          'SELECT DISTINCT file_name FROM raster_maps '
+          'WHERE deleted_at IS NULL',
+        ).get())
+            .map((r) => r.read<String>('file_name'))
+            .toList();
+        assetCount += await _addAssetsToArchive(archive, baseDir.path, paths);
+      }
+    }
+
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final manifest = <String, dynamic>{
       'format': 'speleo_loc_sync',
@@ -197,6 +341,9 @@ class SyncArchiveService {
       'schema_version': kSyncArchiveDbSchemaVersion,
       'exported_at': nowMs,
       'tables': tables.map((t) => t.name).toList(),
+      'includes_documentation_files': includeDocumentationFiles,
+      'includes_raster_maps': includeRasterMaps,
+      'asset_count': assetCount,
     };
     archive.addFile(
       ArchiveFile.string(
@@ -213,7 +360,8 @@ class SyncArchiveService {
     await out.writeAsBytes(encoded, flush: true);
     _log.info('Sync archive exported: ${out.path} '
         '(${encoded.length} bytes, ${tables.length} tables, '
-        '${changeLogRows.length} change-log entries)');
+        '${changeLogRows.length} change-log entries, '
+        '$assetCount asset files)');
     return out;
   }
 
@@ -249,6 +397,8 @@ class SyncArchiveService {
     var skipped = 0;
     var deletesApplied = 0;
     var changeLogMerged = 0;
+    var filesCopied = 0;
+    var filesSkipped = 0;
     final warnings = <String>[];
 
     await _logger.runSuspended(() async {
@@ -321,12 +471,20 @@ class SyncArchiveService {
       });
     });
 
+    // Extract asset files outside the DB transaction (filesystem IO
+    // shouldn't be tied to the transaction's lifetime).
+    final assetResult = await _extractAssets(archive, warnings);
+    filesCopied = assetResult.copied;
+    filesSkipped = assetResult.skipped;
+
     return SyncImportReport(
       rowsInserted: inserted,
       rowsUpdated: updated,
       rowsSkipped: skipped,
       deletesApplied: deletesApplied,
       changeLogMerged: changeLogMerged,
+      filesCopied: filesCopied,
+      filesSkipped: filesSkipped,
       warnings: warnings,
     );
   }
@@ -356,12 +514,30 @@ class SyncArchiveService {
         ),
       ),
       (
+        'documentation_files_to_geofeatures',
+        (u, ts) async =>
+            _deleteIfOlder(_db.documentationFilesToGeofeatures, u, ts),
+      ),
+      (
+        'documentation_files_to_cave_trips',
+        (u, ts) async =>
+            _deleteIfOlder(_db.documentationFilesToCaveTrips, u, ts),
+      ),
+      (
         'cave_trip_points',
         (u, ts) async => _deleteIfOlder(_db.caveTripPoints, u, ts),
       ),
       (
         'cave_trips',
         (u, ts) async => _deleteIfOlder(_db.caveTrips, u, ts),
+      ),
+      (
+        'documentation_files',
+        (u, ts) async => _deleteIfOlder(_db.documentationFiles, u, ts),
+      ),
+      (
+        'trip_report_templates',
+        (u, ts) async => _deleteIfOlder(_db.tripReportTemplates, u, ts),
       ),
       (
         'raster_maps',
@@ -496,6 +672,83 @@ class SyncArchiveService {
     }
     return out;
   }
+
+  // ---------------------------------------------------------------------------
+  //  Asset file helpers
+  // ---------------------------------------------------------------------------
+
+  /// Add [relativePaths] (relative to [baseDir]) into [archive] under the
+  /// `assets/` prefix. Returns the number of files actually added.
+  Future<int> _addAssetsToArchive(
+    Archive archive,
+    String baseDir,
+    List<String> relativePaths,
+  ) async {
+    var added = 0;
+    final seen = <String>{};
+    for (final relPath in relativePaths) {
+      if (relPath.isEmpty) continue;
+      if (!seen.add(relPath)) continue;
+      final file = File('$baseDir${Platform.pathSeparator}$relPath');
+      if (!await file.exists()) {
+        _log.fine('asset missing on disk, skipping: $relPath');
+        continue;
+      }
+      final bytes = await file.readAsBytes();
+      final normalized = relPath.replaceAll('\\', '/');
+      archive.addFile(
+        ArchiveFile('$_assetsPrefix$normalized', bytes.length, bytes),
+      );
+      added++;
+    }
+    return added;
+  }
+
+  /// Walk every `assets/*` entry in [archive] and copy it into the local
+  /// documents directory. Existing local files are preserved (LWW on
+  /// content: assume last export wins only for DB rows; filesystem assets
+  /// are treated as immutable-per-name).
+  Future<_AssetResult> _extractAssets(
+    Archive archive,
+    List<String> warnings,
+  ) async {
+    Directory baseDir;
+    try {
+      baseDir = await _assetsBaseDirResolver();
+    } catch (e) {
+      warnings.add('assets base dir unavailable: $e');
+      return const _AssetResult(copied: 0, skipped: 0);
+    }
+    var copied = 0;
+    var skipped = 0;
+    for (final entry in archive) {
+      if (!entry.isFile) continue;
+      if (!entry.name.startsWith(_assetsPrefix)) continue;
+      final relPath = entry.name
+          .substring(_assetsPrefix.length)
+          .replaceAll('/', Platform.pathSeparator);
+      if (relPath.isEmpty) continue;
+      final dest = File('${baseDir.path}${Platform.pathSeparator}$relPath');
+      try {
+        if (await dest.exists()) {
+          skipped++;
+          continue;
+        }
+        await dest.parent.create(recursive: true);
+        await dest.writeAsBytes(entry.content as List<int>, flush: true);
+        copied++;
+      } catch (e) {
+        warnings.add('copy ${entry.name}: $e');
+      }
+    }
+    return _AssetResult(copied: copied, skipped: skipped);
+  }
+}
+
+class _AssetResult {
+  final int copied;
+  final int skipped;
+  const _AssetResult({required this.copied, required this.skipped});
 }
 
 class _UpsertCounters {

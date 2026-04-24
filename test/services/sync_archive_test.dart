@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -33,8 +35,16 @@ void main() {
     await currentUser.initialize();
     loggerRef = ChangeLogger(db, currentUser);
     final caveRepo = CaveRepository(db, currentUser, loggerRef);
-    final sync = SyncArchiveService(db, loggerRef);
-    return _Harness(db, caveRepo, loggerRef, sync);
+    // Each harness gets its own sandboxed assets directory so tests can
+    // round-trip binary payloads without touching the real documents dir.
+    final assetsDir =
+        await Directory.systemTemp.createTemp('speleoloc_sync_assets_');
+    final sync = SyncArchiveService(
+      db,
+      loggerRef,
+      assetsBaseDirResolver: () async => assetsDir,
+    );
+    return _Harness(db, caveRepo, loggerRef, sync, assetsDir);
   }
 
   test('round-trip carries caves and change-log between devices', () async {
@@ -144,6 +154,53 @@ void main() {
     await a.db.close();
     await b.db.close();
   });
+
+  test('asset files round-trip with documentation_files', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    // Create a documentation_files DB row + a matching asset file on A.
+    final docUuid = Uuid.v7();
+    const relPath = 'documentation/doc1.txt';
+    final payload = utf8.encode('hello cave');
+    final src = File('${a.assetsDir.path}${Platform.pathSeparator}$relPath');
+    await src.parent.create(recursive: true);
+    await src.writeAsBytes(payload);
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await a.db.into(a.db.documentationFiles).insert(
+          DocumentationFilesCompanion.insert(
+            uuid: docUuid,
+            title: 'Doc 1',
+            fileName: relPath,
+            fileSize: payload.length,
+            fileType: 'txt',
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+
+    // Export from A, import into B.
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'assets.zip');
+    final report = await b.sync.importFromZip(zip.path);
+
+    expect(report.filesCopied, 1,
+        reason: 'B had no local copy so the asset should be copied');
+    expect(report.warnings, isEmpty);
+
+    final docOnB = await (b.db.select(b.db.documentationFiles)
+          ..where((d) => d.uuid.equalsValue(docUuid)))
+        .getSingle();
+    expect(docOnB.fileName, relPath);
+
+    final destOnB =
+        File('${b.assetsDir.path}${Platform.pathSeparator}$relPath');
+    expect(await destOnB.exists(), isTrue);
+    expect(await destOnB.readAsBytes(), payload);
+
+    await a.db.close();
+    await b.db.close();
+  });
 }
 
 class _Harness {
@@ -151,5 +208,6 @@ class _Harness {
   final CaveRepository caveRepo;
   final ChangeLogger logger;
   final SyncArchiveService sync;
-  _Harness(this.db, this.caveRepo, this.logger, this.sync);
+  final Directory assetsDir;
+  _Harness(this.db, this.caveRepo, this.logger, this.sync, this.assetsDir);
 }

@@ -256,6 +256,7 @@
   "sync_import_failed": "Import failed",
   "sync_import_confirm_title": "Import sync archive?",
   "sync_import_confirm_body": "This will merge data from the archive into your current database. Newer local edits are kept; older entries are overwritten. Deletes from the archive are applied locally.",
+  "files": "files",
   "change_log": "Change history",
   "no_change_log": "No changes recorded yet",
   "change_insert": "Added",

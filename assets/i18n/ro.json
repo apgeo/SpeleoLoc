@@ -253,6 +253,7 @@
   "sync_import_failed": "Import eșuat",
   "sync_import_confirm_title": "Import arhivă de sincronizare?",
   "sync_import_confirm_body": "Datele din arhivă vor fi îmbinate cu baza de date locală. Modificările locale mai noi se păstrează; cele mai vechi se suprascriu. Ștergerile din arhivă se aplică local.",
+  "files": "fișiere",
   "change_log": "Istoric modificări",
   "no_change_log": "Nu există modificări înregistrate",
   "change_insert": "Adăugat",

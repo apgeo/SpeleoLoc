@@ -21,6 +21,8 @@ class SyncPage extends ConsumerStatefulWidget {
 class _SyncPageState extends ConsumerState<SyncPage>
     with AppBarMenuMixin<SyncPage> {
   bool _busy = false;
+  bool _includeDocumentationFiles = true;
+  bool _includeRasterMaps = true;
   String? _lastMessage;
 
   @override
@@ -32,35 +34,50 @@ class _SyncPageState extends ConsumerState<SyncPage>
         title: Text(LocServ.inst.t('sync_title')),
         actions: [buildAppBarMenuButton()],
       ),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              LocServ.inst.t('sync_description'),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.upload_file),
-              label: Text(LocServ.inst.t('sync_export')),
-              onPressed: _busy ? null : _export,
-            ),
+        children: [
+          Text(
+            LocServ.inst.t('sync_description'),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            LocServ.inst.t('export_settings'),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          SwitchListTile(
+            title: Text(LocServ.inst.t('include_documentation_files')),
+            value: _includeDocumentationFiles,
+            onChanged: _busy
+                ? null
+                : (v) => setState(() => _includeDocumentationFiles = v),
+          ),
+          SwitchListTile(
+            title: Text(LocServ.inst.t('include_raster_maps')),
+            value: _includeRasterMaps,
+            onChanged:
+                _busy ? null : (v) => setState(() => _includeRasterMaps = v),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.upload_file),
+            label: Text(LocServ.inst.t('sync_export')),
+            onPressed: _busy ? null : _export,
+          ),
+          const Divider(height: 32),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.download),
+            label: Text(LocServ.inst.t('sync_import')),
+            onPressed: _busy ? null : _import,
+          ),
+          const SizedBox(height: 24),
+          if (_busy) const LinearProgressIndicator(),
+          if (_lastMessage != null) ...[
             const SizedBox(height: 12),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.download),
-              label: Text(LocServ.inst.t('sync_import')),
-              onPressed: _busy ? null : _import,
-            ),
-            const SizedBox(height: 24),
-            if (_busy) const LinearProgressIndicator(),
-            if (_lastMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(_lastMessage!),
-            ],
+            Text(_lastMessage!),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -77,7 +94,11 @@ class _SyncPageState extends ConsumerState<SyncPage>
     });
     try {
       final service = ref.read(syncArchiveServiceProvider);
-      final file = await service.exportToZip(dir);
+      final file = await service.exportToZip(
+        dir,
+        includeDocumentationFiles: _includeDocumentationFiles,
+        includeRasterMaps: _includeRasterMaps,
+      );
       if (!mounted) return;
       setState(() {
         _lastMessage = '${LocServ.inst.t('sync_export_success')}: ${file.path}';
@@ -134,7 +155,8 @@ class _SyncPageState extends ConsumerState<SyncPage>
             '${LocServ.inst.t('sync_import_success')}: '
             '+${report.rowsInserted} / ~${report.rowsUpdated} / '
             '-${report.deletesApplied} '
-            '(${report.changeLogMerged} ${LocServ.inst.t('change_log')})';
+            '(${report.changeLogMerged} ${LocServ.inst.t('change_log')}, '
+            '${report.filesCopied} ${LocServ.inst.t('files')})';
       });
     } catch (e) {
       if (!mounted) return;
