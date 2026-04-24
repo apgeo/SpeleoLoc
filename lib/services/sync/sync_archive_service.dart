@@ -52,6 +52,71 @@ class SyncImportReport {
       'filesSkipped=$filesSkipped, warnings=${warnings.length})';
 }
 
+/// User (or programmatic) decision when an incoming sync row would overwrite
+/// a local row that has been independently modified.
+enum SyncConflictAction {
+  /// Drop the incoming change; the local row stays intact.
+  keepLocal,
+
+  /// Replace the local row with the incoming payload.
+  useIncoming,
+
+  /// Abort the whole import (throws [SyncImportCancelledException]).
+  cancel,
+}
+
+/// Describes a conflict surfaced to a [ConflictResolver].
+///
+/// Both [localFields] and [incomingFields] are JSON-friendly maps produced
+/// via [SyncValueSerializer] (so UUIDs are canonical strings, byte blobs are
+/// base64-encoded, etc.). [differingFields] lists only the columns whose
+/// values actually differ between the two rows — metadata columns that only
+/// reflect who-last-touched the row are excluded so the UI can show the
+/// truly meaningful differences first.
+class SyncConflict {
+  final String tableName;
+  final Uuid entityUuid;
+  final Map<String, dynamic> localFields;
+  final Map<String, dynamic> incomingFields;
+  final List<String> differingFields;
+  final int? localUpdatedAt;
+  final int? incomingUpdatedAt;
+
+  const SyncConflict({
+    required this.tableName,
+    required this.entityUuid,
+    required this.localFields,
+    required this.incomingFields,
+    required this.differingFields,
+    required this.localUpdatedAt,
+    required this.incomingUpdatedAt,
+  });
+}
+
+/// Callback that decides how a single [SyncConflict] should be resolved.
+///
+/// Return `null` to fall back to the default last-writer-wins behaviour.
+typedef ConflictResolver =
+    Future<SyncConflictAction?> Function(SyncConflict);
+
+/// Thrown when the user (or a resolver) cancels an in-progress import.
+class SyncImportCancelledException implements Exception {
+  final String message;
+  const SyncImportCancelledException([this.message = 'Import cancelled']);
+  @override
+  String toString() => 'SyncImportCancelledException: $message';
+}
+
+/// Metadata columns that are excluded from "differing fields" computation:
+/// they are bookkeeping, not meaningful user content.
+const _metaColumnsForDiff = <String>{
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'created_by_user_uuid',
+  'last_modified_by_user_uuid',
+};
+
 /// Offline archive-based sync across devices.
 ///
 /// Export produces a `.zip` containing, in addition to a small manifest,
@@ -88,12 +153,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.users).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<User>(
+          upsert: (rows, resolver) async => _upsertRows<User>(
             rows,
             (j) => User.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.users,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -101,12 +168,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.surfaceAreas).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<SurfaceArea>(
+          upsert: (rows, resolver) async => _upsertRows<SurfaceArea>(
             rows,
             (j) => SurfaceArea.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.surfaceAreas,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -114,12 +183,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.caves).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<Cave>(
+          upsert: (rows, resolver) async => _upsertRows<Cave>(
             rows,
             (j) => Cave.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.caves,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -127,12 +198,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.caveAreas).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<CaveArea>(
+          upsert: (rows, resolver) async => _upsertRows<CaveArea>(
             rows,
             (j) => CaveArea.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.caveAreas,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -140,12 +213,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.cavePlaces).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<CavePlace>(
+          upsert: (rows, resolver) async => _upsertRows<CavePlace>(
             rows,
             (j) => CavePlace.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.cavePlaces,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -153,12 +228,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.rasterMaps).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<RasterMap>(
+          upsert: (rows, resolver) async => _upsertRows<RasterMap>(
             rows,
             (j) => RasterMap.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.rasterMaps,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -167,16 +244,18 @@ class SyncArchiveService {
               (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
                   .map((r) => r.toJson(serializer: _serializer))
                   .toList(),
-          upsert: (rows) async =>
+          upsert: (rows, resolver) async =>
               _upsertRows<CavePlaceToRasterMapDefinition>(
             rows,
             (j) => CavePlaceToRasterMapDefinition.fromJson(
               j,
               serializer: _serializer,
             ),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.cavePlaceToRasterMapDefinitions,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -184,12 +263,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.caveTrips).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<CaveTrip>(
+          upsert: (rows, resolver) async => _upsertRows<CaveTrip>(
             rows,
             (j) => CaveTrip.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.caveTrips,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -197,12 +278,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.caveTripPoints).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<CaveTripPoint>(
+          upsert: (rows, resolver) async => _upsertRows<CaveTripPoint>(
             rows,
             (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.caveTripPoints,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -210,12 +293,14 @@ class SyncArchiveService {
           dump: () async => (await _db.select(_db.documentationFiles).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows) async => _upsertRows<DocumentationFile>(
+          upsert: (rows, resolver) async => _upsertRows<DocumentationFile>(
             rows,
             (j) => DocumentationFile.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.documentationFiles,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -224,15 +309,18 @@ class SyncArchiveService {
               (await _db.select(_db.documentationFilesToGeofeatures).get())
                   .map((r) => r.toJson(serializer: _serializer))
                   .toList(),
-          upsert: (rows) async => _upsertRows<DocumentationFilesToGeofeature>(
+          upsert: (rows, resolver) async =>
+              _upsertRows<DocumentationFilesToGeofeature>(
             rows,
             (j) => DocumentationFilesToGeofeature.fromJson(
               j,
               serializer: _serializer,
             ),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.documentationFilesToGeofeatures,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -241,16 +329,19 @@ class SyncArchiveService {
               (await _db.select(_db.documentationFilesToCaveTrips).get())
                   .map((r) => r.toJson(serializer: _serializer))
                   .toList(),
-          upsert: (rows) async => _upsertRows<DocumentationFilesToCaveTrip>(
+          upsert: (rows, resolver) async =>
+              _upsertRows<DocumentationFilesToCaveTrip>(
             rows,
             (j) => DocumentationFilesToCaveTrip.fromJson(
               j,
               serializer: _serializer,
             ),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             // Link table has no updated_at; LWW falls back to created_at.
             (r) => r.createdAt,
             _db.documentationFilesToCaveTrips,
+            resolver,
           ),
         ),
         _SyncTable(
@@ -259,12 +350,14 @@ class SyncArchiveService {
               (await _db.select(_db.tripReportTemplates).get())
                   .map((r) => r.toJson(serializer: _serializer))
                   .toList(),
-          upsert: (rows) async => _upsertRows<TripReportTemplate>(
+          upsert: (rows, resolver) async => _upsertRows<TripReportTemplate>(
             rows,
             (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.tripReportTemplates,
+            resolver,
           ),
         ),
       ];
@@ -371,7 +464,17 @@ class SyncArchiveService {
 
   /// Replays an archive produced by [exportToZip] into the local database
   /// using last-writer-wins semantics.
-  Future<SyncImportReport> importFromZip(String zipPath) async {
+  ///
+  /// When a [conflictResolver] is provided, each incoming row that would
+  /// overwrite a local row with at least one meaningfully-different field
+  /// is routed through it. If the resolver returns
+  /// [SyncConflictAction.cancel], the whole import is rolled back and
+  /// [SyncImportCancelledException] is thrown. Returning `null` from the
+  /// resolver falls back to the default LWW decision.
+  Future<SyncImportReport> importFromZip(
+    String zipPath, {
+    ConflictResolver? conflictResolver,
+  }) async {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
     final manifestFile = archive.findFile('manifest.json');
@@ -414,7 +517,7 @@ class SyncArchiveService {
             continue;
           }
           final rows = _readJsonl(entry);
-          final result = await t.upsert(rows);
+          final result = await t.upsert(rows, conflictResolver);
           inserted += result.inserted;
           updated += result.updated;
           skipped += result.skipped;
@@ -601,12 +704,19 @@ class SyncArchiveService {
   // ---------------------------------------------------------------------------
 
   /// Upserts incoming rows with LWW semantics. Returns per-row counters.
+  ///
+  /// If [resolver] is non-null, every conflicting update (same UUID, at least
+  /// one differing column other than audit bookkeeping) is routed through it
+  /// before applying a decision. When the resolver returns `null`, default
+  /// LWW applies.
   Future<_UpsertCounters> _upsertRows<D extends Insertable<D>>(
     List<Map<String, dynamic>> rows,
     D Function(Map<String, dynamic>) fromJson,
+    Map<String, dynamic> Function(D) toJson,
     Uuid Function(D) uuidOf,
     int? Function(D) tsOf,
     TableInfo<Table, D> table,
+    ConflictResolver? resolver,
   ) async {
     var inserted = 0;
     var updated = 0;
@@ -623,26 +733,52 @@ class SyncArchiveService {
       final uuid = uuidOf(incoming);
       final incomingTs = tsOf(incoming) ?? 0;
 
-      final localTsRows = await _db.customSelect(
-        'SELECT COALESCE(updated_at, created_at, 0) AS ts '
-        'FROM ${table.actualTableName} WHERE uuid = ?',
-        variables: [Variable<Uint8List>(uuid.bytes)],
-      ).get();
-
-      if (localTsRows.isEmpty) {
+      final local = await _loadLocal<D>(table, uuid);
+      if (local == null) {
         await _db.into(table).insert(incoming);
         inserted++;
-      } else {
-        final localTs = localTsRows.first.read<int>('ts');
-        if (incomingTs > localTs) {
-          await _db.into(table).insert(
-                incoming,
-                mode: InsertMode.insertOrReplace,
-              );
-          updated++;
-        } else {
-          skipped++;
+        continue;
+      }
+
+      final localTs = tsOf(local) ?? 0;
+      final localJson = toJson(local);
+      final incomingJson = toJson(incoming);
+      final diff = _diffMeaningfulFields(localJson, incomingJson);
+
+      if (diff.isEmpty) {
+        // Identical payloads → count as skipped, no-op.
+        skipped++;
+        continue;
+      }
+
+      var action = incomingTs > localTs
+          ? SyncConflictAction.useIncoming
+          : SyncConflictAction.keepLocal;
+
+      if (resolver != null) {
+        final decision = await resolver(SyncConflict(
+          tableName: table.actualTableName,
+          entityUuid: uuid,
+          localFields: localJson,
+          incomingFields: incomingJson,
+          differingFields: diff,
+          localUpdatedAt: localTs == 0 ? null : localTs,
+          incomingUpdatedAt: incomingTs == 0 ? null : incomingTs,
+        ));
+        if (decision == SyncConflictAction.cancel) {
+          throw const SyncImportCancelledException();
         }
+        if (decision != null) action = decision;
+      }
+
+      if (action == SyncConflictAction.useIncoming) {
+        await _db.into(table).insert(
+              incoming,
+              mode: InsertMode.insertOrReplace,
+            );
+        updated++;
+      } else {
+        skipped++;
       }
     }
 
@@ -651,6 +787,33 @@ class SyncArchiveService {
       updated: updated,
       skipped: skipped,
     );
+  }
+
+  /// Loads a single row from [table] by its [uuid] and returns it as the
+  /// table's DataClass, or `null` if no such row exists.
+  Future<D?> _loadLocal<D>(TableInfo<Table, D> table, Uuid uuid) async {
+    final row = await _db.customSelect(
+      'SELECT * FROM ${table.actualTableName} WHERE uuid = ? LIMIT 1',
+      variables: [Variable<Uint8List>(uuid.bytes)],
+    ).getSingleOrNull();
+    if (row == null) return null;
+    return await table.map(row.data);
+  }
+
+  /// Returns the list of columns whose JSON values differ between [a] and
+  /// [b], excluding audit-bookkeeping columns that should not count as
+  /// user-visible conflicts.
+  List<String> _diffMeaningfulFields(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    final keys = <String>{...a.keys, ...b.keys};
+    final diff = <String>[];
+    for (final k in keys) {
+      if (_metaColumnsForDiff.contains(k)) continue;
+      if (a[k] != b[k]) diff.add(k);
+    }
+    return diff;
   }
 
   ArchiveFile _jsonlFile(String name, List<Map<String, dynamic>> rows) {
@@ -765,6 +928,9 @@ class _UpsertCounters {
 class _SyncTable {
   final String name;
   final Future<List<Map<String, dynamic>>> Function() dump;
-  final Future<_UpsertCounters> Function(List<Map<String, dynamic>>) upsert;
+  final Future<_UpsertCounters> Function(
+    List<Map<String, dynamic>> rows,
+    ConflictResolver? resolver,
+  ) upsert;
   _SyncTable({required this.name, required this.dump, required this.upsert});
 }

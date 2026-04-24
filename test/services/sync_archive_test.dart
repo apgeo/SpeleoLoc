@@ -201,6 +201,91 @@ void main() {
     await a.db.close();
     await b.db.close();
   });
+
+  test('manual resolver keepLocal overrides LWW', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    // A creates + shares cave; B imports.
+    final id = await a.caveRepo.addCave('Original');
+    final zip1 =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
+    await b.sync.importFromZip(zip1.path);
+
+    // A edits the cave so A has the newer timestamp (default LWW would
+    // normally overwrite B's copy on re-import).
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await a.caveRepo.updateCave(id, 'A-Edit');
+
+    final zip2 =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+
+    final seen = <String>[];
+    await b.sync.importFromZip(
+      zip2.path,
+      conflictResolver: (conflict) async {
+        seen.add(conflict.tableName);
+        return SyncConflictAction.keepLocal;
+      },
+    );
+
+    expect(seen, contains('caves'),
+        reason: 'caves row should have been routed through resolver');
+    final bRow = (await b.caveRepo.getCaves()).single;
+    expect(bRow.title, 'Original',
+        reason: 'resolver told us to keep local despite newer incoming ts');
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('manual resolver cancel rolls back the whole import', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    await a.caveRepo.addCave('ShouldNotLand');
+    final zip =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+
+    // B has no local row → no conflict would fire; seed B with a local
+    // cave that conflicts with the incoming archive.
+    final id = await a.caveRepo.addCave('Second');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    // Re-export with two caves; one of them will conflict once we
+    // pre-seed B with a different title for the same uuid.
+    final zip2 =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    await b.sync.importFromZip(zip2.path);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await b.caveRepo.updateCave(id, 'B-Edit');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await a.caveRepo.updateCave(id, 'A-Edit');
+    final zip3 =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a3.zip');
+
+    final bTitlesBefore = (await b.caveRepo.getCaves())
+        .map((c) => c.title)
+        .toSet();
+
+    await expectLater(
+      () => b.sync.importFromZip(
+        zip3.path,
+        conflictResolver: (_) async => SyncConflictAction.cancel,
+      ),
+      throwsA(isA<SyncImportCancelledException>()),
+    );
+
+    // Transaction rolled back → B's titles are unchanged.
+    final bTitlesAfter = (await b.caveRepo.getCaves())
+        .map((c) => c.title)
+        .toSet();
+    expect(bTitlesAfter, bTitlesBefore);
+
+    await a.db.close();
+    await b.db.close();
+    // silence unused-var lint for zip
+    zip.toString();
+  });
 }
 
 class _Harness {
