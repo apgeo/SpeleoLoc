@@ -98,6 +98,12 @@ class CaveRepository implements ICaveRepository {
   Future<void> deleteCave(Uuid id) async {
     try {
       await _database.transaction(() async {
+        // Capture pre-image of the cave for the tombstone so peers can
+        // LWW-delete locally on sync import.
+        final caveRow = await (_database.select(_database.caves)
+              ..where((c) => c.uuid.equalsValue(id))
+              ..limit(1))
+            .getSingleOrNull();
         final caveAreas = await (_database.select(_database.caveAreas)
               ..where((ca) => ca.caveUuid.equalsValue(id)))
             .get();
@@ -186,6 +192,45 @@ class CaveRepository implements ICaveRepository {
             .go();
 
         await (_database.delete(_database.caves)..where((c) => c.uuid.equalsValue(id))).go();
+
+        // Log deletion tombstones for the cave itself and its direct
+        // children (places, maps, areas, trips). Peers will use these
+        // during sync import to propagate the delete cascade.
+        if (caveRow != null) {
+          await _logger.logDelete(
+            'caves',
+            id,
+            oldValues: {
+              'title': caveRow.title,
+              'description': caveRow.description,
+              'surface_area_uuid': caveRow.surfaceAreaUuid,
+            },
+          );
+        }
+        for (final p in cavePlaces) {
+          await _logger.logDelete('cave_places', p.uuid, oldValues: {
+            'title': p.title,
+            'cave_uuid': p.caveUuid,
+          });
+        }
+        for (final m in rasterMaps) {
+          await _logger.logDelete('raster_maps', m.uuid, oldValues: {
+            'title': m.title,
+            'cave_uuid': m.caveUuid,
+          });
+        }
+        for (final a in caveAreas) {
+          await _logger.logDelete('cave_areas', a.uuid, oldValues: {
+            'title': a.title,
+            'cave_uuid': a.caveUuid,
+          });
+        }
+        for (final t in caveTrips) {
+          await _logger.logDelete('cave_trips', t.uuid, oldValues: {
+            'title': t.title,
+            'cave_uuid': t.caveUuid,
+          });
+        }
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave', e, st);

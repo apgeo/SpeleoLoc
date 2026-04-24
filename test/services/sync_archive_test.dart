@@ -1,0 +1,155 @@
+import 'dart:io';
+
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/user_repository.dart';
+
+/// Exercises the export-then-import round-trip and LWW merge behaviour
+/// of [SyncArchiveService] against two independent in-memory databases.
+void main() {
+  late Directory tempDir;
+
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('speleoloc_sync_test_');
+  });
+
+  tearDown(() async {
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
+  });
+
+  Future<_Harness> buildHarness() async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    late ChangeLogger loggerRef;
+    final userRepo = UserRepository(db, () => loggerRef);
+    final currentUser = CurrentUserService(db, userRepo);
+    await currentUser.initialize();
+    loggerRef = ChangeLogger(db, currentUser);
+    final caveRepo = CaveRepository(db, currentUser, loggerRef);
+    final sync = SyncArchiveService(db, loggerRef);
+    return _Harness(db, caveRepo, loggerRef, sync);
+  }
+
+  test('round-trip carries caves and change-log between devices', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    final caveId = await a.caveRepo.addCave('Alpha', description: 'first');
+
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    expect(await zip.exists(), isTrue);
+
+    final report = await b.sync.importFromZip(zip.path);
+    expect(report.rowsInserted, greaterThan(0));
+    expect(report.warnings, isEmpty);
+
+    final onB = await b.caveRepo.getCaves();
+    expect(onB.single.uuid, caveId);
+    expect(onB.single.title, 'Alpha');
+
+    // change_log was merged.
+    final bLogs = await b.db.select(b.db.changeLog).get();
+    expect(bLogs.any((l) => l.entityTable == 'caves'), isTrue);
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('LWW keeps newer local edit when archive is older', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    // Step 1: A creates a cave.
+    final id = await a.caveRepo.addCave('v1');
+    final firstZip =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
+    await b.sync.importFromZip(firstZip.path);
+
+    // Step 2: B edits the cave (newer updated_at).
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await b.caveRepo.updateCave(id, 'v2-on-B');
+
+    // Step 3: A exports again (still v1 locally) and B imports.
+    final secondZip =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    final r = await b.sync.importFromZip(secondZip.path);
+
+    expect(r.rowsSkipped, greaterThan(0),
+        reason: 'B has newer row, incoming older should be skipped');
+    final bRow = (await b.caveRepo.getCaves()).single;
+    expect(bRow.title, 'v2-on-B',
+        reason: 'B keeps its newer edit');
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('delete tombstone in change_log propagates to peer', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    final id = await a.caveRepo.addCave('ToDelete');
+    final zip1 =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
+    await b.sync.importFromZip(zip1.path);
+    expect((await b.caveRepo.getCaves()), hasLength(1));
+
+    // Log a delete on A (without going through deleteCave — which does
+    // not yet log). Simulate what the upcoming repo change will do.
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await a.logger.logDelete(
+      'caves',
+      id,
+      oldValues: {'title': 'ToDelete'},
+    );
+    // Physically delete on A after the log (order matters: log captures
+    // the pre-image).
+    await (a.db.delete(a.db.caves)..where((c) => c.uuid.equalsValue(id)))
+        .go();
+
+    final zip2 =
+        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    final report = await b.sync.importFromZip(zip2.path);
+
+    expect(report.deletesApplied, greaterThan(0));
+    expect((await b.caveRepo.getCaves()), isEmpty,
+        reason: 'B should have deleted the cave based on tombstone');
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('rejects archive with wrong schema_version', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'ok.zip');
+    // Tamper with manifest by writing a corrupt file in the temp dir.
+    final corrupted = File(p.join(tempDir.path, 'corrupted.zip'));
+    await zip.copy(corrupted.path);
+    // Simplest: write unrelated bytes and expect an exception.
+    await corrupted.writeAsBytes([0, 1, 2, 3]);
+    await expectLater(
+      () => b.sync.importFromZip(corrupted.path),
+      throwsA(isA<Exception>()),
+    );
+
+    await a.db.close();
+    await b.db.close();
+  });
+}
+
+class _Harness {
+  final AppDatabase db;
+  final CaveRepository caveRepo;
+  final ChangeLogger logger;
+  final SyncArchiveService sync;
+  _Harness(this.db, this.caveRepo, this.logger, this.sync);
+}

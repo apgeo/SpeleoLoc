@@ -9,6 +9,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 
@@ -54,6 +55,13 @@ final changeLoggerProvider = Provider<ChangeLogger>(
   (ref) => ChangeLogger(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+  ),
+);
+
+final syncArchiveServiceProvider = Provider<SyncArchiveService>(
+  (ref) => SyncArchiveService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(changeLoggerProvider),
   ),
 );
 

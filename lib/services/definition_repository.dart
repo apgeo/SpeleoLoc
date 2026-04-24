@@ -110,9 +110,27 @@ class DefinitionRepository implements IDefinitionRepository {
   @override
   Future<bool> deleteDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
     try {
+      final old = await (_database.select(_database.cavePlaceToRasterMapDefinitions)
+            ..where((d) =>
+                d.cavePlaceUuid.equalsValue(cavePlaceUuid) &
+                d.rasterMapUuid.equalsValue(rasterMapUuid))
+            ..limit(1))
+          .getSingleOrNull();
       final rows = await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
             ..where((d) => d.cavePlaceUuid.equalsValue(cavePlaceUuid) & d.rasterMapUuid.equalsValue(rasterMapUuid)))
           .go();
+      if (rows > 0 && old != null) {
+        await _logger.logDelete(
+          'cave_place_to_raster_map_definitions',
+          old.uuid,
+          oldValues: {
+            'cave_place_uuid': old.cavePlaceUuid,
+            'raster_map_uuid': old.rasterMapUuid,
+            'x_coordinate': old.xCoordinate,
+            'y_coordinate': old.yCoordinate,
+          },
+        );
+      }
       return rows > 0;
     } catch (e, st) {
       _log.severe('deleteDefinition error', e, st);

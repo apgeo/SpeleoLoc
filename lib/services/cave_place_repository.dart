@@ -59,8 +59,10 @@ class CavePlaceRepository implements ICavePlaceRepository {
   Future<void> deleteCavePlace(Uuid id) async {
     try {
       await _database.transaction(() async {
-        // initial delete mechanism
-        //await (_database.delete(_database.cavePlaces)..where((cp) => cp.uuid.equalsValue(id))).go();
+        final old = await (_database.select(_database.cavePlaces)
+              ..where((cp) => cp.uuid.equalsValue(id))
+              ..limit(1))
+            .getSingleOrNull();
 
         // Remove direct FK references from map bindings.
         await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
@@ -82,6 +84,15 @@ class CavePlaceRepository implements ICavePlaceRepository {
         await (_database.delete(_database.cavePlaces)
               ..where((cp) => cp.uuid.equalsValue(id)))
             .go();
+
+        if (old != null) {
+          await _logger.logDelete('cave_places', id, oldValues: {
+            'title': old.title,
+            'description': old.description,
+            'cave_uuid': old.caveUuid,
+            'cave_area_uuid': old.caveAreaUuid,
+          });
+        }
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave place', e, st);

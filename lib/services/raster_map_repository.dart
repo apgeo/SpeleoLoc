@@ -98,7 +98,23 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> deleteRasterMap(Uuid id) async {
     try {
+      final old = await (_database.select(_database.rasterMaps)
+            ..where((rm) => rm.uuid.equalsValue(id))
+            ..limit(1))
+          .getSingleOrNull();
       await (_database.delete(_database.rasterMaps)..where((rm) => rm.uuid.equalsValue(id))).go();
+      if (old != null) {
+        await _logger.logDelete(
+          'raster_maps',
+          id,
+          oldValues: {
+            'title': old.title,
+            'map_type': old.mapType,
+            'file_name': old.fileName,
+            'cave_uuid': old.caveUuid,
+          },
+        );
+      }
     } catch (e, st) {
       _log.severe('Failed to delete raster map', e, st);
       throw DbException('Failed to delete raster map', cause: e, stackTrace: st);
