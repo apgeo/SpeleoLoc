@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -123,6 +124,64 @@ class _OrderTrackingTransport implements IFtpTransport {
     CancelToken? cancelToken,
   }) async {
     _downloadOrder.add(remoteName);
+    await _inner.downloadFile(remoteName, localFile,
+        onProgress: onProgress, cancelToken: cancelToken);
+  }
+}
+
+/// Transport that pauses inside downloadFile until [release] is called, and
+/// fires [onDownloadStarted] as soon as the download begins. Lets tests drive
+/// the controller's cancel/pause logic at a known mid-transfer point.
+class _BlockingTransport implements IFtpTransport {
+  _BlockingTransport(this._inner);
+  final IFtpTransport _inner;
+  final Completer<void> _gate = Completer<void>();
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  FtpProfile get profile => _inner.profile;
+
+  @override
+  Future<void> connect({required String password}) =>
+      _inner.connect(password: password);
+
+  @override
+  Future<void> disconnect() => _inner.disconnect();
+
+  @override
+  Future<void> verifyReadWriteAccess() => _inner.verifyReadWriteAccess();
+
+  @override
+  Future<List<RemoteFileEntry>> listFolder() => _inner.listFolder();
+
+  @override
+  Future<void> uploadFile(
+    File localFile,
+    String remoteName, {
+    TransferProgressCallback? onProgress,
+    CancelToken? cancelToken,
+  }) =>
+      _inner.uploadFile(localFile, remoteName,
+          onProgress: onProgress, cancelToken: cancelToken);
+
+  @override
+  Future<void> downloadFile(
+    String remoteName,
+    File localFile, {
+    TransferProgressCallback? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    onProgress?.call(1, 100);
+    // Wait for release *or* cancellation.
+    while (!_gate.isCompleted) {
+      if (cancelToken?.cancelled ?? false) {
+        throw const TransferCancelledException();
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
     await _inner.downloadFile(remoteName, localFile,
         onProgress: onProgress, cancelToken: cancelToken);
   }
@@ -418,5 +477,74 @@ void main() {
     // No rows should have been re-imported.
     final afterCaveCount = (await b.db.select(b.db.caves).get()).length;
     expect(afterCaveCount, beforeCaveCount);
+  });
+
+  test('pause leaves the run in paused phase; resume reruns to completion',
+      () async {
+    final a = await _buildHarness();
+    await a.caveRepo.addCave('Peer');
+    final zip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'speleo_loc_sync_7000.zip',
+    );
+
+    final b = await _buildHarness();
+    final profileRepo = FtpProfileRepository(b.db);
+    const profile = FtpProfile(
+      profileUuid: 'test-uuid',
+      displayName: 'Test',
+      protocol: FtpProtocol.ftp,
+      host: 'example.com',
+      port: 21,
+      username: 'u',
+      remoteFolder: '/',
+    );
+    await profileRepo.save(profile, password: 'pw');
+    await profileRepo.setDefaultUuid(profile.profileUuid);
+
+    final inner = _FakeTransport(profile);
+    inner.store['speleo_loc_sync_7000.zip'] = await zip.readAsBytes();
+
+    // First run: blocking transport that waits inside downloadFile until we
+    // release it. We pause while the transport is stuck → controller should
+    // surface phase=paused and the blocking download should abort.
+    _BlockingTransport? currentBlocking;
+    var blockingBuilt = 0;
+    late final FtpSyncController controller;
+    controller = FtpSyncController(
+      db: b.db,
+      profileRepository: profileRepo,
+      archiveService: b.sync,
+      currentUserService: b.currentUser,
+      transportBuilder: (_) {
+        blockingBuilt++;
+        if (blockingBuilt == 1) {
+          currentBlocking = _BlockingTransport(inner);
+          return currentBlocking!;
+        }
+        // Second call (resume) uses the plain fake so the run can finish.
+        return inner;
+      },
+    );
+
+    // Kick off the run and wait until the blocking transport is actually
+    // sitting inside downloadFile.
+    final runFuture = controller.startDefault();
+    while (controller.progress.phase != FtpSyncPhase.downloading) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    controller.pause();
+    await runFuture;
+    expect(controller.progress.phase, FtpSyncPhase.paused,
+        reason: controller.progress.log.map((e) => e.message).join('\n'));
+
+    // Resume: second run uses the non-blocking fake and completes normally.
+    await controller.resume();
+    await _waitForTerminal(controller);
+    expect(controller.progress.phase, FtpSyncPhase.completed,
+        reason: controller.progress.log.map((e) => e.message).join('\n'));
+    final caves = await b.db.select(b.db.caves).get();
+    expect(caves.map((c) => c.title), contains('Peer'));
   });
 }

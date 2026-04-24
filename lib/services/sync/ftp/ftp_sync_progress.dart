@@ -35,6 +35,11 @@ enum FtpSyncPhase {
 
   /// Last sync was cancelled by the user.
   cancelled,
+
+  /// Run is paused between steps. The current file/step was rolled back and
+  /// will be restarted from the beginning on resume. Set by
+  /// `FtpSyncController.pause()`.
+  paused,
 }
 
 /// Severity of a log line emitted during sync. Used by the detail screen's
@@ -101,6 +106,15 @@ class FtpSyncProgress {
   /// Name of the profile currently syncing; useful for the drawer title.
   final String? profileName;
 
+  /// Instantaneous transfer speed for the current file, bytes per second.
+  /// Null while no byte-based step is active (connecting, listing, etc.) or
+  /// before enough samples have accumulated.
+  final double? bytesPerSecond;
+
+  /// Estimated remaining time for the *current* step (current file). Null
+  /// when not computable (no total, paused, idle, etc.).
+  final Duration? stepEta;
+
   const FtpSyncProgress({
     required this.phase,
     required this.stepProgress,
@@ -115,6 +129,8 @@ class FtpSyncProgress {
     required this.updatedAt,
     required this.log,
     required this.profileName,
+    this.bytesPerSecond,
+    this.stepEta,
   });
 
   /// Initial idle state; used when no sync has ever run in this session.
@@ -138,7 +154,11 @@ class FtpSyncProgress {
       phase != FtpSyncPhase.idle &&
       phase != FtpSyncPhase.completed &&
       phase != FtpSyncPhase.failed &&
-      phase != FtpSyncPhase.cancelled;
+      phase != FtpSyncPhase.cancelled &&
+      phase != FtpSyncPhase.paused;
+
+  /// True when the run is suspended but resumable.
+  bool get isPaused => phase == FtpSyncPhase.paused;
 
   /// Best-effort "X of N" overall position, 0.0..1.0, for the mini card's
   /// coarse progress bar. Not meant to be linear in time.
@@ -172,6 +192,9 @@ class FtpSyncProgress {
       case FtpSyncPhase.failed:
       case FtpSyncPhase.cancelled:
         return 0.0;
+      case FtpSyncPhase.paused:
+        // Freeze the bar at whatever overall position we had before pausing.
+        return 0.0;
     }
   }
 
@@ -192,6 +215,10 @@ class FtpSyncProgress {
     DateTime? updatedAt,
     List<FtpSyncLogEntry>? log,
     String? profileName,
+    double? bytesPerSecond,
+    bool clearBytesPerSecond = false,
+    Duration? stepEta,
+    bool clearStepEta = false,
   }) {
     return FtpSyncProgress(
       phase: phase ?? this.phase,
@@ -212,6 +239,10 @@ class FtpSyncProgress {
       updatedAt: updatedAt ?? DateTime.now(),
       log: log ?? this.log,
       profileName: profileName ?? this.profileName,
+      bytesPerSecond: clearBytesPerSecond
+          ? null
+          : (bytesPerSecond ?? this.bytesPerSecond),
+      stepEta: clearStepEta ? null : (stepEta ?? this.stepEta),
     );
   }
 }

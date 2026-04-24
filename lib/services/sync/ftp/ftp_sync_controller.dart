@@ -57,6 +57,15 @@ class FtpSyncController extends ChangeNotifier {
   CancelToken? _cancelToken;
   Completer<void>? _runCompleter;
 
+  /// Set while a pause is pending so the outer cancel handler routes to the
+  /// `paused` terminal phase instead of `cancelled`.
+  bool _pauseRequested = false;
+
+  // Speed / ETA rolling window for the current file transfer step. Cleared
+  // each time we enter a fresh download/upload step.
+  final List<_SpeedSample> _speedSamples = <_SpeedSample>[];
+  static const int _maxSpeedSamples = 8;
+
   // Rolling log buffer cap.
   static const int _maxLogEntries = 200;
 
@@ -107,8 +116,31 @@ class FtpSyncController extends ChangeNotifier {
   void cancel() {
     final token = _cancelToken;
     if (token == null) return;
+    _pauseRequested = false;
     _appendLog(FtpSyncLogLevel.warning, 'Cancellation requested');
     token.cancel();
+  }
+
+  /// Pauses the in-flight run: the current step is cancelled and the run
+  /// enters the [FtpSyncPhase.paused] terminal state. [resume] restarts the
+  /// whole pipeline from scratch; because imports are idempotent (LWW),
+  /// re-processing already-imported archives is safe, only wastes bandwidth.
+  void pause() {
+    final token = _cancelToken;
+    if (token == null || !isRunning) return;
+    _pauseRequested = true;
+    _appendLog(FtpSyncLogLevel.info, 'Pause requested');
+    token.cancel();
+  }
+
+  /// Resumes a previously paused run by triggering a fresh [startDefault].
+  /// No-op when not paused.
+  Future<void> resume() {
+    if (_progress.phase != FtpSyncPhase.paused) {
+      return Future<void>.value();
+    }
+    _appendLog(FtpSyncLogLevel.info, 'Resume requested');
+    return startDefault();
   }
 
   // ---------------------------------------------------------------------
@@ -179,6 +211,7 @@ class FtpSyncController extends ChangeNotifier {
         final entry = unseen[i];
         final localPath = p.join(tempDir.path, entry.name);
 
+        _resetSpeedSamples();
         _emit((s) => s.copyWith(
               phase: FtpSyncPhase.downloading,
               statusMessage: 'ftp_phase_downloading',
@@ -186,18 +219,23 @@ class FtpSyncController extends ChangeNotifier {
               bytesTransferred: 0,
               totalBytes: entry.size > 0 ? entry.size : null,
               stepProgress: 0,
+              clearBytesPerSecond: true,
+              clearStepEta: true,
             ));
         await transport.downloadFile(
           entry.name,
           File(localPath),
           onProgress: (bytes, total) {
             if (!isRunning) return;
+            final sample = _recordSample(bytes, total);
             _emit((s) => s.copyWith(
                   bytesTransferred: bytes,
                   totalBytes: total,
                   stepProgress: total == null || total == 0
                       ? 0
                       : (bytes / total).clamp(0.0, 1.0),
+                  bytesPerSecond: sample.bytesPerSecond,
+                  stepEta: sample.eta,
                 ));
           },
           cancelToken: token,
@@ -259,6 +297,7 @@ class FtpSyncController extends ChangeNotifier {
       token.throwIfCancelled();
 
       final archiveSize = await archiveFile.length();
+      _resetSpeedSamples();
       _emit((s) => s.copyWith(
             phase: FtpSyncPhase.uploading,
             statusMessage: 'ftp_phase_uploading',
@@ -266,18 +305,23 @@ class FtpSyncController extends ChangeNotifier {
             bytesTransferred: 0,
             totalBytes: archiveSize,
             stepProgress: 0,
+            clearBytesPerSecond: true,
+            clearStepEta: true,
           ));
       await transport.uploadFile(
         archiveFile,
         archiveName,
         onProgress: (bytes, total) {
           if (!isRunning) return;
+          final sample = _recordSample(bytes, total);
           _emit((s) => s.copyWith(
                 bytesTransferred: bytes,
                 totalBytes: total,
                 stepProgress: total == null || total == 0
                     ? 0
                     : (bytes / total).clamp(0.0, 1.0),
+                bytesPerSecond: sample.bytesPerSecond,
+                stepEta: sample.eta,
               ));
         },
         cancelToken: token,
@@ -307,11 +351,24 @@ class FtpSyncController extends ChangeNotifier {
           ));
       _appendLog(FtpSyncLogLevel.info, 'Sync complete');
     } on TransferCancelledException {
-      _appendLog(FtpSyncLogLevel.warning, 'Sync cancelled');
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.cancelled,
-            statusMessage: 'ftp_phase_cancelled',
-          ));
+      if (_pauseRequested) {
+        _pauseRequested = false;
+        _appendLog(FtpSyncLogLevel.info, 'Sync paused');
+        _emit((s) => s.copyWith(
+              phase: FtpSyncPhase.paused,
+              statusMessage: 'ftp_phase_paused',
+              clearBytesPerSecond: true,
+              clearStepEta: true,
+            ));
+      } else {
+        _appendLog(FtpSyncLogLevel.warning, 'Sync cancelled');
+        _emit((s) => s.copyWith(
+              phase: FtpSyncPhase.cancelled,
+              statusMessage: 'ftp_phase_cancelled',
+              clearBytesPerSecond: true,
+              clearStepEta: true,
+            ));
+      }
     } on FtpAuthException catch (e) {
       _appendLog(FtpSyncLogLevel.error, 'Auth failed: ${e.message}');
       _emit((s) => s.copyWith(
@@ -439,4 +496,64 @@ class FtpSyncController extends ChangeNotifier {
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
+
+  // ---------------------------------------------------------------------
+  // Speed / ETA tracking for the current file transfer
+  // ---------------------------------------------------------------------
+
+  void _resetSpeedSamples() {
+    _speedSamples.clear();
+  }
+
+  /// Records a progress sample and returns the derived speed/ETA for the
+  /// current step. Uses a rolling window of the last few samples to smooth
+  /// out momentary bursts/stalls.
+  _SpeedSample _recordSample(int bytes, int? total) {
+    final now = DateTime.now();
+    _speedSamples.add(_SpeedSample(timestamp: now, bytes: bytes));
+    if (_speedSamples.length > _maxSpeedSamples) {
+      _speedSamples.removeAt(0);
+    }
+    double? bps;
+    Duration? eta;
+    if (_speedSamples.length >= 2) {
+      final first = _speedSamples.first;
+      final last = _speedSamples.last;
+      final elapsedMs =
+          last.timestamp.difference(first.timestamp).inMilliseconds;
+      if (elapsedMs > 0) {
+        bps = (last.bytes - first.bytes) * 1000 / elapsedMs;
+        if (total != null && total > 0 && bps > 0) {
+          final remaining = total - bytes;
+          if (remaining > 0) {
+            eta = Duration(milliseconds: (remaining / bps * 1000).round());
+          } else {
+            eta = Duration.zero;
+          }
+        }
+      }
+    }
+    return _SpeedSample(
+      timestamp: now,
+      bytes: bytes,
+      bytesPerSecond: bps,
+      eta: eta,
+    );
+  }
+}
+
+/// Rolling-window speed sample used by [FtpSyncController] to smooth the
+/// per-step throughput readout.
+class _SpeedSample {
+  final DateTime timestamp;
+  final int bytes;
+  final double? bytesPerSecond;
+  final Duration? eta;
+
+  const _SpeedSample({
+    required this.timestamp,
+    required this.bytes,
+    this.bytesPerSecond,
+    this.eta,
+  });
 }

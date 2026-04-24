@@ -54,15 +54,11 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
   Widget build(BuildContext context) {
     final controller = ref.watch(ftpSyncControllerProvider);
     final progress = controller.progress;
-    // Re-check the default profile after a run finishes (the user may have
-    // just configured one in the settings screen).
-    if (!progress.isRunning && _loadedProfile && _defaultProfile == null) {
-      // No-op: keep the "configure FTP" state until the drawer rebuilds.
-    }
     if (!_loadedProfile) {
       return const SizedBox.shrink();
     }
-    if (_defaultProfile == null && progress.phase == FtpSyncPhase.idle) {
+    if (_defaultProfile == null &&
+        progress.phase == FtpSyncPhase.idle) {
       return _buildConfigurePrompt(context);
     }
     return _buildSyncCard(context, controller, progress);
@@ -109,6 +105,7 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
   ) {
     final theme = Theme.of(context);
     final isRunning = progress.isRunning;
+    final isPaused = progress.isPaused;
     final phaseLabel =
         progress.phase == FtpSyncPhase.idle && _defaultProfile != null
             ? LocServ.inst.t('ftp_sync_now')
@@ -141,6 +138,11 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
         leadingIcon = Icons.cancel_outlined;
         leadingColor = Colors.orange;
         break;
+      case FtpSyncPhase.paused:
+        background = Colors.blueGrey.withValues(alpha: 0.10);
+        leadingIcon = Icons.pause_circle_outline;
+        leadingColor = Colors.blueGrey;
+        break;
       default:
         background = theme.colorScheme.primaryContainer.withValues(alpha: 0.3);
         leadingIcon = Icons.cloud_upload;
@@ -154,6 +156,7 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
         borderRadius: BorderRadius.circular(12),
         onTap: () {
           if (isRunning ||
+              isPaused ||
               progress.phase == FtpSyncPhase.completed ||
               progress.phase == FtpSyncPhase.failed ||
               progress.phase == FtpSyncPhase.cancelled) {
@@ -188,10 +191,19 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
                   ),
                   if (isRunning)
                     IconButton(
-                      icon: const Icon(Icons.stop_circle, size: 18),
-                      tooltip: LocServ.inst.t('cancel'),
+                      icon: const Icon(Icons.pause_circle, size: 18),
+                      tooltip: LocServ.inst.t('ftp_sync_pause'),
                       visualDensity: VisualDensity.compact,
-                      onPressed: controller.cancel,
+                      onPressed: controller.pause,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    )
+                  else if (isPaused)
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_fill, size: 18),
+                      tooltip: LocServ.inst.t('ftp_sync_resume'),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: controller.resume,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     )
