@@ -11,6 +11,7 @@ import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 
@@ -70,6 +71,17 @@ final syncArchiveServiceProvider = Provider<SyncArchiveService>(
 /// kept in the OS keystore, not in the SQLite DB).
 final ftpProfileRepositoryProvider = Provider<FtpProfileRepository>(
   (ref) => FtpProfileRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// Singleton orchestrator for one-tap FTP sync. Exposed as a ChangeNotifier
+/// so UI can react to live progress via `ref.watch(...).progress`.
+final ftpSyncControllerProvider = ChangeNotifierProvider<FtpSyncController>(
+  (ref) => FtpSyncController(
+    db: ref.watch(appDatabaseProvider),
+    profileRepository: ref.watch(ftpProfileRepositoryProvider),
+    archiveService: ref.watch(syncArchiveServiceProvider),
+    currentUserService: ref.watch(currentUserServiceProvider),
+  ),
 );
 
 final usersStreamProvider = StreamProvider<List<User>>((ref) {

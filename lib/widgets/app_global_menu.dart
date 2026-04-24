@@ -10,6 +10,7 @@ import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -413,6 +414,11 @@ class _AppMenuDrawer extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            // FTP sync: a persistent mini card always visible at the bottom.
+            // Shows a quick "Sync now" button when idle, live progress while
+            // running, and the last result afterwards. Tapping opens the
+            // detailed progress screen (Phase C).
+            const FtpSyncDrawerCard(),
             ValueListenableBuilder<Uuid?>(
               valueListenable: caveTripService.activeTripIdNotifier,
               builder: (context, tripId, _) {
