@@ -26,7 +26,7 @@ void main() {
     // Create a cave place + definition to show a marker at (50,50)
     final cavePlaceUuid = Uuid.v7();
     final rasterMapUuid = Uuid.v7();
-    final cavePlace = CavePlace(uuid: cavePlaceUuid, caveUuid: Uuid.v7(), title: 'P1');
+    final cavePlace = CavePlace(uuid: cavePlaceUuid, caveUuid: Uuid.v7(), title: 'P1', isEntrance: 0, isMainEntrance: 0);
     final def = CavePlaceToRasterMapDefinition(uuid: Uuid.v7(), cavePlaceUuid: cavePlaceUuid, rasterMapUuid: rasterMapUuid, xCoordinate: 50, yCoordinate: 50);
     final cpwd = CavePlaceWithDefinition(cavePlace, def);
 

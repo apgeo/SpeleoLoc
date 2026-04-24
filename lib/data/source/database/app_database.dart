@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +113,69 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createAll();
             if (snap.totalRows > 0) {
               await reinsertLegacyData(this, snap);
+            }
+          }
+          if (from == 7) {
+            // v7 → v8 migrations:
+            //
+            // 1. Add created_at to documentation_files_to_geofeatures.
+            await migrator.addColumn(
+              documentationFilesToGeofeatures,
+              documentationFilesToGeofeatures.createdAt,
+            );
+
+            // 2. Backfill cave_places.is_entrance / is_main_entrance NULL → 0.
+            //    The columns are now NOT NULL DEFAULT 0; existing rows that
+            //    pre-date the constraint must be updated before Drift enforces
+            //    the non-nullable Dart type on read.
+            await customStatement(
+              'UPDATE cave_places SET is_entrance = 0 WHERE is_entrance IS NULL',
+            );
+            await customStatement(
+              'UPDATE cave_places SET is_main_entrance = 0 WHERE is_main_entrance IS NULL',
+            );
+
+            // 3. Recreate cave_trips to apply the new UNIQUE(title, cave_uuid)
+            //    constraint and the CHECK on raster_maps.map_type.
+            //    cave_trips has 0 rows in all known v7 databases, so
+            //    drop+create is safe. If rows exist they would be lost, but
+            //    that is acceptable because active trips must have been ended
+            //    before a migration is possible.
+            await migrator.drop(caveTrips);
+            await migrator.create(caveTrips);
+
+            // 4. Recreate raster_maps to apply the new
+            //    CHECK(map_type IN ('plane view', 'projected profile',
+            //    'extended profile')) constraint. All existing rows have
+            //    map_type = 'plane view' which is within the allowed set.
+            //    cave_place_to_raster_map_definitions references raster_maps;
+            //    FK checks are off during onUpgrade (PRAGMA foreign_keys is
+            //    enabled in beforeOpen, which runs after this callback), so
+            //    the drop is safe.
+            final rasterMapRows = await customSelect(
+              'SELECT * FROM raster_maps',
+            ).get();
+            await migrator.drop(rasterMaps);
+            await migrator.create(rasterMaps);
+            for (final row in rasterMapRows) {
+              final d = row.data;
+              await customStatement(
+                'INSERT INTO raster_maps '
+                '(uuid, title, map_type, file_name, cave_uuid, cave_area_uuid, '
+                'created_at, updated_at, deleted_at) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                  d['uuid'],
+                  d['title'],
+                  d['map_type'],
+                  d['file_name'],
+                  d['cave_uuid'],
+                  d['cave_area_uuid'],
+                  d['created_at'],
+                  d['updated_at'],
+                  d['deleted_at'],
+                ],
+              );
             }
           }
         },

@@ -2686,10 +2686,11 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
   late final GeneratedColumn<int> isEntrance = GeneratedColumn<int>(
     'is_entrance',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints: '',
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
   );
   static const VerificationMeta _isMainEntranceMeta = const VerificationMeta(
     'isMainEntrance',
@@ -2697,10 +2698,11 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
   late final GeneratedColumn<int> isMainEntrance = GeneratedColumn<int>(
     'is_main_entrance',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints: '',
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -2902,11 +2904,11 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
       isEntrance: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}is_entrance'],
-      ),
+      )!,
       isMainEntrance: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}is_main_entrance'],
-      ),
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -2948,12 +2950,16 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   final String? description;
   final Uuid caveUuid;
   final int? placeQrCodeIdentifier;
+
+  /// QR codes are either globally unique, either per-cave unique, either per surface area unique, depending on user configured choice in his dataset rules
   final Uuid? caveAreaUuid;
+
+  ///todo: redesign - SQLite stores everything as REAL (the actual DB schema confirms this). The NUMERIC(p,s) type affinity in SQLite is effectively ignored — scale/precision are cosmetic
   final double? latitude;
   final double? longitude;
   final double? depthInCave;
-  final int? isEntrance;
-  final int? isMainEntrance;
+  final int isEntrance;
+  final int isMainEntrance;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -2967,8 +2973,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     this.latitude,
     this.longitude,
     this.depthInCave,
-    this.isEntrance,
-    this.isMainEntrance,
+    required this.isEntrance,
+    required this.isMainEntrance,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -3005,12 +3011,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     if (!nullToAbsent || depthInCave != null) {
       map['depth_in_cave'] = Variable<double>(depthInCave);
     }
-    if (!nullToAbsent || isEntrance != null) {
-      map['is_entrance'] = Variable<int>(isEntrance);
-    }
-    if (!nullToAbsent || isMainEntrance != null) {
-      map['is_main_entrance'] = Variable<int>(isMainEntrance);
-    }
+    map['is_entrance'] = Variable<int>(isEntrance);
+    map['is_main_entrance'] = Variable<int>(isMainEntrance);
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
     }
@@ -3046,12 +3048,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       depthInCave: depthInCave == null && nullToAbsent
           ? const Value.absent()
           : Value(depthInCave),
-      isEntrance: isEntrance == null && nullToAbsent
-          ? const Value.absent()
-          : Value(isEntrance),
-      isMainEntrance: isMainEntrance == null && nullToAbsent
-          ? const Value.absent()
-          : Value(isMainEntrance),
+      isEntrance: Value(isEntrance),
+      isMainEntrance: Value(isMainEntrance),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -3081,8 +3079,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
       depthInCave: serializer.fromJson<double?>(json['depth_in_cave']),
-      isEntrance: serializer.fromJson<int?>(json['is_entrance']),
-      isMainEntrance: serializer.fromJson<int?>(json['is_main_entrance']),
+      isEntrance: serializer.fromJson<int>(json['is_entrance']),
+      isMainEntrance: serializer.fromJson<int>(json['is_main_entrance']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -3103,8 +3101,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
       'depth_in_cave': serializer.toJson<double?>(depthInCave),
-      'is_entrance': serializer.toJson<int?>(isEntrance),
-      'is_main_entrance': serializer.toJson<int?>(isMainEntrance),
+      'is_entrance': serializer.toJson<int>(isEntrance),
+      'is_main_entrance': serializer.toJson<int>(isMainEntrance),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -3121,8 +3119,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
     Value<double?> depthInCave = const Value.absent(),
-    Value<int?> isEntrance = const Value.absent(),
-    Value<int?> isMainEntrance = const Value.absent(),
+    int? isEntrance,
+    int? isMainEntrance,
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
@@ -3138,10 +3136,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
     depthInCave: depthInCave.present ? depthInCave.value : this.depthInCave,
-    isEntrance: isEntrance.present ? isEntrance.value : this.isEntrance,
-    isMainEntrance: isMainEntrance.present
-        ? isMainEntrance.value
-        : this.isMainEntrance,
+    isEntrance: isEntrance ?? this.isEntrance,
+    isMainEntrance: isMainEntrance ?? this.isMainEntrance,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -3245,8 +3241,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
   final Value<double?> latitude;
   final Value<double?> longitude;
   final Value<double?> depthInCave;
-  final Value<int?> isEntrance;
-  final Value<int?> isMainEntrance;
+  final Value<int> isEntrance;
+  final Value<int> isMainEntrance;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
@@ -3334,8 +3330,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Value<double?>? latitude,
     Value<double?>? longitude,
     Value<double?>? depthInCave,
-    Value<int?>? isEntrance,
-    Value<int?>? isMainEntrance,
+    Value<int>? isEntrance,
+    Value<int>? isMainEntrance,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
@@ -3475,7 +3471,8 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL',
+    $customConstraints:
+        'NOT NULL CHECK (map_type IN (\'plane view\', \'projected profile\', \'extended profile\'))',
   );
   static const VerificationMeta _fileNameMeta = const VerificationMeta(
     'fileName',
@@ -5279,6 +5276,17 @@ class DocumentationFilesToGeofeatures extends Table
       ).withConverter<Uuid>(
         DocumentationFilesToGeofeatures.$converterdocumentationFileUuid,
       );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -5307,6 +5315,7 @@ class DocumentationFilesToGeofeatures extends Table
     geofeatureUuid,
     geofeatureType,
     documentationFileUuid,
+    createdAt,
     updatedAt,
     deletedAt,
   ];
@@ -5332,6 +5341,12 @@ class DocumentationFilesToGeofeatures extends Table
       );
     } else if (isInserting) {
       context.missing(_geofeatureTypeMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -5386,6 +5401,10 @@ class DocumentationFilesToGeofeatures extends Table
               data['${effectivePrefix}documentation_file_uuid'],
             )!,
           ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -5423,6 +5442,7 @@ class DocumentationFilesToGeofeature extends DataClass
   final Uuid? geofeatureUuid;
   final String geofeatureType;
   final Uuid documentationFileUuid;
+  final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
   const DocumentationFilesToGeofeature({
@@ -5430,6 +5450,7 @@ class DocumentationFilesToGeofeature extends DataClass
     this.geofeatureUuid,
     required this.geofeatureType,
     required this.documentationFileUuid,
+    this.createdAt,
     this.updatedAt,
     this.deletedAt,
   });
@@ -5456,6 +5477,9 @@ class DocumentationFilesToGeofeature extends DataClass
         ),
       );
     }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<int>(updatedAt);
     }
@@ -5473,6 +5497,9 @@ class DocumentationFilesToGeofeature extends DataClass
           : Value(geofeatureUuid),
       geofeatureType: Value(geofeatureType),
       documentationFileUuid: Value(documentationFileUuid),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -5494,6 +5521,7 @@ class DocumentationFilesToGeofeature extends DataClass
       documentationFileUuid: serializer.fromJson<Uuid>(
         json['documentation_file_uuid'],
       ),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
     );
@@ -5506,6 +5534,7 @@ class DocumentationFilesToGeofeature extends DataClass
       'geofeature_uuid': serializer.toJson<Uuid?>(geofeatureUuid),
       'geofeature_type': serializer.toJson<String>(geofeatureType),
       'documentation_file_uuid': serializer.toJson<Uuid>(documentationFileUuid),
+      'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
     };
@@ -5516,6 +5545,7 @@ class DocumentationFilesToGeofeature extends DataClass
     Value<Uuid?> geofeatureUuid = const Value.absent(),
     String? geofeatureType,
     Uuid? documentationFileUuid,
+    Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
   }) => DocumentationFilesToGeofeature(
@@ -5525,6 +5555,7 @@ class DocumentationFilesToGeofeature extends DataClass
         : this.geofeatureUuid,
     geofeatureType: geofeatureType ?? this.geofeatureType,
     documentationFileUuid: documentationFileUuid ?? this.documentationFileUuid,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
@@ -5542,6 +5573,7 @@ class DocumentationFilesToGeofeature extends DataClass
       documentationFileUuid: data.documentationFileUuid.present
           ? data.documentationFileUuid.value
           : this.documentationFileUuid,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
@@ -5554,6 +5586,7 @@ class DocumentationFilesToGeofeature extends DataClass
           ..write('geofeatureUuid: $geofeatureUuid, ')
           ..write('geofeatureType: $geofeatureType, ')
           ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
           ..write(')'))
@@ -5566,6 +5599,7 @@ class DocumentationFilesToGeofeature extends DataClass
     geofeatureUuid,
     geofeatureType,
     documentationFileUuid,
+    createdAt,
     updatedAt,
     deletedAt,
   );
@@ -5577,6 +5611,7 @@ class DocumentationFilesToGeofeature extends DataClass
           other.geofeatureUuid == this.geofeatureUuid &&
           other.geofeatureType == this.geofeatureType &&
           other.documentationFileUuid == this.documentationFileUuid &&
+          other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
 }
@@ -5587,6 +5622,7 @@ class DocumentationFilesToGeofeaturesCompanion
   final Value<Uuid?> geofeatureUuid;
   final Value<String> geofeatureType;
   final Value<Uuid> documentationFileUuid;
+  final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
   final Value<int> rowid;
@@ -5595,6 +5631,7 @@ class DocumentationFilesToGeofeaturesCompanion
     this.geofeatureUuid = const Value.absent(),
     this.geofeatureType = const Value.absent(),
     this.documentationFileUuid = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5604,6 +5641,7 @@ class DocumentationFilesToGeofeaturesCompanion
     this.geofeatureUuid = const Value.absent(),
     required String geofeatureType,
     required Uuid documentationFileUuid,
+    this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5615,6 +5653,7 @@ class DocumentationFilesToGeofeaturesCompanion
     Expression<Uint8List>? geofeatureUuid,
     Expression<String>? geofeatureType,
     Expression<Uint8List>? documentationFileUuid,
+    Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
     Expression<int>? rowid,
@@ -5625,6 +5664,7 @@ class DocumentationFilesToGeofeaturesCompanion
       if (geofeatureType != null) 'geofeature_type': geofeatureType,
       if (documentationFileUuid != null)
         'documentation_file_uuid': documentationFileUuid,
+      if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (rowid != null) 'rowid': rowid,
@@ -5636,6 +5676,7 @@ class DocumentationFilesToGeofeaturesCompanion
     Value<Uuid?>? geofeatureUuid,
     Value<String>? geofeatureType,
     Value<Uuid>? documentationFileUuid,
+    Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
     Value<int>? rowid,
@@ -5646,6 +5687,7 @@ class DocumentationFilesToGeofeaturesCompanion
       geofeatureType: geofeatureType ?? this.geofeatureType,
       documentationFileUuid:
           documentationFileUuid ?? this.documentationFileUuid,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       rowid: rowid ?? this.rowid,
@@ -5677,6 +5719,9 @@ class DocumentationFilesToGeofeaturesCompanion
         ),
       );
     }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
     }
@@ -5696,6 +5741,7 @@ class DocumentationFilesToGeofeaturesCompanion
           ..write('geofeatureUuid: $geofeatureUuid, ')
           ..write('geofeatureType: $geofeatureType, ')
           ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
@@ -5718,7 +5764,7 @@ class Configurations extends Table
     hasAutoIncrement: true,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints: 'PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL',
+    $customConstraints: 'PRIMARY KEY AUTOINCREMENT NOT NULL',
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -6254,6 +6300,10 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   @override
   Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {title, caveUuid},
+  ];
+  @override
   CaveTrip map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CaveTrip(
@@ -6312,6 +6362,10 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
   static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
       const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'UNIQUE(title, cave_uuid)ON CONFLICT ROLLBACK',
+  ];
   @override
   bool get dontWriteConstraints => true;
 }
@@ -10756,8 +10810,8 @@ typedef $CavePlacesCreateCompanionBuilder =
       Value<double?> latitude,
       Value<double?> longitude,
       Value<double?> depthInCave,
-      Value<int?> isEntrance,
-      Value<int?> isMainEntrance,
+      Value<int> isEntrance,
+      Value<int> isMainEntrance,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -10774,8 +10828,8 @@ typedef $CavePlacesUpdateCompanionBuilder =
       Value<double?> latitude,
       Value<double?> longitude,
       Value<double?> depthInCave,
-      Value<int?> isEntrance,
-      Value<int?> isMainEntrance,
+      Value<int> isEntrance,
+      Value<int> isMainEntrance,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -11357,8 +11411,8 @@ class $CavePlacesTableManager
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
-                Value<int?> isEntrance = const Value.absent(),
-                Value<int?> isMainEntrance = const Value.absent(),
+                Value<int> isEntrance = const Value.absent(),
+                Value<int> isMainEntrance = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -11391,8 +11445,8 @@ class $CavePlacesTableManager
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
-                Value<int?> isEntrance = const Value.absent(),
-                Value<int?> isMainEntrance = const Value.absent(),
+                Value<int> isEntrance = const Value.absent(),
+                Value<int> isMainEntrance = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -13204,6 +13258,7 @@ typedef $DocumentationFilesToGeofeaturesCreateCompanionBuilder =
       Value<Uuid?> geofeatureUuid,
       required String geofeatureType,
       required Uuid documentationFileUuid,
+      Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
       Value<int> rowid,
@@ -13214,6 +13269,7 @@ typedef $DocumentationFilesToGeofeaturesUpdateCompanionBuilder =
       Value<Uuid?> geofeatureUuid,
       Value<String> geofeatureType,
       Value<Uuid> documentationFileUuid,
+      Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
       Value<int> rowid,
@@ -13283,6 +13339,11 @@ class $DocumentationFilesToGeofeaturesFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
@@ -13338,6 +13399,11 @@ class $DocumentationFilesToGeofeaturesOrderingComposer
 
   ColumnOrderings<String> get geofeatureType => $composableBuilder(
     column: $table.geofeatureType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13397,6 +13463,9 @@ class $DocumentationFilesToGeofeaturesAnnotationComposer
     column: $table.geofeatureType,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -13474,6 +13543,7 @@ class $DocumentationFilesToGeofeaturesTableManager
                 Value<Uuid?> geofeatureUuid = const Value.absent(),
                 Value<String> geofeatureType = const Value.absent(),
                 Value<Uuid> documentationFileUuid = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -13482,6 +13552,7 @@ class $DocumentationFilesToGeofeaturesTableManager
                 geofeatureUuid: geofeatureUuid,
                 geofeatureType: geofeatureType,
                 documentationFileUuid: documentationFileUuid,
+                createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
                 rowid: rowid,
@@ -13492,6 +13563,7 @@ class $DocumentationFilesToGeofeaturesTableManager
                 Value<Uuid?> geofeatureUuid = const Value.absent(),
                 required String geofeatureType,
                 required Uuid documentationFileUuid,
+                Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -13500,6 +13572,7 @@ class $DocumentationFilesToGeofeaturesTableManager
                 geofeatureUuid: geofeatureUuid,
                 geofeatureType: geofeatureType,
                 documentationFileUuid: documentationFileUuid,
+                createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
                 rowid: rowid,

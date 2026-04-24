@@ -57,6 +57,8 @@ void main() {
           caveUuid: caveUuid,
           placeQrCodeIdentifier: qr,
           caveAreaUuid: areaId,
+          isEntrance: 0,
+          isMainEntrance: 0,
         );
 
     final u1 = Uuid.v7();

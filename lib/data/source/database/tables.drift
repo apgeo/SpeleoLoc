@@ -57,16 +57,18 @@ CREATE TABLE IF NOT EXISTS cave_places (
     title                       TEXT(80) NOT NULL,
     description                 TEXT,
     cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
-    place_qr_code_identifier    INTEGER,
+    place_qr_code_identifier    INTEGER, -- QR codes are either globally unique, either per-cave unique, either per surface area unique, depending on user configured choice in his dataset rules
     cave_area_uuid              BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),
+    --todo: redesign - SQLite stores everything as REAL (the actual DB schema confirms this). The NUMERIC(p,s) type affinity in SQLite is effectively ignored — scale/precision are cosmetic
     latitude                    NUMERIC(10, 8),
     longitude                   NUMERIC(11, 8),
     depth_in_cave               NUMERIC(7, 2),
-    is_entrance                 INTEGER,
-    is_main_entrance            INTEGER,
+    is_entrance                 INTEGER NOT NULL DEFAULT 0,
+    is_main_entrance            INTEGER NOT NULL DEFAULT 0,
     created_at                  INTEGER,
     updated_at                  INTEGER,
     deleted_at                  INTEGER,
+    --todo: UNIQUE constraint allows silent title duplicates when cave_area_uuid is NULL; redesign
     UNIQUE(title, cave_uuid, cave_area_uuid) ON CONFLICT ROLLBACK
 );
 
@@ -100,17 +102,21 @@ CREATE TABLE IF NOT EXISTS documentation_files (
 -- Table: documentation_files_to_geofeatures
 CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (
     uuid                    BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    
     geofeature_uuid         BLOB MAPPED BY `const UuidConverter()`,
-    geofeature_type         TEXT(10) NOT NULL,
+    geofeature_type         TEXT(20) NOT NULL,
     documentation_file_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
+    
+    created_at              INTEGER,
     updated_at              INTEGER,
     deleted_at              INTEGER,
+    
     UNIQUE(geofeature_uuid, geofeature_type, documentation_file_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: configurations (NOT synced, keeps INTEGER PK)
 CREATE TABLE IF NOT EXISTS configurations (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+    id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     title       TEXT(255) NOT NULL UNIQUE,
     value       TEXT,
     created_at  INTEGER,
@@ -120,14 +126,17 @@ CREATE TABLE IF NOT EXISTS configurations (
 -- Table: raster_maps
 CREATE TABLE IF NOT EXISTS raster_maps (
     uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    
     title           TEXT NOT NULL,
-    map_type        TEXT(20) NOT NULL,
+    map_type        TEXT(20) NOT NULL CHECK(map_type IN ('plane view', 'projected profile', 'extended profile')),
     file_name       TEXT(255) NOT NULL,
     cave_uuid       BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
     cave_area_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),
+    
     created_at      INTEGER,
     updated_at      INTEGER,
     deleted_at      INTEGER,
+    
     UNIQUE(title, map_type, cave_uuid) ON CONFLICT ROLLBACK,
     UNIQUE(file_name, map_type, cave_uuid) ON CONFLICT ROLLBACK
 );
@@ -135,12 +144,14 @@ CREATE TABLE IF NOT EXISTS raster_maps (
 -- Table: surface_places (not used)
 CREATE TABLE IF NOT EXISTS surface_places (
     uuid                                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    
     title                               TEXT(255) NOT NULL,
     description                         TEXT,
     type                                TEXT(20),
     surface_place_qr_code_identifier    INTEGER DEFAULT NULL UNIQUE,
     latitude                            NUMERIC(10, 8),
     longitude                           NUMERIC(11, 8),
+    
     created_at                          INTEGER,
     updated_at                          INTEGER,
     deleted_at                          INTEGER
@@ -149,8 +160,10 @@ CREATE TABLE IF NOT EXISTS surface_places (
 -- Table: surface_areas
 CREATE TABLE IF NOT EXISTS surface_areas (
     uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    
     title       TEXT(255) NOT NULL UNIQUE,
     description TEXT,
+
     created_at  INTEGER,
     updated_at  INTEGER,
     deleted_at  INTEGER
@@ -165,9 +178,12 @@ CREATE TABLE IF NOT EXISTS cave_trips (
     trip_started_at     INTEGER NOT NULL,
     trip_ended_at       INTEGER,
     log                 TEXT,
+    
     created_at          INTEGER,
     updated_at          INTEGER,
-    deleted_at          INTEGER
+    deleted_at          INTEGER,
+    
+    UNIQUE(title, cave_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: cave_trip_points
@@ -177,9 +193,11 @@ CREATE TABLE IF NOT EXISTS cave_trip_points (
     cave_place_uuid     BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
     scanned_at          INTEGER NOT NULL,
     notes               TEXT,
+    
     created_at          INTEGER,
     updated_at          INTEGER,
     deleted_at          INTEGER,
+    
     UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at) ON CONFLICT ROLLBACK
 );
 
