@@ -4,50 +4,82 @@
 -- for the Dart value type and the `UuidConverter` TypeConverter). Primary
 -- keys are named `uuid`; foreign keys are named `<entity>_uuid`.
 --
+-- Audit columns on every syncable table:
+--   created_by_user_uuid        BLOB REFERENCES users(uuid)  -- immutable after insert
+--   last_modified_by_user_uuid  BLOB REFERENCES users(uuid)  -- rewritten on each update
+-- The device_uuid and current_user_uuid are stored in `configurations` as
+-- well-known key/value entries.
+--
 -- `configurations` keeps an INTEGER primary key because it is local-only and
--- not synced across devices.
+-- not synced across devices. It is the ONLY local-only table.
 --
 -- `place_qr_code_identifier` remains INTEGER: QR codes are a user-facing
 -- external identifier (printed on physical labels) and are unrelated to the
--- sync/primary-key scheme.
+-- sync/primary-key scheme. On sync, last-writer-wins.
+--
+-- `change_log` / `change_log_field` record structured audit history for
+-- every repository write. They are synced across devices and auto-purged
+-- locally based on the retention threshold in `configurations`.
 
 import 'package:speleoloc/utils/uuid.dart';
 
+-- Table: users
+-- Synced. `username` is treated as the natural key on sync: two user rows
+-- with the same username auto-merge (keep earliest created_at, remap FKs).
+CREATE TABLE IF NOT EXISTS users (
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    username                    TEXT(100) NOT NULL UNIQUE,
+    first_name                  TEXT(100),
+    last_name                   TEXT(100),
+    details                     TEXT,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid)
+);
+
 -- Table: cave_areas
 CREATE TABLE IF NOT EXISTS cave_areas (
-    uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    title           TEXT(255) NOT NULL,
-    description     TEXT,
-    cave_uuid       BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
-    created_at      INTEGER,
-    updated_at      INTEGER,
-    deleted_at      INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    title                       TEXT(255) NOT NULL,
+    description                 TEXT,
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, cave_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: cave_entrances (not used)
 CREATE TABLE IF NOT EXISTS cave_entrances (
-    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    cave_uuid           BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
-    surface_place_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES surface_places(uuid),
-    is_main_entrance    INTEGER,
-    title               TEXT(255),
-    created_at          INTEGER,
-    updated_at          INTEGER,
-    deleted_at          INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    surface_place_uuid          BLOB MAPPED BY `const UuidConverter()` REFERENCES surface_places(uuid),
+    is_main_entrance            INTEGER,
+    title                       TEXT(255),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(cave_uuid, title) ON CONFLICT ROLLBACK
 );
 
 -- Table: cave_place_to_raster_map_definitions
 CREATE TABLE IF NOT EXISTS cave_place_to_raster_map_definitions (
-    uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    x_coordinate    INTEGER,
-    y_coordinate    INTEGER,
-    cave_place_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
-    raster_map_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES raster_maps(uuid),
-    created_at      INTEGER,
-    updated_at      INTEGER,
-    deleted_at      INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    x_coordinate                INTEGER,
+    y_coordinate                INTEGER,
+    cave_place_uuid             BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
+    raster_map_uuid             BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES raster_maps(uuid),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(cave_place_uuid, raster_map_uuid) ON CONFLICT ROLLBACK
 );
 
@@ -68,53 +100,63 @@ CREATE TABLE IF NOT EXISTS cave_places (
     created_at                  INTEGER,
     updated_at                  INTEGER,
     deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     --todo: UNIQUE constraint allows silent title duplicates when cave_area_uuid is NULL; redesign
     UNIQUE(title, cave_uuid, cave_area_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: caves
 CREATE TABLE IF NOT EXISTS caves (
-    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    title               TEXT(50) NOT NULL,
-    description         TEXT,
-    surface_area_uuid   BLOB MAPPED BY `const UuidConverter()` REFERENCES surface_areas(uuid),
-    created_at          INTEGER,
-    updated_at          INTEGER,
-    deleted_at          INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    title                       TEXT(50) NOT NULL,
+    description                 TEXT,
+    surface_area_uuid           BLOB MAPPED BY `const UuidConverter()` REFERENCES surface_areas(uuid),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, surface_area_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: documentation_files
 CREATE TABLE IF NOT EXISTS documentation_files (
-    uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    title       TEXT(50) NOT NULL,
-    description TEXT,
-    file_name   TEXT(255) NOT NULL,
-    file_size   INTEGER NOT NULL,
-    file_hash   TEXT(64),
-    file_type   TEXT(25) NOT NULL,
-    created_at  INTEGER,
-    updated_at  INTEGER,
-    deleted_at  INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    title                       TEXT(50) NOT NULL,
+    description                 TEXT,
+    file_name                   TEXT(255) NOT NULL,
+    file_size                   INTEGER NOT NULL,
+    file_hash                   TEXT(64),
+    file_type                   TEXT(25) NOT NULL,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, file_name, file_size, file_hash) ON CONFLICT ROLLBACK
 );
 
 -- Table: documentation_files_to_geofeatures
 CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (
-    uuid                    BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    
-    geofeature_uuid         BLOB MAPPED BY `const UuidConverter()`,
-    geofeature_type         TEXT(20) NOT NULL,
-    documentation_file_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
-    
-    created_at              INTEGER,
-    updated_at              INTEGER,
-    deleted_at              INTEGER,
-    
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    geofeature_uuid             BLOB MAPPED BY `const UuidConverter()`,
+    geofeature_type             TEXT(20) NOT NULL,
+    documentation_file_uuid     BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(geofeature_uuid, geofeature_type, documentation_file_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: configurations (NOT synced, keeps INTEGER PK)
+-- Well-known keys include (but are not limited to):
+--   'device_uuid'           -- this device's persistent UUIDv7 (hex)
+--   'current_user_uuid'     -- the currently selected user's UUID (hex)
+--   'change_log_retention_days'  -- default 365
+--   'tombstone_retention_days'   -- default 365
 CREATE TABLE IF NOT EXISTS configurations (
     id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     title       TEXT(255) NOT NULL UNIQUE,
@@ -125,18 +167,17 @@ CREATE TABLE IF NOT EXISTS configurations (
 
 -- Table: raster_maps
 CREATE TABLE IF NOT EXISTS raster_maps (
-    uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    
-    title           TEXT NOT NULL,
-    map_type        TEXT(20) NOT NULL CHECK(map_type IN ('plane view', 'projected profile', 'extended profile')),
-    file_name       TEXT(255) NOT NULL,
-    cave_uuid       BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
-    cave_area_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),
-    
-    created_at      INTEGER,
-    updated_at      INTEGER,
-    deleted_at      INTEGER,
-    
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    title                       TEXT NOT NULL,
+    map_type                    TEXT(20) NOT NULL CHECK(map_type IN ('plane view', 'projected profile', 'extended profile')),
+    file_name                   TEXT(255) NOT NULL,
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    cave_area_uuid              BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, map_type, cave_uuid) ON CONFLICT ROLLBACK,
     UNIQUE(file_name, map_type, cave_uuid) ON CONFLICT ROLLBACK
 );
@@ -144,83 +185,120 @@ CREATE TABLE IF NOT EXISTS raster_maps (
 -- Table: surface_places (not used)
 CREATE TABLE IF NOT EXISTS surface_places (
     uuid                                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    
     title                               TEXT(255) NOT NULL,
     description                         TEXT,
     type                                TEXT(20),
     surface_place_qr_code_identifier    INTEGER DEFAULT NULL UNIQUE,
     latitude                            NUMERIC(10, 8),
     longitude                           NUMERIC(11, 8),
-    
     created_at                          INTEGER,
     updated_at                          INTEGER,
-    deleted_at                          INTEGER
+    deleted_at                          INTEGER,
+    created_by_user_uuid                BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid          BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid)
 );
 
 -- Table: surface_areas
 CREATE TABLE IF NOT EXISTS surface_areas (
-    uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    
-    title       TEXT(255) NOT NULL UNIQUE,
-    description TEXT,
-
-    created_at  INTEGER,
-    updated_at  INTEGER,
-    deleted_at  INTEGER
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    title                       TEXT(255) NOT NULL UNIQUE,
+    description                 TEXT,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid)
 );
 
 -- Table: cave_trips
 CREATE TABLE IF NOT EXISTS cave_trips (
-    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    cave_uuid           BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
-    title               TEXT(255) NOT NULL,
-    description         TEXT,
-    trip_started_at     INTEGER NOT NULL,
-    trip_ended_at       INTEGER,
-    log                 TEXT,
-    
-    created_at          INTEGER,
-    updated_at          INTEGER,
-    deleted_at          INTEGER,
-    
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    title                       TEXT(255) NOT NULL,
+    description                 TEXT,
+    trip_started_at             INTEGER NOT NULL,
+    trip_ended_at               INTEGER,
+    log                         TEXT,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, cave_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: cave_trip_points
 CREATE TABLE IF NOT EXISTS cave_trip_points (
-    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    cave_trip_uuid      BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trips(uuid),
-    cave_place_uuid     BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
-    scanned_at          INTEGER NOT NULL,
-    notes               TEXT,
-    
-    created_at          INTEGER,
-    updated_at          INTEGER,
-    deleted_at          INTEGER,
-    
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_trip_uuid              BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trips(uuid),
+    cave_place_uuid             BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
+    scanned_at                  INTEGER NOT NULL,
+    notes                       TEXT,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at) ON CONFLICT ROLLBACK
 );
 
 -- Table: documentation_files_to_cave_trips
 CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
-    uuid                    BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    documentation_file_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
-    cave_trip_uuid          BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trips(uuid),
-    created_at              INTEGER,
-    deleted_at              INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    documentation_file_uuid     BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
+    cave_trip_uuid              BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trips(uuid),
+    created_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(documentation_file_uuid, cave_trip_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: trip_report_templates
 CREATE TABLE IF NOT EXISTS trip_report_templates (
-    uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
-    title       TEXT(255) NOT NULL,
-    file_name   TEXT(255) NOT NULL,
-    file_size   INTEGER NOT NULL,
-    format      TEXT(10) NOT NULL,
-    created_at  INTEGER,
-    updated_at  INTEGER,
-    deleted_at  INTEGER,
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    title                       TEXT(255) NOT NULL,
+    file_name                   TEXT(255) NOT NULL,
+    file_size                   INTEGER NOT NULL,
+    format                      TEXT(10) NOT NULL,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title) ON CONFLICT ROLLBACK
 );
--- speleo_loc---- All syncable tables use BLOB UUID primary keys (see `lib/utils/uuid.dart`-- for the Dart value type and the `UuidConverter` TypeConverter). Primary-- keys are named `uuid`; foreign keys are named `<entity>_uuid`.---- `configurations` keeps an INTEGER primary key because it is local-only and-- not synced across devices.---- `place_qr_code_identifier` remains INTEGER: QR codes are a user-facing-- external identifier (printed on physical labels) and are unrelated to the-- sync/primary-key scheme.import 'package:speleoloc/utils/uuid.dart';-- Table: cave_areasCREATE TABLE IF NOT EXISTS cave_areas (    uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title           TEXT(255) NOT NULL,    description     TEXT,    cave_uuid       BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),    created_at      INTEGER,    updated_at      INTEGER,    deleted_at      INTEGER,    UNIQUE(title, cave_uuid) ON CONFLICT ROLLBACK);-- Table: cave_entrances (not used)CREATE TABLE IF NOT EXISTS cave_entrances (    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    cave_uuid           BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),    surface_place_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES surface_places(uuid),    is_main_entrance    INTEGER,    title               TEXT(255),    created_at          INTEGER,    updated_at          INTEGER,    deleted_at          INTEGER,    UNIQUE(cave_uuid, title) ON CONFLICT ROLLBACK);-- Table: cave_place_to_raster_map_definitionsCREATE TABLE IF NOT EXISTS cave_place_to_raster_map_definitions (    uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    x_coordinate    INTEGER,    y_coordinate    INTEGER,    cave_place_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),    raster_map_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES raster_maps(uuid),    created_at      INTEGER,    updated_at      INTEGER,    deleted_at      INTEGER,    UNIQUE(cave_place_uuid, raster_map_uuid) ON CONFLICT ROLLBACK);-- Table: cave_placesCREATE TABLE IF NOT EXISTS cave_places (    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title                       TEXT(80) NOT NULL,    description                 TEXT,    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),    place_qr_code_identifier    INTEGER,    cave_area_uuid              BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),    latitude                    NUMERIC(10, 8),    longitude                   NUMERIC(11, 8),    depth_in_cave               NUMERIC(7, 2),    is_entrance                 INTEGER,    is_main_entrance            INTEGER,    created_at                  INTEGER,    updated_at                  INTEGER,    deleted_at                  INTEGER,    UNIQUE(title, cave_uuid, cave_area_uuid) ON CONFLICT ROLLBACK);-- Table: cavesCREATE TABLE IF NOT EXISTS caves (    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title               TEXT(50) NOT NULL,    description         TEXT,    surface_area_uuid   BLOB MAPPED BY `const UuidConverter()` REFERENCES surface_areas(uuid),    created_at          INTEGER,    updated_at          INTEGER,    deleted_at          INTEGER,    UNIQUE(title, surface_area_uuid) ON CONFLICT ROLLBACK);-- Table: documentation_filesCREATE TABLE IF NOT EXISTS documentation_files (    uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title       TEXT(50) NOT NULL,    description TEXT,    file_name   TEXT(255) NOT NULL,    file_size   INTEGER NOT NULL,    file_hash   TEXT(64),    file_type   TEXT(25) NOT NULL,    created_at  INTEGER,    updated_at  INTEGER,    deleted_at  INTEGER,    UNIQUE(title, file_name, file_size, file_hash) ON CONFLICT ROLLBACK);-- Table: documentation_files_to_geofeaturesCREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (    uuid                    BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    geofeature_uuid         BLOB MAPPED BY `const UuidConverter()`,    geofeature_type         TEXT(10) NOT NULL,    documentation_file_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),    updated_at              INTEGER,    deleted_at              INTEGER,    UNIQUE(geofeature_uuid, geofeature_type, documentation_file_uuid) ON CONFLICT ROLLBACK);-- Table: configurations (NOT synced, keeps INTEGER PK)CREATE TABLE IF NOT EXISTS configurations (    id          INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,    title       TEXT(255) NOT NULL UNIQUE,    value       TEXT,    created_at  INTEGER,    updated_at  INTEGER);-- Table: raster_mapsCREATE TABLE IF NOT EXISTS raster_maps (    uuid            BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title           TEXT NOT NULL,    map_type        TEXT(20) NOT NULL,    file_name       TEXT(255) NOT NULL,    cave_uuid       BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),    cave_area_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),    created_at      INTEGER,    updated_at      INTEGER,    deleted_at      INTEGER,    UNIQUE(title, map_type, cave_uuid) ON CONFLICT ROLLBACK,    UNIQUE(file_name, map_type, cave_uuid) ON CONFLICT ROLLBACK);-- Table: surface_places (not used)CREATE TABLE IF NOT EXISTS surface_places (    uuid                                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title                               TEXT(255) NOT NULL,    description                         TEXT,    type                                TEXT(20),    surface_place_qr_code_identifier    INTEGER DEFAULT NULL UNIQUE,    latitude                            NUMERIC(10, 8),    longitude                           NUMERIC(11, 8),    created_at                          INTEGER,    updated_at                          INTEGER,    deleted_at                          INTEGER);-- Table: surface_areasCREATE TABLE IF NOT EXISTS surface_areas (    uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title       TEXT(255) NOT NULL UNIQUE,    description TEXT,    created_at  INTEGER,    updated_at  INTEGER,    deleted_at  INTEGER);-- Table: cave_tripsCREATE TABLE IF NOT EXISTS cave_trips (    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    cave_uuid           BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),    title               TEXT(255) NOT NULL,    description         TEXT,    trip_started_at     INTEGER NOT NULL,    trip_ended_at       INTEGER,    log                 TEXT,    created_at          INTEGER,    updated_at          INTEGER,    deleted_at          INTEGER);-- Table: cave_trip_pointsCREATE TABLE IF NOT EXISTS cave_trip_points (    uuid                BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    cave_trip_uuid      BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trips(uuid),    cave_place_uuid     BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),    scanned_at          INTEGER NOT NULL,    notes               TEXT,    created_at          INTEGER,    updated_at          INTEGER,    deleted_at          INTEGER,    UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at) ON CONFLICT ROLLBACK);-- Table: documentation_files_to_cave_tripsCREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (    uuid                    BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    documentation_file_uuid BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),    cave_trip_uuid          BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trips(uuid),    created_at              INTEGER,    deleted_at              INTEGER,    UNIQUE(documentation_file_uuid, cave_trip_uuid) ON CONFLICT ROLLBACK);-- Table: trip_report_templatesCREATE TABLE IF NOT EXISTS trip_report_templates (    uuid        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,    title       TEXT(255) NOT NULL,    file_name   TEXT(255) NOT NULL,    file_size   INTEGER NOT NULL,    format      TEXT(10) NOT NULL,    created_at  INTEGER,    updated_at  INTEGER,    deleted_at  INTEGER,    UNIQUE(title) ON CONFLICT ROLLBACK);
+
+-- Table: change_log
+-- Structured audit log. One row per repository-layer write operation.
+-- Synced across devices; auto-purged locally past the retention threshold
+-- (see `configurations.change_log_retention_days`).
+--
+-- change_type:  1 = insert, 2 = update, 3 = delete (soft-delete)
+CREATE TABLE IF NOT EXISTS change_log (
+    uuid                 BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    entity_table         TEXT(80) NOT NULL,
+    entity_uuid          BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    change_type          INTEGER NOT NULL,
+    changed_at           INTEGER NOT NULL,
+    changed_by_user_uuid BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    device_uuid          BLOB MAPPED BY `const UuidConverter()`
+);
+
+-- Table: change_log_field
+-- Per-field old-value forensics for a given change_log entry. Only the
+-- old_value is stored (current state is in the entity row itself).
+-- Values larger than 20 bytes are truncated: `old_value_short` is NULL and
+-- `old_value_truncated` is set to 1.
+CREATE TABLE IF NOT EXISTS change_log_field (
+    change_uuid          BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES change_log(uuid) ON DELETE CASCADE,
+    field_name           TEXT(80) NOT NULL,
+    old_value_short      BLOB,
+    old_value_truncated  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (change_uuid, field_name)
+);
+
+-- Indexes for change_log lookups
+CREATE INDEX IF NOT EXISTS idx_change_log_entity        ON change_log(entity_table, entity_uuid);
+CREATE INDEX IF NOT EXISTS idx_change_log_changed_at    ON change_log(changed_at);
+CREATE INDEX IF NOT EXISTS idx_change_log_changed_by    ON change_log(changed_by_user_uuid);
