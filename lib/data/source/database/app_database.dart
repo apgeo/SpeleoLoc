@@ -281,8 +281,10 @@ class AppDatabase extends _$AppDatabase {
     required String title,
     String? description,
     required int startedAt,
+    required Uuid authorUuid,
   }) async {
     final uuid = Uuid.v7();
+    final now = DateTime.now().millisecondsSinceEpoch;
     await into(caveTrips).insert(
       CaveTripsCompanion.insert(
         uuid: uuid,
@@ -290,17 +292,22 @@ class AppDatabase extends _$AppDatabase {
         title: title,
         description: Value(description),
         tripStartedAt: startedAt,
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
     return uuid;
   }
 
-  Future<void> endCaveTrip(Uuid tripUuid) async {
+  Future<void> endCaveTrip(Uuid tripUuid, {required Uuid authorUuid}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
       CaveTripsCompanion(
-        tripEndedAt: Value(DateTime.now().millisecondsSinceEpoch),
-        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        tripEndedAt: Value(now),
+        updatedAt: Value(now),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
   }
@@ -325,16 +332,21 @@ class AppDatabase extends _$AppDatabase {
     required Uuid tripUuid,
     required Uuid cavePlaceUuid,
     String? notes,
+    required Uuid authorUuid,
   }) async {
     final uuid = Uuid.v7();
+    final now = DateTime.now().millisecondsSinceEpoch;
     await into(caveTripPoints).insert(
       CaveTripPointsCompanion.insert(
         uuid: uuid,
         caveTripUuid: tripUuid,
         cavePlaceUuid: Value(cavePlaceUuid),
-        scannedAt: DateTime.now().millisecondsSinceEpoch,
+        scannedAt: now,
         notes: Value(notes),
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
     return uuid;
@@ -361,13 +373,17 @@ class AppDatabase extends _$AppDatabase {
     return trips.map((t) => t.title).toList();
   }
 
-  Future<void> linkDocumentToTrip(Uuid docUuid, Uuid tripUuid) async {
+  Future<void> linkDocumentToTrip(Uuid docUuid, Uuid tripUuid,
+      {required Uuid authorUuid}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     await into(documentationFilesToCaveTrips).insertOnConflictUpdate(
       DocumentationFilesToCaveTripsCompanion.insert(
         uuid: Uuid.v7(),
         documentationFileUuid: docUuid,
         caveTripUuid: tripUuid,
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdAt: Value(now),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
   }

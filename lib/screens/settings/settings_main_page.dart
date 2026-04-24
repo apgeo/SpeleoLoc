@@ -5,6 +5,7 @@ import 'package:speleoloc/screens/settings/settings_image_compression_page.dart'
 import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
 import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_database_page.dart';
+import 'package:speleoloc/screens/settings/users_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -107,6 +108,17 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const SettingsDatabasePage()),
+                );
+              },
+            ),
+            _SettingsSection(
+              icon: Icons.people_outline,
+              title: LocServ.inst.t('settings_users'),
+              subtitle: LocServ.inst.t('settings_users_desc'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UsersPage()),
                 );
               },
             ),

@@ -1,6 +1,7 @@
 import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 
 /// Configuration for CSV cave place import.
 class CSVCavePlacesImportConfig {
@@ -81,8 +82,9 @@ class CSVCavePlaceImportResult {
 /// Helper class for importing cave place data from CSV files.
 class CSVCavePlaceImporter {
   final AppDatabase _database;
+  final CurrentUserService _currentUser;
 
-  CSVCavePlaceImporter(this._database);
+  CSVCavePlaceImporter(this._database, this._currentUser);
 
   /// Parse a CSV string into a list of lists (rows x columns).
   /// Expects the first row to be headers.
@@ -305,6 +307,9 @@ class CSVCavePlaceImporter {
     for (final row in rows) {
       if (row.cavePlaceName == null || row.cavePlaceName!.isEmpty) continue;
 
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
+
       Uuid? targetCaveUuid = config.caveUuid;
 
       // In multiple cave mode, resolve or create the cave
@@ -320,6 +325,10 @@ class CSVCavePlaceImporter {
                 CavesCompanion.insert(
                   uuid: newUuid,
                   title: row.caveName!,
+                  createdAt: Value(now),
+                  updatedAt: Value(now),
+                  createdByUserUuid: Value(author),
+                  lastModifiedByUserUuid: Value(author),
                 ),
               );
           caveCache[caveKey] = newUuid;
@@ -343,6 +352,10 @@ class CSVCavePlaceImporter {
                   uuid: newUuid,
                   title: row.caveArea!,
                   caveUuid: targetCaveUuid,
+                  createdAt: Value(now),
+                  updatedAt: Value(now),
+                  createdByUserUuid: Value(author),
+                  lastModifiedByUserUuid: Value(author),
                 ),
               );
           areaCache[areaKey] = newUuid;
@@ -366,6 +379,8 @@ class CSVCavePlaceImporter {
                   ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
                 .write(CavePlacesCompanion(
               placeQrCodeIdentifier: Value(row.qrCode),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
             ));
             qrCodesUpdated++;
           }
@@ -377,6 +392,8 @@ class CSVCavePlaceImporter {
                 ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
               .write(CavePlacesCompanion(
             caveAreaUuid: Value(targetAreaUuid),
+            updatedAt: Value(now),
+            lastModifiedByUserUuid: Value(author),
           ));
         }
       } else {
@@ -388,6 +405,10 @@ class CSVCavePlaceImporter {
                 caveUuid: targetCaveUuid,
                 caveAreaUuid: Value(targetAreaUuid),
                 placeQrCodeIdentifier: Value(row.qrCode),
+                createdAt: Value(now),
+                updatedAt: Value(now),
+                createdByUserUuid: Value(author),
+                lastModifiedByUserUuid: Value(author),
               ),
             );
         cavePlacesCreated++;

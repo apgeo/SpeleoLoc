@@ -1,13 +1,16 @@
+import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class RasterMapRepository implements IRasterMapRepository {
   final AppDatabase _database;
+  final CurrentUserService _currentUser;
   final _log = AppLogger.of('RasterMapRepository');
 
-  RasterMapRepository(this._database);
+  RasterMapRepository(this._database, this._currentUser);
 
   @override
   Future<List<RasterMap>> getRasterMaps(Uuid caveUuid) async {
@@ -32,7 +35,15 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> addRasterMap(RasterMapsCompanion companion) async {
     try {
-      await _database.into(_database.rasterMaps).insert(companion);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
+      final stamped = companion.copyWith(
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(author),
+        lastModifiedByUserUuid: Value(author),
+      );
+      await _database.into(_database.rasterMaps).insert(stamped);
     } catch (e, st) {
       _log.severe('Failed to add raster map', e, st);
       throw DbException('Failed to add raster map', cause: e, stackTrace: st);
@@ -42,7 +53,13 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> updateRasterMap(RasterMap rasterMap) async {
     try {
-      await _database.update(_database.rasterMaps).replace(rasterMap);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
+      final updated = rasterMap.copyWith(
+        updatedAt: Value(now),
+        lastModifiedByUserUuid: Value(author),
+      );
+      await _database.update(_database.rasterMaps).replace(updated);
     } catch (e, st) {
       _log.severe('Failed to update raster map', e, st);
       throw DbException('Failed to update raster map', cause: e, stackTrace: st);

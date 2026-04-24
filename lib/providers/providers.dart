@@ -4,9 +4,11 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 
 /// Central place that wires all app-wide dependencies via Riverpod.
@@ -22,19 +24,50 @@ import 'package:speleoloc/state/app_notifiers.dart';
 final appDatabaseProvider = Provider<AppDatabase>((ref) => appDatabase);
 
 final caveRepositoryProvider = Provider<ICaveRepository>(
-  (ref) => CaveRepository(ref.watch(appDatabaseProvider)),
+  (ref) => CaveRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+  ),
 );
 
+final userRepositoryProvider = Provider<IUserRepository>(
+  (ref) => UserRepository(ref.watch(appDatabaseProvider)),
+);
+
+final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
+  final svc = CurrentUserService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(userRepositoryProvider),
+  );
+  // Fire-and-forget init; readers that need the values before init finishes
+  // should await `svc.initialize()` themselves.
+  svc.initialize();
+  return svc;
+});
+
+final usersStreamProvider = StreamProvider<List<User>>((ref) {
+  return ref.watch(userRepositoryProvider).watchUsers();
+});
+
 final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
-  (ref) => CavePlaceRepository(ref.watch(appDatabaseProvider)),
+  (ref) => CavePlaceRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+  ),
 );
 
 final rasterMapRepositoryProvider = Provider<IRasterMapRepository>(
-  (ref) => RasterMapRepository(ref.watch(appDatabaseProvider)),
+  (ref) => RasterMapRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+  ),
 );
 
 final definitionRepositoryProvider = Provider<IDefinitionRepository>(
-  (ref) => DefinitionRepository(ref.watch(appDatabaseProvider)),
+  (ref) => DefinitionRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+  ),
 );
 
 final caveTripServiceProvider = Provider<CaveTripService>(

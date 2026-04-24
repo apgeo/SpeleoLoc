@@ -3,24 +3,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
+import 'package:speleoloc/services/user_repository.dart';
 
 /// Phase 1.5 initial repository tests — verify interface wiring and the
 /// core CRUD paths against an in-memory Drift database.
 void main() {
   late AppDatabase db;
+  late CurrentUserService currentUser;
   late CaveRepository caveRepo;
   late CavePlaceRepository cavePlaceRepo;
   late RasterMapRepository rasterMapRepo;
   late DefinitionRepository defRepo;
 
-  setUp(() {
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    caveRepo = CaveRepository(db);
-    cavePlaceRepo = CavePlaceRepository(db);
-    rasterMapRepo = RasterMapRepository(db);
-    defRepo = DefinitionRepository(db);
+    currentUser = CurrentUserService(db, UserRepository(db));
+    await currentUser.initialize();
+    caveRepo = CaveRepository(db, currentUser);
+    cavePlaceRepo = CavePlaceRepository(db, currentUser);
+    rasterMapRepo = RasterMapRepository(db, currentUser);
+    defRepo = DefinitionRepository(db, currentUser);
   });
 
   tearDown(() async {

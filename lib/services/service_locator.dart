@@ -10,7 +10,9 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/user_repository.dart';
 
 // Re-export SessionPrefs so callers importing this file keep working.
 export 'package:speleoloc/providers/providers.dart' show SessionPrefs;
@@ -45,3 +47,7 @@ IRasterMapRepository get rasterMapRepository =>
     rootContainer.read(rasterMapRepositoryProvider);
 IDefinitionRepository get definitionRepository =>
     rootContainer.read(definitionRepositoryProvider);
+IUserRepository get userRepository =>
+    rootContainer.read(userRepositoryProvider);
+CurrentUserService get currentUserService =>
+    rootContainer.read(currentUserServiceProvider);

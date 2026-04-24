@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -33,10 +34,12 @@ class CaveTripService {
 
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
     isPausedNotifier.value = false;
+    final author = await currentUserService.currentOrSystem();
     final tripUuid = await appDatabase.insertCaveTrip(
       caveUuid: caveUuid,
       title: title,
       startedAt: DateTime.now().millisecondsSinceEpoch,
+      authorUuid: author,
     );
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
@@ -50,7 +53,8 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id != null) {
       await _append(_logLine(LocServ.inst.t('trip_log_ended')), id);
-      await appDatabase.endCaveTrip(id);
+      final author = await currentUserService.currentOrSystem();
+      await appDatabase.endCaveTrip(id, authorUuid: author);
     }
     await _clearConfig();
     activeTripIdNotifier.value = null;
@@ -75,8 +79,9 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
+      final author = await currentUserService.currentOrSystem();
       await appDatabase.insertTripPoint(
-          tripUuid: id, cavePlaceUuid: cavePlaceUuid);
+          tripUuid: id, cavePlaceUuid: cavePlaceUuid, authorUuid: author);
       final label =
           placeTitle != null ? '"$placeTitle"' : 'place $cavePlaceUuid';
       await _append(
@@ -90,7 +95,8 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
-      await appDatabase.linkDocumentToTrip(docUuid, id);
+      final author = await currentUserService.currentOrSystem();
+      await appDatabase.linkDocumentToTrip(docUuid, id, authorUuid: author);
       final label =
           documentTitle != null ? '"$documentTitle"' : 'doc $docUuid';
       final sb = StringBuffer(_logLine(

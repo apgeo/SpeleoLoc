@@ -1,14 +1,16 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class CaveRepository implements ICaveRepository {
   final AppDatabase _database;
+  final CurrentUserService _currentUser;
   final _log = AppLogger.of('CaveRepository');
 
-  CaveRepository(this._database);
+  CaveRepository(this._database, this._currentUser);
 
   @override
   Future<List<Cave>> getCaves() async {
@@ -29,11 +31,17 @@ class CaveRepository implements ICaveRepository {
   Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description}) async {
     try {
       final newUuid = Uuid.v7();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
       final companion = CavesCompanion.insert(
         uuid: newUuid,
         title: title,
         surfaceAreaUuid: Value(surfaceAreaUuid),
         description: Value(description),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(author),
+        lastModifiedByUserUuid: Value(author),
       );
       await _database.into(_database.caves).insert(companion);
       return newUuid;
@@ -46,11 +54,15 @@ class CaveRepository implements ICaveRepository {
   @override
   Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description}) async {
     try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
       await (_database.update(_database.caves)..where((c) => c.uuid.equalsValue(id))).write(
         CavesCompanion(
           title: Value(title),
           surfaceAreaUuid: Value(surfaceAreaUuid),
           description: Value(description),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
         ),
       );
     } catch (e, st) {

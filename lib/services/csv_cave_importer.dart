@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 
 /// Configuration for CSV cave import.
 class CSVCavesImportConfig {
@@ -60,8 +61,9 @@ class CSVCaveImportResult {
 /// Helper class for importing cave data from CSV files.
 class CSVCaveImporter {
   final AppDatabase _database;
+  final CurrentUserService _currentUser;
 
-  CSVCaveImporter(this._database);
+  CSVCaveImporter(this._database, this._currentUser);
 
   /// Parse CSV rows according to the given config, skipping the header row.
   List<CSVCaveImportRow> parseRows(List<List<dynamic>> csvData, CSVCavesImportConfig config) {
@@ -167,6 +169,9 @@ class CSVCaveImporter {
       for (final row in rows) {
         if (row.caveName == null || row.caveName!.isEmpty) continue;
 
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final author = await _currentUser.currentOrSystem();
+
         // Resolve surface area
         Uuid? surfaceAreaUuid;
         if (row.surfaceArea != null && row.surfaceArea!.isNotEmpty) {
@@ -179,6 +184,10 @@ class CSVCaveImporter {
                   SurfaceAreasCompanion.insert(
                     uuid: newUuid,
                     title: row.surfaceArea!,
+                    createdAt: Value(now),
+                    updatedAt: Value(now),
+                    createdByUserUuid: Value(author),
+                    lastModifiedByUserUuid: Value(author),
                   ),
                 );
             surfaceAreaCache[saKey] = newUuid;
@@ -194,7 +203,11 @@ class CSVCaveImporter {
           if (row.description != null && row.description!.isNotEmpty) {
             await (_database.update(_database.caves)
                   ..where((c) => c.uuid.equalsValue(caveCache[caveKey]!)))
-                .write(CavesCompanion(description: Value(row.description)));
+                .write(CavesCompanion(
+              description: Value(row.description),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
+            ));
           }
           skippedDuplicates++;
           continue;
@@ -208,6 +221,10 @@ class CSVCaveImporter {
                 title: row.caveName!,
                 description: Value(row.description),
                 surfaceAreaUuid: Value(surfaceAreaUuid),
+                createdAt: Value(now),
+                updatedAt: Value(now),
+                createdByUserUuid: Value(author),
+                lastModifiedByUserUuid: Value(author),
               ),
             );
         caveCache[caveKey] = newUuid;
