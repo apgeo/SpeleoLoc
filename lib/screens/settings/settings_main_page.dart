@@ -8,6 +8,7 @@ import 'package:speleoloc/screens/settings/settings_database_page.dart';
 import 'package:speleoloc/screens/settings/users_page.dart';
 import 'package:speleoloc/screens/settings/change_log_page.dart';
 import 'package:speleoloc/screens/settings/sync_page.dart';
+import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -143,6 +144,18 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const SyncPage()),
+                );
+              },
+            ),
+            _SettingsSection(
+              icon: Icons.cloud_sync,
+              title: LocServ.inst.t('ftp_sync_title'),
+              subtitle: LocServ.inst.t('ftp_sync_desc'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const FtpSyncSettingsPage()),
                 );
               },
             ),

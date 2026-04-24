@@ -46,6 +46,11 @@ dependencies:
   logging: ^1.2.0
   url_launcher: ^6.3.1
   uuid: ^4.5.3
+  # FTP sync (phase A+): ftpconnect for FTP/FTPS, dartssh2 for SFTP,
+  # flutter_secure_storage for per-profile passwords.
+  ftpconnect: ^2.0.7
+  dartssh2: ^2.12.0
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   flutter_test:

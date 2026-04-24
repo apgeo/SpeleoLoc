@@ -10,6 +10,7 @@ import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 
@@ -63,6 +64,12 @@ final syncArchiveServiceProvider = Provider<SyncArchiveService>(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
   ),
+);
+
+/// Stores configured FTP/SFTP endpoints plus their passwords (passwords are
+/// kept in the OS keystore, not in the SQLite DB).
+final ftpProfileRepositoryProvider = Provider<FtpProfileRepository>(
+  (ref) => FtpProfileRepository(ref.watch(appDatabaseProvider)),
 );
 
 final usersStreamProvider = StreamProvider<List<User>>((ref) {

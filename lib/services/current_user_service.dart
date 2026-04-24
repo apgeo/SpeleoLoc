@@ -15,6 +15,14 @@ class ConfigKey {
   static const String currentUserUuid = 'current_user_uuid';
   static const String changeLogRetentionDays = 'change_log_retention_days';
   static const String tombstoneRetentionDays = 'tombstone_retention_days';
+  // FTP sync (feat/sync-v2, Phase A).
+  /// JSON array of [FtpProfile] — see `lib/services/sync/ftp/ftp_profile.dart`.
+  static const String ftpProfiles = 'ftp_profiles';
+  /// UUID of the profile selected as default for one-tap sync.
+  static const String ftpDefaultProfileUuid = 'ftp_default_profile_uuid';
+  /// JSON map `{ archiveFilename: iso8601Timestamp }` — filenames already
+  /// imported from the remote (so future downloads skip them).
+  static const String ftpSeenArchives = 'ftp_seen_archives';
 }
 
 /// Provides the identity used to populate `created_by_user_uuid` and
