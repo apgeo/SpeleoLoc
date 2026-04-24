@@ -4,6 +4,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
@@ -27,12 +28,16 @@ final caveRepositoryProvider = Provider<ICaveRepository>(
   (ref) => CaveRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
   ),
 );
 
-final userRepositoryProvider = Provider<IUserRepository>(
-  (ref) => UserRepository(ref.watch(appDatabaseProvider)),
-);
+final userRepositoryProvider = Provider<IUserRepository>(_buildUserRepository);
+
+IUserRepository _buildUserRepository(Ref ref) => UserRepository(
+      ref.watch(appDatabaseProvider),
+      () => ref.read(changeLoggerProvider),
+    );
 
 final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
   final svc = CurrentUserService(
@@ -45,6 +50,13 @@ final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
   return svc;
 });
 
+final changeLoggerProvider = Provider<ChangeLogger>(
+  (ref) => ChangeLogger(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+  ),
+);
+
 final usersStreamProvider = StreamProvider<List<User>>((ref) {
   return ref.watch(userRepositoryProvider).watchUsers();
 });
@@ -53,6 +65,7 @@ final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
   (ref) => CavePlaceRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
   ),
 );
 
@@ -60,6 +73,7 @@ final rasterMapRepositoryProvider = Provider<IRasterMapRepository>(
   (ref) => RasterMapRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
   ),
 );
 
@@ -67,6 +81,7 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
   (ref) => DefinitionRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
   ),
 );
 

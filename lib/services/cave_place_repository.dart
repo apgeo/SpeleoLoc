@@ -1,5 +1,6 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:drift/drift.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
@@ -8,9 +9,10 @@ import 'package:speleoloc/utils/app_logger.dart';
 class CavePlaceRepository implements ICavePlaceRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
+  final ChangeLogger _logger;
   final _log = AppLogger.of('CavePlaceRepository');
 
-  CavePlaceRepository(this._database, this._currentUser);
+  CavePlaceRepository(this._database, this._currentUser, this._logger);
 
   @override
   Future<List<CavePlace>> getCavePlaces(Uuid caveUuid) async {
@@ -34,9 +36,10 @@ class CavePlaceRepository implements ICavePlaceRepository {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       final author = await _currentUser.currentOrSystem();
+      final newUuid = Uuid.v7();
       await _database.into(_database.cavePlaces).insert(
         CavePlacesCompanion.insert(
-          uuid: Uuid.v7(),
+          uuid: newUuid,
           title: title,
           caveUuid: caveUuid,
           createdAt: Value(now),
@@ -45,6 +48,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
           lastModifiedByUserUuid: Value(author),
         ),
       );
+      await _logger.logInsert('cave_places', newUuid);
     } catch (e, st) {
       _log.severe('Failed to add cave place', e, st);
       throw DbException('Failed to add cave place', cause: e, stackTrace: st);

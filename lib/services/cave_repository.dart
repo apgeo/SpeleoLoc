@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
@@ -8,9 +9,10 @@ import 'package:speleoloc/utils/app_logger.dart';
 class CaveRepository implements ICaveRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
+  final ChangeLogger _logger;
   final _log = AppLogger.of('CaveRepository');
 
-  CaveRepository(this._database, this._currentUser);
+  CaveRepository(this._database, this._currentUser, this._logger);
 
   @override
   Future<List<Cave>> getCaves() async {
@@ -44,6 +46,7 @@ class CaveRepository implements ICaveRepository {
         lastModifiedByUserUuid: Value(author),
       );
       await _database.into(_database.caves).insert(companion);
+      await _logger.logInsert('caves', newUuid);
       return newUuid;
     } catch (e, st) {
       _log.severe('Failed to add cave', e, st);
@@ -56,6 +59,10 @@ class CaveRepository implements ICaveRepository {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       final author = await _currentUser.currentOrSystem();
+      final old = await (_database.select(_database.caves)
+            ..where((c) => c.uuid.equalsValue(id))
+            ..limit(1))
+          .getSingleOrNull();
       await (_database.update(_database.caves)..where((c) => c.uuid.equalsValue(id))).write(
         CavesCompanion(
           title: Value(title),
@@ -65,6 +72,22 @@ class CaveRepository implements ICaveRepository {
           lastModifiedByUserUuid: Value(author),
         ),
       );
+      if (old != null) {
+        await _logger.logUpdate(
+          'caves',
+          id,
+          oldValues: {
+            'title': old.title,
+            'surface_area_uuid': old.surfaceAreaUuid,
+            'description': old.description,
+          },
+          newValues: {
+            'title': title,
+            'surface_area_uuid': surfaceAreaUuid,
+            'description': description,
+          },
+        );
+      }
     } catch (e, st) {
       _log.severe('Failed to update cave', e, st);
       throw DbException('Failed to update cave', cause: e, stackTrace: st);

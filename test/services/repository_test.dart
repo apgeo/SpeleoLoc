@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
@@ -13,6 +14,7 @@ import 'package:speleoloc/services/user_repository.dart';
 void main() {
   late AppDatabase db;
   late CurrentUserService currentUser;
+  late ChangeLogger logger;
   late CaveRepository caveRepo;
   late CavePlaceRepository cavePlaceRepo;
   late RasterMapRepository rasterMapRepo;
@@ -20,12 +22,16 @@ void main() {
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    currentUser = CurrentUserService(db, UserRepository(db));
+    late ChangeLogger loggerRef;
+    final userRepo = UserRepository(db, () => loggerRef);
+    currentUser = CurrentUserService(db, userRepo);
     await currentUser.initialize();
-    caveRepo = CaveRepository(db, currentUser);
-    cavePlaceRepo = CavePlaceRepository(db, currentUser);
-    rasterMapRepo = RasterMapRepository(db, currentUser);
-    defRepo = DefinitionRepository(db, currentUser);
+    loggerRef = ChangeLogger(db, currentUser);
+    logger = loggerRef;
+    caveRepo = CaveRepository(db, currentUser, logger);
+    cavePlaceRepo = CavePlaceRepository(db, currentUser, logger);
+    rasterMapRepo = RasterMapRepository(db, currentUser, logger);
+    defRepo = DefinitionRepository(db, currentUser, logger);
   });
 
   tearDown(() async {

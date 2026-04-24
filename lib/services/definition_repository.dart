@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
@@ -10,9 +11,10 @@ import 'package:speleoloc/utils/app_logger.dart';
 class DefinitionRepository implements IDefinitionRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
+  final ChangeLogger _logger;
   final _log = AppLogger.of('DefinitionRepository');
 
-  DefinitionRepository(this._database, this._currentUser);
+  DefinitionRepository(this._database, this._currentUser, this._logger);
 
   @override
   Future<CavePlaceToRasterMapDefinition?> findDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
@@ -63,6 +65,18 @@ class DefinitionRepository implements IDefinitionRepository {
             updatedAt: Value(now),
             lastModifiedByUserUuid: Value(author),
           ));
+          await _logger.logUpdate(
+            'cave_place_to_raster_map_definitions',
+            existing.uuid,
+            oldValues: {
+              'x_coordinate': existing.xCoordinate,
+              'y_coordinate': existing.yCoordinate,
+            },
+            newValues: {
+              'x_coordinate': imageX.toInt(),
+              'y_coordinate': imageY.toInt(),
+            },
+          );
           return (await findDefinition(cavePlaceUuid, rasterMapUuid))!;
         } else {
           final newUuid = Uuid.v7();
@@ -80,6 +94,8 @@ class DefinitionRepository implements IDefinitionRepository {
           await _database
               .into(_database.cavePlaceToRasterMapDefinitions)
               .insert(companion);
+          await _logger.logInsert(
+              'cave_place_to_raster_map_definitions', newUuid);
           return (await findDefinition(cavePlaceUuid, rasterMapUuid))!;
         }
       });

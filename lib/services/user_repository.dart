@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -33,9 +34,14 @@ abstract class IUserRepository {
 
 class UserRepository implements IUserRepository {
   final AppDatabase _database;
+  // Lazy resolver to break the construction cycle:
+  // UserRepository → ChangeLogger → CurrentUserService → UserRepository.
+  // The logger is resolved on first write, after all providers have
+  // been built.
+  final ChangeLogger Function() _logger;
   final _log = AppLogger.of('UserRepository');
 
-  UserRepository(this._database);
+  UserRepository(this._database, this._logger);
 
   @override
   Future<List<User>> getUsers() async {
@@ -98,6 +104,7 @@ class UserRepository implements IUserRepository {
               lastModifiedByUserUuid: Value(author),
             ),
           );
+      await _logger().logInsert('users', newUuid);
       return newUuid;
     } catch (e, st) {
       _log.severe('Failed to add user', e, st);
@@ -116,6 +123,7 @@ class UserRepository implements IUserRepository {
   }) async {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
+      final old = await findByUuid(uuid);
       await (_database.update(_database.users)
             ..where((u) => u.uuid.equalsValue(uuid)))
           .write(UsersCompanion(
@@ -126,6 +134,24 @@ class UserRepository implements IUserRepository {
         updatedAt: Value(now),
         lastModifiedByUserUuid: Value(authorUserUuid),
       ));
+      if (old != null) {
+        await _logger().logUpdate(
+          'users',
+          uuid,
+          oldValues: {
+            'username': old.username,
+            'first_name': old.firstName,
+            'last_name': old.lastName,
+            'details': old.details,
+          },
+          newValues: {
+            'username': username,
+            'first_name': firstName,
+            'last_name': lastName,
+            'details': details,
+          },
+        );
+      }
     } catch (e, st) {
       _log.severe('Failed to update user', e, st);
       throw DbException('Failed to update user', cause: e, stackTrace: st);
@@ -136,6 +162,7 @@ class UserRepository implements IUserRepository {
   Future<void> softDeleteUser(Uuid uuid,
       {required Uuid authorUserUuid}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final old = await findByUuid(uuid);
     await (_database.update(_database.users)
           ..where((u) => u.uuid.equalsValue(uuid)))
         .write(UsersCompanion(
@@ -143,5 +170,17 @@ class UserRepository implements IUserRepository {
       updatedAt: Value(now),
       lastModifiedByUserUuid: Value(authorUserUuid),
     ));
+    if (old != null) {
+      await _logger().logDelete(
+        'users',
+        uuid,
+        oldValues: {
+          'username': old.username,
+          'first_name': old.firstName,
+          'last_name': old.lastName,
+          'details': old.details,
+        },
+      );
+    }
   }
 }
