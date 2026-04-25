@@ -736,6 +736,10 @@
   "auto_add_entrance_place": "Auto-add entrance when creating cave",
   "auto_add_entrance_place_desc": "Automatically create an entrance cave place when adding a new cave",
 
+  "scan_entrance_start_trip": "You scanned a cave entrance. Would you like to start a new trip?",
+  "scan_entrance_exit_cave": "You scanned a cave entrance. Are you exiting the cave? Stop the active trip?",
+  "scan_entrance_stop_other_trip": "There is an active trip for cave \"{cave}\". Do you want to stop it?",
+  "scan_entrance_start_after_stop": "Would you like to start a new trip for this cave?",
 
   "entrance": "Entrance",
   "main_entrance": "Main entrance",

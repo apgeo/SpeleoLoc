@@ -734,6 +734,10 @@
   "auto_add_entrance_place": "Adaugă automat intrarea la creare peșteră",
   "auto_add_entrance_place_desc": "Creează automat o stație de intrare când se adaugă o peșteră nouă",
 
+  "scan_entrance_start_trip": "Ai scanat o intrare în peșteră. Vrei să începi o tură nouă?",
+  "scan_entrance_exit_cave": "Ai scanat o intrare în peșteră. Ieși din peșteră? Oprești tura activă?",
+  "scan_entrance_stop_other_trip": "Există o tură activă pentru peștera \"{cave}\". O oprești?",
+  "scan_entrance_start_after_stop": "Vrei să începi o tură nouă pentru această peșteră?",
 
   "entrance": "Intrare",
   "main_entrance": "Intrare principală",

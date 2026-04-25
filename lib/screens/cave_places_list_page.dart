@@ -231,6 +231,16 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     }
   }
 
+  /// Stops the active trip immediately (no confirmation dialog).
+  Future<void> _performStopTrip() async {
+    await caveTripService.stopTrip();
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_stopped'))));
+      setState(() {});
+    }
+  }
+
   Future<void> _stopTrip() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -243,13 +253,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         ],
       ),
     );
-    if (confirmed == true) {
-      await caveTripService.stopTrip();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_stopped'))));
-        setState(() {});
-      }
-    }
+    if (confirmed == true) await _performStopTrip();
   }
 
   void _viewActiveTrip() {
@@ -507,14 +511,19 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     if (qrCode != null) {
       final cavePlace = await cavePlaceRepository.findCavePlaceByQrCode(qrCode, widget.caveUuid);
       if (cavePlace != null) {
-        // Record trip point if there's an active trip for this cave
-        final activeTripCaveId = await caveTripService.getActiveTripCaveId();
-        if (activeTripCaveId == widget.caveUuid) {
-          await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
-            );
+        final bool isEntrance = (cavePlace.isEntrance == 1 || cavePlace.isMainEntrance == 1);
+        if (isEntrance && mounted) {
+          await _handleEntranceScan(cavePlace);
+        } else {
+          // Record trip point if there's an active trip for this cave
+          final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+          if (activeTripCaveId == widget.caveUuid) {
+            await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
+              );
+            }
           }
         }
         _onCavePlaceFound(cavePlace);
@@ -534,6 +543,117 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
             ),
           ),
         );
+      }
+    }
+  }
+
+  /// Called when a scanned cave place is marked as an entrance.
+  /// Prompts the user to start/stop a trip depending on the current trip state.
+  Future<void> _handleEntranceScan(CavePlace cavePlace) async {
+    if (!mounted) return;
+
+    final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+
+    if (activeTripCaveId == null) {
+      // No active trip — offer to start one (entering cave)
+      final start = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('trip_start')),
+          content: Text(LocServ.inst.t('scan_entrance_start_trip')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(LocServ.inst.t('yes')),
+            ),
+          ],
+        ),
+      );
+      if (start == true && mounted) await _startTrip();
+    } else if (activeTripCaveId == widget.caveUuid) {
+      // Trip running for THIS cave — offer to stop (exiting)
+      final stop = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('trip_stop')),
+          content: Text(LocServ.inst.t('scan_entrance_exit_cave')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(LocServ.inst.t('yes')),
+            ),
+          ],
+        ),
+      );
+      if (stop == true && mounted) {
+        await _performStopTrip();
+      } else if (mounted) {
+        // Still in cave — record the entrance scan as a trip point
+        await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
+          );
+        }
+      }
+    } else {
+      // Trip running for a DIFFERENT cave — offer to stop it first
+      final otherCave = await (appDatabase.select(appDatabase.caves)
+            ..where((c) => c.uuid.equalsValue(activeTripCaveId)))
+          .getSingleOrNull();
+      final otherCaveTitle = otherCave?.title ?? activeTripCaveId.toString();
+      if (!mounted) return;
+
+      final stopOther = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('confirm')),
+          content: Text(LocServ.inst.t(
+            'scan_entrance_stop_other_trip',
+            {'cave': otherCaveTitle},
+          )),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(LocServ.inst.t('yes')),
+            ),
+          ],
+        ),
+      );
+      if (stopOther == true && mounted) {
+        await _performStopTrip();
+        if (mounted) {
+          final start = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(LocServ.inst.t('trip_start')),
+              content: Text(LocServ.inst.t('scan_entrance_start_after_stop')),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(LocServ.inst.t('cancel')),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(LocServ.inst.t('yes')),
+                ),
+              ],
+            ),
+          );
+          if (start == true && mounted) await _startTrip();
+        }
       }
     }
   }
