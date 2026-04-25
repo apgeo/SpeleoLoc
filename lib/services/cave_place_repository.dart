@@ -32,7 +32,12 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
-  Future<void> addCavePlace(Uuid caveUuid, String title) async {
+  Future<void> addCavePlace(
+    Uuid caveUuid,
+    String title, {
+    bool isEntrance = false,
+    bool isMainEntrance = false,
+  }) async {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       final author = await _currentUser.currentOrSystem();
@@ -42,6 +47,8 @@ class CavePlaceRepository implements ICavePlaceRepository {
           uuid: newUuid,
           title: title,
           caveUuid: caveUuid,
+          isEntrance: Value(isEntrance ? 1 : 0),
+          isMainEntrance: Value(isEntrance && isMainEntrance ? 1 : 0),
           createdAt: Value(now),
           updatedAt: Value(now),
           createdByUserUuid: Value(author),

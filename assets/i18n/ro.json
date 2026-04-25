@@ -731,6 +731,10 @@
   "show_home_toolbar": "Afișează bara de acțiuni pe pagina principală",
   "show_home_toolbar_desc": "Afișează butoanele scanare/adăugare/documente/setări într-o bară pe pagina principală",
 
+  "auto_add_entrance_place": "Adaugă automat intrarea la creare peșteră",
+  "auto_add_entrance_place_desc": "Creează automat o stație de intrare când se adaugă o peșteră nouă",
+
+
   "entrance": "Intrare",
   "main_entrance": "Intrare principală",
   "is_cave_entrance": "Intrare în peșteră",

@@ -27,6 +27,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
 
   String? _appLanguage;
   bool _showHomeToolbar = false;
+  bool _autoAddEntrancePlace = true;
   bool _needsReload = false;
 
   @override
@@ -40,10 +41,15 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
       showHomeToolbarKey,
       'false',
     );
+    final autoAddEntrance = await SettingsHelper.loadStringConfig(
+      autoAddEntrancePlaceKey,
+      'true',
+    );
     if (mounted) {
       setState(() {
         _appLanguage = LocServ.inst.locale;
         _showHomeToolbar = showToolbar == 'true';
+        _autoAddEntrancePlace = autoAddEntrance == 'true';
       });
     }
   }
@@ -116,6 +122,19 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
                     _needsReload = true;
                   });
                 }
+              },
+            ),
+            const Divider(),
+            SwitchListTile(
+              title: Text(LocServ.inst.t('auto_add_entrance_place')),
+              subtitle: Text(LocServ.inst.t('auto_add_entrance_place_desc')),
+              value: _autoAddEntrancePlace,
+              onChanged: (value) async {
+                await SettingsHelper.saveStringConfig(
+                  autoAddEntrancePlaceKey,
+                  value ? 'true' : 'false',
+                );
+                if (mounted) setState(() => _autoAddEntrancePlace = value);
               },
             ),
             const Divider(),

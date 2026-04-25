@@ -24,7 +24,12 @@ abstract class ICaveRepository {
 abstract class ICavePlaceRepository {
   Future<List<CavePlace>> getCavePlaces(Uuid caveUuid);
   Stream<List<CavePlace>> watchCavePlaces(Uuid caveUuid);
-  Future<void> addCavePlace(Uuid caveUuid, String title);
+  Future<void> addCavePlace(
+    Uuid caveUuid,
+    String title, {
+    bool isEntrance = false,
+    bool isMainEntrance = false,
+  });
   Future<void> deleteCavePlace(Uuid uuid);
   Future<CavePlace?> findById(Uuid uuid);
   Future<CavePlace?> findCavePlaceByQrCode(int qrCode, Uuid caveUuid);

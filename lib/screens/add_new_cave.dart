@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -71,6 +73,16 @@ class _AddNewCaveState extends State<AddNewCave>
         if (mounted) Navigator.pop(context, widget.cave!.uuid);
       } else {
         final id = await caveRepository.addCave(_titleController.text.trim(), surfaceAreaUuid: _selectedSurfaceAreaId, description: desc);
+        // Auto-add entrance cave place if setting is enabled (default: true)
+        final autoAdd = await SettingsHelper.loadStringConfig(autoAddEntrancePlaceKey, 'true');
+        if (autoAdd == 'true') {
+          await cavePlaceRepository.addCavePlace(
+            id,
+            LocServ.inst.t('entrance'),
+            isEntrance: true,
+            isMainEntrance: true,
+          );
+        }
         if (mounted) Navigator.pop(context, id);
       }
     } catch (e, st) {

@@ -733,6 +733,10 @@
   "show_home_toolbar": "Show home toolbar",
   "show_home_toolbar_desc": "Display scan/add/docs/settings buttons in a toolbar on the home page",
 
+  "auto_add_entrance_place": "Auto-add entrance when creating cave",
+  "auto_add_entrance_place_desc": "Automatically create an entrance cave place when adding a new cave",
+
+
   "entrance": "Entrance",
   "main_entrance": "Main entrance",
   "is_cave_entrance": "Cave entrance",
