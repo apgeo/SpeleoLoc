@@ -16,6 +16,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/filterable_list.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
@@ -415,20 +416,10 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               children: [
                 if (_showMainToolbar) _buildMainToolbar(),
                 if (_showMainToolbar) const SizedBox(height: 6),
-                Padding(
-                  key: tourKeys['cave_list'],
-                  padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${LocServ.inst.t('caves')}:',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                  ),
-                ),
                 Expanded(
-                  child: ListView(
-                    children: _buildCaveListItems(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _buildCaveList(),
                   ),
                 ),
               ],
@@ -440,18 +431,13 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                   children: [
                     if (_showMainToolbar) _buildMainToolbar(),
                     if (_showMainToolbar) const SizedBox(height: 10),
-                    Padding(
-                      key: tourKeys['cave_list'],
-                      padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${LocServ.inst.t('caves')}:',
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
+                    SizedBox(
+                      height: 600,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: _buildCaveList(),
                       ),
                     ),
-                    ..._buildCaveListItems(),
                   ],
                 ),
               ),
@@ -624,59 +610,67 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     );
   }
 
-  List<Widget> _buildCaveListItems() {
-    final items = <Widget>[];
-    for (final cave in _caves) {
-      items.add(
-        Column(
+  Widget _buildCaveList() {
+    return FilterableList<Cave>(
+      headerKey: tourKeys['cave_list'],
+      headerLabelText: '${LocServ.inst.t('caves')}:',
+      enableSelection: false,
+      items: _caves,
+      keyOf: (c) => c.uuid,
+      enableBulkDelete: showCaveDeleteButtons,
+      onBulkDelete: showCaveDeleteButtons
+          ? (selected) async {
+              for (final c in selected) {
+                await caveRepository.deleteCave(c.uuid);
+              }
+            }
+          : null,
+      searchableText: (cave) {
+        final area = cave.surfaceAreaUuid != null
+            ? (_surfaceAreaTitles[cave.surfaceAreaUuid] ?? '')
+            : '';
+        return '${cave.title} $area';
+      },
+      onItemTap: (cave) => _navigateToCavePage(context, cave),
+      itemBuilder: (context, cave, _) {
+        return Row(
           children: [
-            ListTile(
-              title: Text(cave.title),
-              subtitle: cave.surfaceAreaUuid != null && _surfaceAreaTitles[cave.surfaceAreaUuid] != null
-                  ? Text(
-                      _surfaceAreaTitles[cave.surfaceAreaUuid]!,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    )
-                  : null,
-              onTap: () => _navigateToCavePage(context, cave),
-              hoverColor: Colors.grey[200],
-              trailing: Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Text('${_cavePlaceCounts[cave.uuid] ?? 0}'),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.map, size: 16, color: Colors.grey[600]),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4.0, right: 8.0),
-                    child: Text('${_caveRasterMapCounts[cave.uuid] ?? 0}'),
-                  ),
-                  if (showCaveDeleteButtons)
-                    IconActionButton(
-                      onPressed: () => _deleteCave(cave.uuid),
-                      icon: Icons.delete,
-                      tooltip: LocServ.inst.t('delete_cave'),
+                  Text(cave.title, style: const TextStyle(fontSize: 16)),
+                  if (cave.surfaceAreaUuid != null &&
+                      _surfaceAreaTitles[cave.surfaceAreaUuid] != null)
+                    Text(
+                      _surfaceAreaTitles[cave.surfaceAreaUuid]!,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                 ],
               ),
             ),
-            Divider(height: 1, color: Colors.grey[300]),
+            Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Text('${_cavePlaceCounts[cave.uuid] ?? 0}'),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.map, size: 16, color: Colors.grey[600]),
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0, right: 8.0),
+              child: Text('${_caveRasterMapCounts[cave.uuid] ?? 0}'),
+            ),
+            if (showCaveDeleteButtons)
+              IconActionButton(
+                onPressed: () => _deleteCave(cave.uuid),
+                icon: Icons.delete,
+                tooltip: LocServ.inst.t('delete_cave'),
+              ),
           ],
-        ),
-      );
-    }
-    if (_caves.length > 3) {
-      items.add(
-        const Padding(
-          padding: EdgeInsets.only(top: 10),
-          child: Icon(Icons.arrow_downward, size: 20, color: Colors.grey),
-        ),
-      );
-    }
-    return items;
+        );
+      },
+    );
   }
 }
 
