@@ -7,7 +7,7 @@ import 'package:speleoloc/utils/app_logger.dart';
 
 /// Configurable paths — override via `--dart-define-from-file=build_settings.json`
 const String _defaultTestDbPath =
-    'test_data/db/binaries/speleo_loc_export_20260423.sqlite';
+    'test_data/db/binaries/speleo_loc_export_20260425.sqlite';
 const String _defaultTestMapsDir = 'test_data/maps';
 const String _defaultTestReportTemplatesDir = 'test_data/report_templates';
 

@@ -18,6 +18,7 @@ const String kSqlite3Cmd = 'D:\\dev\\Android\\Sdk\\platform-tools\\sqlite3.exe';
 const String kSourceDbPath =
     'test_data/db/binaries/speleo_loc_export_20260301_tel2.sqlite';
 const List<String> kSourceDbFallbackPaths = [
+  'test_data/db/binaries/speleo_loc_export_20260425.sqlite',
   'test_data/db/binaries/speleo_loc_export_20260423.sqlite',
   'test_data/db/binaries/speleo_loc_export_20260414.sqlite',
   'test_data/db/binaries/speleo_loc_export_20260410.sqlite',
