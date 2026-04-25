@@ -1,14 +1,18 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:drift/drift.dart';
+import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class CavePlaceRepository implements ICavePlaceRepository {
   final AppDatabase _database;
+  final CurrentUserService _currentUser;
+  final ChangeLogger _logger;
   final _log = AppLogger.of('CavePlaceRepository');
 
-  CavePlaceRepository(this._database);
+  CavePlaceRepository(this._database, this._currentUser, this._logger);
 
   @override
   Future<List<CavePlace>> getCavePlaces(Uuid caveUuid) async {
@@ -30,13 +34,21 @@ class CavePlaceRepository implements ICavePlaceRepository {
   @override
   Future<void> addCavePlace(Uuid caveUuid, String title) async {
     try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
+      final newUuid = Uuid.v7();
       await _database.into(_database.cavePlaces).insert(
         CavePlacesCompanion.insert(
-          uuid: Uuid.v7(),
+          uuid: newUuid,
           title: title,
           caveUuid: caveUuid,
+          createdAt: Value(now),
+          updatedAt: Value(now),
+          createdByUserUuid: Value(author),
+          lastModifiedByUserUuid: Value(author),
         ),
       );
+      await _logger.logInsert('cave_places', newUuid);
     } catch (e, st) {
       _log.severe('Failed to add cave place', e, st);
       throw DbException('Failed to add cave place', cause: e, stackTrace: st);
@@ -47,8 +59,10 @@ class CavePlaceRepository implements ICavePlaceRepository {
   Future<void> deleteCavePlace(Uuid id) async {
     try {
       await _database.transaction(() async {
-        // initial delete mechanism
-        //await (_database.delete(_database.cavePlaces)..where((cp) => cp.uuid.equalsValue(id))).go();
+        final old = await (_database.select(_database.cavePlaces)
+              ..where((cp) => cp.uuid.equalsValue(id))
+              ..limit(1))
+            .getSingleOrNull();
 
         // Remove direct FK references from map bindings.
         await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
@@ -70,6 +84,15 @@ class CavePlaceRepository implements ICavePlaceRepository {
         await (_database.delete(_database.cavePlaces)
               ..where((cp) => cp.uuid.equalsValue(id)))
             .go();
+
+        if (old != null) {
+          await _logger.logDelete('cave_places', id, oldValues: {
+            'title': old.title,
+            'description': old.description,
+            'cave_uuid': old.caveUuid,
+            'cave_area_uuid': old.caveAreaUuid,
+          });
+        }
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave place', e, st);

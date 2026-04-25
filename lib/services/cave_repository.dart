@@ -1,14 +1,18 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 class CaveRepository implements ICaveRepository {
   final AppDatabase _database;
+  final CurrentUserService _currentUser;
+  final ChangeLogger _logger;
   final _log = AppLogger.of('CaveRepository');
 
-  CaveRepository(this._database);
+  CaveRepository(this._database, this._currentUser, this._logger);
 
   @override
   Future<List<Cave>> getCaves() async {
@@ -29,13 +33,20 @@ class CaveRepository implements ICaveRepository {
   Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description}) async {
     try {
       final newUuid = Uuid.v7();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
       final companion = CavesCompanion.insert(
         uuid: newUuid,
         title: title,
         surfaceAreaUuid: Value(surfaceAreaUuid),
         description: Value(description),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(author),
+        lastModifiedByUserUuid: Value(author),
       );
       await _database.into(_database.caves).insert(companion);
+      await _logger.logInsert('caves', newUuid);
       return newUuid;
     } catch (e, st) {
       _log.severe('Failed to add cave', e, st);
@@ -46,13 +57,37 @@ class CaveRepository implements ICaveRepository {
   @override
   Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description}) async {
     try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
+      final old = await (_database.select(_database.caves)
+            ..where((c) => c.uuid.equalsValue(id))
+            ..limit(1))
+          .getSingleOrNull();
       await (_database.update(_database.caves)..where((c) => c.uuid.equalsValue(id))).write(
         CavesCompanion(
           title: Value(title),
           surfaceAreaUuid: Value(surfaceAreaUuid),
           description: Value(description),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
         ),
       );
+      if (old != null) {
+        await _logger.logUpdate(
+          'caves',
+          id,
+          oldValues: {
+            'title': old.title,
+            'surface_area_uuid': old.surfaceAreaUuid,
+            'description': old.description,
+          },
+          newValues: {
+            'title': title,
+            'surface_area_uuid': surfaceAreaUuid,
+            'description': description,
+          },
+        );
+      }
     } catch (e, st) {
       _log.severe('Failed to update cave', e, st);
       throw DbException('Failed to update cave', cause: e, stackTrace: st);
@@ -63,6 +98,12 @@ class CaveRepository implements ICaveRepository {
   Future<void> deleteCave(Uuid id) async {
     try {
       await _database.transaction(() async {
+        // Capture pre-image of the cave for the tombstone so peers can
+        // LWW-delete locally on sync import.
+        final caveRow = await (_database.select(_database.caves)
+              ..where((c) => c.uuid.equalsValue(id))
+              ..limit(1))
+            .getSingleOrNull();
         final caveAreas = await (_database.select(_database.caveAreas)
               ..where((ca) => ca.caveUuid.equalsValue(id)))
             .get();
@@ -151,6 +192,45 @@ class CaveRepository implements ICaveRepository {
             .go();
 
         await (_database.delete(_database.caves)..where((c) => c.uuid.equalsValue(id))).go();
+
+        // Log deletion tombstones for the cave itself and its direct
+        // children (places, maps, areas, trips). Peers will use these
+        // during sync import to propagate the delete cascade.
+        if (caveRow != null) {
+          await _logger.logDelete(
+            'caves',
+            id,
+            oldValues: {
+              'title': caveRow.title,
+              'description': caveRow.description,
+              'surface_area_uuid': caveRow.surfaceAreaUuid,
+            },
+          );
+        }
+        for (final p in cavePlaces) {
+          await _logger.logDelete('cave_places', p.uuid, oldValues: {
+            'title': p.title,
+            'cave_uuid': p.caveUuid,
+          });
+        }
+        for (final m in rasterMaps) {
+          await _logger.logDelete('raster_maps', m.uuid, oldValues: {
+            'title': m.title,
+            'cave_uuid': m.caveUuid,
+          });
+        }
+        for (final a in caveAreas) {
+          await _logger.logDelete('cave_areas', a.uuid, oldValues: {
+            'title': a.title,
+            'cave_uuid': a.caveUuid,
+          });
+        }
+        for (final t in caveTrips) {
+          await _logger.logDelete('cave_trips', t.uuid, oldValues: {
+            'title': t.title,
+            'cave_uuid': t.caveUuid,
+          });
+        }
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave', e, st);

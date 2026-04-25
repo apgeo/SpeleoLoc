@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_place_importer.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Screen for importing cave place data from CSV files.
@@ -28,7 +29,8 @@ class CSVCavePlacesImportPage extends StatefulWidget {
 }
 
 class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
-  final CSVCavePlaceImporter _importer = CSVCavePlaceImporter(appDatabase);
+  final CSVCavePlaceImporter _importer =
+      CSVCavePlaceImporter(appDatabase, currentUserService);
   bool _isProcessing = false;
   bool _hasNavigated = false;
 

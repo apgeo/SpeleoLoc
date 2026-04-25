@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -178,16 +178,113 @@ class AppDatabase extends _$AppDatabase {
               );
             }
           }
+          if (from < 9) {
+            // v8 → v9 migrations: sync-v2 schema
+            //
+            // 1. Create `users` table. Audit columns on the users table itself
+            //    self-reference users(uuid), which is fine because they are
+            //    nullable and SQLite does not enforce self-FK checks.
+            await migrator.createTable(users);
+
+            // 2. Add audit columns (created_by_user_uuid,
+            //    last_modified_by_user_uuid) to every existing syncable
+            //    table. They are nullable so existing rows are backfilled
+            //    with NULL and the app treats NULL as "unknown author".
+            final auditableTables = <TableInfo<Table, dynamic>>[
+              caveAreas,
+              caveEntrances,
+              cavePlaceToRasterMapDefinitions,
+              cavePlaces,
+              caves,
+              documentationFiles,
+              documentationFilesToGeofeatures,
+              rasterMaps,
+              surfacePlaces,
+              surfaceAreas,
+              caveTrips,
+              caveTripPoints,
+              documentationFilesToCaveTrips,
+              tripReportTemplates,
+            ];
+            for (final table in auditableTables) {
+              final info = await customSelect(
+                'PRAGMA table_info(${table.actualTableName})',
+              ).get();
+              final cols =
+                  info.map((r) => r.data['name'] as String).toSet();
+              if (!cols.contains('created_by_user_uuid')) {
+                await customStatement(
+                  'ALTER TABLE ${table.actualTableName} '
+                  'ADD COLUMN created_by_user_uuid BLOB '
+                  'REFERENCES users(uuid)',
+                );
+              }
+              if (!cols.contains('last_modified_by_user_uuid')) {
+                await customStatement(
+                  'ALTER TABLE ${table.actualTableName} '
+                  'ADD COLUMN last_modified_by_user_uuid BLOB '
+                  'REFERENCES users(uuid)',
+                );
+              }
+            }
+
+            // 3. Create change_log + change_log_field + indexes.
+            await migrator.createTable(changeLog);
+            await migrator.createTable(changeLogField);
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_change_log_entity '
+              'ON change_log(entity_table, entity_uuid)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_change_log_changed_at '
+              'ON change_log(changed_at)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_change_log_changed_by '
+              'ON change_log(changed_by_user_uuid)',
+            );
+
+            // 4. Seed local-only configuration keys required for sync. They
+            //    are created with ON CONFLICT IGNORE semantics via UNIQUE
+            //    on configurations.title.
+            final nowMs = DateTime.now().millisecondsSinceEpoch;
+            await _seedConfiguration(
+              'device_uuid',
+              Uuid.v7().toString(),
+              nowMs,
+            );
+            await _seedConfiguration(
+              'change_log_retention_days',
+              '365',
+              nowMs,
+            );
+            await _seedConfiguration(
+              'tombstone_retention_days',
+              '365',
+              nowMs,
+            );
+          }
         },
       );
+
+  Future<void> _seedConfiguration(
+      String title, String value, int nowMs) async {
+    await customStatement(
+      'INSERT OR IGNORE INTO configurations '
+      '(title, value, created_at, updated_at) VALUES (?, ?, ?, ?)',
+      [title, value, nowMs, nowMs],
+    );
+  }
 
   Future<Uuid> insertCaveTrip({
     required Uuid caveUuid,
     required String title,
     String? description,
     required int startedAt,
+    required Uuid authorUuid,
   }) async {
     final uuid = Uuid.v7();
+    final now = DateTime.now().millisecondsSinceEpoch;
     await into(caveTrips).insert(
       CaveTripsCompanion.insert(
         uuid: uuid,
@@ -195,17 +292,22 @@ class AppDatabase extends _$AppDatabase {
         title: title,
         description: Value(description),
         tripStartedAt: startedAt,
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
     return uuid;
   }
 
-  Future<void> endCaveTrip(Uuid tripUuid) async {
+  Future<void> endCaveTrip(Uuid tripUuid, {required Uuid authorUuid}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
       CaveTripsCompanion(
-        tripEndedAt: Value(DateTime.now().millisecondsSinceEpoch),
-        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        tripEndedAt: Value(now),
+        updatedAt: Value(now),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
   }
@@ -230,16 +332,21 @@ class AppDatabase extends _$AppDatabase {
     required Uuid tripUuid,
     required Uuid cavePlaceUuid,
     String? notes,
+    required Uuid authorUuid,
   }) async {
     final uuid = Uuid.v7();
+    final now = DateTime.now().millisecondsSinceEpoch;
     await into(caveTripPoints).insert(
       CaveTripPointsCompanion.insert(
         uuid: uuid,
         caveTripUuid: tripUuid,
         cavePlaceUuid: Value(cavePlaceUuid),
-        scannedAt: DateTime.now().millisecondsSinceEpoch,
+        scannedAt: now,
         notes: Value(notes),
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
     return uuid;
@@ -266,13 +373,17 @@ class AppDatabase extends _$AppDatabase {
     return trips.map((t) => t.title).toList();
   }
 
-  Future<void> linkDocumentToTrip(Uuid docUuid, Uuid tripUuid) async {
+  Future<void> linkDocumentToTrip(Uuid docUuid, Uuid tripUuid,
+      {required Uuid authorUuid}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     await into(documentationFilesToCaveTrips).insertOnConflictUpdate(
       DocumentationFilesToCaveTripsCompanion.insert(
         uuid: Uuid.v7(),
         documentationFileUuid: docUuid,
         caveTripUuid: tripUuid,
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdAt: Value(now),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
       ),
     );
   }

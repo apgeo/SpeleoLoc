@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   emoji_picker_flutter
   file_selector_windows
+  flutter_secure_storage_windows
   flutter_sound
   pdfx
   permission_handler_windows

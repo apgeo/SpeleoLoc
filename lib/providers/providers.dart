@@ -4,9 +4,15 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
+import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 
 /// Central place that wires all app-wide dependencies via Riverpod.
@@ -22,19 +28,88 @@ import 'package:speleoloc/state/app_notifiers.dart';
 final appDatabaseProvider = Provider<AppDatabase>((ref) => appDatabase);
 
 final caveRepositoryProvider = Provider<ICaveRepository>(
-  (ref) => CaveRepository(ref.watch(appDatabaseProvider)),
+  (ref) => CaveRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
+  ),
 );
 
+final userRepositoryProvider = Provider<IUserRepository>(_buildUserRepository);
+
+IUserRepository _buildUserRepository(Ref ref) => UserRepository(
+      ref.watch(appDatabaseProvider),
+      () => ref.read(changeLoggerProvider),
+    );
+
+final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
+  final svc = CurrentUserService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(userRepositoryProvider),
+  );
+  // Fire-and-forget init; readers that need the values before init finishes
+  // should await `svc.initialize()` themselves.
+  svc.initialize();
+  return svc;
+});
+
+final changeLoggerProvider = Provider<ChangeLogger>(
+  (ref) => ChangeLogger(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+  ),
+);
+
+final syncArchiveServiceProvider = Provider<SyncArchiveService>(
+  (ref) => SyncArchiveService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(changeLoggerProvider),
+  ),
+);
+
+/// Stores configured FTP/SFTP endpoints plus their passwords (passwords are
+/// kept in the OS keystore, not in the SQLite DB).
+final ftpProfileRepositoryProvider = Provider<FtpProfileRepository>(
+  (ref) => FtpProfileRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// Singleton orchestrator for one-tap FTP sync. Exposed as a ChangeNotifier
+/// so UI can react to live progress via `ref.watch(...).progress`.
+final ftpSyncControllerProvider = ChangeNotifierProvider<FtpSyncController>(
+  (ref) => FtpSyncController(
+    db: ref.watch(appDatabaseProvider),
+    profileRepository: ref.watch(ftpProfileRepositoryProvider),
+    archiveService: ref.watch(syncArchiveServiceProvider),
+    currentUserService: ref.watch(currentUserServiceProvider),
+  ),
+);
+
+final usersStreamProvider = StreamProvider<List<User>>((ref) {
+  return ref.watch(userRepositoryProvider).watchUsers();
+});
+
 final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
-  (ref) => CavePlaceRepository(ref.watch(appDatabaseProvider)),
+  (ref) => CavePlaceRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
+  ),
 );
 
 final rasterMapRepositoryProvider = Provider<IRasterMapRepository>(
-  (ref) => RasterMapRepository(ref.watch(appDatabaseProvider)),
+  (ref) => RasterMapRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
+  ),
 );
 
 final definitionRepositoryProvider = Provider<IDefinitionRepository>(
-  (ref) => DefinitionRepository(ref.watch(appDatabaseProvider)),
+  (ref) => DefinitionRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
+  ),
 );
 
 final caveTripServiceProvider = Provider<CaveTripService>(
