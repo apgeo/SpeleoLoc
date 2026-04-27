@@ -12,12 +12,14 @@ class ExportSettings {
   final bool includeRasterMaps;
   final bool diffOnly;
   final List<int>? caveIds; // null = all caves (future use)
+  final bool includeFtpPasswords;
 
   const ExportSettings({
     this.includeDocumentationFiles = true,
     this.includeRasterMaps = true,
     this.diffOnly = false,
     this.caveIds,
+    this.includeFtpPasswords = false,
   });
 }
 

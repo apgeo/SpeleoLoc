@@ -4,6 +4,8 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -36,6 +38,7 @@ class _DataExportImportPageState extends State<DataExportImportPage>
   bool _includeDocFiles = true;
   bool _includeRasterMaps = true;
   bool _diffExport = false;
+  bool _includeFtpPasswords = false;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +75,13 @@ class _DataExportImportPageState extends State<DataExportImportPage>
             value: _diffExport,
             onChanged: (v) => setState(() => _diffExport = v),
           ),
+          if (exportFtpPasswordsEnabled)
+            SwitchListTile(
+              title: Text(LocServ.inst.t('export_ftp_passwords')),
+              subtitle: Text(LocServ.inst.t('export_ftp_passwords_desc')),
+              value: _includeFtpPasswords,
+              onChanged: (v) => setState(() => _includeFtpPasswords = v),
+            ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             icon: const Icon(Icons.archive_outlined),
@@ -124,9 +134,13 @@ class _DataExportImportPageState extends State<DataExportImportPage>
           includeDocumentationFiles: _includeDocFiles,
           includeRasterMaps: _includeRasterMaps,
           diffOnly: _diffExport,
+          includeFtpPasswords: _includeFtpPasswords,
         ),
         outputDir: dir,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
+        profileRepository: _includeFtpPasswords
+            ? FtpProfileRepository(appDatabase)
+            : null,
       );
 
       if (context.mounted) {

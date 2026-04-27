@@ -35,6 +35,10 @@ const double zoomTextThreshold = 2.0;
 // Feature flags
 const bool showCaveDeleteButtons = false;
 
+/// When true, the data export page shows an option to include FTP account
+/// passwords in the archive. Disable in production builds.
+const bool exportFtpPasswordsEnabled = true;
+
 /// When true, holding the QR scan button for 2.5 s on the home screen opens
 /// a manual QR-code input dialog (for testing without a physical scanner).
 const bool enableQrManualInput = true;

@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 
 import 'package:speleoloc/services/archive/archive_models.dart';
@@ -32,10 +33,15 @@ class DataArchiveService {
   // ---------------------------------------------------------------------------
 
   /// Creates a zip archive at [outputDir] and returns the full path written.
+  ///
+  /// Pass [profileRepository] when [ExportSettings.includeFtpPasswords] is
+  /// true — the method reads each profile's password from the OS keystore and
+  /// stores them in `ftp_credentials.json` inside the archive.
   Future<String> exportArchive({
     required ExportSettings settings,
     required String outputDir,
     ProgressCallback? onProgress,
+    FtpProfileRepository? profileRepository,
   }) async {
     onProgress?.call('Preparing export...');
 
@@ -76,7 +82,23 @@ class DataArchiveService {
       await _addFilesToArchive(archive, docsDir.path, paths);
     }
 
-    // 4. Manifest.
+    // 4. FTP credentials (optional, feature-flag guarded).
+    if (settings.includeFtpPasswords && profileRepository != null) {
+      onProgress?.call('Adding FTP credentials...');
+      final profiles = await profileRepository.list();
+      final credentials = <Map<String, dynamic>>[];
+      for (final profile in profiles) {
+        final password = await profileRepository.readPassword(profile.profileUuid);
+        credentials.add({
+          ...profile.toJson(),
+          'password': password ?? '',
+        });
+      }
+      final credBytes = utf8.encode(jsonEncode(credentials));
+      archive.addFile(ArchiveFile('ftp_credentials.json', credBytes.length, credBytes));
+    }
+
+    // 5. Manifest.
     final manifest = {
       'version': 1,
       'exportedAt': DateTime.now().millisecondsSinceEpoch,
@@ -84,6 +106,7 @@ class DataArchiveService {
       'includesDocumentationFiles': settings.includeDocumentationFiles,
       'includesRasterMaps': settings.includeRasterMaps,
       'caveIds': settings.caveIds,
+      'includesFtpPasswords': settings.includeFtpPasswords,
     };
     final manifestBytes = utf8.encode(jsonEncode(manifest));
     archive.addFile(
@@ -372,7 +395,8 @@ class DataArchiveService {
         final relPath = entity.path
             .substring(extractDir.path.length + 1)
             .replaceAll('\\', '/');
-        if (relPath == 'speleo_loc.sqlite' || relPath == 'manifest.json') {
+        if (relPath == 'speleo_loc.sqlite' || relPath == 'manifest.json' ||
+            relPath == 'ftp_credentials.json') {
           continue;
         }
         final dest = File('${docsDir.path}/$relPath');
@@ -393,7 +417,8 @@ class DataArchiveService {
         final relPath = entity.path
             .substring(extractDir.length + 1)
             .replaceAll('\\', '/');
-        if (relPath == 'speleo_loc.sqlite' || relPath == 'manifest.json') {
+        if (relPath == 'speleo_loc.sqlite' || relPath == 'manifest.json' ||
+            relPath == 'ftp_credentials.json') {
           continue;
         }
         final dest = File('${docsDir.path}/$relPath');
