@@ -443,6 +443,8 @@
   "include_raster_maps": "Include imagini hărți raster",
   "diff_export": "Export diferențial (doar fișiere noi)",
   "diff_export_desc": "Include doar fișierele adăugate de la ultimul export complet",
+  "export_ftp_passwords": "Include parolele conturilor FTP",
+  "export_ftp_passwords_desc": "Stochează credențialele serverului FTP în arhivă (manevrați cu grijă)",
   "export_full_archive": "Exportă Arhivă",
   "import_archive": "Importă Arhivă",
   "export_success": "Date exportate cu succes",

@@ -446,6 +446,8 @@
   "include_raster_maps": "Include raster map images",
   "diff_export": "Diff export (only new files)",
   "diff_export_desc": "Only include files added since the last full export",
+  "export_ftp_passwords": "Include FTP account passwords",
+  "export_ftp_passwords_desc": "Store FTP server credentials in the archive (handle with care)",
   "export_full_archive": "Export Archive",
   "import_archive": "Import Archive",
   "export_success": "Data exported successfully",
