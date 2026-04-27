@@ -53,19 +53,19 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           label: LocServ.inst.t('trip_start'),
           color: Colors.green
           // color: Colors.green.shade900
-        )
-      else ...[
-        AppMenuItem(
-          value: 'view_trip',
-          icon: Icons.route,
-          label: LocServ.inst.t('trip_view'),
         ),
-        AppMenuItem(
-          value: 'stop_trip',
-          icon: Icons.stop,
-          label: LocServ.inst.t('trip_stop'),
-        ),
-      ],
+      // else ...[
+      //   AppMenuItem(
+      //     value: 'view_trip',
+      //     icon: Icons.route,
+      //     label: LocServ.inst.t('trip_view'),
+      //   ),
+      //   AppMenuItem(
+      //     value: 'stop_trip',
+      //     icon: Icons.stop,
+      //     label: LocServ.inst.t('trip_stop'),
+      //   ),
+      // ],
       AppMenuItem(
         value: 'edit_cave',
         icon: Icons.edit_note,
