@@ -400,6 +400,33 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Reactivates a previously ended trip: clears [tripEndedAt], resets
+  /// [tripStartedAt] to now, and records the author.
+  Future<void> restartCaveTrip(Uuid tripUuid,
+      {required Uuid authorUuid}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid)))
+        .write(
+      CaveTripsCompanion(
+        tripEndedAt: const Value(null),
+        tripStartedAt: Value(now),
+        updatedAt: Value(now),
+        lastModifiedByUserUuid: Value(authorUuid),
+      ),
+    );
+  }
+
+  Future<void> renameCaveTrip(Uuid tripUuid, String newTitle) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid)))
+        .write(
+      CaveTripsCompanion(
+        title: Value(newTitle),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
   Future<void> appendToTripLog(Uuid tripUuid, String formattedLine) async {
     await transaction(() async {
       final trip = await (select(caveTrips)
@@ -581,6 +608,9 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteDocumentationFileByUuid(Uuid uuid) async {
     await transaction(() async {
       await (delete(documentationFilesToGeofeatures)
+            ..where((t) => t.documentationFileUuid.equalsValue(uuid)))
+          .go();
+      await (delete(documentationFilesToCaveTrips)
             ..where((t) => t.documentationFileUuid.equalsValue(uuid)))
           .go();
       await (delete(documentationFiles)..where((t) => t.uuid.equalsValue(uuid)))

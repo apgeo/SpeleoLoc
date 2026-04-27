@@ -39,6 +39,10 @@ const bool showCaveDeleteButtons = false;
 /// passwords in the archive. Disable in production builds.
 const bool exportFtpPasswordsEnabled = true;
 
+/// When true, documentation file records whose source asset cannot be found
+/// are omitted from the database when loading the test data snapshot.
+const bool skipMissingTestDocuments = true;
+
 /// When true, holding the QR scan button for 2.5 s on the home screen opens
 /// a manual QR-code input dialog (for testing without a physical scanner).
 const bool enableQrManualInput = true;

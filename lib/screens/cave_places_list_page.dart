@@ -227,7 +227,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     );
     if (confirmed == true && mounted) {
       await caveTripService.startTrip(widget.caveUuid, controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle);
-      setState(() {});
+      if (mounted) {
+        await Navigator.pushNamed(context, caveTripListRoute, arguments: widget.caveUuid);
+        setState(() {});
+      }
     }
   }
 

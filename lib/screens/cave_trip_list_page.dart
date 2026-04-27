@@ -93,9 +93,8 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     );
     if (confirmed == true && mounted) {
       final title = controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle;
-      final tripId = await caveTripService.startTrip(widget.caveUuid, title);
+      await caveTripService.startTrip(widget.caveUuid, title);
       if (mounted) {
-        await Navigator.pushNamed(context, caveTripRoute, arguments: tripId);
         _load();
       }
     }

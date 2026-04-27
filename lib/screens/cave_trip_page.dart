@@ -71,6 +71,11 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
+      value: 'rename_trip',
+      icon: Icons.edit,
+      label: LocServ.inst.t('trip_rename'),
+    ),
+    AppMenuItem(
       value: 'delete_trip',
       icon: Icons.delete,
       label: LocServ.inst.t('trip_delete'),
@@ -79,7 +84,9 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
 
   @override
   void onScreenMenuItemSelected(String value) async {
-    if (value == 'delete_trip') {
+    if (value == 'rename_trip') {
+      await _renameTrip();
+    } else if (value == 'delete_trip') {
       await _deleteTrip();
     }
   }
@@ -390,6 +397,39 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     );
   }
 
+  Future<void> _renameTrip() async {
+    final trip = _trip;
+    if (trip == null) return;
+    final controller = TextEditingController(text: trip.title);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('trip_name_rename_dialog_title')),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('ok'))),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final newTitle = controller.text.trim();
+      if (newTitle.isNotEmpty && newTitle != trip.title) {
+        await appDatabase.renameCaveTrip(trip.uuid, newTitle);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(LocServ.inst.t('trip_renamed'))),
+          );
+          _load();
+        }
+      }
+    }
+  }
+
   Future<void> _stopTrip() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -436,33 +476,12 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   Future<void> _restartTrip() async {
     final trip = _trip;
     if (trip == null) return;
-    final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
-    final defaultTitle = '${trip.title.replaceAll(RegExp(r' \d{4}/\d{2}/\d{2}$'), '')} $dateStr';
-    final controller = TextEditingController(text: defaultTitle);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(LocServ.inst.t('trip_name_dialog_title')),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('ok'))),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      final newTitle = controller.text.trim().isNotEmpty ? controller.text.trim() : defaultTitle;
-      final newTripId = await caveTripService.startTrip(trip.caveUuid, newTitle);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('trip_restarted'))),
-        );
-        Navigator.pushReplacementNamed(context, caveTripRoute, arguments: newTripId);
-      }
+    await caveTripService.restartTrip(trip.uuid);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(LocServ.inst.t('trip_restarted'))),
+      );
+      _load();
     }
   }
 

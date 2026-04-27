@@ -49,6 +49,17 @@ class CaveTripService {
     return tripUuid;
   }
 
+  /// Reactivates an already-ended trip in-place (updates its row instead of
+  /// inserting a new one). The title is unchanged.
+  Future<void> restartTrip(Uuid tripUuid) async {
+    isPausedNotifier.value = false;
+    final author = await currentUserService.currentOrSystem();
+    await appDatabase.restartCaveTrip(tripUuid, authorUuid: author);
+    await _saveConfig(tripUuid);
+    activeTripIdNotifier.value = tripUuid;
+    await _append(_logLine(LocServ.inst.t('trip_log_restarted')), tripUuid);
+  }
+
   Future<void> stopTrip() async {
     final id = activeTripIdNotifier.value;
     if (id != null) {

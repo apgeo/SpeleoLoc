@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/constants.dart';
 
 /// Configurable paths — override via `--dart-define-from-file=build_settings.json`
 const String _defaultTestDbPath =
@@ -73,12 +74,16 @@ class TestDatabaseLoader {
       final docFiles = await db.select(db.documentationFiles).get();
       _log.info('Found ${docFiles.length} documentation file records');
       for (final df in docFiles) {
-        await _copyResourceFile(
+        final found = await _copyResourceFile(
           sourceDir: testMapsDir, // docs may share source folder or have their own
           storedFileName: df.fileName,
           title: df.title,
           documentsDir: documentsDir,
         );
+        if (!found && skipMissingTestDocuments) {
+          await db.deleteDocumentationFileByUuid(df.uuid);
+          _log.info('Removed missing test doc record: "${df.title}" (${df.uuid})');
+        }
       }
     } catch (e) {
       _log.warning('could not load documentation files: $e');
@@ -131,7 +136,9 @@ class TestDatabaseLoader {
   /// - [storedFileName] is the path stored in the DB (e.g. `cave_1/raster_123.jpg`)
   /// - [title] is the raster map title or doc title which may match a source filename
   /// - The method tries matching by basename of [storedFileName] first, then [title].
-  static Future<void> _copyResourceFile({
+  /// - Returns `true` if the file was found (already existed or successfully copied),
+  ///   `false` if the source could not be located.
+  static Future<bool> _copyResourceFile({
     required String sourceDir,
     required String storedFileName,
     required String? title,
@@ -141,7 +148,7 @@ class TestDatabaseLoader {
     final targetFile = File(targetPath);
 
     // Skip if file already exists
-    if (await targetFile.exists()) return;
+    if (await targetFile.exists()) return true;
 
     // Ensure target directory exists
     final targetDir = targetFile.parent;
@@ -164,8 +171,10 @@ class TestDatabaseLoader {
     if (bytes != null) {
       await targetFile.writeAsBytes(bytes, flush: true);
       _log.info('Copied resource → $storedFileName');
+      return true;
     } else {
       _log.warning('source not found for "$storedFileName" (title: "$title")');
+      return false;
     }
   }
 
