@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
@@ -62,6 +64,12 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
           ],
         ),
         actions: [
+          if (!isRunning && !isPaused)
+            IconButton(
+              icon: const Icon(Icons.play_circle),
+              tooltip: LocServ.inst.t('ftp_sync_start'),
+              onPressed: () => unawaited(controller.startDefault()),
+            ),
           if (isRunning)
             IconButton(
               icon: const Icon(Icons.pause_circle),

@@ -215,6 +215,17 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
                       onPressed: () => _startSync(controller),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
+                    )
+                  else if (progress.phase == FtpSyncPhase.completed ||
+                      progress.phase == FtpSyncPhase.failed ||
+                      progress.phase == FtpSyncPhase.cancelled)
+                    IconButton(
+                      icon: const Icon(Icons.replay, size: 18),
+                      tooltip: LocServ.inst.t('ftp_sync_start'),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _startSync(controller),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                 ],
               ),
