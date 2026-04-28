@@ -90,7 +90,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       final result = await Navigator.push<Uuid?>(
         context,
         MaterialPageRoute(
-          builder: (_) => AddNewCave(cave: _cave),
+          builder: (_) => CaveFormPage(cave: _cave),
         ),
       );
       if (result != null) {

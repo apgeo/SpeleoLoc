@@ -8,17 +8,17 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
-class AddNewCave extends StatefulWidget {
+class CaveFormPage extends StatefulWidget {
   final Cave? cave; // if provided, we're editing
 
-  const AddNewCave({super.key, this.cave});
+  const CaveFormPage({super.key, this.cave});
 
   @override
-  State<AddNewCave> createState() => _AddNewCaveState();
+  State<CaveFormPage> createState() => _CaveFormPageState();
 }
 
-class _AddNewCaveState extends State<AddNewCave>
-    with AppBarMenuMixin<AddNewCave>, ProductTourMixin<AddNewCave> {
+class _CaveFormPageState extends State<CaveFormPage>
+    with AppBarMenuMixin<CaveFormPage>, ProductTourMixin<CaveFormPage> {
   @override
   String get tourId => 'add_new_cave';
   @override
@@ -102,7 +102,26 @@ class _AddNewCaveState extends State<AddNewCave>
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
-        title: Text(isEditing ? LocServ.inst.t('edit_cave') : LocServ.inst.t('add_new_cave')),
+        titleSpacing: 0,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isEditing ? LocServ.inst.t('edit_cave') : LocServ.inst.t('add_new_cave'),
+              style: const TextStyle(fontSize: 16),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (isEditing)
+              Text(
+                widget.cave!.title,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
         actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
       ),
       body: Padding(
@@ -159,7 +178,7 @@ class _AddNewCaveState extends State<AddNewCave>
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
-                      child: Text(_saving ? LocServ.inst.t('saving') : LocServ.inst.t('add')),
+                      child: Text(_saving ? LocServ.inst.t('saving') : (isEditing ? LocServ.inst.t('save') : LocServ.inst.t('add'))),
                     ),
                   ),
                 ],

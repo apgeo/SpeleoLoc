@@ -301,7 +301,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     try {
       final result = await Navigator.push<Uuid?>(
         context,
-        MaterialPageRoute(builder: (_) => const AddNewCave()),
+        MaterialPageRoute(builder: (_) => const CaveFormPage()),
       );
       if (result != null) {
         // Stream subscription refreshes the list; just show the snackbar.
