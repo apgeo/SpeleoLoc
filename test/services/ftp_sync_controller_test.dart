@@ -28,6 +28,7 @@ class _FakeTransport implements IFtpTransport {
   final Map<String, List<int>> store = {};
   bool connected = false;
   int connectCalls = 0;
+  final List<String> uploadedNames = <String>[];
 
   void seed(String name, List<int> bytes) {
     store[name] = bytes;
@@ -64,6 +65,7 @@ class _FakeTransport implements IFtpTransport {
   }) async {
     final bytes = await localFile.readAsBytes();
     store[remoteName] = bytes;
+    uploadedNames.add(remoteName);
     onProgress?.call(bytes.length, bytes.length);
   }
 
@@ -547,4 +549,103 @@ void main() {
     final caves = await b.db.select(b.db.caves).get();
     expect(caves.map((c) => c.title), contains('Peer'));
   });
+
+  // -------------------------------------------------------------------
+  // Decision matrix: upload only when local has unsynced changes,
+  // download only when remote has unseen archives, and skip both when
+  // neither side has changes.
+  // -------------------------------------------------------------------
+
+  test('skips upload when local has no changes since last upload',
+      () async {
+    final h = await _buildHarness();
+    await h.caveRepo.addCave('Alpha');
+    final (controller, fake) = await makeController(h);
+
+    // First sync: localChanged=true (lastUploadAt=null), remote empty →
+    // generates + uploads exactly one archive.
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(controller.progress.phase, FtpSyncPhase.completed);
+    expect(fake.uploadedNames, hasLength(1));
+
+    // Second sync, no local mutations between runs: should NOT upload.
+    fake.uploadedNames.clear();
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(controller.progress.phase, FtpSyncPhase.completed);
+    expect(fake.uploadedNames, isEmpty,
+        reason:
+            'Second sync without local changes must not produce a new archive');
+    expect(controller.progress.statusMessage, 'ftp_phase_completed_nothing');
+  });
+
+  test('uploads again after a fresh local mutation', () async {
+    final h = await _buildHarness();
+    await h.caveRepo.addCave('Alpha');
+    final (controller, fake) = await makeController(h);
+
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(fake.uploadedNames, hasLength(1));
+
+    // Touch the DB → change_log gets a new row → next sync must upload.
+    fake.uploadedNames.clear();
+    // Wait one millisecond so the change_log row is strictly later than
+    // the previous lastUploadAt (both are millisecond-precision).
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await h.caveRepo.addCave('Beta');
+
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(controller.progress.phase, FtpSyncPhase.completed);
+    expect(fake.uploadedNames, hasLength(1),
+        reason: 'A local change after lastUploadAt must trigger an upload');
+  });
+
+  test('downloads only — no re-upload when local is unchanged but remote has '
+      'a newer archive', () async {
+    // Peer-side harness produces an archive.
+    final peer = await _buildHarness();
+    await peer.caveRepo.addCave('FromPeer');
+    final peerZip = await peer.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'speleo_loc_sync_8000.zip',
+    );
+
+    // Receiver harness: do an initial empty sync to set lastUploadAt, then
+    // place a peer archive on the remote and run again.
+    final me = await _buildHarness();
+    final (controller, fake) = await makeController(me);
+
+    // First run: no local data, no remote → uploads an empty (state-only)
+    // archive because lastUploadAt is null on first run.
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(fake.uploadedNames, hasLength(1));
+
+    // Now seed the remote with a peer archive. No local DB changes since
+    // the upload above, so this run must download + import only.
+    fake.uploadedNames.clear();
+    fake.store['speleo_loc_sync_8000.zip'] = await peerZip.readAsBytes();
+
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(controller.progress.phase, FtpSyncPhase.completed);
+    expect(controller.progress.statusMessage,
+        'ftp_phase_completed_download_only');
+    expect(fake.uploadedNames, isEmpty,
+        reason: 'Pure import-only run must not upload');
+    final caves = await me.db.select(me.db.caves).get();
+    expect(caves.map((c) => c.title), contains('FromPeer'));
+  });
+
+  // The "remote unseen + local changed" union case is logically the
+  // composition of the two preceding tests; the dual-system-user UNIQUE
+  // constraint in the in-memory test fixture (each harness lazily creates
+  // its own 'system' user on first write) prevents importing a peer
+  // archive into a DB that has already had a local write, which is an
+  // import-side limitation unrelated to the upload-skipping logic under
+  // test here. Worth revisiting once the import handles user merge by
+  // username.
 }

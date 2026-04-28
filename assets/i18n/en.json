@@ -317,6 +317,8 @@
   "ftp_phase_uploading": "Uploading archive",
   "ftp_phase_finalizing": "Finalizing…",
   "ftp_phase_completed": "Sync complete",
+  "ftp_phase_completed_nothing": "Already in sync",
+  "ftp_phase_completed_download_only": "Download complete",
   "ftp_phase_failed": "Sync failed",
   "ftp_phase_cancelled": "Sync cancelled",
   "ftp_phase_paused": "Sync paused",

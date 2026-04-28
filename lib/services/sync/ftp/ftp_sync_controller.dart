@@ -201,6 +201,20 @@ class FtpSyncController extends ChangeNotifier {
       _appendLog(FtpSyncLogLevel.info,
           '${unseen.length} new archive(s) to import of ${remoteEntries.length} on server');
 
+      // Decide whether the local DB has unsynced changes BEFORE we import
+      // anything: importing remote archives modifies the DB but must not by
+      // itself trigger an upload (otherwise every peer endlessly bounces
+      // archives back to the server).
+      final lastUploadAt = await _loadLastUploadAt(profile.profileUuid);
+      final localChanged = await _hasLocalChangesSince(lastUploadAt);
+      _appendLog(
+        FtpSyncLogLevel.info,
+        lastUploadAt == null
+            ? 'No prior upload recorded for this profile — local will be uploaded'
+            : 'Local changes since last upload: $localChanged '
+                '(last upload at ${DateTime.fromMillisecondsSinceEpoch(lastUploadAt).toLocal()})',
+      );
+
       _emit((s) => s.copyWith(
             archivesTotal: unseen.length,
             archivesProcessed: 0,
@@ -270,6 +284,40 @@ class FtpSyncController extends ChangeNotifier {
 
       token.throwIfCancelled();
 
+      // Decide whether to upload: only if the local DB had unsynced changes
+      // *before* the import phase. Pure import-only runs leave the server
+      // untouched (matching the 4-quadrant decision matrix).
+      if (!localChanged) {
+        _appendLog(FtpSyncLogLevel.info,
+            'No local changes — skipping archive generation and upload');
+        _emit((s) => s.copyWith(
+              phase: FtpSyncPhase.finalizing,
+              statusMessage: 'ftp_phase_finalizing',
+              stepProgress: 0,
+              clearCurrentFileName: true,
+            ));
+        await _saveSeenArchives(seen);
+        try {
+          await tempDir.delete(recursive: true);
+        } catch (_) {}
+
+        _emit((s) => s.copyWith(
+              phase: FtpSyncPhase.completed,
+              statusMessage: unseen.isEmpty
+                  ? 'ftp_phase_completed_nothing'
+                  : 'ftp_phase_completed_download_only',
+              stepProgress: 1.0,
+              clearErrorMessage: true,
+            ));
+        _appendLog(
+          FtpSyncLogLevel.info,
+          unseen.isEmpty
+              ? 'Sync complete — already in sync, no transfer needed'
+              : 'Sync complete — downloaded ${unseen.length} archive(s); no upload needed',
+        );
+        return;
+      }
+
       // Generate our own archive reflecting the merged state.
       _emit((s) => s.copyWith(
             phase: FtpSyncPhase.generatingArchive,
@@ -336,6 +384,8 @@ class FtpSyncController extends ChangeNotifier {
             clearCurrentFileName: true,
           ));
       await _saveSeenArchives(seen);
+      await _saveLastUploadAt(
+          profile.profileUuid, DateTime.now().millisecondsSinceEpoch);
       try {
         await archiveFile.delete();
       } catch (_) {}
@@ -417,6 +467,63 @@ class FtpSyncController extends ChangeNotifier {
       ..sort((a, b) => _timestampOf(b).compareTo(_timestampOf(a)));
     final trimmed = sorted.take(500).toList();
     await _writeConfig(ConfigKey.ftpSeenArchives, trimmed.join('\n'));
+  }
+
+  // ---------------------------------------------------------------------
+  // Per-profile last-upload timestamp + change detection
+  // ---------------------------------------------------------------------
+
+  /// Returns the wall-clock time (millis) of our most recent successful
+  /// upload to [profileUuid], or `null` if we've never uploaded.
+  Future<int?> _loadLastUploadAt(String profileUuid) async {
+    final raw = await _readConfig(ConfigKey.ftpLastUploadAt);
+    if (raw == null || raw.isEmpty) return null;
+    final map = _decodeUploadMap(raw);
+    return map[profileUuid];
+  }
+
+  Future<void> _saveLastUploadAt(String profileUuid, int timestampMs) async {
+    final raw = await _readConfig(ConfigKey.ftpLastUploadAt);
+    final map = raw == null || raw.isEmpty
+        ? <String, int>{}
+        : _decodeUploadMap(raw);
+    map[profileUuid] = timestampMs;
+    await _writeConfig(ConfigKey.ftpLastUploadAt, _encodeUploadMap(map));
+  }
+
+  /// Tiny "uuid=ts\n" encoding to avoid pulling in dart:convert just for
+  /// this helper (matches the seen-archives newline-separated convention).
+  Map<String, int> _decodeUploadMap(String raw) {
+    final out = <String, int>{};
+    for (final line in raw.split('\n')) {
+      if (line.isEmpty) continue;
+      final eq = line.indexOf('=');
+      if (eq <= 0) continue;
+      final key = line.substring(0, eq);
+      final ts = int.tryParse(line.substring(eq + 1));
+      if (ts != null) out[key] = ts;
+    }
+    return out;
+  }
+
+  String _encodeUploadMap(Map<String, int> m) =>
+      m.entries.map((e) => '${e.key}=${e.value}').join('\n');
+
+  /// Local-change detector. Uses [change_log.changed_at] as the canonical
+  /// "something changed" signal (every repository write produces a row);
+  /// this captures inserts, updates *and* tombstoned deletes which a plain
+  /// `MAX(updated_at)` scan would miss. Returns true when [lastUploadAt] is
+  /// `null` (first run on this device for this profile) so the local state
+  /// always lands on the server at least once.
+  Future<bool> _hasLocalChangesSince(int? lastUploadAt) async {
+    if (lastUploadAt == null) return true;
+    final rows = await _db.customSelect(
+      'SELECT MAX(changed_at) AS m FROM change_log',
+    ).get();
+    if (rows.isEmpty) return false;
+    final m = rows.first.data['m'] as int?;
+    if (m == null) return false;
+    return m > lastUploadAt;
   }
 
   Future<String?> _readConfig(String key) async {

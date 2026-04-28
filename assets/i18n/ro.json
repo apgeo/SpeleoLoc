@@ -314,6 +314,8 @@
   "ftp_phase_uploading": "Se încarcă arhiva",
   "ftp_phase_finalizing": "Finalizare…",
   "ftp_phase_completed": "Sincronizare reușită",
+  "ftp_phase_completed_nothing": "Deja sincronizat",
+  "ftp_phase_completed_download_only": "Descărcare reușită",
   "ftp_phase_failed": "Sincronizare eșuată",
   "ftp_phase_cancelled": "Sincronizare anulată",
   "ftp_phase_paused": "Sincronizare în pauză",

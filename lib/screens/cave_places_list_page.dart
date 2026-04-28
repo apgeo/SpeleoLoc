@@ -222,7 +222,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(LocServ.inst.t('ok')),
           ),
-        ],R
+        ]
       ),
     );
     if (confirmed == true && mounted) {

@@ -78,3 +78,6 @@ test_data/pictures/
 
 # for now contributing-docs.md is not in public repo
 docs/contributing-docs.md
+
+# Live-integration FTP credentials (opt-in, never committed)
+test_data/ftp_test.json

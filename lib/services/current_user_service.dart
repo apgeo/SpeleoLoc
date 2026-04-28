@@ -23,6 +23,11 @@ class ConfigKey {
   /// JSON map `{ archiveFilename: iso8601Timestamp }` — filenames already
   /// imported from the remote (so future downloads skip them).
   static const String ftpSeenArchives = 'ftp_seen_archives';
+  /// JSON map `{ profileUuid: timestampMs }` — the wall-clock time of the
+  /// most recent successful upload to that profile. Used to decide whether
+  /// a fresh upload is needed (local has unsynced changes when the latest
+  /// `change_log.changed_at` is newer than this timestamp).
+  static const String ftpLastUploadAt = 'ftp_last_upload_at';
 }
 
 /// Provides the identity used to populate `created_by_user_uuid` and
