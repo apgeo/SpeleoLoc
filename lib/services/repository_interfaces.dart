@@ -30,6 +30,21 @@ abstract class ICavePlaceRepository {
     bool isEntrance = false,
     bool isMainEntrance = false,
   });
+
+  /// Insert a cave place from an arbitrary companion. The repository
+  /// stamps audit columns (`createdAt`, `updatedAt`, `createdByUserUuid`,
+  /// `lastModifiedByUserUuid`) when not provided and writes a `change_log`
+  /// header so syncing detects the new row.
+  ///
+  /// Returns the persisted row's uuid.
+  Future<Uuid> addCavePlaceFromCompanion(CavePlacesCompanion companion);
+
+  /// Update an existing cave place from a partial companion. Only fields
+  /// whose `Value.present` is true are written. The repository refreshes
+  /// `updatedAt` / `lastModifiedByUserUuid` automatically and writes a
+  /// `change_log` diff.
+  Future<void> updateCavePlace(Uuid uuid, CavePlacesCompanion patch);
+
   Future<void> deleteCavePlace(Uuid uuid);
   Future<CavePlace?> findById(Uuid uuid);
   Future<CavePlace?> findCavePlaceByQrCode(int qrCode, Uuid caveUuid);

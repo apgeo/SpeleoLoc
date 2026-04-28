@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -71,15 +72,45 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
               final title = controller.text.trim();
               if (title.isEmpty) return;
               final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
+              final now = DateTime.now().millisecondsSinceEpoch;
+              final author = await currentUserService.currentOrSystem();
               if (existing == null) {
+                final newUuid = Uuid.v7();
                 await appDatabase.into(appDatabase.surfaceAreas).insert(
-                  SurfaceAreasCompanion.insert(uuid: Uuid.v7(), title: title, description: Value(desc)),
+                  SurfaceAreasCompanion.insert(
+                    uuid: newUuid,
+                    title: title,
+                    description: Value(desc),
+                    createdAt: Value(now),
+                    updatedAt: Value(now),
+                    createdByUserUuid: Value(author),
+                    lastModifiedByUserUuid: Value(author),
+                  ),
                 );
+                await changeLogger.logInsert('surface_areas', newUuid);
               } else {
                 await (appDatabase.update(appDatabase.surfaceAreas)..where((a) => a.uuid.equalsValue(existing.uuid))).write(
-                  SurfaceAreasCompanion(title: Value(title), description: Value(desc)),
+                  SurfaceAreasCompanion(
+                    title: Value(title),
+                    description: Value(desc),
+                    updatedAt: Value(now),
+                    lastModifiedByUserUuid: Value(author),
+                  ),
+                );
+                await changeLogger.logUpdate(
+                  'surface_areas',
+                  existing.uuid,
+                  oldValues: {
+                    'title': existing.title,
+                    'description': existing.description,
+                  },
+                  newValues: {
+                    'title': title,
+                    'description': desc,
+                  },
                 );
               }
+              if (!context.mounted) return;
               Navigator.pop(context, true);
             },
             child: Text(LocServ.inst.t('save')),
@@ -111,6 +142,14 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
 
     if (confirmed == true) {
       await (appDatabase.delete(appDatabase.surfaceAreas)..where((a) => a.uuid.equalsValue(area.uuid))).go();
+      await changeLogger.logDelete(
+        'surface_areas',
+        area.uuid,
+        oldValues: {
+          'title': area.title,
+          'description': area.description,
+        },
+      );
       _changed = true;
       _loadAreas();
       if (!mounted) return;

@@ -63,6 +63,92 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
+  Future<Uuid> addCavePlaceFromCompanion(CavePlacesCompanion companion) async {
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final author = await _currentUser.currentOrSystem();
+      final newUuid =
+          companion.uuid.present ? companion.uuid.value : Uuid.v7();
+      final stamped = companion.copyWith(
+        uuid: Value(newUuid),
+        createdAt:
+            companion.createdAt.present ? companion.createdAt : Value(now),
+        updatedAt:
+            companion.updatedAt.present ? companion.updatedAt : Value(now),
+        createdByUserUuid: companion.createdByUserUuid.present
+            ? companion.createdByUserUuid
+            : Value(author),
+        lastModifiedByUserUuid: companion.lastModifiedByUserUuid.present
+            ? companion.lastModifiedByUserUuid
+            : Value(author),
+      );
+      await _database.into(_database.cavePlaces).insert(stamped);
+      await _logger.logInsert('cave_places', newUuid);
+      return newUuid;
+    } catch (e, st) {
+      _log.severe('Failed to add cave place', e, st);
+      throw DbException('Failed to add cave place', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> updateCavePlace(Uuid id, CavePlacesCompanion patch) async {
+    try {
+      await _database.transaction(() async {
+        final old = await (_database.select(_database.cavePlaces)
+              ..where((cp) => cp.uuid.equalsValue(id))
+              ..limit(1))
+            .getSingleOrNull();
+        if (old == null) {
+          throw DbException('Cave place $id not found');
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final author = await _currentUser.currentOrSystem();
+        final stamped = patch.copyWith(
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
+        );
+        await (_database.update(_database.cavePlaces)
+              ..where((cp) => cp.uuid.equalsValue(id)))
+            .write(stamped);
+
+        // Build new values map only for fields the caller actually set.
+        final newValues = <String, Object?>{};
+        final oldValues = <String, Object?>{};
+        void cmp<T>(String col, Value<T> v, T oldVal) {
+          if (v.present) {
+            newValues[col] = v.value;
+            oldValues[col] = oldVal;
+          }
+        }
+        cmp('title', patch.title, old.title);
+        cmp('description', patch.description, old.description);
+        cmp('depth_in_cave', patch.depthInCave, old.depthInCave);
+        cmp('place_qr_code_identifier',
+            patch.placeQrCodeIdentifier, old.placeQrCodeIdentifier);
+        cmp('latitude', patch.latitude, old.latitude);
+        cmp('longitude', patch.longitude, old.longitude);
+        cmp('altitude', patch.altitude, old.altitude);
+        cmp('cave_area_uuid', patch.caveAreaUuid, old.caveAreaUuid);
+        cmp('cave_uuid', patch.caveUuid, old.caveUuid);
+        cmp('is_entrance', patch.isEntrance, old.isEntrance);
+        cmp('is_main_entrance', patch.isMainEntrance, old.isMainEntrance);
+
+        await _logger.logUpdate(
+          'cave_places',
+          id,
+          oldValues: oldValues,
+          newValues: newValues,
+        );
+      });
+    } catch (e, st) {
+      _log.severe('Failed to update cave place', e, st);
+      throw DbException('Failed to update cave place',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
   Future<void> deleteCavePlace(Uuid id) async {
     try {
       await _database.transaction(() async {

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
@@ -106,14 +107,36 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
     }
 
     if (widget.documentationFile != null) {
-      final updated = widget.documentationFile!.copyWith(
+      final old = widget.documentationFile!;
+      final author = await currentUserService.currentOrSystem();
+      final updated = old.copyWith(
         title: title,
         description: drift.Value(description),
         fileName: fileNameToStore,
         fileSize: _fileSize,
         fileHash: drift.Value(_fileHash),
+        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        lastModifiedByUserUuid: drift.Value(author),
       );
       await appDatabase.update(appDatabase.documentationFiles).replace(updated);
+      await changeLogger.logUpdate(
+        'documentation_files',
+        old.uuid,
+        oldValues: {
+          'title': old.title,
+          'description': old.description,
+          'file_name': old.fileName,
+          'file_size': old.fileSize,
+          'file_hash': old.fileHash,
+        },
+        newValues: {
+          'title': title,
+          'description': description,
+          'file_name': fileNameToStore,
+          'file_size': _fileSize,
+          'file_hash': _fileHash,
+        },
+      );
       if (mounted) Navigator.pop(context, true);
       return;
     }
@@ -148,10 +171,11 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
     );
 
     try {
-      await appDatabase.insertDocumentationFile(
+      final newUuid = await appDatabase.insertDocumentationFile(
         companion: withOptional,
         parentLink: parentLink,
       );
+      await changeLogger.logInsert('documentation_files', newUuid);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// A compact dialog for quickly adding a new cave place.
@@ -122,19 +123,17 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     final qr = int.tryParse(_qrController.text.trim());
 
     try {
-      final newId = await appDatabase
-          .into(appDatabase.cavePlaces)
-          .insert(
-            CavePlacesCompanion.insert(
-              uuid: Uuid.v7(),
-              title: title,
-              caveUuid: widget.caveUuid,
-              placeQrCodeIdentifier: Value(qr),
-              caveAreaUuid: Value(_selectedCaveAreaId),
-            ),
-          );
+      final newUuid = await cavePlaceRepository.addCavePlaceFromCompanion(
+        CavePlacesCompanion.insert(
+          uuid: Uuid.v7(),
+          title: title,
+          caveUuid: widget.caveUuid,
+          placeQrCodeIdentifier: Value(qr),
+          caveAreaUuid: Value(_selectedCaveAreaId),
+        ),
+      );
       if (mounted) {
-        Navigator.pop(context, newId);
+        Navigator.pop(context, newUuid);
       }
     } catch (e) {
       if (mounted) {

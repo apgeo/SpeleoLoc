@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// Shared helper for documentation file storage, hashing, and DB insertion.
@@ -198,6 +199,7 @@ class DocumentationFileHelper {
       companion: companion,
       parentLink: parentLink,
     );
+    await changeLogger.logInsert('documentation_files', docId);
     caveTripService.linkDocument(docId, documentTitle: title, textContent: textContent);
     return docId;
   }
@@ -214,6 +216,10 @@ class DocumentationFileHelper {
     String? description,
     required SavedFileInfo savedFile,
   }) async {
+    final old = await (appDatabase.select(appDatabase.documentationFiles)
+          ..where((t) => t.uuid.equalsValue(id)))
+        .getSingleOrNull();
+    final author = await currentUserService.currentOrSystem();
     final companion = DocumentationFilesCompanion(
       uuid: drift.Value(id),
       title: drift.Value(title),
@@ -222,9 +228,30 @@ class DocumentationFileHelper {
       fileSize: drift.Value(savedFile.fileSize),
       fileHash: drift.Value(savedFile.fileHash),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+      lastModifiedByUserUuid: drift.Value(author),
     );
 
     await appDatabase.updateDocumentationFile(uuid: id, companion: companion);
+    if (old != null) {
+      await changeLogger.logUpdate(
+        'documentation_files',
+        id,
+        oldValues: {
+          'title': old.title,
+          'description': old.description,
+          'file_name': old.fileName,
+          'file_size': old.fileSize,
+          'file_hash': old.fileHash,
+        },
+        newValues: {
+          'title': title,
+          'description': description,
+          'file_name': savedFile.relativePath,
+          'file_size': savedFile.fileSize,
+          'file_hash': savedFile.fileHash,
+        },
+      );
+    }
   }
 
   // -----------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -60,15 +61,40 @@ class _CaveAreasPageState extends State<CaveAreasPage>
             onPressed: () async {
               final title = controller.text.trim();
               if (title.isEmpty) return;
+              final now = DateTime.now().millisecondsSinceEpoch;
+              final author = await currentUserService.currentOrSystem();
               if (existing == null) {
+                final newUuid = Uuid.v7();
                 await appDatabase.into(appDatabase.caveAreas).insert(
-                  CaveAreasCompanion.insert(uuid: Uuid.v7(), title: title, caveUuid: widget.caveUuid),
+                  CaveAreasCompanion.insert(
+                    uuid: newUuid,
+                    title: title,
+                    caveUuid: widget.caveUuid,
+                    createdAt: Value(now),
+                    updatedAt: Value(now),
+                    createdByUserUuid: Value(author),
+                    lastModifiedByUserUuid: Value(author),
+                  ),
                 );
+                await changeLogger.logInsert('cave_areas', newUuid);
               } else {
                 await (appDatabase.update(appDatabase.caveAreas)..where((a) => a.uuid.equalsValue(existing.uuid))).write(
-                  CaveAreasCompanion(title: Value(title)),
+                  CaveAreasCompanion(
+                    title: Value(title),
+                    updatedAt: Value(now),
+                    lastModifiedByUserUuid: Value(author),
+                  ),
                 );
+                if (existing.title != title) {
+                  await changeLogger.logUpdate(
+                    'cave_areas',
+                    existing.uuid,
+                    oldValues: {'title': existing.title},
+                    newValues: {'title': title},
+                  );
+                }
               }
+              if (!context.mounted) return;
               Navigator.pop(context, true);
             },
             child: Text(LocServ.inst.t('save')),
@@ -100,6 +126,14 @@ class _CaveAreasPageState extends State<CaveAreasPage>
 
     if (confirmed == true) {
       await (appDatabase.delete(appDatabase.caveAreas)..where((a) => a.uuid.equalsValue(area.uuid))).go();
+      await changeLogger.logDelete(
+        'cave_areas',
+        area.uuid,
+        oldValues: {
+          'title': area.title,
+          'cave_uuid': area.caveUuid,
+        },
+      );
       _changed = true;
       _loadAreas();
       if (!mounted) return;

@@ -9,6 +9,7 @@ import 'package:speleoloc/screens/gps_recorder_page.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
@@ -281,27 +282,24 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
 
     if (_currentCavePlaceId == null) {
-      final newUuid = Uuid.v7();
-      await appDatabase
-          .into(appDatabase.cavePlaces)
-          .insert(
-            CavePlacesCompanion.insert(
-              uuid: newUuid,
-              title: title,
-              caveUuid: widget.caveUuid,
-              description: description == null
-                  ? const Value.absent()
-                  : Value(description),
-                depthInCave: Value(depth),
-              placeQrCodeIdentifier: Value(qr),
-              latitude: Value(lat),
-              longitude: Value(long),
-              altitude: Value(alt),
-              caveAreaUuid: Value(_selectedCaveAreaId),
-              isEntrance: Value(_isEntrance ? 1 : 0),
-              isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
-            ),
-          );
+      final newUuid = await cavePlaceRepository.addCavePlaceFromCompanion(
+        CavePlacesCompanion.insert(
+          uuid: Uuid.v7(),
+          title: title,
+          caveUuid: widget.caveUuid,
+          description: description == null
+              ? const Value.absent()
+              : Value(description),
+          depthInCave: Value(depth),
+          placeQrCodeIdentifier: Value(qr),
+          latitude: Value(lat),
+          longitude: Value(long),
+          altitude: Value(alt),
+          caveAreaUuid: Value(_selectedCaveAreaId),
+          isEntrance: Value(_isEntrance ? 1 : 0),
+          isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
+        ),
+      );
 
       if (!mounted) return newUuid;
       if (closeAfterSave) {
@@ -311,15 +309,14 @@ class _CavePlacePageState extends State<CavePlacePage>
       }
       return newUuid;
     } else {
-      await (appDatabase.update(
-        appDatabase.cavePlaces,
-      )..where((cp) => cp.uuid.equalsValue(_currentCavePlaceId!))).write(
+      await cavePlaceRepository.updateCavePlace(
+        _currentCavePlaceId!,
         CavePlacesCompanion(
           title: Value(title),
           description: description == null
               ? const Value.absent()
               : Value(description),
-            depthInCave: Value(depth),
+          depthInCave: Value(depth),
           placeQrCodeIdentifier: Value(qr),
           latitude: Value(lat),
           longitude: Value(long),
