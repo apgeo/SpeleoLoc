@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
@@ -13,20 +14,29 @@ import 'package:speleoloc/utils/qr_generation_defaults.dart';
 /// settings and displays it in a properly sized, zoomable dialog.
 class CavePlaceQrPreviewDialog extends StatefulWidget {
   final CavePlace cavePlace;
+  /// When set, overrides [cavePlace.placeQrCodeIdentifier] for the preview.
+  /// Use this to preview unsaved changes before the user hits save.
+  final int? qrIdentifierOverride;
 
-  const CavePlaceQrPreviewDialog({super.key, required this.cavePlace});
+  const CavePlaceQrPreviewDialog({super.key, required this.cavePlace, this.qrIdentifierOverride});
 
   @override
   State<CavePlaceQrPreviewDialog> createState() =>
       _CavePlaceQrPreviewDialogState();
 
   /// Show the QR preview dialog for [cavePlace].
-  /// Does nothing if the place has no QR code identifier.
-  static void show(BuildContext context, CavePlace cavePlace) {
-    if (cavePlace.placeQrCodeIdentifier == null) return;
+  /// [qrIdentifierOverride] lets callers preview a QR number that has not
+  /// been saved yet (e.g. an unsaved value in the form field).
+  /// Does nothing if there is no QR identifier to render.
+  static void show(BuildContext context, CavePlace cavePlace, {int? qrIdentifierOverride}) {
+    final effectiveQr = qrIdentifierOverride ?? cavePlace.placeQrCodeIdentifier;
+    if (effectiveQr == null) return;
     showDialog(
       context: context,
-      builder: (_) => CavePlaceQrPreviewDialog(cavePlace: cavePlace),
+      builder: (_) => CavePlaceQrPreviewDialog(
+        cavePlace: cavePlace,
+        qrIdentifierOverride: qrIdentifierOverride,
+      ),
     );
   }
 }
@@ -63,7 +73,10 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             QrGenerationDefaults.errorCorrectionLevel,
       );
 
-      final bytes = await QrImageRenderer.render(widget.cavePlace, prefs);
+      final effectiveCavePlace = widget.qrIdentifierOverride != null
+          ? widget.cavePlace.copyWith(placeQrCodeIdentifier: Value(widget.qrIdentifierOverride))
+          : widget.cavePlace;
+      final bytes = await QrImageRenderer.render(effectiveCavePlace, prefs);
 
       if (mounted) {
         setState(() {
@@ -144,11 +157,11 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             ),
             const SizedBox(height: 4),
             // QR code number label
-            if (widget.cavePlace.placeQrCodeIdentifier != null)
+            if (widget.qrIdentifierOverride != null || widget.cavePlace.placeQrCodeIdentifier != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  '#${widget.cavePlace.placeQrCodeIdentifier}',
+                  '#${widget.qrIdentifierOverride ?? widget.cavePlace.placeQrCodeIdentifier}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context)
                             .colorScheme

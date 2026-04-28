@@ -929,16 +929,20 @@ class _CavePlacePageState extends State<CavePlacePage>
                 Row(
                   key: tourKeys['qr_field'],
                   children: [
-                    // QR code preview – only for existing places with a QR identifier.
+                    // QR code preview – only for existing places when a QR number is entered.
                     if (_currentCavePlaceId != null &&
-                        _cavePlace?.placeQrCodeIdentifier != null)
+                        int.tryParse(_qrController.text) != null)
                       IconButton(
                         icon: const Icon(Icons.qr_code_2),
                         tooltip: LocServ.inst.t('view_qr_code'),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                         onPressed: () {
-                          CavePlaceQrPreviewDialog.show(context, _cavePlace!);
+                          CavePlaceQrPreviewDialog.show(
+                            context,
+                            _cavePlace!,
+                            qrIdentifierOverride: int.tryParse(_qrController.text),
+                          );
                         },
                       ),
 
