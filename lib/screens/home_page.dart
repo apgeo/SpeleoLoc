@@ -167,11 +167,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
   @override
   void initState() {
-    // Defer the auto-tour until after the optional test-data popup is handled.
-    // The popup is only shown on the first few launches when no caves exist,
-    // so we hold the tour and resume it in _offerTestDataPopulation() (or
-    // immediately in _loadCaves() when the popup is not needed).
-    deferAutoTour();
     super.initState();
     homePageRefreshNotifier.addListener(_onHomePageRefreshRequested);
     _loadUiSettings();
@@ -239,10 +234,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           _caves.isEmpty &&
           AppStartCounter.count <= 4) {
         _testDataPromptShown = true;
-        await _offerTestDataPopulation();
-      } else {
-        // No popup needed — allow the tour to start now.
-        resumeAutoTour();
+        _offerTestDataPopulation();
       }
     } catch (e) {
       if (!mounted) return;
@@ -301,9 +293,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           );
         }
       }
-    } else {
-      // User declined or dismissed — allow the tour to proceed now.
-      resumeAutoTour();
     }
   }
 

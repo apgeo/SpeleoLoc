@@ -134,28 +134,12 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
   List<TourStepDef> get tourSteps;
 
   bool _tourAutoStartChecked = false;
-  bool _autoTourDeferred = false;
-
-  /// Call this before [super.initState()] to prevent the auto-tour from
-  /// firing until [resumeAutoTour] is called. Useful when the screen may
-  /// show a blocking dialog before the UI is ready for the tour.
-  void deferAutoTour() {
-    _autoTourDeferred = true;
-  }
-
-  /// Resumes a previously deferred auto-tour check. Call this after the
-  /// blocking action (e.g. a one-time popup) has been dismissed.
-  Future<void> resumeAutoTour() async {
-    if (!_autoTourDeferred) return;
-    _autoTourDeferred = false;
-    if (!_tourAutoStartChecked) await _checkAutoStartTour();
-  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_autoTourDeferred) _checkAutoStartTour();
+      _checkAutoStartTour();
     });
   }
 
