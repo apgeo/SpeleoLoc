@@ -104,7 +104,13 @@ class UserRepository implements IUserRepository {
               lastModifiedByUserUuid: Value(author),
             ),
           );
-      await _logger().logInsert('users', newUuid);
+      // Skip change-logging for self-authored bootstrap inserts (authorUserUuid
+      // == null), i.e. the "system" user created on first launch.  Calling
+      // _logger() at that point triggers a Riverpod CircularDependencyError:
+      //   UserRepository → ChangeLogger → CurrentUserService → UserRepository.
+      if (authorUserUuid != null) {
+        await _logger().logInsert('users', newUuid);
+      }
       return newUuid;
     } catch (e, st) {
       _log.severe('Failed to add user', e, st);
