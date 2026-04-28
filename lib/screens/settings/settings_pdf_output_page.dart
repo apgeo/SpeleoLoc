@@ -5,7 +5,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
-/// PDF output settings: grid layout (rows/columns), QR label template.
+/// PDF output settings: grid layout (rows/columns per page).
 class SettingsPdfOutputPage extends StatefulWidget {
   const SettingsPdfOutputPage({super.key});
 
@@ -26,15 +26,12 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
   ];
 
   Map<String, dynamic>? _cfg;
-  late TextEditingController _templateController;
   late TextEditingController _columnsController;
   late TextEditingController _rowsController;
-  final FocusNode _templateFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _templateController = TextEditingController();
     _columnsController = TextEditingController();
     _rowsController = TextEditingController();
     _load();
@@ -42,10 +39,8 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
 
   @override
   void dispose() {
-    _templateController.dispose();
     _columnsController.dispose();
     _rowsController.dispose();
-    _templateFocusNode.dispose();
     super.dispose();
   }
 
@@ -56,7 +51,6 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
     if (mounted) {
       setState(() {
         _cfg = cfg;
-        _templateController.text = cfg['labelTemplate'] ?? defaultLabelTemplate;
         _columnsController.text = (cfg['gridColumns'] ?? 4).toString();
         _rowsController.text = (cfg['gridRows'] ?? 5).toString();
       });
@@ -67,7 +61,6 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
     return {
       'gridColumns': 4,
       'gridRows': 5,
-      'labelTemplate': defaultLabelTemplate,
     };
   }
 
@@ -102,75 +95,9 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
                   const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           _buildStepperRow(cfg),
-          const SizedBox(height: 24),
-          // QR Label template section
-          Text(LocServ.inst.t('qr_label_template'),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _templateController,
-            focusNode: _templateFocusNode,
-            decoration: InputDecoration(
-              labelText: LocServ.inst.t('qr_label_template'),
-              border: const OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 4,
-            minLines: 2,
-            onChanged: (v) async {
-              cfg['labelTemplate'] = v;
-              await _saveConfig(cfg);
-            },
-          ),
-          const SizedBox(height: 12),
-          // Available variables
-          Text(LocServ.inst.t('available_variables'),
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          _variableChip('@place_title', LocServ.inst.t('var_place_title')),
-          _variableChip('@description', LocServ.inst.t('var_description')),
-          _variableChip('@cave_title', LocServ.inst.t('var_cave_title')),
-          _variableChip('@area_title', LocServ.inst.t('var_area_title')),
-          _variableChip('@place_qr_code_identifier',
-              LocServ.inst.t('var_place_qr_code_identifier')),
-          _variableChip('@depth', LocServ.inst.t('var_depth')),
-          const Divider(height: 16),
-          _variableChip('\\n', LocServ.inst.t('var_newline')),
-          const Divider(height: 16),
-          Text(LocServ.inst.t('template_formatting_help'),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          _variableChip('#fz<number>', LocServ.inst.t('var_font_size_help')),
-          _variableChip('#fc<color>', LocServ.inst.t('var_font_color_help')),
-          const SizedBox(height: 8),
-          Text(
-            LocServ.inst.t('template_example'),
-            style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
-          ),
         ],
       ),
     );
-  }
-
-  void _insertVariable(String variable) {
-    final text = _templateController.text;
-    final sel = _templateController.selection;
-    final cursor = sel.isValid ? sel.baseOffset : text.length;
-    final before = text.substring(0, cursor);
-    final after = text.substring(cursor);
-    final newText = '$before$variable$after';
-    _templateController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: cursor + variable.length),
-    );
-    _templateFocusNode.requestFocus();
-    final cfg = _cfg;
-    if (cfg != null) {
-      cfg['labelTemplate'] = newText;
-      _saveConfig(cfg);
-    }
   }
 
   Widget _buildStepperRow(Map<String, dynamic> cfg) {
@@ -257,37 +184,4 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
     );
   }
 
-  Widget _variableChip(String variable, String description) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-            ),
-            child: GestureDetector(
-              onTap: variable.startsWith('@') || variable == '\\n'
-                  ? () => _insertVariable(variable)
-                  : null,
-              child: Text(variable,
-                  style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(description,
-                style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-          ),
-        ],
-      ),
-    );
-  }
 }

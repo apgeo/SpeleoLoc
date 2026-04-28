@@ -5,7 +5,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
-/// QR code generation settings subpage: sizes, colors, error correction, etc.
+/// QR code generation settings subpage: sizes, colors, error correction, label template, etc.
 class SettingsQrGenerationPage extends StatefulWidget {
   const SettingsQrGenerationPage({super.key});
 
@@ -27,23 +27,38 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
   ];
 
   Map<String, dynamic>? _cfg;
+  Map<String, dynamic>? _pdfCfg;
   String _qrOutputKind = 'pdf';
+  late TextEditingController _templateController;
+  final FocusNode _templateFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _templateController = TextEditingController();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _templateController.dispose();
+    _templateFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
     final cfg = await SettingsHelper.loadJsonConfig(
         qrGenerationConfigKey, _defaultQrConfig);
+    final pdfCfg = await SettingsHelper.loadJsonConfig(
+        pdfOutputConfigKey, _defaultPdfConfig);
     final outputKind =
         await SettingsHelper.loadStringConfig('qr_output_kind', 'pdf');
     if (mounted) {
       setState(() {
         _cfg = cfg;
+        _pdfCfg = pdfCfg;
         _qrOutputKind = outputKind;
+        _templateController.text = pdfCfg['labelTemplate'] ?? defaultLabelTemplate;
       });
     }
   }
@@ -52,8 +67,73 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
     await SettingsHelper.saveJsonConfig(qrGenerationConfigKey, cfg);
   }
 
+  Future<void> _savePdfConfig(Map<String, dynamic> cfg) async {
+    await SettingsHelper.saveJsonConfig(pdfOutputConfigKey, cfg);
+  }
+
   Future<void> _saveOutputKind(String v) async {
     await SettingsHelper.saveStringConfig('qr_output_kind', v);
+  }
+
+  static Map<String, dynamic> _defaultPdfConfig() {
+    return {
+      'gridColumns': 4,
+      'gridRows': 5,
+      'labelTemplate': defaultLabelTemplate,
+    };
+  }
+
+  void _insertVariable(String variable) {
+    final text = _templateController.text;
+    final sel = _templateController.selection;
+    final cursor = sel.isValid ? sel.baseOffset : text.length;
+    final before = text.substring(0, cursor);
+    final after = text.substring(cursor);
+    final newText = '$before$variable$after';
+    _templateController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + variable.length),
+    );
+    _templateFocusNode.requestFocus();
+    final cfg = _pdfCfg;
+    if (cfg != null) {
+      cfg['labelTemplate'] = newText;
+      _savePdfConfig(cfg);
+    }
+  }
+
+  Widget _variableChip(String variable, String description) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+            ),
+            child: GestureDetector(
+              onTap: variable.startsWith('@') || variable == '\\n'
+                  ? () => _insertVariable(variable)
+                  : null,
+              child: Text(variable,
+                  style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(description,
+                style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+          ),
+        ],
+      ),
+    );
   }
 
   static Map<String, dynamic> _defaultQrConfig() {
@@ -304,8 +384,54 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 ),
               ),
             ],
-          ),
-        ],
+          ),          const SizedBox(height: 24),
+          // QR Label template section (stored in PDF output config)
+          Text(LocServ.inst.t('qr_label_template'),
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (_pdfCfg != null)
+            TextFormField(
+              controller: _templateController,
+              focusNode: _templateFocusNode,
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('qr_label_template'),
+                border: const OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+              maxLines: 4,
+              minLines: 2,
+              onChanged: (v) async {
+                _pdfCfg!['labelTemplate'] = v;
+                await _savePdfConfig(_pdfCfg!);
+              },
+            ),
+          const SizedBox(height: 12),
+          // Available variables
+          Text(LocServ.inst.t('available_variables'),
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          _variableChip('@place_title', LocServ.inst.t('var_place_title')),
+          _variableChip('@description', LocServ.inst.t('var_description')),
+          _variableChip('@cave_title', LocServ.inst.t('var_cave_title')),
+          _variableChip('@area_title', LocServ.inst.t('var_area_title')),
+          _variableChip('@place_qr_code_identifier',
+              LocServ.inst.t('var_place_qr_code_identifier')),
+          _variableChip('@depth', LocServ.inst.t('var_depth')),
+          const Divider(height: 16),
+          _variableChip('\\n', LocServ.inst.t('var_newline')),
+          const Divider(height: 16),
+          Text(LocServ.inst.t('template_formatting_help'),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          _variableChip('#fz<number>', LocServ.inst.t('var_font_size_help')),
+          _variableChip('#fc<color>', LocServ.inst.t('var_font_color_help')),
+          const SizedBox(height: 8),
+          Text(
+            LocServ.inst.t('template_example'),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+          ),        ],
       ),
     );
   }
