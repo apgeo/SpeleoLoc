@@ -89,8 +89,8 @@ const List<TableCfg> tableConfigs = [
     humanName: 'Cave Places',
     columns: [
       'title', 'description', 'cave_id', 'place_qr_code_identifier',
-      'cave_area_id', 'latitude', 'longitude', 'depth_in_cave', 'created_at',
-      'updated_at', 'deleted_at'
+      'cave_area_id', 'latitude', 'longitude', 'altitude', 'depth_in_cave',
+      'created_at', 'updated_at', 'deleted_at'
     ],
     uniqueConstraints: [
       ['title', 'cave_id', 'cave_area_id']

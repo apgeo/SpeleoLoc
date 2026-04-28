@@ -51,6 +51,7 @@ dependencies:
   ftpconnect: ^2.0.7
   dartssh2: ^2.12.0
   flutter_secure_storage: ^9.2.2
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_test:

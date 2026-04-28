@@ -3933,6 +3933,17 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _altitudeMeta = const VerificationMeta(
+    'altitude',
+  );
+  late final GeneratedColumn<double> altitude = GeneratedColumn<double>(
+    'altitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _depthInCaveMeta = const VerificationMeta(
     'depthInCave',
   );
@@ -4029,6 +4040,7 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     caveAreaUuid,
     latitude,
     longitude,
+    altitude,
     depthInCave,
     isEntrance,
     isMainEntrance,
@@ -4086,6 +4098,12 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
       context.handle(
         _longitudeMeta,
         longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
+      );
+    }
+    if (data.containsKey('altitude')) {
+      context.handle(
+        _altitudeMeta,
+        altitude.isAcceptableOrUnknown(data['altitude']!, _altitudeMeta),
       );
     }
     if (data.containsKey('depth_in_cave')) {
@@ -4181,6 +4199,10 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         DriftSqlType.double,
         data['${effectivePrefix}longitude'],
       ),
+      altitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}altitude'],
+      ),
       depthInCave: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}depth_in_cave'],
@@ -4262,6 +4284,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   ///todo: redesign - SQLite stores everything as REAL (the actual DB schema confirms this). The NUMERIC(p,s) type affinity in SQLite is effectively ignored — scale/precision are cosmetic
   final double? latitude;
   final double? longitude;
+  final double? altitude;
   final double? depthInCave;
   final int isEntrance;
   final int isMainEntrance;
@@ -4279,6 +4302,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     this.caveAreaUuid,
     this.latitude,
     this.longitude,
+    this.altitude,
     this.depthInCave,
     required this.isEntrance,
     required this.isMainEntrance,
@@ -4316,6 +4340,9 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     }
     if (!nullToAbsent || longitude != null) {
       map['longitude'] = Variable<double>(longitude);
+    }
+    if (!nullToAbsent || altitude != null) {
+      map['altitude'] = Variable<double>(altitude);
     }
     if (!nullToAbsent || depthInCave != null) {
       map['depth_in_cave'] = Variable<double>(depthInCave);
@@ -4366,6 +4393,9 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       longitude: longitude == null && nullToAbsent
           ? const Value.absent()
           : Value(longitude),
+      altitude: altitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(altitude),
       depthInCave: depthInCave == null && nullToAbsent
           ? const Value.absent()
           : Value(depthInCave),
@@ -4405,6 +4435,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       caveAreaUuid: serializer.fromJson<Uuid?>(json['cave_area_uuid']),
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
+      altitude: serializer.fromJson<double?>(json['altitude']),
       depthInCave: serializer.fromJson<double?>(json['depth_in_cave']),
       isEntrance: serializer.fromJson<int>(json['is_entrance']),
       isMainEntrance: serializer.fromJson<int>(json['is_main_entrance']),
@@ -4433,6 +4464,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       'cave_area_uuid': serializer.toJson<Uuid?>(caveAreaUuid),
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
+      'altitude': serializer.toJson<double?>(altitude),
       'depth_in_cave': serializer.toJson<double?>(depthInCave),
       'is_entrance': serializer.toJson<int>(isEntrance),
       'is_main_entrance': serializer.toJson<int>(isMainEntrance),
@@ -4455,6 +4487,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     Value<Uuid?> caveAreaUuid = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
+    Value<double?> altitude = const Value.absent(),
     Value<double?> depthInCave = const Value.absent(),
     int? isEntrance,
     int? isMainEntrance,
@@ -4474,6 +4507,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     caveAreaUuid: caveAreaUuid.present ? caveAreaUuid.value : this.caveAreaUuid,
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
+    altitude: altitude.present ? altitude.value : this.altitude,
     depthInCave: depthInCave.present ? depthInCave.value : this.depthInCave,
     isEntrance: isEntrance ?? this.isEntrance,
     isMainEntrance: isMainEntrance ?? this.isMainEntrance,
@@ -4503,6 +4537,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           : this.caveAreaUuid,
       latitude: data.latitude.present ? data.latitude.value : this.latitude,
       longitude: data.longitude.present ? data.longitude.value : this.longitude,
+      altitude: data.altitude.present ? data.altitude.value : this.altitude,
       depthInCave: data.depthInCave.present
           ? data.depthInCave.value
           : this.depthInCave,
@@ -4535,6 +4570,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
+          ..write('altitude: $altitude, ')
           ..write('depthInCave: $depthInCave, ')
           ..write('isEntrance: $isEntrance, ')
           ..write('isMainEntrance: $isMainEntrance, ')
@@ -4557,6 +4593,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     caveAreaUuid,
     latitude,
     longitude,
+    altitude,
     depthInCave,
     isEntrance,
     isMainEntrance,
@@ -4578,6 +4615,7 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           other.caveAreaUuid == this.caveAreaUuid &&
           other.latitude == this.latitude &&
           other.longitude == this.longitude &&
+          other.altitude == this.altitude &&
           other.depthInCave == this.depthInCave &&
           other.isEntrance == this.isEntrance &&
           other.isMainEntrance == this.isMainEntrance &&
@@ -4597,6 +4635,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
   final Value<Uuid?> caveAreaUuid;
   final Value<double?> latitude;
   final Value<double?> longitude;
+  final Value<double?> altitude;
   final Value<double?> depthInCave;
   final Value<int> isEntrance;
   final Value<int> isMainEntrance;
@@ -4615,6 +4654,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.caveAreaUuid = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
+    this.altitude = const Value.absent(),
     this.depthInCave = const Value.absent(),
     this.isEntrance = const Value.absent(),
     this.isMainEntrance = const Value.absent(),
@@ -4634,6 +4674,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.caveAreaUuid = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
+    this.altitude = const Value.absent(),
     this.depthInCave = const Value.absent(),
     this.isEntrance = const Value.absent(),
     this.isMainEntrance = const Value.absent(),
@@ -4655,6 +4696,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Expression<Uint8List>? caveAreaUuid,
     Expression<double>? latitude,
     Expression<double>? longitude,
+    Expression<double>? altitude,
     Expression<double>? depthInCave,
     Expression<int>? isEntrance,
     Expression<int>? isMainEntrance,
@@ -4675,6 +4717,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       if (caveAreaUuid != null) 'cave_area_uuid': caveAreaUuid,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (altitude != null) 'altitude': altitude,
       if (depthInCave != null) 'depth_in_cave': depthInCave,
       if (isEntrance != null) 'is_entrance': isEntrance,
       if (isMainEntrance != null) 'is_main_entrance': isMainEntrance,
@@ -4697,6 +4740,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Value<Uuid?>? caveAreaUuid,
     Value<double?>? latitude,
     Value<double?>? longitude,
+    Value<double?>? altitude,
     Value<double?>? depthInCave,
     Value<int>? isEntrance,
     Value<int>? isMainEntrance,
@@ -4717,6 +4761,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       caveAreaUuid: caveAreaUuid ?? this.caveAreaUuid,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      altitude: altitude ?? this.altitude,
       depthInCave: depthInCave ?? this.depthInCave,
       isEntrance: isEntrance ?? this.isEntrance,
       isMainEntrance: isMainEntrance ?? this.isMainEntrance,
@@ -4765,6 +4810,9 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     if (longitude.present) {
       map['longitude'] = Variable<double>(longitude.value);
     }
+    if (altitude.present) {
+      map['altitude'] = Variable<double>(altitude.value);
+    }
     if (depthInCave.present) {
       map['depth_in_cave'] = Variable<double>(depthInCave.value);
     }
@@ -4812,6 +4860,7 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
+          ..write('altitude: $altitude, ')
           ..write('depthInCave: $depthInCave, ')
           ..write('isEntrance: $isEntrance, ')
           ..write('isMainEntrance: $isMainEntrance, ')
@@ -15681,6 +15730,7 @@ typedef $CavePlacesCreateCompanionBuilder =
       Value<Uuid?> caveAreaUuid,
       Value<double?> latitude,
       Value<double?> longitude,
+      Value<double?> altitude,
       Value<double?> depthInCave,
       Value<int> isEntrance,
       Value<int> isMainEntrance,
@@ -15701,6 +15751,7 @@ typedef $CavePlacesUpdateCompanionBuilder =
       Value<Uuid?> caveAreaUuid,
       Value<double?> latitude,
       Value<double?> longitude,
+      Value<double?> altitude,
       Value<double?> depthInCave,
       Value<int> isEntrance,
       Value<int> isMainEntrance,
@@ -15887,6 +15938,11 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
 
   ColumnFilters<double> get longitude => $composableBuilder(
     column: $table.longitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get altitude => $composableBuilder(
+    column: $table.altitude,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16103,6 +16159,11 @@ class $CavePlacesOrderingComposer extends Composer<_$AppDatabase, CavePlaces> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get altitude => $composableBuilder(
+    column: $table.altitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get depthInCave => $composableBuilder(
     column: $table.depthInCave,
     builder: (column) => ColumnOrderings(column),
@@ -16256,6 +16317,9 @@ class $CavePlacesAnnotationComposer
 
   GeneratedColumn<double> get longitude =>
       $composableBuilder(column: $table.longitude, builder: (column) => column);
+
+  GeneratedColumn<double> get altitude =>
+      $composableBuilder(column: $table.altitude, builder: (column) => column);
 
   GeneratedColumn<double> get depthInCave => $composableBuilder(
     column: $table.depthInCave,
@@ -16469,6 +16533,7 @@ class $CavePlacesTableManager
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
+                Value<double?> altitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
                 Value<int> isEntrance = const Value.absent(),
                 Value<int> isMainEntrance = const Value.absent(),
@@ -16487,6 +16552,7 @@ class $CavePlacesTableManager
                 caveAreaUuid: caveAreaUuid,
                 latitude: latitude,
                 longitude: longitude,
+                altitude: altitude,
                 depthInCave: depthInCave,
                 isEntrance: isEntrance,
                 isMainEntrance: isMainEntrance,
@@ -16507,6 +16573,7 @@ class $CavePlacesTableManager
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
+                Value<double?> altitude = const Value.absent(),
                 Value<double?> depthInCave = const Value.absent(),
                 Value<int> isEntrance = const Value.absent(),
                 Value<int> isMainEntrance = const Value.absent(),
@@ -16525,6 +16592,7 @@ class $CavePlacesTableManager
                 caveAreaUuid: caveAreaUuid,
                 latitude: latitude,
                 longitude: longitude,
+                altitude: altitude,
                 depthInCave: depthInCave,
                 isEntrance: isEntrance,
                 isMainEntrance: isMainEntrance,

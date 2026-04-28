@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -263,6 +263,20 @@ class AppDatabase extends _$AppDatabase {
               '365',
               nowMs,
             );
+          }
+          if (from < 10) {
+            // v9 → v10 migration: add `altitude` column to cave_places.
+            // Holds the surface altitude (WGS84 ellipsoidal, meters) captured
+            // by the GPS recorder. Nullable; existing rows stay NULL.
+            final info = await customSelect(
+              'PRAGMA table_info(cave_places)',
+            ).get();
+            final cols = info.map((r) => r.data['name'] as String).toSet();
+            if (!cols.contains('altitude')) {
+              await customStatement(
+                'ALTER TABLE cave_places ADD COLUMN altitude REAL',
+              );
+            }
           }
         },
       );

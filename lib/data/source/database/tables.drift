@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS cave_places (
     --todo: redesign - SQLite stores everything as REAL (the actual DB schema confirms this). The NUMERIC(p,s) type affinity in SQLite is effectively ignored — scale/precision are cosmetic
     latitude                    NUMERIC(10, 8),
     longitude                   NUMERIC(11, 8),
+    altitude                    NUMERIC(7, 2),
     depth_in_cave               NUMERIC(7, 2),
     is_entrance                 INTEGER NOT NULL DEFAULT 0,
     is_main_entrance            INTEGER NOT NULL DEFAULT 0,

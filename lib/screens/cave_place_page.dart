@@ -5,6 +5,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
+import 'package:speleoloc/screens/gps_recorder_page.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
@@ -70,6 +71,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   final _qrController = TextEditingController();
   final _latController = TextEditingController();
   final _longController = TextEditingController();
+  final _altController = TextEditingController();
 
   bool _qrEditable = false;
 
@@ -86,6 +88,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   bool _qrModified = false;
   bool _latModified = false;
   bool _longModified = false;
+  bool _altModified = false;
   bool _entranceModified = false;
   bool _mainEntranceModified = false;
   bool _isEntrance = false;
@@ -110,6 +113,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     _qrController.addListener(() => _onFieldEdited('qr'));
     _latController.addListener(() => _onFieldEdited('lat'));
     _longController.addListener(() => _onFieldEdited('long'));
+    _altController.addListener(() => _onFieldEdited('alt'));
   }
 
   @override
@@ -120,6 +124,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     _qrController.dispose();
     _latController.dispose();
     _longController.dispose();
+    _altController.dispose();
 
     _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
@@ -145,6 +150,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       _qrController.text = _cavePlace!.placeQrCodeIdentifier?.toString() ?? '';
       _latController.text = _cavePlace!.latitude?.toString() ?? '';
       _longController.text = _cavePlace!.longitude?.toString() ?? '';
+      _altController.text = _cavePlace!.altitude?.toString() ?? '';
       _selectedCaveAreaId = _cavePlace!.caveAreaUuid;
       _isEntrance = (_cavePlace!.isEntrance ?? 0) == 1;
       _isMainEntrance = (_cavePlace!.isMainEntrance ?? 0) == 1;
@@ -186,6 +192,9 @@ class _CavePlacePageState extends State<CavePlacePage>
     final qr = int.tryParse(_qrController.text);
     final lat = double.tryParse(_latController.text);
     final long = double.tryParse(_longController.text);
+    final alt = _altController.text.trim().isEmpty
+        ? null
+        : double.tryParse(_altController.text);
 
     if (title.isEmpty) {
       ScaffoldMessenger.of(
@@ -287,6 +296,7 @@ class _CavePlacePageState extends State<CavePlacePage>
               placeQrCodeIdentifier: Value(qr),
               latitude: Value(lat),
               longitude: Value(long),
+              altitude: Value(alt),
               caveAreaUuid: Value(_selectedCaveAreaId),
               isEntrance: Value(_isEntrance ? 1 : 0),
               isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
@@ -313,6 +323,7 @@ class _CavePlacePageState extends State<CavePlacePage>
           placeQrCodeIdentifier: Value(qr),
           latitude: Value(lat),
           longitude: Value(long),
+          altitude: Value(alt),
           caveAreaUuid: Value(_selectedCaveAreaId),
           isEntrance: Value(_isEntrance ? 1 : 0),
           isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
@@ -348,6 +359,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       _qrModified = false;
       _latModified = false;
       _longModified = false;
+      _altModified = false;
       _entranceModified = false;
       _mainEntranceModified = false;
     });
@@ -373,6 +385,9 @@ class _CavePlacePageState extends State<CavePlacePage>
     } else if (field == 'long') {
       final orig = _cavePlace?.longitude?.toString() ?? '';
       _longModified = _longController.text != orig;
+    } else if (field == 'alt') {
+      final orig = _cavePlace?.altitude?.toString() ?? '';
+      _altModified = _altController.text != orig;
     }
 
     setState(_recomputeUnsavedChanges);
@@ -386,6 +401,7 @@ class _CavePlacePageState extends State<CavePlacePage>
         _qrModified ||
         _latModified ||
         _longModified ||
+        _altModified ||
         _entranceModified ||
         _mainEntranceModified;
   }
@@ -570,6 +586,21 @@ class _CavePlacePageState extends State<CavePlacePage>
       context,
       MaterialPageRoute(builder: (_) => ScannerPage(onScan: _onQrScanned)),
     );
+  }
+
+  Future<void> _openGpsRecorder() async {
+    final result = await Navigator.push<GpsRecorderResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const GpsRecorderPage()),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _latController.text = result.latitude.toStringAsFixed(7);
+      _longController.text = result.longitude.toStringAsFixed(7);
+      if (result.altitude != null) {
+        _altController.text = result.altitude!.toStringAsFixed(1);
+      }
+    });
   }
 
   void _onQrScanned(String code) async {
@@ -998,8 +1029,34 @@ class _CavePlacePageState extends State<CavePlacePage>
                               style: const TextStyle(fontSize: 14),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _altController,
+                              decoration: InputDecoration(
+                                labelText: LocServ.inst.t('altitude'),
+                                suffixText: 'm',
+                                filled: _altModified,
+                                fillColor: _altModified
+                                    ? Colors.green.withValues(alpha: 0.06)
+                                    : null,
+                              ),
+                              keyboardType: TextInputType.numberWithOptions(
+                                decimal: true,
+                                signed: true,
+                              ),
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            tooltip: LocServ.inst.t('record_gps_point'),
+                            onPressed: _openGpsRecorder,
+                            icon: const Icon(Icons.gps_fixed),
+                          ),
                         ],
                       ),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 Row(

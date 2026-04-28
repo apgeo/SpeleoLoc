@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SpeleoLoc uses your location to record GPS coordinates of the entrance cave places on demand, only if you use this feature.</string>
 </dict>
 </plist>
