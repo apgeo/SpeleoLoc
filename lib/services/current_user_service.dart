@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -28,6 +29,8 @@ class ConfigKey {
   /// a fresh upload is needed (local has unsynced changes when the latest
   /// `change_log.changed_at` is newer than this timestamp).
   static const String ftpLastUploadAt = 'ftp_last_upload_at';
+  /// Active trip log generation method id (see [TripLogMethod]).
+  static const String tripLogMethod = 'trip_log_method';
 }
 
 /// Provides the identity used to populate `created_by_user_uuid` and
@@ -118,6 +121,18 @@ class CurrentUserService {
   Future<void> clearCurrentUser() async {
     await _deleteConfig(ConfigKey.currentUserUuid);
     currentUserUuid.value = null;
+  }
+
+  /// Reads the active trip log generation method from `configurations`.
+  /// Falls back to [TripLogMethod.classic] when unset or unrecognized.
+  Future<TripLogMethod> getTripLogMethod() async {
+    final id = await _readConfig(ConfigKey.tripLogMethod);
+    return TripLogMethod.fromId(id);
+  }
+
+  /// Persists the active trip log generation method.
+  Future<void> setTripLogMethod(TripLogMethod method) async {
+    await _writeConfig(ConfigKey.tripLogMethod, method.id);
   }
 
   Future<String?> _readConfig(String title) async {

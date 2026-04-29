@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/trip_log_method.dart';
+import 'package:speleoloc/services/trip_log_renderer.dart';
 import 'package:speleoloc/utils/constants.dart';
-import 'package:speleoloc/utils/localization.dart';
 
 class CaveTripService {
   CaveTripService._();
@@ -12,11 +12,6 @@ class CaveTripService {
 
   final ValueNotifier<Uuid?> activeTripIdNotifier = ValueNotifier<Uuid?>(null);
   final ValueNotifier<bool> isPausedNotifier = ValueNotifier<bool>(false);
-
-  static final _logTimeFmt = DateFormat('yyyy/MM/dd HH:mm:ss');
-
-  String _logLine(String message) =>
-      '[${_logTimeFmt.format(DateTime.now())}] $message';
 
   Future<void> initActiveTrip() async {
     try {
@@ -43,9 +38,7 @@ class CaveTripService {
     );
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
-    await _append(
-        _logLine(LocServ.inst.t('trip_log_started', {'title': title})),
-        tripUuid);
+    await _regenerateLog(tripUuid);
     return tripUuid;
   }
 
@@ -57,33 +50,34 @@ class CaveTripService {
     await appDatabase.restartCaveTrip(tripUuid, authorUuid: author);
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
-    await _append(_logLine(LocServ.inst.t('trip_log_restarted')), tripUuid);
+    await _regenerateLog(tripUuid);
   }
 
   Future<void> stopTrip() async {
     final id = activeTripIdNotifier.value;
     if (id != null) {
-      await _append(_logLine(LocServ.inst.t('trip_log_ended')), id);
       final author = await currentUserService.currentOrSystem();
       await appDatabase.endCaveTrip(id, authorUuid: author);
+      await _appendForNewEvent(id);
     }
     await _clearConfig();
     activeTripIdNotifier.value = null;
     isPausedNotifier.value = false;
   }
 
-  void pauseTrip() {
-    if (activeTripIdNotifier.value == null) return;
+  /// Pause/resume are purely in-memory: while paused, [recordPoint] is
+  /// suppressed. Pauses are not persisted and do not appear in the
+  /// regenerated trip log.
+  Future<void> pauseTrip() async {
+    final id = activeTripIdNotifier.value;
+    if (id == null || isPausedNotifier.value) return;
     isPausedNotifier.value = true;
-    _append(_logLine(LocServ.inst.t('trip_log_paused')),
-        activeTripIdNotifier.value!);
   }
 
-  void resumeTrip() {
-    if (activeTripIdNotifier.value == null) return;
+  Future<void> resumeTrip() async {
+    final id = activeTripIdNotifier.value;
+    if (id == null || !isPausedNotifier.value) return;
     isPausedNotifier.value = false;
-    _append(_logLine(LocServ.inst.t('trip_log_resumed')),
-        activeTripIdNotifier.value!);
   }
 
   Future<void> recordPoint(Uuid cavePlaceUuid, {String? placeTitle}) async {
@@ -93,14 +87,15 @@ class CaveTripService {
       final author = await currentUserService.currentOrSystem();
       await appDatabase.insertTripPoint(
           tripUuid: id, cavePlaceUuid: cavePlaceUuid, authorUuid: author);
-      final label =
-          placeTitle != null ? '"$placeTitle"' : 'place $cavePlaceUuid';
-      await _append(
-          _logLine(LocServ.inst.t('trip_log_qr_scanned', {'label': label})),
-          id);
+      await _appendForNewEvent(id);
     } catch (_) {}
   }
 
+  /// `textContent` is accepted for backwards compatibility with callers but
+  /// is no longer written into the trip log — the renderer cannot recover
+  /// it on subsequent re-renders. Document text is preserved in the
+  /// `documentation_files` table (file content on disk) and is reachable
+  /// from the document itself.
   Future<void> linkDocument(Uuid docUuid,
       {String? documentTitle, String? textContent}) async {
     final id = activeTripIdNotifier.value;
@@ -108,17 +103,7 @@ class CaveTripService {
     try {
       final author = await currentUserService.currentOrSystem();
       await appDatabase.linkDocumentToTrip(docUuid, id, authorUuid: author);
-      final label =
-          documentTitle != null ? '"$documentTitle"' : 'doc $docUuid';
-      final sb = StringBuffer(_logLine(
-          LocServ.inst.t('trip_log_document_added', {'label': label})));
-      if (textContent != null && textContent.trim().isNotEmpty) {
-        sb.write('\n');
-        for (final line in textContent.split('\n')) {
-          sb.write('  $line\n');
-        }
-      }
-      await _append(sb.toString().trimRight(), id);
+      await _appendForNewEvent(id);
     } catch (_) {}
   }
 
@@ -129,10 +114,64 @@ class CaveTripService {
     return trip?.caveUuid;
   }
 
-  Future<void> _append(String line, Uuid tripUuid) async {
+  /// Re-renders the full trip log for [tripUuid] using the user's active
+  /// generation method and overwrites `cave_trips.log`. Called only on
+  /// structural changes (start, restart) and on explicit method switch.
+  /// Failures are swallowed to avoid breaking the event handler that
+  /// triggered the regeneration.
+  Future<void> _regenerateLog(Uuid tripUuid) async {
     try {
-      await appDatabase.appendToTripLog(tripUuid, line);
+      final method = await currentUserService.getTripLogMethod();
+      final events = await TripLogRenderer.instance.loadEvents(tripUuid);
+      final rendered = TripLogRenderer.instance.render(events, method);
+      await appDatabase.updateTripLog(tripUuid, rendered);
     } catch (_) {}
+  }
+
+  /// Appends the rendered text for the most recently added event to
+  /// `cave_trips.log`, preserving any free-form text the user has typed.
+  /// Computed as the suffix difference between rendering all events and
+  /// rendering all-but-the-last event with the active method.
+  Future<void> _appendForNewEvent(Uuid tripUuid) async {
+    try {
+      final method = await currentUserService.getTripLogMethod();
+      final eventsAfter =
+          await TripLogRenderer.instance.loadEvents(tripUuid);
+      if (eventsAfter.isEmpty) return;
+      final eventsBefore =
+          eventsAfter.sublist(0, eventsAfter.length - 1);
+      final before =
+          TripLogRenderer.instance.render(eventsBefore, method);
+      final after = TripLogRenderer.instance.render(eventsAfter, method);
+      if (!after.startsWith(before)) {
+        // Renderings diverge in shape (e.g. method-dependent grouping at
+        // the boundary). Fall back to full regeneration.
+        await appDatabase.updateTripLog(tripUuid, after);
+        return;
+      }
+      final delta = after.substring(before.length);
+      if (delta.isEmpty) return;
+      final trip = await (appDatabase.select(appDatabase.caveTrips)
+            ..where((t) => t.uuid.equalsValue(tripUuid)))
+          .getSingleOrNull();
+      final current = trip?.log ?? '';
+      // If the existing log already ends with this exact delta (e.g. the
+      // user appended nothing since the previous event), avoid double-
+      // appending. Otherwise append.
+      if (current.isEmpty) {
+        await appDatabase.updateTripLog(tripUuid, after);
+      } else {
+        await appDatabase.updateTripLog(tripUuid, current + delta);
+      }
+    } catch (_) {}
+  }
+
+  /// Public hook called by the trip log page after the user picks a new
+  /// method. Persists the choice and rewrites the log.
+  Future<void> regenerateLogWithMethod(
+      Uuid tripUuid, TripLogMethod method) async {
+    await currentUserService.setTripLogMethod(method);
+    await _regenerateLog(tripUuid);
   }
 
   Future<void> _saveConfig(Uuid tripUuid) async {
