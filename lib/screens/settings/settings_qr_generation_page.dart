@@ -102,6 +102,158 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
     }
   }
 
+  // -----------------------------------------------------------------------
+  //  Color picker helpers
+  // -----------------------------------------------------------------------
+
+  /// Shows a simple RGB color-picker dialog and returns the chosen [Color],
+  /// or `null` if the user cancelled.
+  Future<Color?> _showColorPickerDialog(Color initial) {
+    double r = initial.red.toDouble();
+    double g = initial.green.toDouble();
+    double b = initial.blue.toDouble();
+    return showDialog<Color>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) {
+          final picked = Color.fromARGB(255, r.round(), g.round(), b.round());
+          return AlertDialog(
+            title: Text(LocServ.inst.t('pick_color')),
+            content: SizedBox(
+              width: 260,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Preview swatch
+                  Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: picked,
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // R slider
+                  Row(children: [
+                    const SizedBox(width: 12, child: Text('R', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
+                    Expanded(
+                      child: Slider(
+                        value: r,
+                        min: 0,
+                        max: 255,
+                        activeColor: Colors.red,
+                        onChanged: (v) => setS(() => r = v),
+                      ),
+                    ),
+                    SizedBox(width: 32, child: Text(r.round().toString(), textAlign: TextAlign.end)),
+                  ]),
+                  // G slider
+                  Row(children: [
+                    const SizedBox(width: 12, child: Text('G', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+                    Expanded(
+                      child: Slider(
+                        value: g,
+                        min: 0,
+                        max: 255,
+                        activeColor: Colors.green,
+                        onChanged: (v) => setS(() => g = v),
+                      ),
+                    ),
+                    SizedBox(width: 32, child: Text(g.round().toString(), textAlign: TextAlign.end)),
+                  ]),
+                  // B slider
+                  Row(children: [
+                    const SizedBox(width: 12, child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue))),
+                    Expanded(
+                      child: Slider(
+                        value: b,
+                        min: 0,
+                        max: 255,
+                        activeColor: Colors.blue,
+                        onChanged: (v) => setS(() => b = v),
+                      ),
+                    ),
+                    SizedBox(width: 32, child: Text(b.round().toString(), textAlign: TextAlign.end)),
+                  ]),
+                  const SizedBox(height: 4),
+                  // Hex preview
+                  Text(
+                    '#${picked.value.toRadixString(16).toUpperCase().padLeft(8, '0')}',
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(LocServ.inst.t('cancel')),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, picked),
+                child: Text(LocServ.inst.t('ok')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Builds a color field row: a [TextFormField] for hex input plus a small
+  /// colored swatch button that opens [_showColorPickerDialog].
+  Widget _colorField({
+    required String labelKey,
+    required int colorValue,
+    required void Function(int newValue) onChanged,
+  }) {
+    final color = Color(colorValue);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: TextFormField(
+            key: ValueKey(colorValue),
+            initialValue: colorValue
+                .toRadixString(16)
+                .toUpperCase()
+                .replaceAll('0X', '0x'),
+            decoration:
+                InputDecoration(labelText: LocServ.inst.t(labelKey)),
+            onChanged: (v) {
+              try {
+                onChanged(int.parse(v.startsWith('0x') ? v : '0x$v'));
+              } catch (_) {}
+            },
+          ),
+        ),
+        const SizedBox(width: 6),
+        Tooltip(
+          message: LocServ.inst.t('pick_color'),
+          child: InkWell(
+            onTap: () async {
+              final picked = await _showColorPickerDialog(color);
+              if (picked != null && mounted) {
+                onChanged(picked.value);
+                setState(() {});
+              }
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _variableChip(String variable, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -266,34 +418,22 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  initialValue: cfg['qrBgColor']
-                      .toRadixString(16)
-                      .toUpperCase()
-                      .replaceAll('0X', '0x'),
-                  decoration: InputDecoration(
-                      labelText: LocServ.inst.t('qr_bg_color')),
+                child: _colorField(
+                  labelKey: 'qr_bg_color',
+                  colorValue: cfg['qrBgColor'] as int,
                   onChanged: (v) async {
-                    try {
-                      cfg['qrBgColor'] = int.parse(v);
-                    } catch (_) {}
+                    cfg['qrBgColor'] = v;
                     await _saveConfig(cfg);
                   },
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: TextFormField(
-                  initialValue: cfg['qrFgColor']
-                      .toRadixString(16)
-                      .toUpperCase()
-                      .replaceAll('0X', '0x'),
-                  decoration: InputDecoration(
-                      labelText: LocServ.inst.t('qr_fg_color')),
+                child: _colorField(
+                  labelKey: 'qr_fg_color',
+                  colorValue: cfg['qrFgColor'] as int,
                   onChanged: (v) async {
-                    try {
-                      cfg['qrFgColor'] = int.parse(v);
-                    } catch (_) {}
+                    cfg['qrFgColor'] = v;
                     await _saveConfig(cfg);
                   },
                 ),
