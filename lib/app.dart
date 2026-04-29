@@ -12,6 +12,8 @@ import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/utils/uuid.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
 
 class SpeleoLocApp extends StatefulWidget {
   const SpeleoLocApp({super.key});
@@ -38,6 +40,13 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: const [
+        FlutterQuillLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
       title: appName,
       navigatorKey: _navigatorKey,
       theme: ThemeData(
