@@ -807,5 +807,11 @@
   "manage_templates": "Manage templates",
   "status_define_point": "Click on the map to define a new point or change the interaction mode",
   "status_select_place": "Click on another point to select it",
-  "about": "About"
+  "about": "About",
+  "unsaved_changes": "Unsaved changes",
+  "unsaved_changes_message": "You have unsaved changes. Do you want to save or discard them?",
+  "discard": "Discard",
+  "show_docs_toolbar": "Show action toolbar",
+  "hide_docs_toolbar": "Hide action toolbar",
+  "pick_color": "Pick colour"
 }

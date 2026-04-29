@@ -54,7 +54,19 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
   bool _isSaving = false;
   bool _isLoading = false;
 
+  /// Snapshot of title and delta JSON captured after initial load.
+  /// Used to detect unsaved modifications.
+  String _initialTitle = '';
+  String? _initialDeltaJson;
+
   bool get _isEditing => widget.existingDoc != null;
+
+  bool get _isModified {
+    if (_titleCtrl.text.trim() != _initialTitle) return true;
+    final currentJson =
+        jsonEncode(_quillController.document.toDelta().toJson());
+    return currentJson != _initialDeltaJson;
+  }
 
   @override
   void initState() {
@@ -64,6 +76,11 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
     if (_isEditing) {
       _titleCtrl.text = widget.existingDoc!.title;
       _loadExistingContent();
+    } else {
+      // Capture initial empty-document snapshot for dirty detection.
+      _initialTitle = '';
+      _initialDeltaJson =
+          jsonEncode(_quillController.document.toDelta().toJson());
     }
   }
 
@@ -79,7 +96,13 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
     } catch (e) {
       debugPrint('[RichTextEditorPage] Error loading file: $e');
     }
-    if (mounted) setState(() => _isLoading = false);
+    if (mounted) {
+      // Capture initial snapshot now that the document is loaded.
+      _initialTitle = widget.existingDoc!.title;
+      _initialDeltaJson =
+          jsonEncode(_quillController.document.toDelta().toJson());
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -89,6 +112,39 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
     _editorFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Called when the user tries to navigate back. If there are unsaved
+  /// modifications, prompts the user to save, discard, or cancel.
+  /// Returns `true` if navigation should proceed.
+  Future<bool> _onWillPop() async {
+    if (!_isModified) return true;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('unsaved_changes')),
+        content: Text(LocServ.inst.t('unsaved_changes_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'discard'),
+            child: Text(LocServ.inst.t('discard')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            child: Text(LocServ.inst.t('save')),
+          ),
+        ],
+      ),
+    );
+    if (result == 'save') {
+      await _save();
+      return false; // _save() already pops on success
+    }
+    return result == 'discard';
   }
 
   Future<void> _save() async {
@@ -158,7 +214,15 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (await _onWillPop()) {
+          if (mounted) Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
@@ -229,6 +293,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
                 ],
               ),
             ),
+      ),
     );
   }
 }

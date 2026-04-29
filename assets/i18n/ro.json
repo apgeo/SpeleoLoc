@@ -805,5 +805,11 @@
   "manage_templates": "Administrare șabloane",
   "status_define_point": "Apăsați pe hartă pentru a defini un punct nou sau schimbați modul de interacțiune",
   "status_select_place": "Apăsați pe un alt punct pentru a îl selecta",
-  "about": "Despre"
+  "about": "Despre",
+  "unsaved_changes": "Modificări nesalvate",
+  "unsaved_changes_message": "Există modificări nesalvate. Doriți să salvați sau să le anulați?",
+  "discard": "Anulează",
+  "show_docs_toolbar": "Afișează bara de acțiuni",
+  "hide_docs_toolbar": "Ascunde bara de acțiuni",
+  "pick_color": "Alege culoare"
 }

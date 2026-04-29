@@ -51,7 +51,15 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
   bool _isSaving = false;
   bool _isLoading = false;
 
+  /// Snapshots captured after initial load for dirty-state detection.
+  String _initialTitle = '';
+  String _initialContent = '';
+
   bool get _isEditing => widget.existingDoc != null;
+
+  bool get _isModified =>
+      _titleCtrl.text.trim() != _initialTitle ||
+      _contentCtrl.text != _initialContent;
 
   @override
   void initState() {
@@ -59,6 +67,9 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
     if (_isEditing) {
       _titleCtrl.text = widget.existingDoc!.title;
       _loadExistingContent();
+    } else {
+      _initialTitle = '';
+      _initialContent = '';
     }
   }
 
@@ -72,7 +83,11 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
     } catch (e) {
       debugPrint('[TextDocumentEditorPage] Error loading file: $e');
     }
-    if (mounted) setState(() => _isLoading = false);
+    if (mounted) {
+      _initialTitle = widget.existingDoc!.title;
+      _initialContent = _contentCtrl.text;
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -80,6 +95,37 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
     _titleCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
+  }
+
+  /// Returns `true` if navigation should proceed.
+  Future<bool> _onWillPop() async {
+    if (!_isModified) return true;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('unsaved_changes')),
+        content: Text(LocServ.inst.t('unsaved_changes_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'discard'),
+            child: Text(LocServ.inst.t('discard')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            child: Text(LocServ.inst.t('save')),
+          ),
+        ],
+      ),
+    );
+    if (result == 'save') {
+      await _save();
+      return false; // _save() already pops on success
+    }
+    return result == 'discard';
   }
 
   Future<void> _save() async {
@@ -172,7 +218,15 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (await _onWillPop()) {
+          if (mounted) Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
@@ -230,6 +284,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
                 ],
               ),
             ),
+      ),
     );
   }
 }
