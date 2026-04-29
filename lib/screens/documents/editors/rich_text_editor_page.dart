@@ -209,9 +209,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
                   // ---- Quill toolbar ----
                   QuillSimpleToolbar(
                     controller: _quillController,
-                    config: const QuillSimpleToolbarConfig(
-                      multiRowsDisplay: false,
-                    ),
+                    config: const QuillSimpleToolbarConfig(),
                   ),
                   const Divider(height: 1),
 
