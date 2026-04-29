@@ -67,6 +67,9 @@ const String appLanguageKey = 'app_language';
 // Home page UI
 const String showHomeToolbarKey = 'show_home_toolbar';
 
+// GeofeatureDocumentsPage toolbar
+const String showDocumentToolbarKey = 'show_docs_toolbar';
+
 // Image compression settings
 const String imageCompressionConfigKey = 'image_compression';
 

@@ -12,10 +12,13 @@ import 'package:speleoloc/screens/documents/editors/text_document_editor_page.da
 import 'package:speleoloc/services/document_format_registry.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/screens/general_data/edit_documentation_file_page.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
+import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +81,27 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   bool _isLoading = true;
   String? _docsDir;
 
+  // Toolbar visibility (persisted via SettingsHelper)
+  bool _showDocumentToolbar = true;
+
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    if (widget.source.geofeatureLink != null)
+      AppMenuItem(
+        icon: _showDocumentToolbar
+            ? Icons.view_day_outlined
+            : Icons.view_day,
+        label: LocServ.inst.t(
+            _showDocumentToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar'),
+        onTap: _toggleDocumentToolbar,
+      ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) {
+    // All screen items use onTap; nothing to handle here.
+  }
+
   // View state
   DocViewMode _viewMode = DocViewMode.list;
   DocSortField _sortField = DocSortField.title;
@@ -101,7 +125,17 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   Future<void> _init() async {
     final dir = await getApplicationDocumentsDirectory();
     _docsDir = dir.path;
+    final showToolbar =
+        await SettingsHelper.loadStringConfig(showDocumentToolbarKey, 'true');
+    if (mounted) setState(() => _showDocumentToolbar = showToolbar == 'true');
     await _loadDocuments();
+  }
+
+  Future<void> _toggleDocumentToolbar() async {
+    final newValue = !_showDocumentToolbar;
+    setState(() => _showDocumentToolbar = newValue);
+    await SettingsHelper.saveStringConfig(
+        showDocumentToolbarKey, newValue.toString());
   }
 
   @override
@@ -332,6 +366,57 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
         const SizedBox(width: 10),
         Text(label),
       ],
+    );
+  }
+
+  /// Builds the quick-action toolbar shown below the AppBar when
+  /// [_showDocumentToolbar] is `true` and a geofeature link is available.
+  Widget _buildDocumentToolbar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        children: [
+          IconActionButton(
+            icon: Icons.text_snippet,
+            tooltip: LocServ.inst.t('new_text_document'),
+            onPressed: () => _onCreateNew('text'),
+          ),
+          IconActionButton(
+            icon: Icons.text_format,
+            tooltip: LocServ.inst.t('new_rich_text'),
+            onPressed: () => _onCreateNew('rich_text'),
+          ),
+          IconActionButton(
+            icon: Icons.camera_alt,
+            tooltip: LocServ.inst.t('new_photo'),
+            onPressed: () => _onCreateNew('camera'),
+          ),
+          IconActionButton(
+            icon: Icons.mic,
+            tooltip: LocServ.inst.t('new_audio_recording'),
+            onPressed: () => _onCreateNew('audio'),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.attach_file),
+            tooltip: LocServ.inst.t('add_from_file'),
+            onSelected: _onAddFromFile,
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'text',
+                child: _menuItem(Icons.text_snippet, LocServ.inst.t('doc_type_text')),
+              ),
+              PopupMenuItem(
+                value: 'image',
+                child: _menuItem(Icons.image, LocServ.inst.t('doc_type_photo')),
+              ),
+              PopupMenuItem(
+                value: 'audio',
+                child: _menuItem(Icons.audiotrack, LocServ.inst.t('doc_type_audio')),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -700,7 +785,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
           ],
         ),
         actions: [
-          if (widget.source.geofeatureLink != null) ...[
+          if (widget.source.geofeatureLink != null && !_showDocumentToolbar) ...[
           // ---- Create New dropdown ----
           PopupMenuButton<String>(
             icon: const Icon(Icons.add),
@@ -755,7 +840,12 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
+          : Column(
+              children: [
+                if (_showDocumentToolbar && widget.source.geofeatureLink != null)
+                  _buildDocumentToolbar(),
+                Expanded(
+                  child: CustomScrollView(
               key: PageStorageKey<DocViewMode>(_viewMode),
               slivers: [
                 SliverPersistentHeader(
@@ -779,6 +869,9 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
                   ),
                 ),
                 ..._buildContentSlivers(),
+              ],
+                  ),
+                ),
               ],
             ),
     );
