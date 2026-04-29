@@ -25,6 +25,12 @@ const String testReportTemplatesDir =
 class TestDatabaseLoader {
   static final _log = AppLogger.of('TestDatabaseLoader');
 
+  /// When `true` (the default), individual "source not found" warnings and
+  /// "Removed missing test doc record" info messages are suppressed.
+  /// Instead, a single summary line is emitted at the end of each resource
+  /// copy phase listing the count and names of missing resources.
+  static bool suppressMissingResourceLogs = true;
+
   /// Main entry-point.
   ///
   /// 1. Copies the SQLite binary to the documents directory.
@@ -57,13 +63,22 @@ class TestDatabaseLoader {
     try {
       final rasterMaps = await db.select(db.rasterMaps).get();
       _log.info('Found ${rasterMaps.length} raster map records');
+      final List<String> missingRasterMaps = [];
       for (final rm in rasterMaps) {
-        await _copyResourceFile(
+        final found = await _copyResourceFile(
           sourceDir: testMapsDir,
           storedFileName: rm.fileName,
           title: rm.title,
           documentsDir: documentsDir,
         );
+        if (!found && suppressMissingResourceLogs) {
+          missingRasterMaps.add('"${rm.title}" (${rm.fileName})');
+        }
+      }
+      if (suppressMissingResourceLogs && missingRasterMaps.isNotEmpty) {
+        _log.warning(
+            '${missingRasterMaps.length} raster map source(s) not found: '
+            '${missingRasterMaps.join(', ')}');
       }
     } catch (e) {
       _log.warning('could not load raster map files: $e');
@@ -73,6 +88,7 @@ class TestDatabaseLoader {
     try {
       final docFiles = await db.select(db.documentationFiles).get();
       _log.info('Found ${docFiles.length} documentation file records');
+      final List<String> missingDocEntries = [];
       for (final df in docFiles) {
         final found = await _copyResourceFile(
           sourceDir: testMapsDir, // docs may share source folder or have their own
@@ -82,8 +98,17 @@ class TestDatabaseLoader {
         );
         if (!found && skipMissingTestDocuments) {
           await db.deleteDocumentationFileByUuid(df.uuid);
-          _log.info('Removed missing test doc record: "${df.title}" (${df.uuid})');
+          if (!suppressMissingResourceLogs) {
+            _log.info('Removed missing test doc record: "${df.title}" (${df.uuid})');
+          } else {
+            missingDocEntries.add('"${df.title}" (${df.fileName})');
+          }
         }
+      }
+      if (suppressMissingResourceLogs && missingDocEntries.isNotEmpty) {
+        _log.info(
+            '${missingDocEntries.length} missing test doc record(s) removed: '
+            '${missingDocEntries.join(', ')}');
       }
     } catch (e) {
       _log.warning('could not load documentation files: $e');
@@ -173,7 +198,9 @@ class TestDatabaseLoader {
       _log.info('Copied resource → $storedFileName');
       return true;
     } else {
-      _log.warning('source not found for "$storedFileName" (title: "$title")');
+      if (!suppressMissingResourceLogs) {
+        _log.warning('source not found for "$storedFileName" (title: "$title")');
+      }
       return false;
     }
   }
