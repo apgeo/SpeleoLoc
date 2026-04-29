@@ -362,15 +362,15 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
           ),
         );
         break;
-      case 'image_edit':
-        _navigateAndRefresh(
-          ImageEditorPage(
-            cavePlaceUuid: cavePlaceUuid,
-            caveUuid: caveUuid,
-            caveAreaUuid: caveAreaUuid,
-          ),
-        );
-        break;
+      // case 'image_edit':
+      //   _navigateAndRefresh(
+      //     ImageEditorPage(
+      //       cavePlaceUuid: cavePlaceUuid,
+      //       caveUuid: caveUuid,
+      //       caveAreaUuid: caveAreaUuid,
+      //     ),
+      //   );
+      //   break;
       case 'camera':
         _navigateAndRefresh(
           CameraCapturePage(
@@ -715,10 +715,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
                 value: 'rich_text',
                 child: _menuItem(Icons.text_format, LocServ.inst.t('new_rich_text')),
               ),
-              PopupMenuItem(
-                value: 'image_edit',
-                child: _menuItem(Icons.image, LocServ.inst.t('new_image_edit')),
-              ),
+              // PopupMenuItem(
+              //   value: 'image_edit',
+              //   child: _menuItem(Icons.image, LocServ.inst.t('new_image_edit')),
+              // ),
               PopupMenuItem(
                 value: 'camera',
                 child: _menuItem(Icons.camera_alt, LocServ.inst.t('new_photo')),
