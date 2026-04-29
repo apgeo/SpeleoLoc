@@ -43,6 +43,9 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
   bool _isEditing = false;
   bool _isLoading = true;
   Uint8List? _imageBytes;
+  /// Set to `true` once [_onImageEditingComplete] has successfully popped
+  /// the route so that [onCloseEditor] does not issue a second pop.
+  bool _savePopped = false;
 
   bool get _isEditMode => widget.existingDoc != null;
 
@@ -108,7 +111,10 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
         );
       }
 
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        _savePopped = true;
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -153,7 +159,7 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
           await _onImageEditingComplete(bytes);
         },
         onCloseEditor: () {
-          if (mounted) Navigator.pop(context);
+          if (mounted && !_savePopped) Navigator.pop(context);
         },
       ),
     );
