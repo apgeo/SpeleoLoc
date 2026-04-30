@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
@@ -106,99 +107,53 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
   //  Color picker helpers
   // -----------------------------------------------------------------------
 
-  /// Shows a simple RGB color-picker dialog and returns the chosen [Color],
+  /// Shows the flex_color_picker dialog and returns the chosen [Color],
   /// or `null` if the user cancelled.
-  Future<Color?> _showColorPickerDialog(Color initial) {
-    double r = initial.red.toDouble();
-    double g = initial.green.toDouble();
-    double b = initial.blue.toDouble();
-    return showDialog<Color>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) {
-          final picked = Color.fromARGB(255, r.round(), g.round(), b.round());
-          return AlertDialog(
-            title: Text(LocServ.inst.t('pick_color')),
-            content: SizedBox(
-              width: 260,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Preview swatch
-                  Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: picked,
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // R slider
-                  Row(children: [
-                    const SizedBox(width: 12, child: Text('R', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red))),
-                    Expanded(
-                      child: Slider(
-                        value: r,
-                        min: 0,
-                        max: 255,
-                        activeColor: Colors.red,
-                        onChanged: (v) => setS(() => r = v),
-                      ),
-                    ),
-                    SizedBox(width: 32, child: Text(r.round().toString(), textAlign: TextAlign.end)),
-                  ]),
-                  // G slider
-                  Row(children: [
-                    const SizedBox(width: 12, child: Text('G', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
-                    Expanded(
-                      child: Slider(
-                        value: g,
-                        min: 0,
-                        max: 255,
-                        activeColor: Colors.green,
-                        onChanged: (v) => setS(() => g = v),
-                      ),
-                    ),
-                    SizedBox(width: 32, child: Text(g.round().toString(), textAlign: TextAlign.end)),
-                  ]),
-                  // B slider
-                  Row(children: [
-                    const SizedBox(width: 12, child: Text('B', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue))),
-                    Expanded(
-                      child: Slider(
-                        value: b,
-                        min: 0,
-                        max: 255,
-                        activeColor: Colors.blue,
-                        onChanged: (v) => setS(() => b = v),
-                      ),
-                    ),
-                    SizedBox(width: 32, child: Text(b.round().toString(), textAlign: TextAlign.end)),
-                  ]),
-                  const SizedBox(height: 4),
-                  // Hex preview
-                  Text(
-                    '#${picked.value.toRadixString(16).toUpperCase().padLeft(8, '0')}',
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, picked),
-                child: Text(LocServ.inst.t('ok')),
-              ),
-            ],
-          );
-        },
+  Future<Color?> _showColorPickerDialog(Color initial) async {
+    Color picked = initial;
+    final ok = await ColorPicker(
+      color: initial,
+      onColorChanged: (c) => picked = c,
+      heading: Text(
+        LocServ.inst.t('pick_color'),
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      subheading: Text(
+        LocServ.inst.t('pick_color'),
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      pickersEnabled: const <ColorPickerType, bool>{
+        ColorPickerType.both: false,
+        ColorPickerType.primary: true,
+        ColorPickerType.accent: true,
+        ColorPickerType.bw: true,
+        ColorPickerType.custom: false,
+        ColorPickerType.wheel: true,
+      },
+      enableShadesSelection: true,
+      enableTonalPalette: false,
+      showColorCode: true,
+      colorCodeHasColor: true,
+      width: 38,
+      height: 38,
+      borderRadius: 4,
+      spacing: 4,
+      runSpacing: 4,
+      wheelDiameter: 200,
+      copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+        copyButton: true,
+        pasteButton: true,
+        longPressMenu: true,
+      ),
+    ).showPickerDialog(
+      context,
+      constraints: const BoxConstraints(
+        minHeight: 480,
+        minWidth: 320,
+        maxWidth: 360,
       ),
     );
+    return ok ? picked : null;
   }
 
   /// Builds a color field row: a [TextFormField] for hex input plus a small
