@@ -143,6 +143,9 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
     });
   }
 
+  /// Override to delay tour auto-start (e.g. wait for a dialog to complete).
+  Future<void> beforeAutoTour() async {}
+
   Future<void> _checkAutoStartTour() async {
     if (_tourAutoStartChecked) return;
     _tourAutoStartChecked = true;
@@ -152,6 +155,7 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
     if (seen.isEmpty && mounted) {
       // Small delay to ensure layout is fully complete
       await Future.delayed(const Duration(milliseconds: 400));
+      await beforeAutoTour();
       if (mounted) startScreenTour();
     }
   }

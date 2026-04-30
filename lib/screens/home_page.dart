@@ -122,6 +122,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   bool _showMainToolbar = false;
 
   bool _testDataPromptShown = false;
+  Completer<void>? _testDataPromptCompleter;
 
   // --- Long-press QR manual input (enabled by [enableQrManualInput]) ---
   Timer? _qrScanLongPressTimer;
@@ -216,10 +217,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     await SettingsHelper.saveStringConfig(showHomeToolbarKey, newValue.toString());
   }
 
-  Future<void> _toggleMainToolbar() async {
-    final newValue = !_showMainToolbar;
-    setState(() => _showMainToolbar = newValue);
-    await SettingsHelper.saveStringConfig(showHomeToolbarKey, newValue.toString());
+  @override
+  Future<void> beforeAutoTour() async {
+    if (_testDataPromptCompleter != null) await _testDataPromptCompleter!.future;
   }
 
   Future<void> _loadCaves() async {
@@ -250,7 +250,11 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           _caves.isEmpty &&
           AppStartCounter.count <= 4) {
         _testDataPromptShown = true;
-        _offerTestDataPopulation();
+        _testDataPromptCompleter = Completer<void>();
+        _offerTestDataPopulation().whenComplete(() {
+          _testDataPromptCompleter?.complete();
+          _testDataPromptCompleter = null;
+        });
       }
     } catch (e) {
       if (!mounted) return;
@@ -402,12 +406,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                 tooltip: LocServ.inst.t('scan_qr'),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
                 onPressed: _scanAndLookupQr,
               ),
             ),
@@ -418,24 +416,12 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               tooltip: LocServ.inst.t('add_new_cave'),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
               onPressed: _addNewCave,
             ),
           if (!_showMainToolbar)
             IconButton(
               icon: const Icon(Icons.sync),
               tooltip: LocServ.inst.t('sync_dashboard_title'),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               visualDensity: VisualDensity.compact,
               onPressed: () {
@@ -451,12 +437,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               builder: (context, ref, _) => IconButton(
                 icon: const Icon(Icons.cloud_sync),
                 tooltip: LocServ.inst.t('ftp_sync_title'),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 visualDensity: VisualDensity.compact,
                 onPressed: () {
