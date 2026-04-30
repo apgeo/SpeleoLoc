@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
+import 'package:speleoloc/screens/settings/ftp_sync_progress_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
@@ -394,6 +398,31 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               tooltip: LocServ.inst.t('add_new_cave'),
               onPressed: _addNewCave,
             ),
+          if (!_showMainToolbar)
+            IconButton(
+              icon: const Icon(Icons.sync),
+              tooltip: LocServ.inst.t('sync_dashboard_title'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const SyncDashboardPage()),
+                );
+              },
+            ),
+          if (!_showMainToolbar)
+            Consumer(
+              builder: (context, ref, _) => IconButton(
+                icon: const Icon(Icons.cloud_sync),
+                tooltip: LocServ.inst.t('ftp_sync_title'),
+                onPressed: () {
+                  unawaited(
+                    ref.read(ftpSyncControllerProvider).startDefault(),
+                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FtpSyncProgressPage()));
+                },
+              ),
+            ),
           // if (!_showMainToolbar)
           //   IconButton(
           //     key: tourKeys['docs'],
@@ -577,7 +606,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         alignment: Alignment.centerLeft,
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(buttons.length, (i) {
+          children: [
+            ...List.generate(buttons.length, (i) {
             final b = buttons[i];
             Widget btn = Padding(
               padding: EdgeInsets.only(right: i == buttons.length - 1 ? 0 : 3),
@@ -605,6 +635,36 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
             }
             return btn;
           }),
+            Padding(
+              padding: const EdgeInsets.only(left: 3),
+              child: IconButton(
+                icon: Icon(Icons.sync, size: 28, color: Colors.blue[400]),
+                tooltip: LocServ.inst.t('sync_dashboard_title'),
+                visualDensity: VisualDensity.compact,
+                splashRadius: 18,
+                padding: const EdgeInsets.all(2),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SyncDashboardPage())),
+              ),
+            ),
+            Consumer(
+              builder: (context, ref, _) => Padding(
+                padding: const EdgeInsets.only(left: 3),
+                child: IconButton(
+                  icon: Icon(Icons.cloud_sync, size: 28, color: Colors.blue[400]),
+                  tooltip: LocServ.inst.t('ftp_sync_title'),
+                  visualDensity: VisualDensity.compact,
+                  splashRadius: 18,
+                  padding: const EdgeInsets.all(2),
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  onPressed: () {
+                    unawaited(ref.read(ftpSyncControllerProvider).startDefault());
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FtpSyncProgressPage()));
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
