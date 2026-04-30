@@ -381,6 +381,7 @@ class _AppMenuDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12),
+            Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             // Screen-specific items
             if (screenItems.isNotEmpty) ...[
               ...screenItems.map((item) => ListTile(
@@ -388,17 +389,18 @@ class _AppMenuDrawer extends StatelessWidget {
                     title: item.label != null ? Text(item.label!) : null,
                     dense: true,
                     onTap: () => onScreenItemTap(item),
+                    visualDensity: VisualDensity.compact,
                     iconColor: item.color
                   )),
               const Divider(),
             ],
             // Global navigation items with labels
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
               child: Wrap(
                 alignment: WrapAlignment.spaceEvenly,
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 4,
+                runSpacing: 4,
                 children: [
                   _navIconWithLabel(context, Icons.home, LocServ.inst.t('caves'), () {
                     Navigator.pop(context);
@@ -427,7 +429,10 @@ class _AppMenuDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            const Spacer(),
+            ],
+            ),
+            ),
+            ),
             // FTP sync: a persistent mini card always visible at the bottom.
             // Shows a quick "Sync now" button when idle, live progress while
             // running, and the last result afterwards. Tapping opens the
@@ -491,16 +496,16 @@ class _AppMenuDrawer extends StatelessWidget {
 
   Widget _navIconWithLabel(BuildContext context, IconData icon, String label, VoidCallback onTap) {
     return SizedBox(
-      width: 88,
+      width: 60,
       child: InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48),
+            Icon(icon, size: 36),
             const SizedBox(height: 3),
             Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
           ],
