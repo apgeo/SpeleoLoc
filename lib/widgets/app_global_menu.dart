@@ -407,9 +407,10 @@ class _AppMenuDrawer extends StatelessWidget {
                     Navigator.pushNamedAndRemoveUntil(
                         context, homeRoute, (route) => false);
                   }),
-                  _navIconWithLabel(context, Icons.qr_code_scanner, LocServ.inst.t('scan'), () {
+                  _navIconWithLabel(context, Icons.sync, LocServ.inst.t('sync_dashboard_title'), () {
                     Navigator.pop(context);
-                    _openScanner(context);
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const SyncDashboardPage()));
                   }),
                   _navIconWithLabel(context, Icons.description, LocServ.inst.t('documentation'), () {
                     Navigator.pop(context);
@@ -421,10 +422,9 @@ class _AppMenuDrawer extends StatelessWidget {
                     Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const SettingsMainPage()));
                   }),
-                  _navIconWithLabel(context, Icons.sync, LocServ.inst.t('sync_dashboard_title'), () {
+                  _navIconWithLabel(context, Icons.qr_code_scanner, LocServ.inst.t('scan'), () {
                     Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const SyncDashboardPage()));
+                    _openScanner(context);
                   }),
                 ],
               ),
@@ -472,8 +472,6 @@ class _AppMenuDrawer extends StatelessWidget {
                         AppBarMenuMixin._setMenuMode(AppMenuMode.popup);
                       },
                     ),
-                  ],
-                ),
                 if (_appVersion.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4.0),
@@ -485,6 +483,8 @@ class _AppMenuDrawer extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
+                ),
               ],
             ),
             const SizedBox(height: 2),
@@ -738,7 +738,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
-                    '+${_totalPoints - _points.length} cps',
+                    '+${_totalPoints - _points.length} ${LocServ.inst.t('trip_cave_places_short')}',
                     style: TextStyle(fontSize: 9, color: Colors.grey[700]),
                   ),
                 ),

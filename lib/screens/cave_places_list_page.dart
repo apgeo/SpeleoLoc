@@ -567,7 +567,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(LocServ.inst.t('cancel')),
+              child: Text(LocServ.inst.t('no')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -587,7 +587,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(LocServ.inst.t('cancel')),
+              child: Text(LocServ.inst.t('no')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
