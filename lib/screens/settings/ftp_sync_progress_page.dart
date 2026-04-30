@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/change_log_page.dart';
+import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_progress.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -25,7 +27,7 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
         AppBarMenuMixin<FtpSyncProgressPage>,
         SingleTickerProviderStateMixin {
   late final TabController _tabController =
-      TabController(length: 2, vsync: this);
+      TabController(length: 3, vsync: this);
 
   @override
   void dispose() {
@@ -61,6 +63,7 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
                 ],
               ),
             ),
+            Tab(text: LocServ.inst.t('sync_dashboard_changes_tab')),
           ],
         ),
         actions: [
@@ -88,6 +91,14 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
               tooltip: LocServ.inst.t('ftp_sync_cancel'),
               onPressed: controller.cancel,
             ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: LocServ.inst.t('ftp_sync_settings'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FtpSyncSettingsPage()),
+            ),
+          ),
           buildAppBarMenuButton(),
         ],
       ),
@@ -96,6 +107,7 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
         children: [
           _ProgressTab(progress: progress),
           _LogTab(entries: progress.log),
+          const ChangeLogPage(embedded: true),
         ],
       ),
     );
@@ -143,7 +155,14 @@ class _ProgressTab extends StatelessWidget {
         if (progress.phase == FtpSyncPhase.failed &&
             progress.errorMessage != null) ...[
           const SizedBox(height: 12),
-          _ErrorBanner(message: progress.errorMessage!),
+          _ErrorBanner(
+            message: progress.errorMessage!,
+            onOpenSettings: (progress.statusMessage == 'ftp_connection_failed' ||
+                    progress.statusMessage == 'ftp_auth_failed')
+                ? () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const FtpSyncSettingsPage()))
+                : null,
+          ),
         ],
         if (progress.isPaused) ...[
           const SizedBox(height: 12),
@@ -450,7 +469,8 @@ class _Metric extends StatelessWidget {
 
 class _ErrorBanner extends StatelessWidget {
   final String message;
-  const _ErrorBanner({required this.message});
+  final VoidCallback? onOpenSettings;
+  const _ErrorBanner({required this.message, this.onOpenSettings});
 
   @override
   Widget build(BuildContext context) {
@@ -466,12 +486,35 @@ class _ErrorBanner extends StatelessWidget {
         children: [
           const Icon(Icons.error_outline, color: Colors.red),
           const SizedBox(width: 8),
-          Expanded(child: SelectableText(message)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SelectableText(message),
+                if (onOpenSettings != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: onOpenSettings,
+                    icon: const Icon(Icons.settings, size: 16),
+                    label: Text(LocServ.inst.t('open_settings')),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
 
 class _PausedBanner extends StatelessWidget {
   const _PausedBanner();
