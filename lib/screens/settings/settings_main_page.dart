@@ -6,8 +6,7 @@ import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
 import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_database_page.dart';
 import 'package:speleoloc/screens/settings/users_page.dart';
-import 'package:speleoloc/screens/settings/change_log_page.dart';
-import 'package:speleoloc/screens/settings/sync_page.dart';
+import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -126,24 +125,14 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               },
             ),
             _SettingsSection(
-              icon: Icons.history,
-              title: LocServ.inst.t('settings_change_log'),
-              subtitle: LocServ.inst.t('settings_change_log_desc'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChangeLogPage()),
-                );
-              },
-            ),
-            _SettingsSection(
               icon: Icons.sync,
-              title: LocServ.inst.t('settings_sync'),
+              title: LocServ.inst.t('sync_dashboard_title'),
               subtitle: LocServ.inst.t('settings_sync_desc'),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SyncPage()),
+                  MaterialPageRoute(
+                      builder: (_) => const SyncDashboardPage()),
                 );
               },
             ),

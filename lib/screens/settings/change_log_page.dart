@@ -15,7 +15,11 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 /// expanding it reveals the list of fields changed (with old values when
 /// available and non-truncated).
 class ChangeLogPage extends ConsumerStatefulWidget {
-  const ChangeLogPage({super.key});
+  const ChangeLogPage({super.key, this.embedded = false});
+
+  /// When `true`, renders only the body (no `Scaffold`/`AppBar`/end drawer)
+  /// so the page can be embedded as a tab inside another page.
+  final bool embedded;
 
   @override
   ConsumerState<ChangeLogPage> createState() => _ChangeLogPageState();
@@ -50,19 +54,146 @@ class _ChangeLogPageState extends ConsumerState<ChangeLogPage>
       }
     }
 
-    return headers
-        .map((h) => _ChangeRow(
-              header: h,
-              user: h.changedByUserUuid != null
-                  ? users[h.changedByUserUuid]
-                  : null,
-              fields: fieldsByChange[h.uuid] ?? const [],
-            ))
-        .toList();
+    // Group entity uuids by table so we can title-lookup with one query each.
+    final byTable = <String, Set<Uuid>>{};
+    for (final h in headers) {
+      byTable.putIfAbsent(h.entityTable, () => {}).add(h.entityUuid);
+    }
+    final titles = <String, Map<Uuid, String>>{};
+    for (final entry in byTable.entries) {
+      titles[entry.key] =
+          await _loadTitlesForTable(db, entry.key, entry.value);
+    }
+    // For deletes, recover the title from change_log_field old values
+    // (the entity row no longer exists by definition).
+    String? titleFromDeleteFields(List<ChangeLogFieldData> fields) {
+      for (final f in fields) {
+        if (f.fieldName == 'title' && f.oldValueTruncated == 0) {
+          final v = f.oldValueShort;
+          if (v == null || v.isEmpty) return null;
+          try {
+            return utf8.decode(v, allowMalformed: false);
+          } catch (_) {
+            return null;
+          }
+        }
+      }
+      return null;
+    }
+
+    return headers.map((h) {
+      final fields = fieldsByChange[h.uuid] ?? const <ChangeLogFieldData>[];
+      String? title = titles[h.entityTable]?[h.entityUuid];
+      title ??= titleFromDeleteFields(fields);
+      return _ChangeRow(
+        header: h,
+        user: h.changedByUserUuid != null ? users[h.changedByUserUuid] : null,
+        fields: fields,
+        entityTitle: title,
+      );
+    }).toList();
+  }
+
+  /// Returns a `uuid -> title` map by selecting from the table named [table]
+  /// (snake_case). Returns an empty map for tables without a `title` column
+  /// or unknown tables. Users are special-cased to use their username.
+  Future<Map<Uuid, String>> _loadTitlesForTable(
+    AppDatabase db,
+    String table,
+    Set<Uuid> uuids,
+  ) async {
+    if (uuids.isEmpty) return const {};
+    final ids = uuids.toList();
+    switch (table) {
+      case 'caves':
+        final rows = await (db.select(db.caves)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'cave_areas':
+        final rows = await (db.select(db.caveAreas)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'surface_areas':
+        final rows = await (db.select(db.surfaceAreas)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'surface_places':
+        final rows = await (db.select(db.surfacePlaces)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'cave_entrances':
+        final rows = await (db.select(db.caveEntrances)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {
+          for (final r in rows)
+            if (r.title != null) r.uuid: r.title!,
+        };
+      case 'cave_places':
+        final rows = await (db.select(db.cavePlaces)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'raster_maps':
+        final rows = await (db.select(db.rasterMaps)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'documentation_files':
+        final rows = await (db.select(db.documentationFiles)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'cave_trips':
+        final rows = await (db.select(db.caveTrips)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'trip_report_templates':
+        final rows = await (db.select(db.tripReportTemplates)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.title};
+      case 'users':
+        final rows = await (db.select(db.users)
+              ..where((c) => c.uuid.isInValues(ids)))
+            .get();
+        return {for (final r in rows) r.uuid: r.username};
+      default:
+        return const {};
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final body = FutureBuilder<List<_ChangeRow>>(
+      future: _loadRows(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return Center(child: Text('${snap.error}'));
+        }
+        final rows = snap.data ?? const [];
+        if (rows.isEmpty) {
+          return Center(child: Text(LocServ.inst.t('no_change_log')));
+        }
+        return RefreshIndicator(
+          onRefresh: () async => setState(() {}),
+          child: ListView.separated(
+            itemCount: rows.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, i) => _ChangeTile(row: rows[i]),
+          ),
+        );
+      },
+    );
+    if (widget.embedded) return body;
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
@@ -70,29 +201,7 @@ class _ChangeLogPageState extends ConsumerState<ChangeLogPage>
         title: Text(LocServ.inst.t('change_log')),
         actions: [buildAppBarMenuButton()],
       ),
-      body: FutureBuilder<List<_ChangeRow>>(
-        future: _loadRows(),
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            return Center(child: Text('${snap.error}'));
-          }
-          final rows = snap.data ?? const [];
-          if (rows.isEmpty) {
-            return Center(child: Text(LocServ.inst.t('no_change_log')));
-          }
-          return RefreshIndicator(
-            onRefresh: () async => setState(() {}),
-            child: ListView.separated(
-              itemCount: rows.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, i) => _ChangeTile(row: rows[i]),
-            ),
-          );
-        },
-      ),
+      body: body,
     );
   }
 }
@@ -101,7 +210,13 @@ class _ChangeRow {
   final ChangeLogData header;
   final User? user;
   final List<ChangeLogFieldData> fields;
-  _ChangeRow({required this.header, required this.user, required this.fields});
+  final String? entityTitle;
+  _ChangeRow({
+    required this.header,
+    required this.user,
+    required this.fields,
+    this.entityTitle,
+  });
 }
 
 class _ChangeTile extends StatelessWidget {
@@ -171,12 +286,20 @@ class _ChangeTile extends StatelessWidget {
     }
   }
 
+  /// Converts a snake_case table name into a user-friendly label (spaces
+  /// instead of underscores). E.g. `cave_places` -> `cave places`.
+  String _friendlyTableName(String table) => table.replaceAll('_', ' ');
+
   @override
   Widget build(BuildContext context) {
     final h = row.header;
     final expandable = row.fields.isNotEmpty;
     final subtitle =
         '${_formatTs(h.changedAt)} · ${LocServ.inst.t('change_by')} ${_userLabel()}';
+
+    final entityLabel = row.entityTitle != null && row.entityTitle!.isNotEmpty
+        ? '${_friendlyTableName(h.entityTable)}: ${row.entityTitle}'
+        : _friendlyTableName(h.entityTable);
 
     final header = Row(
       children: [
@@ -187,7 +310,7 @@ class _ChangeTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${_opLabel(h.changeType)} · ${h.entityTable}',
+                '${_opLabel(h.changeType)} · $entityLabel',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 2),

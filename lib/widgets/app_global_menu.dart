@@ -6,6 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -238,6 +239,10 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const SettingsMainPage()));
         return true;
+      case '_nav_sync':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SyncDashboardPage()));
+        return true;
       default:
         return false;
     }
@@ -327,6 +332,7 @@ class _GlobalNavRowState extends State<_GlobalNavRow> {
           _navIconWithLabel(Icons.qr_code_scanner, LocServ.inst.t('scan'), () => _go('_nav_scan')),
           _navIconWithLabel(Icons.description, LocServ.inst.t('documentation'), () => _go('_nav_documents')),
           _navIconWithLabel(Icons.settings, LocServ.inst.t('settings'), () => _go('_nav_settings')),
+          _navIconWithLabel(Icons.sync, LocServ.inst.t('sync_dashboard_title'), () => _go('_nav_sync')),
         ],
       ),
     );
@@ -412,6 +418,11 @@ class _AppMenuDrawer extends StatelessWidget {
                     Navigator.pop(context);
                     Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const SettingsMainPage()));
+                  }),
+                  _navIconWithLabel(context, Icons.sync, LocServ.inst.t('sync_dashboard_title'), () {
+                    Navigator.pop(context);
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const SyncDashboardPage()));
                   }),
                 ],
               ),

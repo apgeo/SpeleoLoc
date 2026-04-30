@@ -21,7 +21,12 @@ enum _ConflictMode {
 /// on import. Users can optionally switch to manual conflict resolution to
 /// review each would-be overwrite before it is applied.
 class SyncPage extends ConsumerStatefulWidget {
-  const SyncPage({super.key});
+  const SyncPage({super.key, this.embedded = false});
+
+  /// When `true`, the page renders only its body (no `Scaffold`, no
+  /// `AppBar`, no end-drawer), so it can be embedded as a tab inside
+  /// another page (e.g. the combined sync dashboard).
+  final bool embedded;
 
   @override
   ConsumerState<SyncPage> createState() => _SyncPageState();
@@ -37,6 +42,7 @@ class _SyncPageState extends ConsumerState<SyncPage>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) return _buildBody(context);
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
@@ -44,8 +50,15 @@ class _SyncPageState extends ConsumerState<SyncPage>
         title: Text(LocServ.inst.t('sync_title')),
         actions: [buildAppBarMenuButton()],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: _buildBody(context),
+    );
+  }
+
+  /// The page body, exposed so the combined sync dashboard can host it
+  /// inside a `TabBarView` without the surrounding `Scaffold`/`AppBar`.
+  Widget _buildBody(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
         children: [
           Text(
             LocServ.inst.t('sync_description'),
@@ -113,8 +126,7 @@ class _SyncPageState extends ConsumerState<SyncPage>
             Text(_lastMessage!),
           ],
         ],
-      ),
-    );
+      );
   }
 
   // ---------------------------------------------------------------------------
