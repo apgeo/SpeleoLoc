@@ -210,6 +210,18 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     });
   }
 
+  Future<void> _toggleMainToolbar() async {
+    final newValue = !_showMainToolbar;
+    setState(() => _showMainToolbar = newValue);
+    await SettingsHelper.saveStringConfig(showHomeToolbarKey, newValue.toString());
+  }
+
+  Future<void> _toggleMainToolbar() async {
+    final newValue = !_showMainToolbar;
+    setState(() => _showMainToolbar = newValue);
+    await SettingsHelper.saveStringConfig(showHomeToolbarKey, newValue.toString());
+  }
+
   Future<void> _loadCaves() async {
     try {
       _caves = await caveRepository.getCaves();
@@ -376,7 +388,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         // the App.build method, and use it to set our appbar title.
         title: GestureDetector(
           onTap: _onTitleTap,
-          child: Text(widget.title),
+          child: Text(widget.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
         ),
         actions: [
           if (!_showMainToolbar)
@@ -388,6 +400,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                 key: tourKeys['scan_qr'],
                 icon: const Icon(Icons.qr_code_scanner),
                 tooltip: LocServ.inst.t('scan_qr'),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
                 onPressed: _scanAndLookupQr,
               ),
             ),
@@ -396,12 +416,28 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               key: tourKeys['add_cave'],
               icon: const Icon(Icons.add),
               tooltip: LocServ.inst.t('add_new_cave'),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
               onPressed: _addNewCave,
             ),
           if (!_showMainToolbar)
             IconButton(
               icon: const Icon(Icons.sync),
               tooltip: LocServ.inst.t('sync_dashboard_title'),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -415,6 +451,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               builder: (context, ref, _) => IconButton(
                 icon: const Icon(Icons.cloud_sync),
                 tooltip: LocServ.inst.t('ftp_sync_title'),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                visualDensity: VisualDensity.compact,
                 onPressed: () {
                   unawaited(
                     ref.read(ftpSyncControllerProvider).startDefault(),
@@ -674,6 +718,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     return FilterableList<Cave>(
       headerKey: tourKeys['cave_list'],
       headerLabelText: '${LocServ.inst.t('caves')}:',
+      headerTrailing: [IconButton(icon: Icon(_showMainToolbar ? Icons.view_day : Icons.view_day_outlined), tooltip: LocServ.inst.t(_showMainToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar'), visualDensity: VisualDensity.compact, onPressed: _toggleMainToolbar,),],
       enableSelection: false,
       items: _caves,
       keyOf: (c) => c.uuid,
