@@ -333,7 +333,7 @@
   "no_default_profile": "Niciun profil FTP implicit configurat",
   "no_password_stored": "Nicio parolă salvată pentru acest profil FTP",
   "sync_title": "Sincronizare dispozitive",
-  "sync_dashboard_title": "Sincronizare manuală",
+  "sync_dashboard_title": "Sinc. man.",
   "sync_dashboard_changes_tab": "Istoric modificări",
   "sync_dashboard_archive_tab": "Arhivă sincronizare",
   "sync_description": "Exportă o arhivă de sincronizare pentru a o transfera pe alt dispozitiv sau importă una primită. Conflictele se rezolvă prin „ultima modificare câștigă\" pe baza updated_at.",

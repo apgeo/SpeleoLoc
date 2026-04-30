@@ -329,10 +329,10 @@ class _GlobalNavRowState extends State<_GlobalNavRow> {
         runSpacing: 8,
         children: [
           _navIconWithLabel(Icons.home, LocServ.inst.t('caves'), () => _go('_nav_caves')),
-          _navIconWithLabel(Icons.qr_code_scanner, LocServ.inst.t('scan'), () => _go('_nav_scan')),
+          _navIconWithLabel(Icons.sync, LocServ.inst.t('sync_dashboard_title'), () => _go('_nav_sync')),
           _navIconWithLabel(Icons.description, LocServ.inst.t('documentation'), () => _go('_nav_documents')),
           _navIconWithLabel(Icons.settings, LocServ.inst.t('settings'), () => _go('_nav_settings')),
-          _navIconWithLabel(Icons.sync, LocServ.inst.t('sync_dashboard_title'), () => _go('_nav_sync')),
+          _navIconWithLabel(Icons.qr_code_scanner, LocServ.inst.t('scan'), () => _go('_nav_scan'))
         ],
       ),
     );
@@ -351,7 +351,7 @@ class _GlobalNavRowState extends State<_GlobalNavRow> {
           children: [
             Icon(icon, size: 48),
             const SizedBox(height: 3),
-            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+            FittedBox(fit: BoxFit.scaleDown, child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
           ],
         ),
       ),
@@ -375,7 +375,7 @@ class _AppMenuDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      width: 220,
+      width: 240,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -507,7 +507,7 @@ class _AppMenuDrawer extends StatelessWidget {
           children: [
             Icon(icon, size: 36),
             const SizedBox(height: 3),
-            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+            FittedBox(fit: BoxFit.scaleDown, child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
           ],
         ),
       ),
