@@ -3,6 +3,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class SQLCommandRunner extends StatefulWidget {
   const SQLCommandRunner({super.key});
@@ -38,9 +39,7 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
     final sql = _sqlController.text.trim();
     if (sql.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('sql_empty_command'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('sql_empty_command'));
       return;
     }
 

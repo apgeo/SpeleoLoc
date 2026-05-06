@@ -13,6 +13,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Configuration key for the persisted menu mode preference.
@@ -262,9 +263,7 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
           builder: (_) => ScannerPage(
             onScan: (code) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${LocServ.inst.t('scan_result')}: $code')),
-                );
+                SnackBarService.showInfo('${LocServ.inst.t('scan_result')}: $code');
                 Navigator.pop(context, code);
               }
             },
@@ -582,9 +581,7 @@ class _AppMenuDrawer extends StatelessWidget {
           builder: (_) => ScannerPage(
             onScan: (code) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${LocServ.inst.t('scan_result')}: $code')),
-                );
+                SnackBarService.showInfo('${LocServ.inst.t('scan_result')}: $code');
                 Navigator.pop(context, code);
               }
             },

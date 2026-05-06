@@ -7,6 +7,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveFormPage extends StatefulWidget {
   final Cave? cave; // if provided, we're editing
@@ -88,7 +89,7 @@ class _CaveFormPageState extends State<CaveFormPage>
     } catch (e, st) {
       debugPrint('AddNewCave._save error: $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${LocServ.inst.t('error')}: $e')));
+        SnackBarService.showError(e);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

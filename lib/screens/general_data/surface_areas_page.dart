@@ -5,6 +5,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class SurfaceAreasPage extends StatefulWidget {
   const SurfaceAreasPage({super.key});
@@ -123,7 +124,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
       _changed = true;
       _loadAreas();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('surface_area_saved'))));
+      SnackBarService.showSuccess(LocServ.inst.t('surface_area_saved'));
     }
   }
 
@@ -153,7 +154,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
       _changed = true;
       _loadAreas();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('surface_area_deleted'))));
+      SnackBarService.showSuccess(LocServ.inst.t('surface_area_deleted'));
     }
   }
 

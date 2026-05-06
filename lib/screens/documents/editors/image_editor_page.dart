@@ -7,6 +7,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Full-featured image editor powered by `pro_image_editor`.
 ///
@@ -117,9 +118,7 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        SnackBarService.showError(e);
       }
     } finally {
       if (mounted) setState(() => _isEditing = false);

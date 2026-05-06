@@ -5,6 +5,7 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// A simple plain-text editor that creates a new documentation file record.
 ///
@@ -131,17 +132,13 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
   Future<void> _save() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('title_required'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('title_required'));
       return;
     }
 
     final content = _contentCtrl.text;
     if (content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('text_content_required'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('text_content_required'));
       return;
     }
 
@@ -180,12 +177,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
           fileHash: savedFile.fileHash,
         );
         if (dupes.isNotEmpty && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Similar file(s) already present (size+hash match).'),
-            ),
-          );
+          SnackBarService.showWarning('Similar file(s) already present (size+hash match).');
         }
 
         final parentLink = await appDatabase.getDocumentationParentLink(
@@ -207,9 +199,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        SnackBarService.showError(e);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

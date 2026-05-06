@@ -8,6 +8,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_transport_factory.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Lists configured FTP/SFTP endpoints, lets the user add/edit/delete them,
 /// pick a default, and test connectivity.
@@ -374,15 +375,11 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   }
 
   void _showSnack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError
-            ? Theme.of(context).colorScheme.error
-            : null,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    if (isError) {
+      SnackBarService.showError(message);
+    } else {
+      SnackBarService.showSuccess(message, duration: const Duration(seconds: 4));
+    }
   }
 
   @override

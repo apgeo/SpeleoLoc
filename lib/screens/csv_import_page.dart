@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Definition of a single CSV column that can be mapped by the user.
 class CSVColumnDefinition {
@@ -191,10 +192,7 @@ class _CSVImportPageState extends State<CSVImportPage>
   }
 
   void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    SnackBarService.showInfo(message);
   }
 
   List<DropdownMenuItem<int?>> _buildColumnDropdownItems() {

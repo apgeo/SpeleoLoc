@@ -13,6 +13,7 @@ import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
@@ -267,9 +268,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
             _editorController.panToPoint(x, y);
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(LocServ.inst.t('no_point_defined'))),
-          );
+            SnackBarService.showWarning(LocServ.inst.t('no_point_defined'));
         }
 
         WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Screen for managing trip report document templates.
 ///
@@ -53,9 +54,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
     final format = service.detectFormat(pickedFile.path);
     if (format == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('template_unsupported_format'))),
-        );
+        SnackBarService.showWarning(LocServ.inst.t('template_unsupported_format'));
       }
       return;
     }
@@ -102,16 +101,10 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
       );
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('template_added'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('template_added'));
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
-        );
-      }
+      if (mounted) SnackBarService.showError(e);
     }
   }
 
@@ -140,16 +133,10 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
       await appDatabase.deleteTripReportTemplate(template.uuid);
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('template_deleted'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('template_deleted'));
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
-        );
-      }
+      if (mounted) SnackBarService.showError(e);
     }
   }
 

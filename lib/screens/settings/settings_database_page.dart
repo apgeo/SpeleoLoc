@@ -10,6 +10,7 @@ import 'package:speleoloc/screens/settings/sql_command_runner.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Database management settings: reinitialize, export.
 class SettingsDatabasePage extends StatefulWidget {
@@ -140,23 +141,16 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
 
         if (context.mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(populateTestData
+          SnackBarService.showSuccess(populateTestData
                     ? LocServ.inst.t('database_reinitialized')
-                    : LocServ.inst.t('database_reinitialized_empty'))),
-          );
+                    : LocServ.inst.t('database_reinitialized_empty'));
         }
 
         await DatabaseRestoreHelper.restartApplication();
       } catch (e) {
         if (context.mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    '${LocServ.inst.t('error_reinitializing_database')}: $e')),
-          );
+          SnackBarService.showError('${LocServ.inst.t('error_reinitializing_database')}: $e');
         }
       }
     }
@@ -212,20 +206,14 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
 
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('database_restored'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('database_restored'));
       }
 
       await DatabaseRestoreHelper.restartApplication();
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${LocServ.inst.t('database_restore_failed')}: $e'),
-          ),
-        );
+        SnackBarService.showError('${LocServ.inst.t('database_restore_failed')}: $e');
       }
     }
   }
@@ -235,10 +223,7 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
     final sourceFile = File('${directory.path}/speleo_loc.sqlite');
     if (!await sourceFile.exists()) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(LocServ.inst.t('database_file_not_found'))),
-        );
+        SnackBarService.showWarning(LocServ.inst.t('database_file_not_found'));
       }
       return;
     }
@@ -260,20 +245,12 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       if (outputFile != null) {
         await sourceFile.copy(outputFile);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    '${LocServ.inst.t('database_export_success')}: $outputFile')),
-          );
+          SnackBarService.showSuccess('${LocServ.inst.t('database_export_success')}: $outputFile');
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  '${LocServ.inst.t('database_export_failed')}: $e')),
-        );
+        SnackBarService.showError('${LocServ.inst.t('database_export_failed')}: $e');
       }
     }
   }

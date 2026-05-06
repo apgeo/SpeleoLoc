@@ -4,6 +4,7 @@ import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_place_importer.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Screen for importing cave place data from CSV files.
 ///
@@ -160,10 +161,7 @@ class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
   }
 
   void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    SnackBarService.showInfo(message);
   }
 
   /// Show dialog listing existing matching combinations, ask user to proceed.

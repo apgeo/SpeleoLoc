@@ -20,6 +20,7 @@ import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CavePlacesListPage extends StatefulWidget {
   const CavePlacesListPage({super.key, required this.caveUuid});
@@ -238,8 +239,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   Future<void> _performStopTrip() async {
     await caveTripService.stopTrip();
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_stopped'))));
+      SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
       setState(() {});
     }
   }
@@ -479,11 +479,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   Future<void> _deleteCavePlace(Uuid id) async {
     await cavePlaceRepository.deleteCavePlace(id);
     _loadCavePlaces();
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(LocServ.inst.t('cave_place_deleted'))));
-    }
+    if (mounted) SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
   }
 
   Future<void> _confirmDeleteCavePlace(Uuid id) async {
@@ -522,31 +518,15 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           final activeTripCaveId = await caveTripService.getActiveTripCaveId();
           if (activeTripCaveId == widget.caveUuid) {
             await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
-              );
-            }
+            if (mounted) SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
           }
         }
         _onCavePlaceFound(cavePlace);
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${LocServ.inst.t('cave_place_not_found')}: \'$code\'')),
-          );
-        }
+        if (mounted) SnackBarService.showWarning('${LocServ.inst.t('cave_place_not_found')}: \'$code\'');
       }
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${LocServ.inst.t('invalid_qr_code_detail')}: \'$code\'',
-            ),
-          ),
-        );
-      }
+      if (mounted) SnackBarService.showWarning('${LocServ.inst.t('invalid_qr_code_detail')}: \'$code\'');
     }
   }
 
@@ -601,11 +581,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       } else if (mounted) {
         // Still in cave — record the entrance scan as a trip point
         await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(LocServ.inst.t('trip_point_added'))),
-          );
-        }
+        if (mounted) SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
       }
     } else {
       // Trip running for a DIFFERENT cave — offer to stop it first
@@ -671,11 +647,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     );
     if (!mounted) return;
     _loadCavePlaces();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${LocServ.inst.t('cave_place_identified')}: "${cavePlace.title}"'),
-      ),
-    );
+    SnackBarService.showSuccess('${LocServ.inst.t('cave_place_identified')}: "${cavePlace.title}"');
   }
 
   @override

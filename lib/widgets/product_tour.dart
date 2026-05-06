@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 export 'package:tutorial_coach_mark/tutorial_coach_mark.dart'
   show ContentAlign, ShapeLightFocus;
@@ -186,11 +187,7 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
                   onDisableAutoTours: () async {
                     await setAutoToursDisabled(true);
                     if (mounted) {
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(
-                          content: Text(LocServ.inst.t('auto_tours_disabled')),
-                        ),
-                      );
+                      SnackBarService.showInfo(LocServ.inst.t('auto_tours_disabled'));
                     }
                     controller.skip();
                   },

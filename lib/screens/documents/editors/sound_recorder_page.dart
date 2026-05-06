@@ -13,6 +13,7 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Audio recorder with waveform visualisation.
 ///
@@ -209,9 +210,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('microphone_permission_denied'))),
-        );
+        SnackBarService.showWarning(LocServ.inst.t('microphone_permission_denied'));
       }
       return;
     }
@@ -254,9 +253,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
     } catch (e) {
       debugPrint('[SoundRecorderPage] start recording error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('recording_error'))),
-        );
+        SnackBarService.showError(LocServ.inst.t('recording_error'));
       }
     }
   }
@@ -397,9 +394,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
           '${now.second.toString().padLeft(2, '0')}';
     }
     if (_recordedPath == null || !File(_recordedPath!).existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('no_recording'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('no_recording'));
       return;
     }
 
@@ -442,9 +437,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        SnackBarService.showError(e);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

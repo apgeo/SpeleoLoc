@@ -6,6 +6,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Lightweight viewer that handles common file types inline (images, text)
 /// and embeds PDF rendering for `.pdf` files using `pdfx`.
@@ -86,7 +87,7 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
           const SizedBox(height: 12),
           ElevatedButton(onPressed: () async {
             final tmp = await _writeTempFile(name, await widget.file.readAsBytes());
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to: $tmp')));
+            if (mounted) SnackBarService.showSuccess('Saved to: $tmp');
           }, child: Text(LocServ.inst.t('save'))),
         ]),
       );

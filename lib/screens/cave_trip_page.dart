@@ -17,6 +17,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveTripPage extends StatefulWidget {
   const CaveTripPage({super.key, required this.tripUuid});
@@ -250,9 +251,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     await file.writeAsBytes(byteData.buffer.asUint8List());
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${LocServ.inst.t('trip_map_exported')}: ${file.path}')),
-      );
+      SnackBarService.showSuccess('${LocServ.inst.t('trip_map_exported')}: ${file.path}');
     }
   }
 
@@ -263,9 +262,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     final log = trip.log;
     if (log == null || log.trim().isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('trip_export_no_log'))),
-        );
+        if (mounted) SnackBarService.showWarning(LocServ.inst.t('trip_export_no_log'));
       }
       return;
     }
@@ -303,18 +300,14 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('trip_export_success'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('trip_export_success'));
       }
 
       // Open with system handler
       await TripReportExportService.instance.openWithSystem(finalPath);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
-        );
+        SnackBarService.showError(e);
       }
     }
   }
@@ -421,9 +414,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       if (newTitle.isNotEmpty && newTitle != trip.title) {
         await appDatabase.renameCaveTrip(trip.uuid, newTitle);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(LocServ.inst.t('trip_renamed'))),
-          );
+          SnackBarService.showSuccess(LocServ.inst.t('trip_renamed'));
           _load();
         }
       }
@@ -445,7 +436,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     if (confirmed == true) {
       await caveTripService.stopTrip();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_stopped'))));
+        SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
         _load();
       }
     }
@@ -467,7 +458,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       if (_isActive) await caveTripService.stopTrip();
       await appDatabase.deleteCaveTrip(widget.tripUuid);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_deleted'))));
+        SnackBarService.showSuccess(LocServ.inst.t('trip_deleted'));
         Navigator.pop(context, true);
       }
     }
@@ -478,9 +469,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     if (trip == null) return;
     await caveTripService.restartTrip(trip.uuid);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('trip_restarted'))),
-      );
+      SnackBarService.showSuccess(LocServ.inst.t('trip_restarted'));
       _load();
     }
   }

@@ -10,6 +10,7 @@ import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Full data export / import page.
 ///
@@ -145,20 +146,12 @@ class _DataExportImportPageState extends State<DataExportImportPage>
 
       if (context.mounted) {
         Navigator.pop(context); // close progress
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  '${LocServ.inst.t('export_success')}: $outputPath')),
-        );
+        SnackBarService.showSuccess('${LocServ.inst.t('export_success')}: $outputPath');
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('${LocServ.inst.t('export_failed')}: $e')),
-        );
+        SnackBarService.showError('${LocServ.inst.t('export_failed')}: $e');
       }
     }
   }
@@ -253,20 +246,14 @@ class _DataExportImportPageState extends State<DataExportImportPage>
 
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('import_success'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('import_success'));
       }
 
       await DatabaseRestoreHelper.restartApplication();
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('${LocServ.inst.t('import_failed')}: $e')),
-        );
+        SnackBarService.showError('${LocServ.inst.t('import_failed')}: $e');
       }
     }
   }
@@ -323,15 +310,9 @@ class _DataExportImportPageState extends State<DataExportImportPage>
       if (context.mounted) {
         Navigator.pop(context);
         if (batchState.cancelled) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(LocServ.inst.t('import_cancelled'))),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('${LocServ.inst.t('import_failed')}: $e')),
-          );
+          SnackBarService.showWarning(LocServ.inst.t('import_cancelled'));
+          } else {
+          SnackBarService.showError('${LocServ.inst.t('import_failed')}: $e');
         }
       }
     }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/documents/editors/camera_capture_page.dart';
-import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
 import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
 import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
 import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
@@ -20,6 +19,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 // ---------------------------------------------------------------------------
 //  Enums
@@ -244,9 +244,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     final file = await getDocumentsFile(doc.fileName);
     if (file == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('image_not_found'))),
-        );
+        SnackBarService.showWarning(LocServ.inst.t('image_not_found'));
       }
       return;
     }

@@ -10,6 +10,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class RasterMapsPage extends StatefulWidget {
   const RasterMapsPage({super.key, required this.caveUuid});
@@ -53,9 +54,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
     _changed = true;
     _loadRasterMaps();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('raster_map_deleted'))),
-      );
+      SnackBarService.showSuccess(LocServ.inst.t('raster_map_deleted'));
     }
   }
 

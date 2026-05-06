@@ -10,6 +10,7 @@ import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Captures a photo using [ImagePicker] (camera) and then optionally opens the
 /// [ImageEditorPage] for annotation / cropping before saving.
@@ -71,9 +72,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
     } catch (e) {
       debugPrint('[CameraCapturePage] Camera error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('camera_error'))),
-        );
+        SnackBarService.showError(LocServ.inst.t('camera_error'));
         Navigator.pop(context);
       }
     }
@@ -86,9 +85,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       setState(() => _capturedFile = File(xFile.path));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        SnackBarService.showError(e);
       }
     }
   }
@@ -117,9 +114,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        SnackBarService.showError(e);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

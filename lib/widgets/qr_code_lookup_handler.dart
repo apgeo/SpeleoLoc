@@ -3,6 +3,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Handles the full QR code lookup flow: searches for matching cave places,
 /// shows a disambiguation dialog if multiple results are found, and navigates
@@ -25,13 +26,7 @@ class QrCodeLookupHandler {
     final results = await _service.lookup(rawCode, currentCaveId: currentCaveId);
 
     if (results.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${LocServ.inst.t('cave_place_not_found')}: \'$rawCode\''),
-          ),
-        );
-      }
+      SnackBarService.showWarning('${LocServ.inst.t('cave_place_not_found')}: \'$rawCode\'');
       return null;
     }
 

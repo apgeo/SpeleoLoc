@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:pdfx/pdfx.dart';
 
 /// Viewer screen for generated QR code PDFs.
@@ -299,11 +300,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
         ),
       );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
-        );
-      }
+      SnackBarService.showError(e);
     }
   }
 
@@ -334,9 +331,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
           await File('${subDir.path}/${f.name}').writeAsBytes(f.bytes);
         }
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${LocServ.inst.t('files_saved')}: ${subDir.path}')),
-          );
+          SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: ${subDir.path}');
         }
       } else {
         final dir = await FilePicker.platform.getDirectoryPath(
@@ -347,16 +342,12 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
           await File('$dir/${f.name}').writeAsBytes(f.bytes);
         }
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(LocServ.inst.t('files_saved'))),
-          );
+          SnackBarService.showSuccess(LocServ.inst.t('files_saved'));
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
-        );
+        SnackBarService.showError(e);
       }
     }
   }
@@ -376,9 +367,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
         await File(output).writeAsBytes(bytes);
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('files_saved')}: $output')),
-        );
+        SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: $output');
       }
     }
   }

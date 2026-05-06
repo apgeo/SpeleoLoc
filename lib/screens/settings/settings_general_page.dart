@@ -4,6 +4,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// General settings: app language.
 class SettingsGeneralPage extends StatefulWidget {
@@ -145,9 +146,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
               onTap: () async {
                 await resetAllTours(allTourIds);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(LocServ.inst.t('tours_reset_done'))),
-                  );
+                  SnackBarService.showSuccess(LocServ.inst.t('tours_reset_done'));
                 }
               },
             ),

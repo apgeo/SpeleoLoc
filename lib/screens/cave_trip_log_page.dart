@@ -5,6 +5,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveTripLogPage extends StatefulWidget {
   const CaveTripLogPage({super.key, required this.tripUuid});
@@ -60,9 +61,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
     try {
       await appDatabase.updateTripLog(widget.tripUuid, _controller.text);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('trip_log_saved'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('trip_log_saved'));
         Navigator.pop(context);
       }
     } finally {

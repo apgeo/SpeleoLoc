@@ -16,6 +16,7 @@ import 'package:speleoloc/utils/raw_image_data.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/widgets/add_cave_place_popup.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 // Re-export so existing callers (e.g. MapViewerPage) that import the image
 // cache functions from this file continue to work without changes.
@@ -723,12 +724,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         if (widget.onAutoSaveRequested != null && widget.selectedRasterMapUuid != null) {
           await widget.onAutoSaveRequested!(newId, widget.selectedRasterMapUuid!, cx, cy);
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(LocServ.inst.t('cave_place_added')),
-            duration: RasterMapEditorConstants.shortSnackbarDuration,
-          ),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('cave_place_added'), duration: RasterMapEditorConstants.shortSnackbarDuration);
         widget.onCavePlaceAdded?.call();
       }
       return;
@@ -889,12 +885,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         if (title.isNotEmpty) {
           final dur = widget.controller?.autoSaveSnackbarNotificationDuration ??
               RasterMapEditorConstants.shortSnackbarDuration;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${LocServ.inst.t('new_point_saved_for')} $title'),
-              duration: dur,
-            ),
-          );
+          SnackBarService.showSuccess('${LocServ.inst.t('new_point_saved_for')} $title', duration: dur);
         }
       }
     }
@@ -966,12 +957,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       _imageSelectedY ?? 0,
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(LocServ.inst.t('point_reset')),
-          duration: RasterMapEditorConstants.shortSnackbarDuration,
-        ),
-      );
+      SnackBarService.showSuccess(LocServ.inst.t('point_reset'), duration: RasterMapEditorConstants.shortSnackbarDuration);
     }
   }
 
@@ -1011,12 +997,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         _initialControllerCavePlaceY = null;
         _initialControllerCavePlaceTitle = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(LocServ.inst.t('definition_removed')),
-          duration: RasterMapEditorConstants.shortSnackbarDuration,
-        ),
-      );
+      SnackBarService.showSuccess(LocServ.inst.t('definition_removed'), duration: RasterMapEditorConstants.shortSnackbarDuration);
     }
   }
 
@@ -1025,12 +1006,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   void _handleAddCavePlace() {
     if (widget.caveUuid == null) return;
     setState(() => _waitingForNewCavePlaceTap = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(LocServ.inst.t('tap_on_map_to_define_place')),
-        duration: RasterMapEditorConstants.longSnackbarDuration,
-      ),
-    );
+    SnackBarService.showInfo(LocServ.inst.t('tap_on_map_to_define_place'), duration: RasterMapEditorConstants.longSnackbarDuration);
   }
 
   /// Notify the parent to save the current point when the user has modified it.
@@ -1088,12 +1064,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// Show a toast message when a cave place point is long-tapped.
   void _showLongTapToast(String cavePlaceTitle) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(LocServ.inst.t('long_tap_detected', {'cavePlaceTitle': cavePlaceTitle})),
-        duration: RasterMapEditorConstants.mediumSnackbarDuration,
-      ),
-    );
+    SnackBarService.showInfo(LocServ.inst.t('long_tap_detected', {'cavePlaceTitle': cavePlaceTitle}), duration: RasterMapEditorConstants.mediumSnackbarDuration);
   }
 
   @override

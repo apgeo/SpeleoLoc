@@ -11,6 +11,7 @@ import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
@@ -279,9 +280,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   void _definePlace() async {
     if (_imageSelectedX == null || _imageSelectedY == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('no_point_defined'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('no_point_defined'));
       return;
     }
 
@@ -297,11 +296,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(LocServ.inst.t('define_place_on_map')),
-          duration: RasterMapEditorConstants.shortSnackbarDuration,
-        ),
+      SnackBarService.showSuccess(
+        LocServ.inst.t('define_place_on_map'),
+        duration: RasterMapEditorConstants.shortSnackbarDuration,
       );
       Navigator.pop(context);
     }

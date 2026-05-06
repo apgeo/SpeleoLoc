@@ -15,6 +15,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CavePlacePage extends StatefulWidget {
   const CavePlacePage({super.key, required this.caveUuid, this.cavePlaceUuid});
@@ -198,23 +199,17 @@ class _CavePlacePageState extends State<CavePlacePage>
         : double.tryParse(_altController.text);
 
     if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(LocServ.inst.t('title_required'))));
+      SnackBarService.showWarning(LocServ.inst.t('title_required'));
       return null;
     }
 
     if (_depthController.text.trim().isNotEmpty && depth == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('depth_invalid_number'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
       return null;
     }
 
     if (depth != null && (depth < -5000 || depth > 5000)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('depth_out_of_range'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('depth_out_of_range'));
       return null;
     }
 
@@ -608,9 +603,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       // Check if same code is already in the field
       if (currentQrValue == qr) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('qr_code_already_present'))),
-        );
+        SnackBarService.showWarning(LocServ.inst.t('qr_code_already_present'));
         return;
       }
 
@@ -631,12 +624,8 @@ class _CavePlacePageState extends State<CavePlacePage>
       if (existing != null) {
         // QR code belongs to another cave place
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'QR code ${LocServ.inst.t('already_used_for')}: "${existing.title}"',
-            ),
-          ),
+        SnackBarService.showWarning(
+          'QR code ${LocServ.inst.t('already_used_for')}: "${existing.title}"',
         );
         return;
       }
@@ -678,9 +667,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       }
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('invalid_qr_code'));
     }
   }
 

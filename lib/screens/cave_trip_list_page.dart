@@ -6,6 +6,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveTripListPage extends StatefulWidget {
   const CaveTripListPage({super.key, required this.caveUuid});
@@ -115,7 +116,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     if (confirmed == true) {
       await caveTripService.stopTrip();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('trip_stopped'))));
+        SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
         setState(() {});
       }
     }

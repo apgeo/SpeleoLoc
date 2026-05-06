@@ -9,6 +9,7 @@ import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Whether to apply image compression when picking raster map images.
 const bool kCompressRasterMapImages = false;
@@ -62,16 +63,13 @@ class _RasterMapFormState extends State<RasterMapForm>
 
   Future<void> _setFullImagePath() async {
     if (_imagePath != null) {
-      final localContext = context;
       final directory = await getApplicationDocumentsDirectory();
       _fullImagePath = '${directory.path}/$_imagePath';
       final file = File(_fullImagePath!);
       if (!await file.exists()) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            ScaffoldMessenger.of(localContext).showSnackBar(
-              SnackBar(content: Text(LocServ.inst.t('image_file_not_found_warning'))),
-            );
+            SnackBarService.showWarning(LocServ.inst.t('image_file_not_found_warning'));
           }
         });
       }
@@ -132,9 +130,7 @@ class _RasterMapFormState extends State<RasterMapForm>
       }
       if (mounted) Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocServ.inst.t('please_select_image_and_map_type'))),
-      );
+      SnackBarService.showWarning(LocServ.inst.t('please_select_image_and_map_type'));
     }
   }
 

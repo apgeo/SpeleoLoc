@@ -25,6 +25,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/screens/csv_caves_import_page.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -154,14 +155,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       _titleTapCount = 0;
       final newValue = !debugModeNotifier.value;
       debugModeNotifier.value = newValue;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(newValue
-              ? 'Debug mode activated'
-              : 'Debug mode deactivated'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      SnackBarService.showInfo(newValue ? 'Debug mode activated' : 'Debug mode deactivated');
     }
   }
 
@@ -258,9 +252,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${LocServ.inst.t('error_loading_caves')}: $e')),
-      );
+      SnackBarService.showError('${LocServ.inst.t('error_loading_caves')}: $e');
       rethrow;
     }
   }
@@ -308,9 +300,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       } catch (e) {
         if (mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${LocServ.inst.t('error_reinitializing_database')}: $e')),
-          );
+          SnackBarService.showError('${LocServ.inst.t('error_reinitializing_database')}: $e');
         }
       }
     }
@@ -326,12 +316,12 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       if (result != null) {
         // Stream subscription refreshes the list; just show the snackbar.
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('new_cave_added'))));
+          SnackBarService.showSuccess(LocServ.inst.t('new_cave_added'));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${LocServ.inst.t('error_adding_cave')}: $e')));
+        SnackBarService.showError('${LocServ.inst.t('error_adding_cave')}: $e');
       }
     }
   }
@@ -359,15 +349,11 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       await caveRepository.deleteCave(caveUuid);
       // Stream subscription auto-refreshes _caves.
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('cave_deleted'))),
-        );
+        SnackBarService.showSuccess(LocServ.inst.t('cave_deleted'));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${LocServ.inst.t('error_deleting_cave')}: $e')),
-        );
+        SnackBarService.showError('${LocServ.inst.t('error_deleting_cave')}: $e');
       }
     }
   }
@@ -584,9 +570,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(LocServ.inst.t('camera_permission_denied'))),
-        );
+        SnackBarService.showWarning(LocServ.inst.t('camera_permission_denied'));
       }
     }
   }

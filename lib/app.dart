@@ -11,6 +11,7 @@ import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
+import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
@@ -23,12 +24,10 @@ class SpeleoLocApp extends StatefulWidget {
 }
 
 class _SpeleoLocAppState extends State<SpeleoLocApp> {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   void initState() {
     super.initState();
-    DeepLinkHandler.instance.init(_navigatorKey);
+    DeepLinkHandler.instance.init(navigatorKey);
   }
 
   @override
@@ -48,7 +47,7 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
       ],
       supportedLocales: const [Locale('en')],
       title: appName,
-      navigatorKey: _navigatorKey,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
         useMaterial3: true,
