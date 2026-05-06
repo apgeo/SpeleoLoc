@@ -770,9 +770,9 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       ? _points
         .take(_animatedPointCount)
         .map((p) => p.cavePlaceUuid)
-        .whereType<int>()
+        .whereType<Uuid>()
         .toList()
-      : _points.map((p) => p.cavePlaceUuid).whereType<int>().toList();
+      : _points.map((p) => p.cavePlaceUuid).whereType<Uuid>().toList();
 
     return Column(
       children: [

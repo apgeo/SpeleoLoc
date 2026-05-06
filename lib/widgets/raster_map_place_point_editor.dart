@@ -30,7 +30,7 @@ export 'package:speleoloc/widgets/raster_map_image_cache.dart';
 class TripOverlayData {
   /// Ordered list of cave place IDs in the order they were visited.
   /// A place may appear more than once if revisited during the trip.
-  final List<int> orderedCavePlaceIds;
+  final List<Uuid> orderedCavePlaceIds;
 
   /// Line/arrow color for the trip route.
   final Color routeColor;
