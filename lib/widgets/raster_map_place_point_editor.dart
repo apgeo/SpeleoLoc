@@ -385,6 +385,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   Offset? _panStart;
   Offset? _panEnd;
 
+  // Custom gesture state (replaces photo_view's internal gesture handling)
+  double? _gestureStartScale;
+  Offset? _gestureFocalInImage; // image-space coords of focal point at gesture start
+
   // Nav bar visibility + tap mode
   late bool _showNavBar;
   late bool _showTapModeCheckbox;
@@ -783,18 +787,60 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     widget.onImagePointChanged?.call(_imageSelectedX!, _imageSelectedY!);
   }
 
-  void zoomIn() {
-    _photoViewController.scale = clampZoom(_photoViewController.scale! * 1.2);
-  }
+  void zoomIn() => _zoomAtViewportCenter(clampZoom(_photoViewController.scale! * 1.2));
 
-  void zoomOut() {
-    _photoViewController.scale = clampZoom(_photoViewController.scale! / 1.2);
+  void zoomOut() => _zoomAtViewportCenter(clampZoom(_photoViewController.scale! / 1.2));
+
+  /// Zoom to [newScale] while keeping the image point currently at the
+  /// viewport centre fixed in place.
+  void _zoomAtViewportCenter(double newScale) {
+    final currentScale = _photoViewController.scale ?? 1.0;
+    if (currentScale == 0) return;
+    final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
+    final vc = Offset(viewport.width / 2, viewport.height / 2);
+    final pos = _photoViewController.position;
+    // Image point at viewport centre: (vc - pos) / currentScale.
+    // New position to keep that point at vc: vc - imagePt * newScale.
+    final newPos = vc - (vc - pos) * (newScale / currentScale);
+    _photoViewController.scale = newScale;
+    _photoViewController.position = newPos;
   }
 
   void resetZoom() {
     _panZoomController.stop();
     _scaleStateController.scaleState = PhotoViewScaleState.initial;
     _photoViewController.position = Offset.zero;
+  }
+
+  /// Called at the start of a pan/pinch gesture.
+  void _handleGestureScaleStart(ScaleStartDetails details) {
+    _panZoomController.stop();
+    _gestureStartScale = _photoViewController.scale ?? 1.0;
+    final pos = _photoViewController.position;
+    // Store the image-space coordinates of the focal point so we can keep
+    // that exact image pixel under the fingers throughout the gesture.
+    // With Alignment.topLeft: viewportPt = imagePt * scale + pos
+    //   => imagePt = (viewportPt - pos) / scale
+    if (_gestureStartScale != 0) {
+      _gestureFocalInImage = (details.localFocalPoint - pos) / _gestureStartScale!;
+    } else {
+      _gestureFocalInImage = Offset.zero;
+    }
+  }
+
+  /// Called on every update of a pan/pinch gesture.
+  void _handleGestureScaleUpdate(ScaleUpdateDetails details) {
+    final startScale = _gestureStartScale;
+    final focalInImage = _gestureFocalInImage;
+    if (startScale == null || focalInImage == null) return;
+    // Apply zoom only when gesture zoom is enabled; otherwise treat as pan only.
+    final newScale = clampZoom(startScale * (_gestureZoomEnabled ? details.scale : 1.0));
+    // New position: keep the stored image-space focal point under the current
+    // focal viewport point.
+    // viewportPt = imagePt * newScale + newPos  =>  newPos = viewportPt - imagePt * newScale
+    final newPos = details.localFocalPoint - focalInImage * newScale;
+    _photoViewController.scale = newScale;
+    _photoViewController.position = newPos;
   }
 
   /// Programmatically pan/zoom to center an image-space point in the viewport.
@@ -1085,28 +1131,41 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           ),
 
         Expanded(
-          child: ClipRect(
-            child: Stack(
-              children: [
-                PhotoView(
-                  controller: _photoViewController,
-                  scaleStateController: _scaleStateController,
-                  imageProvider: widget.imageProvider ?? FileImage(widget.imageFile),
-                  minScale: _gestureZoomEnabled
-                      ? PhotoViewComputedScale.contained * 0.5
-                      : PhotoViewComputedScale.contained,
-                  maxScale: _gestureZoomEnabled
-                      ? PhotoViewComputedScale.covered * 4.8
-                      : PhotoViewComputedScale.contained,
-                  initialScale: PhotoViewComputedScale.contained,
-                  enableRotation: false,
-                  basePosition: Alignment.topLeft,
-                  onTapDown: (context, details, controllerValue) {
-                    _onImageTap(details, controllerValue);
-                  },
-                  loadingBuilder: (context, event) =>
-                      const Center(child: CircularProgressIndicator()),
-                ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            // Tap: forward to the image-tap handler with current controller state.
+            onTapDown: (details) {
+              final cv = PhotoViewControllerValue(
+                scale: _photoViewController.scale,
+                position: _photoViewController.position,
+                rotation: _photoViewController.rotation,
+                rotationFocusPoint: _photoViewController.rotationFocusPoint,
+              );
+              _onImageTap(details, cv);
+            },
+            // Pan and pinch-zoom: correctly maintain the focal point.
+            onScaleStart: _handleGestureScaleStart,
+            onScaleUpdate: _handleGestureScaleUpdate,
+            child: ClipRect(
+              child: Stack(
+                children: [
+                  PhotoView(
+                    controller: _photoViewController,
+                    scaleStateController: _scaleStateController,
+                    imageProvider: widget.imageProvider ?? FileImage(widget.imageFile),
+                    minScale: _gestureZoomEnabled
+                        ? PhotoViewComputedScale.contained * 0.5
+                        : PhotoViewComputedScale.contained,
+                    maxScale: _gestureZoomEnabled
+                        ? PhotoViewComputedScale.covered * 4.8
+                        : PhotoViewComputedScale.contained,
+                    initialScale: PhotoViewComputedScale.contained,
+                    enableRotation: false,
+                    basePosition: Alignment.topLeft,
+                    disableGestures: true,
+                    loadingBuilder: (context, event) =>
+                        const Center(child: CircularProgressIndicator()),
+                  ),
                 Positioned.fill(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -1311,6 +1370,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             ),
           ),
         ),
+      ),
 
         const SizedBox(height: 2),
 
