@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/screens/settings/debug_info_page.dart';
 import 'package:speleoloc/screens/settings/settings_general_page.dart';
 import 'package:speleoloc/screens/settings/settings_image_compression_page.dart';
 import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
@@ -9,6 +10,7 @@ import 'package:speleoloc/screens/settings/users_page.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
+import 'package:speleoloc/state/app_notifiers.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
@@ -156,6 +158,23 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const DataExportImportPage()),
+                );
+              },
+            ),
+            ValueListenableBuilder<bool>(
+              valueListenable: debugModeNotifier,
+              builder: (context, isDebug, _) {
+                if (!isDebug) return const SizedBox.shrink();
+                return _SettingsSection(
+                  icon: Icons.bug_report_outlined,
+                  title: LocServ.inst.t('settings_debug_info'),
+                  subtitle: LocServ.inst.t('settings_debug_info_desc'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DebugInfoPage()),
+                    );
+                  },
                 );
               },
             ),

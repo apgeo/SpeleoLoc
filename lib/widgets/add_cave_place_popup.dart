@@ -4,7 +4,6 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// A compact dialog for quickly adding a new cave place.
 ///
@@ -138,7 +137,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarService.showError(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${LocServ.inst.t('error')}: $e')),
+        );
         setState(() => _isSaving = false);
       }
     }
@@ -154,7 +155,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
             _qrController.text = qr.toString();
             Navigator.pop(context); // close scanner
           } else {
-            SnackBarService.showWarning(LocServ.inst.t('invalid_qr_code'));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
+            );
           }
         }),
       ),

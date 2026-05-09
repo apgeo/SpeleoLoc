@@ -5,7 +5,6 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
-import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveAreasPage extends StatefulWidget {
   const CaveAreasPage({super.key, required this.caveUuid});
@@ -108,7 +107,7 @@ class _CaveAreasPageState extends State<CaveAreasPage>
       _changed = true;
       _loadAreas();
       if (!mounted) return;
-      SnackBarService.showSuccess(LocServ.inst.t('area_saved'));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('area_saved'))));
     }
   }
 
@@ -138,7 +137,7 @@ class _CaveAreasPageState extends State<CaveAreasPage>
       _changed = true;
       _loadAreas();
       if (!mounted) return;
-      SnackBarService.showSuccess(LocServ.inst.t('area_deleted'));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('area_deleted'))));
     }
   }
 

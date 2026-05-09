@@ -11,7 +11,6 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
-import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class EditDocumentationFilePage extends StatefulWidget {
   const EditDocumentationFilePage({super.key, this.documentationFile, this.cavePlaceUuid, this.caveUuid, this.caveAreaUuid});
@@ -82,7 +81,7 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
         fileHash: _fileHash!,
       );
       if (matches.isNotEmpty) {
-        if (mounted) SnackBarService.showWarning('Similar file(s) already present (size+hash match).');
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Similar file(s) already present (size+hash match).')));
       }
     }
   }
@@ -144,7 +143,7 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
 
     // Validation: require a file name for new records
     if (fileNameToStore == null || fileNameToStore.isEmpty) {
-      if (mounted) SnackBarService.showWarning(LocServ.inst.t('please_select_file'));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('please_select_file'))));
       return;
     }
 
@@ -180,7 +179,9 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        SnackBarService.showError(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
       }
     }
   }
