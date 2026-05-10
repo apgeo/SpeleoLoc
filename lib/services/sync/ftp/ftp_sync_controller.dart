@@ -265,14 +265,35 @@ class FtpSyncController extends ChangeNotifier {
       // anything: importing remote archives modifies the DB but must not by
       // itself trigger an upload (otherwise every peer endlessly bounces
       // archives back to the server).
-      final lastUploadAt = await _loadLastUploadAt(profile.profileUuid);
-      final localChanged = await _hasLocalChangesSince(lastUploadAt);
+      //
+      // Reference timestamp: prefer the embedded timestamp of the newest
+      // archive THIS device already has on the server (derived from the
+      // filename). This is more reliable than the locally persisted
+      // lastUploadAt because (a) it survives reinstall and (b) it prevents
+      // peer-imported change_log entries from causing false positives when
+      // the change_log is filtered by device_uuid.
+      final myDeviceUuid = _currentUser.deviceUuid.value;
+      final myDevicePrefix = myDeviceUuid?.toString().substring(0, 8);
+      int? serverNewestOwnTs;
+      if (myDevicePrefix != null) {
+        final myRemoteTs = remoteEntries
+            .where((e) => _deviceIdOf(e.name) == myDevicePrefix)
+            .map((e) => _timestampOf(e.name));
+        if (myRemoteTs.isNotEmpty) {
+          serverNewestOwnTs = myRemoteTs.reduce((a, b) => a > b ? a : b);
+        }
+      }
+      final referenceTs =
+          serverNewestOwnTs ?? await _loadLastUploadAt(profile.profileUuid);
+      final localChanged =
+          await _hasLocalChangesSince(referenceTs, deviceUuid: myDeviceUuid);
       _appendLog(
         FtpSyncLogLevel.info,
-        lastUploadAt == null
-            ? 'No prior upload recorded for this profile — local will be uploaded'
+        referenceTs == null
+            ? 'No prior upload on server or locally — will upload'
             : 'Local changes since last upload: $localChanged '
-                '(last upload at ${DateTime.fromMillisecondsSinceEpoch(lastUploadAt).toLocal()})',
+                '(reference: ${serverNewestOwnTs != null ? 'server archive' : 'local record'} '
+                'at ${DateTime.fromMillisecondsSinceEpoch(referenceTs).toLocal()})',
       );
 
       _emit((s) => s.copyWith(
@@ -562,8 +583,8 @@ class FtpSyncController extends ChangeNotifier {
             stepProgress: 0,
           ));
       final nowMs = DateTime.now().millisecondsSinceEpoch;
-      final deviceUuid = _currentUser.deviceUuid.value?.toString();
-      if (deviceUuid == null || deviceUuid.isEmpty) {
+      // myDeviceUuid / myDevicePrefix were resolved before the import loop.
+      if (myDeviceUuid == null || myDevicePrefix == null) {
         // The archive filename embeds the source device id; per-device
         // dedup on listing depends on that, so we refuse to upload an
         // archive that cannot be attributed to a device.
@@ -573,7 +594,7 @@ class FtpSyncController extends ChangeNotifier {
       // Filename embeds the device uuid so peers can identify the source
       // device and perform per-device dedup on listing.
       final archiveName =
-          '$_archivePrefix${nowMs}_${deviceUuid.substring(0, 8)}$_archiveSuffix';
+          '$_archivePrefix${nowMs}_$myDevicePrefix$_archiveSuffix';
       final archiveFile = await _archiveService.exportToZip(
         tempDir.path,
         filenameHint: archiveName,
@@ -793,11 +814,24 @@ class FtpSyncController extends ChangeNotifier {
   /// `MAX(updated_at)` scan would miss. Returns true when [lastUploadAt] is
   /// `null` (first run on this device for this profile) so the local state
   /// always lands on the server at least once.
-  Future<bool> _hasLocalChangesSince(int? lastUploadAt) async {
+  ///
+  /// When [deviceUuid] is provided the query is restricted to rows that
+  /// originated on this device, preventing change_log entries imported from
+  /// peer archives from causing false-positive "something changed" results.
+  Future<bool> _hasLocalChangesSince(int? lastUploadAt,
+      {Uuid? deviceUuid}) async {
     if (lastUploadAt == null) return true;
-    final rows = await _db.customSelect(
-      'SELECT MAX(changed_at) AS m FROM change_log',
-    ).get();
+    final List<Variable<Object>> vars;
+    final String sql;
+    if (deviceUuid != null) {
+      sql =
+          'SELECT MAX(changed_at) AS m FROM change_log WHERE device_uuid = ?';
+      vars = [Variable<Uint8List>(deviceUuid.bytes)];
+    } else {
+      sql = 'SELECT MAX(changed_at) AS m FROM change_log';
+      vars = [];
+    }
+    final rows = await _db.customSelect(sql, variables: vars).get();
     if (rows.isEmpty) return false;
     final m = rows.first.data['m'] as int?;
     if (m == null) return false;
