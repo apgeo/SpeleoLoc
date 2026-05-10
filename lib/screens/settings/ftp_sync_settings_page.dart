@@ -262,6 +262,13 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   bool _showPassword = false;
   bool _testing = false;
   bool _saving = false;
+  /// True while the password field shows the saved-password placeholder ("********").
+  bool _hasPlaceholder = false;
+  /// Prevents the password listener from treating programmatic text changes as
+  /// user edits (e.g. when loading the real password for the view button).
+  bool _suppressPasswordListener = false;
+  bool _loadingPassword = false;
+  late final FocusNode _passwordFocusNode;
 
   @override
   void initState() {
@@ -272,11 +279,27 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     _host = TextEditingController(text: e?.host ?? '');
     _port = TextEditingController(text: e?.port?.toString() ?? '');
     _username = TextEditingController(text: e?.username ?? '');
-    _password = TextEditingController();
+    final bool isEditing = e != null;
+    _hasPlaceholder = isEditing;
+    _password = TextEditingController(text: isEditing ? '********' : '');
     _remoteFolder = TextEditingController(text: e?.remoteFolder ?? '/');
     _passiveMode = e?.passiveMode ?? true;
     _allowInvalidCertificate = e?.allowInvalidCertificate ?? false;
-    _password.addListener(() => _passwordChanged = true);
+    _password.addListener(() {
+      if (!_suppressPasswordListener) {
+        _hasPlaceholder = false;
+        _passwordChanged = true;
+      }
+    });
+    _passwordFocusNode = FocusNode();
+    _passwordFocusNode.addListener(() {
+      if (_passwordFocusNode.hasFocus && _hasPlaceholder) {
+        _suppressPasswordListener = true;
+        _password.clear();
+        _suppressPasswordListener = false;
+        // _passwordChanged intentionally stays false until the user actually types.
+      }
+    });
   }
 
   @override
@@ -286,6 +309,7 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     _port.dispose();
     _username.dispose();
     _password.dispose();
+    _passwordFocusNode.dispose();
     _remoteFolder.dispose();
     super.dispose();
   }
@@ -308,6 +332,39 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
       passiveMode: _passiveMode,
       allowInvalidCertificate: _allowInvalidCertificate,
     );
+  }
+
+  /// Toggles visibility of the password field.
+  /// When the field still shows the placeholder, the first reveal attempts to
+  /// load the real password from storage and replace the placeholder with it.
+  Future<void> _toggleShowPassword() async {
+    if (_hasPlaceholder) {
+      if (!_showPassword) {
+        setState(() => _loadingPassword = true);
+        final realPw =
+            await widget.repository.readPassword(widget.existing!.profileUuid);
+        if (!mounted) return;
+        if (realPw != null && realPw.isNotEmpty) {
+          _suppressPasswordListener = true;
+          _password.text = realPw;
+          _suppressPasswordListener = false;
+          _hasPlaceholder = false;
+        }
+        setState(() {
+          _loadingPassword = false;
+          _showPassword = true;
+        });
+      } else {
+        // Collapse back to the obscured placeholder.
+        _suppressPasswordListener = true;
+        _password.text = '********';
+        _suppressPasswordListener = false;
+        _hasPlaceholder = true;
+        setState(() => _showPassword = false);
+      }
+      return;
+    }
+    setState(() => _showPassword = !_showPassword);
   }
 
   Future<String?> _resolvePassword() async {
@@ -484,6 +541,7 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _password,
+              focusNode: _passwordFocusNode,
               obscureText: !_showPassword,
               decoration: InputDecoration(
                 labelText: LocServ.inst.t('ftp_password'),
@@ -491,13 +549,21 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                     ? null
                     : LocServ.inst.t('ftp_password_leave_empty_to_keep'),
                 border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_showPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility),
-                  onPressed: () =>
-                      setState(() => _showPassword = !_showPassword),
-                ),
+                suffixIcon: _loadingPassword
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: Icon(_showPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility),
+                        onPressed: _toggleShowPassword,
+                      ),
               ),
             ),
             const SizedBox(height: 12),
