@@ -877,5 +877,20 @@
   "discard": "Discard",
   "show_docs_toolbar": "Show action toolbar",
   "hide_docs_toolbar": "Hide action toolbar",
-  "pick_color": "Pick colour"
+  "pick_color": "Pick colour",
+  "sort_primary": "Primary",
+  "sort_secondary": "Secondary",
+  "sort_clear": "Clear sort",
+  "sort_ascending": "Ascending",
+  "sort_descending": "Descending",
+  "sort_last_modified": "Last modified",
+  "sort_surface_area": "Surface area",
+  "sort_cave_places_count": "Number of cave places",
+  "sort_depth": "Depth",
+  "sort_has_qr_code": "Has QR code",
+  "sort_is_entrance": "Entrance",
+  "sort_definitions_count": "Maps with location",
+  "sort_non_entrance": "Non-entrance",
+  "sort_has_qr_code_yes": "Has QR code",
+  "sort_has_qr_code_no": "No QR code"
 }

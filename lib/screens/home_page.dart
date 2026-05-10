@@ -686,6 +686,50 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       enableSelection: false,
       items: _caves,
       keyOf: (c) => c.uuid,
+      persistKey: 'cave_list_sort',
+      initialSort: const FilterableListSortSpec(
+        primaryFieldId: 'last_modified',
+        primaryAscending: false,
+      ),
+      sortFields: [
+        FilterableListSortField<Cave>(
+          id: 'last_modified',
+          label: LocServ.inst.t('sort_last_modified'),
+          compare: (a, b) => (a.updatedAt ?? 0).compareTo(b.updatedAt ?? 0),
+        ),
+        FilterableListSortField<Cave>(
+          id: 'title',
+          label: LocServ.inst.t('title'),
+          compare: (a, b) =>
+              a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          groupKeyOf: (cave) {
+            final t = cave.title.trim();
+            return t.isEmpty ? '' : t[0].toUpperCase();
+          },
+        ),
+        FilterableListSortField<Cave>(
+          id: 'surface_area',
+          label: LocServ.inst.t('sort_surface_area'),
+          compare: (a, b) {
+            final at = a.surfaceAreaUuid != null
+                ? (_surfaceAreaTitles[a.surfaceAreaUuid] ?? '')
+                : '';
+            final bt = b.surfaceAreaUuid != null
+                ? (_surfaceAreaTitles[b.surfaceAreaUuid] ?? '')
+                : '';
+            return at.toLowerCase().compareTo(bt.toLowerCase());
+          },
+          groupKeyOf: (cave) => cave.surfaceAreaUuid != null
+              ? (_surfaceAreaTitles[cave.surfaceAreaUuid] ?? '')
+              : '',
+        ),
+        FilterableListSortField<Cave>(
+          id: 'cave_places_count',
+          label: LocServ.inst.t('sort_cave_places_count'),
+          compare: (a, b) => (_cavePlaceCounts[a.uuid] ?? 0)
+              .compareTo(_cavePlaceCounts[b.uuid] ?? 0),
+        ),
+      ],
       enableBulkDelete: showCaveDeleteButtons,
       onBulkDelete: showCaveDeleteButtons
           ? (selected) async {

@@ -875,5 +875,20 @@
   "discard": "Anulează",
   "show_docs_toolbar": "Afișează bara de acțiuni",
   "hide_docs_toolbar": "Ascunde bara de acțiuni",
-  "pick_color": "Alege culoare"
+  "pick_color": "Alege culoare",
+  "sort_primary": "Primar",
+  "sort_secondary": "Secundar",
+  "sort_clear": "Șterge sortarea",
+  "sort_ascending": "Crescător",
+  "sort_descending": "Descrescător",
+  "sort_last_modified": "Ultima modificare",
+  "sort_surface_area": "Zonă de suprafață",
+  "sort_cave_places_count": "Număr de locuri",
+  "sort_depth": "Adâncime",
+  "sort_has_qr_code": "Are cod QR",
+  "sort_is_entrance": "Intrare",
+  "sort_definitions_count": "Hărți cu poziție",
+  "sort_non_entrance": "Non-intrare",
+  "sort_has_qr_code_yes": "Are cod QR",
+  "sort_has_qr_code_no": "Fără cod QR"
 }

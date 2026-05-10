@@ -872,6 +872,99 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       controller: _listController,
       scrollController: _scrollController,
       filterHintText: LocServ.inst.t('filter_cave_places'),
+      persistKey: 'cave_places_list_sort',
+      initialSort: const FilterableListSortSpec(
+        primaryFieldId: 'last_modified',
+        primaryAscending: false,
+      ),
+      sortFields: [
+        FilterableListSortField<CavePlace>(
+          id: 'last_modified',
+          label: LocServ.inst.t('sort_last_modified'),
+          compare: (a, b) => (a.updatedAt ?? 0).compareTo(b.updatedAt ?? 0),
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'title',
+          label: LocServ.inst.t('title'),
+          compare: (a, b) =>
+              a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          groupKeyOf: (cp) {
+            final t = cp.title.trim();
+            return t.isEmpty ? '' : t[0].toUpperCase();
+          },
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'cave_area',
+          label: LocServ.inst.t('cave_area'),
+          compare: (a, b) {
+            final at = a.caveAreaUuid != null
+                ? (_areaTitles[a.caveAreaUuid] ?? '')
+                : '';
+            final bt = b.caveAreaUuid != null
+                ? (_areaTitles[b.caveAreaUuid] ?? '')
+                : '';
+            return at.toLowerCase().compareTo(bt.toLowerCase());
+          },
+          groupKeyOf: (cp) => cp.caveAreaUuid != null
+              ? (_areaTitles[cp.caveAreaUuid] ?? '')
+              : '',
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'depth',
+          label: LocServ.inst.t('sort_depth'),
+          // Treat null depth as +infinity so unspecified entries sort last
+          // when ascending.
+          compare: (a, b) => (a.depthInCave ?? double.infinity)
+              .compareTo(b.depthInCave ?? double.infinity),
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'qr_code_identifier',
+          label: LocServ.inst.t('qr_code_identifier'),
+          // Null QR codes sort last on ascending.
+          compare: (a, b) {
+            final av = a.placeQrCodeIdentifier;
+            final bv = b.placeQrCodeIdentifier;
+            if (av == null && bv == null) return 0;
+            if (av == null) return 1;
+            if (bv == null) return -1;
+            return av.compareTo(bv);
+          },
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'is_entrance',
+          label: LocServ.inst.t('sort_is_entrance'),
+          // Main entrance > entrance > non-entrance, so ascending puts
+          // non-entrances first; descending puts main entrances first.
+          compare: (a, b) {
+            int rank(CavePlace p) =>
+                p.isMainEntrance == 1 ? 2 : (p.isEntrance == 1 ? 1 : 0);
+            return rank(a).compareTo(rank(b));
+          },
+          groupKeyOf: (cp) {
+            if (cp.isMainEntrance == 1) return LocServ.inst.t('main_entrance');
+            if (cp.isEntrance == 1) return LocServ.inst.t('entrance');
+            return LocServ.inst.t('sort_non_entrance');
+          },
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'has_qr_code',
+          label: LocServ.inst.t('sort_has_qr_code'),
+          compare: (a, b) {
+            final av = a.placeQrCodeIdentifier != null ? 1 : 0;
+            final bv = b.placeQrCodeIdentifier != null ? 1 : 0;
+            return av.compareTo(bv);
+          },
+          groupKeyOf: (cp) => cp.placeQrCodeIdentifier != null
+              ? LocServ.inst.t('sort_has_qr_code_yes')
+              : LocServ.inst.t('sort_has_qr_code_no'),
+        ),
+        FilterableListSortField<CavePlace>(
+          id: 'definitions_count',
+          label: LocServ.inst.t('sort_definitions_count'),
+          compare: (a, b) => (_definitionCountByPlace[a.uuid] ?? 0)
+              .compareTo(_definitionCountByPlace[b.uuid] ?? 0),
+        ),
+      ],
       filter: (cp, qLower) {
         if (cp.title.toLowerCase().contains(qLower)) return true;
         if (cp.placeQrCodeIdentifier?.toString().contains(qLower) ?? false) {
