@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:drift/drift.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
@@ -16,7 +17,9 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// v2: asset files (documentation_files, raster_maps) are shipped inside
 ///     the zip under `assets/<relative path>` mirroring the app's
 ///     documents directory layout.
-const int kSyncArchiveVersion = 2;
+/// v3: manifest gains `app_version`/`app_build_number` so import errors
+///     can tell the user the minimum app version required.
+const int kSyncArchiveVersion = 3;
 
 /// Database schema version this archive format targets. Imports with a
 /// different `schema_version` are refused (rather than silently mis-merging).
@@ -105,6 +108,53 @@ class SyncImportCancelledException implements Exception {
   const SyncImportCancelledException([this.message = 'Import cancelled']);
   @override
   String toString() => 'SyncImportCancelledException: $message';
+}
+
+/// Thrown by [SyncArchiveService.importFromZip] when the archive's database
+/// schema version does not match the running app's. Carries enough metadata
+/// to render an actionable message:
+///
+/// - [archiveSchemaVersion] / [localSchemaVersion]: numeric comparison.
+/// - [archiveAppVersion] / [archiveAppBuildNumber]: the app version that
+///   produced the archive (when available — older archives may be missing
+///   this field, in which case it stays `null`).
+/// - [tooNew]: `true` when the archive was made by a newer app/schema than
+///   the running app; the user must update. `false` for the opposite case.
+class SyncArchiveSchemaMismatchException implements Exception {
+  final int archiveSchemaVersion;
+  final int localSchemaVersion;
+  final String? archiveAppVersion;
+  final String? archiveAppBuildNumber;
+  final bool tooNew;
+
+  const SyncArchiveSchemaMismatchException({
+    required this.archiveSchemaVersion,
+    required this.localSchemaVersion,
+    required this.archiveAppVersion,
+    required this.archiveAppBuildNumber,
+    required this.tooNew,
+  });
+
+  @override
+  String toString() {
+    final direction = tooNew ? 'newer' : 'older';
+    final buildSuffix = archiveAppBuildNumber == null
+        ? ''
+        : '+$archiveAppBuildNumber';
+    final ver = archiveAppVersion == null
+        ? '(unknown app version)'
+        : 'v$archiveAppVersion$buildSuffix';
+    if (tooNew) {
+      return 'SyncArchiveSchemaMismatchException: archive was produced by a '
+          '$direction version of the app ($ver, schema '
+          '$archiveSchemaVersion). Local schema is $localSchemaVersion. '
+          'Update the application to $ver or newer to import this archive.';
+    }
+    return 'SyncArchiveSchemaMismatchException: archive schema '
+        '$archiveSchemaVersion is older than local schema '
+        '$localSchemaVersion. Cross-version migration is not implemented; '
+        're-export from the source device with an up-to-date app.';
+  }
 }
 
 /// Metadata columns that are excluded from "differing fields" computation:
@@ -428,10 +478,13 @@ class SyncArchiveService {
     }
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final pkgInfo = await _safeReadPackageInfo();
     final manifest = <String, dynamic>{
       'format': 'speleo_loc_sync',
       'format_version': kSyncArchiveVersion,
       'schema_version': kSyncArchiveDbSchemaVersion,
+      'app_version': pkgInfo?.version,
+      'app_build_number': pkgInfo?.buildNumber,
       'exported_at': nowMs,
       'tables': tables.map((t) => t.name).toList(),
       'includes_documentation_files': includeDocumentationFiles,
@@ -449,10 +502,17 @@ class SyncArchiveService {
     if (!await dir.exists()) await dir.create(recursive: true);
     final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
     final out = File('${dir.path}${Platform.pathSeparator}$name');
-    final encoded = ZipEncoder().encode(archive)!;
-    await out.writeAsBytes(encoded, flush: true);
+    // Stream-encode to disk so very large archives (raster maps, etc.) do
+    // not have to be held in memory all at once.
+    final output = OutputFileStream(out.path);
+    try {
+      ZipEncoder().encode(archive, output: output);
+    } finally {
+      await output.close();
+    }
+    final size = await out.length();
     _log.info('Sync archive exported: ${out.path} '
-        '(${encoded.length} bytes, ${tables.length} tables, '
+        '($size bytes, ${tables.length} tables, '
         '${changeLogRows.length} change-log entries, '
         '$assetCount asset files)');
     return out;
@@ -475,11 +535,126 @@ class SyncArchiveService {
     String zipPath, {
     ConflictResolver? conflictResolver,
   }) async {
-    final bytes = await File(zipPath).readAsBytes();
-    final archive = ZipDecoder().decodeBytes(bytes);
+    // Stream-decode from disk to avoid materialising the whole zip in
+    // memory (which has historically tripped RangeError boundary bugs in
+    // package:archive when the decoded payload is large, e.g. for archives
+    // carrying raster-map images).
+    //
+    // CRITICAL: ZipDecoder().decodeBuffer(input) returns a *lazy* archive
+    // — entry payloads are inflated on-demand later by writeContent() in
+    // _extractAssets. We therefore must NOT close `input` until the whole
+    // import has finished, otherwise the inflater reads from a closed
+    // file handle and throws "FormatException: Filter error, bad data"
+    // (observed on Android Samsung devices, where the platform appears
+    // to actually invalidate the underlying buffer on close, while on
+    // some other platforms it lingers in cache).
+    final input = InputFileStream(zipPath);
+    try {
+      Archive archive = ZipDecoder().decodeBuffer(input);
+      // Forensic fallback: if the streaming decode produced an archive
+      // without a manifest, retry once with the in-memory decoder which
+      // sometimes finds the central directory when the streaming reader
+      // landed on a false-positive EOCD signature. We log enough detail
+      // for the user to compare the on-disk file with the source.
+      if (archive.findFile('manifest.json') == null) {
+        final f = File(zipPath);
+        final size = await f.length();
+        _log.warning(
+          'streaming decode of $zipPath ($size bytes) yielded '
+          '${archive.files.length} entries without manifest.json; '
+          'retrying with in-memory decoder',
+        );
+        try {
+          final bytes = await f.readAsBytes();
+          final retry = ZipDecoder().decodeBytes(bytes);
+          if (retry.findFile('manifest.json') != null) {
+            _log.info(
+              'in-memory decoder recovered manifest.json '
+              '(${retry.files.length} entries)',
+            );
+            archive = retry;
+          } else {
+            // Still no manifest. Dump diagnostics: head/tail bytes plus
+            // the byte offset of every End-Of-Central-Directory signature
+            // we can find. A single match near the very end of the file
+            // means the zip is well-formed and the manifest really is
+            // absent (i.e. produced by an older or alien tool). Multiple
+            // matches or a match far from the end strongly suggests a
+            // truncated/corrupted download.
+            final eocdOffsets = _findEocdOffsets(bytes);
+            final headHex = _hexHead(bytes, 16);
+            final tailHex = _hexTail(bytes, 32);
+            _log.severe(
+              'in-memory decoder also failed to find manifest.json. '
+              'file_size=$size, eocd_offsets=$eocdOffsets, '
+              'head=$headHex, tail=$tailHex, '
+              'streaming_entries=${archive.files.length}, '
+              'retry_entries=${retry.files.length}',
+            );
+          }
+        } catch (e) {
+          _log.warning('in-memory decode retry failed for $zipPath: $e');
+        }
+      }
+      return await _importFromArchive(archive, conflictResolver, zipPath);
+    } finally {
+      await input.close();
+    }
+  }
+
+  /// Returns every byte offset in [bytes] where the 4-byte zip End-Of-
+  /// Central-Directory signature (0x06054b50, little-endian "PK\x05\x06")
+  /// appears. A healthy zip has exactly one near the end.
+  List<int> _findEocdOffsets(List<int> bytes) {
+    const sig = [0x50, 0x4b, 0x05, 0x06];
+    final hits = <int>[];
+    for (var i = 0; i + 3 < bytes.length; i++) {
+      if (bytes[i] == sig[0] &&
+          bytes[i + 1] == sig[1] &&
+          bytes[i + 2] == sig[2] &&
+          bytes[i + 3] == sig[3]) {
+        hits.add(i);
+        if (hits.length >= 8) break;
+      }
+    }
+    return hits;
+  }
+
+  String _hexHead(List<int> bytes, int n) {
+    final end = bytes.length < n ? bytes.length : n;
+    return bytes
+        .sublist(0, end)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join(' ');
+  }
+
+  String _hexTail(List<int> bytes, int n) {
+    final start = bytes.length < n ? 0 : bytes.length - n;
+    return bytes
+        .sublist(start)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join(' ');
+  }
+
+  Future<SyncImportReport> _importFromArchive(
+    Archive archive,
+    ConflictResolver? conflictResolver,
+    String zipPath,
+  ) async {
     final manifestFile = archive.findFile('manifest.json');
     if (manifestFile == null) {
-      throw const FormatException('Archive missing manifest.json');
+      final f = File(zipPath);
+      final size = await f.length();
+      final names = archive.files
+          .map((f) => f.name)
+          .take(10)
+          .toList(growable: false);
+      throw FormatException(
+        'Archive missing manifest.json '
+        '(file_size=$size bytes, ${archive.files.length} zip entries found'
+        '${names.isEmpty ? '' : ', e.g. ${names.join(", ")}'}). '
+        'See log for forensic details (EOCD offsets, head/tail bytes).',
+      );
     }
     final manifest = jsonDecode(
       utf8.decode(manifestFile.content as List<int>),
@@ -488,10 +663,17 @@ class SyncArchiveService {
       throw FormatException('Unrecognized archive format: ${manifest['format']}');
     }
     final archiveSchema = manifest['schema_version'];
+    if (archiveSchema is! int) {
+      throw const FormatException(
+          'Archive manifest is missing or has an invalid schema_version');
+    }
     if (archiveSchema != kSyncArchiveDbSchemaVersion) {
-      throw FormatException(
-        'Schema version mismatch: archive=$archiveSchema, '
-        'local=$kSyncArchiveDbSchemaVersion',
+      throw SyncArchiveSchemaMismatchException(
+        archiveSchemaVersion: archiveSchema,
+        localSchemaVersion: kSyncArchiveDbSchemaVersion,
+        archiveAppVersion: manifest['app_version'] as String?,
+        archiveAppBuildNumber: manifest['app_build_number'] as String?,
+        tooNew: archiveSchema > kSyncArchiveDbSchemaVersion,
       );
     }
 
@@ -503,6 +685,14 @@ class SyncArchiveService {
     var filesCopied = 0;
     var filesSkipped = 0;
     final warnings = <String>[];
+
+    // Build a remap table for incoming user UUIDs that collide on
+    // `username` with a different local user (e.g. the auto-generated
+    // 'system' user, whose UUID is independently created on each device).
+    // Without this remap the insert would trip the UNIQUE(username)
+    // constraint and every FK from the archive that points at the
+    // incoming user UUID would be orphaned.
+    final userRemap = await _buildUserUuidRemap(archive, warnings);
 
     await _logger.runSuspended(() async {
       await _db.transaction(() async {
@@ -517,6 +707,11 @@ class SyncArchiveService {
             continue;
           }
           final rows = _readJsonl(entry);
+          if (userRemap.isNotEmpty) {
+            for (final r in rows) {
+              _applyUserRemapToRow(r, userRemap, t.name);
+            }
+          }
           final result = await t.upsert(rows, conflictResolver);
           inserted += result.inserted;
           updated += result.updated;
@@ -534,6 +729,9 @@ class SyncArchiveService {
         if (logEntry != null) {
           final logRows = _readJsonl(logEntry);
           for (final row in logRows) {
+            if (userRemap.isNotEmpty) {
+              _applyUserRemapToChangeLogRow(row, userRemap);
+            }
             final uuidStr = row['uuid'] as String;
             if (existingLogUuids.contains(uuidStr)) continue;
             final data =
@@ -898,13 +1096,125 @@ class SyncArchiveService {
           continue;
         }
         await dest.parent.create(recursive: true);
-        await dest.writeAsBytes(entry.content as List<int>, flush: true);
+        // Stream the entry directly to disk to avoid loading the whole
+        // payload into memory — important for raster-map images that can
+        // be tens or hundreds of MB.
+        final out = OutputFileStream(dest.path);
+        try {
+          entry.writeContent(out);
+        } finally {
+          await out.close();
+        }
         copied++;
       } catch (e) {
         warnings.add('copy ${entry.name}: $e');
       }
     }
     return _AssetResult(copied: copied, skipped: skipped);
+  }
+
+  // ---------------------------------------------------------------------------
+  //  User-UUID remap (collision on username)
+  // ---------------------------------------------------------------------------
+
+  /// Inspects `tables/users.jsonl` against the local `users` table and
+  /// returns a `{incomingUuidStr: localUuidStr}` map for every incoming
+  /// user whose `username` already exists locally under a different UUID.
+  ///
+  /// This is what makes seed users (notably the auto-generated `system`
+  /// user, whose UUID is independently allocated on every device)
+  /// importable across devices: instead of inserting the incoming row
+  /// (which would fail on the UNIQUE(username) constraint) and orphaning
+  /// every FK that references the incoming UUID, we rewrite all those
+  /// references to the local UUID and let normal LWW handle the row
+  /// itself.
+  Future<Map<String, String>> _buildUserUuidRemap(
+    Archive archive,
+    List<String> warnings,
+  ) async {
+    final entry = archive.findFile('tables/users.jsonl');
+    if (entry == null) return const <String, String>{};
+    final rows = _readJsonl(entry);
+    if (rows.isEmpty) return const <String, String>{};
+
+    final localByUsername = <String, String>{};
+    final localUuids = <String>{};
+    for (final u in await _db.select(_db.users).get()) {
+      localUuids.add(u.uuid.toString());
+      localByUsername[u.username] = u.uuid.toString();
+    }
+
+    final remap = <String, String>{};
+    for (final row in rows) {
+      final incomingUuid = row['uuid'];
+      final incomingUsername = row['username'];
+      if (incomingUuid is! String || incomingUsername is! String) continue;
+      if (localUuids.contains(incomingUuid)) continue;
+      final localUuid = localByUsername[incomingUsername];
+      if (localUuid == null) continue; // brand-new user — insert as-is
+      remap[incomingUuid] = localUuid;
+      warnings.add(
+        'remapped user "$incomingUsername" '
+        '$incomingUuid -> $localUuid (matched by username)',
+      );
+    }
+    return remap;
+  }
+
+  /// Rewrites user-FK columns of [row] using [remap]. For the `users`
+  /// table the row's own `uuid` is also rewritten so the subsequent
+  /// upsert resolves to the local row via LWW instead of attempting an
+  /// insert that would violate the UNIQUE(username) constraint.
+  void _applyUserRemapToRow(
+    Map<String, dynamic> row,
+    Map<String, String> remap,
+    String tableName,
+  ) {
+    if (tableName == 'users') {
+      final u = row['uuid'];
+      if (u is String) {
+        final mapped = remap[u];
+        if (mapped != null) row['uuid'] = mapped;
+      }
+    }
+    _remapField(row, 'created_by_user_uuid', remap);
+    _remapField(row, 'last_modified_by_user_uuid', remap);
+  }
+
+  /// Rewrites user-FK columns of a single `change_log` row using [remap].
+  /// `entity_uuid` is also rewritten when the row targets the `users`
+  /// table so that delete tombstones and field-history entries follow the
+  /// remapped user identity.
+  void _applyUserRemapToChangeLogRow(
+    Map<String, dynamic> row,
+    Map<String, String> remap,
+  ) {
+    _remapField(row, 'changed_by_user_uuid', remap);
+    if (row['entity_table'] == 'users') {
+      _remapField(row, 'entity_uuid', remap);
+    }
+  }
+
+  void _remapField(
+    Map<String, dynamic> row,
+    String key,
+    Map<String, String> remap,
+  ) {
+    final v = row[key];
+    if (v is! String) return;
+    final mapped = remap[v];
+    if (mapped != null) row[key] = mapped;
+  }
+
+  /// Reads `PackageInfo.fromPlatform()` and swallows any failure so a
+  /// missing platform binding (e.g. unit tests) does not block exports.
+  Future<PackageInfo?> _safeReadPackageInfo() async {
+    try {
+      return await PackageInfo.fromPlatform();
+    } catch (e) {
+      _log.warning('PackageInfo.fromPlatform() failed: $e');
+      return null;
+    }
   }
 }
 

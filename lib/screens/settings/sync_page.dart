@@ -226,6 +226,12 @@ class _SyncPageState extends ConsumerState<SyncPage>
       setState(() {
         _lastMessage = LocServ.inst.t('sync_import_cancelled');
       });
+    } on SyncArchiveSchemaMismatchException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _lastMessage = '${LocServ.inst.t('sync_import_failed')}: '
+            '${_formatSchemaMismatch(e)}';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -234,6 +240,27 @@ class _SyncPageState extends ConsumerState<SyncPage>
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Builds a user-facing message for a schema-mismatch error. When the
+  /// archive is *newer*, instructs the user to update; when *older*, reports
+  /// the schema gap so they know to re-export from the source device.
+  String _formatSchemaMismatch(SyncArchiveSchemaMismatchException e) {
+    final ver = e.archiveAppVersion ?? '?';
+    final build = e.archiveAppBuildNumber == null
+        ? ''
+        : '+${e.archiveAppBuildNumber}';
+    if (e.tooNew) {
+      return LocServ.inst.t('sync_import_archive_too_new', {
+        'version': '$ver$build',
+        'archiveSchema': '${e.archiveSchemaVersion}',
+        'localSchema': '${e.localSchemaVersion}',
+      });
+    }
+    return LocServ.inst.t('sync_import_archive_too_old', {
+      'archiveSchema': '${e.archiveSchemaVersion}',
+      'localSchema': '${e.localSchemaVersion}',
+    });
   }
 
   /// Returns a [ConflictResolver] that drives [_ConflictDialog]; it honours

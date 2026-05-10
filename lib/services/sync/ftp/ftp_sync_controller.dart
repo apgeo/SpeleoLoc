@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -18,8 +19,21 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// Archive filename prefix (see [SyncArchiveService.exportToZip]).
 const String _archivePrefix = 'speleo_loc_sync_';
 const String _archiveSuffix = '.zip';
+
+/// Sidecar filename suffix for the SHA-256 hex digest of an archive.
+///
+/// Each `<name>.zip` is published alongside `<name>.zip.sha256` containing
+/// the lowercase hex digest of the archive. Consumers download both and
+/// verify the local file's hash before importing — this catches both
+/// transport-layer corruption (FTP libraries dropping bytes on certain
+/// platforms) and corruption-at-rest on the FTP server.
+const String _sha256Suffix = '.sha256';
+/// Strict archive filename: `speleo_loc_sync_<timestampMs>_<deviceUuidHex>.zip`.
+/// The device-uuid suffix is mandatory — every archive is the snapshot of a
+/// specific source device, and per-device dedup on listing requires that
+/// origin to be present in the filename.
 final RegExp _archiveNameRe =
-    RegExp(r'^speleo_loc_sync_(\d+)(?:_[a-fA-F0-9]+)?\.zip$');
+    RegExp(r'^speleo_loc_sync_(\d+)_([a-fA-F0-9]+)\.zip$');
 
 /// Orchestrates one FTP sync pass and broadcasts live progress to the UI.
 ///
@@ -192,12 +206,45 @@ class FtpSyncController extends ChangeNotifier {
       token.throwIfCancelled();
 
       final seen = await _loadSeenArchives();
-      final unseen = remoteEntries
+      final candidates = remoteEntries
           .where((e) =>
               _archiveNameRe.hasMatch(e.name) && !seen.contains(e.name))
-          // Oldest-first: sort ascending by embedded timestamp.
-          .toList()
-        ..sort((a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)));
+          .toList();
+
+      // Each archive is a FULL snapshot of its source device's view, so for
+      // a given device only the most recent archive needs to be downloaded
+      // and imported — older ones from the same device are strictly
+      // subsumed.
+      final byDevice = <String, List<RemoteFileEntry>>{};
+      for (final e in candidates) {
+        final deviceId = _deviceIdOf(e.name);
+        if (deviceId == null) {
+          // Strict filename pattern is enforced on export; anything
+          // non-conforming is an alien file we silently ignore.
+          continue;
+        }
+        byDevice.putIfAbsent(deviceId, () => []).add(e);
+      }
+      final superseded = <RemoteFileEntry>[];
+      final unseen = <RemoteFileEntry>[];
+      for (final group in byDevice.values) {
+        group.sort(
+            (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)));
+        unseen.add(group.last);
+        if (group.length > 1) superseded.addAll(group.sublist(0, group.length - 1));
+      }
+      // Oldest-first: sort ascending by embedded timestamp across devices.
+      unseen.sort(
+          (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)));
+      if (superseded.isNotEmpty) {
+        _appendLog(
+            FtpSyncLogLevel.info,
+            'Skipping ${superseded.length} superseded archive(s) '
+            '(older snapshots from same device)');
+        // Mark them as seen locally so we don't re-list them next run.
+        seen.addAll(superseded.map((e) => e.name));
+        await _saveSeenArchives(seen);
+      }
       _appendLog(FtpSyncLogLevel.info,
           '${unseen.length} new archive(s) to import of ${remoteEntries.length} on server');
 
@@ -220,6 +267,12 @@ class FtpSyncController extends ChangeNotifier {
             archivesProcessed: 0,
           ));
 
+      // Counts archives whose import phase failed; surfaced at the end
+      // so a partial-success run terminates in `failed` instead of
+      // misleadingly green-ticked `completed`.
+      var importErrors = 0;
+      String? firstImportError;
+
       for (var i = 0; i < unseen.length; i++) {
         token.throwIfCancelled();
         final entry = unseen[i];
@@ -236,26 +289,147 @@ class FtpSyncController extends ChangeNotifier {
               clearBytesPerSecond: true,
               clearStepEta: true,
             ));
-        await transport.downloadFile(
-          entry.name,
-          File(localPath),
-          onProgress: (bytes, total) {
-            if (!isRunning) return;
-            final sample = _recordSample(bytes, total);
-            _emit((s) => s.copyWith(
-                  bytesTransferred: bytes,
-                  totalBytes: total,
-                  stepProgress: total == null || total == 0
-                      ? 0
-                      : (bytes / total).clamp(0.0, 1.0),
-                  bytesPerSecond: sample.bytesPerSecond,
-                  stepEta: sample.eta,
-                ));
-          },
-          cancelToken: token,
-        );
+        // Single download attempt by default; increase [maxDownloadAttempts]
+        // to retry on size mismatch (e.g. if the transport layer is known
+        // to be flaky on a particular platform).
+        const maxDownloadAttempts = 1;
+        var localSize = 0;
+        var attempt = 0;
+        String? downloadError;
+        while (true) {
+          attempt++;
+          downloadError = null;
+          try {
+            await transport.downloadFile(
+              entry.name,
+              File(localPath),
+              onProgress: (bytes, total) {
+                if (!isRunning) return;
+                final sample = _recordSample(bytes, total);
+                _emit((s) => s.copyWith(
+                      bytesTransferred: bytes,
+                      totalBytes: total,
+                      stepProgress: total == null || total == 0
+                          ? 0
+                          : (bytes / total).clamp(0.0, 1.0),
+                      bytesPerSecond: sample.bytesPerSecond,
+                      stepEta: sample.eta,
+                    ));
+              },
+              cancelToken: token,
+            );
+          } on TransferCancelledException {
+            rethrow;
+          } catch (e) {
+            downloadError = e.toString();
+          }
+          if (downloadError == null) {
+            localSize = await File(localPath).length();
+            if (entry.size <= 0 || localSize == entry.size) break;
+          }
+          if (attempt >= maxDownloadAttempts) break;
+          final reason = downloadError ??
+              '$localSize of ${entry.size} bytes';
+          _appendLog(
+              FtpSyncLogLevel.warning,
+              'Download mismatch on attempt $attempt for '
+              '${entry.name} ($reason); retrying…');
+          try {
+            await File(localPath).delete();
+          } catch (_) {}
+          _resetSpeedSamples();
+        }
+        final downloadFailed = downloadError != null ||
+            (entry.size > 0 && localSize != entry.size);
+        if (downloadFailed) {
+          final reason = downloadError ??
+              'size mismatch ($localSize of ${entry.size} bytes after '
+              '$maxDownloadAttempts attempts)';
+          importErrors++;
+          firstImportError ??= '${entry.name}: $reason';
+          _appendLog(
+              FtpSyncLogLevel.error,
+              'Skipping ${entry.name}: $reason. '
+              'Will retry on next sync.');
+          // Do NOT mark as seen so the next sync attempt re-downloads it.
+          try {
+            await File(localPath).delete();
+          } catch (_) {}
+          _emit((s) => s.copyWith(
+                archivesProcessed: i + 1,
+                stepProgress: 1.0,
+              ));
+          continue;
+        }
         _appendLog(FtpSyncLogLevel.info,
-            'Downloaded ${entry.name} (${_formatBytes(entry.size)})');
+            'Downloaded ${entry.name} ($localSize bytes, '
+            '${_formatBytes(localSize)})');
+
+        // SHA-256 verification: if the producer published a sidecar, the
+        // archive must hash to the value in it. This catches transport
+        // corruption (FTP libraries dropping bytes silently on certain
+        // platforms) and corruption-at-rest on the server. Sidecar is
+        // optional for backward compatibility — archives uploaded before
+        // this scheme existed are imported without a hash check.
+        final sidecarName = '${entry.name}$_sha256Suffix';
+        final sidecarRemote = remoteEntries.firstWhere(
+          (e) => e.name == sidecarName,
+          orElse: () => const RemoteFileEntry(name: '', size: 0),
+        );
+        if (sidecarRemote.name.isNotEmpty) {
+          final sidecarPath = p.join(tempDir.path, sidecarName);
+          try {
+            await transport.downloadFile(
+              sidecarName,
+              File(sidecarPath),
+              cancelToken: token,
+            );
+            final expected = (await File(sidecarPath).readAsString())
+                .trim()
+                .toLowerCase();
+            final actual = await _sha256OfFile(File(localPath));
+            if (expected.isEmpty || expected.length != 64) {
+              _appendLog(
+                  FtpSyncLogLevel.warning,
+                  'Ignoring malformed sidecar for ${entry.name} '
+                  '(unexpected content) — proceeding without hash check');
+            } else if (expected != actual) {
+              importErrors++;
+              firstImportError ??=
+                  '${entry.name}: SHA-256 mismatch (expected '
+                  '${expected.substring(0, 12)}…, got '
+                  '${actual.substring(0, 12)}…)';
+              _appendLog(
+                  FtpSyncLogLevel.error,
+                  'Skipping ${entry.name}: SHA-256 mismatch — the file '
+                  'is corrupt on the server or was damaged in transit. '
+                  'Re-export from the source device. Will retry on '
+                  'next sync.');
+              try {
+                await File(localPath).delete();
+              } catch (_) {}
+              try {
+                await File(sidecarPath).delete();
+              } catch (_) {}
+              _emit((s) => s.copyWith(
+                    archivesProcessed: i + 1,
+                    stepProgress: 1.0,
+                  ));
+              continue;
+            } else {
+              _appendLog(FtpSyncLogLevel.info,
+                  'Verified ${entry.name} SHA-256 OK');
+            }
+            try {
+              await File(sidecarPath).delete();
+            } catch (_) {}
+          } catch (e) {
+            _appendLog(
+                FtpSyncLogLevel.warning,
+                'Could not download sidecar for ${entry.name}: $e — '
+                'proceeding without hash check');
+          }
+        }
 
         _emit((s) => s.copyWith(
               phase: FtpSyncPhase.importing,
@@ -267,7 +441,40 @@ class FtpSyncController extends ChangeNotifier {
           _appendLog(FtpSyncLogLevel.info,
               'Imported ${entry.name}: +${report.rowsInserted} / '
               '~${report.rowsUpdated} / =${report.rowsSkipped}');
+        } on SyncArchiveSchemaMismatchException catch (e) {
+          // Make the message actionable: tell the user the minimum app
+          // version they need to update to. We deliberately *do not* mark
+          // the archive as seen so a later app upgrade can re-import it.
+          _appendLog(
+              e.tooNew ? FtpSyncLogLevel.error : FtpSyncLogLevel.warning,
+              e.tooNew
+                  ? 'Cannot import ${entry.name}: archive was produced by a '
+                      'newer version of the app '
+                      '(v${e.archiveAppVersion ?? '?'}'
+                      '${e.archiveAppBuildNumber == null ? '' : '+${e.archiveAppBuildNumber}'}'
+                      ', schema ${e.archiveSchemaVersion}). Update the app '
+                      'to v${e.archiveAppVersion ?? '?'} or newer to '
+                      'continue.'
+                  : 'Skipping ${entry.name}: archive schema '
+                      '${e.archiveSchemaVersion} is older than local schema '
+                      '${e.localSchemaVersion}; re-export from the source '
+                      'device.');
+          // Older archives won't ever import — mark as seen so we stop
+          // re-listing them. Newer archives are intentionally left unseen
+          // so a future app upgrade can import them.
+          if (!e.tooNew) seen.add(entry.name);
+          // Skip the trailing seen.add for too-new archives.
+          _emit((s) => s.copyWith(
+                archivesProcessed: i + 1,
+                stepProgress: 1.0,
+              ));
+          try {
+            await File(localPath).delete();
+          } catch (_) {}
+          continue;
         } catch (e) {
+          importErrors++;
+          firstImportError ??= '${entry.name}: $e';
           _appendLog(FtpSyncLogLevel.error,
               'Import failed for ${entry.name}: $e — continuing with next');
         }
@@ -301,6 +508,19 @@ class FtpSyncController extends ChangeNotifier {
           await tempDir.delete(recursive: true);
         } catch (_) {}
 
+        if (importErrors > 0) {
+          final summary =
+              'Sync finished with $importErrors import error(s); '
+              'first: ${firstImportError ?? '<unknown>'}';
+          _appendLog(FtpSyncLogLevel.error, summary);
+          _emit((s) => s.copyWith(
+                phase: FtpSyncPhase.failed,
+                statusMessage: 'ftp_sync_failed',
+                errorMessage: summary,
+                stepProgress: 1.0,
+              ));
+          return;
+        }
         _emit((s) => s.copyWith(
               phase: FtpSyncPhase.completed,
               statusMessage: unseen.isEmpty
@@ -330,11 +550,17 @@ class FtpSyncController extends ChangeNotifier {
           ));
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final deviceUuid = _currentUser.deviceUuid.value?.toString();
-      // Include the device uuid so peers can tell whose archive this is
-      // (nice-to-have for debugging; not used for filtering).
-      final archiveName = deviceUuid == null
-          ? '$_archivePrefix$nowMs$_archiveSuffix'
-          : '$_archivePrefix${nowMs}_${deviceUuid.substring(0, 8)}$_archiveSuffix';
+      if (deviceUuid == null || deviceUuid.isEmpty) {
+        // The archive filename embeds the source device id; per-device
+        // dedup on listing depends on that, so we refuse to upload an
+        // archive that cannot be attributed to a device.
+        _fail('ftp_no_device_uuid');
+        return;
+      }
+      // Filename embeds the device uuid so peers can identify the source
+      // device and perform per-device dedup on listing.
+      final archiveName =
+          '$_archivePrefix${nowMs}_${deviceUuid.substring(0, 8)}$_archiveSuffix';
       final archiveFile = await _archiveService.exportToZip(
         tempDir.path,
         filenameHint: archiveName,
@@ -377,6 +603,32 @@ class FtpSyncController extends ChangeNotifier {
       seen.add(archiveName);
       _appendLog(FtpSyncLogLevel.info, 'Uploaded $archiveName');
 
+      // Compute and upload a SHA-256 sidecar so peers can detect transport
+      // corruption and corruption-at-rest. Best-effort: a sidecar upload
+      // failure is logged but doesn't fail the whole sync — the archive
+      // itself is already on the server.
+      try {
+        final hash = await _sha256OfFile(archiveFile);
+        final sidecarName = '$archiveName$_sha256Suffix';
+        final sidecarFile = File(p.join(tempDir.path, sidecarName));
+        await sidecarFile.writeAsString('$hash\n', flush: true);
+        await transport.uploadFile(
+          sidecarFile,
+          sidecarName,
+          cancelToken: token,
+        );
+        seen.add(sidecarName);
+        _appendLog(FtpSyncLogLevel.info,
+            'Uploaded $sidecarName (${hash.substring(0, 12)}…)');
+        try {
+          await sidecarFile.delete();
+        } catch (_) {}
+      } catch (e) {
+        _appendLog(FtpSyncLogLevel.warning,
+            'Sidecar upload failed for $archiveName: $e — '
+            'archive is published without integrity hash');
+      }
+
       _emit((s) => s.copyWith(
             phase: FtpSyncPhase.finalizing,
             statusMessage: 'ftp_phase_finalizing',
@@ -393,6 +645,19 @@ class FtpSyncController extends ChangeNotifier {
         await tempDir.delete(recursive: true);
       } catch (_) {}
 
+      if (importErrors > 0) {
+        final summary =
+            'Sync finished with $importErrors import error(s); '
+            'first: ${firstImportError ?? '<unknown>'}';
+        _appendLog(FtpSyncLogLevel.error, summary);
+        _emit((s) => s.copyWith(
+              phase: FtpSyncPhase.failed,
+              statusMessage: 'ftp_sync_failed',
+              errorMessage: summary,
+              stepProgress: 1.0,
+            ));
+        return;
+      }
       _emit((s) => s.copyWith(
             phase: FtpSyncPhase.completed,
             statusMessage: 'ftp_phase_completed',
@@ -558,6 +823,15 @@ class FtpSyncController extends ChangeNotifier {
     return int.tryParse(m.group(1) ?? '0') ?? 0;
   }
 
+  /// Extracts the source-device identifier from an archive filename
+  /// (`speleo_loc_sync_<ts>_<deviceUuidPrefix>.zip`). Returns `null` only
+  /// when the filename does not match the strict pattern (those archives
+  /// are filtered out before this is called).
+  String? _deviceIdOf(String archiveName) {
+    final m = _archiveNameRe.firstMatch(archiveName);
+    return m?.group(2);
+  }
+
   Future<Directory> _syncWorkspace() async {
     final base = await getTemporaryDirectory();
     final dir = Directory(p.join(base.path,
@@ -602,6 +876,12 @@ class FtpSyncController extends ChangeNotifier {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  }
+
+  /// Streams [file] through SHA-256 and returns the lowercase hex digest.
+  static Future<String> _sha256OfFile(File file) async {
+    final digest = await file.openRead().transform(sha256).single;
+    return digest.toString();
   }
 
   // ---------------------------------------------------------------------
