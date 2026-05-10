@@ -1,6 +1,7 @@
 {
   "language_name": "Română",
   "reinitialize_db": "Reinițializați baza de date",
+  "export": "Exportă",
   "export_db": "Exportă baza de date",
   "qr_output": "Ieșire QR:",
   "qr_settings_title": "Setări generare cod QR",
@@ -26,6 +27,8 @@
   "close": "Închide",
   "image_not_found": "Imaginea nu a fost găsită",
   "no_point_defined": "Nu există un punct nou redefinit pentru acest loc pe harta selectată",
+  "export_to_pictures": "Salvează în Imagini",
+  "export_choose_location": "Alege locație…",
   "export_images_zip": "Exportă imaginile ca zip",
   "confirm_reinitialize_database": "Toate datele vor fi șterse (peșteri, locuri, coduri QR etc.) și baza de date va fi repopulată cu date de test. Aplicația va fi repornită după această operațiune. Doriți să continuați?",
   "reconfirm_reinitialize_database": "Avertisment: prin confirmare vor fi șterse toate datele înregistrate acum în aplicație (peșteri, locuri, coduri QR etc.). Sigur doriți să le ștergeți?",

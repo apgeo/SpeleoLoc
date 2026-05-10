@@ -1,6 +1,7 @@
 {
   "language_name": "English",
   "reinitialize_db": "Reinitialize database",
+  "export": "Export",
   "export_db": "Export database",
   "qr_output": "QR output:",
   "qr_settings_title": "QR Code generation settings",
@@ -27,6 +28,8 @@
   "close": "Close",
   "image_not_found": "Image not found",
   "no_point_defined": "No redefined point for this place on the selected map",
+  "export_to_pictures": "Save to Pictures",
+  "export_choose_location": "Choose location…",
   "export_images_zip": "Export images as zip",
   "database_reinitialized": "Database reinitialized and populated with test data. Application will now restart.",
   "confirm_reinitialize_database": "This will delete all data (caves, cave places, maps, etc.) and will populate database with test data. Application will be restarted after this operation. Do you want to continue?",

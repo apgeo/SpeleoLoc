@@ -190,15 +190,16 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
       appBar: AppBar(
         title: Text(LocServ.inst.t('generated_qr_codes')),
         actions: [
-          if (_result != null)
-            IconButton(
-              icon: const Icon(Icons.save_alt),
-              tooltip: LocServ.inst.t('save'),
-              onPressed: () => _exportResult(context),
-            ),
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
+      floatingActionButton: _result != null
+          ? FloatingActionButton.extended(
+              onPressed: () => _exportResult(context),
+              icon: const Icon(Icons.download),
+              label: Text(LocServ.inst.t('export')),
+            )
+          : null,
       body: Column(
         key: tourKeys['pdf'],
         children: [
