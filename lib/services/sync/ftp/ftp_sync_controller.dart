@@ -167,28 +167,41 @@ class FtpSyncController extends ChangeNotifier {
     final token = CancelToken();
     _cancelToken = token;
 
-    _emit((p0) => FtpSyncProgress(
-          phase: FtpSyncPhase.connecting,
-          stepProgress: 0,
-          bytesTransferred: 0,
-          totalBytes: null,
-          currentFileName: null,
-          archivesProcessed: 0,
-          archivesTotal: 0,
-          statusMessage: 'ftp_phase_connecting',
-          errorMessage: null,
-          startedAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          log: [
-            FtpSyncLogEntry(
-              timestamp: DateTime.now(),
-              level: FtpSyncLogLevel.info,
-              message:
-                  'Starting sync to ${profile.displayName} (${profile.host})',
-            ),
-          ],
-          profileName: profile.displayName,
-        ));
+    _emit((p0) {
+      final now = DateTime.now();
+      final previousLog = p0.log;
+      final newEntries = <FtpSyncLogEntry>[
+        if (previousLog.isNotEmpty)
+          FtpSyncLogEntry(
+            timestamp: now,
+            level: FtpSyncLogLevel.info,
+            message: '',
+            isSeparator: true,
+          ),
+        FtpSyncLogEntry(
+          timestamp: now,
+          level: FtpSyncLogLevel.info,
+          message:
+              'Starting sync to ${profile.displayName} (${profile.host})',
+        ),
+      ];
+      final mergedLog = [...previousLog, ...newEntries];
+      return FtpSyncProgress(
+        phase: FtpSyncPhase.connecting,
+        stepProgress: 0,
+        bytesTransferred: 0,
+        totalBytes: null,
+        currentFileName: null,
+        archivesProcessed: 0,
+        archivesTotal: 0,
+        statusMessage: 'ftp_phase_connecting',
+        errorMessage: null,
+        startedAt: now,
+        updatedAt: now,
+        log: mergedLog,
+        profileName: profile.displayName,
+      );
+    });
 
     final transport = _transportBuilder(profile);
     final tempDir = await _syncWorkspace();

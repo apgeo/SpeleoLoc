@@ -52,10 +52,16 @@ class FtpSyncLogEntry {
   final FtpSyncLogLevel level;
   final String message;
 
+  /// When true this entry is a visual separator between two sync sessions,
+  /// not a real log message. The [level] and [message] fields are ignored
+  /// by the UI for separator entries.
+  final bool isSeparator;
+
   const FtpSyncLogEntry({
     required this.timestamp,
     required this.level,
     required this.message,
+    this.isSeparator = false,
   });
 }
 

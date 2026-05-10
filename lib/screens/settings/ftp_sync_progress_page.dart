@@ -198,6 +198,24 @@ class _LogTab extends StatelessWidget {
       separatorBuilder: (_, __) => const Divider(height: 4),
       itemBuilder: (context, i) {
         final e = reversed[i];
+        if (e.isSeparator) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    '─── ${LocServ.inst.t('ftp_sync_log_new_session')} ───',
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+          );
+        }
         return ListTile(
           dense: true,
           visualDensity: VisualDensity.compact,
