@@ -761,14 +761,13 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
           if (widget.sortFields.isNotEmpty)
             ValueListenableBuilder<FilterableListSortSpec?>(
               valueListenable: _sort,
-              builder: (context, spec, _) => IconButton(
-                key: widget.sortButtonKey,
-                icon: Icon(Icons.sort, size: theme.actionIconSize),
+              builder: (context, spec, _) => _ActiveIconButton(
+                active: spec != null,
+                activeColor: theme.activeToggleColor,
+                buttonKey: widget.sortButtonKey,
+                icon: Icons.swap_vert,
+                size: theme.actionIconSize,
                 tooltip: loc.t('sort_by'),
-                color: spec != null
-                    ? (theme.activeToggleColor ??
-                        Theme.of(context).colorScheme.primary)
-                    : null,
                 onPressed: _openSortPicker,
               ),
             ),
@@ -822,14 +821,13 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
           if (widget.enableFilter)
             ValueListenableBuilder<bool>(
               valueListenable: _filterVisible,
-              builder: (context, visible, _) => IconButton(
-                key: widget.filterButtonKey,
-                icon: Icon(Icons.filter_list, size: theme.actionIconSize),
+              builder: (context, visible, _) => _ActiveIconButton(
+                active: visible,
+                activeColor: theme.activeToggleColor,
+                buttonKey: widget.filterButtonKey,
+                icon: Icons.filter_list,
+                size: theme.actionIconSize,
                 tooltip: loc.t('show_filter'),
-                color: visible
-                    ? (theme.activeToggleColor ??
-                        Theme.of(context).colorScheme.primary)
-                    : null,
                 onPressed: () {
                   final next = !visible;
                   _filterVisible.value = next;
@@ -1007,6 +1005,73 @@ class _SelectableRowState<T> extends State<_SelectableRow<T>> {
     // RepaintBoundary keeps each row's painting independent — selecting one
     // row will not invalidate sibling rows in the layer tree.
     return RepaintBoundary(child: row);
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  Active-state icon button
+// ---------------------------------------------------------------------------
+
+/// An [IconButton] that shows a small tinted rounded-rectangle background
+/// when [active] is true, making the active state unmistakable without
+/// relying solely on icon colour.
+class _ActiveIconButton extends StatelessWidget {
+  const _ActiveIconButton({
+    required this.active,
+    required this.icon,
+    required this.size,
+    required this.tooltip,
+    required this.onPressed,
+    this.activeColor,
+    this.buttonKey,
+  });
+
+  final bool active;
+  final IconData icon;
+  final double size;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  /// Override the tint colour; falls back to the theme's primary colour.
+  final Color? activeColor;
+  final Key? buttonKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent =
+        activeColor ?? Theme.of(context).colorScheme.primary;
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        key: buttonKey,
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeInOut,
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: active
+              ? BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.45),
+                    width: 1,
+                  ),
+                )
+              : const BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.zero,
+                ),
+          child: Icon(
+            icon,
+            size: size,
+            color: active ? accent : null,
+          ),
+        ),
+      ),
+    );
   }
 }
 
