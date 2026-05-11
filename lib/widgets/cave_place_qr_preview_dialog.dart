@@ -76,7 +76,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
         qrBgColor: cfg['qrBgColor'] ?? QrGenerationDefaults.qrBgColor,
         qrFgColor: cfg['qrFgColor'] ?? QrGenerationDefaults.qrFgColor,
         qrErrorCorrectionLevel: cfg['qrErrorCorrectionLevel'] ??
-            QrGenerationDefaults.errorCorrectionLevel,
+            QrGenerationDefaults.errorCorrectionLevel,            
       );
       if (mounted) {
         setState(() {
@@ -122,9 +122,12 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                 gapless: true,
                 errorCorrectionLevel: _ecLevel(prefs.qrErrorCorrectionLevel),
                 backgroundColor: Color(prefs.qrBgColor),
+                // the small individual modules/boxes in the qr code image used for encoding data
                 dataModuleStyle: QrDataModuleStyle(
                   color: Color(prefs.qrFgColor),
+                  dataModuleShape: QrDataModuleShape.square,
                 ),
+                // the big modules/boxes in the qr code image corners used for orientation detection by scanners
                 eyeStyle: QrEyeStyle(
                   eyeShape: QrEyeShape.square,
                   color: Color(prefs.qrFgColor),
