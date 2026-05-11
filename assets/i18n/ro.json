@@ -319,7 +319,6 @@
   "ftp_sync_progress_title": "Sincronizare FTP",
   "ftp_sync_log": "Jurnal",
   "ftp_sync_log_empty": "Nicio intrare în jurnal.",
-  "ftp_sync_log_new_session": "sincronizare nouă",
   "ftp_started_at": "Început la",
   "ftp_overall_progress": "Progres total",
   "ftp_current_file": "Fișier curent",

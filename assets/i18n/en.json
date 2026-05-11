@@ -322,7 +322,6 @@
   "ftp_sync_progress_title": "FTP sync",
   "ftp_sync_log": "Log",
   "ftp_sync_log_empty": "No log entries yet.",
-  "ftp_sync_log_new_session": "new sync",
   "ftp_started_at": "Started at",
   "ftp_overall_progress": "Overall progress",
   "ftp_current_file": "Current file",

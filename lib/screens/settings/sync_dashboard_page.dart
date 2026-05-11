@@ -33,14 +33,14 @@ class _SyncDashboardPageState extends ConsumerState<SyncDashboardPage>
           bottom: TabBar(
             tabs: [
               Tab(text: LocServ.inst.t('sync_dashboard_archive_tab')),
-              Tab(text: LocServ.inst.t('sync_dashboard_changes_tab')),
+              Tab(text: LocServ.inst.t('sync_dashboard_changes_tab')),              
             ],
           ),
         ),
         body: const TabBarView(
           children: [
-            ChangeLogPage(embedded: true),
             SyncPage(embedded: true),
+            ChangeLogPage(embedded: true),            
           ],
         ),
       ),
