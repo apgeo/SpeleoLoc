@@ -64,6 +64,7 @@
   "extended_profile": "profil extins",
   "image_file_not_found_warning": "Avertisment: Fișierul imagine nu a fost găsit",
   "raster_map_deleted": "Harta raster a fost ștearsă",
+  "raster_map_has_definitions": "Această hartă raster are {count} puncte definite pe ea pentru locuri din peșteră. Ștergerea va elimina și aceste definiții (locurile rămân). Continuați?",
   "camera_permission_denied": "Permisiune pentru cameră refuzată",
   "error_opening_file": "Eroare la deschiderea fișierului",
   "database_file_not_found": "Fișierul bazei de date nu a fost găsit",

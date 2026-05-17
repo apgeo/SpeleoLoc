@@ -137,4 +137,45 @@ class DefinitionRepository implements IDefinitionRepository {
       throw DbException('Failed to delete definition', cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<int> countDefinitionsForRasterMap(Uuid rasterMapUuid) async {
+    try {
+      final rows = await (_database.select(_database.cavePlaceToRasterMapDefinitions)
+            ..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid)))
+          .get();
+      return rows.length;
+    } catch (e, st) {
+      _log.severe('countDefinitionsForRasterMap error', e, st);
+      throw DbException('Failed to count definitions', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<int> deleteAllDefinitionsForRasterMap(Uuid rasterMapUuid) async {
+    try {
+      final all = await (_database.select(_database.cavePlaceToRasterMapDefinitions)
+            ..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid)))
+          .get();
+      final count = await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
+            ..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid)))
+          .go();
+      for (final row in all) {
+        await _logger.logDelete(
+          'cave_place_to_raster_map_definitions',
+          row.uuid,
+          oldValues: {
+            'cave_place_uuid': row.cavePlaceUuid,
+            'raster_map_uuid': row.rasterMapUuid,
+            'x_coordinate': row.xCoordinate,
+            'y_coordinate': row.yCoordinate,
+          },
+        );
+      }
+      return count;
+    } catch (e, st) {
+      _log.severe('deleteAllDefinitionsForRasterMap error', e, st);
+      throw DbException('Failed to delete all definitions for raster map', cause: e, stackTrace: st);
+    }
+  }
 }

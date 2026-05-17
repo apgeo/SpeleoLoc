@@ -81,4 +81,11 @@ abstract class IDefinitionRepository {
     double imageY,
   );
   Future<bool> deleteDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid);
+
+  /// Returns the number of point definitions linked to [rasterMapUuid].
+  Future<int> countDefinitionsForRasterMap(Uuid rasterMapUuid);
+
+  /// Deletes all point definitions linked to [rasterMapUuid]. Returns the number of rows deleted.
+  Future<int> deleteAllDefinitionsForRasterMap(Uuid rasterMapUuid);
 }
+

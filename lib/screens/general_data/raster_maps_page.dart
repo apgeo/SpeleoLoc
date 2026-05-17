@@ -58,24 +58,62 @@ class _RasterMapsPageState extends State<RasterMapsPage>
     }
   }
 
-  Future<void> _confirmDeleteRasterMap(Uuid id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(LocServ.inst.t('confirm')),
-        content: Text('${LocServ.inst.t('delete')}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(LocServ.inst.t('yes'))),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      _deleteRasterMap(id);
+  Future<void> _forceDeleteRasterMap(Uuid id) async {
+    await definitionRepository.deleteAllDefinitionsForRasterMap(id);
+    await rasterMapRepository.deleteRasterMap(id);
+    _changed = true;
+    _loadRasterMaps();
+    if (mounted) {
+      SnackBarService.showSuccess(LocServ.inst.t('raster_map_deleted'));
     }
   }
 
-  Future<String> _getFullImagePath(String fileName) async {
+  Future<void> _confirmDeleteRasterMap(Uuid id) async {
+    final loc = LocServ.inst;
+    final count = await definitionRepository.countDefinitionsForRasterMap(id);
+    if (!mounted) return;
+    if (count > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(loc.t('confirm')),
+          content: Text(
+            loc.t('raster_map_has_definitions').replaceAll('{count}', '$count'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: Text(loc.t('delete')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) {
+        _forceDeleteRasterMap(id);
+      }
+    } else {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(loc.t('confirm')),
+          content: Text('${loc.t('delete')}?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(loc.t('cancel'))),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(loc.t('yes'))),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        _deleteRasterMap(id);
+      }
+    }
+  }
+Future<String> _getFullImagePath(String fileName) async {
     final directory = await getApplicationDocumentsDirectory();
     return '${directory.path}/$fileName';
   }
