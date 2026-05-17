@@ -9,12 +9,14 @@ abstract class ICaveRepository {
     String title, {
     Uuid? surfaceAreaUuid,
     String? description,
+    String? caveLocalIndex,
   });
   Future<void> updateCave(
     Uuid uuid,
     String title, {
     Uuid? surfaceAreaUuid,
     String? description,
+    String? caveLocalIndex,
   });
   Future<void> deleteCave(Uuid uuid);
   Future<List<CaveArea>> getCaveAreas(Uuid caveUuid);
@@ -47,7 +49,7 @@ abstract class ICavePlaceRepository {
 
   Future<void> deleteCavePlace(Uuid uuid);
   Future<CavePlace?> findById(Uuid uuid);
-  Future<CavePlace?> findCavePlaceByQrCode(int qrCode, Uuid caveUuid);
+  Future<CavePlace?> findCavePlaceByCode(String code, Uuid caveUuid);
 }
 
 /// Abstract contract for the raster-map repository.

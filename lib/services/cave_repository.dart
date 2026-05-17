@@ -30,7 +30,7 @@ class CaveRepository implements ICaveRepository {
   }
 
   @override
-  Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description}) async {
+  Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description, String? caveLocalIndex}) async {
     try {
       final newUuid = Uuid.v7();
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -40,6 +40,7 @@ class CaveRepository implements ICaveRepository {
         title: title,
         surfaceAreaUuid: Value(surfaceAreaUuid),
         description: Value(description),
+        caveLocalIndex: Value(caveLocalIndex),
         createdAt: Value(now),
         updatedAt: Value(now),
         createdByUserUuid: Value(author),
@@ -55,7 +56,7 @@ class CaveRepository implements ICaveRepository {
   }
 
   @override
-  Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description}) async {
+  Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description, String? caveLocalIndex}) async {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       final author = await _currentUser.currentOrSystem();
@@ -68,6 +69,7 @@ class CaveRepository implements ICaveRepository {
           title: Value(title),
           surfaceAreaUuid: Value(surfaceAreaUuid),
           description: Value(description),
+          caveLocalIndex: Value(caveLocalIndex),
           updatedAt: Value(now),
           lastModifiedByUserUuid: Value(author),
         ),
@@ -80,11 +82,13 @@ class CaveRepository implements ICaveRepository {
             'title': old.title,
             'surface_area_uuid': old.surfaceAreaUuid,
             'description': old.description,
+            'cave_local_index': old.caveLocalIndex,
           },
           newValues: {
             'title': title,
             'surface_area_uuid': surfaceAreaUuid,
             'description': description,
+            'cave_local_index': caveLocalIndex,
           },
         );
       }
