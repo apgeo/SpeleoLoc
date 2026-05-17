@@ -183,14 +183,27 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
                 return _TourStepContent(
                   title: LocServ.inst.t(step.titleLocKey),
                   body: LocServ.inst.t(step.bodyLocKey),
-                  disableAutoToursLabel: LocServ.inst.t('disable_auto_tours'),
-                  onDisableAutoTours: () async {
+                  onNext: () => controller.next(),
+                );
+              },
+            ),
+            TargetContent(
+              align: ContentAlign.custom,
+              customPosition: CustomTargetContentPosition(bottom: 32, left: 16),
+              builder: (context, controller) {
+                return TextButton.icon(
+                  onPressed: () async {
                     await setAutoToursDisabled(true);
                     if (mounted) {
                       SnackBarService.showInfo(LocServ.inst.t('auto_tours_disabled'));
                     }
                     controller.skip();
                   },
+                  icon: const Icon(Icons.block, color: Colors.white, size: 16),
+                  label: Text(
+                    LocServ.inst.t('disable_auto_tours'),
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 );
               },
             ),
@@ -223,14 +236,12 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
 class _TourStepContent extends StatelessWidget {
   final String title;
   final String body;
-  final String disableAutoToursLabel;
-  final Future<void> Function() onDisableAutoTours;
+  final VoidCallback onNext;
 
   const _TourStepContent({
     required this.title,
     required this.body,
-    required this.disableAutoToursLabel,
-    required this.onDisableAutoTours,
+    required this.onNext,
   });
 
   @override
@@ -256,12 +267,11 @@ class _TourStepContent extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Align(
-            alignment: Alignment.bottomLeft,
-            child: TextButton.icon(
-              onPressed: onDisableAutoTours,
-              icon: const Icon(Icons.block, color: Colors.white, size: 16),
-              label: Text(
-                disableAutoToursLabel,
+            alignment: Alignment.bottomRight,
+            child: TextButton(
+              onPressed: onNext,
+              child: Text(
+                LocServ.inst.t('next'),
                 style: const TextStyle(color: Colors.white),
               ),
             ),

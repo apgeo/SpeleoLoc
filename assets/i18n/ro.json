@@ -858,6 +858,7 @@
   "main_entrance_already_defined_title": "Intrarea principală este deja definită",
   "main_entrance_already_defined_body": "Poate exista o singură intrare principală. Intrarea principală curentă: {names}.\nDebifează cealaltă/celelalte ca fiind intrări mai întâi.",
 
+  "next": "Următor",
   "disable_auto_tours": "Dezactivează tururile automate",
   "auto_tours_disabled": "Tururile automate au fost dezactivate. Poți porni oricând manual turul de ajutor din meniul lateral.",
 

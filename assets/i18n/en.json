@@ -860,6 +860,7 @@
   "main_entrance_already_defined_title": "Main cave entrance already defined",
   "main_entrance_already_defined_body": "There can be only one main cave entrance. Current main entrance(s): {names}.\nSet the other one(s) as regular entrances first.",
 
+  "next": "Next",
   "disable_auto_tours": "Disable auto tours",
   "auto_tours_disabled": "Automatic tours were disabled. You can still start Help tour manually from the menu.",
 
