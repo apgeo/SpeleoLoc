@@ -755,22 +755,22 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
     return KeyedSubtree(
       key: widget.headerKey,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (labelWidget != null) Expanded(child: labelWidget) else const Spacer(),
+          if (widget.enableSelection)
+            ValueListenableBuilder<bool>(
+              valueListenable: _selectionMode,
+              builder: (context, mode, _) {
+                if (mode) return const SizedBox.shrink();
+                if (labelWidget != null) return Expanded(child: labelWidget);
+                return const Spacer();
+              },
+            )
+          else if (labelWidget != null)
+            Expanded(child: labelWidget)
+          else
+            const Spacer(),
           ...widget.headerLeading,
-          if (widget.sortFields.isNotEmpty)
-            ValueListenableBuilder<FilterableListSortSpec?>(
-              valueListenable: _sort,
-              builder: (context, spec, _) => _ActiveIconButton(
-                active: spec != null,
-                activeColor: theme.activeToggleColor,
-                buttonKey: widget.sortButtonKey,
-                icon: Icons.swap_vert,
-                size: theme.actionIconSize,
-                tooltip: loc.t('sort_by'),
-                onPressed: _openSortPicker,
-              ),
-            ),
           if (widget.enableSelection)
             ValueListenableBuilder<bool>(
               valueListenable: _selectionMode,
@@ -818,6 +818,19 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
                 onPressed: () => _setSelectionMode(!mode),
               ),
             ),
+          if (widget.sortFields.isNotEmpty)
+            ValueListenableBuilder<FilterableListSortSpec?>(
+              valueListenable: _sort,
+              builder: (context, spec, _) => _ActiveIconButton(
+                active: spec != null,
+                activeColor: theme.activeToggleColor,
+                buttonKey: widget.sortButtonKey,
+                icon: Icons.swap_vert,
+                size: theme.actionIconSize,
+                tooltip: loc.t('sort_by'),
+                onPressed: _openSortPicker,
+              ),
+            ),            
           if (widget.enableFilter)
             ValueListenableBuilder<bool>(
               valueListenable: _filterVisible,
