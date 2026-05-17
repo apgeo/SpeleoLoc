@@ -373,7 +373,7 @@
   "sync_import_cancelled": "Import anulat — nicio modificare nu a fost aplicată",
   "sync_conflict_mode_title": "Rezolvarea conflictelor",
   "sync_conflict_mode_auto": "Automat (ultima modificare câștigă)",
-  "sync_conflict_mode_auto_desc": "Suprascrie automat datele mai vechi folosind marcajul updated_at.",
+  "sync_conflict_mode_auto_desc": "Suprascrie automat datele mai vechi folosind câmpul timp de actualizare.",
   "sync_conflict_mode_manual": "Manual (revizuiește fiecare conflict)",
   "sync_conflict_mode_manual_desc": "Cere confirmare pentru fiecare rând ale cărui câmpuri diferă de cel local.",
   "sync_conflict_title": "Conflict în {table}",
