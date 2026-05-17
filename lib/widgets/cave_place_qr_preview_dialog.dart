@@ -20,9 +20,9 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// settings and displays it in a properly sized, zoomable dialog.
 class CavePlaceQrPreviewDialog extends StatefulWidget {
   final CavePlace cavePlace;
-  /// When set, overrides [cavePlace.placeQrCodeIdentifier] for the preview.
+  /// When set, overrides [cavePlace.placeCodeIdentifier] for the preview.
   /// Use this to preview unsaved changes before the user hits save.
-  final int? qrIdentifierOverride;
+  final String? qrIdentifierOverride;
 
   const CavePlaceQrPreviewDialog({super.key, required this.cavePlace, this.qrIdentifierOverride});
 
@@ -31,12 +31,12 @@ class CavePlaceQrPreviewDialog extends StatefulWidget {
       _CavePlaceQrPreviewDialogState();
 
   /// Show the QR preview dialog for [cavePlace].
-  /// [qrIdentifierOverride] lets callers preview a QR number that has not
+  /// [qrIdentifierOverride] lets callers preview a code that has not
   /// been saved yet (e.g. an unsaved value in the form field).
-  /// Does nothing if there is no QR identifier to render.
-  static void show(BuildContext context, CavePlace cavePlace, {int? qrIdentifierOverride}) {
-    final effectiveQr = qrIdentifierOverride ?? cavePlace.placeQrCodeIdentifier;
-    if (effectiveQr == null) return;
+  /// Does nothing if there is no code identifier to render.
+  static void show(BuildContext context, CavePlace cavePlace, {String? qrIdentifierOverride}) {
+    final effectiveQr = qrIdentifierOverride ?? cavePlace.placeCodeIdentifier;
+    if (effectiveQr == null || effectiveQr.isEmpty) return;
     showDialog(
       context: context,
       builder: (_) => CavePlaceQrPreviewDialog(
@@ -76,7 +76,8 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
         qrBgColor: cfg['qrBgColor'] ?? QrGenerationDefaults.qrBgColor,
         qrFgColor: cfg['qrFgColor'] ?? QrGenerationDefaults.qrFgColor,
         qrErrorCorrectionLevel: cfg['qrErrorCorrectionLevel'] ??
-            QrGenerationDefaults.errorCorrectionLevel,            
+            QrGenerationDefaults.errorCorrectionLevel,
+        includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,            
       );
       if (mounted) {
         setState(() {
@@ -103,7 +104,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
     }
   }
 
-  Widget _buildQrContent(int qrId) {
+  Widget _buildQrContent(String qrId) {
     final prefs = _prefs!;
     final padding = prefs.imagePaddingPx.toDouble();
     return RepaintBoundary(
@@ -117,7 +118,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             AspectRatio(
               aspectRatio: 1,
               child: QrImageView(
-                data: '$qrId',
+                data: prefs.includeDeepLinkPrefix ? '$deepLinkPrefix$qrId' : '$qrId',
                 version: QrVersions.auto,
                 gapless: true,
                 errorCorrectionLevel: _ecLevel(prefs.qrErrorCorrectionLevel),
@@ -184,8 +185,8 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
   }
 
   Future<void> _exportImage(BuildContext context) async {
-    final effectiveId = widget.qrIdentifierOverride ?? widget.cavePlace.placeQrCodeIdentifier;
-    if (effectiveId == null || _prefs == null || _exporting) return;
+    final effectiveId = widget.qrIdentifierOverride ?? widget.cavePlace.placeCodeIdentifier;
+    if (effectiveId == null || effectiveId.isEmpty || _prefs == null || _exporting) return;
 
     // Capture the live rendered widget — this is correct by definition since
     // it is exactly what the user sees, and avoids the off-screen canvas
@@ -297,7 +298,8 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveId = widget.qrIdentifierOverride ?? widget.cavePlace.placeQrCodeIdentifier;
+    final effectiveId = widget.qrIdentifierOverride ?? widget.cavePlace.placeCodeIdentifier;
+    final hasEffectiveId = effectiveId != null && effectiveId.isNotEmpty;
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -339,7 +341,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                   ),
                 ),
               )
-            else if (effectiveId != null)
+            else if (hasEffectiveId)
               _buildQrContent(effectiveId)
             else
               SizedBox(
@@ -348,7 +350,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
               ),
             const SizedBox(height: 4),
             // QR code number label
-            if (effectiveId != null)
+            if (hasEffectiveId)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
@@ -377,7 +379,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                     : IconButton(
                         icon: const Icon(Icons.download),
                         tooltip: LocServ.inst.t('export'),
-                        onPressed: (_prefs != null && effectiveId != null)
+                        onPressed: (_prefs != null && hasEffectiveId)
                             ? () => _exportImage(context)
                             : null,
                       ),

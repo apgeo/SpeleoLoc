@@ -10,8 +10,11 @@ import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/place_code_batch_ui.dart';
+import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/widgets/filterable_list.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
@@ -82,6 +85,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         icon: Icons.upload_file,
         label: LocServ.inst.t('csv_import_places'),
       ),
+      AppMenuItem(
+        value: 'generate_codes',
+        icon: Icons.auto_awesome,
+        label: LocServ.inst.t('generate_codes'),
+      ),
     ];
   }
 
@@ -138,6 +146,13 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       await _stopTrip();
     } else if (value == 'view_trip') {
       _viewActiveTrip();
+    } else if (value == 'generate_codes') {
+      await PlaceCodeBatchUi.run(
+        context,
+        scope: PerCaveScope(widget.caveUuid),
+        confirmTitle: LocServ.inst.t('generate_codes'),
+        confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),
+      );
     }
   }
   // Using global appDatabase instance
@@ -147,6 +162,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   bool _showManualQrSection = false;
   final FilterableListController<CavePlace> _listController =
       FilterableListController<CavePlace>();
+
+  // Long-press on the scan toolbar button → manual QR search dialog.
+  Timer? _qrScanLongPressTimer;
+  final TextEditingController _manualQrSearchController =
+      TextEditingController();
   Map<Uuid, String> _areaTitles = {};
   Map<Uuid, String> _surfaceAreaTitles = {};
   int _pastTripsCount = 0;
@@ -305,8 +325,55 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     _scrollController.dispose();
     _cavePlacesSub?.cancel();
     _listController.dispose();
+    _qrScanLongPressTimer?.cancel();
+    _manualQrSearchController.dispose();
     caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     super.dispose();
+  }
+
+  void _startQrScanLongPress() {
+    _qrScanLongPressTimer?.cancel();
+    _qrScanLongPressTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) _showManualQrSearchDialog();
+    });
+  }
+
+  void _cancelQrScanLongPress() {
+    _qrScanLongPressTimer?.cancel();
+    _qrScanLongPressTimer = null;
+  }
+
+  Future<void> _showManualQrSearchDialog() async {
+    _manualQrSearchController.clear();
+    final confirmed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('manual_qr_search')),
+        content: TextField(
+          controller: _manualQrSearchController,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('qr_code_identifier'),
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.pop(ctx, _manualQrSearchController.text.trim()),
+            child:
+                Text(LocServ.inst.t('search_place_by_qr_code_by_identifier')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != null && confirmed.isNotEmpty && mounted) {
+      _onScan(qrScanService.process(confirmed, config: await QrScanConfig.load()).qcri);
+    }
   }
 
   Future<void> _loadCave() async {
@@ -506,27 +573,27 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   void _onScan(String code) async {
-    final qrCode = int.tryParse(code);
-    if (qrCode != null) {
-      final cavePlace = await cavePlaceRepository.findCavePlaceByQrCode(qrCode, widget.caveUuid);
-      if (cavePlace != null) {
-        final bool isEntrance = (cavePlace.isEntrance == 1 || cavePlace.isMainEntrance == 1);
-        if (isEntrance && mounted) {
-          await _handleEntranceScan(cavePlace);
-        } else {
-          // Record trip point if there's an active trip for this cave
-          final activeTripCaveId = await caveTripService.getActiveTripCaveId();
-          if (activeTripCaveId == widget.caveUuid) {
-            await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
-            if (mounted) SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
-          }
-        }
-        _onCavePlaceFound(cavePlace);
-      } else {
-        if (mounted) SnackBarService.showWarning('${LocServ.inst.t('cave_place_not_found')}: \'$code\'');
-      }
-    } else {
+    final trimmed = code.trim();
+    if (trimmed.isEmpty) {
       if (mounted) SnackBarService.showWarning('${LocServ.inst.t('invalid_qr_code_detail')}: \'$code\'');
+      return;
+    }
+    final cavePlace = await cavePlaceRepository.findCavePlaceByCode(trimmed, widget.caveUuid);
+    if (cavePlace != null) {
+      final bool isEntrance = (cavePlace.isEntrance == 1 || cavePlace.isMainEntrance == 1);
+      if (isEntrance && mounted) {
+        await _handleEntranceScan(cavePlace);
+      } else {
+        // Record trip point if there's an active trip for this cave
+        final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+        if (activeTripCaveId == widget.caveUuid) {
+          await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
+          if (mounted) SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
+        }
+      }
+      _onCavePlaceFound(cavePlace);
+    } else {
+      if (mounted) SnackBarService.showWarning('${LocServ.inst.t('cave_place_not_found')}: \'$code\'');
     }
   }
 
@@ -745,15 +812,26 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            IconActionButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ScannerPage(onScan: _onScan),
+            Listener(
+              onPointerDown: enableQrManualInput
+                  ? (_) => _startQrScanLongPress()
+                  : null,
+              onPointerUp: enableQrManualInput
+                  ? (_) => _cancelQrScanLongPress()
+                  : null,
+              onPointerCancel: enableQrManualInput
+                  ? (_) => _cancelQrScanLongPress()
+                  : null,
+              child: IconActionButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ScannerPage(onScan: _onScan),
+                  ),
                 ),
+                icon: Icons.qr_code_scanner,
+                tooltip: LocServ.inst.t('scan_qr'),
               ),
-              icon: Icons.qr_code_scanner,
-              tooltip: LocServ.inst.t('scan_qr'),
             ),
             const SizedBox(width: 8),
             IconActionButton(
@@ -920,10 +998,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         FilterableListSortField<CavePlace>(
           id: 'qr_code_identifier',
           label: LocServ.inst.t('qr_code_identifier'),
-          // Null QR codes sort last on ascending.
+          // Null PCIs sort last on ascending.
           compare: (a, b) {
-            final av = a.placeQrCodeIdentifier;
-            final bv = b.placeQrCodeIdentifier;
+            final av = a.placeCodeIdentifier;
+            final bv = b.placeCodeIdentifier;
             if (av == null && bv == null) return 0;
             if (av == null) return 1;
             if (bv == null) return -1;
@@ -950,11 +1028,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           id: 'has_qr_code',
           label: LocServ.inst.t('sort_has_qr_code'),
           compare: (a, b) {
-            final av = a.placeQrCodeIdentifier != null ? 1 : 0;
-            final bv = b.placeQrCodeIdentifier != null ? 1 : 0;
+            final av = a.placeCodeIdentifier != null ? 1 : 0;
+            final bv = b.placeCodeIdentifier != null ? 1 : 0;
             return av.compareTo(bv);
           },
-          groupKeyOf: (cp) => cp.placeQrCodeIdentifier != null
+          groupKeyOf: (cp) => cp.placeCodeIdentifier != null
               ? LocServ.inst.t('sort_has_qr_code_yes')
               : LocServ.inst.t('sort_has_qr_code_no'),
         ),
@@ -967,7 +1045,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       ],
       filter: (cp, qLower) {
         if (cp.title.toLowerCase().contains(qLower)) return true;
-        if (cp.placeQrCodeIdentifier?.toString().contains(qLower) ?? false) {
+        if (cp.placeCodeIdentifier?.toLowerCase().contains(qLower) ?? false) {
           return true;
         }
         final areaTitle = (cp.caveAreaUuid != null)
@@ -1041,10 +1119,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
             Padding(
               padding: const EdgeInsets.only(left: 4.0, right: 2.0),
               child: Icon(
-                cp.placeQrCodeIdentifier != null
+                cp.placeCodeIdentifier != null
                     ? Icons.qr_code
                     : Icons.qr_code_outlined,
-                color: cp.placeQrCodeIdentifier != null
+                color: cp.placeCodeIdentifier != null
                     ? Colors.green.withValues(alpha: 0.8)
                     : Colors.grey,
                 size: 20,

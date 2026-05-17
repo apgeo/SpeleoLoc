@@ -82,24 +82,19 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     final qrText = _qrController.text.trim();
     if (qrText.isEmpty) {
       setState(() => _qrError = null);
-      return true; // QR is optional
-    }
-    final qr = int.tryParse(qrText);
-    if (qr == null) {
-      setState(() => _qrError = LocServ.inst.t('invalid_qr_code'));
-      return false;
+      return true; // PCI is optional
     }
     // Check uniqueness within cave
     final existing = await (appDatabase.select(appDatabase.cavePlaces)
           ..where((cp) =>
               cp.caveUuid.equalsValue(widget.caveUuid) &
-              cp.placeQrCodeIdentifier.equals(qr)))
+              cp.placeCodeIdentifier.equals(qrText)))
         .getSingleOrNull();
     if (existing != null) {
       if (mounted) {
         setState(() => _qrError = LocServ.inst
             .t('qr_already_exists')
-            .replaceAll('{qr}', qr.toString())
+            .replaceAll('{qr}', qrText)
             .replaceAll('{title}', existing.title));
       }
       return false;
@@ -120,18 +115,22 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     }
 
     final title = _titleController.text.trim();
-    final qr = int.tryParse(_qrController.text.trim());
+    final qrText = _qrController.text.trim();
+    final qr = qrText.isEmpty ? null : qrText;
 
     try {
-      final newUuid = await cavePlaceRepository.addCavePlaceFromCompanion(
+      final newUuid = Uuid.v7();
+      final companion = await placeCodeService.applyPciToCompanion(
         CavePlacesCompanion.insert(
-          uuid: Uuid.v7(),
+          uuid: newUuid,
           title: title,
           caveUuid: widget.caveUuid,
-          placeQrCodeIdentifier: Value(qr),
+          placeCodeIdentifier: Value(qr),
           caveAreaUuid: Value(_selectedCaveAreaId),
         ),
+        cavePlaceUuid: newUuid,
       );
+      await cavePlaceRepository.addCavePlaceFromCompanion(companion);
       if (mounted) {
         Navigator.pop(context, newUuid);
       }
@@ -150,9 +149,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
       context,
       MaterialPageRoute(
         builder: (_) => ScannerPage(onScan: (code) {
-          final qr = int.tryParse(code);
-          if (qr != null) {
-            _qrController.text = qr.toString();
+          final qr = code.trim();
+          if (qr.isNotEmpty) {
+            _qrController.text = qr;
             Navigator.pop(context); // close scanner
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -210,10 +209,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
                   child: TextField(
                     controller: _qrController,
                     decoration: InputDecoration(
-                      labelText: LocServ.inst.t('qr_code_identifier'),
+                      labelText: LocServ.inst.t('place_code_identifier'),
                       errorText: _qrError,
                     ),
-                    keyboardType: TextInputType.number,
                     onChanged: (_) {
                       if (_qrError != null) setState(() => _qrError = null);
                     },
