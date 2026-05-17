@@ -97,6 +97,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   bool _latModified = false;
   bool _longModified = false;
   bool _altModified = false;
+  bool _areaModified = false;
   bool _entranceModified = false;
   bool _mainEntranceModified = false;
   bool _isEntrance = false;
@@ -463,6 +464,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       _latModified = false;
       _longModified = false;
       _altModified = false;
+      _areaModified = false;
       _entranceModified = false;
       _mainEntranceModified = false;
     });
@@ -509,6 +511,7 @@ class _CavePlacePageState extends State<CavePlacePage>
         _latModified ||
         _longModified ||
         _altModified ||
+        _areaModified ||
         _entranceModified ||
         _mainEntranceModified;
   }
@@ -1137,12 +1140,20 @@ class _CavePlacePageState extends State<CavePlacePage>
                               ),
                             );
                             if (confirmed == true) {
-                              setState(() => _selectedCaveAreaId = null);
+                              setState(() {
+                                _selectedCaveAreaId = null;
+                                _areaModified = null != _cavePlace?.caveAreaUuid;
+                                _recomputeUnsavedChanges();
+                              });
                             } else {
                               setState(() => _selectedCaveAreaId = old);
                             }
                           } else {
-                            setState(() => _selectedCaveAreaId = v);
+                            setState(() {
+                              _selectedCaveAreaId = v;
+                              _areaModified = v != _cavePlace?.caveAreaUuid;
+                              _recomputeUnsavedChanges();
+                            });
                           }
                         },
                       ),
