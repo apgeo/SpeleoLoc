@@ -268,9 +268,13 @@ Future<void> reinsertLegacyData(
 
   // ---- cave_places ----
   for (final r in snap.cavePlaces) {
+    // v6 → v11+: legacy integer QR codes are migrated into the new PCI
+    // (place_code_identifier) column as their string representation. The
+    // QCRI column stays NULL until the user runs a (re)generation pass.
+    final legacyQr = r['place_qr_code_identifier'] as int?;
     await db.customInsert(
       'INSERT INTO cave_places '
-      '(uuid, title, description, cave_uuid, place_qr_code_identifier, '
+      '(uuid, title, description, cave_uuid, place_code_identifier, '
       'cave_area_uuid, latitude, longitude, depth_in_cave, is_entrance, '
       'is_main_entrance, created_at, updated_at, deleted_at) '
       'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -279,7 +283,7 @@ Future<void> reinsertLegacyData(
         Variable<String>(r['title'] as String),
         Variable<String>(r['description'] as String?),
         Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
-        Variable<int>(r['place_qr_code_identifier'] as int?),
+        Variable<String>(legacyQr?.toString()),
         Variable<Uint8List>(_fkBytes(r['cave_area_id'], snap.caveAreaMap)),
         Variable<double>(_asDouble(r['latitude'])),
         Variable<double>(_asDouble(r['longitude'])),

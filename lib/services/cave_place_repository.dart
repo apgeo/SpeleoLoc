@@ -124,8 +124,10 @@ class CavePlaceRepository implements ICavePlaceRepository {
         cmp('title', patch.title, old.title);
         cmp('description', patch.description, old.description);
         cmp('depth_in_cave', patch.depthInCave, old.depthInCave);
-        cmp('place_qr_code_identifier',
-            patch.placeQrCodeIdentifier, old.placeQrCodeIdentifier);
+        cmp('place_code_identifier',
+            patch.placeCodeIdentifier, old.placeCodeIdentifier);
+        cmp('qr_code_resource_identifier',
+            patch.qrCodeResourceIdentifier, old.qrCodeResourceIdentifier);
         cmp('latitude', patch.latitude, old.latitude);
         cmp('longitude', patch.longitude, old.longitude);
         cmp('altitude', patch.altitude, old.altitude);
@@ -204,17 +206,19 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
-  Future<CavePlace?> findCavePlaceByQrCode(int qrCode, Uuid caveUuid) async {
+  Future<CavePlace?> findCavePlaceByCode(String code, Uuid caveUuid) async {
     try {
       final results = await (_database.select(_database.cavePlaces)
             ..where((cp) =>
-                cp.placeQrCodeIdentifier.equals(qrCode) &
+                (cp.placeCodeIdentifier.equals(code) |
+                        cp.qrCodeResourceIdentifier.equals(code)) &
                 cp.caveUuid.equalsValue(caveUuid)))
           .get();
       return results.firstOrNull;
     } catch (e, st) {
-      _log.severe('Failed to find cave place by QR', e, st);
-      throw DbException('Failed to find cave place by QR', cause: e, stackTrace: st);
+      _log.severe('Failed to find cave place by code', e, st);
+      throw DbException('Failed to find cave place by code',
+          cause: e, stackTrace: st);
     }
   }
 }

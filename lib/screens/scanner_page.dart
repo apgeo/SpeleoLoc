@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -7,6 +8,8 @@ import 'package:speleoloc/widgets/product_tour.dart';
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key, required this.onScan});
 
+  /// Called with the processed payload (deep link prefix stripped, etc.).
+  /// Use [ScannerPage.raw] to receive the original payload instead.
   final void Function(String) onScan;
 
   @override
@@ -27,7 +30,16 @@ class _ScannerPageState extends State<ScannerPage>
   ];
 
   final MobileScannerController _controller = MobileScannerController();
+  QrScanConfig _scanConfig = const QrScanConfig();
   // Using global appDatabase instance
+
+  @override
+  void initState() {
+    super.initState();
+    QrScanConfig.load().then((cfg) {
+      if (mounted) setState(() => _scanConfig = cfg);
+    });
+  }
   
   @override
   void dispose() {
@@ -63,7 +75,8 @@ class _ScannerPageState extends State<ScannerPage>
             final code = barcodes.first.rawValue ?? '';
             if (code.isNotEmpty) {
               _controller.stop();
-              widget.onScan(code);
+              final processed = qrScanService.process(code, config: _scanConfig).qcri;
+              widget.onScan(processed);
               if (mounted) Navigator.pop(context);
             }
           }

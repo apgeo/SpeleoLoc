@@ -7,6 +7,8 @@ import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
+import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
+import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
@@ -93,6 +95,21 @@ final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+  ),
+);
+
+/// The single chokepoint for PCI/QCRI generation, validation and write
+/// integration. See `docs/features/place-code-identifiers.md`.
+final placeCodeServiceProvider = Provider<PlaceCodeService>(
+  (ref) => PlaceCodeService(ref.watch(appDatabaseProvider)),
+);
+
+/// Batch runner orchestrating PCI/QCRI generation over a scope.
+final placeCodeBatchRunnerProvider = Provider<PlaceCodeBatchRunner>(
+  (ref) => PlaceCodeBatchRunner(
+    ref.watch(appDatabaseProvider),
+    ref.watch(placeCodeServiceProvider),
+    ref.watch(cavePlaceRepositoryProvider),
   ),
 );
 

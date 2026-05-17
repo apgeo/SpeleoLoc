@@ -52,7 +52,7 @@ class TestDataHelper {
         final area4Uuid = await insertArea('verticale intrare', cave2Uuid);
         final area5Uuid = await insertArea('activ', cave2Uuid);
 
-        int generateRandomQr(Random r) => r.nextInt(100000000);
+        String generateRandomQr(Random r) => r.nextInt(100000000).toString();
         final rand = Random();
 
         // ---------- Cave places ----------
@@ -62,7 +62,7 @@ class TestDataHelper {
                 uuid: u,
                 title: title,
                 caveUuid: caveUuid,
-                placeQrCodeIdentifier: Value(generateRandomQr(rand)),
+                placeCodeIdentifier: Value(generateRandomQr(rand)),
               ));
           return u;
         }

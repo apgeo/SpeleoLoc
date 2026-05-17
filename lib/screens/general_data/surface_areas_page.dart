@@ -4,6 +4,8 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/place_code_batch_ui.dart';
+import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -29,6 +31,23 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
 
   List<SurfaceArea> _areas = [];
   bool _changed = false;
+  bool _showGenerateIcons = false;
+
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    AppMenuItem(
+      value: 'toggle_generate_icons',
+      icon: _showGenerateIcons ? Icons.check_box : Icons.check_box_outline_blank,
+      label: LocServ.inst.t('show_generate_codes_icons'),
+    ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) {
+    if (value == 'toggle_generate_icons') {
+      setState(() => _showGenerateIcons = !_showGenerateIcons);
+    }
+  }
 
   @override
   void initState() {
@@ -47,6 +66,8 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
   Future<void> _showAddEditDialog({SurfaceArea? existing}) async {
     final controller = TextEditingController(text: existing?.title ?? '');
     final descController = TextEditingController(text: existing?.description ?? '');
+    final identifierController =
+        TextEditingController(text: existing?.generalAreaIdentifier ?? '');
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -60,6 +81,13 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
             ),
             const SizedBox(height: 8),
             TextField(
+              controller: identifierController,
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('general_area_identifier'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
               controller: descController,
               decoration: InputDecoration(labelText: LocServ.inst.t('description')),
               maxLines: 3,
@@ -67,12 +95,28 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
           ],
         ),
         actions: [
+          if (existing != null)
+            TextButton.icon(
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: Text(LocServ.inst.t('generate_codes')),
+              onPressed: () async {
+                await PlaceCodeBatchUi.run(
+                  context,
+                  scope: PerAreaScope(existing.uuid),
+                  confirmTitle: LocServ.inst.t('generate_codes'),
+                  confirmBody: LocServ.inst.t('generate_codes_confirm_area'),
+                );
+              },
+            ),
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
           TextButton(
             onPressed: () async {
               final title = controller.text.trim();
               if (title.isEmpty) return;
               final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
+              final identifier = identifierController.text.trim().isEmpty
+                  ? null
+                  : identifierController.text.trim();
               final now = DateTime.now().millisecondsSinceEpoch;
               final author = await currentUserService.currentOrSystem();
               if (existing == null) {
@@ -82,6 +126,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
                     uuid: newUuid,
                     title: title,
                     description: Value(desc),
+                    generalAreaIdentifier: Value(identifier),
                     createdAt: Value(now),
                     updatedAt: Value(now),
                     createdByUserUuid: Value(author),
@@ -94,6 +139,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
                   SurfaceAreasCompanion(
                     title: Value(title),
                     description: Value(desc),
+                    generalAreaIdentifier: Value(identifier),
                     updatedAt: Value(now),
                     lastModifiedByUserUuid: Value(author),
                   ),
@@ -104,10 +150,12 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
                   oldValues: {
                     'title': existing.title,
                     'description': existing.description,
+                    'general_area_identifier': existing.generalAreaIdentifier,
                   },
                   newValues: {
                     'title': title,
                     'description': desc,
+                    'general_area_identifier': identifier,
                   },
                 );
               }
@@ -189,6 +237,18 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (_showGenerateIcons)
+                    IconButton(
+                      onPressed: () => PlaceCodeBatchUi.run(
+                        context,
+                        scope: PerAreaScope(area.uuid),
+                        confirmTitle: LocServ.inst.t('generate_codes'),
+                        confirmBody:
+                            LocServ.inst.t('generate_codes_confirm_area'),
+                      ),
+                      icon: const Icon(Icons.auto_awesome),
+                      tooltip: LocServ.inst.t('generate_codes'),
+                    ),
                   IconButton(onPressed: () => _showAddEditDialog(existing: area), icon: const Icon(Icons.edit)),
                   IconButton(onPressed: () => _confirmDelete(area), icon: const Icon(Icons.delete)),
                 ],

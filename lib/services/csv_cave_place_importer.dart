@@ -2,6 +2,7 @@ import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/place_code/place_code_service.dart';
 
 /// Configuration for CSV cave place import.
 class CSVCavePlacesImportConfig {
@@ -39,7 +40,7 @@ class CSVCavePlacesImportConfig {
 class CSVCavePlaceImportRow {
   final String? caveName;
   final String? cavePlaceName;
-  final int? qrCode;
+  final String? qrCode;
   final String? caveArea;
 
   CSVCavePlaceImportRow({this.caveName, this.cavePlaceName, this.qrCode, this.caveArea});
@@ -54,7 +55,7 @@ class CavePlaceExistingMatch {
   final String caveName;
   final String cavePlaceName;
   final String? caveArea;
-  final int? existingQrCode;
+  final String? existingQrCode;
 
   CavePlaceExistingMatch({
     required this.caveName,
@@ -83,8 +84,13 @@ class CSVCavePlaceImportResult {
 class CSVCavePlaceImporter {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
+  final PlaceCodeService _placeCodeService;
 
-  CSVCavePlaceImporter(this._database, this._currentUser);
+  CSVCavePlaceImporter(
+    this._database,
+    this._currentUser,
+    this._placeCodeService,
+  );
 
   /// Parse a CSV string into a list of lists (rows x columns).
   /// Expects the first row to be headers.
@@ -112,7 +118,7 @@ class CSVCavePlaceImporter {
 
       String? caveName;
       String? cavePlaceName;
-      int? qrCode;
+      String? qrCode;
       String? caveArea;
 
       if (config.caveNameColumn != null && config.caveNameColumn! < row.length) {
@@ -127,7 +133,7 @@ class CSVCavePlaceImporter {
 
       if (config.qrCodeColumn != null && config.qrCodeColumn! < row.length) {
         final val = row[config.qrCodeColumn!].toString().trim();
-        if (val.isNotEmpty) qrCode = int.tryParse(val);
+        if (val.isNotEmpty) qrCode = val;
       }
 
       if (config.caveAreaColumn != null && config.caveAreaColumn! < row.length) {
@@ -203,7 +209,7 @@ class CSVCavePlaceImporter {
                 caveName: cave.title,
                 cavePlaceName: mp.title,
                 caveArea: row.caveArea,
-                existingQrCode: mp.placeQrCodeIdentifier,
+                existingQrCode: mp.placeCodeIdentifier,
               ));
             }
           }
@@ -235,7 +241,7 @@ class CSVCavePlaceImporter {
               caveName: caveName,
               cavePlaceName: mp.title,
               caveArea: row.caveArea,
-              existingQrCode: mp.placeQrCodeIdentifier,
+              existingQrCode: mp.placeCodeIdentifier,
             ));
           }
         }
@@ -257,7 +263,7 @@ class CSVCavePlaceImporter {
     for (final row in rows) {
       if (row.qrCode == null) continue;
       final existing = await (_database.select(_database.cavePlaces)
-            ..where((cp) => cp.placeQrCodeIdentifier.equals(row.qrCode!)))
+            ..where((cp) => cp.placeCodeIdentifier.equals(row.qrCode!)))
           .getSingleOrNull();
       if (existing != null) {
         // Determine the cave name for display
@@ -270,7 +276,7 @@ class CSVCavePlaceImporter {
           caveName: caveName,
           cavePlaceName: existing.title,
           caveArea: null,
-          existingQrCode: existing.placeQrCodeIdentifier,
+          existingQrCode: existing.placeCodeIdentifier,
         ));
       }
     }
@@ -372,16 +378,20 @@ class CSVCavePlaceImporter {
           .getSingleOrNull();
 
       if (existingPlace != null) {
-        // Update QR code if configured and allowed
+        // Update PCI if configured and allowed
         if (row.qrCode != null && config.qrCodeColumn != null) {
-          if (existingPlace.placeQrCodeIdentifier != row.qrCode && overwriteQr) {
+          if (existingPlace.placeCodeIdentifier != row.qrCode && overwriteQr) {
+            final patch = await _placeCodeService.applyPciToCompanion(
+              CavePlacesCompanion(
+                placeCodeIdentifier: Value(row.qrCode),
+                updatedAt: Value(now),
+                lastModifiedByUserUuid: Value(author),
+              ),
+              cavePlaceUuid: existingPlace.uuid,
+            );
             await (_database.update(_database.cavePlaces)
                   ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
-                .write(CavePlacesCompanion(
-              placeQrCodeIdentifier: Value(row.qrCode),
-              updatedAt: Value(now),
-              lastModifiedByUserUuid: Value(author),
-            ));
+                .write(patch);
             qrCodesUpdated++;
           }
         }
@@ -398,19 +408,22 @@ class CSVCavePlaceImporter {
         }
       } else {
         // Create new cave place
-        await _database.into(_database.cavePlaces).insert(
-              CavePlacesCompanion.insert(
-                uuid: Uuid.v7(),
-                title: row.cavePlaceName!,
-                caveUuid: targetCaveUuid,
-                caveAreaUuid: Value(targetAreaUuid),
-                placeQrCodeIdentifier: Value(row.qrCode),
-                createdAt: Value(now),
-                updatedAt: Value(now),
-                createdByUserUuid: Value(author),
-                lastModifiedByUserUuid: Value(author),
-              ),
-            );
+        final newUuid = Uuid.v7();
+        final companion = await _placeCodeService.applyPciToCompanion(
+          CavePlacesCompanion.insert(
+            uuid: newUuid,
+            title: row.cavePlaceName!,
+            caveUuid: targetCaveUuid,
+            caveAreaUuid: Value(targetAreaUuid),
+            placeCodeIdentifier: Value(row.qrCode),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+            createdByUserUuid: Value(author),
+            lastModifiedByUserUuid: Value(author),
+          ),
+          cavePlaceUuid: newUuid,
+        );
+        await _database.into(_database.cavePlaces).insert(companion);
         cavePlacesCreated++;
       }
     }

@@ -147,6 +147,7 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
             : 2.0,
         caveTitle: cave?.title,
         areaTitle: null,
+        includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,
       );
 
       final generator = CavePlaceQRCodePDFGenerator();

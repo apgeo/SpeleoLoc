@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -278,15 +278,115 @@ class AppDatabase extends _$AppDatabase {
               );
             }
           }
+          if (from < 11) {
+            // v10 → v11 migration: introduce the pluggable place-code
+            // identifier system. See docs/features/place-code-identifiers.md.
+            //
+            // 1. Replace cave_places.place_qr_code_identifier (INTEGER) with
+            //    two TEXT columns: place_code_identifier (PCI) and
+            //    qr_code_resource_identifier (QCRI). Legacy integer values
+            //    are dropped (clean break per spec §10 Q-M1/Q-M2).
+            final cpInfo = await customSelect(
+              'PRAGMA table_info(cave_places)',
+            ).get();
+            final cpCols =
+                cpInfo.map((r) => r.data['name'] as String).toSet();
+            if (cpCols.contains('place_qr_code_identifier')) {
+              await customStatement(
+                'ALTER TABLE cave_places '
+                'DROP COLUMN place_qr_code_identifier',
+              );
+            }
+            if (!cpCols.contains('place_code_identifier')) {
+              await customStatement(
+                'ALTER TABLE cave_places '
+                'ADD COLUMN place_code_identifier TEXT',
+              );
+            }
+            if (!cpCols.contains('qr_code_resource_identifier')) {
+              await customStatement(
+                'ALTER TABLE cave_places '
+                'ADD COLUMN qr_code_resource_identifier TEXT',
+              );
+            }
+
+            // 2. Add caves.cave_local_index (used by per-cave sequential PCI).
+            final cavesInfo = await customSelect(
+              'PRAGMA table_info(caves)',
+            ).get();
+            final cavesCols =
+                cavesInfo.map((r) => r.data['name'] as String).toSet();
+            if (!cavesCols.contains('cave_local_index')) {
+              await customStatement(
+                'ALTER TABLE caves ADD COLUMN cave_local_index TEXT',
+              );
+            }
+
+            // 3. Add surface_areas.general_area_identifier (used by per-area
+            //    sequential PCI).
+            final saInfo = await customSelect(
+              'PRAGMA table_info(surface_areas)',
+            ).get();
+            final saCols =
+                saInfo.map((r) => r.data['name'] as String).toSet();
+            if (!saCols.contains('general_area_identifier')) {
+              await customStatement(
+                'ALTER TABLE surface_areas '
+                'ADD COLUMN general_area_identifier TEXT',
+              );
+            }
+
+            // 4. Add configurations.is_synced (selective archive sync flag).
+            final cfgInfo = await customSelect(
+              'PRAGMA table_info(configurations)',
+            ).get();
+            final cfgCols =
+                cfgInfo.map((r) => r.data['name'] as String).toSet();
+            if (!cfgCols.contains('is_synced')) {
+              await customStatement(
+                'ALTER TABLE configurations '
+                'ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0',
+              );
+            }
+
+            // 5. Seed the PCI/QCRI configuration keys (synced).
+            final nowMs = DateTime.now().millisecondsSinceEpoch;
+            await _seedConfiguration(
+              'place_code_strategy',
+              'global_hierarchical',
+              nowMs,
+              isSynced: true,
+            );
+            await _seedConfiguration(
+              'place_code_strategy_config',
+              '{}',
+              nowMs,
+              isSynced: true,
+            );
+            await _seedConfiguration(
+              'qcri_mode',
+              'plain',
+              nowMs,
+              isSynced: true,
+            );
+            await _seedConfiguration(
+              'qcri_hash_config',
+              '{}',
+              nowMs,
+              isSynced: true,
+            );
+          }
         },
       );
 
   Future<void> _seedConfiguration(
-      String title, String value, int nowMs) async {
+      String title, String value, int nowMs,
+      {bool isSynced = false}) async {
     await customStatement(
       'INSERT OR IGNORE INTO configurations '
-      '(title, value, created_at, updated_at) VALUES (?, ?, ?, ?)',
-      [title, value, nowMs, nowMs],
+      '(title, value, is_synced, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?)',
+      [title, value, isSynced ? 1 : 0, nowMs, nowMs],
     );
   }
 

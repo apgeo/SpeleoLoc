@@ -31,6 +31,18 @@ class ConfigKey {
   static const String ftpLastUploadAt = 'ftp_last_upload_at';
   /// Active trip log generation method id (see [TripLogMethod]).
   static const String tripLogMethod = 'trip_log_method';
+
+  // ----- Place-code identifier (PCI) configuration -----
+  /// Selected PCI assignment strategy id (e.g. `global_hierarchical`,
+  /// `per_cave_sequential`, `per_area_sequential`). Synced.
+  static const String placeCodeStrategy = 'place_code_strategy';
+  /// JSON-encoded strategy-specific configuration (width, separator, alphabet
+  /// hint, etc.). Synced.
+  static const String placeCodeStrategyConfig = 'place_code_strategy_config';
+  /// QCRI mode (`plain` or `hash`). Synced.
+  static const String qcriMode = 'qcri_mode';
+  /// JSON-encoded QCRI hash configuration (length, retry settings). Synced.
+  static const String qcriHashConfig = 'qcri_hash_config';
 }
 
 /// Provides the identity used to populate `created_by_user_uuid` and

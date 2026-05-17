@@ -14,7 +14,7 @@ class LabelSegment {
 ///
 /// Template variables:
 ///   @place_title, @description, @cave_title, @area_title,
-///   @place_qr_code_identifier, @depth
+///   @place_code_identifier (PCI), @qr_res_identifier (QCRI), @depth
 ///
 /// Formatting prefixes (applied per variable or free text):
 ///   #fz<number>  — font size
@@ -35,8 +35,10 @@ class QrLabelTemplateEngine {
     result = result.replaceAll('@description', place.description ?? '');
     result = result.replaceAll('@cave_title', caveTitle ?? '');
     result = result.replaceAll('@area_title', areaTitle ?? '');
-    result = result.replaceAll('@place_qr_code_identifier',
-        place.placeQrCodeIdentifier?.toString() ?? '');
+    result = result.replaceAll('@place_code_identifier',
+        place.placeCodeIdentifier ?? '');
+    result = result.replaceAll('@qr_res_identifier',
+        place.qrCodeResourceIdentifier ?? '');
     result = result.replaceAll('@depth', _formatDepth(place.depthInCave));
 
     // Handle \n as newline
@@ -62,8 +64,10 @@ class QrLabelTemplateEngine {
     resolved = resolved.replaceAll('@description', place.description ?? '');
     resolved = resolved.replaceAll('@cave_title', caveTitle ?? '');
     resolved = resolved.replaceAll('@area_title', areaTitle ?? '');
-    resolved = resolved.replaceAll('@place_qr_code_identifier',
-        place.placeQrCodeIdentifier?.toString() ?? '');
+    resolved = resolved.replaceAll('@place_code_identifier',
+        place.placeCodeIdentifier ?? '');
+    resolved = resolved.replaceAll('@qr_res_identifier',
+        place.qrCodeResourceIdentifier ?? '');
     resolved = resolved.replaceAll('@depth', _formatDepth(place.depthInCave));
 
     // Handle \n as newline

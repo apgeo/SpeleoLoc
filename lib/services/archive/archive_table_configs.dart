@@ -31,7 +31,8 @@ const List<TableCfg> tableConfigs = [
     name: 'surface_areas',
     humanName: 'Surface Areas',
     columns: [
-      'title', 'description', 'created_at', 'updated_at', 'deleted_at'
+      'title', 'description', 'general_area_identifier',
+      'created_at', 'updated_at', 'deleted_at'
     ],
     uniqueConstraints: [
       ['title']
@@ -52,8 +53,8 @@ const List<TableCfg> tableConfigs = [
     name: 'caves',
     humanName: 'Caves',
     columns: [
-      'title', 'description', 'surface_area_id', 'created_at', 'updated_at',
-      'deleted_at'
+      'title', 'description', 'surface_area_id', 'cave_local_index',
+      'created_at', 'updated_at', 'deleted_at'
     ],
     uniqueConstraints: [
       ['title', 'surface_area_id']
@@ -88,7 +89,8 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_places',
     humanName: 'Cave Places',
     columns: [
-      'title', 'description', 'cave_id', 'place_qr_code_identifier',
+      'title', 'description', 'cave_id',
+      'place_code_identifier', 'qr_code_resource_identifier',
       'cave_area_id', 'latitude', 'longitude', 'altitude', 'depth_in_cave',
       'created_at', 'updated_at', 'deleted_at'
     ],
@@ -152,10 +154,12 @@ const List<TableCfg> tableConfigs = [
   TableCfg(
     name: 'configurations',
     humanName: 'Configurations',
-    columns: ['title', 'value', 'created_at', 'updated_at'],
+    columns: ['title', 'value', 'is_synced', 'created_at', 'updated_at'],
     uniqueConstraints: [
       ['title']
     ],
+    // Only rows with is_synced=1 participate in archive/FTP sync; the
+    // sync engine filters on this column when exporting.
   ),
   TableCfg(
     name: 'cave_trips',

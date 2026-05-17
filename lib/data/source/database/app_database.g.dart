@@ -677,6 +677,17 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _generalAreaIdentifierMeta =
+      const VerificationMeta('generalAreaIdentifier');
+  late final GeneratedColumn<String> generalAreaIdentifier =
+      GeneratedColumn<String>(
+        'general_area_identifier',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -733,6 +744,7 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
     uuid,
     title,
     description,
+    generalAreaIdentifier,
     createdAt,
     updatedAt,
     deletedAt,
@@ -765,6 +777,15 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
         description.isAcceptableOrUnknown(
           data['description']!,
           _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('general_area_identifier')) {
+      context.handle(
+        _generalAreaIdentifierMeta,
+        generalAreaIdentifier.isAcceptableOrUnknown(
+          data['general_area_identifier']!,
+          _generalAreaIdentifierMeta,
         ),
       );
     }
@@ -808,6 +829,10 @@ class SurfaceAreas extends Table with TableInfo<SurfaceAreas, SurfaceArea> {
       description: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}description'],
+      ),
+      generalAreaIdentifier: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}general_area_identifier'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -859,6 +884,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
   final Uuid uuid;
   final String title;
   final String? description;
+  final String? generalAreaIdentifier;
+
+  /// short identifier used by per-area sequential PCI strategy
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -868,6 +896,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
     required this.uuid,
     required this.title,
     this.description,
+    this.generalAreaIdentifier,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -885,6 +914,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || generalAreaIdentifier != null) {
+      map['general_area_identifier'] = Variable<String>(generalAreaIdentifier);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -917,6 +949,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      generalAreaIdentifier: generalAreaIdentifier == null && nullToAbsent
+          ? const Value.absent()
+          : Value(generalAreaIdentifier),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -944,6 +979,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
       uuid: serializer.fromJson<Uuid>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
+      generalAreaIdentifier: serializer.fromJson<String?>(
+        json['general_area_identifier'],
+      ),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -962,6 +1000,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
       'uuid': serializer.toJson<Uuid>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
+      'general_area_identifier': serializer.toJson<String?>(
+        generalAreaIdentifier,
+      ),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -976,6 +1017,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
     Uuid? uuid,
     String? title,
     Value<String?> description = const Value.absent(),
+    Value<String?> generalAreaIdentifier = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
@@ -985,6 +1027,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
     uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
+    generalAreaIdentifier: generalAreaIdentifier.present
+        ? generalAreaIdentifier.value
+        : this.generalAreaIdentifier,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -1002,6 +1047,9 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      generalAreaIdentifier: data.generalAreaIdentifier.present
+          ? data.generalAreaIdentifier.value
+          : this.generalAreaIdentifier,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -1020,6 +1068,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
           ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
+          ..write('generalAreaIdentifier: $generalAreaIdentifier, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -1034,6 +1083,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
     uuid,
     title,
     description,
+    generalAreaIdentifier,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1047,6 +1097,7 @@ class SurfaceArea extends DataClass implements Insertable<SurfaceArea> {
           other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
+          other.generalAreaIdentifier == this.generalAreaIdentifier &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -1058,6 +1109,7 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
   final Value<Uuid> uuid;
   final Value<String> title;
   final Value<String?> description;
+  final Value<String?> generalAreaIdentifier;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
@@ -1068,6 +1120,7 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
     this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
+    this.generalAreaIdentifier = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1079,6 +1132,7 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
     required Uuid uuid,
     required String title,
     this.description = const Value.absent(),
+    this.generalAreaIdentifier = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1091,6 +1145,7 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
     Expression<Uint8List>? uuid,
     Expression<String>? title,
     Expression<String>? description,
+    Expression<String>? generalAreaIdentifier,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
@@ -1102,6 +1157,8 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
       if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
+      if (generalAreaIdentifier != null)
+        'general_area_identifier': generalAreaIdentifier,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -1116,6 +1173,7 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
     Value<Uuid>? uuid,
     Value<String>? title,
     Value<String?>? description,
+    Value<String?>? generalAreaIdentifier,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
@@ -1127,6 +1185,8 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
       uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
+      generalAreaIdentifier:
+          generalAreaIdentifier ?? this.generalAreaIdentifier,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -1150,6 +1210,11 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
+    }
+    if (generalAreaIdentifier.present) {
+      map['general_area_identifier'] = Variable<String>(
+        generalAreaIdentifier.value,
+      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -1186,6 +1251,7 @@ class SurfaceAreasCompanion extends UpdateCompanion<SurfaceArea> {
           ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
+          ..write('generalAreaIdentifier: $generalAreaIdentifier, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -1240,6 +1306,17 @@ class Caves extends Table with TableInfo<Caves, Cave> {
     requiredDuringInsert: false,
     $customConstraints: 'REFERENCES surface_areas(uuid)',
   ).withConverter<Uuid?>(Caves.$convertersurfaceAreaUuidn);
+  static const VerificationMeta _caveLocalIndexMeta = const VerificationMeta(
+    'caveLocalIndex',
+  );
+  late final GeneratedColumn<String> caveLocalIndex = GeneratedColumn<String>(
+    'cave_local_index',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1297,6 +1374,7 @@ class Caves extends Table with TableInfo<Caves, Cave> {
     title,
     description,
     surfaceAreaUuid,
+    caveLocalIndex,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1329,6 +1407,15 @@ class Caves extends Table with TableInfo<Caves, Cave> {
         description.isAcceptableOrUnknown(
           data['description']!,
           _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cave_local_index')) {
+      context.handle(
+        _caveLocalIndexMeta,
+        caveLocalIndex.isAcceptableOrUnknown(
+          data['cave_local_index']!,
+          _caveLocalIndexMeta,
         ),
       );
     }
@@ -1382,6 +1469,10 @@ class Caves extends Table with TableInfo<Caves, Cave> {
           DriftSqlType.blob,
           data['${effectivePrefix}surface_area_uuid'],
         ),
+      ),
+      caveLocalIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cave_local_index'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -1441,6 +1532,9 @@ class Cave extends DataClass implements Insertable<Cave> {
   final String title;
   final String? description;
   final Uuid? surfaceAreaUuid;
+  final String? caveLocalIndex;
+
+  /// short identifier used by per-cave sequential PCI strategy
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -1451,6 +1545,7 @@ class Cave extends DataClass implements Insertable<Cave> {
     required this.title,
     this.description,
     this.surfaceAreaUuid,
+    this.caveLocalIndex,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -1471,6 +1566,9 @@ class Cave extends DataClass implements Insertable<Cave> {
       map['surface_area_uuid'] = Variable<Uint8List>(
         Caves.$convertersurfaceAreaUuidn.toSql(surfaceAreaUuid),
       );
+    }
+    if (!nullToAbsent || caveLocalIndex != null) {
+      map['cave_local_index'] = Variable<String>(caveLocalIndex);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -1504,6 +1602,9 @@ class Cave extends DataClass implements Insertable<Cave> {
       surfaceAreaUuid: surfaceAreaUuid == null && nullToAbsent
           ? const Value.absent()
           : Value(surfaceAreaUuid),
+      caveLocalIndex: caveLocalIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(caveLocalIndex),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -1532,6 +1633,7 @@ class Cave extends DataClass implements Insertable<Cave> {
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       surfaceAreaUuid: serializer.fromJson<Uuid?>(json['surface_area_uuid']),
+      caveLocalIndex: serializer.fromJson<String?>(json['cave_local_index']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -1551,6 +1653,7 @@ class Cave extends DataClass implements Insertable<Cave> {
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'surface_area_uuid': serializer.toJson<Uuid?>(surfaceAreaUuid),
+      'cave_local_index': serializer.toJson<String?>(caveLocalIndex),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -1566,6 +1669,7 @@ class Cave extends DataClass implements Insertable<Cave> {
     String? title,
     Value<String?> description = const Value.absent(),
     Value<Uuid?> surfaceAreaUuid = const Value.absent(),
+    Value<String?> caveLocalIndex = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
@@ -1578,6 +1682,9 @@ class Cave extends DataClass implements Insertable<Cave> {
     surfaceAreaUuid: surfaceAreaUuid.present
         ? surfaceAreaUuid.value
         : this.surfaceAreaUuid,
+    caveLocalIndex: caveLocalIndex.present
+        ? caveLocalIndex.value
+        : this.caveLocalIndex,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -1598,6 +1705,9 @@ class Cave extends DataClass implements Insertable<Cave> {
       surfaceAreaUuid: data.surfaceAreaUuid.present
           ? data.surfaceAreaUuid.value
           : this.surfaceAreaUuid,
+      caveLocalIndex: data.caveLocalIndex.present
+          ? data.caveLocalIndex.value
+          : this.caveLocalIndex,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -1617,6 +1727,7 @@ class Cave extends DataClass implements Insertable<Cave> {
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('surfaceAreaUuid: $surfaceAreaUuid, ')
+          ..write('caveLocalIndex: $caveLocalIndex, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -1632,6 +1743,7 @@ class Cave extends DataClass implements Insertable<Cave> {
     title,
     description,
     surfaceAreaUuid,
+    caveLocalIndex,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1646,6 +1758,7 @@ class Cave extends DataClass implements Insertable<Cave> {
           other.title == this.title &&
           other.description == this.description &&
           other.surfaceAreaUuid == this.surfaceAreaUuid &&
+          other.caveLocalIndex == this.caveLocalIndex &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -1658,6 +1771,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
   final Value<String> title;
   final Value<String?> description;
   final Value<Uuid?> surfaceAreaUuid;
+  final Value<String?> caveLocalIndex;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
@@ -1669,6 +1783,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.surfaceAreaUuid = const Value.absent(),
+    this.caveLocalIndex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1681,6 +1796,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
     required String title,
     this.description = const Value.absent(),
     this.surfaceAreaUuid = const Value.absent(),
+    this.caveLocalIndex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1694,6 +1810,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
     Expression<String>? title,
     Expression<String>? description,
     Expression<Uint8List>? surfaceAreaUuid,
+    Expression<String>? caveLocalIndex,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
@@ -1706,6 +1823,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (surfaceAreaUuid != null) 'surface_area_uuid': surfaceAreaUuid,
+      if (caveLocalIndex != null) 'cave_local_index': caveLocalIndex,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -1721,6 +1839,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
     Value<String>? title,
     Value<String?>? description,
     Value<Uuid?>? surfaceAreaUuid,
+    Value<String?>? caveLocalIndex,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
@@ -1733,6 +1852,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
       title: title ?? this.title,
       description: description ?? this.description,
       surfaceAreaUuid: surfaceAreaUuid ?? this.surfaceAreaUuid,
+      caveLocalIndex: caveLocalIndex ?? this.caveLocalIndex,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -1759,6 +1879,9 @@ class CavesCompanion extends UpdateCompanion<Cave> {
       map['surface_area_uuid'] = Variable<Uint8List>(
         Caves.$convertersurfaceAreaUuidn.toSql(surfaceAreaUuid.value),
       );
+    }
+    if (caveLocalIndex.present) {
+      map['cave_local_index'] = Variable<String>(caveLocalIndex.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -1794,6 +1917,7 @@ class CavesCompanion extends UpdateCompanion<Cave> {
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('surfaceAreaUuid: $surfaceAreaUuid, ')
+          ..write('caveLocalIndex: $caveLocalIndex, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -3892,16 +4016,28 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         requiredDuringInsert: true,
         $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
       ).withConverter<Uuid>(CavePlaces.$convertercaveUuid);
-  static const VerificationMeta _placeQrCodeIdentifierMeta =
-      const VerificationMeta('placeQrCodeIdentifier');
-  late final GeneratedColumn<int> placeQrCodeIdentifier = GeneratedColumn<int>(
-    'place_qr_code_identifier',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: '',
-  );
+  static const VerificationMeta _placeCodeIdentifierMeta =
+      const VerificationMeta('placeCodeIdentifier');
+  late final GeneratedColumn<String> placeCodeIdentifier =
+      GeneratedColumn<String>(
+        'place_code_identifier',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
+  static const VerificationMeta _qrCodeResourceIdentifierMeta =
+      const VerificationMeta('qrCodeResourceIdentifier');
+  late final GeneratedColumn<String> qrCodeResourceIdentifier =
+      GeneratedColumn<String>(
+        'qr_code_resource_identifier',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
   late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> caveAreaUuid =
       GeneratedColumn<Uint8List>(
         'cave_area_uuid',
@@ -4036,7 +4172,8 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
     title,
     description,
     caveUuid,
-    placeQrCodeIdentifier,
+    placeCodeIdentifier,
+    qrCodeResourceIdentifier,
     caveAreaUuid,
     latitude,
     longitude,
@@ -4079,12 +4216,21 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
         ),
       );
     }
-    if (data.containsKey('place_qr_code_identifier')) {
+    if (data.containsKey('place_code_identifier')) {
       context.handle(
-        _placeQrCodeIdentifierMeta,
-        placeQrCodeIdentifier.isAcceptableOrUnknown(
-          data['place_qr_code_identifier']!,
-          _placeQrCodeIdentifierMeta,
+        _placeCodeIdentifierMeta,
+        placeCodeIdentifier.isAcceptableOrUnknown(
+          data['place_code_identifier']!,
+          _placeCodeIdentifierMeta,
+        ),
+      );
+    }
+    if (data.containsKey('qr_code_resource_identifier')) {
+      context.handle(
+        _qrCodeResourceIdentifierMeta,
+        qrCodeResourceIdentifier.isAcceptableOrUnknown(
+          data['qr_code_resource_identifier']!,
+          _qrCodeResourceIdentifierMeta,
         ),
       );
     }
@@ -4181,9 +4327,13 @@ class CavePlaces extends Table with TableInfo<CavePlaces, CavePlace> {
           data['${effectivePrefix}cave_uuid'],
         )!,
       ),
-      placeQrCodeIdentifier: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}place_qr_code_identifier'],
+      placeCodeIdentifier: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}place_code_identifier'],
+      ),
+      qrCodeResourceIdentifier: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}qr_code_resource_identifier'],
       ),
       caveAreaUuid: CavePlaces.$convertercaveAreaUuidn.fromSql(
         attachedDatabase.typeMapping.read(
@@ -4276,9 +4426,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
   final String title;
   final String? description;
   final Uuid caveUuid;
-  final int? placeQrCodeIdentifier;
+  final String? placeCodeIdentifier;
 
-  /// QR codes are either globally unique, either per-cave unique, either per surface area unique, depending on user configured choice in his dataset rules
+  /// alphanumeric PCI, generated by the configured assignment strategy
+  final String? qrCodeResourceIdentifier;
+
+  /// alphanumeric QCRI embedded in QR codes (= PCI or hash(PCI+salt))
   final Uuid? caveAreaUuid;
 
   ///todo: redesign - SQLite stores everything as REAL (the actual DB schema confirms this). The NUMERIC(p,s) type affinity in SQLite is effectively ignored — scale/precision are cosmetic
@@ -4298,7 +4451,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     required this.title,
     this.description,
     required this.caveUuid,
-    this.placeQrCodeIdentifier,
+    this.placeCodeIdentifier,
+    this.qrCodeResourceIdentifier,
     this.caveAreaUuid,
     this.latitude,
     this.longitude,
@@ -4327,8 +4481,13 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
         CavePlaces.$convertercaveUuid.toSql(caveUuid),
       );
     }
-    if (!nullToAbsent || placeQrCodeIdentifier != null) {
-      map['place_qr_code_identifier'] = Variable<int>(placeQrCodeIdentifier);
+    if (!nullToAbsent || placeCodeIdentifier != null) {
+      map['place_code_identifier'] = Variable<String>(placeCodeIdentifier);
+    }
+    if (!nullToAbsent || qrCodeResourceIdentifier != null) {
+      map['qr_code_resource_identifier'] = Variable<String>(
+        qrCodeResourceIdentifier,
+      );
     }
     if (!nullToAbsent || caveAreaUuid != null) {
       map['cave_area_uuid'] = Variable<Uint8List>(
@@ -4381,9 +4540,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           ? const Value.absent()
           : Value(description),
       caveUuid: Value(caveUuid),
-      placeQrCodeIdentifier: placeQrCodeIdentifier == null && nullToAbsent
+      placeCodeIdentifier: placeCodeIdentifier == null && nullToAbsent
           ? const Value.absent()
-          : Value(placeQrCodeIdentifier),
+          : Value(placeCodeIdentifier),
+      qrCodeResourceIdentifier: qrCodeResourceIdentifier == null && nullToAbsent
+          ? const Value.absent()
+          : Value(qrCodeResourceIdentifier),
       caveAreaUuid: caveAreaUuid == null && nullToAbsent
           ? const Value.absent()
           : Value(caveAreaUuid),
@@ -4429,8 +4591,11 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
-      placeQrCodeIdentifier: serializer.fromJson<int?>(
-        json['place_qr_code_identifier'],
+      placeCodeIdentifier: serializer.fromJson<String?>(
+        json['place_code_identifier'],
+      ),
+      qrCodeResourceIdentifier: serializer.fromJson<String?>(
+        json['qr_code_resource_identifier'],
       ),
       caveAreaUuid: serializer.fromJson<Uuid?>(json['cave_area_uuid']),
       latitude: serializer.fromJson<double?>(json['latitude']),
@@ -4458,8 +4623,9 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'cave_uuid': serializer.toJson<Uuid>(caveUuid),
-      'place_qr_code_identifier': serializer.toJson<int?>(
-        placeQrCodeIdentifier,
+      'place_code_identifier': serializer.toJson<String?>(placeCodeIdentifier),
+      'qr_code_resource_identifier': serializer.toJson<String?>(
+        qrCodeResourceIdentifier,
       ),
       'cave_area_uuid': serializer.toJson<Uuid?>(caveAreaUuid),
       'latitude': serializer.toJson<double?>(latitude),
@@ -4483,7 +4649,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     String? title,
     Value<String?> description = const Value.absent(),
     Uuid? caveUuid,
-    Value<int?> placeQrCodeIdentifier = const Value.absent(),
+    Value<String?> placeCodeIdentifier = const Value.absent(),
+    Value<String?> qrCodeResourceIdentifier = const Value.absent(),
     Value<Uuid?> caveAreaUuid = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
@@ -4501,9 +4668,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     caveUuid: caveUuid ?? this.caveUuid,
-    placeQrCodeIdentifier: placeQrCodeIdentifier.present
-        ? placeQrCodeIdentifier.value
-        : this.placeQrCodeIdentifier,
+    placeCodeIdentifier: placeCodeIdentifier.present
+        ? placeCodeIdentifier.value
+        : this.placeCodeIdentifier,
+    qrCodeResourceIdentifier: qrCodeResourceIdentifier.present
+        ? qrCodeResourceIdentifier.value
+        : this.qrCodeResourceIdentifier,
     caveAreaUuid: caveAreaUuid.present ? caveAreaUuid.value : this.caveAreaUuid,
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
@@ -4529,9 +4699,12 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           ? data.description.value
           : this.description,
       caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
-      placeQrCodeIdentifier: data.placeQrCodeIdentifier.present
-          ? data.placeQrCodeIdentifier.value
-          : this.placeQrCodeIdentifier,
+      placeCodeIdentifier: data.placeCodeIdentifier.present
+          ? data.placeCodeIdentifier.value
+          : this.placeCodeIdentifier,
+      qrCodeResourceIdentifier: data.qrCodeResourceIdentifier.present
+          ? data.qrCodeResourceIdentifier.value
+          : this.qrCodeResourceIdentifier,
       caveAreaUuid: data.caveAreaUuid.present
           ? data.caveAreaUuid.value
           : this.caveAreaUuid,
@@ -4566,7 +4739,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('caveUuid: $caveUuid, ')
-          ..write('placeQrCodeIdentifier: $placeQrCodeIdentifier, ')
+          ..write('placeCodeIdentifier: $placeCodeIdentifier, ')
+          ..write('qrCodeResourceIdentifier: $qrCodeResourceIdentifier, ')
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
@@ -4589,7 +4763,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
     title,
     description,
     caveUuid,
-    placeQrCodeIdentifier,
+    placeCodeIdentifier,
+    qrCodeResourceIdentifier,
     caveAreaUuid,
     latitude,
     longitude,
@@ -4611,7 +4786,8 @@ class CavePlace extends DataClass implements Insertable<CavePlace> {
           other.title == this.title &&
           other.description == this.description &&
           other.caveUuid == this.caveUuid &&
-          other.placeQrCodeIdentifier == this.placeQrCodeIdentifier &&
+          other.placeCodeIdentifier == this.placeCodeIdentifier &&
+          other.qrCodeResourceIdentifier == this.qrCodeResourceIdentifier &&
           other.caveAreaUuid == this.caveAreaUuid &&
           other.latitude == this.latitude &&
           other.longitude == this.longitude &&
@@ -4631,7 +4807,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
   final Value<String> title;
   final Value<String?> description;
   final Value<Uuid> caveUuid;
-  final Value<int?> placeQrCodeIdentifier;
+  final Value<String?> placeCodeIdentifier;
+  final Value<String?> qrCodeResourceIdentifier;
   final Value<Uuid?> caveAreaUuid;
   final Value<double?> latitude;
   final Value<double?> longitude;
@@ -4650,7 +4827,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.caveUuid = const Value.absent(),
-    this.placeQrCodeIdentifier = const Value.absent(),
+    this.placeCodeIdentifier = const Value.absent(),
+    this.qrCodeResourceIdentifier = const Value.absent(),
     this.caveAreaUuid = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
@@ -4670,7 +4848,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     required String title,
     this.description = const Value.absent(),
     required Uuid caveUuid,
-    this.placeQrCodeIdentifier = const Value.absent(),
+    this.placeCodeIdentifier = const Value.absent(),
+    this.qrCodeResourceIdentifier = const Value.absent(),
     this.caveAreaUuid = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
@@ -4692,7 +4871,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Expression<String>? title,
     Expression<String>? description,
     Expression<Uint8List>? caveUuid,
-    Expression<int>? placeQrCodeIdentifier,
+    Expression<String>? placeCodeIdentifier,
+    Expression<String>? qrCodeResourceIdentifier,
     Expression<Uint8List>? caveAreaUuid,
     Expression<double>? latitude,
     Expression<double>? longitude,
@@ -4712,8 +4892,10 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (caveUuid != null) 'cave_uuid': caveUuid,
-      if (placeQrCodeIdentifier != null)
-        'place_qr_code_identifier': placeQrCodeIdentifier,
+      if (placeCodeIdentifier != null)
+        'place_code_identifier': placeCodeIdentifier,
+      if (qrCodeResourceIdentifier != null)
+        'qr_code_resource_identifier': qrCodeResourceIdentifier,
       if (caveAreaUuid != null) 'cave_area_uuid': caveAreaUuid,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
@@ -4736,7 +4918,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
     Value<String>? title,
     Value<String?>? description,
     Value<Uuid>? caveUuid,
-    Value<int?>? placeQrCodeIdentifier,
+    Value<String?>? placeCodeIdentifier,
+    Value<String?>? qrCodeResourceIdentifier,
     Value<Uuid?>? caveAreaUuid,
     Value<double?>? latitude,
     Value<double?>? longitude,
@@ -4756,8 +4939,9 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
       title: title ?? this.title,
       description: description ?? this.description,
       caveUuid: caveUuid ?? this.caveUuid,
-      placeQrCodeIdentifier:
-          placeQrCodeIdentifier ?? this.placeQrCodeIdentifier,
+      placeCodeIdentifier: placeCodeIdentifier ?? this.placeCodeIdentifier,
+      qrCodeResourceIdentifier:
+          qrCodeResourceIdentifier ?? this.qrCodeResourceIdentifier,
       caveAreaUuid: caveAreaUuid ?? this.caveAreaUuid,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -4794,9 +4978,14 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
         CavePlaces.$convertercaveUuid.toSql(caveUuid.value),
       );
     }
-    if (placeQrCodeIdentifier.present) {
-      map['place_qr_code_identifier'] = Variable<int>(
-        placeQrCodeIdentifier.value,
+    if (placeCodeIdentifier.present) {
+      map['place_code_identifier'] = Variable<String>(
+        placeCodeIdentifier.value,
+      );
+    }
+    if (qrCodeResourceIdentifier.present) {
+      map['qr_code_resource_identifier'] = Variable<String>(
+        qrCodeResourceIdentifier.value,
       );
     }
     if (caveAreaUuid.present) {
@@ -4856,7 +5045,8 @@ class CavePlacesCompanion extends UpdateCompanion<CavePlace> {
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('caveUuid: $caveUuid, ')
-          ..write('placeQrCodeIdentifier: $placeQrCodeIdentifier, ')
+          ..write('placeCodeIdentifier: $placeCodeIdentifier, ')
+          ..write('qrCodeResourceIdentifier: $qrCodeResourceIdentifier, ')
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
@@ -7744,6 +7934,18 @@ class Configurations extends Table
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  late final GeneratedColumn<int> isSynced = GeneratedColumn<int>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -7771,6 +7973,7 @@ class Configurations extends Table
     id,
     title,
     value,
+    isSynced,
     createdAt,
     updatedAt,
   ];
@@ -7801,6 +8004,12 @@ class Configurations extends Table
       context.handle(
         _valueMeta,
         value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -7836,6 +8045,10 @@ class Configurations extends Table
         DriftSqlType.string,
         data['${effectivePrefix}value'],
       ),
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_synced'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -7860,12 +8073,16 @@ class Configuration extends DataClass implements Insertable<Configuration> {
   final int id;
   final String title;
   final String? value;
+  final int isSynced;
+
+  /// when 1, the row is exported by archive sync
   final int? createdAt;
   final int? updatedAt;
   const Configuration({
     required this.id,
     required this.title,
     this.value,
+    required this.isSynced,
     this.createdAt,
     this.updatedAt,
   });
@@ -7877,6 +8094,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
     if (!nullToAbsent || value != null) {
       map['value'] = Variable<String>(value);
     }
+    map['is_synced'] = Variable<int>(isSynced);
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
     }
@@ -7893,6 +8111,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
       value: value == null && nullToAbsent
           ? const Value.absent()
           : Value(value),
+      isSynced: Value(isSynced),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -7911,6 +8130,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
       id: serializer.fromJson<int>(json['id']),
       title: serializer.fromJson<String>(json['title']),
       value: serializer.fromJson<String?>(json['value']),
+      isSynced: serializer.fromJson<int>(json['is_synced']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
     );
@@ -7922,6 +8142,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
       'id': serializer.toJson<int>(id),
       'title': serializer.toJson<String>(title),
       'value': serializer.toJson<String?>(value),
+      'is_synced': serializer.toJson<int>(isSynced),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
     };
@@ -7931,12 +8152,14 @@ class Configuration extends DataClass implements Insertable<Configuration> {
     int? id,
     String? title,
     Value<String?> value = const Value.absent(),
+    int? isSynced,
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
   }) => Configuration(
     id: id ?? this.id,
     title: title ?? this.title,
     value: value.present ? value.value : this.value,
+    isSynced: isSynced ?? this.isSynced,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -7945,6 +8168,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
       value: data.value.present ? data.value.value : this.value,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -7956,6 +8180,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('value: $value, ')
+          ..write('isSynced: $isSynced, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -7963,7 +8188,8 @@ class Configuration extends DataClass implements Insertable<Configuration> {
   }
 
   @override
-  int get hashCode => Object.hash(id, title, value, createdAt, updatedAt);
+  int get hashCode =>
+      Object.hash(id, title, value, isSynced, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7971,6 +8197,7 @@ class Configuration extends DataClass implements Insertable<Configuration> {
           other.id == this.id &&
           other.title == this.title &&
           other.value == this.value &&
+          other.isSynced == this.isSynced &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -7979,12 +8206,14 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
   final Value<int> id;
   final Value<String> title;
   final Value<String?> value;
+  final Value<int> isSynced;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   const ConfigurationsCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.value = const Value.absent(),
+    this.isSynced = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -7992,6 +8221,7 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
     this.id = const Value.absent(),
     required String title,
     this.value = const Value.absent(),
+    this.isSynced = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : title = Value(title);
@@ -7999,6 +8229,7 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
     Expression<int>? id,
     Expression<String>? title,
     Expression<String>? value,
+    Expression<int>? isSynced,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
   }) {
@@ -8006,6 +8237,7 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
       if (id != null) 'id': id,
       if (title != null) 'title': title,
       if (value != null) 'value': value,
+      if (isSynced != null) 'is_synced': isSynced,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -8015,6 +8247,7 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
     Value<int>? id,
     Value<String>? title,
     Value<String?>? value,
+    Value<int>? isSynced,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
   }) {
@@ -8022,6 +8255,7 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
       id: id ?? this.id,
       title: title ?? this.title,
       value: value ?? this.value,
+      isSynced: isSynced ?? this.isSynced,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -8039,6 +8273,9 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
     if (value.present) {
       map['value'] = Variable<String>(value.value);
     }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<int>(isSynced.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -8054,6 +8291,7 @@ class ConfigurationsCompanion extends UpdateCompanion<Configuration> {
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('value: $value, ')
+          ..write('isSynced: $isSynced, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -12005,6 +12243,7 @@ typedef $SurfaceAreasCreateCompanionBuilder =
       required Uuid uuid,
       required String title,
       Value<String?> description,
+      Value<String?> generalAreaIdentifier,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -12017,6 +12256,7 @@ typedef $SurfaceAreasUpdateCompanionBuilder =
       Value<Uuid> uuid,
       Value<String> title,
       Value<String?> description,
+      Value<String?> generalAreaIdentifier,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -12116,6 +12356,11 @@ class $SurfaceAreasFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get generalAreaIdentifier => $composableBuilder(
+    column: $table.generalAreaIdentifier,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12230,6 +12475,11 @@ class $SurfaceAreasOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get generalAreaIdentifier => $composableBuilder(
+    column: $table.generalAreaIdentifier,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -12309,6 +12559,11 @@ class $SurfaceAreasAnnotationComposer
 
   GeneratedColumn<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get generalAreaIdentifier => $composableBuilder(
+    column: $table.generalAreaIdentifier,
     builder: (column) => column,
   );
 
@@ -12428,6 +12683,7 @@ class $SurfaceAreasTableManager
                 Value<Uuid> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String?> generalAreaIdentifier = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -12438,6 +12694,7 @@ class $SurfaceAreasTableManager
                 uuid: uuid,
                 title: title,
                 description: description,
+                generalAreaIdentifier: generalAreaIdentifier,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12450,6 +12707,7 @@ class $SurfaceAreasTableManager
                 required Uuid uuid,
                 required String title,
                 Value<String?> description = const Value.absent(),
+                Value<String?> generalAreaIdentifier = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -12460,6 +12718,7 @@ class $SurfaceAreasTableManager
                 uuid: uuid,
                 title: title,
                 description: description,
+                generalAreaIdentifier: generalAreaIdentifier,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12578,6 +12837,7 @@ typedef $CavesCreateCompanionBuilder =
       required String title,
       Value<String?> description,
       Value<Uuid?> surfaceAreaUuid,
+      Value<String?> caveLocalIndex,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -12591,6 +12851,7 @@ typedef $CavesUpdateCompanionBuilder =
       Value<String> title,
       Value<String?> description,
       Value<Uuid?> surfaceAreaUuid,
+      Value<String?> caveLocalIndex,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -12773,6 +13034,11 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get caveLocalIndex => $composableBuilder(
+    column: $table.caveLocalIndex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13009,6 +13275,11 @@ class $CavesOrderingComposer extends Composer<_$AppDatabase, Caves> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get caveLocalIndex => $composableBuilder(
+    column: $table.caveLocalIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -13110,6 +13381,11 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
 
   GeneratedColumn<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get caveLocalIndex => $composableBuilder(
+    column: $table.caveLocalIndex,
     builder: (column) => column,
   );
 
@@ -13358,6 +13634,7 @@ class $CavesTableManager
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<Uuid?> surfaceAreaUuid = const Value.absent(),
+                Value<String?> caveLocalIndex = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -13369,6 +13646,7 @@ class $CavesTableManager
                 title: title,
                 description: description,
                 surfaceAreaUuid: surfaceAreaUuid,
+                caveLocalIndex: caveLocalIndex,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -13382,6 +13660,7 @@ class $CavesTableManager
                 required String title,
                 Value<String?> description = const Value.absent(),
                 Value<Uuid?> surfaceAreaUuid = const Value.absent(),
+                Value<String?> caveLocalIndex = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -13393,6 +13672,7 @@ class $CavesTableManager
                 title: title,
                 description: description,
                 surfaceAreaUuid: surfaceAreaUuid,
+                caveLocalIndex: caveLocalIndex,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -15726,7 +16006,8 @@ typedef $CavePlacesCreateCompanionBuilder =
       required String title,
       Value<String?> description,
       required Uuid caveUuid,
-      Value<int?> placeQrCodeIdentifier,
+      Value<String?> placeCodeIdentifier,
+      Value<String?> qrCodeResourceIdentifier,
       Value<Uuid?> caveAreaUuid,
       Value<double?> latitude,
       Value<double?> longitude,
@@ -15747,7 +16028,8 @@ typedef $CavePlacesUpdateCompanionBuilder =
       Value<String> title,
       Value<String?> description,
       Value<Uuid> caveUuid,
-      Value<int?> placeQrCodeIdentifier,
+      Value<String?> placeCodeIdentifier,
+      Value<String?> qrCodeResourceIdentifier,
       Value<Uuid?> caveAreaUuid,
       Value<double?> latitude,
       Value<double?> longitude,
@@ -15926,8 +16208,13 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get placeQrCodeIdentifier => $composableBuilder(
-    column: $table.placeQrCodeIdentifier,
+  ColumnFilters<String> get placeCodeIdentifier => $composableBuilder(
+    column: $table.placeCodeIdentifier,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get qrCodeResourceIdentifier => $composableBuilder(
+    column: $table.qrCodeResourceIdentifier,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16144,8 +16431,13 @@ class $CavePlacesOrderingComposer extends Composer<_$AppDatabase, CavePlaces> {
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get placeQrCodeIdentifier => $composableBuilder(
-    column: $table.placeQrCodeIdentifier,
+  ColumnOrderings<String> get placeCodeIdentifier => $composableBuilder(
+    column: $table.placeCodeIdentifier,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get qrCodeResourceIdentifier => $composableBuilder(
+    column: $table.qrCodeResourceIdentifier,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -16307,8 +16599,13 @@ class $CavePlacesAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get placeQrCodeIdentifier => $composableBuilder(
-    column: $table.placeQrCodeIdentifier,
+  GeneratedColumn<String> get placeCodeIdentifier => $composableBuilder(
+    column: $table.placeCodeIdentifier,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get qrCodeResourceIdentifier => $composableBuilder(
+    column: $table.qrCodeResourceIdentifier,
     builder: (column) => column,
   );
 
@@ -16529,7 +16826,8 @@ class $CavePlacesTableManager
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<Uuid> caveUuid = const Value.absent(),
-                Value<int?> placeQrCodeIdentifier = const Value.absent(),
+                Value<String?> placeCodeIdentifier = const Value.absent(),
+                Value<String?> qrCodeResourceIdentifier = const Value.absent(),
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
@@ -16548,7 +16846,8 @@ class $CavePlacesTableManager
                 title: title,
                 description: description,
                 caveUuid: caveUuid,
-                placeQrCodeIdentifier: placeQrCodeIdentifier,
+                placeCodeIdentifier: placeCodeIdentifier,
+                qrCodeResourceIdentifier: qrCodeResourceIdentifier,
                 caveAreaUuid: caveAreaUuid,
                 latitude: latitude,
                 longitude: longitude,
@@ -16569,7 +16868,8 @@ class $CavePlacesTableManager
                 required String title,
                 Value<String?> description = const Value.absent(),
                 required Uuid caveUuid,
-                Value<int?> placeQrCodeIdentifier = const Value.absent(),
+                Value<String?> placeCodeIdentifier = const Value.absent(),
+                Value<String?> qrCodeResourceIdentifier = const Value.absent(),
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
@@ -16588,7 +16888,8 @@ class $CavePlacesTableManager
                 title: title,
                 description: description,
                 caveUuid: caveUuid,
-                placeQrCodeIdentifier: placeQrCodeIdentifier,
+                placeCodeIdentifier: placeCodeIdentifier,
+                qrCodeResourceIdentifier: qrCodeResourceIdentifier,
                 caveAreaUuid: caveAreaUuid,
                 latitude: latitude,
                 longitude: longitude,
@@ -19775,6 +20076,7 @@ typedef $ConfigurationsCreateCompanionBuilder =
       Value<int> id,
       required String title,
       Value<String?> value,
+      Value<int> isSynced,
       Value<int?> createdAt,
       Value<int?> updatedAt,
     });
@@ -19783,6 +20085,7 @@ typedef $ConfigurationsUpdateCompanionBuilder =
       Value<int> id,
       Value<String> title,
       Value<String?> value,
+      Value<int> isSynced,
       Value<int?> createdAt,
       Value<int?> updatedAt,
     });
@@ -19808,6 +20111,11 @@ class $ConfigurationsFilterComposer
 
   ColumnFilters<String> get value => $composableBuilder(
     column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isSynced => $composableBuilder(
+    column: $table.isSynced,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19846,6 +20154,11 @@ class $ConfigurationsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -19874,6 +20187,9 @@ class $ConfigurationsAnnotationComposer
 
   GeneratedColumn<String> get value =>
       $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<int> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -19916,12 +20232,14 @@ class $ConfigurationsTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> value = const Value.absent(),
+                Value<int> isSynced = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
               }) => ConfigurationsCompanion(
                 id: id,
                 title: title,
                 value: value,
+                isSynced: isSynced,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -19930,12 +20248,14 @@ class $ConfigurationsTableManager
                 Value<int> id = const Value.absent(),
                 required String title,
                 Value<String?> value = const Value.absent(),
+                Value<int> isSynced = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
               }) => ConfigurationsCompanion.insert(
                 id: id,
                 title: title,
                 value: value,
+                isSynced: isSynced,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

@@ -4,6 +4,7 @@ import 'package:speleoloc/screens/settings/debug_info_page.dart';
 import 'package:speleoloc/screens/settings/settings_general_page.dart';
 import 'package:speleoloc/screens/settings/settings_image_compression_page.dart';
 import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
+import 'package:speleoloc/screens/settings/settings_place_codes_page.dart';
 import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_database_page.dart';
 import 'package:speleoloc/screens/settings/users_page.dart';
@@ -90,6 +91,18 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const SettingsQrGenerationPage()),
+                );
+              },
+            ),
+            _SettingsSection(
+              icon: Icons.tag,
+              title: LocServ.inst.t('settings_place_codes'),
+              subtitle: LocServ.inst.t('settings_place_codes_desc'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const SettingsPlaceCodesPage()),
                 );
               },
             ),

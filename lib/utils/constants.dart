@@ -50,6 +50,7 @@ const bool enableQrManualInput = true;
 // Configuration keys
 const String qrGenerationConfigKey = 'qr_code_generation';
 const String pdfOutputConfigKey = 'pdf_output_config';
+const String qrScanConfigKey = 'qr_scan_config';
 const String lastOpenCaveKey = 'last_open_cave';
 
 // Default QR label template
@@ -90,3 +91,6 @@ const String activeTripConfigKey = 'active_trip_id';
 
 // Auto-add entrance cave place when creating a new cave
 const String autoAddEntrancePlaceKey = 'auto_add_entrance_place';
+
+// Allow bulk deletion of top-level objects (caves or others) via selection mode
+const String allowMainObjectBulkDeletesKey = 'allow_main_object_bulk_deletes';

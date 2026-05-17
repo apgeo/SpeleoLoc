@@ -20,7 +20,7 @@ List<CavePlace> filterCavePlaces(
   return places.where((cp) {
     final titleMatch = cp.title.toLowerCase().contains(qLower);
     final qrMatch =
-        cp.placeQrCodeIdentifier?.toString().contains(qLower) ?? false;
+        cp.placeCodeIdentifier?.toLowerCase().contains(qLower) ?? false;
     final areaTitle = (cp.caveAreaUuid != null)
         ? (areaTitles[cp.caveAreaUuid] ?? '')
         : '';

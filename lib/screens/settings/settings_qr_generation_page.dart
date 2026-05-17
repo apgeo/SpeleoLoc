@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
@@ -33,10 +34,15 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
   late TextEditingController _templateController;
   final FocusNode _templateFocusNode = FocusNode();
 
+  // Scan config
+  bool _scanStripUrl = true;
+  late TextEditingController _scanDelimitersController;
+
   @override
   void initState() {
     super.initState();
     _templateController = TextEditingController();
+    _scanDelimitersController = TextEditingController();
     _load();
   }
 
@@ -44,6 +50,7 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
   void dispose() {
     _templateController.dispose();
     _templateFocusNode.dispose();
+    _scanDelimitersController.dispose();
     super.dispose();
   }
 
@@ -54,18 +61,47 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
         pdfOutputConfigKey, _defaultPdfConfig);
     final outputKind =
         await SettingsHelper.loadStringConfig('qr_output_kind', 'pdf');
+    final scanConfig = await QrScanConfig.load();
     if (mounted) {
       setState(() {
         _cfg = cfg;
         _pdfCfg = pdfCfg;
         _qrOutputKind = outputKind;
         _templateController.text = pdfCfg['labelTemplate'] ?? defaultLabelTemplate;
+        _scanStripUrl = scanConfig.stripUrlToLastDelimiter;
+        _scanDelimitersController.text = scanConfig.urlStripDelimiters.join(', ');
       });
     }
   }
 
   Future<void> _saveConfig(Map<String, dynamic> cfg) async {
     await SettingsHelper.saveJsonConfig(qrGenerationConfigKey, cfg);
+  }
+
+  Future<void> _saveScanConfig({
+    bool? stripUrl,
+    List<String>? delimiters,
+  }) async {
+    final newStrip = stripUrl ?? _scanStripUrl;
+    final newDelimiters = delimiters ?? _parseDelimiters(_scanDelimitersController.text);
+    final config = QrScanConfig(
+      stripUrlToLastDelimiter: newStrip,
+      urlStripDelimiters: newDelimiters,
+    );
+    await SettingsHelper.saveJsonConfig(qrScanConfigKey, config.toJson());
+    setState(() {
+      _scanStripUrl = newStrip;
+    });
+  }
+
+  List<String> _parseDelimiters(String text) {
+    // Accept comma-separated or space-separated single characters.
+    final parts = text.split(RegExp(r'[,\s]+'));
+    final result = parts
+        .map((s) => s.trim())
+        .where((s) => s.length == 1)
+        .toList();
+    return result.isEmpty ? const ['/', '='] : result;
   }
 
   Future<void> _savePdfConfig(Map<String, dynamic> cfg) async {
@@ -258,6 +294,7 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
       'qrErrorCorrectionLevel': 'M',
       'pdfQrPaddingH': 2.0,
       'pdfQrPaddingV': 2.0,
+      'includeDeepLinkPrefix': true,
     };
   }
 
@@ -442,6 +479,16 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
               if (mounted) setState(() {});
             },
           ),
+          SwitchListTile(
+            title: Text(LocServ.inst.t('include_deep_link_prefix')),
+            subtitle: Text(LocServ.inst.t('include_deep_link_prefix_help')),
+            value: cfg['includeDeepLinkPrefix'] ?? true,
+            onChanged: (v) async {
+              cfg['includeDeepLinkPrefix'] = v;
+              await _saveConfig(cfg);
+              if (mounted) setState(() {});
+            },
+          ),
           const SizedBox(height: 8),
           Text(LocServ.inst.t('pdf_qr_padding'),
               style:
@@ -511,8 +558,10 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
           _variableChip('@description', LocServ.inst.t('var_description')),
           _variableChip('@cave_title', LocServ.inst.t('var_cave_title')),
           _variableChip('@area_title', LocServ.inst.t('var_area_title')),
-          _variableChip('@place_qr_code_identifier',
-              LocServ.inst.t('var_place_qr_code_identifier')),
+          _variableChip('@place_code_identifier',
+              LocServ.inst.t('var_place_code_identifier')),
+          _variableChip('@qr_res_identifier',
+              LocServ.inst.t('var_qr_res_identifier')),
           _variableChip('@depth', LocServ.inst.t('var_depth')),
           const Divider(height: 16),
           _variableChip('\\n', LocServ.inst.t('var_newline')),
@@ -526,7 +575,33 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
           Text(
             LocServ.inst.t('template_example'),
             style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
-          ),        ],
+          ),
+          const Divider(height: 32),
+          Text(LocServ.inst.t('qr_scan_settings_title'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          SwitchListTile(
+            title: Text(LocServ.inst.t('qr_scan_strip_url')),
+            subtitle: Text(LocServ.inst.t('qr_scan_strip_url_help')),
+            value: _scanStripUrl,
+            onChanged: (v) => _saveScanConfig(stripUrl: v),
+          ),
+          if (_scanStripUrl) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _scanDelimitersController,
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('qr_scan_strip_delimiters'),
+                helperText: LocServ.inst.t('qr_scan_strip_delimiters_help'),
+                helperMaxLines: 2,
+              ),
+              onEditingComplete: () =>
+                  _saveScanConfig(delimiters: _parseDelimiters(_scanDelimitersController.text)),
+              onTapOutside: (_) =>
+                  _saveScanConfig(delimiters: _parseDelimiters(_scanDelimitersController.text)),
+            ),
+          ],
+        ],
       ),
     );
   }
