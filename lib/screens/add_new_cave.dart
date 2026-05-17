@@ -6,6 +6,8 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/place_code_batch_ui.dart';
+import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -32,9 +34,32 @@ class _CaveFormPageState extends State<CaveFormPage>
     TourStepDef(keyId: 'menu', titleLocKey: 'tour_add_new_cave_menu_title', bodyLocKey: 'tour_add_new_cave_menu_body'),
   ];
 
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    if (widget.cave != null)
+      AppMenuItem(
+        value: 'generate_codes',
+        icon: Icons.auto_awesome,
+        label: LocServ.inst.t('generate_codes'),
+      ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) async {
+    if (value == 'generate_codes' && widget.cave != null) {
+      await PlaceCodeBatchUi.run(
+        context,
+        scope: PerCaveScope(widget.cave!.uuid),
+        confirmTitle: LocServ.inst.t('generate_codes'),
+        confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),
+      );
+    }
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _caveLocalIndexController = TextEditingController();
   bool _saving = false;
 
   List<SurfaceArea> _surfaceAreas = [];
@@ -46,6 +71,7 @@ class _CaveFormPageState extends State<CaveFormPage>
     if (widget.cave != null) {
       _titleController.text = widget.cave!.title;
       _descriptionController.text = widget.cave!.description ?? '';
+      _caveLocalIndexController.text = widget.cave!.caveLocalIndex ?? '';
       _selectedSurfaceAreaId = widget.cave!.surfaceAreaUuid;
     }
     _loadSurfaceAreas();
@@ -61,6 +87,7 @@ class _CaveFormPageState extends State<CaveFormPage>
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _caveLocalIndexController.dispose();
     super.dispose();
   }
 
@@ -69,11 +96,25 @@ class _CaveFormPageState extends State<CaveFormPage>
     setState(() => _saving = true);
     try {
       final desc = _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim();
+      final localIdx = _caveLocalIndexController.text.trim().isEmpty
+          ? null
+          : _caveLocalIndexController.text.trim();
       if (widget.cave != null) {
-        await caveRepository.updateCave(widget.cave!.uuid, _titleController.text.trim(), surfaceAreaUuid: _selectedSurfaceAreaId, description: desc);
+        await caveRepository.updateCave(
+          widget.cave!.uuid,
+          _titleController.text.trim(),
+          surfaceAreaUuid: _selectedSurfaceAreaId,
+          description: desc,
+          caveLocalIndex: localIdx,
+        );
         if (mounted) Navigator.pop(context, widget.cave!.uuid);
       } else {
-        final id = await caveRepository.addCave(_titleController.text.trim(), surfaceAreaUuid: _selectedSurfaceAreaId, description: desc);
+        final id = await caveRepository.addCave(
+          _titleController.text.trim(),
+          surfaceAreaUuid: _selectedSurfaceAreaId,
+          description: desc,
+          caveLocalIndex: localIdx,
+        );
         // Auto-add entrance cave place if setting is enabled (default: true)
         final autoAdd = await SettingsHelper.loadStringConfig(autoAddEntrancePlaceKey, 'true');
         if (autoAdd == 'true') {
@@ -172,6 +213,13 @@ class _CaveFormPageState extends State<CaveFormPage>
                     },
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _caveLocalIndexController,
+                decoration: InputDecoration(
+                  labelText: LocServ.inst.t('cave_local_index'),
+                ),
               ),
               const SizedBox(height: 20),
               Row(
