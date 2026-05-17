@@ -89,6 +89,7 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
             id: config.id,
             title: config.title,
             value: saved.isEmpty ? null : saved,
+            isSynced: config.isSynced,
             createdAt: config.createdAt,
             updatedAt: DateTime.now().millisecondsSinceEpoch,
           ),

@@ -29,6 +29,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
   String? _appLanguage;
   bool _showHomeToolbar = false;
   bool _autoAddEntrancePlace = true;
+  bool _allowMainObjectBulkDeletes = true;
   bool _needsReload = false;
 
   @override
@@ -46,11 +47,16 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
       autoAddEntrancePlaceKey,
       'true',
     );
+    final allowBulkDeletes = await SettingsHelper.loadStringConfig(
+      allowMainObjectBulkDeletesKey,
+      'true',
+    );
     if (mounted) {
       setState(() {
         _appLanguage = LocServ.inst.locale;
         _showHomeToolbar = showToolbar == 'true';
         _autoAddEntrancePlace = autoAddEntrance == 'true';
+        _allowMainObjectBulkDeletes = allowBulkDeletes == 'true';
       });
     }
   }
@@ -136,6 +142,19 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
                   value ? 'true' : 'false',
                 );
                 if (mounted) setState(() => _autoAddEntrancePlace = value);
+              },
+            ),
+            const Divider(),
+            SwitchListTile(
+              title: Text(LocServ.inst.t('allow_main_object_bulk_deletes')),
+              subtitle: Text(LocServ.inst.t('allow_main_object_bulk_deletes_desc')),
+              value: _allowMainObjectBulkDeletes,
+              onChanged: (value) async {
+                await SettingsHelper.saveStringConfig(
+                  allowMainObjectBulkDeletesKey,
+                  value ? 'true' : 'false',
+                );
+                if (mounted) setState(() => _allowMainObjectBulkDeletes = value);
               },
             ),
             const Divider(),

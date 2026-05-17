@@ -121,6 +121,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   Map<Uuid, int> _caveRasterMapCounts = {};
   Map<Uuid, String?> _surfaceAreaTitles = {}; // surface_area_id -> title
   bool _showMainToolbar = false;
+  bool _allowMainObjectBulkDeletes = true;
 
   bool _testDataPromptShown = false;
   Completer<void>? _testDataPromptCompleter;
@@ -199,9 +200,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       showHomeToolbarKey,
       'false',
     );
+    final allowBulkDeletes = await SettingsHelper.loadStringConfig(
+      allowMainObjectBulkDeletesKey,
+      'true',
+    );
     if (!mounted) return;
     setState(() {
       _showMainToolbar = showToolbar == 'true';
+      _allowMainObjectBulkDeletes = allowBulkDeletes == 'true';
     });
   }
 
@@ -355,6 +361,58 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       if (mounted) {
         SnackBarService.showError('${LocServ.inst.t('error_deleting_cave')}: $e');
       }
+    }
+  }
+
+  Future<void> _deleteSelectedCaves(List<Cave> selected) async {
+    final loc = LocServ.inst;
+    final count = selected.length;
+    // First confirmation — Cancel left, Delete right (standard order)
+    final first = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.t('confirm')),
+        content: Text(
+          loc.t('delete_selected_caves_confirm').replaceAll('{count}', '$count'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(loc.t('delete')),
+          ),
+        ],
+      ),
+    );
+    if (first != true || !mounted) return;
+    // Second confirmation — Delete left, Cancel right (reversed order)
+    final second = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.t('confirm')),
+        content: Text(
+          loc.t('delete_selected_caves_confirm2').replaceAll('{count}', '$count'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(loc.t('delete')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.t('cancel')),
+          ),
+        ],
+      ),
+    );
+    if (second != true || !mounted) return;
+    for (final c in selected) {
+      await caveRepository.deleteCave(c.uuid);
     }
   }
 
@@ -683,7 +741,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       headerKey: tourKeys['cave_list'],
       headerLabelText: '${LocServ.inst.t('caves')}:',
       headerTrailing: [IconButton(icon: Icon(_showMainToolbar ? Icons.view_day : Icons.view_day_outlined), tooltip: LocServ.inst.t(_showMainToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar'), visualDensity: VisualDensity.compact, onPressed: _toggleMainToolbar,),],
-      enableSelection: false,
+      enableSelection: true,
       items: _caves,
       keyOf: (c) => c.uuid,
       persistKey: 'cave_list_sort',
@@ -730,13 +788,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               .compareTo(_cavePlaceCounts[b.uuid] ?? 0),
         ),
       ],
-      enableBulkDelete: showCaveDeleteButtons,
-      onBulkDelete: showCaveDeleteButtons
-          ? (selected) async {
-              for (final c in selected) {
-                await caveRepository.deleteCave(c.uuid);
-              }
-            }
+      enableBulkDelete: _allowMainObjectBulkDeletes,
+      onBulkDelete: _allowMainObjectBulkDeletes
+          ? _deleteSelectedCaves
           : null,
       searchableText: (cave) {
         final area = cave.surfaceAreaUuid != null
