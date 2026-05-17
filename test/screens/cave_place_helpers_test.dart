@@ -50,12 +50,12 @@ void main() {
     final areaUuid10 = Uuid.v7();
     final areaUuid20 = Uuid.v7();
     CavePlace mk(Uuid id, String title,
-        {int? qr, Uuid? areaId}) =>
+        {String? qr, Uuid? areaId}) =>
         CavePlace(
           uuid: id,
           title: title,
           caveUuid: caveUuid,
-          placeQrCodeIdentifier: qr,
+          placeCodeIdentifier: qr,
           caveAreaUuid: areaId,
           isEntrance: 0,
           isMainEntrance: 0,
@@ -65,9 +65,9 @@ void main() {
     final u2 = Uuid.v7();
     final u3 = Uuid.v7();
     final places = [
-      mk(u1, 'Entrance', qr: 1001, areaId: areaUuid10),
-      mk(u2, 'Sump Room', qr: 2002, areaId: areaUuid20),
-      mk(u3, 'Crystal Hall', qr: 3003),
+      mk(u1, 'Entrance', qr: '1001', areaId: areaUuid10),
+      mk(u2, 'Sump Room', qr: '2002', areaId: areaUuid20),
+      mk(u3, 'Crystal Hall', qr: '3003'),
     ];
     final areaTitles = {areaUuid10: 'Main Gallery', areaUuid20: 'Deep Section'};
 
