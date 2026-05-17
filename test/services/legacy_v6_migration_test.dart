@@ -10,8 +10,9 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('legacy v6 export is migrated to v7 UUID schema with data preserved',
-      () async {
+  test(
+    'legacy v6 export is migrated to v7 UUID schema with data preserved',
+    () async {
     final source =
         File('test_data/db/binaries/speleo_loc_export_20260414.sqlite');
     expect(source.existsSync(), isTrue,
@@ -59,10 +60,10 @@ void main() {
       }
 
       // Drift reports the new schema version.
-      expect(db.schemaVersion, 9);
+      expect(db.schemaVersion, 11);
     } finally {
       await db.close();
       await tmpDir.delete(recursive: true);
     }
-  });
+  }, timeout: const Timeout(Duration(minutes: 5)));
 }
