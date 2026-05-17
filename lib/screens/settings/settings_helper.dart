@@ -32,10 +32,14 @@ class SettingsHelper {
   }
 
   /// Persist a JSON config map under the given [configKey] (upsert).
+  ///
+  /// [isSynced] controls whether the row participates in archive/FTP sync.
+  /// Defaults to `false` (local-only) for backward compatibility.
   static Future<void> saveJsonConfig(
     String configKey,
-    Map<String, dynamic> cfg,
-  ) async {
+    Map<String, dynamic> cfg, {
+    bool isSynced = false,
+  }) async {
     final existing = await (appDatabase.select(appDatabase.configurations)
           ..where((c) => c.title.equals(configKey)))
         .getSingleOrNull();
@@ -43,10 +47,16 @@ class SettingsHelper {
     if (existing == null) {
       await appDatabase.into(appDatabase.configurations).insert(
           ConfigurationsCompanion.insert(
-              title: configKey, value: drift.Value(jsonStr)));
+              title: configKey,
+              value: drift.Value(jsonStr),
+              isSynced: drift.Value(isSynced ? 1 : 0)));
     } else {
       await appDatabase.update(appDatabase.configurations).replace(
-          Configuration(id: existing.id, title: configKey, value: jsonStr));
+          Configuration(
+              id: existing.id,
+              title: configKey,
+              value: jsonStr,
+              isSynced: existing.isSynced));
     }
   }
 
@@ -67,20 +77,29 @@ class SettingsHelper {
   }
 
   /// Persist a plain string value under the given [configKey] (upsert).
+  ///
+  /// [isSynced] controls whether the row participates in archive/FTP sync.
   static Future<void> saveStringConfig(
     String configKey,
-    String value,
-  ) async {
+    String value, {
+    bool isSynced = false,
+  }) async {
     final existing = await (appDatabase.select(appDatabase.configurations)
           ..where((c) => c.title.equals(configKey)))
         .getSingleOrNull();
     if (existing == null) {
       await appDatabase.into(appDatabase.configurations).insert(
           ConfigurationsCompanion.insert(
-              title: configKey, value: drift.Value(value)));
+              title: configKey,
+              value: drift.Value(value),
+              isSynced: drift.Value(isSynced ? 1 : 0)));
     } else {
       await appDatabase.update(appDatabase.configurations).replace(
-          Configuration(id: existing.id, title: configKey, value: value));
+          Configuration(
+              id: existing.id,
+              title: configKey,
+              value: value,
+              isSynced: existing.isSynced));
     }
   }
 }
