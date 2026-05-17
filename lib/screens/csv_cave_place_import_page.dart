@@ -31,7 +31,7 @@ class CSVCavePlacesImportPage extends StatefulWidget {
 
 class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
   final CSVCavePlaceImporter _importer =
-      CSVCavePlaceImporter(appDatabase, currentUserService);
+      CSVCavePlaceImporter(appDatabase, currentUserService, placeCodeService);
   bool _isProcessing = false;
   bool _hasNavigated = false;
 

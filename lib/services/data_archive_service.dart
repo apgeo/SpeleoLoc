@@ -246,10 +246,17 @@ class DataArchiveService {
         for (final row in importedRows) {
           final oldId = row['id'] as int;
 
-          // Skip device-local configuration keys.
+          // Skip device-local configuration keys and any non-synced rows.
+          // Only configurations with is_synced=1 participate in archive sync
+          // (see docs/features/place-code-identifiers.md §8).
           if (cfg.name == 'configurations') {
             final title = row['title'] as String?;
             if (title != null && skipConfigKeys.contains(title)) continue;
+            final isSynced = row['is_synced'];
+            // Older archives (pre-v11) lack the column → treat as not-synced.
+            if (isSynced == null || (isSynced is int && isSynced == 0)) {
+              continue;
+            }
           }
 
           // Build a mutable copy without 'id' (auto-generated on insert).
