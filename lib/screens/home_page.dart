@@ -198,7 +198,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   Future<void> _loadUiSettings() async {
     final showToolbar = await SettingsHelper.loadStringConfig(
       showHomeToolbarKey,
-      'false',
+      'true',
     );
     final allowBulkDeletes = await SettingsHelper.loadStringConfig(
       allowMainObjectBulkDeletesKey,
@@ -463,20 +463,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               onPressed: _addNewCave,
             ),
           if (!_showMainToolbar)
-            IconButton(
-              icon: const Icon(Icons.sync),
-              tooltip: LocServ.inst.t('sync_dashboard_title'),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const SyncDashboardPage()),
-                );
-              },
-            ),
-          if (!_showMainToolbar)
             Consumer(
               builder: (context, ref, _) => IconButton(
                 icon: const Icon(Icons.cloud_sync),
@@ -491,19 +477,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                 },
               ),
             ),
-          // if (!_showMainToolbar)
-          //   IconButton(
-          //     key: tourKeys['docs'],
-          //     icon: const Icon(Icons.description),
-          //     tooltip: LocServ.inst.t('documentation'),
-          //     onPressed: _openDocumentationFiles,
-          //   ),
-          // if (!_showMainToolbar)
-          //   IconButton(
-          //     icon: const Icon(Icons.settings),
-          //     tooltip: LocServ.inst.t('settings'),
-          //     onPressed: _openSettings,
-          //   ),
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
@@ -656,6 +629,28 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         icon: Icons.description,
         tooltip: LocServ.inst.t('documentation'),
         onTap: _openDocumentationFiles,
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.landscape,
+        tooltip: LocServ.inst.t('manage_surface_areas'),
+        onTap: () async {
+          final result = await Navigator.push<bool?>(
+            context,
+            MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
+          );
+          if (result == true) _loadCaves();
+        },
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.upload_file,
+        tooltip: LocServ.inst.t('csv_import_caves'),
+        onTap: () async {
+          final result = await Navigator.push<bool?>(
+            context,
+            MaterialPageRoute(builder: (_) => const CSVCavesImportPage()),
+          );
+          if (result == true) _loadCaves();
+        },
       ),
       _HomeToolbarBtn(
         icon: Icons.settings,
