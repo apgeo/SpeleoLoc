@@ -54,17 +54,20 @@ class DeepLinkHandler {
     await _resolveAndNavigate(context, dlInput);
   }
 
-  /// Resolve dl_input against place_qr_code_identifier and navigate.
+  /// Resolve dl_input against place_code_identifier / qr_code_resource_identifier
+  /// and navigate.
   Future<void> _resolveAndNavigate(BuildContext context, String dlInput) async {
-    final qrCode = int.tryParse(dlInput);
-    if (qrCode == null) {
+    final code = dlInput.trim();
+    if (code.isEmpty) {
       _showWarning(context, '${LocServ.inst.t('invalid_qr_code')}: "$dlInput"');
       return;
     }
 
-    // Find all cave places matching the QR code identifier across all caves
+    // Find all cave places whose PCI or QCRI matches the scanned code.
     final matches = await (appDatabase.select(appDatabase.cavePlaces)
-          ..where((cp) => cp.placeQrCodeIdentifier.equals(qrCode)))
+          ..where((cp) =>
+              cp.placeCodeIdentifier.equals(code) |
+              cp.qrCodeResourceIdentifier.equals(code)))
         .get();
 
     if (matches.isEmpty) {
@@ -98,14 +101,17 @@ class DeepLinkHandler {
     }
   }
 
-  Future<int?> _getLastOpenCaveId() async {
+  Future<Uuid?> _getLastOpenCaveId() async {
     final row = await (appDatabase.select(appDatabase.configurations)
           ..where((c) => c.title.equals(lastOpenCaveKey)))
         .getSingleOrNull();
-    if (row?.value != null) {
-      return int.tryParse(row!.value!);
+    final raw = row?.value;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return Uuid.parse(raw);
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   /// Save the last opened cave ID to configurations.
@@ -123,7 +129,8 @@ class DeepLinkHandler {
           Configuration(
               id: existing.id,
               title: lastOpenCaveKey,
-              value: caveUuid.toString()));
+              value: caveUuid.toString(),
+              isSynced: existing.isSynced));
     }
   }
 

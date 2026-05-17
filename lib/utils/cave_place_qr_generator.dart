@@ -9,6 +9,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:barcode/barcode.dart' show BarcodeQRCorrectionLevel;
 
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/qr_generation_defaults.dart';
 import 'package:speleoloc/utils/qr_label_template_engine.dart';
 
@@ -78,6 +79,12 @@ class GenerationPreferences {
   /// Area title for template resolution.
   final String? areaTitle;
 
+  /// When true (default), the printed QR payload is prefixed with
+  /// [deepLinkPrefix] (e.g. `sp://`). The stored
+  /// `qr_code_resource_identifier` is **not** affected — the prefix
+  /// only appears in the encoded image.
+  final bool includeDeepLinkPrefix;
+
   const GenerationPreferences({
     this.asPdf = true,
     this.includeTitle = true,
@@ -99,6 +106,7 @@ class GenerationPreferences {
     this.pdfQrPaddingV = QrGenerationDefaults.pdfQrPaddingV,
     this.caveTitle,
     this.areaTitle,
+    this.includeDeepLinkPrefix = true,
   });
 }
 
@@ -145,7 +153,7 @@ class QrImageRenderer {
     CavePlace place,
     GenerationPreferences prefs,
   ) async {
-    final data = _qrDataForPlace(place);
+    final data = _qrDataForPlace(place, prefs);
     final qrSize = prefs.qrSizePx.toDouble();
     final padding = prefs.imagePaddingPx.toDouble();
 
@@ -235,8 +243,13 @@ class QrImageRenderer {
     }
   }
 
-  static String _qrDataForPlace(CavePlace place) {
-    return '${place.placeQrCodeIdentifier}';
+  static String _qrDataForPlace(CavePlace place, [GenerationPreferences? prefs]) {
+    final raw = place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
+    if (raw.isEmpty) return raw;
+    if (prefs?.includeDeepLinkPrefix ?? true) {
+      return '$deepLinkPrefix$raw';
+    }
+    return raw;
   }
 }
 
@@ -314,7 +327,7 @@ class CavePlaceQRCodePDFGenerator {
                         return pw.Expanded(child: pw.SizedBox());
                       }
                       final place = pagePlaces[idx];
-                      final data = _qrDataForPlace(place);
+                      final data = _qrDataForPlace(place, prefs);
                       
                       // Parse segments for potential font size/color overrides
                       final segments = QrLabelTemplateEngine.parseSegments(
@@ -452,8 +465,13 @@ class CavePlaceQRCodePDFGenerator {
     }
   }
 
-  String _qrDataForPlace(CavePlace place) {
-    return '${place.placeQrCodeIdentifier}';
+  String _qrDataForPlace(CavePlace place, [GenerationPreferences? prefs]) {
+    final raw = place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
+    if (raw.isEmpty) return raw;
+    if (prefs?.includeDeepLinkPrefix ?? true) {
+      return '$deepLinkPrefix$raw';
+    }
+    return raw;
   }
 
   String _sanitizeFilename(String inName) =>

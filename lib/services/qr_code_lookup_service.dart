@@ -18,23 +18,26 @@ class QrCodeLookupService {
 
   QrCodeLookupService(this._db);
 
-  /// Parses [rawCode] as an integer QR identifier and returns matching cave places.
+  /// Looks up cave places whose PCI or QCRI equals [rawCode].
   ///
-  /// Returns an empty list if [rawCode] is not a valid integer.
+  /// Returns an empty list when [rawCode] is empty after trimming.
   Future<List<QrLookupResult>> lookup(String rawCode, {Uuid? currentCaveId}) async {
-    final qrCode = int.tryParse(rawCode);
-    if (qrCode == null) return [];
+    final code = rawCode.trim();
+    if (code.isEmpty) return [];
 
     List<CavePlace> places;
     if (currentCaveId != null) {
       places = await (_db.select(_db.cavePlaces)
             ..where((cp) =>
-                cp.placeQrCodeIdentifier.equals(qrCode) &
+                (cp.placeCodeIdentifier.equals(code) |
+                        cp.qrCodeResourceIdentifier.equals(code)) &
                 cp.caveUuid.equalsValue(currentCaveId)))
           .get();
     } else {
       places = await (_db.select(_db.cavePlaces)
-            ..where((cp) => cp.placeQrCodeIdentifier.equals(qrCode)))
+            ..where((cp) =>
+                cp.placeCodeIdentifier.equals(code) |
+                cp.qrCodeResourceIdentifier.equals(code)))
           .get();
     }
 
