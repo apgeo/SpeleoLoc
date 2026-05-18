@@ -249,7 +249,7 @@
   "point_reset": "Punctul a fost resetat la poziția inițială",
   "duplicate_qr_warning": "Cod QR duplicat",
   "duplicate_qr_message": "Locul \"{title}\" folosește deja codul QR {qr}. Salvați cu duplicat?",
-  "add_cave_place_quick": "Adăugare rapidă loc peșteră",
+  "add_cave_place_quick": "Adăugare loc peșteră",
   "cave_place_title": "Titlu loc peșteră",
   "cave_area": "Zonă peșteră",
   "title_already_exists": "Un loc cu acest titlu există deja în această peșteră",
