@@ -185,7 +185,7 @@ class RasterMapMarkerBuilder {
           left: viewportPos.dx + 10,
           top: viewportPos.dy - 10,
           child: buildLabel(
-            '${cpwd.cavePlace.title} ${cpwd.definition?.cavePlaceUuid ?? ''}',
+            cpwd.cavePlace.title,
             textColor,
             outlineEnabled: outlineEnabled,
             outlineWidth: outlineWidth,

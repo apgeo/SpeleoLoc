@@ -9,6 +9,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/full_screen_image_viewer.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -122,23 +123,13 @@ Future<String> _getFullImagePath(String fileName) async {
     final directory = await getApplicationDocumentsDirectory();
     final filePath = '${directory.path}/${rm.fileName}';
     final file = File(filePath);
-    if (await file.exists()) {
-      try {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            child: Image.file(file),
-          ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        _editRasterMap(rm);
-      }
-    } else {
+    if (!await file.exists()) {
       if (!mounted) return;
       _editRasterMap(rm);
+      return;
     }
+    if (!mounted) return;
+    await FullScreenImageViewer.show(context, file, title: rm.title);
   }
 
   void _editRasterMap(RasterMap rm) async {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -8,6 +9,7 @@ import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/full_screen_image_viewer.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -104,34 +106,56 @@ class _RasterMapFormState extends State<RasterMapForm>
   }
 
   void _save() async {
-    if (_imagePath != null && _selectedMapType != null) {
-      final title = _titleController.text.isEmpty ? null : _titleController.text;
-      if (widget.rasterMap != null) {
-        // Update
-        final updated = RasterMap(
-          uuid: widget.rasterMap!.uuid,
-          title: title ?? widget.rasterMap!.title,
-          mapType: _selectedMapType!,
-          fileName: _imagePath!,
-          caveUuid: widget.caveUuid,
-          caveAreaUuid: widget.rasterMap!.caveAreaUuid,
-        );
-        await rasterMapRepository.updateRasterMap(updated);
-      } else {
-        // Insert
-        final companion = RasterMapsCompanion.insert(
-          uuid: Uuid.v7(),
-          title: title ?? '?????', //todo: fix this
-          mapType: _selectedMapType!,
-          fileName: _imagePath!,
-          caveUuid: widget.caveUuid,
-        );
-        await rasterMapRepository.addRasterMap(companion);
-      }
-      if (mounted) Navigator.pop(context, true);
-    } else {
+    if (_imagePath == null || _selectedMapType == null) {
       SnackBarService.showWarning(LocServ.inst.t('please_select_image_and_map_type'));
+      return;
     }
+
+    // Use filename (without extension) as title when user left title empty.
+    String title = _titleController.text.trim();
+    if (title.isEmpty) {
+      final base = _imagePath!.split('/').last;
+      final dot = base.lastIndexOf('.');
+      title = dot > 0 ? base.substring(0, dot) : base;
+      _titleController.text = title;
+    }
+
+    // Check for a duplicate (title, map_type, cave_uuid) matching the DB UNIQUE constraint.
+    final existingMaps = await (appDatabase.select(appDatabase.rasterMaps)
+          ..where((rm) =>
+              rm.caveUuid.equalsValue(widget.caveUuid) &
+              rm.title.equals(title) &
+              rm.mapType.equals(_selectedMapType!)))
+        .get();
+    final isDuplicate = existingMaps.any(
+      (rm) => widget.rasterMap == null || rm.uuid != widget.rasterMap!.uuid,
+    );
+    if (isDuplicate) {
+      SnackBarService.showWarning(LocServ.inst.t('raster_map_title_duplicate'));
+      return;
+    }
+
+    if (widget.rasterMap != null) {
+      final updated = RasterMap(
+        uuid: widget.rasterMap!.uuid,
+        title: title,
+        mapType: _selectedMapType!,
+        fileName: _imagePath!,
+        caveUuid: widget.caveUuid,
+        caveAreaUuid: widget.rasterMap!.caveAreaUuid,
+      );
+      await rasterMapRepository.updateRasterMap(updated);
+    } else {
+      final companion = RasterMapsCompanion.insert(
+        uuid: Uuid.v7(),
+        title: title,
+        mapType: _selectedMapType!,
+        fileName: _imagePath!,
+        caveUuid: widget.caveUuid,
+      );
+      await rasterMapRepository.addRasterMap(companion);
+    }
+    if (mounted) Navigator.pop(context, true);
   }
 
   @override
@@ -161,10 +185,19 @@ class _RasterMapFormState extends State<RasterMapForm>
             if (_fullImagePath != null && File(_fullImagePath!).existsSync())
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Image.file(
-                  File(_fullImagePath!),
-                  height: 200,
-                  fit: BoxFit.cover,
+                child: GestureDetector(
+                  onTap: () => FullScreenImageViewer.show(
+                    context,
+                    File(_fullImagePath!),
+                    title: _titleController.text.trim().isNotEmpty
+                        ? _titleController.text.trim()
+                        : null,
+                  ),
+                  child: Image.file(
+                    File(_fullImagePath!),
+                    height: 200,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               )
             else if (_fullImagePath != null)

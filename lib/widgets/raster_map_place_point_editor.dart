@@ -397,6 +397,19 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// When false, tapping selects an existing marker instead.
   bool _tapDefinesNewPoint = true;
 
+  /// Controls visibility of the status_define_point / status_select_place label.
+  bool _showStatusOverlay = true;
+  Timer? _statusOverlayTimer;
+  static const Duration _statusOverlayDuration = Duration(seconds: 8);
+
+  void _scheduleStatusOverlayHide() {
+    _statusOverlayTimer?.cancel();
+    if (mounted) setState(() => _showStatusOverlay = true);
+    _statusOverlayTimer = Timer(_statusOverlayDuration, () {
+      if (mounted) setState(() => _showStatusOverlay = false);
+    });
+  }
+
   /// When true, next image tap captures coordinates for a new cave place.
   bool _waitingForNewCavePlaceTap = false;
 
@@ -424,6 +437,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // nav bar / tap-mode visibility
     _showNavBar = widget.controller?.showNavBar ?? widget.showNavBar;
     _showTapModeCheckbox = widget.controller?.showTapModeCheckbox ?? widget.showTapModeCheckbox;
+
+    // schedule auto-hide of the status overlay
+    _scheduleStatusOverlayHide();
 
     // wire controller -> state if controller provided
     widget.controller?._state = this;
@@ -510,6 +526,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     _scaleStateController.dispose();
     _pulseController.dispose();
     _panZoomController.dispose();
+    _statusOverlayTimer?.cancel();
     super.dispose();
   }
 
@@ -1302,7 +1319,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!widget.isReadonly && _showTapModeCheckbox)
+                      if (!widget.isReadonly && _showTapModeCheckbox && _showStatusOverlay)
                         Container(
                           constraints: const BoxConstraints(maxWidth: 220),
                           margin: const EdgeInsets.only(bottom: 4),
@@ -1393,7 +1410,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
               if (_showTapModeCheckbox)
                 IconButton(
                   onPressed: () {
-                    if (mounted) setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
+                    if (mounted) {
+                      setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
+                      _scheduleStatusOverlayHide();
+                    }
                   },
                   icon: Icon(
                     // tap_mode_define_point icon options to consider: move_up, edit_location, edit_location_alt, swipe_up, swipe_right_alt

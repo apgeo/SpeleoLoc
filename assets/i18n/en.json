@@ -65,6 +65,7 @@
   "extended_profile": "extended profile",
   "image_file_not_found_warning": "Warning: Image file not found",
   "raster_map_deleted": "Raster map deleted",
+  "raster_map_title_duplicate": "A raster map with this title and type already exists for this cave",
   "raster_map_has_definitions": "This raster map has {count} cave place point definition(s). Deleting it will also remove those point definitions. Continue?",
   "camera_permission_denied": "Camera permission denied",
   "error_opening_file": "Error opening file",
