@@ -176,8 +176,10 @@ CREATE TABLE IF NOT EXISTS configurations (
 CREATE TABLE IF NOT EXISTS raster_maps (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
     title                       TEXT NOT NULL,
-    map_type                    TEXT(20) NOT NULL CHECK(map_type IN ('plane view', 'projected profile', 'extended profile')),
+    map_type                    TEXT(20) NOT NULL CHECK(map_type IN ('plane view', 'projected profile', 'extended profile', 'other')),
     file_name                   TEXT(255) NOT NULL,
+    file_hash                   TEXT(64),     -- SHA-256 hex digest of the image file; NULL when not yet computed
+    file_size                   INTEGER,      -- image file size in bytes; NULL when not yet computed
     cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
     cave_area_uuid              BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),
     created_at                  INTEGER,

@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -375,6 +375,45 @@ class AppDatabase extends _$AppDatabase {
               nowMs,
               isSynced: true,
             );
+          }
+          if (from < 12) {
+            // v11 → v12 migration:
+            //   1. Add `file_hash TEXT(64)` and `file_size INTEGER` columns to
+            //      raster_maps.
+            //   2. Expand the map_type CHECK constraint to also allow 'other'.
+            //      SQLite cannot ALTER a CHECK constraint, so we recreate the
+            //      table (same pattern used in v7→v8).  All existing rows keep
+            //      their current data; the two new columns default to NULL.
+            final rasterMapRows = await customSelect(
+              'SELECT * FROM raster_maps',
+            ).get();
+            await migrator.drop(rasterMaps);
+            await migrator.create(rasterMaps);
+            for (final row in rasterMapRows) {
+              final d = row.data;
+              await customStatement(
+                'INSERT INTO raster_maps '
+                '(uuid, title, map_type, file_name, '
+                'file_hash, file_size, '
+                'cave_uuid, cave_area_uuid, '
+                'created_at, updated_at, deleted_at, '
+                'created_by_user_uuid, last_modified_by_user_uuid) '
+                'VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                  d['uuid'],
+                  d['title'],
+                  d['map_type'],
+                  d['file_name'],
+                  d['cave_uuid'],
+                  d['cave_area_uuid'],
+                  d['created_at'],
+                  d['updated_at'],
+                  d['deleted_at'],
+                  d['created_by_user_uuid'],
+                  d['last_modified_by_user_uuid'],
+                ],
+              );
+            }
           }
         },
       );

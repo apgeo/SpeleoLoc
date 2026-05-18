@@ -5098,7 +5098,7 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     $customConstraints:
-        'NOT NULL CHECK (map_type IN (\'plane view\', \'projected profile\', \'extended profile\'))',
+        'NOT NULL CHECK (map_type IN (\'plane view\', \'projected profile\', \'extended profile\', \'other\'))',
   );
   static const VerificationMeta _fileNameMeta = const VerificationMeta(
     'fileName',
@@ -5110,6 +5110,28 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _fileHashMeta = const VerificationMeta(
+    'fileHash',
+  );
+  late final GeneratedColumn<String> fileHash = GeneratedColumn<String>(
+    'file_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _fileSizeMeta = const VerificationMeta(
+    'fileSize',
+  );
+  late final GeneratedColumn<int> fileSize = GeneratedColumn<int>(
+    'file_size',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
   late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
       GeneratedColumn<Uint8List>(
@@ -5186,6 +5208,8 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     title,
     mapType,
     fileName,
+    fileHash,
+    fileSize,
     caveUuid,
     caveAreaUuid,
     createdAt,
@@ -5229,6 +5253,18 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
       );
     } else if (isInserting) {
       context.missing(_fileNameMeta);
+    }
+    if (data.containsKey('file_hash')) {
+      context.handle(
+        _fileHashMeta,
+        fileHash.isAcceptableOrUnknown(data['file_hash']!, _fileHashMeta),
+      );
+    }
+    if (data.containsKey('file_size')) {
+      context.handle(
+        _fileSizeMeta,
+        fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -5280,6 +5316,14 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
         DriftSqlType.string,
         data['${effectivePrefix}file_name'],
       )!,
+      fileHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_hash'],
+      ),
+      fileSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}file_size'],
+      ),
       caveUuid: RasterMaps.$convertercaveUuid.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.blob,
@@ -5354,6 +5398,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   final String title;
   final String mapType;
   final String fileName;
+  final String? fileHash;
+
+  /// SHA-256 hex digest of the image file; NULL when not yet computed
+  final int? fileSize;
+
+  /// image file size in bytes; NULL when not yet computed
   final Uuid caveUuid;
   final Uuid? caveAreaUuid;
   final int? createdAt;
@@ -5366,6 +5416,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     required this.title,
     required this.mapType,
     required this.fileName,
+    this.fileHash,
+    this.fileSize,
     required this.caveUuid,
     this.caveAreaUuid,
     this.createdAt,
@@ -5383,6 +5435,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     map['title'] = Variable<String>(title);
     map['map_type'] = Variable<String>(mapType);
     map['file_name'] = Variable<String>(fileName);
+    if (!nullToAbsent || fileHash != null) {
+      map['file_hash'] = Variable<String>(fileHash);
+    }
+    if (!nullToAbsent || fileSize != null) {
+      map['file_size'] = Variable<int>(fileSize);
+    }
     {
       map['cave_uuid'] = Variable<Uint8List>(
         RasterMaps.$convertercaveUuid.toSql(caveUuid),
@@ -5423,6 +5481,12 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       title: Value(title),
       mapType: Value(mapType),
       fileName: Value(fileName),
+      fileHash: fileHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileHash),
+      fileSize: fileSize == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileSize),
       caveUuid: Value(caveUuid),
       caveAreaUuid: caveAreaUuid == null && nullToAbsent
           ? const Value.absent()
@@ -5455,6 +5519,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       title: serializer.fromJson<String>(json['title']),
       mapType: serializer.fromJson<String>(json['map_type']),
       fileName: serializer.fromJson<String>(json['file_name']),
+      fileHash: serializer.fromJson<String?>(json['file_hash']),
+      fileSize: serializer.fromJson<int?>(json['file_size']),
       caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
       caveAreaUuid: serializer.fromJson<Uuid?>(json['cave_area_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
@@ -5476,6 +5542,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       'title': serializer.toJson<String>(title),
       'map_type': serializer.toJson<String>(mapType),
       'file_name': serializer.toJson<String>(fileName),
+      'file_hash': serializer.toJson<String?>(fileHash),
+      'file_size': serializer.toJson<int?>(fileSize),
       'cave_uuid': serializer.toJson<Uuid>(caveUuid),
       'cave_area_uuid': serializer.toJson<Uuid?>(caveAreaUuid),
       'created_at': serializer.toJson<int?>(createdAt),
@@ -5493,6 +5561,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     String? title,
     String? mapType,
     String? fileName,
+    Value<String?> fileHash = const Value.absent(),
+    Value<int?> fileSize = const Value.absent(),
     Uuid? caveUuid,
     Value<Uuid?> caveAreaUuid = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
@@ -5505,6 +5575,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     title: title ?? this.title,
     mapType: mapType ?? this.mapType,
     fileName: fileName ?? this.fileName,
+    fileHash: fileHash.present ? fileHash.value : this.fileHash,
+    fileSize: fileSize.present ? fileSize.value : this.fileSize,
     caveUuid: caveUuid ?? this.caveUuid,
     caveAreaUuid: caveAreaUuid.present ? caveAreaUuid.value : this.caveAreaUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
@@ -5523,6 +5595,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       title: data.title.present ? data.title.value : this.title,
       mapType: data.mapType.present ? data.mapType.value : this.mapType,
       fileName: data.fileName.present ? data.fileName.value : this.fileName,
+      fileHash: data.fileHash.present ? data.fileHash.value : this.fileHash,
+      fileSize: data.fileSize.present ? data.fileSize.value : this.fileSize,
       caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
       caveAreaUuid: data.caveAreaUuid.present
           ? data.caveAreaUuid.value
@@ -5546,6 +5620,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
           ..write('title: $title, ')
           ..write('mapType: $mapType, ')
           ..write('fileName: $fileName, ')
+          ..write('fileHash: $fileHash, ')
+          ..write('fileSize: $fileSize, ')
           ..write('caveUuid: $caveUuid, ')
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('createdAt: $createdAt, ')
@@ -5563,6 +5639,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     title,
     mapType,
     fileName,
+    fileHash,
+    fileSize,
     caveUuid,
     caveAreaUuid,
     createdAt,
@@ -5579,6 +5657,8 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
           other.title == this.title &&
           other.mapType == this.mapType &&
           other.fileName == this.fileName &&
+          other.fileHash == this.fileHash &&
+          other.fileSize == this.fileSize &&
           other.caveUuid == this.caveUuid &&
           other.caveAreaUuid == this.caveAreaUuid &&
           other.createdAt == this.createdAt &&
@@ -5593,6 +5673,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
   final Value<String> title;
   final Value<String> mapType;
   final Value<String> fileName;
+  final Value<String?> fileHash;
+  final Value<int?> fileSize;
   final Value<Uuid> caveUuid;
   final Value<Uuid?> caveAreaUuid;
   final Value<int?> createdAt;
@@ -5606,6 +5688,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     this.title = const Value.absent(),
     this.mapType = const Value.absent(),
     this.fileName = const Value.absent(),
+    this.fileHash = const Value.absent(),
+    this.fileSize = const Value.absent(),
     this.caveUuid = const Value.absent(),
     this.caveAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -5620,6 +5704,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     required String title,
     required String mapType,
     required String fileName,
+    this.fileHash = const Value.absent(),
+    this.fileSize = const Value.absent(),
     required Uuid caveUuid,
     this.caveAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -5638,6 +5724,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     Expression<String>? title,
     Expression<String>? mapType,
     Expression<String>? fileName,
+    Expression<String>? fileHash,
+    Expression<int>? fileSize,
     Expression<Uint8List>? caveUuid,
     Expression<Uint8List>? caveAreaUuid,
     Expression<int>? createdAt,
@@ -5652,6 +5740,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
       if (title != null) 'title': title,
       if (mapType != null) 'map_type': mapType,
       if (fileName != null) 'file_name': fileName,
+      if (fileHash != null) 'file_hash': fileHash,
+      if (fileSize != null) 'file_size': fileSize,
       if (caveUuid != null) 'cave_uuid': caveUuid,
       if (caveAreaUuid != null) 'cave_area_uuid': caveAreaUuid,
       if (createdAt != null) 'created_at': createdAt,
@@ -5669,6 +5759,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     Value<String>? title,
     Value<String>? mapType,
     Value<String>? fileName,
+    Value<String?>? fileHash,
+    Value<int?>? fileSize,
     Value<Uuid>? caveUuid,
     Value<Uuid?>? caveAreaUuid,
     Value<int?>? createdAt,
@@ -5683,6 +5775,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
       title: title ?? this.title,
       mapType: mapType ?? this.mapType,
       fileName: fileName ?? this.fileName,
+      fileHash: fileHash ?? this.fileHash,
+      fileSize: fileSize ?? this.fileSize,
       caveUuid: caveUuid ?? this.caveUuid,
       caveAreaUuid: caveAreaUuid ?? this.caveAreaUuid,
       createdAt: createdAt ?? this.createdAt,
@@ -5711,6 +5805,12 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     }
     if (fileName.present) {
       map['file_name'] = Variable<String>(fileName.value);
+    }
+    if (fileHash.present) {
+      map['file_hash'] = Variable<String>(fileHash.value);
+    }
+    if (fileSize.present) {
+      map['file_size'] = Variable<int>(fileSize.value);
     }
     if (caveUuid.present) {
       map['cave_uuid'] = Variable<Uint8List>(
@@ -5756,6 +5856,8 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
           ..write('title: $title, ')
           ..write('mapType: $mapType, ')
           ..write('fileName: $fileName, ')
+          ..write('fileHash: $fileHash, ')
+          ..write('fileSize: $fileSize, ')
           ..write('caveUuid: $caveUuid, ')
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('createdAt: $createdAt, ')
@@ -17074,6 +17176,8 @@ typedef $RasterMapsCreateCompanionBuilder =
       required String title,
       required String mapType,
       required String fileName,
+      Value<String?> fileHash,
+      Value<int?> fileSize,
       required Uuid caveUuid,
       Value<Uuid?> caveAreaUuid,
       Value<int?> createdAt,
@@ -17089,6 +17193,8 @@ typedef $RasterMapsUpdateCompanionBuilder =
       Value<String> title,
       Value<String> mapType,
       Value<String> fileName,
+      Value<String?> fileHash,
+      Value<int?> fileSize,
       Value<Uuid> caveUuid,
       Value<Uuid?> caveAreaUuid,
       Value<int?> createdAt,
@@ -17242,6 +17348,16 @@ class $RasterMapsFilterComposer extends Composer<_$AppDatabase, RasterMaps> {
 
   ColumnFilters<String> get fileName => $composableBuilder(
     column: $table.fileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileHash => $composableBuilder(
+    column: $table.fileHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17408,6 +17524,16 @@ class $RasterMapsOrderingComposer extends Composer<_$AppDatabase, RasterMaps> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fileHash => $composableBuilder(
+    column: $table.fileHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fileSize => $composableBuilder(
+    column: $table.fileSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17536,6 +17662,12 @@ class $RasterMapsAnnotationComposer
 
   GeneratedColumn<String> get fileName =>
       $composableBuilder(column: $table.fileName, builder: (column) => column);
+
+  GeneratedColumn<String> get fileHash =>
+      $composableBuilder(column: $table.fileHash, builder: (column) => column);
+
+  GeneratedColumn<int> get fileSize =>
+      $composableBuilder(column: $table.fileSize, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -17704,6 +17836,8 @@ class $RasterMapsTableManager
                 Value<String> title = const Value.absent(),
                 Value<String> mapType = const Value.absent(),
                 Value<String> fileName = const Value.absent(),
+                Value<String?> fileHash = const Value.absent(),
+                Value<int?> fileSize = const Value.absent(),
                 Value<Uuid> caveUuid = const Value.absent(),
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
@@ -17717,6 +17851,8 @@ class $RasterMapsTableManager
                 title: title,
                 mapType: mapType,
                 fileName: fileName,
+                fileHash: fileHash,
+                fileSize: fileSize,
                 caveUuid: caveUuid,
                 caveAreaUuid: caveAreaUuid,
                 createdAt: createdAt,
@@ -17732,6 +17868,8 @@ class $RasterMapsTableManager
                 required String title,
                 required String mapType,
                 required String fileName,
+                Value<String?> fileHash = const Value.absent(),
+                Value<int?> fileSize = const Value.absent(),
                 required Uuid caveUuid,
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
@@ -17745,6 +17883,8 @@ class $RasterMapsTableManager
                 title: title,
                 mapType: mapType,
                 fileName: fileName,
+                fileHash: fileHash,
+                fileSize: fileSize,
                 caveUuid: caveUuid,
                 caveAreaUuid: caveAreaUuid,
                 createdAt: createdAt,

@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'package:drift/drift.dart' show BooleanExpressionOperators;
+import 'package:crypto/crypto.dart';
+import 'package:drift/drift.dart' show BooleanExpressionOperators, Value;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -42,6 +43,8 @@ class _RasterMapFormState extends State<RasterMapForm>
 
   String? _selectedMapType;
   String? _imagePath;  String? _fullImagePath;  final _titleController = TextEditingController();
+  String? _pendingFileHash; // hash of the newly-picked image file (null when not changed)
+  int? _pendingFileSize;   // size in bytes of the newly-picked image file
 
   @override
   void initState() {
@@ -98,9 +101,16 @@ class _RasterMapFormState extends State<RasterMapForm>
         await ImageCompressor.compressFile(savedFile, compressionSettings);
       }
 
+      // Compute SHA-256 hash and file size for duplicate detection.
+      final bytes = await savedFile.readAsBytes();
+      final hash = sha256.convert(bytes).toString();
+      final size = bytes.length;
+
       setState(() {
         _imagePath = 'cave_${widget.caveUuid}/$fileName';
         _fullImagePath = savedFile.path;
+        _pendingFileHash = hash;
+        _pendingFileSize = size;
       });
     }
   }
@@ -135,12 +145,61 @@ class _RasterMapFormState extends State<RasterMapForm>
       return;
     }
 
+    // Check for a duplicate image (same SHA-256 hash, same cave).
+    // Only run this check when a new image was picked in this session.
+    if (_pendingFileHash != null) {
+      final hashMatches = await (appDatabase.select(appDatabase.rasterMaps)
+            ..where((rm) =>
+                rm.caveUuid.equalsValue(widget.caveUuid) &
+                rm.fileHash.equals(_pendingFileHash!)))
+          .get();
+      RasterMap? hashDuplicate;
+      for (final rm in hashMatches) {
+        if (widget.rasterMap == null || rm.uuid != widget.rasterMap!.uuid) {
+          hashDuplicate = rm;
+          break;
+        }
+      }
+      if (hashDuplicate != null && mounted) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(LocServ.inst.t('raster_map_image_duplicate_title')),
+            content: Text(
+              LocServ.inst.t('raster_map_image_duplicate_body').replaceFirst(
+                '{title}',
+                hashDuplicate?.title ?? '',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(LocServ.inst.t('cancel')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(LocServ.inst.t('save_anyway')),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true) return;
+      }
+    }
+
+    // Resolve the hash/size to persist: prefer the just-picked values; for
+    // edits without a new image, carry over the existing stored values.
+    final fileHash = _pendingFileHash ?? widget.rasterMap?.fileHash;
+    final fileSize = _pendingFileSize ?? widget.rasterMap?.fileSize;
+
     if (widget.rasterMap != null) {
       final updated = RasterMap(
         uuid: widget.rasterMap!.uuid,
         title: title,
         mapType: _selectedMapType!,
         fileName: _imagePath!,
+        fileHash: fileHash,
+        fileSize: fileSize,
         caveUuid: widget.caveUuid,
         caveAreaUuid: widget.rasterMap!.caveAreaUuid,
       );
@@ -151,6 +210,8 @@ class _RasterMapFormState extends State<RasterMapForm>
         title: title,
         mapType: _selectedMapType!,
         fileName: _imagePath!,
+        fileHash: Value(fileHash),
+        fileSize: Value(fileSize),
         caveUuid: widget.caveUuid,
       );
       await rasterMapRepository.addRasterMap(companion);
@@ -214,6 +275,7 @@ class _RasterMapFormState extends State<RasterMapForm>
                 DropdownMenuItem(value: 'plane view', child: Text(LocServ.inst.t('plane_view'))),
                 DropdownMenuItem(value: 'projected profile', child: Text(LocServ.inst.t('projected_profile'))),
                 DropdownMenuItem(value: 'extended profile', child: Text(LocServ.inst.t('extended_profile'))),
+                DropdownMenuItem(value: 'other', child: Text(LocServ.inst.t('other'))),
               ],
               onChanged: (value) => setState(() => _selectedMapType = value),
             ),
