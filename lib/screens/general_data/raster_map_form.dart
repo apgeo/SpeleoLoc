@@ -174,7 +174,7 @@ class _RasterMapFormState extends State<RasterMapForm>
             TextFormField(
               key: tourKeys['title_field'],
               controller: _titleController,
-              decoration: InputDecoration(labelText: '${LocServ.inst.t('title')} (${LocServ.inst.t('cave')})'),
+              decoration: InputDecoration(labelText: '${LocServ.inst.t('title')}'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
