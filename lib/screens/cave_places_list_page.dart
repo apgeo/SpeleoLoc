@@ -36,6 +36,7 @@ class CavePlacesListPage extends StatefulWidget {
 
 class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage>, ProductTourMixin<CavePlacesListPage> {
   static const bool _pinTopControls = true;
+  static const double TOOLBAR_BUTTON_SPACING = 1;
   @override
   String get tourId => 'cave_places_list';
   @override
@@ -89,6 +90,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         value: 'generate_codes',
         icon: Icons.auto_awesome,
         label: LocServ.inst.t('generate_codes'),
+      ),
+      AppMenuItem(
+        value: 'raster_map_place_selector',
+        icon: Icons.push_pin,
+        label: LocServ.inst.t('raster_map_place_selector'),
       ),
     ];
   }
@@ -153,6 +159,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         confirmTitle: LocServ.inst.t('generate_codes'),
         confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),
       );
+    } else if (value == 'raster_map_place_selector') {
+      await _openRasterMapPlaceSelector();
     }
   }
   // Using global appDatabase instance
@@ -310,6 +318,38 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         ),
       );
     }
+  }
+
+  Future<void> _openRasterMapPlaceSelector() async {
+    final rasterMaps = await (appDatabase.select(appDatabase.rasterMaps)
+          ..where((rm) => rm.caveUuid.equalsValue(widget.caveUuid)))
+        .get();
+    if (rasterMaps.isEmpty) {
+      if (mounted) SnackBarService.showWarning(LocServ.inst.t('no_raster_maps_for_cave'));
+      return;
+    }
+    if (_cavePlaces.isEmpty) {
+      if (mounted) SnackBarService.showWarning(LocServ.inst.t('no_cave_places'));
+      return;
+    }
+    final rm = rasterMaps.first;
+    final cavePlacesWithDefs = await appDatabase
+        .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
+    final firstPlaceId = _cavePlaces.first.uuid;
+    final existing = await appDatabase.getDefinition(firstPlaceId, rm.uuid);
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RasterMapPlaceSelectorPage(
+          rasterMap: rm,
+          cavePlaceUuid: firstPlaceId,
+          cavePlacesWithDefinitions: cavePlacesWithDefs,
+          existingDefinition: existing,
+        ),
+      ),
+    );
+    if (mounted) _loadCavePlaces();
   }
 
   void _onScroll() {
@@ -809,88 +849,157 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // toolbarsection (icon-only)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Listener(
-              onPointerDown: enableQrManualInput
-                  ? (_) => _startQrScanLongPress()
-                  : null,
-              onPointerUp: enableQrManualInput
-                  ? (_) => _cancelQrScanLongPress()
-                  : null,
-              onPointerCancel: enableQrManualInput
-                  ? (_) => _cancelQrScanLongPress()
-                  : null,
-              child: IconActionButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ScannerPage(onScan: _onScan),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Listener(
+                onPointerDown: enableQrManualInput
+                    ? (_) => _startQrScanLongPress()
+                    : null,
+                onPointerUp: enableQrManualInput
+                    ? (_) => _cancelQrScanLongPress()
+                    : null,
+                onPointerCancel: enableQrManualInput
+                    ? (_) => _cancelQrScanLongPress()
+                    : null,
+                child: IconActionButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ScannerPage(onScan: _onScan),
+                    ),
                   ),
+                  icon: Icons.qr_code_scanner,
+                  tooltip: LocServ.inst.t('scan_qr'),
                 ),
-                icon: Icons.qr_code_scanner,
-                tooltip: LocServ.inst.t('scan_qr'),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconActionButton(
-              key: tourKeys['add'],
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CavePlacePage(caveUuid: widget.caveUuid),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                key: tourKeys['add'],
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CavePlacePage(caveUuid: widget.caveUuid),
+                    ),
+                  );
+                  if (result == true) _loadCavePlaces();
+                },
+                icon: Icons.add,
+                tooltip: LocServ.inst.t('add_cave_place'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: () async {
+                  final result = await Navigator.pushNamed(
+                    context,
+                    rasterMapsRoute,
+                    arguments: widget.caveUuid,
+                  );
+                  if (result == true) _loadCavePlaces();
+                },
+                icon: Icons.map,
+                tooltip: LocServ.inst.t('view_raster_maps'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: _printQRCodes,
+                icon: Icons.print,
+                tooltip: LocServ.inst.t('print_qr_codes'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: () {
+                  setState(() {
+                    _showManualQrSection = !_showManualQrSection;
+                  });
+                },
+                icon: Icons.qr_code_rounded,
+                tooltip: LocServ.inst.t('manual_qr_search'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconButton(
+                icon: const Icon(Icons.layers),
+                tooltip: LocServ.inst.t('manage_cave_areas'),
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CaveAreasPage(caveUuid: widget.caveUuid),
+                    ),
+                  );
+                  if (result == true) _loadCavePlaces();
+                },
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: _openRasterMapPlaceSelector,
+                icon: Icons.push_pin,
+                tooltip: LocServ.inst.t('raster_map_place_selector'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: () async {
+                  final result = await Navigator.push<bool?>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CSVCavePlacesImportPage(caveUuid: widget.caveUuid),
+                    ),
+                  );
+                  if (result == true) _loadCavePlaces();
+                },
+                icon: Icons.upload_file,
+                tooltip: LocServ.inst.t('csv_import_places'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: () async {
+                  await PlaceCodeBatchUi.run(
+                    context,
+                    scope: PerCaveScope(widget.caveUuid),
+                    confirmTitle: LocServ.inst.t('generate_codes'),
+                    confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),
+                  );
+                },
+                icon: Icons.auto_awesome,
+                tooltip: LocServ.inst.t('generate_codes'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.home_filled),
+                tooltip: LocServ.inst.t('cave_management'),
+                padding: EdgeInsets.zero,
+                onSelected: (value) => onScreenMenuItemSelected(value),
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit_cave',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.edit_note, size: 20),
+                        const SizedBox(width: 8),
+                        Text(LocServ.inst.t('edit_cave')),
+                      ],
+                    ),
                   ),
-                );
-                if (result == true) _loadCavePlaces();
-              },
-              icon: Icons.add,
-              tooltip: LocServ.inst.t('add_cave_place'),
-            ),
-            const SizedBox(width: 8),
-            IconActionButton(
-              onPressed: () async {
-                final result = await Navigator.pushNamed(
-                  context,
-                  rasterMapsRoute,
-                  arguments: widget.caveUuid,
-                );
-                if (result == true) _loadCavePlaces();
-              },
-              icon: Icons.map,
-              tooltip: LocServ.inst.t('view_raster_maps'),
-            ),
-            const SizedBox(width: 8),
-            IconActionButton(
-              onPressed: _printQRCodes,
-              icon: Icons.print,
-              tooltip: LocServ.inst.t('print_qr_codes'),
-            ),
-            const SizedBox(width: 8),
-            IconActionButton(
-              onPressed: () {
-                setState(() {
-                  _showManualQrSection = !_showManualQrSection;
-                });
-              },
-              icon: Icons.qr_code_rounded,
-              tooltip: LocServ.inst.t('manual_qr_search'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.layers),
-              tooltip: LocServ.inst.t('manage_cave_areas'),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CaveAreasPage(caveUuid: widget.caveUuid),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          LocServ.inst.t('delete_cave'),
+                          style: TextStyle(color: Colors.red.shade700),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-                if (result == true) _loadCavePlaces();
-              },
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(height: 4),
