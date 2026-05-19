@@ -176,8 +176,8 @@ class _CavePlacePageState extends State<CavePlacePage>
       // _selectedCaveAreaId is assigned below after _caveAreas is loaded,
       // to avoid a DropdownButtonFormField assertion when setState fires from
       // text controller listeners before the areas list is available.
-      _isEntrance = (_cavePlace!.isEntrance ?? 0) == 1;
-      _isMainEntrance = (_cavePlace!.isMainEntrance ?? 0) == 1;
+      _isEntrance = _cavePlace!.isEntrance == 1;
+      _isMainEntrance = _cavePlace!.isMainEntrance == 1;
     } else {
       _descriptionLines = 1;
       _isEntrance = false;
@@ -364,6 +364,77 @@ class _CavePlacePageState extends State<CavePlacePage>
       }
     }
 
+    // Entrance detection: if the title contains the localised entrance keyword
+    // and the place is not yet flagged as an entrance, prompt the user.
+    //todo: consider chcking if contains the keyword instead of equals, to catch cases like 
+    //      "Main entrance" or "Entrance Cave" but only if there is not another entrance defined as it
+    //      prompts the user continuosly on each save - find a better approach
+    if (!_isEntrance) {
+      final detectorWord = LocServ.inst.t('entrance_detector_text');
+      if (title.toLowerCase().trim() == detectorWord.toLowerCase()) {
+        if (!mounted) return null;
+        final setEntrance = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(LocServ.inst.t('is_cave_entrance')),
+            content: Text(
+              LocServ.inst
+                  .t('entrance_detected_in_title')
+                  .replaceAll('{word}', detectorWord),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(LocServ.inst.t('no')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(LocServ.inst.t('yes')),
+              ),
+            ],
+          ),
+        );
+        if (setEntrance == true) {
+          _isEntrance = true;
+        }
+      }
+    }
+
+    // If the place will be saved as an entrance and no main entrance is set
+    // for this cave yet, prompt the user.
+    if (_isEntrance && !_isMainEntrance) {
+      final existingMain = await (appDatabase.select(appDatabase.cavePlaces)
+            ..where((cp) =>
+                cp.caveUuid.equalsValue(widget.caveUuid) &
+                cp.isMainEntrance.equals(1) &
+                (_currentCavePlaceId != null
+                    ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
+                    : const Constant(true))))
+          .get();
+      if (existingMain.isEmpty && mounted) {
+        final setMainEntrance = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(LocServ.inst.t('is_main_cave_entrance')),
+            content: Text(LocServ.inst.t('confirm_mark_as_main_entrance')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(LocServ.inst.t('no')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(LocServ.inst.t('yes')),
+              ),
+            ],
+          ),
+        );
+        if (setMainEntrance == true) {
+          _isMainEntrance = true;
+        }
+      }
+    }
+
     if (_currentCavePlaceId == null) {
       final newUuid = Uuid.v7();
       // Use explicit QCRI from field when set; auto-compute from PCI otherwise.
@@ -453,8 +524,8 @@ class _CavePlacePageState extends State<CavePlacePage>
       _currentCavePlaceId = cavePlaceUuid;
       _cavePlace = refreshed;
       _selectedCaveAreaId = refreshed.caveAreaUuid;
-      _isEntrance = (refreshed.isEntrance ?? 0) == 1;
-      _isMainEntrance = (refreshed.isMainEntrance ?? 0) == 1;
+      _isEntrance = refreshed.isEntrance == 1;
+      _isMainEntrance = refreshed.isMainEntrance == 1;
       _hasUnsavedChanges = false;
       _titleModified = false;
       _descriptionModified = false;

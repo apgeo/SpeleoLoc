@@ -4,7 +4,9 @@ import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
@@ -103,6 +105,118 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
       default:   return QrErrorCorrectLevel.M;
     }
   }
+
+  /// Returns the single-letter code for a [QrErrorCorrectLevel] integer.
+  String _ecLevelLetter(int level) {
+    switch (level) {
+      case QrErrorCorrectLevel.L: return 'L';
+      case QrErrorCorrectLevel.Q: return 'Q';
+      case QrErrorCorrectLevel.H: return 'H';
+      default:                    return 'M';
+    }
+  }
+
+  /// Returns the localised description for a [QrErrorCorrectLevel] integer.
+  String _ecLevelDescription(int level) {
+    switch (level) {
+      case QrErrorCorrectLevel.L: return LocServ.inst.t('qr_ec_low');
+      case QrErrorCorrectLevel.Q: return LocServ.inst.t('qr_ec_quartile');
+      case QrErrorCorrectLevel.H: return LocServ.inst.t('qr_ec_high');
+      default:                    return LocServ.inst.t('qr_ec_medium');
+    }
+  }
+
+  void _showQrInfoDialog(BuildContext context, String qrId) {
+    if (_prefs == null) return;
+    final prefs = _prefs!;
+    final payload = prefs.includeDeepLinkPrefix ? '$deepLinkPrefix$qrId' : qrId;
+    final ecLevelInt = _ecLevel(prefs.qrErrorCorrectionLevel);
+
+    // Compute actual QR version and module count using the qr package.
+    // QrCode.fromData sets typeNumber and moduleCount as final fields;
+    // no separate make() call is needed in qr 3.x.
+    int? version;
+    int? moduleCount;
+    try {
+      final code = QrCode.fromData(
+        data: payload,
+        errorCorrectLevel: ecLevelInt,
+      );
+      version = code.typeNumber;
+      moduleCount = code.moduleCount;
+    } catch (_) {
+      version = null;
+      moduleCount = null;
+    }
+
+    final letter = _ecLevelLetter(ecLevelInt);
+    final desc   = _ecLevelDescription(ecLevelInt);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('qr_code_info')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (version != null) ...[
+                _InfoRow(
+                  label: LocServ.inst.t('qr_version'),
+                  value: version.toString(),
+                ),
+                _InfoRow(
+                  label: LocServ.inst.t('qr_modules'),
+                  value: '${moduleCount}×${moduleCount}',
+                ),
+              ],
+              _InfoRow(
+                label: LocServ.inst.t('qr_error_correction_level'),
+                value: '$letter – $desc',
+              ),
+              const SizedBox(height: 8),
+              Text(
+                LocServ.inst.t('qr_payload'),
+                style: Theme.of(ctx).textTheme.labelSmall,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      payload,
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    tooltip: LocServ.inst.t('debug_info_copy_value'),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: payload));
+                      SnackBarService.showSuccess(LocServ.inst.t('debug_info_copied'));
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(LocServ.inst.t('close')),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildQrContent(String qrId) {
     final prefs = _prefs!;
@@ -383,6 +497,13 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                             ? () => _exportImage(context)
                             : null,
                       ),
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  tooltip: LocServ.inst.t('qr_code_info'),
+                  onPressed: (_prefs != null && hasEffectiveId)
+                      ? () => _showQrInfoDialog(context, effectiveId)
+                      : null,
+                ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(LocServ.inst.t('close')),
@@ -391,6 +512,39 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Simple two-column label/value row used inside the QR info dialog.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
       ),
     );
   }
