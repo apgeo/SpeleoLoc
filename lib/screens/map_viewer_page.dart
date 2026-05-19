@@ -16,6 +16,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 
 class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
@@ -213,12 +214,19 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       icon: Icons.sort,
       label: LocServ.inst.t('sort_raster_maps'),
     ),
+    AppMenuItem(
+      value: 'manage_raster_maps',
+      icon: Icons.map,
+      label: LocServ.inst.t('manage_raster_maps'),
+    ),
   ];
 
   @override
   void onScreenMenuItemSelected(String value) {
     if (value == 'sort_raster_maps') {
       _showSortDialog();
+    } else if (value == 'manage_raster_maps') {
+      _openRasterMapsPage();
     }
   }
 
@@ -232,6 +240,20 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       _editorController.sortOption = option;
       _rasterMaps = option.apply(_rasterMaps, _placesWithDefs);
     });
+  }
+
+  Future<void> _openRasterMapsPage() async {
+    final caveUuid = _cavePlace?.caveUuid ?? widget.caveUuid;
+    if (caveUuid == null) return;
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RasterMapsPage(caveUuid: caveUuid),
+      ),
+    );
+    if ((changed == true) && mounted) {
+      _loadAll();
+    }
   }
 
   void _ensurePlaceItemVisible(Uuid cavePlaceUuid) {

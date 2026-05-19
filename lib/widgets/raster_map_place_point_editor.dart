@@ -234,6 +234,7 @@ class RasterMapPlacePointEditorController {
     this.textBackgroundEnabled = false,
     this.keepZoomOnNavigation = false,
     this.initialZoomLevel = RasterMapEditorConstants.defaultInitialZoomLevel,
+    this.initialTapDefinesNewPoint = false,
   });
 
   _RasterMapPlacePointEditorState? _state;
@@ -293,6 +294,10 @@ class RasterMapPlacePointEditorController {
   /// Initial zoom level to apply when the editor first renders. Default 1.0
   /// (=contained). Use a smaller value (e.g. 0.8) for a wider view.
   double initialZoomLevel;
+
+  /// When true the editor starts in define-point tap mode (new-point tap).
+  /// When false (default) it starts in select-place mode.
+  bool initialTapDefinesNewPoint;
 
   /// Current sort option applied to the raster-map nav bar thumbnails.
   /// Defaults to [RasterMapSortField.orderIndex] ascending (DB order).
@@ -594,6 +599,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // nav bar / tap-mode visibility
     _showNavBar = widget.controller?.showNavBar ?? widget.showNavBar;
     _showTapModeCheckbox = widget.controller?.showTapModeCheckbox ?? widget.showTapModeCheckbox;
+
+    // initial tap mode: controller overrides; default is select-place (false)
+    _tapDefinesNewPoint = widget.controller?.initialTapDefinesNewPoint ?? false;
 
     // schedule auto-hide of the status overlay
     _scheduleStatusOverlayHide();
@@ -904,6 +912,12 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         }
         SnackBarService.showSuccess(LocServ.inst.t('cave_place_added'), duration: RasterMapEditorConstants.shortSnackbarDuration);
         widget.onCavePlaceAdded?.call();
+        // Keep add-cave-place mode active so the user can immediately tap
+        // the next place without having to re-enable it.
+        if (mounted) {
+          setState(() => _waitingForNewCavePlaceTap = true);
+          SnackBarService.showInfo(LocServ.inst.t('tap_on_map_to_define_place'), duration: RasterMapEditorConstants.longSnackbarDuration);
+        }
       }
       return;
     }
@@ -1221,10 +1235,20 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     }
   }
 
+  /// If the user has tapped a new point while in define-point tap mode,
+  /// auto-save that point before executing the given action.
+  Future<void> _commitPendingPointIfNeeded() async {
+    if (_tapDefinesNewPoint && _userHasSelectedNewPoint) {
+      await _autoSaveIfNeeded();
+    }
+  }
+
   /// Activate add-cave-place flow: highlight button, show snackbar,
   /// and wait for user to tap on the map.
-  void _handleAddCavePlace() {
+  Future<void> _handleAddCavePlace() async {
     if (widget.caveUuid == null) return;
+    await _commitPendingPointIfNeeded();
+    if (!mounted) return;
     setState(() => _waitingForNewCavePlaceTap = true);
     SnackBarService.showInfo(LocServ.inst.t('tap_on_map_to_define_place'), duration: RasterMapEditorConstants.longSnackbarDuration);
   }
@@ -1238,6 +1262,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   /// Open CavePlacePage for the currently selected cave place.
   Future<void> _openCavePlacePage() async {
+    await _commitPendingPointIfNeeded();
     _saveDefinitionIfNeeded();
     final cavePlaceUuid = widget.controller?.cavePlaceUuid;
     if (cavePlaceUuid == null) return;
@@ -1270,6 +1295,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   /// Open DocumentationFilesPage for the currently selected cave place.
   Future<void> _openCavePlaceDocuments() async {
+    await _commitPendingPointIfNeeded();
     _saveDefinitionIfNeeded();
     final cavePlaceUuid = widget.controller?.cavePlaceUuid;
     if (cavePlaceUuid == null) return;
@@ -1567,7 +1593,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           children: [
               // Legend toggle (always available)
               IconButton(
-                onPressed: () => setState(() => _showLegend = !_showLegend),
+                onPressed: () async {
+                  await _commitPendingPointIfNeeded();
+                  if (mounted) setState(() => _showLegend = !_showLegend);
+                },
                 icon: Icon(Icons.info_outline, size: 20, color: _showLegend ? Colors.blue : null),
                 tooltip: LocServ.inst.t('toggle_legend'),
                 padding: const EdgeInsets.all(2),
@@ -1579,7 +1608,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
               // Tap mode toggle
               if (_showTapModeCheckbox)
                 IconButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    await _commitPendingPointIfNeeded();
                     if (mounted) {
                       setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
                       _scheduleStatusOverlayHide();

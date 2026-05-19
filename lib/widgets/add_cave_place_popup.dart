@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// A compact dialog for quickly adding a new cave place.
 ///
@@ -29,6 +31,7 @@ class AddCavePlacePopup extends StatefulWidget {
 
 class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
   final _titleController = TextEditingController();
+  final _depthController = TextEditingController();
   final _qrController = TextEditingController();
   Uuid? _selectedCaveAreaId;
   List<CaveArea> _caveAreas = [];
@@ -45,6 +48,7 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
   @override
   void dispose() {
     _titleController.dispose();
+    _depthController.dispose();
     _qrController.dispose();
     super.dispose();
   }
@@ -117,6 +121,18 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     final title = _titleController.text.trim();
     final qrText = _qrController.text.trim();
     final qr = qrText.isEmpty ? null : qrText;
+    final depth = parseDepthValue(_depthController.text);
+
+    if (_depthController.text.trim().isNotEmpty && depth == null) {
+      if (mounted) SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
+      setState(() => _isSaving = false);
+      return;
+    }
+    if (depth != null && (depth < -5000 || depth > 5000)) {
+      if (mounted) SnackBarService.showWarning(LocServ.inst.t('depth_out_of_range'));
+      setState(() => _isSaving = false);
+      return;
+    }
 
     try {
       final newUuid = Uuid.v7();
@@ -127,6 +143,7 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
           caveUuid: widget.caveUuid,
           placeCodeIdentifier: Value(qr),
           caveAreaUuid: Value(_selectedCaveAreaId),
+          depthInCave: Value(depth),
         ),
         cavePlaceUuid: newUuid,
       );
@@ -183,23 +200,45 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
               },
             ),
             const SizedBox(height: 12),
-            // Cave area dropdown
-            DropdownButtonFormField<Uuid?>(
-              initialValue: _selectedCaveAreaId,
-              decoration: InputDecoration(
-                labelText: LocServ.inst.t('cave_area'),
-              ),
-              items: [
-                DropdownMenuItem<Uuid?>(
-                  value: null,
-                  child: Text(LocServ.inst.t('none')),
+            // Depth + Cave area on the same row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: 90,
+                  child: TextField(
+                    controller: _depthController,
+                    decoration: InputDecoration(
+                      labelText: "${LocServ.inst.t('depth')} '+/-'",
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                    inputFormatters: [depthInputFormatter],
+                  ),
                 ),
-                ..._caveAreas.map((a) => DropdownMenuItem<Uuid?>(
-                      value: a.uuid,
-                      child: Text(a.title),
-                    )),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<Uuid?>(
+                    initialValue: _selectedCaveAreaId,
+                    decoration: InputDecoration(
+                      labelText: LocServ.inst.t('cave_area'),
+                    ),
+                    items: [
+                      DropdownMenuItem<Uuid?>(
+                        value: null,
+                        child: Text(LocServ.inst.t('none')),
+                      ),
+                      ..._caveAreas.map((a) => DropdownMenuItem<Uuid?>(
+                            value: a.uuid,
+                            child: Text(a.title),
+                          )),
+                    ],
+                    onChanged: (v) => setState(() => _selectedCaveAreaId = v),
+                  ),
+                ),
               ],
-              onChanged: (v) => setState(() => _selectedCaveAreaId = v),
             ),
             const SizedBox(height: 12),
             // QR code field + scan button

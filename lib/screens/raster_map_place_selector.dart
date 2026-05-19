@@ -12,6 +12,7 @@ import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 
 class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
@@ -57,6 +58,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
         showZoomControls: !false,
         showNavBar: true,
         showTapModeCheckbox: true,
+        initialTapDefinesNewPoint: true,
         
         autoZoomToPoints: true,
         keepZoomOnNavigation: true,
@@ -275,12 +277,19 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
       icon: Icons.sort,
       label: LocServ.inst.t('sort_raster_maps'),
     ),
+    AppMenuItem(
+      value: 'manage_raster_maps',
+      icon: Icons.map,
+      label: LocServ.inst.t('manage_raster_maps'),
+    ),
   ];
 
   @override
   void onScreenMenuItemSelected(String value) {
     if (value == 'sort_raster_maps') {
       _showSortDialog();
+    } else if (value == 'manage_raster_maps') {
+      _openRasterMapsPage();
     }
   }
 
@@ -294,6 +303,19 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
       _editorController.sortOption = option;
       _rasterMaps = option.apply(_rasterMaps, _placesWithDefinitions);
     });
+  }
+
+  Future<void> _openRasterMapsPage() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RasterMapsPage(caveUuid: widget.rasterMap.caveUuid),
+      ),
+    );
+    if ((changed == true) && mounted) {
+      await _loadRasterMaps();
+      await _loadDefinitionsForSelected();
+    }
   }
 
   /// Public function to zoom and pan to a specific cave place point

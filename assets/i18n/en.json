@@ -76,6 +76,7 @@
   "reorder_maps_done": "Done reordering",
   "reorder_maps_hint": "Drag rows to reorder",
   "sort_raster_maps": "Sort maps",
+  "manage_raster_maps": "Manage maps",
   "sort_field_orderIndex": "Manual order",
   "sort_field_placeCount": "Number of places",
   "sort_field_title": "Title (alphabetical)",
