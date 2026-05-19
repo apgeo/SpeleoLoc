@@ -131,7 +131,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     final maps = await rasterMapRepository.getRasterMaps(widget.rasterMap.caveUuid);
     if (mounted) {
       setState(() {
-        _rasterMaps = maps;
+        _rasterMaps = _editorController.sortOption.apply(maps, _placesWithDefinitions);
       });
     }
   }
@@ -264,6 +264,36 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   void dispose() {
     _editorController.detach();
     super.dispose();
+  }
+
+  // ── Sort menu ────────────────────────────────────────────────────────────
+
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    AppMenuItem(
+      value: 'sort_raster_maps',
+      icon: Icons.sort,
+      label: LocServ.inst.t('sort_raster_maps'),
+    ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) {
+    if (value == 'sort_raster_maps') {
+      _showSortDialog();
+    }
+  }
+
+  Future<void> _showSortDialog() async {
+    final option = await showRasterMapSortDialog(
+      context,
+      _editorController.sortOption,
+    );
+    if (option == null || !mounted) return;
+    setState(() {
+      _editorController.sortOption = option;
+      _rasterMaps = option.apply(_rasterMaps, _placesWithDefinitions);
+    });
   }
 
   /// Public function to zoom and pan to a specific cave place point

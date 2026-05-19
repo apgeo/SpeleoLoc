@@ -5133,6 +5133,18 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
   late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
       GeneratedColumn<Uint8List>(
         'cave_uuid',
@@ -5210,6 +5222,7 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
     fileName,
     fileHash,
     fileSize,
+    orderIndex,
     caveUuid,
     caveAreaUuid,
     createdAt,
@@ -5264,6 +5277,12 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
       context.handle(
         _fileSizeMeta,
         fileSize.isAcceptableOrUnknown(data['file_size']!, _fileSizeMeta),
+      );
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -5324,6 +5343,10 @@ class RasterMaps extends Table with TableInfo<RasterMaps, RasterMap> {
         DriftSqlType.int,
         data['${effectivePrefix}file_size'],
       ),
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
       caveUuid: RasterMaps.$convertercaveUuid.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.blob,
@@ -5404,6 +5427,9 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
   final int? fileSize;
 
   /// image file size in bytes; NULL when not yet computed
+  final int orderIndex;
+
+  /// display order within a cave (0-based, lower = earlier)
   final Uuid caveUuid;
   final Uuid? caveAreaUuid;
   final int? createdAt;
@@ -5418,6 +5444,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     required this.fileName,
     this.fileHash,
     this.fileSize,
+    required this.orderIndex,
     required this.caveUuid,
     this.caveAreaUuid,
     this.createdAt,
@@ -5441,6 +5468,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     if (!nullToAbsent || fileSize != null) {
       map['file_size'] = Variable<int>(fileSize);
     }
+    map['order_index'] = Variable<int>(orderIndex);
     {
       map['cave_uuid'] = Variable<Uint8List>(
         RasterMaps.$convertercaveUuid.toSql(caveUuid),
@@ -5487,6 +5515,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       fileSize: fileSize == null && nullToAbsent
           ? const Value.absent()
           : Value(fileSize),
+      orderIndex: Value(orderIndex),
       caveUuid: Value(caveUuid),
       caveAreaUuid: caveAreaUuid == null && nullToAbsent
           ? const Value.absent()
@@ -5521,6 +5550,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       fileName: serializer.fromJson<String>(json['file_name']),
       fileHash: serializer.fromJson<String?>(json['file_hash']),
       fileSize: serializer.fromJson<int?>(json['file_size']),
+      orderIndex: serializer.fromJson<int>(json['order_index']),
       caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
       caveAreaUuid: serializer.fromJson<Uuid?>(json['cave_area_uuid']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
@@ -5544,6 +5574,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       'file_name': serializer.toJson<String>(fileName),
       'file_hash': serializer.toJson<String?>(fileHash),
       'file_size': serializer.toJson<int?>(fileSize),
+      'order_index': serializer.toJson<int>(orderIndex),
       'cave_uuid': serializer.toJson<Uuid>(caveUuid),
       'cave_area_uuid': serializer.toJson<Uuid?>(caveAreaUuid),
       'created_at': serializer.toJson<int?>(createdAt),
@@ -5563,6 +5594,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     String? fileName,
     Value<String?> fileHash = const Value.absent(),
     Value<int?> fileSize = const Value.absent(),
+    int? orderIndex,
     Uuid? caveUuid,
     Value<Uuid?> caveAreaUuid = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
@@ -5577,6 +5609,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     fileName: fileName ?? this.fileName,
     fileHash: fileHash.present ? fileHash.value : this.fileHash,
     fileSize: fileSize.present ? fileSize.value : this.fileSize,
+    orderIndex: orderIndex ?? this.orderIndex,
     caveUuid: caveUuid ?? this.caveUuid,
     caveAreaUuid: caveAreaUuid.present ? caveAreaUuid.value : this.caveAreaUuid,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
@@ -5597,6 +5630,9 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
       fileName: data.fileName.present ? data.fileName.value : this.fileName,
       fileHash: data.fileHash.present ? data.fileHash.value : this.fileHash,
       fileSize: data.fileSize.present ? data.fileSize.value : this.fileSize,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
       caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
       caveAreaUuid: data.caveAreaUuid.present
           ? data.caveAreaUuid.value
@@ -5622,6 +5658,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
           ..write('fileName: $fileName, ')
           ..write('fileHash: $fileHash, ')
           ..write('fileSize: $fileSize, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('caveUuid: $caveUuid, ')
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('createdAt: $createdAt, ')
@@ -5641,6 +5678,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
     fileName,
     fileHash,
     fileSize,
+    orderIndex,
     caveUuid,
     caveAreaUuid,
     createdAt,
@@ -5659,6 +5697,7 @@ class RasterMap extends DataClass implements Insertable<RasterMap> {
           other.fileName == this.fileName &&
           other.fileHash == this.fileHash &&
           other.fileSize == this.fileSize &&
+          other.orderIndex == this.orderIndex &&
           other.caveUuid == this.caveUuid &&
           other.caveAreaUuid == this.caveAreaUuid &&
           other.createdAt == this.createdAt &&
@@ -5675,6 +5714,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
   final Value<String> fileName;
   final Value<String?> fileHash;
   final Value<int?> fileSize;
+  final Value<int> orderIndex;
   final Value<Uuid> caveUuid;
   final Value<Uuid?> caveAreaUuid;
   final Value<int?> createdAt;
@@ -5690,6 +5730,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     this.fileName = const Value.absent(),
     this.fileHash = const Value.absent(),
     this.fileSize = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.caveUuid = const Value.absent(),
     this.caveAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -5706,6 +5747,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     required String fileName,
     this.fileHash = const Value.absent(),
     this.fileSize = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     required Uuid caveUuid,
     this.caveAreaUuid = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -5726,6 +5768,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     Expression<String>? fileName,
     Expression<String>? fileHash,
     Expression<int>? fileSize,
+    Expression<int>? orderIndex,
     Expression<Uint8List>? caveUuid,
     Expression<Uint8List>? caveAreaUuid,
     Expression<int>? createdAt,
@@ -5742,6 +5785,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
       if (fileName != null) 'file_name': fileName,
       if (fileHash != null) 'file_hash': fileHash,
       if (fileSize != null) 'file_size': fileSize,
+      if (orderIndex != null) 'order_index': orderIndex,
       if (caveUuid != null) 'cave_uuid': caveUuid,
       if (caveAreaUuid != null) 'cave_area_uuid': caveAreaUuid,
       if (createdAt != null) 'created_at': createdAt,
@@ -5761,6 +5805,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     Value<String>? fileName,
     Value<String?>? fileHash,
     Value<int?>? fileSize,
+    Value<int>? orderIndex,
     Value<Uuid>? caveUuid,
     Value<Uuid?>? caveAreaUuid,
     Value<int?>? createdAt,
@@ -5777,6 +5822,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
       fileName: fileName ?? this.fileName,
       fileHash: fileHash ?? this.fileHash,
       fileSize: fileSize ?? this.fileSize,
+      orderIndex: orderIndex ?? this.orderIndex,
       caveUuid: caveUuid ?? this.caveUuid,
       caveAreaUuid: caveAreaUuid ?? this.caveAreaUuid,
       createdAt: createdAt ?? this.createdAt,
@@ -5811,6 +5857,9 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
     }
     if (fileSize.present) {
       map['file_size'] = Variable<int>(fileSize.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
     }
     if (caveUuid.present) {
       map['cave_uuid'] = Variable<Uint8List>(
@@ -5858,6 +5907,7 @@ class RasterMapsCompanion extends UpdateCompanion<RasterMap> {
           ..write('fileName: $fileName, ')
           ..write('fileHash: $fileHash, ')
           ..write('fileSize: $fileSize, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('caveUuid: $caveUuid, ')
           ..write('caveAreaUuid: $caveAreaUuid, ')
           ..write('createdAt: $createdAt, ')
@@ -17178,6 +17228,7 @@ typedef $RasterMapsCreateCompanionBuilder =
       required String fileName,
       Value<String?> fileHash,
       Value<int?> fileSize,
+      Value<int> orderIndex,
       required Uuid caveUuid,
       Value<Uuid?> caveAreaUuid,
       Value<int?> createdAt,
@@ -17195,6 +17246,7 @@ typedef $RasterMapsUpdateCompanionBuilder =
       Value<String> fileName,
       Value<String?> fileHash,
       Value<int?> fileSize,
+      Value<int> orderIndex,
       Value<Uuid> caveUuid,
       Value<Uuid?> caveAreaUuid,
       Value<int?> createdAt,
@@ -17358,6 +17410,11 @@ class $RasterMapsFilterComposer extends Composer<_$AppDatabase, RasterMaps> {
 
   ColumnFilters<int> get fileSize => $composableBuilder(
     column: $table.fileSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17534,6 +17591,11 @@ class $RasterMapsOrderingComposer extends Composer<_$AppDatabase, RasterMaps> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17668,6 +17730,11 @@ class $RasterMapsAnnotationComposer
 
   GeneratedColumn<int> get fileSize =>
       $composableBuilder(column: $table.fileSize, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -17838,6 +17905,7 @@ class $RasterMapsTableManager
                 Value<String> fileName = const Value.absent(),
                 Value<String?> fileHash = const Value.absent(),
                 Value<int?> fileSize = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
                 Value<Uuid> caveUuid = const Value.absent(),
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
@@ -17853,6 +17921,7 @@ class $RasterMapsTableManager
                 fileName: fileName,
                 fileHash: fileHash,
                 fileSize: fileSize,
+                orderIndex: orderIndex,
                 caveUuid: caveUuid,
                 caveAreaUuid: caveAreaUuid,
                 createdAt: createdAt,
@@ -17870,6 +17939,7 @@ class $RasterMapsTableManager
                 required String fileName,
                 Value<String?> fileHash = const Value.absent(),
                 Value<int?> fileSize = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
                 required Uuid caveUuid,
                 Value<Uuid?> caveAreaUuid = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
@@ -17885,6 +17955,7 @@ class $RasterMapsTableManager
                 fileName: fileName,
                 fileHash: fileHash,
                 fileSize: fileSize,
+                orderIndex: orderIndex,
                 caveUuid: caveUuid,
                 caveAreaUuid: caveAreaUuid,
                 createdAt: createdAt,

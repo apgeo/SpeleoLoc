@@ -17,7 +17,10 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<List<RasterMap>> getRasterMaps(Uuid caveUuid) async {
     try {
-      return await (_database.select(_database.rasterMaps)..where((rm) => rm.caveUuid.equalsValue(caveUuid))).get();
+      return await (_database.select(_database.rasterMaps)
+            ..where((rm) => rm.caveUuid.equalsValue(caveUuid))
+            ..orderBy([(rm) => OrderingTerm.asc(rm.orderIndex)]))
+          .get();
     } catch (e, st) {
       _log.severe('Failed to load raster maps', e, st);
       throw DbException('Failed to load raster maps', cause: e, stackTrace: st);
@@ -100,6 +103,7 @@ class RasterMapRepository implements IRasterMapRepository {
   }
 
   @override
+  @override
   Future<void> deleteRasterMap(Uuid id) async {
     try {
       final old = await (_database.select(_database.rasterMaps)
@@ -122,6 +126,31 @@ class RasterMapRepository implements IRasterMapRepository {
     } catch (e, st) {
       _log.severe('Failed to delete raster map', e, st);
       throw DbException('Failed to delete raster map', cause: e, stackTrace: st);
+    }
+  }
+
+  /// Persists a new display order for raster maps.
+  ///
+  /// [orderedIds] must contain the UUIDs of all maps for a cave in the desired
+  /// order (index 0 = first). Each map's `order_index` is set to its position
+  /// in the list.  Only the `order_index` and `updated_at` columns are touched.
+  @override
+  Future<void> updateRasterMapOrder(List<Uuid> orderedIds) async {
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await _database.transaction(() async {
+        for (var i = 0; i < orderedIds.length; i++) {
+          await (_database.update(_database.rasterMaps)
+                ..where((rm) => rm.uuid.equalsValue(orderedIds[i])))
+              .write(RasterMapsCompanion(
+                orderIndex: Value(i),
+                updatedAt: Value(now),
+              ));
+        }
+      });
+    } catch (e, st) {
+      _log.severe('Failed to update raster map order', e, st);
+      throw DbException('Failed to update raster map order', cause: e, stackTrace: st);
     }
   }
 }

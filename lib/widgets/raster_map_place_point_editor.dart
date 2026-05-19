@@ -22,6 +22,73 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 // cache functions from this file continue to work without changes.
 export 'package:speleoloc/widgets/raster_map_image_cache.dart';
 
+// ---------------------------------------------------------------------------
+// Raster-map sort options
+// ---------------------------------------------------------------------------
+
+/// Field by which the raster-map list (nav bar thumbnails) is sorted.
+enum RasterMapSortField {
+  /// Manual order set by the user in RasterMapsPage (default).
+  orderIndex,
+
+  /// Number of cave places currently defined on the map (descending by default).
+  placeCount,
+
+  /// Map title, alphabetical.
+  title,
+
+  /// File size in bytes (proxy for map area / resolution).
+  fileSize,
+}
+
+/// Bundles sort field + direction into one value that can be stored in the
+/// controller and compared cheaply.
+class RasterMapSortOption {
+  const RasterMapSortOption({
+    this.field = RasterMapSortField.orderIndex,
+    this.ascending = true,
+  });
+
+  final RasterMapSortField field;
+  final bool ascending;
+
+  RasterMapSortOption copyWith({RasterMapSortField? field, bool? ascending}) =>
+      RasterMapSortOption(
+        field: field ?? this.field,
+        ascending: ascending ?? this.ascending,
+      );
+
+  /// Returns a sorted copy of [maps] using place-count data from [defs].
+  List<RasterMap> apply(
+    List<RasterMap> maps,
+    List<CavePlaceWithDefinition> defs,
+  ) {
+    final sorted = List<RasterMap>.from(maps);
+    final dir = ascending ? 1 : -1;
+    switch (field) {
+      case RasterMapSortField.orderIndex:
+        sorted.sort((a, b) => dir * a.orderIndex.compareTo(b.orderIndex));
+      case RasterMapSortField.placeCount:
+        // Count how many definitions belong to each raster map.
+        final counts = <Uuid, int>{};
+        for (final d in defs) {
+          if (d.definition != null) {
+            final rmUuid = d.definition!.rasterMapUuid;
+            counts[rmUuid] = (counts[rmUuid] ?? 0) + 1;
+          }
+        }
+        sorted.sort((a, b) =>
+            dir * (counts[a.uuid] ?? 0).compareTo(counts[b.uuid] ?? 0));
+      case RasterMapSortField.title:
+        sorted.sort((a, b) => dir * a.title.compareTo(b.title));
+      case RasterMapSortField.fileSize:
+        sorted.sort((a, b) =>
+            dir * (a.fileSize ?? 0).compareTo(b.fileSize ?? 0));
+    }
+    return sorted;
+  }
+}
+
 /// Trip overlay data for displaying trip route on a raster map.
 ///
 /// Contains the ordered sequence of cave place IDs visited during a trip.
@@ -58,6 +125,92 @@ class TripOverlayData {
 /// - `imageFile` (required) - source image file to display.
 /// - `cavePlacesWithDefinitions` - used to draw existing definition markers.
 /// - `initialImageX`/`initialImageY` - optional initial image-space selection.
+/// Opens a dialog that lets the user choose a [RasterMapSortOption].
+///
+/// Returns the chosen option, or null if the dialog was dismissed.
+Future<RasterMapSortOption?> showRasterMapSortDialog(
+  BuildContext context,
+  RasterMapSortOption current,
+) {
+  return showDialog<RasterMapSortOption>(
+    context: context,
+    builder: (context) => _RasterMapSortDialog(current: current),
+  );
+}
+
+class _RasterMapSortDialog extends StatefulWidget {
+  const _RasterMapSortDialog({required this.current});
+  final RasterMapSortOption current;
+
+  @override
+  State<_RasterMapSortDialog> createState() => _RasterMapSortDialogState();
+}
+
+class _RasterMapSortDialogState extends State<_RasterMapSortDialog> {
+  late RasterMapSortField _field;
+  late bool _ascending;
+
+  @override
+  void initState() {
+    super.initState();
+    _field = widget.current.field;
+    _ascending = widget.current.ascending;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = LocServ.inst;
+    return AlertDialog(
+      title: Text(loc.t('sort_raster_maps')),
+      contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final field in RasterMapSortField.values)
+            RadioListTile<RasterMapSortField>(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(loc.t('sort_field_${field.name}')),
+              value: field,
+              groupValue: _field,
+              onChanged: (v) => setState(() => _field = v!),
+            ),
+          const Divider(height: 16),
+          Row(
+            children: [
+              ChoiceChip(
+                label: Text(loc.t('sort_asc')),
+                selected: _ascending,
+                onSelected: (_) => setState(() => _ascending = true),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text(loc.t('sort_desc')),
+                selected: !_ascending,
+                onSelected: (_) => setState(() => _ascending = false),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(loc.t('cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            RasterMapSortOption(field: _field, ascending: _ascending),
+          ),
+          child: Text(loc.t('apply')),
+        ),
+      ],
+    );
+  }
+}
+
 /// - `isReadonly` - when true, taps won't change the selected point.
 /// - `onImagePointChanged` - callback(ImageX, ImageY) when user selects a point.
 ///
@@ -140,6 +293,10 @@ class RasterMapPlacePointEditorController {
   /// Initial zoom level to apply when the editor first renders. Default 1.0
   /// (=contained). Use a smaller value (e.g. 0.8) for a wider view.
   double initialZoomLevel;
+
+  /// Current sort option applied to the raster-map nav bar thumbnails.
+  /// Defaults to [RasterMapSortField.orderIndex] ascending (DB order).
+  RasterMapSortOption sortOption = const RasterMapSortOption();
 
   void setShowLegend(bool v) {
     showLegend = v;
@@ -1333,20 +1490,33 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                                   color: Colors.black26, blurRadius: 4)
                             ],
                           ),
-                          child: Text(
-                            _tapDefinesNewPoint
-                                ? LocServ.inst.t('status_define_point')
-                                : LocServ.inst.t('status_select_place'),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.black87,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.white70,
-                                  blurRadius: 1,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _tapDefinesNewPoint
+                                      ? LocServ.inst.t('status_define_point')
+                                      : LocServ.inst.t('status_select_place'),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black87,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.white70,
+                                        blurRadius: 1,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                _tapDefinesNewPoint ? Icons.edit_location_alt : Icons.touch_app,
+                                size: 14,
+                                color: _tapDefinesNewPoint ? Colors.blue : Colors.orange,
+                              ),
+                            ],
                           ),
                         ),
                       if (_showLegend) const RasterMapPointsLegend(),

@@ -62,6 +62,7 @@ abstract class IRasterMapRepository {
   Future<void> addRasterMap(RasterMapsCompanion companion);
   Future<void> updateRasterMap(RasterMap rasterMap);
   Future<void> deleteRasterMap(Uuid uuid);
+  Future<void> updateRasterMapOrder(List<Uuid> orderedIds);
 }
 
 /// Abstract contract for the cave-place ↔ raster-map definition repository.

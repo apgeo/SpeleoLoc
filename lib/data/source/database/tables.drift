@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS raster_maps (
     file_name                   TEXT(255) NOT NULL,
     file_hash                   TEXT(64),     -- SHA-256 hex digest of the image file; NULL when not yet computed
     file_size                   INTEGER,      -- image file size in bytes; NULL when not yet computed
+    order_index                 INTEGER NOT NULL DEFAULT 0,  -- display order within a cave (0-based, lower = earlier)
     cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
     cave_area_uuid              BLOB MAPPED BY `const UuidConverter()` REFERENCES cave_areas(uuid),
     created_at                  INTEGER,

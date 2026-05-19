@@ -112,6 +112,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       // If an explicit caveUuid was provided, still load raster maps for that cave.
       if (widget.caveUuid != null) {
         _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid!);
+        _rasterMaps = _editorController.sortOption.apply(_rasterMaps, []);
         if (_rasterMaps.isNotEmpty) {
           _selectedRasterMap = _rasterMaps.first;
           await _loadDefinitionsForSelected();
@@ -123,6 +124,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     }
     final Uuid caveUuid = _cavePlace!.caveUuid;
     _rasterMaps = await rasterMapRepository.getRasterMaps(caveUuid);
+    _rasterMaps = _editorController.sortOption.apply(_rasterMaps, _placesWithDefs);
 
     // default selected place is the one passed in (must be set BEFORE
     // loading definitions so the editor controller is informed about which
@@ -200,6 +202,36 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     _imageProviderCache.clear();
     _decodedImage = null;
     super.dispose();
+  }
+
+  // ── Sort menu ────────────────────────────────────────────────────────────
+
+  @override
+  List<AppMenuItem> get screenMenuItems => [
+    AppMenuItem(
+      value: 'sort_raster_maps',
+      icon: Icons.sort,
+      label: LocServ.inst.t('sort_raster_maps'),
+    ),
+  ];
+
+  @override
+  void onScreenMenuItemSelected(String value) {
+    if (value == 'sort_raster_maps') {
+      _showSortDialog();
+    }
+  }
+
+  Future<void> _showSortDialog() async {
+    final option = await showRasterMapSortDialog(
+      context,
+      _editorController.sortOption,
+    );
+    if (option == null || !mounted) return;
+    setState(() {
+      _editorController.sortOption = option;
+      _rasterMaps = option.apply(_rasterMaps, _placesWithDefs);
+    });
   }
 
   void _ensurePlaceItemVisible(Uuid cavePlaceUuid) {

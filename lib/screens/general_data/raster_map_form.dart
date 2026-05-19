@@ -202,6 +202,7 @@ class _RasterMapFormState extends State<RasterMapForm>
         fileSize: fileSize,
         caveUuid: widget.caveUuid,
         caveAreaUuid: widget.rasterMap!.caveAreaUuid,
+        orderIndex: widget.rasterMap!.orderIndex
       );
       await rasterMapRepository.updateRasterMap(updated);
     } else {

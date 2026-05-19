@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -404,6 +404,51 @@ class AppDatabase extends _$AppDatabase {
                   d['title'],
                   d['map_type'],
                   d['file_name'],
+                  d['cave_uuid'],
+                  d['cave_area_uuid'],
+                  d['created_at'],
+                  d['updated_at'],
+                  d['deleted_at'],
+                  d['created_by_user_uuid'],
+                  d['last_modified_by_user_uuid'],
+                ],
+              );
+            }
+          }
+          if (from < 13) {
+            // v12 → v13 migration:
+            //   Add `order_index INTEGER NOT NULL DEFAULT 0` to raster_maps.
+            //   We recreate the table (same pattern as v11→v12) and assign
+            //   each existing row an order_index equal to its row position
+            //   within its cave (stable, deterministic assignment).
+            final rasterMapRows13 = await customSelect(
+              'SELECT * FROM raster_maps ORDER BY cave_uuid, created_at, uuid',
+            ).get();
+            await migrator.drop(rasterMaps);
+            await migrator.create(rasterMaps);
+            // Track per-cave counter for order_index assignment.
+            final Map<Object?, int> caveCounter = {};
+            for (final row in rasterMapRows13) {
+              final d = row.data;
+              final caveKey = d['cave_uuid'];
+              final idx = caveCounter[caveKey] ?? 0;
+              caveCounter[caveKey] = idx + 1;
+              await customStatement(
+                'INSERT INTO raster_maps '
+                '(uuid, title, map_type, file_name, '
+                'file_hash, file_size, order_index, '
+                'cave_uuid, cave_area_uuid, '
+                'created_at, updated_at, deleted_at, '
+                'created_by_user_uuid, last_modified_by_user_uuid) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                  d['uuid'],
+                  d['title'],
+                  d['map_type'],
+                  d['file_name'],
+                  d['file_hash'],
+                  d['file_size'],
+                  idx,
                   d['cave_uuid'],
                   d['cave_area_uuid'],
                   d['created_at'],

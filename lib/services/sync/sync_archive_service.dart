@@ -280,7 +280,13 @@ class SyncArchiveService {
               .toList(),
           upsert: (rows, resolver) async => _upsertRows<RasterMap>(
             rows,
-            (j) => RasterMap.fromJson(j, serializer: _serializer),
+            (j) => RasterMap.fromJson(
+              // Older archives (schema ≤ v12) lack order_index.
+              // Supply a safe default so deserialization never fails on
+              // the non-nullable int field.
+              {'order_index': 0, ...j},
+              serializer: _serializer,
+            ),
             (r) => r.toJson(serializer: _serializer),
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,

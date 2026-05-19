@@ -38,6 +38,7 @@ class _RasterMapsPageState extends State<RasterMapsPage>
   List<RasterMap> _rasterMaps = [];
 
   bool _changed = false;
+  bool _reorderMode = false;
 
   @override
   void initState() {
@@ -160,7 +161,7 @@ Future<String> _getFullImagePath(String fileName) async {
             key: tourKeys['add'],
             icon: const Icon(Icons.add),
             tooltip: LocServ.inst.t('add_raster_map'),
-            onPressed: () async {
+            onPressed: _reorderMode ? null : () async {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => RasterMapForm(caveUuid: widget.caveUuid)),
@@ -174,62 +175,161 @@ Future<String> _getFullImagePath(String fileName) async {
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
-      body: SingleChildScrollView(
-        key: tourKeys['list'],
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(LocServ.inst.t('raster_maps'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ..._rasterMaps.map((rm) => Column(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Compact toolbar ──────────────────────────────────────────
+          Material(
+            elevation: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: Row(
                 children: [
-                  ListTile(
-                    leading: SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: FutureBuilder<String>(
-                        future: _getFullImagePath(rm.fileName),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            return Image.file(
-                              File(snapshot.data!),
-                              fit: BoxFit.cover,
-                            );
-                          } else {
-                            return const Icon(Icons.image);
-                          }
-                        },
-                      ),
-                    ),
-                    title: Text(rm.title),
-                    onTap: () => _viewImage(rm),
-                    hoverColor: Colors.grey[200],
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconActionButton(
-                          onPressed: () => _editRasterMap(rm),
-                          icon: Icons.edit,
-                          tooltip: LocServ.inst.t('edit_raster_map'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconActionButton(
-                          onPressed: () => _confirmDeleteRasterMap(rm.uuid),
-                          icon: Icons.delete,
-                          tooltip: LocServ.inst.t('delete_raster_map'),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    _reorderMode
+                        ? LocServ.inst.t('reorder_maps_hint')
+                        : '',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  Divider(height: 1, color: Colors.grey[300]),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(
+                      Icons.sort,
+                      color: _reorderMode
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    tooltip: _reorderMode
+                        ? LocServ.inst.t('reorder_maps_done')
+                        : LocServ.inst.t('reorder_maps'),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    onPressed: () => setState(() => _reorderMode = !_reorderMode),
+                  ),
                 ],
-              )),
-            ],
+              ),
+            ),
           ),
-        ),
+          // ── List ─────────────────────────────────────────────────────
+          Expanded(
+            child: _reorderMode ? _buildReorderableList() : _buildNormalList(),
+          ),
+        ],
       ),
       )
+    );
+  }
+
+  Widget _buildNormalList() {
+    return SingleChildScrollView(
+      key: tourKeys['list'],
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ..._rasterMaps.map((rm) => Column(
+              children: [
+                ListTile(
+                  leading: SizedBox(
+                    width: 50,
+                    height: 50,
+                    child: FutureBuilder<String>(
+                      future: _getFullImagePath(rm.fileName),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          return Image.file(
+                            File(snapshot.data!),
+                            fit: BoxFit.cover,
+                          );
+                        } else {
+                          return const Icon(Icons.image);
+                        }
+                      },
+                    ),
+                  ),
+                  title: Text(rm.title),
+                  onTap: () => _viewImage(rm),
+                  hoverColor: Colors.grey[200],
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconActionButton(
+                        onPressed: () => _editRasterMap(rm),
+                        icon: Icons.edit,
+                        tooltip: LocServ.inst.t('edit_raster_map'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconActionButton(
+                        onPressed: () => _confirmDeleteRasterMap(rm.uuid),
+                        icon: Icons.delete,
+                        tooltip: LocServ.inst.t('delete_raster_map'),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: Colors.grey[300]),
+              ],
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReorderableList() {
+    return ReorderableListView.builder(
+      key: tourKeys['list'],
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: _rasterMaps.length,
+      buildDefaultDragHandles: false,
+      onReorder: (oldIndex, newIndex) async {
+        if (newIndex > oldIndex) newIndex--;
+        setState(() {
+          final item = _rasterMaps.removeAt(oldIndex);
+          _rasterMaps.insert(newIndex, item);
+        });
+        _changed = true;
+        await rasterMapRepository.updateRasterMapOrder(
+          _rasterMaps.map((rm) => rm.uuid).toList(),
+        );
+      },
+      itemBuilder: (context, index) {
+        final rm = _rasterMaps[index];
+        return ReorderableDragStartListener(
+          key: ValueKey(rm.uuid),
+          index: index,
+          child: Column(
+            children: [
+              ListTile(
+                leading: SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: FutureBuilder<String>(
+                    future: _getFullImagePath(rm.fileName),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        return Image.file(File(snapshot.data!), fit: BoxFit.cover);
+                      } else {
+                        return const Icon(Icons.image);
+                      }
+                    },
+                  ),
+                ),
+                title: Text(rm.title),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Drag handle
+                    const Icon(Icons.drag_handle, color: Colors.grey),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[300]),
+            ],
+          ),
+        );
+      },
     );
   }
 }
