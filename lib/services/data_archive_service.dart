@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:drift/drift.dart' show Variable;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
@@ -154,6 +155,15 @@ class DataArchiveService {
         throw Exception('No database found in archive');
       }
 
+      // Preserve the device-local identity so the restored database keeps
+      // this device's UUID (the archive may carry a different device's UUID).
+      // This behaviour can be disabled via the archive import/export config
+      // flag `copy_device_uuid_from_archive_on_import`.
+      final savedDeviceUuid = await _readConfigValue('device_uuid');
+      final importExportCfgRaw =
+          await _readConfigValue('archive_sync_import_export_config');
+      final copyUuidFromArchive = _parseCopyDeviceUuidFlag(importExportCfgRaw);
+
       // Close current database.
       await appDatabase.close();
 
@@ -172,6 +182,11 @@ class DataArchiveService {
       // Re-open database.
       appDatabase = AppDatabase();
       DatabaseRestoreHelper.logMigrationIfAny(source: 'archive-import-replace');
+
+      // Restore device identity unless the flag says to adopt the archive's.
+      if (!copyUuidFromArchive && savedDeviceUuid != null) {
+        await _writeConfigValue('device_uuid', savedDeviceUuid);
+      }
     } finally {
       try {
         await tempDir.delete(recursive: true);
@@ -446,6 +461,46 @@ class DataArchiveService {
   // ---------------------------------------------------------------------------
   //  Misc helpers
   // ---------------------------------------------------------------------------
+
+  /// Reads a single value from `configurations` by [key] using the open DB.
+  Future<String?> _readConfigValue(String key) async {
+    final rows = await appDatabase.customSelect(
+      'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+      variables: [Variable<String>(key)],
+    ).get();
+    if (rows.isEmpty) return null;
+    return rows.first.data['value'] as String?;
+  }
+
+  /// Writes (upserts) a value into `configurations` using the open DB.
+  Future<void> _writeConfigValue(String key, String value) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await appDatabase.customStatement(
+      'INSERT INTO configurations (title, value, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?) '
+      'ON CONFLICT(title) DO UPDATE SET value = excluded.value, '
+      'updated_at = excluded.updated_at',
+      [key, value, now, now],
+    );
+  }
+
+  /// Parses the `copy_device_uuid_from_archive_on_import` flag from the raw
+  /// JSON stored under [ConfigKey.archiveSyncImportExportConfig].
+  ///
+  /// Returns `true` **only** when the flag is explicitly `true`.
+  /// Any other value — absent config row, absent key in the JSON object,
+  /// `null` value, `false`, or unparseable JSON — returns `false`, so
+  /// the local device_uuid is preserved.
+  static bool _parseCopyDeviceUuidFlag(String? raw) {
+    if (raw == null || raw.isEmpty) return false;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      // null, absent key, false → all evaluate to false via == true.
+      return map['copy_device_uuid_from_archive_on_import'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   static String _pad(int n) => n.toString().padLeft(2, '0');
 

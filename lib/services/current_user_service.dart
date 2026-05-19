@@ -43,6 +43,19 @@ class ConfigKey {
   static const String qcriMode = 'qcri_mode';
   /// JSON-encoded QCRI hash configuration (length, retry settings). Synced.
   static const String qcriHashConfig = 'qcri_hash_config';
+
+  // ----- Archive / sync import-export behaviour -----
+  /// JSON object controlling archive import/export behaviour.
+  /// Schema: `{ "copy_device_uuid_from_archive_on_import": bool }`.
+  /// Default (absent key or absent field): all flags are `false`.
+  ///
+  /// `copy_device_uuid_from_archive_on_import` — when `true`, the
+  /// device_uuid found inside the imported archive is written into
+  /// `configurations` after a replace-import, overriding the local
+  /// device identity.  When `false` (default) the local device_uuid
+  /// is preserved across replace-imports.
+  static const String archiveSyncImportExportConfig =
+      'archive_sync_import_export_config';
 }
 
 /// Provides the identity used to populate `created_by_user_uuid` and

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:drift/drift.dart' show Variable;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -190,6 +192,30 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
         );
       }
 
+      // Preserve device identity before replacing the database.
+      // Disabled when `copy_device_uuid_from_archive_on_import` is true in
+      // the archive_sync_import_export_config configuration key.
+      final savedDeviceUuid = (await appDatabase.customSelect(
+        'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+        variables: [Variable<String>('device_uuid')],
+      ).get()).map((r) => r.data['value'] as String?).firstOrNull;
+      final importCfgRaw = (await appDatabase.customSelect(
+        'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+        variables: [Variable<String>('archive_sync_import_export_config')],
+      ).get()).map((r) => r.data['value'] as String?).firstOrNull;
+      // copyUuidFromArchive is true ONLY when the flag is explicitly true.
+      // Absent config row, absent key, null value, false, or bad JSON all
+      // leave it false, so the local device_uuid is preserved.
+      bool copyUuidFromArchive = false;
+      if (importCfgRaw != null && importCfgRaw.isNotEmpty) {
+        try {
+          final map = jsonDecode(importCfgRaw) as Map<String, dynamic>;
+          // null or absent key → null == true → false (preserve UUID).
+          copyUuidFromArchive =
+              map['copy_device_uuid_from_archive_on_import'] == true;
+        } catch (_) {}
+      }
+
       await appDatabase.close();
       final directory = await getApplicationDocumentsDirectory();
       final targetPath = '${directory.path}/speleo_loc.sqlite';
@@ -203,6 +229,21 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
 
       appDatabase = AppDatabase();
       DatabaseRestoreHelper.logMigrationIfAny(source: 'external-database-restore');
+
+      // Restore device identity so this device keeps its own UUID,
+      // unless the flag says to adopt the archive's identity.
+      if (!copyUuidFromArchive &&
+          savedDeviceUuid != null &&
+          savedDeviceUuid.isNotEmpty) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await appDatabase.customStatement(
+          'INSERT INTO configurations (title, value, created_at, updated_at) '
+          'VALUES (?, ?, ?, ?) '
+          'ON CONFLICT(title) DO UPDATE SET value = excluded.value, '
+          'updated_at = excluded.updated_at',
+          ['device_uuid', savedDeviceUuid, now, now],
+        );
+      }
 
       if (context.mounted) {
         Navigator.pop(context);
