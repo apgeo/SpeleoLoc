@@ -346,6 +346,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           cavePlaceUuid: firstPlaceId,
           cavePlacesWithDefinitions: cavePlacesWithDefs,
           existingDefinition: existing,
+          initialTapDefinesNewPoint: false,
         ),
       ),
     );
@@ -536,6 +537,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                                 cavePlaceUuid: cavePlaceUuid,
                                 cavePlacesWithDefinitions: cavePlacesWithDefs,
                                 existingDefinition: existing,
+                                initialTapDefinesNewPoint: false,
                               ),
                             ),
                           );

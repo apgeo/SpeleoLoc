@@ -1185,7 +1185,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       _userHasSelectedNewPoint = false;
       _imageSelectedX = widget.initialImageX;
       _imageSelectedY = widget.initialImageY;
+      // switch to select-place mode after undoing, so accidental follow-up
+      // taps don't immediately redefine the point.
+      _tapDefinesNewPoint = false;
     });
+    _scheduleStatusOverlayHide();
     widget.onImagePointChanged?.call(
       _imageSelectedX ?? 0,
       _imageSelectedY ?? 0,

@@ -22,6 +22,7 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
     required this.cavePlacesWithDefinitions,
     this.existingDefinition,
     this.isReadonly = false,
+    this.initialTapDefinesNewPoint = true,
   });
 
   final RasterMap rasterMap;
@@ -29,6 +30,7 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
   final List<CavePlaceWithDefinition> cavePlacesWithDefinitions;
   final CavePlaceToRasterMapDefinition? existingDefinition;
   final bool isReadonly;
+  final bool initialTapDefinesNewPoint;
 
   @override
   State<RasterMapPlaceSelectorPage> createState() => _RasterMapPlaceSelectorPageState();
@@ -108,6 +110,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
     // inform the editor controller which cavePlace should be highlighted by default
     _editorController.setCavePlaceId(_selectedCavePlaceId);
+
+    // propagate widget-level tap-mode preference to the controller
+    _editorController.initialTapDefinesNewPoint = widget.initialTapDefinesNewPoint;
 
     // In view-only mode, don't auto-zoom to points when not already zoomed
     if (widget.isReadonly) {

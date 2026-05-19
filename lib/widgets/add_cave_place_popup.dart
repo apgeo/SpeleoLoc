@@ -31,7 +31,7 @@ class AddCavePlacePopup extends StatefulWidget {
 
 class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
   final _titleController = TextEditingController();
-  final _depthController = TextEditingController();
+  final _depthController = TextEditingController(text: '-');
   final _qrController = TextEditingController();
   Uuid? _selectedCaveAreaId;
   List<CaveArea> _caveAreas = [];
