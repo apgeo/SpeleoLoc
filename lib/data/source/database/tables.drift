@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (
     UNIQUE(geofeature_uuid, geofeature_type, documentation_file_uuid) ON CONFLICT ROLLBACK
 );
 
--- Table: configurations (NOT synced, keeps INTEGER PK)
+-- Table: configurations (NOT synced, keeps INTEGER PK, except for is_synced=1 archive entries)
 -- Well-known keys include (but are not limited to):
 --   'device_uuid'           -- this device's persistent UUIDv7 (hex)
 --   'current_user_uuid'     -- the currently selected user's UUID (hex)
@@ -167,8 +167,7 @@ CREATE TABLE IF NOT EXISTS configurations (
     id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     title       TEXT(255) NOT NULL UNIQUE,
     value       TEXT,
-    
-       INTEGER NOT NULL DEFAULT 0, -- when 1, the row is exported by archive sync
+    is_synced   INTEGER NOT NULL DEFAULT 0, -- when 1, the row is exported by archive sync
     created_at  INTEGER,
     updated_at  INTEGER
 );

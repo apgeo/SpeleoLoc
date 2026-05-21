@@ -123,7 +123,12 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     final qr = qrText.isEmpty ? null : qrText;
     final depth = parseDepthValue(_depthController.text);
 
-    if (_depthController.text.trim().isNotEmpty && depth == null) {
+    // Treat a bare "-" or "+" as "no depth entered" (the field starts with "-"
+    // as a sign-entry convenience, so the user may not have typed a number).
+    final depthRaw = _depthController.text.trim();
+    final depthIsSignOnly = depthRaw == '-' || depthRaw == '+';
+
+    if (!depthIsSignOnly && depthRaw.isNotEmpty && depth == null) {
       if (mounted) SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
       setState(() => _isSaving = false);
       return;

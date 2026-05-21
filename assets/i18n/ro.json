@@ -294,6 +294,8 @@
   "debug_info_copy_value": "Copiază valoarea",
   "debug_info_edit_value": "Editează valoarea",
   "debug_info_copied": "Copiat în clipboard",
+  "synced": "Sincronizat",
+  "not_synced": "Nesincronizat",
   "debug_info_refresh": "Reîncarcă",
   "debug_info_add_config": "Adaugă intrare configurație",
   "debug_info_config_key": "Cheie",

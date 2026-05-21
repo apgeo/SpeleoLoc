@@ -350,7 +350,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         ),
       ),
     );
-    if (mounted) _loadCavePlaces();
+    if (mounted) await _loadCavePlaces();
   }
 
   void _onScroll() {
@@ -541,7 +541,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                               ),
                             ),
                           );
-                          _loadCavePlaces();
+                          if (mounted) await _loadCavePlaces();
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),

@@ -227,6 +227,20 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            Tooltip(
+                              message: cfg.isSynced == 1
+                                  ? LocServ.inst.t('synced')
+                                  : LocServ.inst.t('not_synced'),
+                              child: Icon(
+                                cfg.isSynced == 1
+                                    ? Icons.cloud_done_outlined
+                                    : Icons.cloud_off_outlined,
+                                size: 18,
+                                color: cfg.isSynced == 1
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                            ),
                             IconButton(
                               icon: const Icon(Icons.copy, size: 18),
                               tooltip: LocServ.inst.t('debug_info_copy_value'),

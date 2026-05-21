@@ -294,6 +294,8 @@
   "debug_info_file_exists": "File exists",
   "debug_info_file_missing": "File not found",
   "debug_info_configurations": "Configurations table",
+  "synced": "Synced",
+  "not_synced": "Not synced",
   "debug_info_copy_value": "Copy value",
   "debug_info_edit_value": "Edit value",
   "debug_info_copied": "Copied to clipboard",
