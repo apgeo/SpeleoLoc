@@ -106,6 +106,14 @@ class PlaceCodeBatchUi {
     final t = LocServ.inst.t;
     final durationSec = (summary.durationMs / 1000.0).toStringAsFixed(1);
 
+    // Detect known abort causes so we can show a targeted error message.
+    final hasMissingConfig = summary.aborted.any(
+      (e) => e.reason == 'missingDatasetConfig',
+    );
+    final hasOtherAborts = summary.aborted.any(
+      (e) => e.reason != 'missingDatasetConfig',
+    );
+
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -115,6 +123,24 @@ class PlaceCodeBatchUi {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // -- Abort error banners (shown before stats when relevant) --
+              if (hasMissingConfig) ...[
+                _ErrorBanner(message: t('batch_abort_missing_dataset_config')),
+                const SizedBox(height: 8),
+              ],
+              if (hasOtherAborts) ...[
+                _ErrorBanner(
+                  message: t('batch_abort_internal_error').replaceAll(
+                    '{n}',
+                    summary.aborted
+                        .where((e) => e.reason != 'missingDatasetConfig')
+                        .length
+                        .toString(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
               // -- Core stats --
               Text(t('batch_summary_caves_updated')
                   .replaceAll('{n}', summary.cavesUpdated.toString())),
@@ -185,7 +211,6 @@ class PlaceCodeBatchUi {
     );
   }
 }
-
 // ---------------------------------------------------------------------------
 // Progress dialog widget
 // ---------------------------------------------------------------------------
@@ -298,6 +323,41 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
 
 // ---------------------------------------------------------------------------
 // Fallback section widget (expandable cave list)
+// ---------------------------------------------------------------------------
+
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+  const _ErrorBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 class _FallbackSection extends StatelessWidget {

@@ -1035,5 +1035,7 @@
   "batch_summary_no_surface_area_hint": "Area segment set to '000…' (zeros).",
   "batch_summary_no_identifier_title": "{caves} cave(s) / {places} place(s) — surface area has no identifier",
   "batch_summary_no_identifier_hint": "Area segment set to '999…' (nines).",
+  "batch_abort_missing_dataset_config": "Generation aborted: country code or organization code is not configured. Go to Settings \u2192 Place Codes to set them before generating.",
+  "batch_abort_internal_error": "Generation aborted due to {n} unexpected error(s). Check the app logs for details.",
   "area_identifier_width": "Area identifier width"
 }

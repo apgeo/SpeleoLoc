@@ -1033,5 +1033,7 @@
   "batch_summary_no_surface_area_hint": "Segmentul de zonă setat la '000…'.",
   "batch_summary_no_identifier_title": "{caves} peșteră/peșteri / {places} loc(uri) — zona de suprafață nu are identificator",
   "batch_summary_no_identifier_hint": "Segmentul de zonă setat la '99…'.",
+  "batch_abort_missing_dataset_config": "Generare anulată: codul de țară sau codul de organizație nu sunt configurate. Mergi la Setări → Coduri locuri pentru a le defini.",
+  "batch_abort_internal_error": "Generare anulată din cauza a {n} eroare(i) neașteptate. Verifică jurnalele aplicației pentru detalii.",
   "area_identifier_width": "Nr. cifre identificator zonă"
 }
