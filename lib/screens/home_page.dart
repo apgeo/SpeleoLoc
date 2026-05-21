@@ -152,10 +152,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     }
     _lastTitleTap = now;
     _titleTapCount++;
-    if (_titleTapCount >= 9) {
+    final isDebugOn = debugModeNotifier.value;
+    final threshold = isDebugOn ? 20 : 9;
+    if (_titleTapCount >= threshold) {
       _titleTapCount = 0;
-      final newValue = !debugModeNotifier.value;
+      final newValue = !isDebugOn;
       debugModeNotifier.value = newValue;
+      // Reset counter when activating so it doesn't carry over to deactivation.
+      if (newValue) _titleTapCount = 0;
       SnackBarService.showInfo(newValue ? 'Debug mode activated' : 'Debug mode deactivated');
     }
   }
