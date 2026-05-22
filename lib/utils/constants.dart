@@ -47,6 +47,28 @@ const bool skipMissingTestDocuments = true;
 /// a manual QR-code input dialog (for testing without a physical scanner).
 const bool enableQrManualInput = true;
 
+/// When `true`, the first-start "Load test data?" prompt uses the legacy
+/// [TestDatabaseLoader] path (loads pre-built sqlite + loose resource files
+/// from build-embedded assets — the test data that has to be shipped inside
+/// the application binary).
+///
+/// When `false` (default), the same prompt instead downloads (or loads from
+/// a build-embedded zip asset) the archive at [testArchiveUrl] and imports
+/// it through [DataArchiveService.importArchiveReplace]. The legacy code
+/// path is preserved on purpose so we can fall back to it during debugging.
+const bool useLegacyTestDataLoad = false;
+
+/// URL (or build-embedded asset path) of the test-data archive used by the
+/// new first-start import flow. Overridden via
+/// `--dart-define-from-file=build_settings.json` (key `test_archive_url`).
+///
+/// If the value parses as an `http`/`https` URL it is downloaded; otherwise
+/// it is treated as a relative asset path (e.g.
+/// `test_data/test_archive/test_archive.zip`) and loaded via `rootBundle`.
+/// An empty string disables the new flow.
+const String testArchiveUrl =
+    String.fromEnvironment('test_archive_url', defaultValue: '');
+
 // Configuration keys
 const String qrGenerationConfigKey = 'qr_code_generation';
 const String pdfOutputConfigKey = 'pdf_output_config';

@@ -73,7 +73,11 @@ flutter:
   uses-material-design: true
 
   assets:
-    - test_data/maps/
-    - test_data/db/binaries/
+    # Test data loose files (pre-built sqlite + resource files used by the
+    # legacy TestDatabaseLoader path). Commented out so they are NOT bundled
+    # into the release binary. Un-comment both lines if you need to re-enable
+    # the legacy in-binary test data load (useLegacyTestDataLoad = true).
+    # - test_data/maps/
+    # - test_data/db/binaries/
     - assets/fonts/
     - assets/i18n/

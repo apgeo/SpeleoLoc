@@ -5,6 +5,7 @@ import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
+import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -102,6 +103,43 @@ class _DataExportImportPageState extends State<DataExportImportPage>
             label: Text(LocServ.inst.t('import_archive')),
             onPressed: () => _import(context),
           ),
+
+          // -- Test data section -- only shown when a URL is configured.
+          if (testArchiveUrl.isNotEmpty) ...[
+            const Divider(height: 32),
+            Text(
+              LocServ.inst.t('test_data_section'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            // Text(
+            //   testArchiveUrl,
+            //   style: const TextStyle(fontSize: 11, color: Colors.grey),
+            // ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.download_outlined),
+              label: Text(LocServ.inst.t('load_test_data_from_url')),
+              onPressed: () => _importTestArchive(context),
+            ),          ] else ...[
+            const Divider(height: 32),
+            Text(
+              LocServ.inst.t('test_data_section'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    LocServ.inst.t('test_archive_url_not_configured'),
+                    style: const TextStyle(color: Colors.orange),
+                  ),
+                ),
+              ],
+            ),          ],
         ],
       ),
     );
@@ -316,6 +354,79 @@ class _DataExportImportPageState extends State<DataExportImportPage>
         }
       }
     }
+  }
+
+  // ===========================================================================
+  //  TEST DATA – archive download + replace import
+  // ===========================================================================
+
+  Future<void> _importTestArchive(BuildContext context) async {
+    // Warn if there is existing data that will be overwritten.
+    final hasData = await _hasAnyData();
+    if (!context.mounted) return;
+
+    if (hasData) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => ConfirmDialog(
+          text: LocServ.inst.t('confirm_load_test_data_overwrite'),
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
+
+    final messageNotifier = ValueNotifier<String>(
+      LocServ.inst.t('downloading_test_archive'),
+    );
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<String>(
+              valueListenable: messageNotifier,
+              builder: (_, msg, __) => Text(msg),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await TestArchiveImportService.importFrom(
+        urlOrPath: testArchiveUrl,
+        onProgress: (msg) => messageNotifier.value = msg,
+      );
+      if (context.mounted) Navigator.pop(context);
+      await DatabaseRestoreHelper.restartApplication();
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        SnackBarService.showError(
+            '${LocServ.inst.t('error_downloading_test_archive')}: $e');
+      }
+    } finally {
+      messageNotifier.dispose();
+    }
+  }
+
+  /// `true` when there are any caves, raster maps, or documentation files.
+  Future<bool> _hasAnyData() async {
+    try {
+      for (final query in [
+        'SELECT COUNT(*) AS cnt FROM caves WHERE deleted_at IS NULL',
+        'SELECT COUNT(*) AS cnt FROM raster_maps WHERE deleted_at IS NULL',
+        'SELECT COUNT(*) AS cnt FROM documentation_files WHERE deleted_at IS NULL',
+      ]) {
+        final row = await appDatabase.customSelect(query).getSingle();
+        if (row.read<int>('cnt') > 0) return true;
+      }
+    } catch (_) {}
+    return false;
   }
 
   // ---------------------------------------------------------------------------

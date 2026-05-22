@@ -13,6 +13,7 @@ import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_progress_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
@@ -269,11 +270,28 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
   Future<void> _offerTestDataPopulation() async {
     if (!mounted) return;
+
+    // Build the prompt content; when there is leftover data that the import
+    // would wipe (raster maps or documentation files — caves are already
+    // known to be empty here, that's the trigger condition), append a
+    // destructive-action warning so the user understands the impact.
+    final hasResidualData = await _hasResidualUserData();
+    if (!mounted) return;
+
+    final messageBuffer = StringBuffer(
+      LocServ.inst.t('populate_test_data_message'),
+    );
+    if (hasResidualData) {
+      messageBuffer
+        ..write('\n\n')
+        ..write(LocServ.inst.t('populate_test_data_overwrite_warning'));
+    }
+
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(LocServ.inst.t('populate_test_data_title')),
-        content: Text(LocServ.inst.t('populate_test_data_message')),
+        content: Text(messageBuffer.toString()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -286,35 +304,119 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         ],
       ),
     );
-    if (accepted == true) {
-      if (!mounted) return;
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(LocServ.inst.t('loading_test_data')),
-            ],
-          ),
+    if (accepted != true) return;
+    if (!mounted) return;
+
+    // Branch between the legacy (build-embedded sqlite + loose resource
+    // files) loader and the new archive-download importer. The legacy path
+    // is gated behind [useLegacyTestDataLoad] so it can still be re-enabled
+    // for debugging by flipping the flag in `lib/utils/constants.dart`.
+    if (useLegacyTestDataLoad) {
+      await _runLegacyTestDataLoad();
+    } else {
+      await _runArchiveTestDataLoad();
+    }
+  }
+
+  /// Legacy first-start test data loader. Kept intact behind
+  /// [useLegacyTestDataLoad]; superseded by [_runArchiveTestDataLoad].
+  Future<void> _runLegacyTestDataLoad() async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(LocServ.inst.t('loading_test_data')),
+          ],
         ),
-      );
-      try {
-        await DatabaseRestoreHelper.reinitializeDatabase(
-            populateTestData: true);
-        if (mounted) Navigator.pop(context);
-        await DatabaseRestoreHelper.restartApplication();
-      } catch (e) {
-        if (mounted) {
-          Navigator.pop(context);
-          SnackBarService.showError('${LocServ.inst.t('error_reinitializing_database')}: $e');
-        }
+      ),
+    );
+    try {
+      await DatabaseRestoreHelper.reinitializeDatabase(
+          populateTestData: true);
+      if (mounted) Navigator.pop(context);
+      await DatabaseRestoreHelper.restartApplication();
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        SnackBarService.showError(
+            '${LocServ.inst.t('error_reinitializing_database')}: $e');
       }
     }
   }
+
+  /// New test data loader: downloads (or loads from bundled assets) the zip
+  /// archive defined by [testArchiveUrl] and replaces the local DB+files
+  /// via [DataArchiveService.importArchiveReplace].
+  Future<void> _runArchiveTestDataLoad() async {
+    if (testArchiveUrl.trim().isEmpty) {
+      SnackBarService.showError(
+          LocServ.inst.t('test_archive_url_not_configured'));
+      return;
+    }
+
+    final messageNotifier = ValueNotifier<String>(
+      LocServ.inst.t('downloading_test_archive'),
+    );
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<String>(
+              valueListenable: messageNotifier,
+              builder: (_, msg, __) => Text(msg),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await TestArchiveImportService.importFrom(
+        urlOrPath: testArchiveUrl,
+        onProgress: (msg) => messageNotifier.value = msg,
+      );
+      if (mounted) Navigator.pop(context); // close progress
+      await DatabaseRestoreHelper.restartApplication();
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        SnackBarService.showError(
+            '${LocServ.inst.t('error_downloading_test_archive')}: $e');
+      }
+    } finally {
+      messageNotifier.dispose();
+    }
+  }
+
+  /// Returns `true` if there are any raster maps or documentation files
+  /// already in the local DB that would be wiped by a replace-import.
+  Future<bool> _hasResidualUserData() async {
+    try {
+      final mapsRow = await appDatabase
+          .customSelect('SELECT COUNT(*) AS cnt FROM raster_maps '
+              'WHERE deleted_at IS NULL')
+          .getSingle();
+      if (mapsRow.read<int>('cnt') > 0) return true;
+      final docsRow = await appDatabase
+          .customSelect('SELECT COUNT(*) AS cnt FROM documentation_files '
+              'WHERE deleted_at IS NULL')
+          .getSingle();
+      return docsRow.read<int>('cnt') > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
 
   void _addNewCave() async {
     // Open AddNewCave screen to let user enter title and area
