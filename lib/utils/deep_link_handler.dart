@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:drift/drift.dart' as drift;
 
 /// Handles deep links in the "sp://<dl_input>" format.
@@ -55,7 +55,9 @@ class DeepLinkHandler {
   }
 
   /// Resolve dl_input against place_code_identifier / qr_code_resource_identifier
-  /// and navigate.
+  /// and navigate via the unified [QrCodeLookupHandler].
+  ///
+  /// Ambiguity policy is read from [deepLinkAmbiguityPolicyKey] settings.
   Future<void> _resolveAndNavigate(BuildContext context, String dlInput) async {
     final code = dlInput.trim();
     if (code.isEmpty) {
@@ -63,55 +65,17 @@ class DeepLinkHandler {
       return;
     }
 
-    // Find all cave places whose PCI or QCRI matches the scanned code.
-    final matches = await (appDatabase.select(appDatabase.cavePlaces)
-          ..where((cp) =>
-              cp.placeCodeIdentifier.equals(code) |
-              cp.qrCodeResourceIdentifier.equals(code)))
-        .get();
+    final policy = await loadQrAmbiguityPolicy(QrLookupSource.deepLink);
+    if (!context.mounted) return;
 
-    if (matches.isEmpty) {
-      _showWarning(context,
-          '${LocServ.inst.t('cave_place_not_found')}: "$dlInput"');
-      return;
-    }
-
-    CavePlace target;
-    if (matches.length == 1) {
-      target = matches.first;
-    } else {
-      // Multiple matches — prefer the last open cave
-      final lastCaveId = await _getLastOpenCaveId();
-      final inLastCave =
-          matches.where((cp) => cp.caveUuid == lastCaveId).toList();
-      if (inLastCave.isNotEmpty) {
-        target = inLastCave.first;
-      } else {
-        target = matches.first;
-      }
-    }
-
-    // Navigate to the cave place via MapViewerPage (same behavior as QR scan)
-    if (context.mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => MapViewerPage(cavePlaceUuid: target.uuid),
-        ),
-      );
-    }
-  }
-
-  Future<Uuid?> _getLastOpenCaveId() async {
-    final row = await (appDatabase.select(appDatabase.configurations)
-          ..where((c) => c.title.equals(lastOpenCaveKey)))
-        .getSingleOrNull();
-    final raw = row?.value;
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      return Uuid.parse(raw);
-    } catch (_) {
-      return null;
-    }
+    await QrCodeLookupHandler.defaultInstance().handleScannedCode(
+      context,
+      code,
+      ambiguityPolicy: policy,
+      // Deep-link prefix has already been stripped in handleUri; skipping
+      // the handler's own preprocessing avoids re-parsing the URL.
+      preprocessPayload: false,
+    );
   }
 
   /// Save the last opened cave ID to configurations.

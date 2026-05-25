@@ -30,6 +30,8 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
   bool _showHomeToolbar = false;
   bool _autoAddEntrancePlace = true;
   bool _allowMainObjectBulkDeletes = true;
+  bool _qrScanAskOnAmbiguity = true;
+  bool _deepLinkAskOnAmbiguity = true;
   bool _needsReload = false;
 
   @override
@@ -51,12 +53,22 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
       allowMainObjectBulkDeletesKey,
       'true',
     );
+    final qrScanAmbiguity = await SettingsHelper.loadStringConfig(
+      qrScanAmbiguityPolicyKey,
+      ambiguityPolicyDialog,
+    );
+    final deepLinkAmbiguity = await SettingsHelper.loadStringConfig(
+      deepLinkAmbiguityPolicyKey,
+      ambiguityPolicyDialog,
+    );
     if (mounted) {
       setState(() {
         _appLanguage = LocServ.inst.locale;
         _showHomeToolbar = showToolbar == 'true';
         _autoAddEntrancePlace = autoAddEntrance == 'true';
         _allowMainObjectBulkDeletes = allowBulkDeletes == 'true';
+        _qrScanAskOnAmbiguity = qrScanAmbiguity == ambiguityPolicyDialog;
+        _deepLinkAskOnAmbiguity = deepLinkAmbiguity == ambiguityPolicyDialog;
       });
     }
   }
@@ -155,6 +167,38 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
                   value ? 'true' : 'false',
                 );
                 if (mounted) setState(() => _allowMainObjectBulkDeletes = value);
+              },
+            ),
+            const Divider(),
+            SwitchListTile(
+              title: Text(LocServ.inst.t('qr_scan_ask_on_ambiguity')),
+              subtitle:
+                  Text(LocServ.inst.t('qr_scan_ask_on_ambiguity_desc')),
+              value: _qrScanAskOnAmbiguity,
+              onChanged: (value) async {
+                await SettingsHelper.saveStringConfig(
+                  qrScanAmbiguityPolicyKey,
+                  value
+                      ? ambiguityPolicyDialog
+                      : ambiguityPolicyPreferLastCave,
+                );
+                if (mounted) setState(() => _qrScanAskOnAmbiguity = value);
+              },
+            ),
+            const Divider(),
+            SwitchListTile(
+              title: Text(LocServ.inst.t('deep_link_ask_on_ambiguity')),
+              subtitle:
+                  Text(LocServ.inst.t('deep_link_ask_on_ambiguity_desc')),
+              value: _deepLinkAskOnAmbiguity,
+              onChanged: (value) async {
+                await SettingsHelper.saveStringConfig(
+                  deepLinkAmbiguityPolicyKey,
+                  value
+                      ? ambiguityPolicyDialog
+                      : ambiguityPolicyPreferLastCave,
+                );
+                if (mounted) setState(() => _deepLinkAskOnAmbiguity = value);
               },
             ),
             const Divider(),

@@ -116,3 +116,18 @@ const String autoAddEntrancePlaceKey = 'auto_add_entrance_place';
 
 // Allow bulk deletion of top-level objects (caves or others) via selection mode
 const String allowMainObjectBulkDeletesKey = 'allow_main_object_bulk_deletes';
+
+// QR scan ambiguity policy: when a scanned code matches places in multiple
+// caves, either show a disambiguation dialog ('dialog', default) or silently
+// open the match from the last-opened cave ('prefer_last_cave').
+const String qrScanAmbiguityPolicyKey = 'qr_scan_ambiguity_policy';
+
+// Same as above, but for deep links (sp://...).
+const String deepLinkAmbiguityPolicyKey = 'deep_link_ambiguity_policy';
+
+const String ambiguityPolicyDialog = 'dialog';
+const String ambiguityPolicyPreferLastCave = 'prefer_last_cave';
+
+// Raster-map sort option (persisted so MapViewerPage and QR handler agree)
+const String rasterMapSortFieldKey = 'raster_map_sort_field';
+const String rasterMapSortAscKey = 'raster_map_sort_asc';

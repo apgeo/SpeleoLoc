@@ -867,6 +867,11 @@
 
   "allow_main_object_bulk_deletes": "Allow bulk deletion of caves",
   "allow_main_object_bulk_deletes_desc": "Show a delete button in the cave list selection mode to permanently delete all selected caves",
+  "qr_scan_ask_on_ambiguity": "Ask which cave on ambiguous QR scan",
+  "qr_scan_ask_on_ambiguity_desc": "When a scanned QR code matches places in multiple caves, show a dialog to choose. Disable to silently open the match from the last-opened cave.",
+  "deep_link_ask_on_ambiguity": "Ask which cave on ambiguous deep link",
+  "deep_link_ask_on_ambiguity_desc": "When a deep link (sp://...) matches places in multiple caves, show a dialog to choose. Disable to silently open the match from the last-opened cave.",
+  "no_map_definition_for_place": "No map has a point defined for this cave place",
   "delete_selected_caves_confirm": "Permanently delete {count} cave(s) and all their data? This cannot be undone.",
   "delete_selected_caves_confirm2": "Confirm again: delete {count} cave(s) with all their places, maps, and records?",
 

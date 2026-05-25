@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
@@ -145,6 +144,7 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
               (this as ProductTourMixin).startScreenTour();
             }
           : null,
+      onScanPressed: _navigateToScanner,
     );
   }
 
@@ -250,48 +250,7 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
   }
 
   void _navigateToScanner() async {
-    var status = await Permission.camera.status;
-    if (!status.isGranted) {
-      status = await Permission.camera.request();
-    }
-    if (!mounted) return;
-
-    if (status.isGranted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ScannerPage(
-            onScan: (code) {
-              if (mounted) {
-                SnackBarService.showInfo('${LocServ.inst.t('scan_result')}: $code');
-                Navigator.pop(context, code);
-              }
-            },
-          ),
-        ),
-      );
-    } else if (status.isPermanentlyDenied) {
-      showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('permission_required')),
-          content: Text(LocServ.inst.t('camera_permission_required')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(LocServ.inst.t('cancel')),
-            ),
-            TextButton(
-              onPressed: () {
-                openAppSettings();
-                Navigator.of(ctx).pop();
-              },
-              child: Text(LocServ.inst.t('open_settings')),
-            ),
-          ],
-        ),
-      );
-    }
+    await QrCodeLookupHandler.openAndHandle(context);
   }
 
   static void _setMenuMode(AppMenuMode mode) {
@@ -364,11 +323,13 @@ class _AppMenuDrawer extends StatelessWidget {
   final List<AppMenuItem> screenItems;
   final void Function(AppMenuItem) onScreenItemTap;
   final VoidCallback? onHelpPressed;
+  final VoidCallback? onScanPressed;
 
   const _AppMenuDrawer({
     required this.screenItems,
     required this.onScreenItemTap,
     this.onHelpPressed,
+    this.onScanPressed,
   });
 
   @override
@@ -423,7 +384,7 @@ class _AppMenuDrawer extends StatelessWidget {
                   }),
                   _navIconWithLabel(context, Icons.qr_code_scanner, LocServ.inst.t('scan'), () {
                     Navigator.pop(context);
-                    _openScanner(context);
+                    onScanPressed?.call();
                   }),
                 ],
               ),
@@ -567,50 +528,6 @@ class _AppMenuDrawer extends StatelessWidget {
     );
   }
 
-  void _openScanner(BuildContext context) async {
-    var status = await Permission.camera.status;
-    if (!status.isGranted) {
-      status = await Permission.camera.request();
-    }
-    if (!context.mounted) return;
-
-    if (status.isGranted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ScannerPage(
-            onScan: (code) {
-              if (context.mounted) {
-                SnackBarService.showInfo('${LocServ.inst.t('scan_result')}: $code');
-                Navigator.pop(context, code);
-              }
-            },
-          ),
-        ),
-      );
-    } else if (status.isPermanentlyDenied) {
-      showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('permission_required')),
-          content: Text(LocServ.inst.t('camera_permission_required')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(LocServ.inst.t('cancel')),
-            ),
-            TextButton(
-              onPressed: () {
-                openAppSettings();
-                Navigator.of(ctx).pop();
-              },
-              child: Text(LocServ.inst.t('open_settings')),
-            ),
-          ],
-        ),
-      );
-    }
-  }
 }
 
 class _ActiveTripCard extends StatefulWidget {

@@ -3,14 +3,11 @@ import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_places/past_trips_button.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
-import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
-import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
@@ -23,6 +20,7 @@ import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CavePlacesListPage extends StatefulWidget {
@@ -413,7 +411,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       ),
     );
     if (confirmed != null && confirmed.isNotEmpty && mounted) {
-      _onScan(qrScanService.process(confirmed, config: await QrScanConfig.load()).qcri);
+      await _onScan(confirmed);
     }
   }
 
@@ -614,149 +612,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     }
   }
 
-  void _onScan(String code) async {
-    final trimmed = code.trim();
-    if (trimmed.isEmpty) {
-      if (mounted) SnackBarService.showWarning('${LocServ.inst.t('invalid_qr_code_detail')}: \'$code\'');
-      return;
-    }
-    final cavePlace = await cavePlaceRepository.findCavePlaceByCode(trimmed, widget.caveUuid);
-    if (cavePlace != null) {
-      final bool isEntrance = (cavePlace.isEntrance == 1 || cavePlace.isMainEntrance == 1);
-      if (isEntrance && mounted) {
-        await _handleEntranceScan(cavePlace);
-      } else {
-        // Record trip point if there's an active trip for this cave
-        final activeTripCaveId = await caveTripService.getActiveTripCaveId();
-        if (activeTripCaveId == widget.caveUuid) {
-          await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
-          if (mounted) SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
-        }
-      }
-      _onCavePlaceFound(cavePlace);
-    } else {
-      if (mounted) SnackBarService.showWarning('${LocServ.inst.t('cave_place_not_found')}: \'$code\'');
-    }
-  }
-
-  /// Called when a scanned cave place is marked as an entrance.
-  /// Prompts the user to start/stop a trip depending on the current trip state.
-  Future<void> _handleEntranceScan(CavePlace cavePlace) async {
-    if (!mounted) return;
-
-    final activeTripCaveId = await caveTripService.getActiveTripCaveId();
-
-    if (activeTripCaveId == null) {
-      // No active trip — offer to start one (entering cave)
-      final start = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('trip_start')),
-          content: Text(LocServ.inst.t('scan_entrance_start_trip')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(LocServ.inst.t('no')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(LocServ.inst.t('yes')),
-            ),
-          ],
-        ),
-      );
-      if (start == true && mounted) await _startTrip();
-    } else if (activeTripCaveId == widget.caveUuid) {
-      // Trip running for THIS cave — offer to stop (exiting)
-      final stop = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('trip_stop')),
-          content: Text(LocServ.inst.t('scan_entrance_exit_cave')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(LocServ.inst.t('no')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(LocServ.inst.t('yes')),
-            ),
-          ],
-        ),
-      );
-      if (stop == true && mounted) {
-        await _performStopTrip();
-      } else if (mounted) {
-        // Still in cave — record the entrance scan as a trip point
-        await caveTripService.recordPoint(cavePlace.uuid, placeTitle: cavePlace.title);
-        if (mounted) SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
-      }
-    } else {
-      // Trip running for a DIFFERENT cave — offer to stop it first
-      final otherCave = await (appDatabase.select(appDatabase.caves)
-            ..where((c) => c.uuid.equalsValue(activeTripCaveId)))
-          .getSingleOrNull();
-      final otherCaveTitle = otherCave?.title ?? activeTripCaveId.toString();
-      if (!mounted) return;
-
-      final stopOther = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('confirm')),
-          content: Text(LocServ.inst.t(
-            'scan_entrance_stop_other_trip',
-            {'cave': otherCaveTitle},
-          )),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(LocServ.inst.t('cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(LocServ.inst.t('yes')),
-            ),
-          ],
-        ),
-      );
-      if (stopOther == true && mounted) {
-        await _performStopTrip();
-        if (mounted) {
-          final start = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(LocServ.inst.t('trip_start')),
-              content: Text(LocServ.inst.t('scan_entrance_start_after_stop')),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: Text(LocServ.inst.t('cancel')),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(LocServ.inst.t('yes')),
-                ),
-              ],
-            ),
-          );
-          if (start == true && mounted) await _startTrip();
-        }
-      }
-    }
-  }
-
-  void _onCavePlaceFound(CavePlace cavePlace) async {
-    // Navigate to MapViewerPage for the found cave place and show snackbar
-    await Navigator.push(
+  Future<void> _onScan(String code) async {
+    final result =
+        await QrCodeLookupHandler.defaultInstance().handleScannedCode(
       context,
-      MaterialPageRoute(
-        builder: (_) => MapViewerPage(cavePlaceUuid: cavePlace.uuid, caveUuid: widget.caveUuid),
-      ),
+      code,
+      currentCaveId: widget.caveUuid,
     );
-    if (!mounted) return;
-    _loadCavePlaces();
-    SnackBarService.showSuccess('${LocServ.inst.t('cave_place_identified')}: "${cavePlace.title}"');
+    if (result != null && mounted) _loadCavePlaces();
   }
 
   @override
@@ -867,12 +730,13 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                     ? (_) => _cancelQrScanLongPress()
                     : null,
                 child: IconActionButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ScannerPage(onScan: _onScan),
-                    ),
-                  ),
+                  onPressed: () async {
+                    final result = await QrCodeLookupHandler.openAndHandle(
+                      context,
+                      currentCaveId: widget.caveUuid,
+                    );
+                    if (result != null && mounted) _loadCavePlaces();
+                  },
                   icon: Icons.qr_code_scanner,
                   tooltip: LocServ.inst.t('scan_qr'),
                 ),

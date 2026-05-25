@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
@@ -15,7 +13,6 @@ import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
-import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
@@ -129,7 +126,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
   // --- Long-press QR manual input (enabled by [enableQrManualInput]) ---
   Timer? _qrScanLongPressTimer;
-  final TextEditingController _manualQrController = TextEditingController();
 
   void _startQrScanLongPress() {
     _qrScanLongPressTimer?.cancel();
@@ -184,7 +180,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   @override
   void dispose() {
     _qrScanLongPressTimer?.cancel();
-    _manualQrController.dispose();
     _cavesSub?.cancel();
     homePageRefreshNotifier.removeListener(_onHomePageRefreshRequested);
     super.dispose();
@@ -627,89 +622,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
 
   Future<void> _showManualQrInputDialog() async {
-    _manualQrController.clear();
-    final confirmed = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(LocServ.inst.t('manual_qr_search')),
-        content: TextField(
-          controller: _manualQrController,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: LocServ.inst.t('qr_code_identifier'),
-          ),
-          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(LocServ.inst.t('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, _manualQrController.text.trim()),
-            child: Text(LocServ.inst.t('search_place_by_qr_code_by_identifier')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != null && confirmed.isNotEmpty && mounted) {
-      final handler = QrCodeLookupHandler(QrCodeLookupService(appDatabase));
-      final result = await handler.handleScannedCode(context, confirmed);
-      if (result != null) _loadCaves();
-    }
+    final result =
+        await QrCodeLookupHandler.manualInputAndHandle(context);
+    if (result != null) _loadCaves();
   }
 
   Future<void> _scanAndLookupQr() async {
-    final status = await Permission.camera.status;
-    PermissionStatus resultStatus = status;
-    if (!status.isGranted) {
-      resultStatus = await Permission.camera.request();
-    }
-    if (!mounted) return;
-
-    if (resultStatus.isGranted) {
-      String? scannedCode;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ScannerPage(onScan: (code) {
-            scannedCode = code;
-          }),
-        ),
-      );
-      if (scannedCode != null && mounted) {
-        final handler = QrCodeLookupHandler(QrCodeLookupService(appDatabase));
-        final result = await handler.handleScannedCode(context, scannedCode!);
-        if (result != null) _loadCaves();
-      }
-    } else if (resultStatus.isPermanentlyDenied) {
-      if (mounted) {
-        showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(LocServ.inst.t('permission_required')),
-            content: Text(LocServ.inst.t('camera_permission_required')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              TextButton(
-                onPressed: () {
-                  openAppSettings();
-                  Navigator.of(context).pop();
-                },
-                child: Text(LocServ.inst.t('open_settings')),
-              ),
-            ],
-          ),
-        );
-      }
-    } else {
-      if (mounted) {
-        SnackBarService.showWarning(LocServ.inst.t('camera_permission_denied'));
-      }
-    }
+    final result = await QrCodeLookupHandler.openAndHandle(context);
+    if (result != null) _loadCaves();
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
