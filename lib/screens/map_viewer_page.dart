@@ -180,19 +180,31 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       _editorController.resetZoom();
     } catch (_) {}
 
-    // center on initially selected place if it has coordinates
+    // Center on initially selected place if it has coordinates.
+    // Use a short delay (instead of a bare postFrameCallback) so that PhotoView
+    // has time to finish its first-paint setup before the scale is changed
+    // programmatically.  Applying the scale too early can leave the map blank
+    // until the next user interaction (pan / zoom / reset).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // delegate centering to inner editor's PhotoView controller
-      if (_selectedPlaceId == null) return;
-      final matches = _placesWithDefs.where((p) => p.cavePlace.uuid == _selectedPlaceId).toList();
-      if (matches.isEmpty) return;
-      final cpwd = matches.first;
-      if (cpwd.definition == null) return;
-      final x = cpwd.definition!.xCoordinate?.toDouble();
-      final y = cpwd.definition!.yCoordinate?.toDouble();
-      if (x != null && y != null) {
-        _editorController.zoomToPoint(x, y, zoomLevel: 0.8);
-      }
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        final id = _selectedPlaceId;
+        final cpwd = id == null
+            ? null
+            : _placesWithDefs.where((p) => p.cavePlace.uuid == id).firstOrNull;
+        final x = cpwd?.definition?.xCoordinate?.toDouble();
+        final y = cpwd?.definition?.yCoordinate?.toDouble();
+        if (x != null && y != null) {
+          _editorController.zoomToPoint(x, y, zoomLevel: 0.8);
+        } else {
+          // No point to zoom to; call resetZoom to guarantee the map repaints
+          // correctly after its first render (works around the same blank-map
+          // issue even when there is nothing to zoom to).
+          try {
+            _editorController.resetZoom();
+          } catch (_) {}
+        }
+      });
     });
     if (mounted) setState(() {});
   }
