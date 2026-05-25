@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:archive/archive_io.dart';
@@ -541,71 +542,45 @@ class SyncArchiveService {
     String zipPath, {
     ConflictResolver? conflictResolver,
   }) async {
-    // Stream-decode from disk to avoid materialising the whole zip in
-    // memory (which has historically tripped RangeError boundary bugs in
-    // package:archive when the decoded payload is large, e.g. for archives
-    // carrying raster-map images).
+    // Read the file asynchronously so the UI/main isolate is never blocked.
     //
-    // CRITICAL: ZipDecoder().decodeBuffer(input) returns a *lazy* archive
-    // — entry payloads are inflated on-demand later by writeContent() in
-    // _extractAssets. We therefore must NOT close `input` until the whole
-    // import has finished, otherwise the inflater reads from a closed
-    // file handle and throws "FormatException: Filter error, bad data"
-    // (observed on Android Samsung devices, where the platform appears
-    // to actually invalidate the underlying buffer on close, while on
-    // some other platforms it lingers in cache).
-    final input = InputFileStream(zipPath);
-    try {
-      Archive archive = ZipDecoder().decodeBuffer(input);
-      // Forensic fallback: if the streaming decode produced an archive
-      // without a manifest, retry once with the in-memory decoder which
-      // sometimes finds the central directory when the streaming reader
-      // landed on a false-positive EOCD signature. We log enough detail
-      // for the user to compare the on-disk file with the source.
-      if (archive.findFile('manifest.json') == null) {
-        final f = File(zipPath);
-        final size = await f.length();
-        _log.warning(
-          'streaming decode of $zipPath ($size bytes) yielded '
-          '${archive.files.length} entries without manifest.json; '
-          'retrying with in-memory decoder',
-        );
-        try {
-          final bytes = await f.readAsBytes();
-          final retry = ZipDecoder().decodeBytes(bytes);
-          if (retry.findFile('manifest.json') != null) {
-            _log.info(
-              'in-memory decoder recovered manifest.json '
-              '(${retry.files.length} entries)',
-            );
-            archive = retry;
-          } else {
-            // Still no manifest. Dump diagnostics: head/tail bytes plus
-            // the byte offset of every End-Of-Central-Directory signature
-            // we can find. A single match near the very end of the file
-            // means the zip is well-formed and the manifest really is
-            // absent (i.e. produced by an older or alien tool). Multiple
-            // matches or a match far from the end strongly suggests a
-            // truncated/corrupted download.
-            final eocdOffsets = _findEocdOffsets(bytes);
-            final headHex = _hexHead(bytes, 16);
-            final tailHex = _hexTail(bytes, 32);
-            _log.severe(
-              'in-memory decoder also failed to find manifest.json. '
-              'file_size=$size, eocd_offsets=$eocdOffsets, '
-              'head=$headHex, tail=$tailHex, '
-              'streaming_entries=${archive.files.length}, '
-              'retry_entries=${retry.files.length}',
-            );
-          }
-        } catch (e) {
-          _log.warning('in-memory decode retry failed for $zipPath: $e');
-        }
-      }
-      return await _importFromArchive(archive, conflictResolver, zipPath);
-    } finally {
-      await input.close();
+    // Previous approach used InputFileStream (a forward-only sequential
+    // reader). ZIP stores its central directory at the END of the file, so
+    // ZipDecoder had to read the entire archive byte-by-byte to reach it.
+    // On a Samsung Galaxy S20 FE (Exynos 990) this took >5 s for a 17.8 MB
+    // archive, exceeding Android's 5 s input-dispatching deadline and
+    // causing ANR even before the import logic ran.
+    //
+    // InputStream wraps an in-memory Uint8List and IS seekable: ZipDecoder
+    // jumps straight to the last 22 bytes to locate the EOCD, reads the
+    // central directory (a few KB), and returns in milliseconds regardless
+    // of archive size.
+    //
+    // The historical RangeError from in-memory archives (which motivated the
+    // InputFileStream approach) is no longer a risk: large asset entries
+    // (raster maps) are never inflated via entry.content in this isolate —
+    // _extractAssetsInBackground opens its own InputFileStream in a
+    // background isolate and handles all binary extraction there.
+    final bytes = await File(zipPath).readAsBytes();
+    // InputStream is backed by the Uint8List above; both live until
+    // _importFromArchive returns and the archive goes out of scope.
+    final Archive archive = ZipDecoder().decodeBuffer(InputStream(bytes));
+
+    if (archive.findFile('manifest.json') == null) {
+      final size = bytes.length;
+      // InputStream is seekable so a false-positive EOCD hit is extremely
+      // unlikely here, but log diagnostics for forensics regardless.
+      final eocdOffsets = _findEocdOffsets(bytes);
+      final headHex = _hexHead(bytes, 16);
+      final tailHex = _hexTail(bytes, 32);
+      _log.severe(
+        'in-memory decode of $zipPath ($size bytes) yielded '
+        '${archive.files.length} entries without manifest.json. '
+        'eocd_offsets=$eocdOffsets, head=$headHex, tail=$tailHex',
+      );
     }
+
+    return await _importFromArchive(archive, conflictResolver, zipPath);
   }
 
   /// Returns every byte offset in [bytes] where the 4-byte zip End-Of-
@@ -700,24 +675,61 @@ class SyncArchiveService {
     // incoming user UUID would be orphaned.
     final userRemap = await _buildUserUuidRemap(archive, warnings);
 
+    // ── Phase 1: pre-parse all JSONL data outside the DB transaction ──────
+    // Inflating lazy zip entries and decoding JSON are CPU-bound synchronous
+    // operations.  Running them inside the DB transaction (as before) blocked
+    // the Dart UI isolate long enough to trigger Android ANR on larger
+    // archives.  We now inflate + parse each table file in turn, yielding to
+    // the Flutter engine between tables so it can process frames and input
+    // events.  The transaction itself then contains only async DB awaits.
+    final tables = _syncedTables();
+    final tableRows = <String, List<Map<String, dynamic>>>{};
+    for (final t in tables) {
+      // Yield to the event loop before inflating each (potentially large)
+      // zip entry so the Flutter engine can process frames / input between
+      // table parses.
+      await Future.delayed(Duration.zero);
+      final entry = archive.findFile('tables/${t.name}.jsonl');
+      if (entry == null) {
+        warnings.add('archive missing tables/${t.name}.jsonl');
+        continue;
+      }
+      final rows = _readJsonl(entry);
+      if (userRemap.isNotEmpty) {
+        for (final r in rows) {
+          _applyUserRemapToRow(r, userRemap, t.name);
+        }
+      }
+      tableRows[t.name] = rows;
+    }
+
+    await Future.delayed(Duration.zero);
+    final logEntry = archive.findFile('change_log.jsonl');
+    var logRows = <Map<String, dynamic>>[];
+    if (logEntry != null) {
+      logRows = _readJsonl(logEntry);
+      if (userRemap.isNotEmpty) {
+        for (final row in logRows) {
+          _applyUserRemapToChangeLogRow(row, userRemap);
+        }
+      }
+    }
+
+    await Future.delayed(Duration.zero);
+    final fieldEntry = archive.findFile('change_log_field.jsonl');
+    final fieldRows =
+        fieldEntry != null ? _readJsonl(fieldEntry) : <Map<String, dynamic>>[];
+
+    // ── Phase 2: DB transaction — pure async DB operations only ──────────
     await _logger.runSuspended(() async {
       await _db.transaction(() async {
         // Defer FK checks to the end of the transaction so we can insert
         // in any order without hitting transient constraint violations.
         await _db.customStatement('PRAGMA defer_foreign_keys = ON');
 
-        for (final t in _syncedTables()) {
-          final entry = archive.findFile('tables/${t.name}.jsonl');
-          if (entry == null) {
-            warnings.add('archive missing tables/${t.name}.jsonl');
-            continue;
-          }
-          final rows = _readJsonl(entry);
-          if (userRemap.isNotEmpty) {
-            for (final r in rows) {
-              _applyUserRemapToRow(r, userRemap, t.name);
-            }
-          }
+        for (final t in tables) {
+          final rows = tableRows[t.name];
+          if (rows == null) continue; // missing entry already warned above
           final result = await t.upsert(rows, conflictResolver);
           inserted += result.inserted;
           updated += result.updated;
@@ -725,46 +737,35 @@ class SyncArchiveService {
         }
 
         // Merge change_log headers first (FK parent) then fields.
-        final logEntry = archive.findFile('change_log.jsonl');
         final existingLogUuids = <String>{};
         for (final r in await _db.select(_db.changeLog).get()) {
           existingLogUuids.add(r.uuid.toString());
         }
         final deleteTargets = <String, int>{}; // uuid-string -> changed_at
 
-        if (logEntry != null) {
-          final logRows = _readJsonl(logEntry);
-          for (final row in logRows) {
-            if (userRemap.isNotEmpty) {
-              _applyUserRemapToChangeLogRow(row, userRemap);
-            }
-            final uuidStr = row['uuid'] as String;
-            if (existingLogUuids.contains(uuidStr)) continue;
-            final data =
-                ChangeLogData.fromJson(row, serializer: _serializer);
-            await _db.into(_db.changeLog).insert(data);
-            existingLogUuids.add(uuidStr);
-            changeLogMerged++;
-            if (data.changeType == ChangeType.delete) {
-              deleteTargets[data.entityUuid.toString()] = data.changedAt;
-            }
+        for (final row in logRows) {
+          final uuidStr = row['uuid'] as String;
+          if (existingLogUuids.contains(uuidStr)) continue;
+          final data =
+              ChangeLogData.fromJson(row, serializer: _serializer);
+          await _db.into(_db.changeLog).insert(data);
+          existingLogUuids.add(uuidStr);
+          changeLogMerged++;
+          if (data.changeType == ChangeType.delete) {
+            deleteTargets[data.entityUuid.toString()] = data.changedAt;
           }
         }
 
-        final fieldEntry = archive.findFile('change_log_field.jsonl');
-        if (fieldEntry != null) {
-          final rows = _readJsonl(fieldEntry);
-          for (final row in rows) {
-            try {
-              final data =
-                  ChangeLogFieldData.fromJson(row, serializer: _serializer);
-              await _db.into(_db.changeLogField).insert(
-                    data,
-                    mode: InsertMode.insertOrIgnore,
-                  );
-            } catch (e) {
-              warnings.add('change_log_field: $e');
-            }
+        for (final row in fieldRows) {
+          try {
+            final data =
+                ChangeLogFieldData.fromJson(row, serializer: _serializer);
+            await _db.into(_db.changeLogField).insert(
+                  data,
+                  mode: InsertMode.insertOrIgnore,
+                );
+          } catch (e) {
+            warnings.add('change_log_field: $e');
           }
         }
 
@@ -780,7 +781,7 @@ class SyncArchiveService {
 
     // Extract asset files outside the DB transaction (filesystem IO
     // shouldn't be tied to the transaction's lifetime).
-    final assetResult = await _extractAssets(archive, warnings);
+    final assetResult = await _extractAssets(archive, warnings, zipPath: zipPath);
     filesCopied = assetResult.copied;
     filesSkipped = assetResult.skipped;
 
@@ -1077,8 +1078,9 @@ class SyncArchiveService {
   /// are treated as immutable-per-name).
   Future<_AssetResult> _extractAssets(
     Archive archive,
-    List<String> warnings,
-  ) async {
+    List<String> warnings, {
+    required String zipPath,
+  }) async {
     Directory baseDir;
     try {
       baseDir = await _assetsBaseDirResolver();
@@ -1086,8 +1088,13 @@ class SyncArchiveService {
       warnings.add('assets base dir unavailable: $e');
       return const _AssetResult(copied: 0, skipped: 0);
     }
-    var copied = 0;
     var skipped = 0;
+
+    // Phase 1 (main isolate): determine which entries need extracting and
+    // create output parent directories.  getApplicationDocumentsDirectory()
+    // and Directory.create() use platform channels that must run on the main
+    // isolate, so we resolve all paths here before spawning.
+    final toExtract = <List<String>>[];
     for (final entry in archive) {
       if (!entry.isFile) continue;
       if (!entry.name.startsWith(_assetsPrefix)) continue;
@@ -1096,27 +1103,36 @@ class SyncArchiveService {
           .replaceAll('/', Platform.pathSeparator);
       if (relPath.isEmpty) continue;
       final dest = File('${baseDir.path}${Platform.pathSeparator}$relPath');
-      try {
-        if (await dest.exists()) {
-          skipped++;
-          continue;
-        }
-        await dest.parent.create(recursive: true);
-        // Stream the entry directly to disk to avoid loading the whole
-        // payload into memory — important for raster-map images that can
-        // be tens or hundreds of MB.
-        final out = OutputFileStream(dest.path);
-        try {
-          entry.writeContent(out);
-        } finally {
-          await out.close();
-        }
-        copied++;
-      } catch (e) {
-        warnings.add('copy ${entry.name}: $e');
+      if (await dest.exists()) {
+        skipped++;
+        continue;
       }
+      await dest.parent.create(recursive: true);
+      toExtract.add([entry.name, dest.path]);
     }
-    return _AssetResult(copied: copied, skipped: skipped);
+
+    if (toExtract.isEmpty) {
+      return _AssetResult(copied: 0, skipped: skipped);
+    }
+
+    // Phase 2 (background isolate): inflate + write all asset files.
+    // entry.writeContent() is fully synchronous, CPU-bound decompression
+    // that can block the Dart UI thread for several seconds per large
+    // raster-map file, triggering Android ANR.  Offloading to Isolate.run()
+    // keeps the UI thread completely free during the entire extraction.
+    try {
+      final (copied, isolateWarnings) = await Isolate.run(
+        () => _extractAssetsInBackground(zipPath, toExtract),
+      );
+      warnings.addAll(isolateWarnings);
+      return _AssetResult(copied: copied, skipped: skipped);
+    } catch (e) {
+      warnings.add(
+        'asset extraction failed: $e '
+        '(— skipping ${toExtract.length} file(s))',
+      );
+      return _AssetResult(copied: 0, skipped: skipped);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1222,6 +1238,54 @@ class SyncArchiveService {
       return null;
     }
   }
+}
+
+/// Extracts archive entries to their pre-created output paths.
+///
+/// Runs in a background isolate spawned by [SyncArchiveService._extractAssets]
+/// so that synchronous CPU-bound decompression (via [ArchiveFile.writeContent])
+/// does not block the Flutter UI isolate and cause Android ANR.
+///
+/// [zipPath] is re-opened with a fresh [InputFileStream] so this function is
+/// fully self-contained and can run in any isolate without sharing state.
+/// [entries] is a list of `[entryName, outputPath]` pairs; output parent
+/// directories must already exist (created by the caller on the main isolate).
+///
+/// Returns `(copied, warnings)` — number of files successfully written and
+/// any per-file error messages.
+Future<(int, List<String>)> _extractAssetsInBackground(
+  String zipPath,
+  List<List<String>> entries,
+) async {
+  var copied = 0;
+  final warnings = <String>[];
+  final input = InputFileStream(zipPath);
+  try {
+    final archive = ZipDecoder().decodeBuffer(input);
+    for (final pair in entries) {
+      final name = pair[0];
+      final outputPath = pair[1];
+      final entry = archive.findFile(name);
+      if (entry == null) {
+        warnings.add('entry not found in archive: $name');
+        continue;
+      }
+      try {
+        final out = OutputFileStream(outputPath);
+        try {
+          entry.writeContent(out);
+        } finally {
+          await out.close();
+        }
+        copied++;
+      } catch (e) {
+        warnings.add('$name → $outputPath: $e');
+      }
+    }
+  } finally {
+    await input.close();
+  }
+  return (copied, warnings);
 }
 
 class _AssetResult {
