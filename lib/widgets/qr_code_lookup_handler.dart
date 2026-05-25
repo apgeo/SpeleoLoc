@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -38,6 +39,20 @@ class QrCodeLookupHandler {
       final choice = await _showDisambiguationDialog(context, results);
       if (choice == null) return null;
       selected = choice;
+    }
+
+    if (!context.mounted) return null;
+
+    // Record a trip point when there is an active trip for the scanned place's
+    // cave.  This mirrors the logic in CavePlacesListPage._onScan so that
+    // scanning from the home page (which has no cave context) behaves the same.
+    final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+    if (activeTripCaveId == selected.cavePlace.caveUuid) {
+      await caveTripService.recordPoint(
+        selected.cavePlace.uuid,
+        placeTitle: selected.cavePlace.title,
+      );
+      SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
     }
 
     if (!context.mounted) return null;
