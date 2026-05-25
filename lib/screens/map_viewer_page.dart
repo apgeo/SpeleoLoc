@@ -23,6 +23,7 @@ class MapViewerPage extends StatefulWidget {
     super.key,
     required this.cavePlaceUuid,
     this.caveUuid,
+    this.initialRasterMapUuid,
     this.placesListAlignment = 0.5,
     this.allowEditorOverflow = false,
   });
@@ -32,6 +33,10 @@ class MapViewerPage extends StatefulWidget {
   /// Optional cave context. When provided and [cavePlaceUuid] resolves to null
   /// (e.g. id == 0), raster maps for this cave are still loaded.
   final Uuid? caveUuid;
+
+  /// When set (e.g. from a QR scan), the viewer pre-selects this raster map
+  /// instead of defaulting to the first one in the sorted list.
+  final Uuid? initialRasterMapUuid;
 
   /// Horizontal alignment used when bringing a cave-place item into view
   /// (0.0 = left, 0.5 = center, 1.0 = right).
@@ -107,6 +112,10 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   }
 
   Future<void> _loadAll() async {
+    // Load persisted sort option so the initial order matches the user's preference.
+    final savedSort = await RasterMapSortOption.load();
+    _editorController.sortOption = savedSort;
+
     // Load cave place and raster maps for its cave
     _cavePlace = await cavePlaceRepository.findById(widget.cavePlaceUuid);
     if (_cavePlace == null) {
@@ -133,7 +142,12 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     _selectedPlaceId = widget.cavePlaceUuid;
 
     if (_rasterMaps.isNotEmpty) {
-      _selectedRasterMap = _rasterMaps.first;
+      _selectedRasterMap = widget.initialRasterMapUuid != null
+          ? _rasterMaps.firstWhere(
+              (m) => m.uuid == widget.initialRasterMapUuid,
+              orElse: () => _rasterMaps.first,
+            )
+          : _rasterMaps.first;
       await _loadDefinitionsForSelected();
     }
 
@@ -252,6 +266,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       _editorController.sortOption = option;
       _rasterMaps = option.apply(_rasterMaps, _placesWithDefs);
     });
+    await option.save();
   }
 
   Future<void> _openRasterMapsPage() async {

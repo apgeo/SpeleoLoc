@@ -65,7 +65,7 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         },
         cavePlaceViewRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, Uuid?>?;
-          return MapViewerPage(cavePlaceUuid: args?['cavePlaceUuid'] ?? Uuid.zero, caveUuid: args?['caveUuid']);
+          return MapViewerPage(cavePlaceUuid: args?['cavePlaceUuid'] ?? Uuid.zero, caveUuid: args?['caveUuid'], initialRasterMapUuid: args?['initialRasterMapUuid']);
         },
         rasterMapsRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Uuid?;

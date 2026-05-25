@@ -7,8 +7,10 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// What to do when a QR code matches places in multiple caves.
@@ -135,14 +137,47 @@ class QrCodeLookupHandler {
 
     if (!context.mounted) return cavePlace;
 
-    await Navigator.pushNamed(
-      context,
-      cavePlaceViewRoute,
-      arguments: {
-        'caveUuid': cavePlace.caveUuid,
-        'cavePlaceUuid': cavePlace.uuid,
-      },
-    );
+    // Find the best raster map to open: first in sort order that has a
+    // definition for this cave place.  If none found, fall back to CavePlacePage.
+    final allMaps = await rasterMapRepository.getRasterMaps(cavePlace.caveUuid);
+    Uuid? bestMapUuid;
+    if (allMaps.isNotEmpty) {
+      final sortOption = await RasterMapSortOption.load();
+      final sortedMaps = sortOption.apply(allMaps, []);
+      for (final rm in sortedMaps) {
+        final def =
+            await definitionRepository.findDefinition(cavePlace.uuid, rm.uuid);
+        if (def != null) {
+          bestMapUuid = rm.uuid;
+          break;
+        }
+      }
+    }
+
+    if (!context.mounted) return cavePlace;
+
+    if (bestMapUuid != null) {
+      await Navigator.pushNamed(
+        context,
+        cavePlaceViewRoute,
+        arguments: {
+          'caveUuid': cavePlace.caveUuid,
+          'cavePlaceUuid': cavePlace.uuid,
+          'initialRasterMapUuid': bestMapUuid,
+        },
+      );
+    } else {
+      SnackBarService.showWarning(
+          LocServ.inst.t('no_map_definition_for_place'));
+      await Navigator.pushNamed(
+        context,
+        cavePlaceRoute,
+        arguments: {
+          'caveUuid': cavePlace.caveUuid,
+          'cavePlaceUuid': cavePlace.uuid,
+        },
+      );
+    }
 
     if (context.mounted) {
       SnackBarService.showSuccess(

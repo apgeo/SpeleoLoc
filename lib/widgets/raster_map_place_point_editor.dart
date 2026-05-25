@@ -11,6 +11,8 @@ import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_image_cache.dart';
 import 'package:speleoloc/widgets/raster_map_marker_builder.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
@@ -57,6 +59,26 @@ class RasterMapSortOption {
         field: field ?? this.field,
         ascending: ascending ?? this.ascending,
       );
+
+  /// Load the persisted sort option from settings.
+  static Future<RasterMapSortOption> load() async {
+    final fieldStr = await SettingsHelper.loadStringConfig(
+        rasterMapSortFieldKey, RasterMapSortField.orderIndex.name);
+    final ascStr =
+        await SettingsHelper.loadStringConfig(rasterMapSortAscKey, 'true');
+    final field = RasterMapSortField.values.firstWhere(
+      (f) => f.name == fieldStr,
+      orElse: () => RasterMapSortField.orderIndex,
+    );
+    return RasterMapSortOption(field: field, ascending: ascStr == 'true');
+  }
+
+  /// Persist this sort option to settings.
+  Future<void> save() async {
+    await SettingsHelper.saveStringConfig(rasterMapSortFieldKey, field.name);
+    await SettingsHelper.saveStringConfig(
+        rasterMapSortAscKey, ascending.toString());
+  }
 
   /// Returns a sorted copy of [maps] using place-count data from [defs].
   List<RasterMap> apply(
