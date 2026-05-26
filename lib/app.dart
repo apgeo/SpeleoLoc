@@ -12,6 +12,7 @@ import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
@@ -87,6 +88,9 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         tripReportTemplatesRoute: (context) =>
             const TripReportTemplatesPage(),
       },
+      builder: (context, child) => Stack(
+        children: [SizedBox.expand(child: child!), const AppToastHost()],
+      ),
     );
   }
 }

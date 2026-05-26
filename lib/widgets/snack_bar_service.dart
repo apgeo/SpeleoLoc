@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
-import 'package:speleoloc/utils/navigator_key.dart';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -11,16 +10,17 @@ import 'package:speleoloc/utils/navigator_key.dart';
 enum ToastType { info, success, warning, error }
 
 // ---------------------------------------------------------------------------
-// Public API — all methods are context-free; they use [navigatorKey].
+// Public API — all methods are context-free.
 // ---------------------------------------------------------------------------
 
-/// Centralised overlay-toast service.
+/// Centralised toast notification service.
 ///
 /// Multiple toasts stack at the bottom of the screen and auto-dismiss
 /// independently, so rapid messages are always visible without queuing.
 ///
-/// Call [showError], [showSuccess], [showWarning], or [showInfo] from
-/// anywhere in the app — no [BuildContext] required.
+/// Requires [AppToastHost] to be present in [MaterialApp.builder].  Call
+/// [showError], [showSuccess], [showWarning], or [showInfo] from anywhere in
+/// the app — no [BuildContext] required.
 class SnackBarService {
   const SnackBarService._();
 
@@ -73,30 +73,46 @@ class _ToastManager {
   _ToastManager._();
   static final instance = _ToastManager._();
 
-  final _hostKey = GlobalKey<_ToastHostState>();
-  OverlayEntry? _entry;
+  final hostKey = GlobalKey<_ToastHostState>();
 
   void show(String message, ToastType type, {required Duration duration}) {
-    final overlay = navigatorKey.currentState?.overlay;
-    if (overlay == null) return;
-
-    if (_entry == null) {
-      _entry = OverlayEntry(builder: (_) => _ToastHost(hostKey: _hostKey));
-      overlay.insert(_entry!);
-    }
-
     final data = _ToastData(
       id: DateTime.now().microsecondsSinceEpoch,
       message: message,
       type: type,
       duration: duration,
     );
-    _hostKey.currentState?.addToast(data);
+    hostKey.currentState?.addToast(data);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Toast host widget — lives in the overlay and manages the toast stack.
+// Root-level toast host — place in MaterialApp.builder above the Navigator.
+// ---------------------------------------------------------------------------
+
+/// Hosts all overlay toast notifications above the entire widget tree.
+///
+/// Place this inside [MaterialApp.builder] so toasts remain visible above
+/// pushed routes, dialogs, and bottom sheets:
+///
+/// ```dart
+/// MaterialApp(
+///   builder: (context, child) => Stack(
+///     children: [SizedBox.expand(child: child!), const AppToastHost()],
+///   ),
+/// )
+/// ```
+class AppToastHost extends StatelessWidget {
+  const AppToastHost({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ToastHost(hostKey: _ToastManager.instance.hostKey);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Toast host widget — manages the toast stack and animations.
 // ---------------------------------------------------------------------------
 
 class _ToastHost extends StatefulWidget {
