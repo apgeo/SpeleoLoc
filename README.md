@@ -13,7 +13,7 @@ Each mapped point can store additional information, including text and media. Af
 Another component of the system is placing QR codes at the entrance of explored caves. The payload in these QR codes is a weblink that can be scanned both with SpeleoLoc but could optionally be linked with a website in order to open on any mobile device online for broader access to relevant information.
 
 ## Current status
-The application is under development, in a beta stage - some of the functionality is not tested extensively.
+The application is under development, in an early beta stage / alpha - some of the functionality is not tested extensively.
 
 ## Future development
 Dedicated web server for synchronization (now sync is done by sending files / FTP)
