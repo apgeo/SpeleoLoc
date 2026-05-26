@@ -14,19 +14,20 @@ places in visit order.
 | **Title** | Required. Unique within a cave. |
 | **Description** | Free-form text (multi-line). |
 | **Depth in cave** | Signed number. Negative values (e.g. `-45`) are typical for points below entrance; positive for above. |
-| **QR code identifier** | Integer. Printed on the physical label. Unique within a cave; duplicates across caves are allowed but warned against. |
+| **Place code identifier (PCI)** | Human-readable string code printed on each label. Replaces the older integer "QR code identifier" — any string allowed, depending on the active [strategy](place-code-identifiers.md). Unique within a cave; duplicates across caves are warned. |
+| **QR code resource identifier (QCRI)** | Payload actually embedded in the QR pixels / `sp://` deep link. Equals the PCI in mirror mode, or a short hash in hash mode. Computed automatically when the PCI is saved. |
 | **Cave area** | Optional. Links the place to a [cave area](caves-and-areas.md). |
-| **Latitude / Longitude** | Optional GPS coordinates. Hidden by default; toggle via the screen menu. |
+| **Latitude / Longitude / Altitude** | Optional GPS coordinates. The form has a built-in **GPS recorder** that streams positions, averages them, and lets you capture a snapshot in one tap. |
 | **Is entrance** / **Is main entrance** | Flags used for display and reports. |
 
 ## Opening the cave places list
 
 From the home screen, tap a cave. The places list shows:
 
-- a filter bar (toggled from the toolbar) that matches title **or** QR
-  code number substring,
+- a filter bar (toggled from the toolbar) that matches title **or**
+  place code substring,
 - a **past trips** button (see [Trips](trips.md)),
-- the list of places with their depth, area and QR number.
+- the list of places with their depth, area and place code.
 
 A banner appears at the top whenever there is an **active trip** in
 this cave, with pause/resume/stop controls.
@@ -38,7 +39,7 @@ Four ways, pick the one that fits:
 1. **Manual (full form)** — list **Add place** button, fill every
    field, save. Use for detailed entry.
 2. **Quick add** — available from the map viewer and some dialogs;
-   asks only title, area and QR.
+   asks only title, area and place code (PCI).
 3. **By tapping on a raster map** — set tap-mode to "Define new place"
    in the map viewer, tap the image, then fill the quick-add form.
    See [Map viewer](map-viewer.md).
@@ -57,20 +58,27 @@ Tap a row to open the **cave place page**, which has tabs:
 
 Unsaved changes trigger a confirmation dialog if you try to leave.
 
-### QR editing safety
+### Place-code editing safety
 
-The QR code field is locked by default when the place already has a QR
-assigned, to prevent accidental overwrites during rough use. Toggle
-**Enable QR edit** / **Disable QR edit** from the ⋮ menu to change it.
+The **Place code identifier (PCI)** field is locked by default when
+the place already has a code assigned, to prevent accidental
+overwrites during rough use. Toggle **Enable code edit** / **Disable
+code edit** from the ⋮ menu to change it. The QCRI is recomputed
+automatically when you save.
 
-If you assign a QR that is already used by another place in the cave,
-the app warns and asks whether to replace it on the existing place
-(leaving it blank), keep both (duplicate warning), or cancel.
+If you assign a code that is already used by another place in the
+cave, the app warns and asks whether to replace it on the existing
+place (leaving it blank), keep both (duplicate warning), or cancel.
+
+You can also **generate** the PCI/QCRI automatically — see
+[Place codes (PCI) and QR payloads (QCRI)](place-code-identifiers.md).
 
 ### GPS coordinates
 
 Hidden by default. Enable **Show GPS coordinates** in the screen menu.
-Useful for the entrance place; not required for interior places.
+Useful for the entrance place; not required for interior places. The
+**Record GPS** button opens a small recorder page that streams
+positions, averages them and lets you capture the result in one tap.
 
 ### Entrance flags
 
@@ -94,6 +102,7 @@ Deleting a place also removes:
 
 ## See also
 
+- [Place codes (PCI) and QR payloads (QCRI)](place-code-identifiers.md)
 - [QR codes](qr-codes.md)
 - [Map viewer and point editor](map-viewer.md)
 - [Documents](documents.md)

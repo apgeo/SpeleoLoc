@@ -2,10 +2,16 @@
 
 [← Back to index](../README.md) · [Overview](../overview.md)
 
-SpeleoLoc currently has **no central server**. Data is shared between
-devices by exchanging a single **archive file** — a zip containing the
-database plus (optionally) the attached documentation files and raster
-map images.
+SpeleoLoc has **no central server** in the traditional sense. Data is
+shared between devices in two complementary ways:
+
+- by exchanging **archive files** manually (zip with the database plus
+  optional documentation files and raster-map images), or
+- by pointing several devices at a shared **FTP/SFTP folder** which
+  the app fills with archive entries automatically.
+
+The two modes can be mixed — they both use the same archive format
+and the same conflict-resolution rules.
 
 ## What an archive contains
 
@@ -23,12 +29,14 @@ updates.
 
 ## Export an archive
 
-1. **Settings → Database → Export archive**.
+1. **Settings → Data export/import → Export archive**.
 2. In the dialog, choose:
    - which caves to include (all, or specific ones),
    - whether to include documentation files,
    - whether to include raster map images,
-   - whether to export only diffs since last export.
+   - whether to export only diffs since last export,
+   - whether to include **FTP profile passwords** (opt-in, off by
+     default — only enable when sharing with your other devices).
 3. Pick an output folder and confirm.
 
 The result is a single `speleoloc_export_*.zip` you can share by email,
@@ -50,23 +58,25 @@ See [Database export, import and backup](../features/database-export-import.md).
 > Merge import preserves local data and adds the incoming items,
 > resolving conflicts as they appear.
 
-1. **Settings → Database → Import (merge)**.
+1. **Settings → Data export/import → Import (merge)**.
 2. Pick the archive.
-3. On conflicts (duplicate titles, duplicate QR codes, …) the app asks
-   you to keep local, keep incoming, or skip. You can apply decisions
-   per-type or per-row.
-4. The merged documents and raster map images are written into the app
-   data directory and linked to the corresponding records.
+3. On conflicts (duplicate titles, duplicate place codes, …) the app
+   asks you to keep local, keep incoming, or skip. You can apply
+   decisions per-type or per-row.
+4. The merged documents and raster map images are written into the
+   app data directory and linked to the corresponding records.
 
-Exact UI wording may differ between app versions — look for "Import" or
-"Sync" options under **Settings → Database**.
+For a less manual workflow — where the app continuously reads/writes
+archives against a shared server — see [FTP sync](../features/ftp-sync.md)
+and the [Sync dashboard](../features/sync-and-change-log.md).
 
 ## Practical tips
 
-- **Before every underground session**: have the latest archive imported
-  by every team member. This avoids surprise missing places or stale
-  pictures.
-- **After every underground session**: run a diff export and share it.
+- **Before every underground session**: have the latest archive
+  imported by every team member (or run an FTP sync). This avoids
+  surprise missing places or stale pictures.
+- **After every underground session**: run a diff export and share
+  it, or rely on the FTP sync to do the same automatically.
 - **Naming**: include date and cave name in the archive file name; it
   makes history obvious.
 - **Large archives**: toggle off "include documentation files" if the
@@ -74,12 +84,20 @@ Exact UI wording may differ between app versions — look for "Import" or
 
 ## Alternative channels
 
-Because archives are ordinary zip files, any file-sharing method works:
-FTP, cloud sync folders, messaging apps with large-file support, or
-removable media. A dedicated synchronization server is in the project's
-[roadmap](../../README.md#future-development) but not yet available.
+Because archives are ordinary zip files, any file-sharing method
+works: FTP/SFTP, cloud sync folders, messaging apps with large-file
+support, or removable media.
+
+- **FTP/SFTP**: configure once in **Settings → FTP sync** and the app
+  will push & pull archive entries automatically. See
+  [FTP sync](../features/ftp-sync.md).
+- **Other channels**: export an archive and share the resulting zip
+  through your preferred medium; the recipient imports it the same
+  way.
 
 ---
 
 See also: [Database export, import and backup](../features/database-export-import.md),
+[Sync dashboard & change log](../features/sync-and-change-log.md),
+[FTP sync](../features/ftp-sync.md),
 [Trips](../features/trips.md), [Documents](../features/documents.md).

@@ -9,7 +9,8 @@ that helps with:
   other files to those points of interest.
 - **Trip logging and reporting** — recording a caving trip's path and events,
   and generating a trip report afterwards.
-- **Data sharing** between teams through exportable archives (future: FTP / server sync).
+- **Data sharing** between teams through exportable archives or
+  optional FTP/SFTP sync (a dedicated server is on the roadmap).
 
 This wiki is organized from high-level concepts down to detailed feature
 reference. Start with the [Overview](overview.md) if you are new; jump into the
@@ -34,6 +35,7 @@ reference. Start with the [Overview](overview.md) if you are new; jump into the
 - [Home screen](features/home-screen.md)
 - [Caves and cave areas](features/caves-and-areas.md)
 - [Cave places](features/cave-places.md)
+- [Place codes (PCI) and QR payloads (QCRI)](features/place-code-identifiers.md)
 - [QR codes — placing, scanning, printing](features/qr-codes.md)
 - [Raster maps](features/raster-maps.md)
 - [Map viewer and point editor](features/map-viewer.md)
@@ -43,11 +45,14 @@ reference. Start with the [Overview](overview.md) if you are new; jump into the
 - [Surface areas](features/surface-areas.md)
 - [CSV import](features/csv-import.md)
 - [Deep links (`sp://`)](features/deep-links.md)
+- [Users](features/users.md)
+- [Sync dashboard & change log](features/sync-and-change-log.md)
+- [FTP / SFTP sync](features/ftp-sync.md)
 - [Settings](features/settings.md)
 - [Database export, import and backup](features/database-export-import.md)
 
 ### Meta
-- [Contributing to this wiki](contributing-docs.md) (not in repo yet)
+- [Contributing to this wiki](contributing-docs.md)
 
 ---
 
@@ -56,5 +61,5 @@ reference. Start with the [Overview](overview.md) if you are new; jump into the
 SpeleoLoc is in **alpha**. Some features are partially implemented or subject
 to change. See the project [README](../README.md) for release state.
 
-This wiki is a **work in progress**, a first version and is subject to change as the application evolves, with both UI and features are being changed / added   — see [Contributing to this wiki](contributing-docs.md)
+This wiki is a **work in progress**, with more or less up to date information and is subject to change as the application evolves, with both UI and features are being changed / added   — see [Contributing to this wiki](contributing-docs.md)
 for conventions.

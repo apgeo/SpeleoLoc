@@ -15,5 +15,11 @@ Another component of the system is placing QR codes at the entrance of explored 
 ## Current status
 The application is under development, in an early beta stage / alpha - some of the functionality is not tested extensively.
 
+## Docs
+Check [user documentation](docs/README.md) (might not be always up to date).
+
 ## Future development
-Dedicated web server for synchronization (now sync is done by sending files / FTP)
+- Dedicated web server for synchronization (now sync is done by sending files / FTP).
+- In cave sync between devices via bluetooth
+- hardware BLE beacon based point detection
+- Surface dynamic maps

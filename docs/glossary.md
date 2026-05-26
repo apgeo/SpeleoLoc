@@ -11,8 +11,8 @@ See [Surface areas](features/surface-areas.md).
 
 ### Cave
 The top-level entry representing an individual cave. Has a title, an
-optional surface area, an optional entrance QR identifier, and contains
-cave places, cave areas, raster maps and trips.
+optional surface area, an optional entrance place code (QCRI), and
+contains cave places, cave areas, raster maps and trips.
 See [Caves and cave areas](features/caves-and-areas.md).
 
 ### Cave area
@@ -22,18 +22,31 @@ group cave places for filtering and display. Optional.
 ### Cave place
 A single, named point of interest inside a cave — the **unit** SpeleoLoc
 is built around. Has a title, optional description, depth in cave, optional
-GPS coordinates, an optional QR code identifier, and may be flagged as an
+GPS coordinates, an optional place code (PCI/QCRI), and may be
+flagged as an
 **entrance** or **main entrance**.
 See [Cave places](features/cave-places.md).
 
-### QR code identifier
-An integer printed on a physical QR label, placed at a cave place. Each
-label encodes a `sp://<number>` deep link. Within one cave the identifier
-should be unique; the app warns on duplicates.
-See [QR codes](features/qr-codes.md).
+### Place code identifier (PCI)
+The **human-readable** code attached to each cave place (printed on
+labels, shown in lists, used in reports). Replaces the older "QR code
+identifier" integer field. Strings, not just numbers; can encode
+country / organization / area / cave / place hierarchy.
+See [Place codes](features/place-code-identifiers.md).
+
+### QR code resource identifier (QCRI)
+The actual payload **encoded inside the QR pixels** (and in
+`sp://<qcri>` deep links). Either equal to the PCI (mirror mode) or a
+short hash of it (hash mode).
+See [Place codes](features/place-code-identifiers.md).
+
+### Place code strategy
+The algorithm SpeleoLoc uses to compute PCIs in bulk. Pluggable —
+choose one in **Settings → Place codes**. Bundled strategies: **global
+hierarchical**, **per-cave sequential**, **per-area sequential**.
 
 ### Deep link
-A URI of the form `sp://<qr-code-identifier>`. Opening it (via the scanner
+A URI of the form `sp://<qcri>`. Opening it (via the scanner
 or externally) navigates to the matching cave place. See
 [Deep links](features/deep-links.md).
 
@@ -82,3 +95,28 @@ be re-triggered from the screen's **⋮ menu**.
 A zip file produced by SpeleoLoc containing the database plus (optionally)
 documentation files and raster-map images. Used for sharing data between
 devices/teams. See [Database export, import and backup](features/database-export-import.md).
+
+### Sync archive
+A specialised archive used by the [sync dashboard](features/sync-and-change-log.md)
+and [FTP sync](features/ftp-sync.md). Row-level, with timestamps, merged
+on import using last-writer-wins (or manual conflict resolution).
+
+### Change log
+The append-only audit table that records every insert, update or
+delete of a synced row, with timestamp and user. Powers diff/FTP sync
+and the **Sync dashboard → Change log** tab.
+See [Sync dashboard & change log](features/sync-and-change-log.md).
+
+### User (current user)
+A caver/operator identity tracked locally for audit/attribution. Not a
+login. Selected in **Settings → Users**; stamped on every change and
+change-log entry. See [Users](features/users.md).
+
+### FTP profile
+A saved FTP/FTPS/SFTP endpoint configuration used by automatic sync.
+See [FTP sync](features/ftp-sync.md).
+
+### Device UUID
+A stable identifier assigned to this installation. Embedded in sync
+archives so receivers can distinguish them. Preserved across imports
+unless explicitly overridden.

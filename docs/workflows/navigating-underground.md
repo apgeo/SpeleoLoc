@@ -81,18 +81,18 @@ See [Documents](../features/documents.md).
 
 ## If the label is ambiguous
 
-When the same QR identifier exists in multiple caves (it should not, but
-legacy imports can produce this), a chooser dialog lists every matching
-cave + place. Pick the correct one.
+When the same place code (QCRI) exists in multiple caves (it should
+not, but legacy imports can produce this), a chooser dialog lists
+every matching cave + place. Pick the correct one.
 
 ## If you are not sure which place you are at
 
 You can also find a place **without scanning**:
 
-- From a cave's places list, use **Filter** (title or QR substring).
+- From a cave's places list, use **Filter** (title or place code
+  substring).
 - From a raster map viewer, tap a visible pin to open that place.
-- From a cave place, use **Search place by QR identifier** to jump
-  around.
+- From a cave place, use **Search place by code** to jump around.
 
 ## When you come back to the surface
 

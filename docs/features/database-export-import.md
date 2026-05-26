@@ -24,17 +24,17 @@ Three options, from most targeted to most comprehensive.
 
 ### 1. Export raw database file
 
-**Settings → Database → Export database**. Writes the `.sqlite` file
-to a folder of your choice. Small, fast, but does **not** include any
-documentation files or raster map images — importing it elsewhere will
-result in missing media.
+**Settings → Data export/import → Export database**. Writes the
+`.sqlite` file to a folder of your choice. Small, fast, but does
+**not** include any documentation files or raster map images —
+importing it elsewhere will result in missing media.
 
 Use for: quick backup snapshots you will restore on the **same
 device**.
 
 ### 2. Export an archive (full)
 
-**Settings → Database → Export archive**. Produces a single
+**Settings → Data export/import → Export archive**. Produces a single
 `speleoloc_export_*.zip` containing:
 
 - the database,
@@ -49,6 +49,10 @@ In the export dialog, choose:
 - Whether to include **raster-map images**.
 - Whether to export **diff-only** (only items changed since the last
   export, when timestamp information is available).
+- Whether to **include FTP passwords** *(opt-in, off by default)*.
+  When ticked, [FTP profile](ftp-sync.md) passwords are exported in
+  the archive so that another device of yours can re-use them. Leave
+  off when sharing with people who shouldn't access your servers.
 
 Use for: sharing with another device or team.
 
@@ -72,11 +76,11 @@ lost unless you backed it up.
 
 ### Merge / sync import
 
-**Settings → Database → Import (merge)**. Pick an archive. The
-importer walks through the incoming records:
+**Settings → Data export/import → Import (merge)**. Pick an archive.
+The importer walks through the incoming records:
 
 - New items are added.
-- Conflicts (duplicate titles, duplicate QR identifiers, same primary
+- Conflicts (duplicate titles, duplicate place codes, same primary
   key with different content) trigger a decision prompt:
   - **Keep local**,
   - **Take incoming**,
@@ -85,6 +89,10 @@ importer walks through the incoming records:
 
 After processing, documents and raster images are unpacked into the
 app's data directory so they are immediately available.
+
+For automated, repeated team sync (no per-row prompts on every
+import), see [Sync dashboard & change log](sync-and-change-log.md)
+and [FTP sync](ftp-sync.md).
 
 ## Backup strategy recommendations
 
@@ -106,4 +114,6 @@ Both show two confirmation dialogs and restart the app on success.
 ## See also
 
 - [Sharing data between teams](../workflows/sharing-data.md)
+- [Sync dashboard & change log](sync-and-change-log.md)
+- [FTP sync](ftp-sync.md)
 - [Settings](settings.md)

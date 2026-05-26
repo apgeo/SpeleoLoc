@@ -55,7 +55,10 @@ Required column:
 
 Optional columns:
 
-- **QR code** (integer).
+- **Place code (PCI)** — string. Mapped to the cave place's
+  [PCI](place-code-identifiers.md). The legacy column header **QR
+  code** is also accepted for backward compatibility and is treated as
+  a PCI.
 - **Cave area**.
 - **Description**.
 
@@ -78,11 +81,11 @@ proceed:
 - **Existing entries** — rows whose cave/place combination already
   exists. Counted and previewed; continue to import the new rows and
   keep the existing ones untouched.
-- **QR code conflicts** — a row wants to assign a QR that is already
-  used by another place. Choose:
-  - **Skip QR updates** — keep the existing QR assignments; no
+- **QR code conflicts** — a row wants to assign a place code (PCI)
+  that is already used by another place. Choose:
+  - **Skip code updates** — keep the existing assignments; no
     changes to the colliding places.
-  - **Overwrite QR codes** — move the QR to the imported place; the
+  - **Overwrite codes** — move the PCI to the imported place; the
     previous owner is cleared.
 
 ## Summary report
@@ -93,7 +96,7 @@ At the end, the importer shows counts for:
 - Surface areas created.
 - Cave areas created.
 - Cave places created.
-- QR codes updated.
+- Place codes updated.
 - Caves skipped (duplicates).
 
 ## Tips

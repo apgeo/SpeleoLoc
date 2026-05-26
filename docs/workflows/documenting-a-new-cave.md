@@ -112,9 +112,10 @@ See [Map viewer and point editor](../features/map-viewer.md).
 3. Export as **PDF** (for direct printing) or as **Images** (for external
    layout tools).
 
-Useful template variables when labelling: place title, depth (with sign),
-area title, cave title and QR identifier number. See
-[QR codes — placing, scanning, printing](../features/qr-codes.md).
+Useful template variables when labelling: place title, depth (with
+sign), area title, cave title and place code (PCI / QCRI). See
+[QR codes — placing, scanning, printing](../features/qr-codes.md) and
+[Place codes (PCI) and QR payloads (QCRI)](../features/place-code-identifiers.md).
 
 ## Step 8 — Mount the labels inside the cave
 
@@ -138,9 +139,12 @@ See [Documents](../features/documents.md).
 
 Generate an archive and send it to everyone who will go underground:
 
-1. **Settings → Database → Export archive** → choose what to include.
-2. Share the resulting zip file by any means (email, cloud, USB).
-3. Teammates import it via **Settings → Database → Import / Restore**.
+1. **Settings → Data export/import → Export archive** → choose what
+   to include.
+2. Share the resulting zip file by any means (email, cloud, USB) — or
+   let [FTP sync](../features/ftp-sync.md) push it automatically.
+3. Teammates import it via **Settings → Data export/import →
+   Import / Restore**.
 
 See [Sharing data between teams](sharing-data.md).
 

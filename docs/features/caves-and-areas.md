@@ -8,9 +8,10 @@ A **cave** is the top-level record in SpeleoLoc. It has:
 
 - **Title** (required, unique in the database),
 - optional **surface area** — see [Surface areas](surface-areas.md),
-- optional **entrance QR code identifier** — a second, distinct QR at
+- optional **entrance place code (QCRI)** — a second, distinct QR at
   the cave entrance that opens the cave's page directly (see
-  [QR codes](qr-codes.md)),
+  [QR codes](qr-codes.md) and
+  [Place codes (PCI/QCRI)](place-code-identifiers.md)),
 - a collection of **cave places**,
 - a collection of **cave areas**,
 - a collection of **raster maps**,
