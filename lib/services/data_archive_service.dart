@@ -187,6 +187,11 @@ class DataArchiveService {
       if (!copyUuidFromArchive && savedDeviceUuid != null) {
         await _writeConfigValue('device_uuid', savedDeviceUuid);
       }
+
+      // Restore FTP passwords from the archive's ftp_credentials.json into
+      // the OS keystore (flutter_secure_storage). This must run after the
+      // DB is re-opened so FtpProfileRepository can write to it.
+      await _restoreFtpPasswords(tempDir.path, onProgress: onProgress);
     } finally {
       try {
         await tempDir.delete(recursive: true);
@@ -214,12 +219,17 @@ class DataArchiveService {
         throw Exception('No database found in archive');
       }
 
-      return await _syncMerge(
+      final result = await _syncMerge(
         importedDbPath: importedDbPath,
         extractDir: tempDir.path,
         conflictResolver: conflictResolver,
         onProgress: onProgress,
       );
+
+      // Restore FTP passwords from the archive's ftp_credentials.json.
+      await _restoreFtpPasswords(tempDir.path, onProgress: onProgress);
+
+      return result;
     } finally {
       try {
         await tempDir.delete(recursive: true);
@@ -461,6 +471,47 @@ class DataArchiveService {
   // ---------------------------------------------------------------------------
   //  Misc helpers
   // ---------------------------------------------------------------------------
+
+  /// Reads `ftp_credentials.json` from [extractDir] (if present) and upserts
+  /// each FTP profile together with its password into [FtpProfileRepository].
+  ///
+  /// Called after the DB has been (re-)opened so the repository can write to
+  /// it. Any entry whose `password` field is empty is saved without touching
+  /// the stored password (preserves an existing keystore entry).
+  Future<void> _restoreFtpPasswords(
+    String extractDir, {
+    ProgressCallback? onProgress,
+  }) async {
+    final credFile = File('$extractDir/ftp_credentials.json');
+    if (!await credFile.exists()) return;
+
+    onProgress?.call('Restoring FTP credentials...');
+
+    List<dynamic> list;
+    try {
+      list = jsonDecode(await credFile.readAsString()) as List<dynamic>;
+    } catch (_) {
+      return; // Malformed json — skip silently.
+    }
+
+    final profileRepo = FtpProfileRepository(appDatabase);
+    for (final entry in list) {
+      if (entry is! Map<String, dynamic>) continue;
+      final password = entry['password'] as String?;
+      final profileData = Map<String, Object?>.from(entry)..remove('password');
+      try {
+        final profile = FtpProfile.fromJson(profileData);
+        // Pass password only when non-empty; null means "don't touch the
+        // existing keystore entry" (FtpProfileRepository.save semantics).
+        await profileRepo.save(
+          profile,
+          password: (password != null && password.isNotEmpty) ? password : null,
+        );
+      } catch (_) {
+        // Malformed entry — skip silently.
+      }
+    }
+  }
 
   /// Reads a single value from `configurations` by [key] using the open DB.
   Future<String?> _readConfigValue(String key) async {
