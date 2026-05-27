@@ -8576,6 +8576,15 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
     requiredDuringInsert: false,
     $customConstraints: 'REFERENCES users(uuid)',
   ).withConverter<Uuid?>(CaveTrips.$converterlastModifiedByUserUuidn);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> deviceUuid =
+      GeneratedColumn<Uint8List>(
+        'device_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      ).withConverter<Uuid?>(CaveTrips.$converterdeviceUuidn);
   @override
   List<GeneratedColumn> get $columns => [
     uuid,
@@ -8590,6 +8599,7 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
     deletedAt,
     createdByUserUuid,
     lastModifiedByUserUuid,
+    deviceUuid,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8671,7 +8681,7 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
   Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {title, caveUuid},
+    {title, caveUuid, createdByUserUuid, deviceUuid},
   ];
   @override
   CaveTrip map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -8734,6 +8744,12 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
               data['${effectivePrefix}last_modified_by_user_uuid'],
             ),
           ),
+      deviceUuid: CaveTrips.$converterdeviceUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}device_uuid'],
+        ),
+      ),
     );
   }
 
@@ -8753,9 +8769,13 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
       const UuidConverter();
   static TypeConverter<Uuid?, Uint8List?> $converterlastModifiedByUserUuidn =
       NullAwareTypeConverter.wrap($converterlastModifiedByUserUuid);
+  static TypeConverter<Uuid, Uint8List> $converterdeviceUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $converterdeviceUuidn =
+      NullAwareTypeConverter.wrap($converterdeviceUuid);
   @override
   List<String> get customConstraints => const [
-    'UNIQUE(title, cave_uuid)ON CONFLICT ROLLBACK',
+    'UNIQUE(title, cave_uuid, created_by_user_uuid, device_uuid)ON CONFLICT ROLLBACK',
   ];
   @override
   bool get dontWriteConstraints => true;
@@ -8774,6 +8794,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   final int? deletedAt;
   final Uuid? createdByUserUuid;
   final Uuid? lastModifiedByUserUuid;
+  final Uuid? deviceUuid;
   const CaveTrip({
     required this.uuid,
     required this.caveUuid,
@@ -8787,6 +8808,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     this.deletedAt,
     this.createdByUserUuid,
     this.lastModifiedByUserUuid,
+    this.deviceUuid,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -8831,6 +8853,11 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
         ),
       );
     }
+    if (!nullToAbsent || deviceUuid != null) {
+      map['device_uuid'] = Variable<Uint8List>(
+        CaveTrips.$converterdeviceUuidn.toSql(deviceUuid),
+      );
+    }
     return map;
   }
 
@@ -8862,6 +8889,9 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
       lastModifiedByUserUuid: lastModifiedByUserUuid == null && nullToAbsent
           ? const Value.absent()
           : Value(lastModifiedByUserUuid),
+      deviceUuid: deviceUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceUuid),
     );
   }
 
@@ -8887,6 +8917,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
       lastModifiedByUserUuid: serializer.fromJson<Uuid?>(
         json['last_modified_by_user_uuid'],
       ),
+      deviceUuid: serializer.fromJson<Uuid?>(json['device_uuid']),
     );
   }
   @override
@@ -8907,6 +8938,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
       'last_modified_by_user_uuid': serializer.toJson<Uuid?>(
         lastModifiedByUserUuid,
       ),
+      'device_uuid': serializer.toJson<Uuid?>(deviceUuid),
     };
   }
 
@@ -8923,6 +8955,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     Value<int?> deletedAt = const Value.absent(),
     Value<Uuid?> createdByUserUuid = const Value.absent(),
     Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+    Value<Uuid?> deviceUuid = const Value.absent(),
   }) => CaveTrip(
     uuid: uuid ?? this.uuid,
     caveUuid: caveUuid ?? this.caveUuid,
@@ -8940,6 +8973,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     lastModifiedByUserUuid: lastModifiedByUserUuid.present
         ? lastModifiedByUserUuid.value
         : this.lastModifiedByUserUuid,
+    deviceUuid: deviceUuid.present ? deviceUuid.value : this.deviceUuid,
   );
   CaveTrip copyWithCompanion(CaveTripsCompanion data) {
     return CaveTrip(
@@ -8965,6 +8999,9 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
       lastModifiedByUserUuid: data.lastModifiedByUserUuid.present
           ? data.lastModifiedByUserUuid.value
           : this.lastModifiedByUserUuid,
+      deviceUuid: data.deviceUuid.present
+          ? data.deviceUuid.value
+          : this.deviceUuid,
     );
   }
 
@@ -8982,7 +9019,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('createdByUserUuid: $createdByUserUuid, ')
-          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid, ')
+          ..write('deviceUuid: $deviceUuid')
           ..write(')'))
         .toString();
   }
@@ -9001,6 +9039,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     deletedAt,
     createdByUserUuid,
     lastModifiedByUserUuid,
+    deviceUuid,
   );
   @override
   bool operator ==(Object other) =>
@@ -9017,7 +9056,8 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
           other.createdByUserUuid == this.createdByUserUuid &&
-          other.lastModifiedByUserUuid == this.lastModifiedByUserUuid);
+          other.lastModifiedByUserUuid == this.lastModifiedByUserUuid &&
+          other.deviceUuid == this.deviceUuid);
 }
 
 class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
@@ -9033,6 +9073,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
   final Value<int?> deletedAt;
   final Value<Uuid?> createdByUserUuid;
   final Value<Uuid?> lastModifiedByUserUuid;
+  final Value<Uuid?> deviceUuid;
   final Value<int> rowid;
   const CaveTripsCompanion({
     this.uuid = const Value.absent(),
@@ -9047,6 +9088,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     this.deletedAt = const Value.absent(),
     this.createdByUserUuid = const Value.absent(),
     this.lastModifiedByUserUuid = const Value.absent(),
+    this.deviceUuid = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CaveTripsCompanion.insert({
@@ -9062,6 +9104,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     this.deletedAt = const Value.absent(),
     this.createdByUserUuid = const Value.absent(),
     this.lastModifiedByUserUuid = const Value.absent(),
+    this.deviceUuid = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : uuid = Value(uuid),
        caveUuid = Value(caveUuid),
@@ -9080,6 +9123,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     Expression<int>? deletedAt,
     Expression<Uint8List>? createdByUserUuid,
     Expression<Uint8List>? lastModifiedByUserUuid,
+    Expression<Uint8List>? deviceUuid,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9096,6 +9140,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
       if (createdByUserUuid != null) 'created_by_user_uuid': createdByUserUuid,
       if (lastModifiedByUserUuid != null)
         'last_modified_by_user_uuid': lastModifiedByUserUuid,
+      if (deviceUuid != null) 'device_uuid': deviceUuid,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9113,6 +9158,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     Value<int?>? deletedAt,
     Value<Uuid?>? createdByUserUuid,
     Value<Uuid?>? lastModifiedByUserUuid,
+    Value<Uuid?>? deviceUuid,
     Value<int>? rowid,
   }) {
     return CaveTripsCompanion(
@@ -9129,6 +9175,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
       createdByUserUuid: createdByUserUuid ?? this.createdByUserUuid,
       lastModifiedByUserUuid:
           lastModifiedByUserUuid ?? this.lastModifiedByUserUuid,
+      deviceUuid: deviceUuid ?? this.deviceUuid,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9182,6 +9229,11 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
         ),
       );
     }
+    if (deviceUuid.present) {
+      map['device_uuid'] = Variable<Uint8List>(
+        CaveTrips.$converterdeviceUuidn.toSql(deviceUuid.value),
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9203,6 +9255,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
           ..write('deletedAt: $deletedAt, ')
           ..write('createdByUserUuid: $createdByUserUuid, ')
           ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid, ')
+          ..write('deviceUuid: $deviceUuid, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -20509,6 +20562,7 @@ typedef $CaveTripsCreateCompanionBuilder =
       Value<int?> deletedAt,
       Value<Uuid?> createdByUserUuid,
       Value<Uuid?> lastModifiedByUserUuid,
+      Value<Uuid?> deviceUuid,
       Value<int> rowid,
     });
 typedef $CaveTripsUpdateCompanionBuilder =
@@ -20525,6 +20579,7 @@ typedef $CaveTripsUpdateCompanionBuilder =
       Value<int?> deletedAt,
       Value<Uuid?> createdByUserUuid,
       Value<Uuid?> lastModifiedByUserUuid,
+      Value<Uuid?> deviceUuid,
       Value<int> rowid,
     });
 
@@ -20702,6 +20757,12 @@ class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnWithTypeConverterFilters<Uuid?, Uuid, Uint8List> get deviceUuid =>
+      $composableBuilder(
+        column: $table.deviceUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
   $CavesFilterComposer get caveUuid {
     final $CavesFilterComposer composer = $composerBuilder(
       composer: this,
@@ -20876,6 +20937,11 @@ class $CaveTripsOrderingComposer extends Composer<_$AppDatabase, CaveTrips> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get deviceUuid => $composableBuilder(
+    column: $table.deviceUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $CavesOrderingComposer get caveUuid {
     final $CavesOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -20986,6 +21052,12 @@ class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
 
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid?, Uint8List> get deviceUuid =>
+      $composableBuilder(
+        column: $table.deviceUuid,
+        builder: (column) => column,
+      );
 
   $CavesAnnotationComposer get caveUuid {
     final $CavesAnnotationComposer composer = $composerBuilder(
@@ -21155,6 +21227,7 @@ class $CaveTripsTableManager
                 Value<int?> deletedAt = const Value.absent(),
                 Value<Uuid?> createdByUserUuid = const Value.absent(),
                 Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<Uuid?> deviceUuid = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CaveTripsCompanion(
                 uuid: uuid,
@@ -21169,6 +21242,7 @@ class $CaveTripsTableManager
                 deletedAt: deletedAt,
                 createdByUserUuid: createdByUserUuid,
                 lastModifiedByUserUuid: lastModifiedByUserUuid,
+                deviceUuid: deviceUuid,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -21185,6 +21259,7 @@ class $CaveTripsTableManager
                 Value<int?> deletedAt = const Value.absent(),
                 Value<Uuid?> createdByUserUuid = const Value.absent(),
                 Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<Uuid?> deviceUuid = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CaveTripsCompanion.insert(
                 uuid: uuid,
@@ -21199,6 +21274,7 @@ class $CaveTripsTableManager
                 deletedAt: deletedAt,
                 createdByUserUuid: createdByUserUuid,
                 lastModifiedByUserUuid: lastModifiedByUserUuid,
+                deviceUuid: deviceUuid,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

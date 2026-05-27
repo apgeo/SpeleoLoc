@@ -91,7 +91,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -460,6 +460,54 @@ class AppDatabase extends _$AppDatabase {
               );
             }
           }
+          if (from < 14) {
+            // v13 → v14: Add device_uuid to cave_trips and widen the UNIQUE
+            // constraint from (title, cave_uuid) to
+            // (title, cave_uuid, created_by_user_uuid, device_uuid).
+            //
+            // Rationale: the old two-column constraint caused
+            // UNIQUE constraint failures (with ON CONFLICT ROLLBACK →
+            // CouldNotRollBackException) when two different users on
+            // different devices created trips with the same title for
+            // the same cave and then synced.  Adding device_uuid makes
+            // each (user, device, cave, title) combination unique.
+            //
+            // SQLite cannot ALTER a UNIQUE constraint, so we recreate
+            // the table.  FK checks are off during onUpgrade (they are
+            // enabled in beforeOpen, which runs after the upgrade).
+            // Existing rows receive device_uuid = NULL; SQLite treats
+            // each NULL as distinct in UNIQUE indexes, so no conflicts.
+            final caveTripRows14 = await customSelect(
+              'SELECT * FROM cave_trips',
+            ).get();
+            await migrator.drop(caveTrips);
+            await migrator.create(caveTrips);
+            for (final row in caveTripRows14) {
+              final d = row.data;
+              await customStatement(
+                'INSERT INTO cave_trips '
+                '(uuid, cave_uuid, title, description, '
+                'trip_started_at, trip_ended_at, log, '
+                'created_at, updated_at, deleted_at, '
+                'created_by_user_uuid, last_modified_by_user_uuid) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                  d['uuid'],
+                  d['cave_uuid'],
+                  d['title'],
+                  d['description'],
+                  d['trip_started_at'],
+                  d['trip_ended_at'],
+                  d['log'],
+                  d['created_at'],
+                  d['updated_at'],
+                  d['deleted_at'],
+                  d['created_by_user_uuid'],
+                  d['last_modified_by_user_uuid'],
+                ],
+              );
+            }
+          }
         },
       );
 
@@ -480,6 +528,7 @@ class AppDatabase extends _$AppDatabase {
     String? description,
     required int startedAt,
     required Uuid authorUuid,
+    Uuid? deviceUuid,
   }) async {
     final uuid = Uuid.v7();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -494,6 +543,7 @@ class AppDatabase extends _$AppDatabase {
         updatedAt: Value(now),
         createdByUserUuid: Value(authorUuid),
         lastModifiedByUserUuid: Value(authorUuid),
+        deviceUuid: Value(deviceUuid),
       ),
     );
     return uuid;

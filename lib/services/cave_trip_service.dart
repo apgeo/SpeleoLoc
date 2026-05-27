@@ -20,9 +20,16 @@ class CaveTripService {
           .getSingleOrNull();
       final parsed = Uuid.tryParse(row?.value);
       if (parsed != null) {
-        final trip = await appDatabase.getActiveTrip();
-        activeTripIdNotifier.value = (trip?.uuid == parsed) ? parsed : null;
-        if (trip?.uuid != parsed) await _clearConfig();
+        // Look up the specific trip stored in config to verify it is still
+        // unended.  Using getActiveTrip() (most-recent-unended) was wrong:
+        // a different orphaned trip could satisfy that query while the config
+        // trip has already been ended, or vice-versa.
+        final trip = await (appDatabase.select(appDatabase.caveTrips)
+              ..where(
+                  (t) => t.uuid.equalsValue(parsed) & t.tripEndedAt.isNull()))
+            .getSingleOrNull();
+        activeTripIdNotifier.value = trip != null ? parsed : null;
+        if (trip == null) await _clearConfig();
       }
     } catch (_) {}
   }
@@ -35,6 +42,7 @@ class CaveTripService {
       title: title,
       startedAt: DateTime.now().millisecondsSinceEpoch,
       authorUuid: author,
+      deviceUuid: currentUserService.deviceUuid.value,
     );
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
@@ -109,8 +117,16 @@ class CaveTripService {
 
   Future<CaveTrip?> getActiveTrip() => appDatabase.getActiveTrip();
 
+  /// Returns the cave UUID of the currently tracked active trip, or [null]
+  /// when no trip is active.  Uses [activeTripIdNotifier] as the single source
+  /// of truth — consistent with what the UI displays — rather than a raw
+  /// "any unended trip" DB query which can return orphaned rows.
   Future<Uuid?> getActiveTripCaveId() async {
-    final trip = await getActiveTrip();
+    final id = activeTripIdNotifier.value;
+    if (id == null) return null;
+    final trip = await (appDatabase.select(appDatabase.caveTrips)
+          ..where((t) => t.uuid.equalsValue(id)))
+        .getSingleOrNull();
     return trip?.caveUuid;
   }
 

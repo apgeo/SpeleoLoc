@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show Variable;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
 

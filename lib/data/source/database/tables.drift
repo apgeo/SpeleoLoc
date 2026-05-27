@@ -236,7 +236,8 @@ CREATE TABLE IF NOT EXISTS cave_trips (
     deleted_at                  INTEGER,
     created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
-    UNIQUE(title, cave_uuid) ON CONFLICT ROLLBACK
+    device_uuid                 BLOB MAPPED BY `const UuidConverter()`,
+    UNIQUE(title, cave_uuid, created_by_user_uuid, device_uuid) ON CONFLICT ROLLBACK
 );
 
 -- Table: cave_trip_points
