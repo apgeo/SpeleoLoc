@@ -1,5 +1,5 @@
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/user_repository.dart';
@@ -70,10 +70,16 @@ class ConfigKey {
 /// The device UUID is seeded by the v9 migration. If the row is missing
 /// (fresh install that started at v9) one is generated on first read.
 class CurrentUserService {
-  CurrentUserService(this._db, this._users);
+  CurrentUserService(this._db, this._users, this._configs);
 
+  // Reserved: PR 2 of the refactor plan (`docs/REFACTORING_PLAN.md`) will
+  // route the remaining direct DB access here through `_db`. Until then it
+  // is referenced only by the constructor so tests and the production
+  // provider can pass a real DB without further plumbing churn.
+  // ignore: unused_field
   final AppDatabase _db;
   final IUserRepository _users;
+  final IConfigurationRepository _configs;
   final _log = AppLogger.of('CurrentUserService');
 
   final ValueNotifier<Uuid?> currentUserUuid = ValueNotifier<Uuid?>(null);
@@ -160,30 +166,10 @@ class CurrentUserService {
     await _writeConfig(ConfigKey.tripLogMethod, method.id);
   }
 
-  Future<String?> _readConfig(String title) async {
-    final rows = await _db.customSelect(
-      'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-      variables: [Variable<String>(title)],
-    ).get();
-    if (rows.isEmpty) return null;
-    return rows.first.data['value'] as String?;
-  }
+  Future<String?> _readConfig(String title) => _configs.readString(title);
 
-  Future<void> _writeConfig(String title, String value) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    await _db.customStatement(
-      'INSERT INTO configurations (title, value, created_at, updated_at) '
-      'VALUES (?, ?, ?, ?) '
-      'ON CONFLICT(title) DO UPDATE SET value = excluded.value, '
-      'updated_at = excluded.updated_at',
-      [title, value, now, now],
-    );
-  }
+  Future<void> _writeConfig(String title, String value) =>
+      _configs.writeString(title, value);
 
-  Future<void> _deleteConfig(String title) async {
-    await _db.customStatement(
-      'DELETE FROM configurations WHERE title = ?',
-      [title],
-    );
-  }
+  Future<void> _deleteConfig(String title) => _configs.delete(title);
 }

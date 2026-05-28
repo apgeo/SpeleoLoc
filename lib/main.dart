@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/app.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/document_format_registry.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 
@@ -33,11 +34,11 @@ void main() async {
 
   // Load saved language preference before building the widget tree (#14, #25)
   try {
-    final langRow = await (appDatabase.select(appDatabase.configurations)
-          ..where((c) => c.title.equals('app_language')))
-        .getSingleOrNull();
-    if (langRow != null && langRow.value != null) {
-      await LocServ.inst.setLocale(langRow.value!);
+    final lang = await container
+        .read(configurationRepositoryProvider)
+        .readString(appLanguageKey);
+    if (lang != null && lang.isNotEmpty) {
+      await LocServ.inst.setLocale(lang);
     }
   } catch (_) {
     // DB not ready yet — use default locale

@@ -12,7 +12,6 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
-import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Configuration key for the persisted menu mode preference.

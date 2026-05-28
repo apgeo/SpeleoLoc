@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
@@ -190,20 +191,16 @@ class CaveTripService {
     await _regenerateLog(tripUuid);
   }
 
-  Future<void> _saveConfig(Uuid tripUuid) async {
-    await appDatabase.into(appDatabase.configurations).insertOnConflictUpdate(
-          ConfigurationsCompanion.insert(
-            title: activeTripConfigKey,
-            value: Value(tripUuid.toString()),
-            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
-          ),
-        );
+  Future<void> _saveConfig(Uuid tripUuid) {
+    return rootContainer
+        .read(configurationRepositoryProvider)
+        .writeString(activeTripConfigKey, tripUuid.toString());
   }
 
-  Future<void> _clearConfig() async {
-    await (appDatabase.delete(appDatabase.configurations)
-          ..where((c) => c.title.equals(activeTripConfigKey)))
-        .go();
+  Future<void> _clearConfig() {
+    return rootContainer
+        .read(configurationRepositoryProvider)
+        .delete(activeTripConfigKey);
   }
 
   static final _suffixRe = RegExp(r'\s+\[\d+\]$');

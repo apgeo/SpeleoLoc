@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
@@ -29,6 +30,12 @@ import 'package:speleoloc/state/app_notifiers.dart';
 /// provider returns the same instance. Tests override with an in-memory DB.
 final appDatabaseProvider = Provider<AppDatabase>((ref) => appDatabase);
 
+/// Key/value access to the `configurations` table. See
+/// [IConfigurationRepository] for the contract.
+final configurationRepositoryProvider = Provider<IConfigurationRepository>(
+  (ref) => ConfigurationRepository(ref.watch(appDatabaseProvider)),
+);
+
 final caveRepositoryProvider = Provider<ICaveRepository>(
   (ref) => CaveRepository(
     ref.watch(appDatabaseProvider),
@@ -48,6 +55,7 @@ final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
   final svc = CurrentUserService(
     ref.watch(appDatabaseProvider),
     ref.watch(userRepositoryProvider),
+    ref.watch(configurationRepositoryProvider),
   );
   // Fire-and-forget init; readers that need the values before init finishes
   // should await `svc.initialize()` themselves.

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Configuration controlling how [QrScanService.process] handles raw payloads.

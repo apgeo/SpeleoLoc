@@ -226,7 +226,7 @@ class PlaceCodeBatchRunner {
           }
       }
 
-      final resolvedPci = resultPci!;
+      final resolvedPci = resultPci;
       final newQcri = await _service.computeQcri(
         resolvedPci,
         cavePlaceUuid: place.uuid,
