@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/app.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/document_format_registry.dart';
@@ -47,7 +46,7 @@ void main() async {
   // Load persisted menu mode preference (popup vs drawer).
   await initAppMenuMode();
 
-  await CaveTripService.instance.initActiveTrip();
+  await container.read(caveTripServiceProvider).initActiveTrip();
 
   runApp(
     UncontrolledProviderScope(

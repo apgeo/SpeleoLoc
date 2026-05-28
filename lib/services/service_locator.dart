@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
@@ -58,6 +59,8 @@ IDefinitionRepository get definitionRepository =>
     rootContainer.read(definitionRepositoryProvider);
 ICaveTripRepository get caveTripRepository =>
     rootContainer.read(caveTripRepositoryProvider);
+CaveTripService get caveTripService =>
+    rootContainer.read(caveTripServiceProvider);
 IUserRepository get userRepository =>
     rootContainer.read(userRepositoryProvider);
 CurrentUserService get currentUserService =>

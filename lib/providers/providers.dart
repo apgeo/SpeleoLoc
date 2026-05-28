@@ -139,7 +139,7 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
 );
 
 final caveTripServiceProvider = Provider<CaveTripService>(
-  (ref) => CaveTripService.instance,
+  (ref) => CaveTripService(ref.watch(appDatabaseProvider)),
 );
 
 /// Read/mutation surface for `cave_trips`, `cave_trip_points`, and
