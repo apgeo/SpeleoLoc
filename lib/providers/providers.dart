@@ -5,6 +5,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
@@ -139,6 +140,14 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
 
 final caveTripServiceProvider = Provider<CaveTripService>(
   (ref) => CaveTripService.instance,
+);
+
+/// Read/mutation surface for `cave_trips`, `cave_trip_points`, and
+/// `trip_report_templates` tables. Trip runtime state lives in
+/// [CaveTripService]; this provider exposes the pure DB operations so
+/// screens stop reaching into the global [AppDatabase].
+final caveTripRepositoryProvider = Provider<ICaveTripRepository>(
+  (ref) => CaveTripRepository(ref.watch(appDatabaseProvider)),
 );
 
 /// Session-level preferences that persist for the lifetime of the app process.

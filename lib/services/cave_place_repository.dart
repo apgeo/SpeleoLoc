@@ -221,4 +221,89 @@ class CavePlaceRepository implements ICavePlaceRepository {
           cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<List<CavePlace>> findByIds(Iterable<Uuid> uuids) async {
+    final ids = uuids.toList(growable: false);
+    if (ids.isEmpty) return const <CavePlace>[];
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) => cp.uuid.isInValues(ids)))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find cave places by ids', e, st);
+      throw DbException('Failed to find cave places by ids',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findByPlaceCodeIdentifier(
+    String code, {
+    Uuid? caveUuid,
+    Uuid? excludeUuid,
+  }) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) =>
+                (caveUuid != null
+                    ? cp.caveUuid.equalsValue(caveUuid)
+                    : const Constant(true)) &
+                cp.placeCodeIdentifier.equals(code) &
+                (excludeUuid != null
+                    ? cp.uuid.equalsValue(excludeUuid).not()
+                    : const Constant(true))))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find cave places by PCI', e, st);
+      throw DbException('Failed to find cave places by PCI',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findByQrCodeResourceIdentifier(
+    String code, {
+    Uuid? excludeUuid,
+  }) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) =>
+                cp.qrCodeResourceIdentifier.equals(code) &
+                (excludeUuid != null
+                    ? cp.uuid.equalsValue(excludeUuid).not()
+                    : const Constant(true))))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find cave places by QCRI', e, st);
+      throw DbException('Failed to find cave places by QCRI',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findEntrances(
+    Uuid caveUuid, {
+    bool mainOnly = false,
+    Uuid? excludeUuid,
+  }) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) {
+              final sameCave = cp.caveUuid.equalsValue(caveUuid);
+              final flag = mainOnly
+                  ? cp.isMainEntrance.equals(1)
+                  : cp.isEntrance.equals(1);
+              final notExcluded = excludeUuid != null
+                  ? cp.uuid.equalsValue(excludeUuid).not()
+                  : const Constant(true);
+              return sameCave & flag & notExcluded;
+            }))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find entrances', e, st);
+      throw DbException('Failed to find entrances',
+          cause: e, stackTrace: st);
+    }
+  }
 }

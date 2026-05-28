@@ -115,17 +115,13 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   }
 
   Future<void> _load() async {
-    final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.uuid.equalsValue(widget.tripUuid)))
-        .getSingleOrNull();
+    final trip = await caveTripRepository.findById(widget.tripUuid);
     if (trip == null) {
       if (mounted) Navigator.pop(context);
       return;
     }
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(trip.caveUuid)))
-        .getSingleOrNull();
-    final points = await appDatabase.getTripPoints(widget.tripUuid);
+    final cave = await caveRepository.findById(trip.caveUuid);
+    final points = await caveTripRepository.getTripPoints(widget.tripUuid);
     final placeIds = points
       .map((p) => p.cavePlaceUuid)
       .whereType<Uuid>()
@@ -133,9 +129,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       .toList();
     Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
-      final places = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) => cp.uuid.isInValues(placeIds)))
-          .get();
+      final places = await cavePlaceRepository.findByIds(placeIds);
       placesById = {for (var p in places) p.uuid: p};
     }
 
@@ -313,7 +307,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   }
 
   Future<TripReportTemplate?> _showTemplateSelectionDialog() async {
-    final templates = await appDatabase.getTripReportTemplates();
+    final templates = await caveTripRepository.getTripReportTemplates();
 
     if (!mounted) return null;
 
@@ -412,7 +406,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     if (confirmed == true && mounted) {
       final newTitle = controller.text.trim();
       if (newTitle.isNotEmpty && newTitle != trip.title) {
-        await appDatabase.renameCaveTrip(trip.uuid, newTitle);
+        await caveTripRepository.renameCaveTrip(trip.uuid, newTitle);
         if (mounted) {
           SnackBarService.showSuccess(LocServ.inst.t('trip_renamed'));
           _load();
@@ -456,7 +450,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     );
     if (confirmed == true) {
       if (_isActive) await caveTripService.stopTrip();
-      await appDatabase.deleteCaveTrip(widget.tripUuid);
+      await caveTripRepository.deleteCaveTrip(widget.tripUuid);
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_deleted'));
         Navigator.pop(context, true);

@@ -20,6 +20,13 @@ abstract class ICaveRepository {
   });
   Future<void> deleteCave(Uuid uuid);
   Future<List<CaveArea>> getCaveAreas(Uuid caveUuid);
+
+  /// Returns the single [Cave] with [uuid], or `null` if none exists.
+  Future<Cave?> findById(Uuid uuid);
+
+  /// Returns all [SurfaceArea] rows. Used by list pages that render
+  /// `cave.surfaceAreaUuid` as a human-readable label.
+  Future<List<SurfaceArea>> getSurfaceAreas();
 }
 
 /// Abstract contract for the cave-place repository.
@@ -50,6 +57,37 @@ abstract class ICavePlaceRepository {
   Future<void> deleteCavePlace(Uuid uuid);
   Future<CavePlace?> findById(Uuid uuid);
   Future<CavePlace?> findCavePlaceByCode(String code, Uuid caveUuid);
+
+  /// Returns the cave-places whose uuid is in [uuids]. Used to resolve a
+  /// batch of place references (e.g. trip points) in one round-trip.
+  Future<List<CavePlace>> findByIds(Iterable<Uuid> uuids);
+
+  /// Returns the cave-places whose `place_code_identifier == code`,
+  /// optionally restricted to a single cave via [caveUuid] (when null the
+  /// search is global), and optionally excluding [excludeUuid] (typically
+  /// the place currently being edited).
+  Future<List<CavePlace>> findByPlaceCodeIdentifier(
+    String code, {
+    Uuid? caveUuid,
+    Uuid? excludeUuid,
+  });
+
+  /// Returns the cave-places (across all caves) whose
+  /// `qr_code_resource_identifier == code`, optionally excluding
+  /// [excludeUuid].
+  Future<List<CavePlace>> findByQrCodeResourceIdentifier(
+    String code, {
+    Uuid? excludeUuid,
+  });
+
+  /// Returns the cave-places flagged as entrances in [caveUuid].
+  /// When [mainOnly] is true, restricts the result to main entrances.
+  /// Optionally excludes [excludeUuid] (the place currently being edited).
+  Future<List<CavePlace>> findEntrances(
+    Uuid caveUuid, {
+    bool mainOnly = false,
+    Uuid? excludeUuid,
+  });
 }
 
 /// Abstract contract for the raster-map repository.
@@ -88,5 +126,28 @@ abstract class IDefinitionRepository {
 
   /// Deletes all point definitions linked to [rasterMapUuid]. Returns the number of rows deleted.
   Future<int> deleteAllDefinitionsForRasterMap(Uuid rasterMapUuid);
+
+  /// Returns every definition whose `raster_map_uuid` is in
+  /// [rasterMapUuids]. Empty input returns an empty list without hitting
+  /// the database.
+  Future<List<CavePlaceToRasterMapDefinition>> getDefinitionsForRasterMaps(
+    Iterable<Uuid> rasterMapUuids,
+  );
+}
+
+/// Abstract contract for the cave-trip read-only / mutation operations.
+///
+/// Note: trip *state* (active trip, paused flag, log appending) is owned by
+/// [CaveTripService]. This repository only exposes table-level operations
+/// (lookup by id, list, rename, delete, report-template lookup) so screens
+/// don't reach into the global `AppDatabase` for them.
+abstract class ICaveTripRepository {
+  Future<CaveTrip?> findById(Uuid uuid);
+  Future<List<CaveTrip>> getCaveTrips(Uuid caveUuid);
+  Future<List<String>> getCaveTripTitles(Uuid caveUuid);
+  Future<List<CaveTripPoint>> getTripPoints(Uuid tripUuid);
+  Future<List<TripReportTemplate>> getTripReportTemplates();
+  Future<void> renameCaveTrip(Uuid tripUuid, String newTitle);
+  Future<void> deleteCaveTrip(Uuid tripUuid);
 }
 

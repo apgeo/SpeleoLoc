@@ -178,4 +178,21 @@ class DefinitionRepository implements IDefinitionRepository {
       throw DbException('Failed to delete all definitions for raster map', cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<List<CavePlaceToRasterMapDefinition>> getDefinitionsForRasterMaps(
+    Iterable<Uuid> rasterMapUuids,
+  ) async {
+    final ids = rasterMapUuids.toList(growable: false);
+    if (ids.isEmpty) return const <CavePlaceToRasterMapDefinition>[];
+    try {
+      return await (_database.select(_database.cavePlaceToRasterMapDefinitions)
+            ..where((d) => d.rasterMapUuid.isInValues(ids)))
+          .get();
+    } catch (e, st) {
+      _log.severe('getDefinitionsForRasterMaps error', e, st);
+      throw DbException('Failed to load definitions for raster maps',
+          cause: e, stackTrace: st);
+    }
+  }
 }

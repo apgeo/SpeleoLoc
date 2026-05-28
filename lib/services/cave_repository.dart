@@ -251,4 +251,27 @@ class CaveRepository implements ICaveRepository {
       throw DbException('Failed to load cave areas', cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<Cave?> findById(Uuid uuid) async {
+    try {
+      return await (_database.select(_database.caves)
+            ..where((c) => c.uuid.equalsValue(uuid)))
+          .getSingleOrNull();
+    } catch (e, st) {
+      _log.severe('Failed to find cave by id', e, st);
+      throw DbException('Failed to find cave', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<SurfaceArea>> getSurfaceAreas() async {
+    try {
+      return await _database.select(_database.surfaceAreas).get();
+    } catch (e, st) {
+      _log.severe('Failed to load surface areas', e, st);
+      throw DbException('Failed to load surface areas',
+          cause: e, stackTrace: st);
+    }
+  }
 }

@@ -56,6 +56,8 @@ IRasterMapRepository get rasterMapRepository =>
     rootContainer.read(rasterMapRepositoryProvider);
 IDefinitionRepository get definitionRepository =>
     rootContainer.read(definitionRepositoryProvider);
+ICaveTripRepository get caveTripRepository =>
+    rootContainer.read(caveTripRepositoryProvider);
 IUserRepository get userRepository =>
     rootContainer.read(userRepositoryProvider);
 CurrentUserService get currentUserService =>

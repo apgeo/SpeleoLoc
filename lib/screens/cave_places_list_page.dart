@@ -206,7 +206,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
 
   Future<void> _loadSurfaceAreas() async {
     try {
-      final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
+      final areas = await caveRepository.getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
     } catch (e) {
       _surfaceAreaTitles = {};
@@ -221,14 +221,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _loadTripCount() async {
-    final trips = await appDatabase.getCaveTrips(widget.caveUuid);
+    final trips = await caveTripRepository.getCaveTrips(widget.caveUuid);
     final ended = trips.where((t) => t.tripEndedAt != null).length;
     if (mounted) setState(() => _pastTripsCount = ended);
   }
 
   Future<void> _startTrip() async {
     final defaultTitle = '${_cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveUuid);
+    final existingTitles = await caveTripRepository.getCaveTripTitles(widget.caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
     final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
@@ -319,9 +319,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _openRasterMapPlaceSelector() async {
-    final rasterMaps = await (appDatabase.select(appDatabase.rasterMaps)
-          ..where((rm) => rm.caveUuid.equalsValue(widget.caveUuid)))
-        .get();
+    final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
     if (rasterMaps.isEmpty) {
       if (mounted) SnackBarService.showWarning(LocServ.inst.t('no_raster_maps_for_cave'));
       return;
@@ -331,10 +329,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       return;
     }
     final rm = rasterMaps.first;
-    final cavePlacesWithDefs = await appDatabase
+    final cavePlacesWithDefs = await definitionRepository
         .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
     final firstPlaceId = _cavePlaces.first.uuid;
-    final existing = await appDatabase.getDefinition(firstPlaceId, rm.uuid);
+    final existing = await definitionRepository.findDefinition(firstPlaceId, rm.uuid);
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -416,9 +414,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _loadCave() async {
-    _cave = await (appDatabase.select(
-      appDatabase.caves,
-    )..where((c) => c.uuid.equalsValue(widget.caveUuid))).getSingleOrNull();
+    _cave = await caveRepository.findById(widget.caveUuid);
     // Save last open cave for deep link resolution
     DeepLinkHandler.saveLastOpenCave(widget.caveUuid);
     if (!mounted) return;
@@ -432,17 +428,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     await _loadCaveAreas();
 
     // Compute raster maps count and how many raster maps have definitions for each cave place
-    final rasterMaps = await (appDatabase.select(
-      appDatabase.rasterMaps,
-    )..where((rm) => rm.caveUuid.equalsValue(widget.caveUuid))).get();
+    final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
     final rasterMapIds = rasterMaps.map((r) => r.uuid).toList();
     _rasterMapsCountForCave = rasterMapIds.length;
 
     Map<Uuid, Set<Uuid>> placeToRasters = {};
     if (rasterMapIds.isNotEmpty) {
-      final defs = await (appDatabase.select(
-        appDatabase.cavePlaceToRasterMapDefinitions,
-      )..where((d) => d.rasterMapUuid.isInValues(rasterMapIds))).get();
+      final defs = await definitionRepository
+          .getDefinitionsForRasterMaps(rasterMapIds);
       for (final d in defs) {
         final cpId = d.cavePlaceUuid;
         final rmId = d.rasterMapUuid;
@@ -474,9 +467,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
 
   Future<void> _loadCaveAreas() async {
     try {
-      final areas = await (appDatabase.select(
-        appDatabase.caveAreas,
-      )..where((a) => a.caveUuid.equalsValue(widget.caveUuid))).get();
+      final areas = await caveRepository.getCaveAreas(widget.caveUuid);
       _areaTitles = {for (var a in areas) a.uuid: a.title};
     } catch (e) {
       _areaTitles = {};
@@ -485,12 +476,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
 
   Future<void> _showDefinitionsReport(Uuid cavePlaceUuid) async {
     // Load raster maps for cave and check if definition exists for each
-    final rasterMaps = await (appDatabase.select(
-      appDatabase.rasterMaps,
-    )..where((rm) => rm.caveUuid.equalsValue(widget.caveUuid))).get();
+    final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
     final List<Map<String, dynamic>> rows = [];
     for (final rm in rasterMaps) {
-      final def = await appDatabase.getDefinition(cavePlaceUuid, rm.uuid);
+      final def = await definitionRepository.findDefinition(cavePlaceUuid, rm.uuid);
       rows.add({'rasterMap': rm, 'defined': def != null, 'definition': def});
     }
 
@@ -517,11 +506,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                     return InkWell(
                       onTap: () async {
                           Navigator.pop(context);
-                          final existing = await appDatabase.getDefinition(
+                          final existing = await definitionRepository.findDefinition(
                             cavePlaceUuid,
                             rm.uuid,
                           );
-                          final cavePlacesWithDefs = await appDatabase
+                          final cavePlacesWithDefs = await definitionRepository
                               .getCavePlacesWithDefinitionsForRasterMap(
                                 widget.caveUuid,
                                 rm.uuid,

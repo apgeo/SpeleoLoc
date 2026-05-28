@@ -153,13 +153,9 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   void _loadData() async {
-    _cave = await (appDatabase.select(
-      appDatabase.caves,
-    )..where((c) => c.uuid.equalsValue(widget.caveUuid))).getSingleOrNull();
+    _cave = await caveRepository.findById(widget.caveUuid);
     if (_currentCavePlaceId != null) {
-      _cavePlace = await (appDatabase.select(
-        appDatabase.cavePlaces,
-      )..where((cp) => cp.uuid.equalsValue(_currentCavePlaceId!))).getSingleOrNull();
+      _cavePlace = await cavePlaceRepository.findById(_currentCavePlaceId!);
       if (_cavePlace == null) {
         if (mounted) Navigator.pop(context);
         return;
@@ -194,14 +190,10 @@ class _CavePlacePageState extends State<CavePlacePage>
     } catch (_) {
       _pciRowHidden = false;
     }
-    _rasterMaps = await (appDatabase.select(
-      appDatabase.rasterMaps,
-    )..where((rm) => rm.caveUuid.equalsValue(widget.caveUuid))).get();
+    _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
 
     // Load cave areas for the cave (used in the dropdown)
-    final loadedAreas = await (appDatabase.select(
-      appDatabase.caveAreas,
-    )..where((ca) => ca.caveUuid.equalsValue(widget.caveUuid))).get();
+    final loadedAreas = await caveRepository.getCaveAreas(widget.caveUuid);
     // Deduplicate by UUID to prevent DropdownButtonFormField assertion errors
     final seenUuids = <dynamic>{};
     final deduplicatedAreas =
@@ -289,14 +281,11 @@ class _CavePlacePageState extends State<CavePlacePage>
 
     // Check for duplicate place code within the same cave
     if (qr != null) {
-      final duplicates = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) =>
-                cp.caveUuid.equalsValue(widget.caveUuid) &
-                cp.placeCodeIdentifier.equals(qr) &
-                (_currentCavePlaceId != null
-                    ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
-                    : const Constant(true))))
-          .get();
+      final duplicates = await cavePlaceRepository.findByPlaceCodeIdentifier(
+        qr,
+        caveUuid: widget.caveUuid,
+        excludeUuid: _currentCavePlaceId,
+      );
       if (duplicates.isNotEmpty && mounted) {
         final otherTitle = duplicates.first.title;
         final confirmed = await showDialog<bool>(
@@ -329,13 +318,10 @@ class _CavePlacePageState extends State<CavePlacePage>
     // runs when the user explicitly modified QCRI (so we don't
     // re-prompt on every save when QCRI was auto-mirrored).
     if (_qcriModified && qcriText.isNotEmpty) {
-      final dupQcri = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) =>
-                cp.qrCodeResourceIdentifier.equals(qcriText) &
-                (_currentCavePlaceId != null
-                    ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
-                    : const Constant(true))))
-          .get();
+      final dupQcri = await cavePlaceRepository.findByQrCodeResourceIdentifier(
+        qcriText,
+        excludeUuid: _currentCavePlaceId,
+      );
       if (dupQcri.isNotEmpty && mounted) {
         final otherTitle = dupQcri.first.title;
         final confirmed = await showDialog<bool>(
@@ -403,14 +389,11 @@ class _CavePlacePageState extends State<CavePlacePage>
     // If the place will be saved as an entrance and no main entrance is set
     // for this cave yet, prompt the user.
     if (_isEntrance && !_isMainEntrance) {
-      final existingMain = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) =>
-                cp.caveUuid.equalsValue(widget.caveUuid) &
-                cp.isMainEntrance.equals(1) &
-                (_currentCavePlaceId != null
-                    ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
-                    : const Constant(true))))
-          .get();
+      final existingMain = await cavePlaceRepository.findEntrances(
+        widget.caveUuid,
+        mainOnly: true,
+        excludeUuid: _currentCavePlaceId,
+      );
       if (existingMain.isEmpty && mounted) {
         final setMainEntrance = await showDialog<bool>(
           context: context,
@@ -511,9 +494,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   Future<void> _refreshCavePlaceState(Uuid cavePlaceUuid) async {
-    final refreshed = await (appDatabase.select(
-      appDatabase.cavePlaces,
-    )..where((cp) => cp.uuid.equalsValue(cavePlaceUuid))).getSingleOrNull();
+    final refreshed = await cavePlaceRepository.findById(cavePlaceUuid);
 
     if (!mounted || refreshed == null) return;
     // Pre-set _cavePlace so that the QCRI controller listener computes
@@ -595,17 +576,12 @@ class _CavePlacePageState extends State<CavePlacePage>
     _recomputeUnsavedChanges();
   }
 
-  Future<List<CavePlace>> _findOtherEntrancePlaces({required bool mainOnly}) async {
-    final query = appDatabase.select(appDatabase.cavePlaces)
-      ..where((cp) {
-        final sameCave = cp.caveUuid.equalsValue(widget.caveUuid);
-        final flag = mainOnly ? cp.isMainEntrance.equals(1) : cp.isEntrance.equals(1);
-        final notCurrent = _currentCavePlaceId != null
-            ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
-            : const Constant(true);
-        return sameCave & flag & notCurrent;
-      });
-    return query.get();
+  Future<List<CavePlace>> _findOtherEntrancePlaces({required bool mainOnly}) {
+    return cavePlaceRepository.findEntrances(
+      widget.caveUuid,
+      mainOnly: mainOnly,
+      excludeUuid: _currentCavePlaceId,
+    );
   }
 
   Future<void> _onEntranceToggleRequested(bool enabled) async {
@@ -930,12 +906,11 @@ class _CavePlacePageState extends State<CavePlacePage>
     });
 
     // Check if this code already exists as a QCRI for another cave place
-    final query = appDatabase.select(appDatabase.cavePlaces)
-      ..where((cp) => cp.qrCodeResourceIdentifier.equals(qr));
-    if (_currentCavePlaceId != null) {
-      query.where((cp) => cp.uuid.equalsValue(_currentCavePlaceId!).not());
-    }
-    final existing = await query.getSingleOrNull();
+    final qcriDups = await cavePlaceRepository.findByQrCodeResourceIdentifier(
+      qr,
+      excludeUuid: _currentCavePlaceId,
+    );
+    final existing = qcriDups.isEmpty ? null : qcriDups.first;
 
     if (existing != null) {
       if (!mounted) return;
@@ -980,13 +955,11 @@ class _CavePlacePageState extends State<CavePlacePage>
     // the value isn't already used as a PCI elsewhere.
     final mirror = await placeCodeService.isMirrorMode();
     if (mirror && mounted && _qrController.text.trim().isEmpty) {
-      final pciDup = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) =>
-                cp.placeCodeIdentifier.equals(qr) &
-                (_currentCavePlaceId != null
-                    ? cp.uuid.equalsValue(_currentCavePlaceId!).not()
-                    : const Constant(true))))
-          .getSingleOrNull();
+      final pciDups = await cavePlaceRepository.findByPlaceCodeIdentifier(
+        qr,
+        excludeUuid: _currentCavePlaceId,
+      );
+      final pciDup = pciDups.isEmpty ? null : pciDups.first;
       if (pciDup != null) {
         if (mounted) {
           SnackBarService.showWarning(
@@ -1246,11 +1219,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                         );
                         // reload areas after return
                         final reloadedAreas =
-                            await (appDatabase.select(appDatabase.caveAreas)
-                                  ..where(
-                                    (ca) => ca.caveUuid.equalsValue(widget.caveUuid),
-                                  ))
-                                .get();
+                            await caveRepository.getCaveAreas(widget.caveUuid);
                         // Deduplicate by UUID to prevent DropdownButtonFormField assertion errors
                         final seen = <dynamic>{};
                         final deduped = reloadedAreas

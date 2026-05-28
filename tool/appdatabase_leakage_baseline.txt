@@ -1,10 +1,7 @@
 lib/screens/add_new_cave.dart
-lib/screens/cave_place_page.dart
 lib/screens/cave_place/cave_place_map_tab.dart
-lib/screens/cave_places_list_page.dart
 lib/screens/cave_trip_list_page.dart
 lib/screens/cave_trip_log_page.dart
-lib/screens/cave_trip_page.dart
 lib/screens/documents/editors/camera_capture_page.dart
 lib/screens/documents/editors/image_editor_page.dart
 lib/screens/documents/editors/rich_text_editor_page.dart
@@ -20,11 +17,9 @@ lib/screens/home_page.dart
 lib/screens/settings/data_export_import_page.dart
 lib/screens/settings/debug_info_page.dart
 lib/screens/settings/settings_database_page.dart
-lib/screens/settings/settings_helper.dart
 lib/screens/settings/sql_command_runner.dart
 lib/screens/trip_report_templates_page.dart
 lib/utils/database_restore_helper.dart
-lib/utils/deep_link_handler.dart
 lib/utils/documentation_file_helper.dart
 lib/widgets/add_cave_place_popup.dart
 lib/widgets/app_global_menu.dart
