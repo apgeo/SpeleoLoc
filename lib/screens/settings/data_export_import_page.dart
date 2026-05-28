@@ -168,18 +168,23 @@ class _DataExportImportPageState extends State<DataExportImportPage>
     try {
       final service =
           DataArchiveService(DataExportImportRepository(appDatabase));
+      // Belt-and-suspenders: even if [_includeFtpPasswords] were somehow
+      // set to true (e.g. via tooling outside the UI gate), the
+      // build-time [exportFtpPasswordsEnabled] flag still hard-disables
+      // password serialization in production builds.
+      final includePasswords =
+          exportFtpPasswordsEnabled && _includeFtpPasswords;
       final outputPath = await service.exportArchive(
         settings: ExportSettings(
           includeDocumentationFiles: _includeDocFiles,
           includeRasterMaps: _includeRasterMaps,
           diffOnly: _diffExport,
-          includeFtpPasswords: _includeFtpPasswords,
+          includeFtpPasswords: includePasswords,
         ),
         outputDir: dir,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
-        profileRepository: _includeFtpPasswords
-            ? FtpProfileRepository(appDatabase)
-            : null,
+        profileRepository:
+            includePasswords ? FtpProfileRepository(appDatabase) : null,
       );
 
       if (context.mounted) {

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_coordinates_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_save_command.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/gps_recorder_page.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
@@ -185,271 +188,29 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   Future<Uuid?> _save({bool closeAfterSave = true}) async {
-    final title = _form.title.text;
-    final description = _form.description.text.isEmpty
-        ? null
-        : _form.description.text;
-    final depth = _parseDepthValue(_form.depth.text);
-    final qrText = _form.qr.text.trim();
-    final qr = qrText.isEmpty ? null : qrText;
-    final qcriText = _form.qcri.text.trim();
-    final lat = double.tryParse(_form.lat.text);
-    final long = double.tryParse(_form.long.text);
-    final alt = _form.alt.text.trim().isEmpty
-        ? null
-        : double.tryParse(_form.alt.text);
-
-    if (title.isEmpty) {
-      SnackBarService.showWarning(LocServ.inst.t('title_required'));
-      return null;
-    }
-
-    if (_form.depth.text.trim().isNotEmpty && depth == null) {
-      SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
-      return null;
-    }
-
-    if (depth != null && (depth < -5000 || depth > 5000)) {
-      SnackBarService.showWarning(LocServ.inst.t('depth_out_of_range'));
-      return null;
-    }
-
-    if (depth != null && (depth < -1800 || depth > 1800)) {
-      final confirmExtremeDepth = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(LocServ.inst.t('confirm')),
-          content: Text(
-            LocServ.inst
-                .t('depth_outlier_confirm')
-                .replaceAll('{depth}', _formatDepthValue(depth)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(LocServ.inst.t('cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(LocServ.inst.t('yes')),
-            ),
-          ],
-        ),
-      );
-      if (confirmExtremeDepth != true) return null;
-    }
-
-    // Check for duplicate place code within the same cave
-    if (qr != null) {
-      final duplicates = await cavePlaceRepository.findByPlaceCodeIdentifier(
-        qr,
-        caveUuid: widget.caveUuid,
-        excludeUuid: _currentCavePlaceId,
-      );
-      if (duplicates.isNotEmpty && mounted) {
-        final otherTitle = duplicates.first.title;
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(LocServ.inst.t('duplicate_qr_warning')),
-            content: Text(
-              LocServ.inst
-                  .t('duplicate_qr_message')
-                  .replaceAll('{title}', otherTitle)
-                  .replaceAll('{qr}', qr),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(LocServ.inst.t('yes')),
-              ),
-            ],
-          ),
-        );
-        if (confirmed != true) return null;
-      }
-    }
-
-    // Mirror of the PCI duplicate check, but for the QCRI value. Only
-    // runs when the user explicitly modified QCRI (so we don't
-    // re-prompt on every save when QCRI was auto-mirrored).
-    if (_form.qcriModified && qcriText.isNotEmpty) {
-      final dupQcri = await cavePlaceRepository.findByQrCodeResourceIdentifier(
-        qcriText,
-        excludeUuid: _currentCavePlaceId,
-      );
-      if (dupQcri.isNotEmpty && mounted) {
-        final otherTitle = dupQcri.first.title;
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(LocServ.inst.t('duplicate_qr_warning')),
-            content: Text(
-              LocServ.inst
-                  .t('duplicate_qr_message')
-                  .replaceAll('{title}', otherTitle)
-                  .replaceAll('{qr}', qcriText),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(LocServ.inst.t('yes')),
-              ),
-            ],
-          ),
-        );
-        if (confirmed != true) return null;
-      }
-    }
-
-    // Entrance detection: if the title contains the localised entrance keyword
-    // and the place is not yet flagged as an entrance, prompt the user.
-    //todo: consider chcking if contains the keyword instead of equals, to catch cases like 
-    //      "Main entrance" or "Entrance Cave" but only if there is not another entrance defined as it
-    //      prompts the user continuosly on each save - find a better approach
-    if (!_form.isEntrance) {
-      final detectorWord = LocServ.inst.t('entrance_detector_text');
-      if (title.toLowerCase().trim() == detectorWord.toLowerCase()) {
-        if (!mounted) return null;
-        final setEntrance = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(LocServ.inst.t('is_cave_entrance')),
-            content: Text(
-              LocServ.inst
-                  .t('entrance_detected_in_title')
-                  .replaceAll('{word}', detectorWord),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(LocServ.inst.t('no')),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(LocServ.inst.t('yes')),
-              ),
-            ],
-          ),
-        );
-        if (setEntrance == true) {
-          _form.isEntrance = true;
+    final command = CavePlaceSaveCommand(
+      caveUuid: widget.caveUuid,
+      currentCavePlaceId: _currentCavePlaceId,
+      form: _form,
+      repository: cavePlaceRepository,
+      placeCodeService: placeCodeService,
+      confirmations: PageCavePlaceConfirmationPort(this),
+    );
+    final result = await command.execute();
+    switch (result) {
+      case SaveValidationFailed(:final messageKey):
+        SnackBarService.showWarning(LocServ.inst.t(messageKey));
+        return null;
+      case SaveCancelled():
+        return null;
+      case SaveOk(:final uuid):
+        if (!mounted) return uuid;
+        if (closeAfterSave) {
+          Navigator.pop(context, true);
+        } else {
+          await _refreshCavePlaceState(uuid);
         }
-      }
-    }
-
-    // If the place will be saved as an entrance and no main entrance is set
-    // for this cave yet, prompt the user.
-    if (_form.isEntrance && !_form.isMainEntrance) {
-      final existingMain = await cavePlaceRepository.findEntrances(
-        widget.caveUuid,
-        mainOnly: true,
-        excludeUuid: _currentCavePlaceId,
-      );
-      if (existingMain.isEmpty && mounted) {
-        final setMainEntrance = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(LocServ.inst.t('is_main_cave_entrance')),
-            content: Text(LocServ.inst.t('confirm_mark_as_main_entrance')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(LocServ.inst.t('no')),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(LocServ.inst.t('yes')),
-              ),
-            ],
-          ),
-        );
-        if (setMainEntrance == true) {
-          _form.isMainEntrance = true;
-        }
-      }
-    }
-
-    if (_currentCavePlaceId == null) {
-      final newUuid = Uuid.v7();
-      // Use explicit QCRI from field when set; auto-compute from PCI otherwise.
-      // If PCI is null, QCRI is also null.
-      final qcri = qr == null
-          ? null
-          : qcriText.isNotEmpty
-              ? qcriText
-              : await placeCodeService.computeQcri(qr, cavePlaceUuid: newUuid);
-      final companion = CavePlacesCompanion.insert(
-        uuid: newUuid,
-        title: title,
-        caveUuid: widget.caveUuid,
-        description: description == null
-            ? const Value.absent()
-            : Value(description),
-        depthInCave: Value(depth),
-        placeCodeIdentifier: Value(qr),
-        qrCodeResourceIdentifier: Value(qcri),
-        latitude: Value(lat),
-        longitude: Value(long),
-        altitude: Value(alt),
-        caveAreaUuid: Value(_form.selectedCaveAreaId),
-        isEntrance: Value(_form.isEntrance ? 1 : 0),
-        isMainEntrance: Value(_form.isEntrance && _form.isMainEntrance ? 1 : 0),
-      );
-      await cavePlaceRepository.addCavePlaceFromCompanion(companion);
-
-      if (!mounted) return newUuid;
-      if (closeAfterSave) {
-        Navigator.pop(context, true);
-      } else {
-        await _refreshCavePlaceState(newUuid);
-      }
-      return newUuid;
-    } else {
-      // Use explicit QCRI from field when set; auto-compute from PCI otherwise.
-      final qcri = qr == null
-          ? null
-          : qcriText.isNotEmpty
-              ? qcriText
-              : await placeCodeService.computeQcri(
-                  qr,
-                  cavePlaceUuid: _currentCavePlaceId!,
-                );
-      final companion = CavePlacesCompanion(
-        title: Value(title),
-        description: description == null
-            ? const Value.absent()
-            : Value(description),
-        depthInCave: Value(depth),
-        placeCodeIdentifier: Value(qr),
-        qrCodeResourceIdentifier: Value(qcri),
-        latitude: Value(lat),
-        longitude: Value(long),
-        altitude: Value(alt),
-        caveAreaUuid: Value(_form.selectedCaveAreaId),
-        isEntrance: Value(_form.isEntrance ? 1 : 0),
-        isMainEntrance: Value(_form.isEntrance && _form.isMainEntrance ? 1 : 0),
-      );
-      await cavePlaceRepository.updateCavePlace(
-        _currentCavePlaceId!,
-        companion,
-      );
-
-      if (!mounted) return _currentCavePlaceId;
-      if (closeAfterSave) {
-        Navigator.pop(context, true);
-      } else {
-        await _refreshCavePlaceState(_currentCavePlaceId!);
-      }
-      return _currentCavePlaceId;
+        return uuid;
     }
   }
 
@@ -592,11 +353,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     });
   }
 
-  String _formatDepthValue(double? value) => formatDepthValue(value);
-
   int _computeDescriptionLines(String text) => computeDescriptionLines(text);
-
-  double? _parseDepthValue(String input) => parseDepthValue(input);
 
   Future<bool> _onWillPop() async {
     if (!_form.hasUnsavedChanges) return true;
@@ -1266,75 +1023,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (_showLatLngFields)
-                  Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _form.lat,
-                              decoration: InputDecoration(
-                                labelText: LocServ.inst.t('latitude'),
-                                filled: _form.latModified,
-                                fillColor: _form.latModified
-                                    ? Colors.green.withValues(alpha: 0.06)
-                                    : null,
-                              ),
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _form.long,
-                              decoration: InputDecoration(
-                                labelText: LocServ.inst.t('longitude'),
-                                filled: _form.longModified,
-                                fillColor: _form.longModified
-                                    ? Colors.green.withValues(alpha: 0.06)
-                                    : null,
-                              ),
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _form.alt,
-                              decoration: InputDecoration(
-                                labelText: LocServ.inst.t('altitude'),
-                                suffixText: 'm',
-                                filled: _form.altModified,
-                                fillColor: _form.altModified
-                                    ? Colors.green.withValues(alpha: 0.06)
-                                    : null,
-                              ),
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                                signed: true,
-                              ),
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          IconButton(
-                            tooltip: LocServ.inst.t('record_gps_point'),
-                            onPressed: _openGpsRecorder,
-                            icon: const Icon(Icons.gps_fixed),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
+                CavePlaceCoordinatesSection(
+                  visible: _showLatLngFields,
+                  form: _form,
+                  onOpenGpsRecorder: _openGpsRecorder,
+                ),
                 Row(
                   children: [
                     const SizedBox(height: 8),
@@ -1481,3 +1174,4 @@ class _CavePlacePageState extends State<CavePlacePage>
     );
   }
 }
+

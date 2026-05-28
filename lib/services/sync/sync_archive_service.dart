@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
+import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// Current on-disk sync archive format version. Bump when the layout
@@ -198,8 +199,8 @@ class SyncArchiveService {
   // Tables exported (in FK-dependency order). Each entry is a small struct
   // holding dump/restore callbacks so the big ordered list is the single
   // source of truth for sync scope.
-  List<_SyncTable> _syncedTables() => <_SyncTable>[
-        _SyncTable(
+  List<SyncTableHandler> _syncedTables() => <SyncTableHandler>[
+        SyncTableHandler(
           name: 'users',
           dump: () async => (await _db.select(_db.users).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -214,7 +215,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'surface_areas',
           dump: () async => (await _db.select(_db.surfaceAreas).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -229,7 +230,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'caves',
           dump: () async => (await _db.select(_db.caves).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -244,7 +245,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'cave_areas',
           dump: () async => (await _db.select(_db.caveAreas).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -259,7 +260,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'cave_places',
           dump: () async => (await _db.select(_db.cavePlaces).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -274,7 +275,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'raster_maps',
           dump: () async => (await _db.select(_db.rasterMaps).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -295,7 +296,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'cave_place_to_raster_map_definitions',
           dump: () async =>
               (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
@@ -315,7 +316,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'cave_trips',
           dump: () async => (await _db.select(_db.caveTrips).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -330,7 +331,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'cave_trip_points',
           dump: () async => (await _db.select(_db.caveTripPoints).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -345,7 +346,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'documentation_files',
           dump: () async => (await _db.select(_db.documentationFiles).get())
               .map((r) => r.toJson(serializer: _serializer))
@@ -360,7 +361,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'documentation_files_to_geofeatures',
           dump: () async =>
               (await _db.select(_db.documentationFilesToGeofeatures).get())
@@ -380,7 +381,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'documentation_files_to_cave_trips',
           dump: () async =>
               (await _db.select(_db.documentationFilesToCaveTrips).get())
@@ -401,7 +402,7 @@ class SyncArchiveService {
             resolver,
           ),
         ),
-        _SyncTable(
+        SyncTableHandler(
           name: 'trip_report_templates',
           dump: () async =>
               (await _db.select(_db.tripReportTemplates).get())
@@ -914,7 +915,7 @@ class SyncArchiveService {
   /// one differing column other than audit bookkeeping) is routed through it
   /// before applying a decision. When the resolver returns `null`, default
   /// LWW applies.
-  Future<_UpsertCounters> _upsertRows<D extends Insertable<D>>(
+  Future<UpsertCounters> _upsertRows<D extends Insertable<D>>(
     List<Map<String, dynamic>> rows,
     D Function(Map<String, dynamic>) fromJson,
     Map<String, dynamic> Function(D) toJson,
@@ -987,7 +988,7 @@ class SyncArchiveService {
       }
     }
 
-    return _UpsertCounters(
+    return UpsertCounters(
       inserted: inserted,
       updated: updated,
       skipped: skipped,
@@ -1294,23 +1295,3 @@ class _AssetResult {
   const _AssetResult({required this.copied, required this.skipped});
 }
 
-class _UpsertCounters {
-  final int inserted;
-  final int updated;
-  final int skipped;
-  const _UpsertCounters({
-    required this.inserted,
-    required this.updated,
-    required this.skipped,
-  });
-}
-
-class _SyncTable {
-  final String name;
-  final Future<List<Map<String, dynamic>>> Function() dump;
-  final Future<_UpsertCounters> Function(
-    List<Map<String, dynamic>> rows,
-    ConflictResolver? resolver,
-  ) upsert;
-  _SyncTable({required this.name, required this.dump, required this.upsert});
-}
