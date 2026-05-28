@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// Tracks the number of application starts in a plain-text file.
 class AppStartCounter {
@@ -20,7 +21,9 @@ class AppStartCounter {
     if (await file.exists()) {
       try {
         current = int.parse((await file.readAsString()).trim());
-      } catch (_) {
+      } catch (e, st) {
+        AppLogger.of('AppStartCounter')
+            .warning('start-count file corrupt; resetting to 0', e, st);
         current = 0;
       }
     }

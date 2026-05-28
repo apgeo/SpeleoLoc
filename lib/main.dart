@@ -39,8 +39,12 @@ void main() async {
     if (lang != null && lang.isNotEmpty) {
       await LocServ.inst.setLocale(lang);
     }
-  } catch (_) {
+  } catch (e, st) {
     // DB not ready yet — use default locale
+    AppLogger.of('Main').warning(
+        'Saved language preference could not be loaded; using default locale',
+        e,
+        st);
   }
 
   // Load persisted menu mode preference (popup vs drawer).

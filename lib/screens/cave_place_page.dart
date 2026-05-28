@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
@@ -70,14 +71,9 @@ class _CavePlacePageState extends State<CavePlacePage>
   List<RasterMap> _rasterMaps = [];
   List<CaveArea> _caveAreas = [];
 
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _depthController = TextEditingController();
-  final _qrController = TextEditingController();
-  final _qcriController = TextEditingController();
-  final _latController = TextEditingController();
-  final _longController = TextEditingController();
-  final _altController = TextEditingController();
+  /// All form-field state (text controllers, dirty flags, toggle states)
+  /// lives on this controller. See [CavePlaceFormController].
+  final _form = CavePlaceFormController();
 
   bool _qrEditable = false;
   bool _qcriEditable = false;
@@ -85,23 +81,6 @@ class _CavePlacePageState extends State<CavePlacePage>
   TabController? _tabController;
   bool _showLatLngFields = false;
   int _currentTabIndex = 0;
-  Uuid? _selectedCaveAreaId;
-  // bool _qrEnabled = false;
-
-  bool _hasUnsavedChanges = false;
-  bool _titleModified = false;
-  bool _descriptionModified = false;
-  bool _depthModified = false;
-  bool _qrModified = false;
-  bool _qcriModified = false;
-  bool _latModified = false;
-  bool _longModified = false;
-  bool _altModified = false;
-  bool _areaModified = false;
-  bool _entranceModified = false;
-  bool _mainEntranceModified = false;
-  bool _isEntrance = false;
-  bool _isMainEntrance = false;
   int _descriptionLines = 1;
 
   /// When true, hide the PCI row (it's identical to QCRI in mirror mode).
@@ -124,26 +103,14 @@ class _CavePlacePageState extends State<CavePlacePage>
     AppLogger.of('CavePlacePage').fine('initState caveUuid=${widget.caveUuid}');
     _loadData();
 
-    _titleController.addListener(() => _onFieldEdited('title'));
-    _descriptionController.addListener(() => _onFieldEdited('description'));
-    _depthController.addListener(() => _onFieldEdited('depth'));
-    _qrController.addListener(() => _onFieldEdited('qr'));
-    _qcriController.addListener(() => _onFieldEdited('qcri'));
-    _latController.addListener(() => _onFieldEdited('lat'));
-    _longController.addListener(() => _onFieldEdited('long'));
-    _altController.addListener(() => _onFieldEdited('alt'));
+    _form.attachTextListeners(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _depthController.dispose();
-    _qrController.dispose();
-    _qcriController.dispose();
-    _latController.dispose();
-    _longController.dispose();
-    _altController.dispose();
+    _form.dispose();
 
     _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
@@ -160,34 +127,27 @@ class _CavePlacePageState extends State<CavePlacePage>
         if (mounted) Navigator.pop(context);
         return;
       }
-      _titleController.text = _cavePlace!.title;
-      _descriptionController.text = _cavePlace!.description ?? '';
-      _descriptionLines = _computeDescriptionLines(_descriptionController.text);
-      _depthController.text = _formatDepthValue(_cavePlace!.depthInCave);
-      _qrController.text = _cavePlace!.placeCodeIdentifier ?? '';
-      _qcriController.text = _cavePlace!.qrCodeResourceIdentifier ?? '';
-      _latController.text = _cavePlace!.latitude?.toString() ?? '';
-      _longController.text = _cavePlace!.longitude?.toString() ?? '';
-      _altController.text = _cavePlace!.altitude?.toString() ?? '';
-      // _selectedCaveAreaId is assigned below after _caveAreas is loaded,
-      // to avoid a DropdownButtonFormField assertion when setState fires from
-      // text controller listeners before the areas list is available.
-      _isEntrance = _cavePlace!.isEntrance == 1;
-      _isMainEntrance = _cavePlace!.isMainEntrance == 1;
+      // Populate form controllers + reset dirty flags.
+      // Note: the cave-area selection is assigned below after _caveAreas
+      // is loaded, to avoid a DropdownButtonFormField assertion when
+      // setState fires from text controller listeners before the areas
+      // list is available.
+      _form.loadFrom(_cavePlace);
+      _descriptionLines = _computeDescriptionLines(_form.description.text);
     } else {
+      _form.loadFrom(null);
       _descriptionLines = 1;
-      _isEntrance = false;
-      _isMainEntrance = false;
     }
     // Hide PCI row by default when mirror mode is active AND PCI equals
     // QCRI — the user is unlikely to want to edit a field that mirrors
     // another. They can reveal it with a button on the area row.
     try {
       final mirror = await placeCodeService.isMirrorMode();
-      final pci = _qrController.text.trim();
-      final qcri = _qcriController.text.trim();
+      final pci = _form.qr.text.trim();
+      final qcri = _form.qcri.text.trim();
       _pciRowHidden = mirror && pci.isNotEmpty && pci == qcri;
-    } catch (_) {
+    } catch (e, st) {
+      log.warning('PCI mirror-mode check failed; showing PCI row', e, st);
       _pciRowHidden = false;
     }
     _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
@@ -210,7 +170,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (!mounted) return;
     setState(() {
       _caveAreas = deduplicatedAreas;
-      _selectedCaveAreaId = resolvedAreaId;
+      _form.selectedCaveAreaId = resolvedAreaId;
       _tabController = TabController(length: _rasterMaps.length, vsync: this);
       _tabController!.addListener(_onTabChanged);
     });
@@ -225,26 +185,26 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   Future<Uuid?> _save({bool closeAfterSave = true}) async {
-    final title = _titleController.text;
-    final description = _descriptionController.text.isEmpty
+    final title = _form.title.text;
+    final description = _form.description.text.isEmpty
         ? null
-        : _descriptionController.text;
-    final depth = _parseDepthValue(_depthController.text);
-    final qrText = _qrController.text.trim();
+        : _form.description.text;
+    final depth = _parseDepthValue(_form.depth.text);
+    final qrText = _form.qr.text.trim();
     final qr = qrText.isEmpty ? null : qrText;
-    final qcriText = _qcriController.text.trim();
-    final lat = double.tryParse(_latController.text);
-    final long = double.tryParse(_longController.text);
-    final alt = _altController.text.trim().isEmpty
+    final qcriText = _form.qcri.text.trim();
+    final lat = double.tryParse(_form.lat.text);
+    final long = double.tryParse(_form.long.text);
+    final alt = _form.alt.text.trim().isEmpty
         ? null
-        : double.tryParse(_altController.text);
+        : double.tryParse(_form.alt.text);
 
     if (title.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('title_required'));
       return null;
     }
 
-    if (_depthController.text.trim().isNotEmpty && depth == null) {
+    if (_form.depth.text.trim().isNotEmpty && depth == null) {
       SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
       return null;
     }
@@ -317,7 +277,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     // Mirror of the PCI duplicate check, but for the QCRI value. Only
     // runs when the user explicitly modified QCRI (so we don't
     // re-prompt on every save when QCRI was auto-mirrored).
-    if (_qcriModified && qcriText.isNotEmpty) {
+    if (_form.qcriModified && qcriText.isNotEmpty) {
       final dupQcri = await cavePlaceRepository.findByQrCodeResourceIdentifier(
         qcriText,
         excludeUuid: _currentCavePlaceId,
@@ -355,7 +315,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     //todo: consider chcking if contains the keyword instead of equals, to catch cases like 
     //      "Main entrance" or "Entrance Cave" but only if there is not another entrance defined as it
     //      prompts the user continuosly on each save - find a better approach
-    if (!_isEntrance) {
+    if (!_form.isEntrance) {
       final detectorWord = LocServ.inst.t('entrance_detector_text');
       if (title.toLowerCase().trim() == detectorWord.toLowerCase()) {
         if (!mounted) return null;
@@ -381,14 +341,14 @@ class _CavePlacePageState extends State<CavePlacePage>
           ),
         );
         if (setEntrance == true) {
-          _isEntrance = true;
+          _form.isEntrance = true;
         }
       }
     }
 
     // If the place will be saved as an entrance and no main entrance is set
     // for this cave yet, prompt the user.
-    if (_isEntrance && !_isMainEntrance) {
+    if (_form.isEntrance && !_form.isMainEntrance) {
       final existingMain = await cavePlaceRepository.findEntrances(
         widget.caveUuid,
         mainOnly: true,
@@ -413,7 +373,7 @@ class _CavePlacePageState extends State<CavePlacePage>
           ),
         );
         if (setMainEntrance == true) {
-          _isMainEntrance = true;
+          _form.isMainEntrance = true;
         }
       }
     }
@@ -440,9 +400,9 @@ class _CavePlacePageState extends State<CavePlacePage>
         latitude: Value(lat),
         longitude: Value(long),
         altitude: Value(alt),
-        caveAreaUuid: Value(_selectedCaveAreaId),
-        isEntrance: Value(_isEntrance ? 1 : 0),
-        isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
+        caveAreaUuid: Value(_form.selectedCaveAreaId),
+        isEntrance: Value(_form.isEntrance ? 1 : 0),
+        isMainEntrance: Value(_form.isEntrance && _form.isMainEntrance ? 1 : 0),
       );
       await cavePlaceRepository.addCavePlaceFromCompanion(companion);
 
@@ -474,9 +434,9 @@ class _CavePlacePageState extends State<CavePlacePage>
         latitude: Value(lat),
         longitude: Value(long),
         altitude: Value(alt),
-        caveAreaUuid: Value(_selectedCaveAreaId),
-        isEntrance: Value(_isEntrance ? 1 : 0),
-        isMainEntrance: Value(_isEntrance && _isMainEntrance ? 1 : 0),
+        caveAreaUuid: Value(_form.selectedCaveAreaId),
+        isEntrance: Value(_form.isEntrance ? 1 : 0),
+        isMainEntrance: Value(_form.isEntrance && _form.isMainEntrance ? 1 : 0),
       );
       await cavePlaceRepository.updateCavePlace(
         _currentCavePlaceId!,
@@ -497,83 +457,11 @@ class _CavePlacePageState extends State<CavePlacePage>
     final refreshed = await cavePlaceRepository.findById(cavePlaceUuid);
 
     if (!mounted || refreshed == null) return;
-    // Pre-set _cavePlace so that the QCRI controller listener computes
-    // _qcriModified = false (not a new modification relative to DB).
     _cavePlace = refreshed;
-    _qcriController.text = refreshed.qrCodeResourceIdentifier ?? '';
     setState(() {
       _currentCavePlaceId = cavePlaceUuid;
-      _cavePlace = refreshed;
-      _selectedCaveAreaId = refreshed.caveAreaUuid;
-      _isEntrance = refreshed.isEntrance == 1;
-      _isMainEntrance = refreshed.isMainEntrance == 1;
-      _hasUnsavedChanges = false;
-      _titleModified = false;
-      _descriptionModified = false;
-      _depthModified = false;
-      _qrModified = false;
-      _qcriModified = false;
-      _latModified = false;
-      _longModified = false;
-      _altModified = false;
-      _areaModified = false;
-      _entranceModified = false;
-      _mainEntranceModified = false;
+      _form.adoptAsBaseline(refreshed);
     });
-  }
-
-  void _onFieldEdited(String field) {
-    // Compare with original loaded values
-    if (field == 'title') {
-      final orig = _cavePlace?.title ?? '';
-      _titleModified = _titleController.text != orig;
-    } else if (field == 'description') {
-      final orig = _cavePlace?.description ?? '';
-      _descriptionModified = _descriptionController.text != orig;
-    } else if (field == 'depth') {
-      final orig = _formatDepthValue(_cavePlace?.depthInCave);
-      _depthModified = _depthController.text != orig;
-    } else if (field == 'qr') {
-      final orig = _cavePlace?.placeCodeIdentifier ?? '';
-      _qrModified = _qrController.text != orig;
-    } else if (field == 'qcri') {
-      final orig = _cavePlace?.qrCodeResourceIdentifier ?? '';
-      _qcriModified = _qcriController.text != orig;
-    } else if (field == 'lat') {
-      final orig = _cavePlace?.latitude?.toString() ?? '';
-      _latModified = _latController.text != orig;
-    } else if (field == 'long') {
-      final orig = _cavePlace?.longitude?.toString() ?? '';
-      _longModified = _longController.text != orig;
-    } else if (field == 'alt') {
-      final orig = _cavePlace?.altitude?.toString() ?? '';
-      _altModified = _altController.text != orig;
-    }
-
-    setState(_recomputeUnsavedChanges);
-  }
-
-  void _recomputeUnsavedChanges() {
-    _hasUnsavedChanges =
-        _titleModified ||
-        _descriptionModified ||
-        _depthModified ||
-        _qrModified ||
-        _qcriModified ||
-        _latModified ||
-        _longModified ||
-        _altModified ||
-        _areaModified ||
-        _entranceModified ||
-        _mainEntranceModified;
-  }
-
-  void _syncEntranceModifiedState() {
-    final origEntrance = (_cavePlace?.isEntrance ?? 0) == 1;
-    final origMainEntrance = (_cavePlace?.isMainEntrance ?? 0) == 1;
-    _entranceModified = _isEntrance != origEntrance;
-    _mainEntranceModified = _isMainEntrance != origMainEntrance;
-    _recomputeUnsavedChanges();
   }
 
   Future<List<CavePlace>> _findOtherEntrancePlaces({required bool mainOnly}) {
@@ -585,7 +473,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   Future<void> _onEntranceToggleRequested(bool enabled) async {
-    if (enabled == _isEntrance) return;
+    if (enabled == _form.isEntrance) return;
 
     if (enabled) {
       final confirmEnable = await showDialog<bool>(
@@ -621,8 +509,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       }
 
       setState(() {
-        _isEntrance = true;
-        _syncEntranceModifiedState();
+        _form.setEntrance(true);
       });
       return;
     }
@@ -641,14 +528,13 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (confirmDisable != true) return;
 
     setState(() {
-      _isEntrance = false;
-      _isMainEntrance = false;
-      _syncEntranceModifiedState();
+      _form.setEntrance(false);
+      _form.setMainEntrance(false);
     });
   }
 
   Future<void> _onMainEntranceToggleRequested(bool enabled) async {
-    if (!_isEntrance || enabled == _isMainEntrance) return;
+    if (!_form.isEntrance || enabled == _form.isMainEntrance) return;
 
     if (enabled) {
       final confirmEnable = await showDialog<bool>(
@@ -683,8 +569,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       }
 
       setState(() {
-        _isMainEntrance = true;
-        _syncEntranceModifiedState();
+        _form.setMainEntrance(true);
       });
       return;
     }
@@ -703,8 +588,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (confirmDisable != true) return;
 
     setState(() {
-      _isMainEntrance = false;
-      _syncEntranceModifiedState();
+      _form.setMainEntrance(false);
     });
   }
 
@@ -715,7 +599,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   double? _parseDepthValue(String input) => parseDepthValue(input);
 
   Future<bool> _onWillPop() async {
-    if (!_hasUnsavedChanges) return true;
+    if (!_form.hasUnsavedChanges) return true;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -804,7 +688,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       final result = await placeCodeService.generatePci(
         caveUuid: widget.caveUuid,
         cavePlaceUuid: effectiveUuid,
-        isMainEntrance: _isEntrance && _isMainEntrance,
+        isMainEntrance: _form.isEntrance && _form.isMainEntrance,
       );
       if (!mounted) return;
       final String? pci = switch (result) {
@@ -825,9 +709,8 @@ class _CavePlacePageState extends State<CavePlacePage>
         return;
       }
       setState(() {
-        _qrController.text = pci;
-        _qrModified = true;
-        _hasUnsavedChanges = true;
+        _form.qr.text = pci;
+        _form.markPciTouched();
       });
     } catch (e, st) {
       AppLogger.of('CavePlacePage').severe('PCI auto-generate failed', e, st);
@@ -839,7 +722,7 @@ class _CavePlacePageState extends State<CavePlacePage>
   /// Auto-generate the QCRI from the current PCI using the configured
   /// QCRI mode (exact copy in mirror mode, hash in hash mode).
   Future<void> _autoGenerateQcri() async {
-    final pci = _qrController.text.trim();
+    final pci = _form.qr.text.trim();
     if (pci.isEmpty) {
       SnackBarService.showWarning(
         LocServ.inst.t('place_code_identifier_required'),
@@ -854,13 +737,12 @@ class _CavePlacePageState extends State<CavePlacePage>
       final qcri = await placeCodeService.computeQcri(
         pci,
         cavePlaceUuid: effectiveUuid,
-        isEntrance: _isEntrance,
+        isEntrance: _form.isEntrance,
       );
       if (!mounted) return;
       setState(() {
-        _qcriController.text = qcri;
-        _qcriModified = true;
-        _hasUnsavedChanges = true;
+        _form.qcri.text = qcri;
+        _form.markQcriTouched();
       });
     } catch (e, st) {
       AppLogger.of('CavePlacePage').severe('QCRI auto-generate failed', e, st);
@@ -876,10 +758,10 @@ class _CavePlacePageState extends State<CavePlacePage>
     );
     if (!mounted || result == null) return;
     setState(() {
-      _latController.text = result.latitude.toStringAsFixed(7);
-      _longController.text = result.longitude.toStringAsFixed(7);
+      _form.lat.text = result.latitude.toStringAsFixed(7);
+      _form.long.text = result.longitude.toStringAsFixed(7);
       if (result.altitude != null) {
-        _altController.text = result.altitude!.toStringAsFixed(1);
+        _form.alt.text = result.altitude!.toStringAsFixed(1);
       }
     });
   }
@@ -891,7 +773,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       SnackBarService.showWarning(LocServ.inst.t('invalid_qr_code'));
       return;
     }
-    final currentQcriValue = _qcriController.text.trim();
+    final currentQcriValue = _form.qcri.text.trim();
 
     // Check if same code is already in the QCRI field
     if (currentQcriValue == qr) {
@@ -901,8 +783,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     }
 
     setState(() {
-      _qcriModified = true;
-      _hasUnsavedChanges = true;
+      _form.markQcriTouched();
     });
 
     // Check if this code already exists as a QCRI for another cave place
@@ -947,14 +828,14 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (!mounted) return;
     setState(() {
       _qcriEditable = true;
-      _qcriController.text = qr;
+      _form.qcri.text = qr;
     });
 
     // If mirror mode (exact copy), also set PCI to the scanned value
     // — but only when PCI is currently empty, and only after verifying
     // the value isn't already used as a PCI elsewhere.
     final mirror = await placeCodeService.isMirrorMode();
-    if (mirror && mounted && _qrController.text.trim().isEmpty) {
+    if (mirror && mounted && _form.qr.text.trim().isEmpty) {
       final pciDups = await cavePlaceRepository.findByPlaceCodeIdentifier(
         qr,
         excludeUuid: _currentCavePlaceId,
@@ -970,7 +851,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       } else if (mounted) {
         setState(() {
           _qrEditable = true;
-          _qrController.text = qr;
+          _form.qr.text = qr;
         });
       }
     }
@@ -1068,11 +949,11 @@ class _CavePlacePageState extends State<CavePlacePage>
               children: [
                 TextFormField(
                   key: tourKeys['title_field'],
-                  controller: _titleController,
+                  controller: _form.title,
                   decoration: InputDecoration(
                     labelText: LocServ.inst.t('title'),
-                    filled: _titleModified,
-                    fillColor: _titleModified
+                    filled: _form.titleModified,
+                    fillColor: _form.titleModified
                         ? Colors.green.withValues(alpha: 0.06)
                         : null,
                   ),
@@ -1085,11 +966,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                     Expanded(
                       child: TextFormField(
                         key: tourKeys['desc_field'],
-                        controller: _descriptionController,
+                        controller: _form.description,
                         decoration: InputDecoration(
                           labelText: LocServ.inst.t('description'),
-                          filled: _descriptionModified,
-                          fillColor: _descriptionModified
+                          filled: _form.descriptionModified,
+                          fillColor: _form.descriptionModified
                               ? Colors.green.withValues(alpha: 0.06)
                               : null,
                         ),
@@ -1125,11 +1006,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                       width: 80,
                       child: TextFormField(
                         key: tourKeys['depth_field'],
-                        controller: _depthController,
+                        controller: _form.depth,
                         decoration: InputDecoration(
                           labelText: "Depth '+/-'",
-                          filled: _depthModified,
-                          fillColor: _depthModified
+                          filled: _form.depthModified,
+                          fillColor: _form.depthModified
                               ? Colors.green.withValues(alpha: 0.06)
                               : null,
                         ),
@@ -1145,7 +1026,7 @@ class _CavePlacePageState extends State<CavePlacePage>
 
                     Expanded(
                       child: DropdownButtonFormField<Uuid?>(
-                        initialValue: _selectedCaveAreaId,
+                        initialValue: _form.selectedCaveAreaId,
                         decoration: InputDecoration(
                           labelText: LocServ.inst.t('area_title'),
                         ),
@@ -1162,7 +1043,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                           ),
                         ],
                         onChanged: (v) async {
-                          final old = _selectedCaveAreaId;
+                          final old = _form.selectedCaveAreaId;
                           if (v == null && old != null) {
                             final confirmed = await showDialog<bool>(
                               context: context,
@@ -1185,18 +1066,14 @@ class _CavePlacePageState extends State<CavePlacePage>
                             );
                             if (confirmed == true) {
                               setState(() {
-                                _selectedCaveAreaId = null;
-                                _areaModified = null != _cavePlace?.caveAreaUuid;
-                                _recomputeUnsavedChanges();
+                                _form.setArea(null);
                               });
                             } else {
-                              setState(() => _selectedCaveAreaId = old);
+                              setState(() => _form.selectedCaveAreaId = old);
                             }
                           } else {
                             setState(() {
-                              _selectedCaveAreaId = v;
-                              _areaModified = v != _cavePlace?.caveAreaUuid;
-                              _recomputeUnsavedChanges();
+                              _form.setArea(v);
                             });
                           }
                         },
@@ -1228,11 +1105,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                         setState(() {
                           _caveAreas = deduped;
                           // Clear selected area if it was deleted
-                          if (_selectedCaveAreaId != null &&
+                          if (_form.selectedCaveAreaId != null &&
                               !_caveAreas.any(
-                                (a) => a.uuid == _selectedCaveAreaId,
+                                (a) => a.uuid == _form.selectedCaveAreaId,
                               )) {
-                            _selectedCaveAreaId = null;
+                            _form.selectedCaveAreaId = null;
                           }
                         });
                       },
@@ -1280,11 +1157,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                     ),
                     Expanded(
                       child: TextFormField(
-                        controller: _qrController,
+                        controller: _form.qr,
                         decoration: InputDecoration(
                           labelText: LocServ.inst.t('place_code_identifier'),
-                          filled: _qrModified,
-                          fillColor: _qrModified
+                          filled: _form.qrModified,
+                          fillColor: _form.qrModified
                               ? Colors.green.withValues(alpha: 0.06)
                               : null,
                         ),
@@ -1308,7 +1185,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                   children: [
                     // View QR code – only for existing places when QCRI is set
                     if (_currentCavePlaceId != null &&
-                        _qcriController.text.trim().isNotEmpty)
+                        _form.qcri.text.trim().isNotEmpty)
                       IconButton(
                         icon: const Icon(Icons.qr_code_2),
                         tooltip: LocServ.inst.t('view_qr_code'),
@@ -1318,9 +1195,9 @@ class _CavePlacePageState extends State<CavePlacePage>
                           CavePlaceQrPreviewDialog.show(
                             context,
                             _cavePlace!,
-                            qrIdentifierOverride: _qcriController.text.trim().isEmpty
+                            qrIdentifierOverride: _form.qcri.text.trim().isEmpty
                                 ? null
-                                : _qcriController.text.trim(),
+                                : _form.qcri.text.trim(),
                           );
                         },
                       )
@@ -1344,11 +1221,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                     ),
                     Expanded(
                       child: TextFormField(
-                        controller: _qcriController,
+                        controller: _form.qcri,
                         decoration: InputDecoration(
                           labelText: LocServ.inst.t('qr_code_resource_identifier'),
-                          filled: _qcriModified,
-                          fillColor: _qcriModified
+                          filled: _form.qcriModified,
+                          fillColor: _form.qcriModified
                               ? Colors.green.withValues(alpha: 0.06)
                               : null,
                         ),
@@ -1397,11 +1274,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                         children: [
                           Expanded(
                             child: TextFormField(
-                              controller: _latController,
+                              controller: _form.lat,
                               decoration: InputDecoration(
                                 labelText: LocServ.inst.t('latitude'),
-                                filled: _latModified,
-                                fillColor: _latModified
+                                filled: _form.latModified,
+                                fillColor: _form.latModified
                                     ? Colors.green.withValues(alpha: 0.06)
                                     : null,
                               ),
@@ -1414,11 +1291,11 @@ class _CavePlacePageState extends State<CavePlacePage>
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextFormField(
-                              controller: _longController,
+                              controller: _form.long,
                               decoration: InputDecoration(
                                 labelText: LocServ.inst.t('longitude'),
-                                filled: _longModified,
-                                fillColor: _longModified
+                                filled: _form.longModified,
+                                fillColor: _form.longModified
                                     ? Colors.green.withValues(alpha: 0.06)
                                     : null,
                               ),
@@ -1431,12 +1308,12 @@ class _CavePlacePageState extends State<CavePlacePage>
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextFormField(
-                              controller: _altController,
+                              controller: _form.alt,
                               decoration: InputDecoration(
                                 labelText: LocServ.inst.t('altitude'),
                                 suffixText: 'm',
-                                filled: _altModified,
-                                fillColor: _altModified
+                                filled: _form.altModified,
+                                fillColor: _form.altModified
                                     ? Colors.green.withValues(alpha: 0.06)
                                     : null,
                               ),
@@ -1566,7 +1443,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  value: _isEntrance,
+                  value: _form.isEntrance,
                   title: Text(LocServ.inst.t('is_cave_entrance')),
                   onChanged: (v) => _onEntranceToggleRequested(v ?? false),
                 ),
@@ -1576,9 +1453,9 @@ class _CavePlacePageState extends State<CavePlacePage>
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
-                    value: _isMainEntrance,
+                    value: _form.isMainEntrance,
                     title: Text(LocServ.inst.t('is_main_cave_entrance')),
-                    onChanged: _isEntrance
+                    onChanged: _form.isEntrance
                         ? (v) => _onMainEntranceToggleRequested(v ?? false)
                         : null,
                   ),

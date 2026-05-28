@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Theme data for [FilterableList]. All fields are optional; null means
@@ -522,7 +523,9 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
         _sort.value = validated;
         setState(_recomputeFilter);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('persisted sort spec load failed; using default', e, st);
+    }
   }
 
   Future<void> _saveSort(FilterableListSortSpec? spec) async {

@@ -5,6 +5,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
@@ -33,7 +34,9 @@ class CaveTripService {
         activeTripIdNotifier.value = trip != null ? parsed : null;
         if (trip == null) await _clearConfig();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('initActiveTrip failed; leaving active trip unset', e, st);
+    }
   }
 
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
@@ -98,7 +101,9 @@ class CaveTripService {
       await _db.insertTripPoint(
           tripUuid: id, cavePlaceUuid: cavePlaceUuid, authorUuid: author);
       await _appendForNewEvent(id);
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
+    }
   }
 
   /// `textContent` is accepted for backwards compatibility with callers but
@@ -114,7 +119,9 @@ class CaveTripService {
       final author = await currentUserService.currentOrSystem();
       await _db.linkDocumentToTrip(docUuid, id, authorUuid: author);
       await _appendForNewEvent(id);
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('linkDocument failed (doc=$docUuid)', e, st);
+    }
   }
 
   Future<CaveTrip?> getActiveTrip() => _db.getActiveTrip();
@@ -143,7 +150,9 @@ class CaveTripService {
       final events = await TripLogRenderer.instance.loadEvents(tripUuid);
       final rendered = TripLogRenderer.instance.render(events, method);
       await _db.updateTripLog(tripUuid, rendered);
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('regenerateLog failed (trip=$tripUuid)', e, st);
+    }
   }
 
   /// Appends the rendered text for the most recently added event to
@@ -181,7 +190,9 @@ class CaveTripService {
       } else {
         await _db.updateTripLog(tripUuid, current + delta);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('appendForNewEvent failed (trip=$tripUuid)', e, st);
+    }
   }
 
   /// Public hook called by the trip log page after the user picks a new

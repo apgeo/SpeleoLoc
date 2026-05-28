@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// Read/write API for the `configurations` table — the app-wide key/value
 /// store keyed by `title` (UNIQUE).
@@ -93,8 +94,9 @@ class ConfigurationRepository implements IConfigurationRepository {
       if (decoded is Map<String, dynamic>) return decoded;
       if (decoded is Map) return Map<String, dynamic>.from(decoded);
       return defaults?.call() ?? <String, dynamic>{};
-    } catch (_) {
+    } catch (e, st) {
       // Corrupt payload — surface the caller's default rather than crashing.
+      log.warning('readJson: corrupt payload for key "$key"', e, st);
       return defaults?.call() ?? <String, dynamic>{};
     }
   }

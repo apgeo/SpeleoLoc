@@ -8,6 +8,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
@@ -55,7 +56,9 @@ Future<void> initAppMenuMode() async {
   try {
     final info = await PackageInfo.fromPlatform();
     _appVersion = 'v${info.version}+${info.buildNumber}';
-  } catch (_) {
+  } catch (e, st) {
+    AppLogger.of('AppGlobalMenu')
+        .warning('PackageInfo.fromPlatform failed; version hidden', e, st);
     _appVersion = '';
   }
 }

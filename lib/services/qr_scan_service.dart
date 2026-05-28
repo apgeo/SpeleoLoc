@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Configuration controlling how [QrScanService.process] handles raw payloads.
@@ -49,7 +50,9 @@ class QrScanConfig {
         urlStripDelimiters:
             delimiters.isEmpty ? const ['/', '='] : delimiters,
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.of('QrScanConfig')
+          .warning('QR scan config decode failed; using defaults', e, st);
       return const QrScanConfig();
     }
   }

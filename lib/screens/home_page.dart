@@ -13,6 +13,7 @@ import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/database_restore_helper.dart';
@@ -407,7 +408,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
               'WHERE deleted_at IS NULL')
           .getSingle();
       return docsRow.read<int>('cnt') > 0;
-    } catch (_) {
+    } catch (e, st) {
+      log.warning('_caveHasMapsOrDocs query failed; treating as empty', e, st);
       return false;
     }
   }
