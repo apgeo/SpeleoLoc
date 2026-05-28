@@ -59,6 +59,8 @@ IDefinitionRepository get definitionRepository =>
     rootContainer.read(definitionRepositoryProvider);
 ICaveTripRepository get caveTripRepository =>
     rootContainer.read(caveTripRepositoryProvider);
+IDocumentationRepository get documentationRepository =>
+    rootContainer.read(documentationRepositoryProvider);
 CaveTripService get caveTripService =>
     rootContainer.read(caveTripServiceProvider);
 IUserRepository get userRepository =>

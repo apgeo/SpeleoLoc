@@ -8,6 +8,7 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -421,7 +422,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         // ---- CREATE ----
         final saved =
             await DocumentationFileHelper.saveExternalFile(recordedFile);
-        final parentLink = await appDatabase.getDocumentationParentLink(
+        final parentLink = await documentationRepository.getDocumentationParentLink(
           cavePlaceUuid: widget.cavePlaceUuid,
           caveUuid: widget.caveUuid,
           caveAreaUuid: widget.caveAreaUuid,

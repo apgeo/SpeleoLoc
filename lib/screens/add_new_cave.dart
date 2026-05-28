@@ -78,7 +78,7 @@ class _CaveFormPageState extends State<CaveFormPage>
   }
 
   void _loadSurfaceAreas() async {
-    final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
+    final areas = await caveRepository.getSurfaceAreas();
     if (!mounted) return;
     setState(() => _surfaceAreas = areas);
   }

@@ -42,9 +42,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
   }
 
   Future<void> _load() async {
-    final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.uuid.equalsValue(widget.tripUuid)))
-        .getSingleOrNull();
+    final trip = await caveTripRepository.findById(widget.tripUuid);
     final method = await currentUserService.getTripLogMethod();
     if (mounted) {
       setState(() {
@@ -58,7 +56,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await appDatabase.updateTripLog(widget.tripUuid, _controller.text);
+      await caveTripRepository.updateTripLog(widget.tripUuid, _controller.text);
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_log_saved'));
         Navigator.pop(context);
@@ -92,9 +90,7 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
     try {
       await caveTripService.regenerateLogWithMethod(widget.tripUuid, method);
       // Reload the trip text from DB after regeneration.
-      final trip = await (appDatabase.select(appDatabase.caveTrips)
-            ..where((t) => t.uuid.equalsValue(widget.tripUuid)))
-          .getSingleOrNull();
+      final trip = await caveTripRepository.findById(widget.tripUuid);
       if (mounted) {
         setState(() {
           _controller.text = trip?.log ?? '';

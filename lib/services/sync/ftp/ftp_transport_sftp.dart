@@ -66,10 +66,14 @@ class FtpTransportSftp implements IFtpTransport {
     _ssh = null;
     try {
       sftp?.close();
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('best-effort sftp.close failed', e, st);
+    }
     try {
       ssh?.close();
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('best-effort ssh.close failed', e, st);
+    }
   }
 
   @override
@@ -173,7 +177,9 @@ class FtpTransportSftp implements IFtpTransport {
     int? total;
     try {
       total = (await sftp.stat(remotePath)).size;
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('best-effort sftp.stat failed for $remotePath', e, st);
+    }
     final sink = localFile.openWrite();
     try {
       await sftp.download(

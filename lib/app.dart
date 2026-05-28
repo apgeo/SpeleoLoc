@@ -11,6 +11,7 @@ import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
+import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/utils/uuid.dart';
@@ -39,6 +40,24 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
 
   @override
   Widget build(BuildContext context) {
+    // PR 9: derive Material's supportedLocales from the loaded LocServ
+    // bundles (which come from `assets/i18n/*.json`) rather than the old
+    // hard-coded `[Locale('en')]`. This makes Material/Cupertino/Quill
+    // framework widgets pick up date/time and form labels in the user's
+    // language whenever a matching bundle ships in the app. `LocServ`
+    // returns BCP-47 language tags like `en` / `fr` / `pt_BR`; split on
+    // `_` so the latter maps to `Locale('pt', 'BR')`. Falls back to
+    // `[Locale('en')]` if LocServ failed to load any bundles (e.g. asset
+    // bundle missing in a test harness) so the app still boots.
+    final loaded = LocServ.inst.supportedLocales();
+    final supported = loaded.isEmpty
+        ? const <Locale>[Locale('en')]
+        : loaded.map((code) {
+            final parts = code.split('_');
+            return parts.length == 2
+                ? Locale(parts[0], parts[1])
+                : Locale(parts[0]);
+          }).toList(growable: false);
     return MaterialApp(
       localizationsDelegates: const [
         FlutterQuillLocalizations.delegate,
@@ -46,7 +65,7 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('en')],
+      supportedLocales: supported,
       title: appName,
       navigatorKey: navigatorKey,
       theme: ThemeData(

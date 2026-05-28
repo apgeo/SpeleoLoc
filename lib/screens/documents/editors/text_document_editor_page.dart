@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -180,7 +181,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
           SnackBarService.showWarning('Similar file(s) already present (size+hash match).');
         }
 
-        final parentLink = await appDatabase.getDocumentationParentLink(
+        final parentLink = await documentationRepository.getDocumentationParentLink(
           cavePlaceUuid: widget.cavePlaceUuid,
           caveUuid: widget.caveUuid,
           caveAreaUuid: widget.caveAreaUuid,

@@ -93,4 +93,47 @@ class CaveTripRepository implements ICaveTripRepository {
           cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<void> updateTripLog(Uuid tripUuid, String log) async {
+    try {
+      await _database.updateTripLog(tripUuid, log);
+    } catch (e, st) {
+      _log.severe('Failed to update trip log', e, st);
+      throw DbException('Failed to update trip log',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Uuid> insertTripReportTemplate({
+    required String title,
+    required String fileName,
+    required int fileSize,
+    required String format,
+  }) async {
+    try {
+      return await _database.insertTripReportTemplate(
+        title: title,
+        fileName: fileName,
+        fileSize: fileSize,
+        format: format,
+      );
+    } catch (e, st) {
+      _log.severe('Failed to insert trip report template', e, st);
+      throw DbException('Failed to insert trip report template',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> deleteTripReportTemplate(Uuid uuid) async {
+    try {
+      await _database.deleteTripReportTemplate(uuid);
+    } catch (e, st) {
+      _log.severe('Failed to delete trip report template', e, st);
+      throw DbException('Failed to delete trip report template',
+          cause: e, stackTrace: st);
+    }
+  }
 }

@@ -52,14 +52,12 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
   }
 
   Future<void> _load() async {
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(widget.caveUuid)))
-        .getSingleOrNull();
-    final allTrips = await appDatabase.getCaveTrips(widget.caveUuid);
+    final cave = await caveRepository.findById(widget.caveUuid);
+    final allTrips = await caveTripRepository.getCaveTrips(widget.caveUuid);
     final ended = allTrips.where((t) => t.tripEndedAt != null).toList();
     Map<Uuid, int> counts = {};
     for (final trip in ended) {
-      final points = await appDatabase.getTripPoints(trip.uuid);
+      final points = await caveTripRepository.getTripPoints(trip.uuid);
       counts[trip.uuid] = points.length;
     }
     if (mounted) {
@@ -75,7 +73,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     final caveName = _cave?.title ?? '';
     final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
     final defaultTitle = '$caveName $dateStr';
-    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveUuid);
+    final existingTitles = await caveTripRepository.getCaveTripTitles(widget.caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
     final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
@@ -198,7 +196,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
 
   Widget _buildActiveTripCard(Uuid tripId) {
     return FutureBuilder<CaveTrip?>(
-      future: (appDatabase.select(appDatabase.caveTrips)..where((t) => t.uuid.equalsValue(tripId))).getSingleOrNull(),
+      future: caveTripRepository.findById(tripId),
       builder: (context, snap) {
         final trip = snap.data;
         if (trip == null) return const SizedBox.shrink();

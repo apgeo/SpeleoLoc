@@ -9,6 +9,7 @@ import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
+import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
@@ -148,6 +149,14 @@ final caveTripServiceProvider = Provider<CaveTripService>(
 /// screens stop reaching into the global [AppDatabase].
 final caveTripRepositoryProvider = Provider<ICaveTripRepository>(
   (ref) => CaveTripRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// Documentation-file helper surface used by editor pages and the
+/// documentation list. Currently only exposes `getDocumentationParentLink`;
+/// other writes still flow through [DocumentationFileHelper] until those
+/// call-sites are migrated in a follow-up PR-2 slice.
+final documentationRepositoryProvider = Provider<IDocumentationRepository>(
+  (ref) => DocumentationRepository(ref.watch(appDatabaseProvider)),
 );
 
 /// Session-level preferences that persist for the lifetime of the app process.

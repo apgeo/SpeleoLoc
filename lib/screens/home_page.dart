@@ -227,20 +227,12 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     try {
       _caves = await caveRepository.getCaves();
       // compute place counts
-      final allPlaces = await (appDatabase.select(appDatabase.cavePlaces)).get();
-      _cavePlaceCounts = {};
-      for (var p in allPlaces) {
-        _cavePlaceCounts[p.caveUuid] = (_cavePlaceCounts[p.caveUuid] ?? 0) + 1;
-      }
+      _cavePlaceCounts = await cavePlaceRepository.getCavePlaceCountsByCave();
       // compute raster map counts
-      final allRasterMaps = await (appDatabase.select(appDatabase.rasterMaps)).get();
-      _caveRasterMapCounts = {};
-      for (var rm in allRasterMaps) {
-        _caveRasterMapCounts[rm.caveUuid] = (_caveRasterMapCounts[rm.caveUuid] ?? 0) + 1;
-      }
+      _caveRasterMapCounts = await rasterMapRepository.getRasterMapCountsByCave();
 
       // load surface area titles for display on the cave list
-      final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
+      final areas = await caveRepository.getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
 
       if (!mounted) return;

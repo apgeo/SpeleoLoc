@@ -223,6 +223,20 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
+  Future<CavePlace?> findCavePlaceByTitle(Uuid caveUuid, String title) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) =>
+                cp.caveUuid.equalsValue(caveUuid) & cp.title.equals(title)))
+          .getSingleOrNull();
+    } catch (e, st) {
+      _log.severe('Failed to find cave place by title', e, st);
+      throw DbException('Failed to find cave place by title',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
   Future<List<CavePlace>> findByIds(Iterable<Uuid> uuids) async {
     final ids = uuids.toList(growable: false);
     if (ids.isEmpty) return const <CavePlace>[];
@@ -303,6 +317,22 @@ class CavePlaceRepository implements ICavePlaceRepository {
     } catch (e, st) {
       _log.severe('Failed to find entrances', e, st);
       throw DbException('Failed to find entrances',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Map<Uuid, int>> getCavePlaceCountsByCave() async {
+    try {
+      final rows = await _database.select(_database.cavePlaces).get();
+      final counts = <Uuid, int>{};
+      for (final p in rows) {
+        counts[p.caveUuid] = (counts[p.caveUuid] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e, st) {
+      _log.severe('Failed to count cave places by cave', e, st);
+      throw DbException('Failed to count cave places by cave',
           cause: e, stackTrace: st);
     }
   }

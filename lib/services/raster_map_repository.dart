@@ -153,4 +153,20 @@ class RasterMapRepository implements IRasterMapRepository {
       throw DbException('Failed to update raster map order', cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<Map<Uuid, int>> getRasterMapCountsByCave() async {
+    try {
+      final rows = await _database.select(_database.rasterMaps).get();
+      final counts = <Uuid, int>{};
+      for (final rm in rows) {
+        counts[rm.caveUuid] = (counts[rm.caveUuid] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e, st) {
+      _log.severe('Failed to count raster maps by cave', e, st);
+      throw DbException('Failed to count raster maps by cave',
+          cause: e, stackTrace: st);
+    }
+  }
 }

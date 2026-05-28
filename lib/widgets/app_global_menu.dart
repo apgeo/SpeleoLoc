@@ -566,14 +566,10 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
   }
 
   Future<void> _load() async {
-    final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.uuid.equalsValue(widget.tripId)))
-        .getSingleOrNull();
+    final trip = await caveTripRepository.findById(widget.tripId);
     if (trip == null) return;
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(trip.caveUuid)))
-        .getSingleOrNull();
-    final points = await appDatabase.getTripPoints(widget.tripId);
+    final cave = await caveRepository.findById(trip.caveUuid);
+    final points = await caveTripRepository.getTripPoints(widget.tripId);
     final last5 = points.reversed.take(5).toList().reversed.toList();
     final placeIds = last5
       .map((p) => p.cavePlaceUuid)
@@ -582,9 +578,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
       .toList();
     Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
-      final places = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) => cp.uuid.isInValues(placeIds)))
-          .get();
+      final places = await cavePlaceRepository.findByIds(placeIds);
       placesById = {for (var p in places) p.uuid: p};
     }
     if (mounted) setState(() {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:drift/drift.dart' hide Column;
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
@@ -123,9 +122,21 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   void _loadData() async {
-    _cave = await caveRepository.findById(widget.caveUuid);
+    // PR 11: kick off the four independent repository reads in parallel.
+    // Before this change these were 4–5 sequential awaits (cave, cavePlace,
+    // rasterMaps, caveAreas, then mirror-mode), which on cold DB cache
+    // dominated the page-open latency. The mirror-mode check still runs
+    // sequentially because it needs the form text populated from _cavePlace.
+    final caveFuture = caveRepository.findById(widget.caveUuid);
+    final cavePlaceFuture = _currentCavePlaceId != null
+        ? cavePlaceRepository.findById(_currentCavePlaceId!)
+        : Future<CavePlace?>.value(null);
+    final rasterMapsFuture = rasterMapRepository.getRasterMaps(widget.caveUuid);
+    final caveAreasFuture = caveRepository.getCaveAreas(widget.caveUuid);
+
+    _cave = await caveFuture;
     if (_currentCavePlaceId != null) {
-      _cavePlace = await cavePlaceRepository.findById(_currentCavePlaceId!);
+      _cavePlace = await cavePlaceFuture;
       if (_cavePlace == null) {
         if (mounted) Navigator.pop(context);
         return;
@@ -153,10 +164,10 @@ class _CavePlacePageState extends State<CavePlacePage>
       log.warning('PCI mirror-mode check failed; showing PCI row', e, st);
       _pciRowHidden = false;
     }
-    _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
+    _rasterMaps = await rasterMapsFuture;
 
     // Load cave areas for the cave (used in the dropdown)
-    final loadedAreas = await caveRepository.getCaveAreas(widget.caveUuid);
+    final loadedAreas = await caveAreasFuture;
     // Deduplicate by UUID to prevent DropdownButtonFormField assertion errors
     final seenUuids = <dynamic>{};
     final deduplicatedAreas =

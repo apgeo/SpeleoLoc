@@ -12,7 +12,7 @@ import 'package:speleoloc/utils/database_restore_helper.dart';
 
 import 'package:speleoloc/services/archive/archive_models.dart';
 import 'package:speleoloc/services/archive/archive_table_configs.dart';
-
+import 'package:speleoloc/utils/app_logger.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
 // via data_archive_service.dart keep working after the Phase 2.4 split.
 export 'package:speleoloc/services/archive/archive_models.dart';
@@ -27,6 +27,7 @@ export 'package:speleoloc/services/archive/archive_models.dart';
 /// conflict-resolution decisions via UI callbacks.
 class DataArchiveService {
   final DataExportImportRepository _repo;
+  final _log = AppLogger.of('DataArchiveService');
 
   DataArchiveService(this._repo);
 
@@ -196,7 +197,9 @@ class DataArchiveService {
     } finally {
       try {
         await tempDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
+      }
     }
   }
 
@@ -234,7 +237,9 @@ class DataArchiveService {
     } finally {
       try {
         await tempDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
+      }
     }
   }
 
@@ -361,7 +366,9 @@ class DataArchiveService {
     } finally {
       try {
         await _repo.detachImportedDb();
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort detachImportedDb failed', e, st);
+      }
     }
 
     // Copy binary files that don't already exist locally.
@@ -491,8 +498,9 @@ class DataArchiveService {
     List<dynamic> list;
     try {
       list = jsonDecode(await credFile.readAsString()) as List<dynamic>;
-    } catch (_) {
-      return; // Malformed json — skip silently.
+    } catch (e, st) {
+      _log.warning('ftp_credentials.json is malformed — skipping restore', e, st);
+      return;
     }
 
     final profileRepo = FtpProfileRepository(appDatabase);
@@ -508,8 +516,8 @@ class DataArchiveService {
           profile,
           password: (password != null && password.isNotEmpty) ? password : null,
         );
-      } catch (_) {
-        // Malformed entry — skip silently.
+      } catch (e, st) {
+        _log.warning('Failed to restore FTP profile entry from archive', e, st);
       }
     }
   }
@@ -549,7 +557,11 @@ class DataArchiveService {
       final map = jsonDecode(raw) as Map<String, dynamic>;
       // null, absent key, false → all evaluate to false via == true.
       return map['copy_device_uuid_from_archive_on_import'] == true;
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.of('DataArchiveService').fine(
+          'Malformed archive sync config JSON — treating copyDeviceUuid as false',
+          e,
+          st);
       return false;
     }
   }

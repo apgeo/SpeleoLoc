@@ -58,6 +58,11 @@ abstract class ICavePlaceRepository {
   Future<CavePlace?> findById(Uuid uuid);
   Future<CavePlace?> findCavePlaceByCode(String code, Uuid caveUuid);
 
+  /// Case-sensitive title lookup within a single cave. Returns the first
+  /// matching place or `null`. Used by the add/edit popups to enforce
+  /// per-cave title uniqueness without loading the entire place list.
+  Future<CavePlace?> findCavePlaceByTitle(Uuid caveUuid, String title);
+
   /// Returns the cave-places whose uuid is in [uuids]. Used to resolve a
   /// batch of place references (e.g. trip points) in one round-trip.
   Future<List<CavePlace>> findByIds(Iterable<Uuid> uuids);
@@ -88,6 +93,11 @@ abstract class ICavePlaceRepository {
     bool mainOnly = false,
     Uuid? excludeUuid,
   });
+
+  /// Returns a map of `caveUuid → number of cave-places under that cave`.
+  /// Used by the home-page summary; computed in SQL to avoid loading
+  /// every place into memory.
+  Future<Map<Uuid, int>> getCavePlaceCountsByCave();
 }
 
 /// Abstract contract for the raster-map repository.
@@ -101,6 +111,9 @@ abstract class IRasterMapRepository {
   Future<void> updateRasterMap(RasterMap rasterMap);
   Future<void> deleteRasterMap(Uuid uuid);
   Future<void> updateRasterMapOrder(List<Uuid> orderedIds);
+
+  /// Returns a map of `caveUuid → number of raster maps under that cave`.
+  Future<Map<Uuid, int>> getRasterMapCountsByCave();
 }
 
 /// Abstract contract for the cave-place ↔ raster-map definition repository.
@@ -149,5 +162,42 @@ abstract class ICaveTripRepository {
   Future<List<TripReportTemplate>> getTripReportTemplates();
   Future<void> renameCaveTrip(Uuid tripUuid, String newTitle);
   Future<void> deleteCaveTrip(Uuid tripUuid);
+
+  /// Replaces the persisted log text for [tripUuid]. Stamps `updatedAt`.
+  Future<void> updateTripLog(Uuid tripUuid, String log);
+
+  /// Inserts a new trip report template row. Returns the persisted uuid.
+  Future<Uuid> insertTripReportTemplate({
+    required String title,
+    required String fileName,
+    required int fileSize,
+    required String format,
+  });
+
+  /// Removes the template row identified by [uuid] (does not delete the
+  /// on-disk template file — callers do that via
+  /// [TripReportExportService.deleteTemplateFile]).
+  Future<void> deleteTripReportTemplate(Uuid uuid);
+}
+
+/// Abstract contract for documentation-file metadata operations that
+/// screens currently invoke directly on [AppDatabase].
+///
+/// Only adds methods the document editors and documentation list pages
+/// currently need; the bulk of the writes (insert/update/delete of
+/// `DocumentationFile` rows, link insertion) still flow through
+/// [AppDatabase] helpers and [DocumentationFileHelper] until those
+/// call-sites are migrated in a follow-up PR-2 slice.
+abstract class IDocumentationRepository {
+  /// Builds a [DocumentationGeofeatureLink] from the (mutually exclusive)
+  /// uuids supplied. Returns `null` when none of the uuids are provided.
+  /// Throws [ArgumentError] if more than one is provided. Mirrors the
+  /// pre-existing [AppDatabase.getDocumentationParentLink] semantics so
+  /// editor pages can call it without touching the global DB.
+  Future<DocumentationGeofeatureLink?> getDocumentationParentLink({
+    Uuid? caveUuid,
+    Uuid? cavePlaceUuid,
+    Uuid? caveAreaUuid,
+  });
 }
 

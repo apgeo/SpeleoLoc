@@ -370,7 +370,9 @@ class FtpSyncController extends ChangeNotifier {
               '${entry.name} ($reason); retrying…');
           try {
             await File(localPath).delete();
-          } catch (_) {}
+          } catch (e, st) {
+            _log.fine('best-effort delete failed: $localPath', e, st);
+          }
           _resetSpeedSamples();
         }
         final downloadFailed = downloadError != null ||
@@ -388,7 +390,9 @@ class FtpSyncController extends ChangeNotifier {
           // Do NOT mark as seen so the next sync attempt re-downloads it.
           try {
             await File(localPath).delete();
-          } catch (_) {}
+          } catch (e, st) {
+            _log.fine('best-effort delete failed: $localPath', e, st);
+          }
           _emit((s) => s.copyWith(
                 archivesProcessed: i + 1,
                 stepProgress: 1.0,
@@ -441,10 +445,14 @@ class FtpSyncController extends ChangeNotifier {
                   'next sync.');
               try {
                 await File(localPath).delete();
-              } catch (_) {}
+              } catch (e, st) {
+                _log.fine('best-effort delete failed: $localPath', e, st);
+              }
               try {
                 await File(sidecarPath).delete();
-              } catch (_) {}
+              } catch (e, st) {
+                _log.fine('best-effort delete failed: $sidecarPath', e, st);
+              }
               _emit((s) => s.copyWith(
                     archivesProcessed: i + 1,
                     stepProgress: 1.0,
@@ -456,7 +464,9 @@ class FtpSyncController extends ChangeNotifier {
             }
             try {
               await File(sidecarPath).delete();
-            } catch (_) {}
+            } catch (e, st) {
+              _log.fine('best-effort delete failed: $sidecarPath', e, st);
+            }
           } catch (e) {
             _appendLog(
                 FtpSyncLogLevel.warning,
@@ -504,7 +514,9 @@ class FtpSyncController extends ChangeNotifier {
               ));
           try {
             await File(localPath).delete();
-          } catch (_) {}
+          } catch (e, st) {
+            _log.fine('best-effort delete failed: $localPath', e, st);
+          }
           continue;
         } catch (e) {
           importErrors++;
@@ -520,7 +532,9 @@ class FtpSyncController extends ChangeNotifier {
         // Best-effort cleanup of the local copy.
         try {
           await File(localPath).delete();
-        } catch (_) {}
+        } catch (e, st) {
+          _log.fine('best-effort delete failed: $localPath', e, st);
+        }
       }
 
       token.throwIfCancelled();
@@ -540,7 +554,9 @@ class FtpSyncController extends ChangeNotifier {
         await _saveSeenArchives(seen);
         try {
           await tempDir.delete(recursive: true);
-        } catch (_) {}
+        } catch (e, st) {
+          _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
+        }
 
         if (importErrors > 0) {
           final summary =
@@ -656,7 +672,9 @@ class FtpSyncController extends ChangeNotifier {
             'Uploaded $sidecarName (${hash.substring(0, 12)}…)');
         try {
           await sidecarFile.delete();
-        } catch (_) {}
+        } catch (e, st) {
+          _log.fine('best-effort sidecar delete failed: ${sidecarFile.path}', e, st);
+        }
       } catch (e) {
         _appendLog(FtpSyncLogLevel.warning,
             'Sidecar upload failed for $archiveName: $e — '
@@ -674,10 +692,14 @@ class FtpSyncController extends ChangeNotifier {
           profile.profileUuid, DateTime.now().millisecondsSinceEpoch);
       try {
         await archiveFile.delete();
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort archive delete failed: ${archiveFile.path}', e, st);
+      }
       try {
         await tempDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
+      }
 
       if (importErrors > 0) {
         final summary =
@@ -743,7 +765,9 @@ class FtpSyncController extends ChangeNotifier {
     } finally {
       try {
         await transport.disconnect();
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort transport.disconnect failed', e, st);
+      }
       _cancelToken = null;
       _runCompleter = null;
       if (!completer.isCompleted) completer.complete();

@@ -5,7 +5,6 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:speleoloc/data/source/database/legacy_v6_migration.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 import 'package:speleoloc/data/source/database/test_data_helper.dart';
 import 'package:speleoloc/utils/uuid.dart';

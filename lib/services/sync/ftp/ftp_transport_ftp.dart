@@ -101,7 +101,9 @@ class FtpTransportFtp implements IFtpTransport {
     } finally {
       try {
         if (localProbe.existsSync()) localProbe.deleteSync();
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('best-effort local probe delete failed: ${localProbe.path}', e, st);
+      }
     }
   }
 
@@ -166,7 +168,8 @@ class FtpTransportFtp implements IFtpTransport {
     int? total;
     try {
       total = await _client!.sizeFile(remoteName);
-    } catch (_) {
+    } catch (e, st) {
+      _log.fine('best-effort sizeFile failed for $remoteName', e, st);
       total = null;
     }
     try {

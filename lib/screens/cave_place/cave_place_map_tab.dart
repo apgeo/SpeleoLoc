@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
@@ -79,7 +80,7 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
   }
 
   Future<List<CavePlaceWithDefinition>> _loadDefinitions() {
-    return appDatabase.getCavePlacesWithDefinitionsForRasterMap(
+    return rasterMapRepository.getCavePlacesWithDefinitionsForRasterMap(
       widget.caveUuid,
       widget.rasterMap.uuid,
     );
@@ -105,8 +106,8 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
     _log.fine(
       'Opening place selector for cavePlaceUuid=$cavePlaceUuid rasterMapUuid=${rm.uuid}',
     );
-    final existing = await appDatabase.getDefinition(cavePlaceUuid, rm.uuid);
-    final cavePlacesWithDefs = await appDatabase
+    final existing = await definitionRepository.findDefinition(cavePlaceUuid, rm.uuid);
+    final cavePlacesWithDefs = await rasterMapRepository
         .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
 
     if (!mounted) return;

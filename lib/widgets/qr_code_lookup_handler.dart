@@ -313,9 +313,7 @@ class QrCodeLookupHandler {
       }
     } else {
       // Trip running for a DIFFERENT cave — offer to stop it first.
-      final otherCave = await (appDatabase.select(appDatabase.caves)
-            ..where((c) => c.uuid.equalsValue(activeTripCaveId)))
-          .getSingleOrNull();
+      final otherCave = await caveRepository.findById(activeTripCaveId);
       final otherCaveTitle =
           otherCave?.title ?? activeTripCaveId.toString();
       if (!context.mounted) return;
@@ -394,12 +392,10 @@ class QrCodeLookupHandler {
   }
 
   Future<void> _startTripForCave(BuildContext context, Uuid caveUuid) async {
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(caveUuid)))
-        .getSingleOrNull();
+    final cave = await caveRepository.findById(caveUuid);
     final defaultTitle =
         '${cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final existingTitles = await appDatabase.getCaveTripTitles(caveUuid);
+    final existingTitles = await caveTripRepository.getCaveTripTitles(caveUuid);
     final suggestedTitle =
         CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
 
