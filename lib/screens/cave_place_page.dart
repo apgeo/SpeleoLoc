@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_coordinates_section.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_entrance_toggles.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_pci_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_qcri_section.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_raster_maps_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_save_command.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_title_section.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/gps_recorder_page.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
@@ -716,54 +719,18 @@ class _CavePlacePageState extends State<CavePlacePage>
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                TextFormField(
-                  key: tourKeys['title_field'],
-                  controller: _form.title,
-                  decoration: InputDecoration(
-                    labelText: LocServ.inst.t('title'),
-                    filled: _form.titleModified,
-                    fillColor: _form.titleModified
-                        ? Colors.green.withValues(alpha: 0.06)
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Description (expandable multiline)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        key: tourKeys['desc_field'],
-                        controller: _form.description,
-                        decoration: InputDecoration(
-                          labelText: LocServ.inst.t('description'),
-                          filled: _form.descriptionModified,
-                          fillColor: _form.descriptionModified
-                              ? Colors.green.withValues(alpha: 0.06)
-                              : null,
-                        ),
-                        minLines: 1,
-                        maxLines: _descriptionLines,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.unfold_more, size: 18),
-                      tooltip: LocServ.inst.t('expand_description'),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      style: IconButton.styleFrom(
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          if (_descriptionLines < 5) {
-                            _descriptionLines += 1;
-                          }
-                        });
-                      },
-                    ),
-                  ],
+                CavePlaceTitleSection(
+                  form: _form,
+                  descriptionLines: _descriptionLines,
+                  onExpandDescription: () {
+                    setState(() {
+                      if (_descriptionLines < 5) {
+                        _descriptionLines += 1;
+                      }
+                    });
+                  },
+                  titleFieldKey: tourKeys['title_field'],
+                  descFieldKey: tourKeys['desc_field'],
                 ),
                 const SizedBox(height: 8),
                 // Cave area dropdown and manage areas button, depth
@@ -951,110 +918,20 @@ class _CavePlacePageState extends State<CavePlacePage>
                 /// Raster maps section
                 if (_rasterMaps.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(
-                            '${LocServ.inst.t('raster_maps')}:',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        /// Raster maps tab bar controller section, with left/right header buttons
-                        DefaultTabController(
-                          key: tourKeys['tabs'],
-                          length: _rasterMaps.length,
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  IconButton(
-                                    onPressed: _currentTabIndex > 0
-                                        ? () => _tabController?.animateTo(
-                                            _currentTabIndex - 1,
-                                          )
-                                        : null,
-                                    icon: const Icon(Icons.arrow_left),
-                                  ),
-                                  Expanded(
-                                    child: TabBar(
-                                      controller: _tabController,
-                                      isScrollable: true,
-                                      tabs: _rasterMaps
-                                          .map(
-                                            (rm) => Tab(
-                                              text:
-                                                  rm.title.isEmpty
-                                                      ? rm.fileName.replaceAll(
-                                                          RegExp(
-                                                            r'\.(jpg|jpeg|png|bmp)$',
-                                                          ),
-                                                          "",
-                                                        )
-                                                      : rm.title
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed:
-                                        _currentTabIndex <
-                                            (_tabController?.length ?? 0) - 1
-                                        ? () => _tabController?.animateTo(
-                                            _currentTabIndex + 1,
-                                          )
-                                        : null,
-                                    icon: const Icon(Icons.arrow_right),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(
-                                height:
-                                    350, // Increased height to accommodate larger images
-                                child: TabBarView(
-                                  controller: _tabController,
-                                  children: _rasterMaps
-                                      .map((rm) => _buildMapTab(rm))
-                                      .toList(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  CavePlaceRasterMapsSection(
+                    rasterMaps: _rasterMaps,
+                    tabController: _tabController,
+                    currentTabIndex: _currentTabIndex,
+                    buildMapTab: _buildMapTab,
+                    tabsKey: tourKeys['tabs'],
                   ),
                 ],
 
                 const SizedBox(height: 4),
-                CheckboxListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  value: _form.isEntrance,
-                  title: Text(LocServ.inst.t('is_cave_entrance')),
-                  onChanged: (v) => _onEntranceToggleRequested(v ?? false),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 24),
-                  child: CheckboxListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    value: _form.isMainEntrance,
-                    title: Text(LocServ.inst.t('is_main_cave_entrance')),
-                    onChanged: _form.isEntrance
-                        ? (v) => _onMainEntranceToggleRequested(v ?? false)
-                        : null,
-                  ),
+                CavePlaceEntranceToggles(
+                  form: _form,
+                  onEntranceChanged: _onEntranceToggleRequested,
+                  onMainEntranceChanged: _onMainEntranceToggleRequested,
                 ),
                 /*
               Row(
