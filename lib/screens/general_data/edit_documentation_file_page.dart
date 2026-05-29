@@ -118,7 +118,7 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
         updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
         lastModifiedByUserUuid: drift.Value(author),
       );
-      await appDatabase.update(appDatabase.documentationFiles).replace(updated);
+      await documentationRepository.replaceDocumentationFile(updated);
       await changeLogger.logUpdate(
         'documentation_files',
         old.uuid,
@@ -147,7 +147,7 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
       return;
     }
 
-    final parentLink = await appDatabase.getDocumentationParentLink(
+    final parentLink = await documentationRepository.getDocumentationParentLink(
       cavePlaceUuid: widget.cavePlaceUuid,
       caveUuid: widget.caveUuid,
       caveAreaUuid: widget.caveAreaUuid,
@@ -171,7 +171,7 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
     );
 
     try {
-      final newUuid = await appDatabase.insertDocumentationFile(
+      final newUuid = await documentationRepository.insertDocumentationFile(
         companion: withOptional,
         parentLink: parentLink,
       );

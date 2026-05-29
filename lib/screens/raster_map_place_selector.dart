@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -163,7 +164,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     });
     try {
       _editorController.setCavePlaceId(_selectedCavePlaceId);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.of('RasterMapPlaceSelector').fine('setCavePlaceId after load failed', e, st);
+    }
   }
 
   CavePlaceToRasterMapDefinition? _findDefinition(
@@ -332,7 +335,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     // Use the typed controller to programmatically pan/zoom the editor.
     try {
       _editorController.zoomToPoint(imageX, imageY, zoomLevel: zoomLevel);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.of('RasterMapPlaceSelector').fine('zoomToPoint failed', e, st);
+    }
   }
 
   void _definePlace() async {

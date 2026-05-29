@@ -24,9 +24,47 @@ abstract class ICaveRepository {
   /// Returns the single [Cave] with [uuid], or `null` if none exists.
   Future<Cave?> findById(Uuid uuid);
 
+  /// Returns the single [CaveArea] with [uuid], or `null` if none exists.
+  Future<CaveArea?> findCaveAreaById(Uuid uuid);
+
+  /// Inserts a new [CaveArea] row under [caveUuid] with the given [title].
+  /// Stamps audit columns and writes a `change_log` header. Returns the new uuid.
+  Future<Uuid> addCaveArea(Uuid caveUuid, String title);
+
+  /// Renames an existing cave area. [oldTitle] is used only to write the
+  /// `change_log` diff when it differs from [newTitle].
+  Future<void> updateCaveAreaTitle({
+    required Uuid uuid,
+    required String newTitle,
+    String? oldTitle,
+  });
+
+  /// Deletes a cave area row, writing a `change_log` tombstone using the
+  /// supplied pre-image fields.
+  Future<void> deleteCaveArea(CaveArea area);
+
   /// Returns all [SurfaceArea] rows. Used by list pages that render
   /// `cave.surfaceAreaUuid` as a human-readable label.
   Future<List<SurfaceArea>> getSurfaceAreas();
+
+  /// Inserts a new [SurfaceArea] row. Returns the persisted uuid.
+  Future<Uuid> addSurfaceArea({
+    required String title,
+    String? description,
+    String? generalAreaIdentifier,
+  });
+
+  /// Updates an existing [SurfaceArea] row, writing the audit columns and a
+  /// `change_log` diff (using [existing] as the pre-image).
+  Future<void> updateSurfaceArea({
+    required SurfaceArea existing,
+    required String title,
+    String? description,
+    String? generalAreaIdentifier,
+  });
+
+  /// Deletes a surface area row, writing a `change_log` tombstone.
+  Future<void> deleteSurfaceArea(SurfaceArea area);
 }
 
 /// Abstract contract for the cave-place repository.
@@ -114,6 +152,22 @@ abstract class IRasterMapRepository {
 
   /// Returns a map of `caveUuid → number of raster maps under that cave`.
   Future<Map<Uuid, int>> getRasterMapCountsByCave();
+
+  /// Returns raster maps matching `(caveUuid, title, mapType)` — used by
+  /// the form to enforce the table UNIQUE constraint without loading every
+  /// map.
+  Future<List<RasterMap>> findRasterMapsByTitleAndType({
+    required Uuid caveUuid,
+    required String title,
+    required String mapType,
+  });
+
+  /// Returns raster maps in [caveUuid] whose `file_hash == hash`. Used by
+  /// the form to detect a re-import of the same image.
+  Future<List<RasterMap>> findRasterMapsByHash({
+    required Uuid caveUuid,
+    required String hash,
+  });
 }
 
 /// Abstract contract for the cave-place ↔ raster-map definition repository.
@@ -199,5 +253,35 @@ abstract class IDocumentationRepository {
     Uuid? cavePlaceUuid,
     Uuid? caveAreaUuid,
   });
+
+  /// Returns the single [DocumentationFile] with [uuid], or `null`.
+  Future<DocumentationFile?> findById(Uuid uuid);
+
+  /// Returns documentation files matching the supplied size and hash. Used
+  /// by the edit screen to surface "similar file already present" hints.
+  Future<List<DocumentationFile>> findDuplicates({
+    required int fileSize,
+    required String fileHash,
+  });
+
+  /// Inserts a new documentation-file row (plus optional geofeature link)
+  /// in a single transaction. Returns the persisted uuid.
+  Future<Uuid> insertDocumentationFile({
+    required DocumentationFilesCompanion companion,
+    DocumentationGeofeatureLink? parentLink,
+  });
+
+  /// Applies a partial update to the documentation-file row identified by
+  /// [uuid]. Caller is responsible for `updated_at` /
+  /// `last_modified_by_user_uuid` already being present in the companion.
+  Future<void> updateDocumentationFile({
+    required Uuid uuid,
+    required DocumentationFilesCompanion companion,
+  });
+
+  /// Replaces a full documentation-file row (whole-row update). Used by
+  /// the edit page where the caller has already constructed the updated
+  /// [DocumentationFile] via `copyWith`.
+  Future<void> replaceDocumentationFile(DocumentationFile updated);
 }
 

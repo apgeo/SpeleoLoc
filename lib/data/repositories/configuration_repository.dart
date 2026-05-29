@@ -50,6 +50,18 @@ abstract class IConfigurationRepository {
 
   /// Removes the row stored under [key]. No-op when the row does not exist.
   Future<void> delete(String key);
+
+  /// Returns every row in the `configurations` table. Used by the debug
+  /// info page to list/inspect raw key-value pairs.
+  Future<List<Configuration>> getAllRows();
+
+  /// Whole-row replace. Used by the debug info page after the user edits a
+  /// raw value field.
+  Future<void> replaceRow(Configuration row);
+
+  /// Inserts a new row from a companion. Used by the debug info page when
+  /// the user creates a new configuration key.
+  Future<void> insertRow(ConfigurationsCompanion companion);
 }
 
 class ConfigurationRepository implements IConfigurationRepository {
@@ -114,5 +126,20 @@ class ConfigurationRepository implements IConfigurationRepository {
     await (_db.delete(_db.configurations)
           ..where((c) => c.title.equals(key)))
         .go();
+  }
+
+  @override
+  Future<List<Configuration>> getAllRows() async {
+    return _db.select(_db.configurations).get();
+  }
+
+  @override
+  Future<void> replaceRow(Configuration row) async {
+    await _db.update(_db.configurations).replace(row);
+  }
+
+  @override
+  Future<void> insertRow(ConfigurationsCompanion companion) async {
+    await _db.into(_db.configurations).insert(companion);
   }
 }

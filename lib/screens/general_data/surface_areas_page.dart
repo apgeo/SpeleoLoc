@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -56,7 +55,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
   }
 
   void _loadAreas() async {
-    final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
+    final areas = await caveRepository.getSurfaceAreas();
     if (!mounted) return;
     setState(() {
       _areas = areas;
@@ -117,46 +116,18 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
               final identifier = identifierController.text.trim().isEmpty
                   ? null
                   : identifierController.text.trim();
-              final now = DateTime.now().millisecondsSinceEpoch;
-              final author = await currentUserService.currentOrSystem();
               if (existing == null) {
-                final newUuid = Uuid.v7();
-                await appDatabase.into(appDatabase.surfaceAreas).insert(
-                  SurfaceAreasCompanion.insert(
-                    uuid: newUuid,
-                    title: title,
-                    description: Value(desc),
-                    generalAreaIdentifier: Value(identifier),
-                    createdAt: Value(now),
-                    updatedAt: Value(now),
-                    createdByUserUuid: Value(author),
-                    lastModifiedByUserUuid: Value(author),
-                  ),
+                await caveRepository.addSurfaceArea(
+                  title: title,
+                  description: desc,
+                  generalAreaIdentifier: identifier,
                 );
-                await changeLogger.logInsert('surface_areas', newUuid);
               } else {
-                await (appDatabase.update(appDatabase.surfaceAreas)..where((a) => a.uuid.equalsValue(existing.uuid))).write(
-                  SurfaceAreasCompanion(
-                    title: Value(title),
-                    description: Value(desc),
-                    generalAreaIdentifier: Value(identifier),
-                    updatedAt: Value(now),
-                    lastModifiedByUserUuid: Value(author),
-                  ),
-                );
-                await changeLogger.logUpdate(
-                  'surface_areas',
-                  existing.uuid,
-                  oldValues: {
-                    'title': existing.title,
-                    'description': existing.description,
-                    'general_area_identifier': existing.generalAreaIdentifier,
-                  },
-                  newValues: {
-                    'title': title,
-                    'description': desc,
-                    'general_area_identifier': identifier,
-                  },
+                await caveRepository.updateSurfaceArea(
+                  existing: existing,
+                  title: title,
+                  description: desc,
+                  generalAreaIdentifier: identifier,
                 );
               }
               if (!context.mounted) return;
@@ -190,15 +161,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
     );
 
     if (confirmed == true) {
-      await (appDatabase.delete(appDatabase.surfaceAreas)..where((a) => a.uuid.equalsValue(area.uuid))).go();
-      await changeLogger.logDelete(
-        'surface_areas',
-        area.uuid,
-        oldValues: {
-          'title': area.title,
-          'description': area.description,
-        },
-      );
+      await caveRepository.deleteSurfaceArea(area);
       _changed = true;
       _loadAreas();
       if (!mounted) return;

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 class DebugInfoPage extends StatefulWidget {
@@ -29,8 +30,7 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
 
   Future<void> _load() async {
     final dir = await getApplicationDocumentsDirectory();
-    final configs =
-        await appDatabase.select(appDatabase.configurations).get();
+    final configs = await configurationRepository.getAllRows();
     if (!mounted) return;
     setState(() {
       _dataDir = dir.path;
@@ -84,16 +84,16 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
     );
     controller.dispose();
     if (saved == null || !mounted) return;
-    await appDatabase.update(appDatabase.configurations).replace(
-          Configuration(
-            id: config.id,
-            title: config.title,
-            value: saved.isEmpty ? null : saved,
-            isSynced: config.isSynced,
-            createdAt: config.createdAt,
-            updatedAt: DateTime.now().millisecondsSinceEpoch,
-          ),
-        );
+    await configurationRepository.replaceRow(
+      Configuration(
+        id: config.id,
+        title: config.title,
+        value: saved.isEmpty ? null : saved,
+        isSynced: config.isSynced,
+        createdAt: config.createdAt,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
     await _reload();
   }
 
@@ -141,13 +141,13 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
     titleCtrl.dispose();
     valueCtrl.dispose();
     if (saved != true || titleCtrl.text.trim().isEmpty || !mounted) return;
-    await appDatabase.into(appDatabase.configurations).insert(
-          ConfigurationsCompanion.insert(
-            title: titleCtrl.text.trim(),
-            value: drift.Value(
-                valueCtrl.text.isEmpty ? null : valueCtrl.text),
-          ),
-        );
+    await configurationRepository.insertRow(
+      ConfigurationsCompanion.insert(
+        title: titleCtrl.text.trim(),
+        value: drift.Value(
+            valueCtrl.text.isEmpty ? null : valueCtrl.text),
+      ),
+    );
     await _reload();
   }
 

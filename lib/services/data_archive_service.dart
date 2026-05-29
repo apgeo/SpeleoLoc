@@ -8,7 +8,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
-import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/services/database_restore_helper.dart';
 
 import 'package:speleoloc/services/archive/archive_models.dart';
 import 'package:speleoloc/services/archive/archive_table_configs.dart';

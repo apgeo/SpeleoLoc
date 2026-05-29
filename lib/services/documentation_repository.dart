@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -30,6 +31,63 @@ class DocumentationRepository implements IDocumentationRepository {
       );
     } catch (e, st) {
       _log.severe('getDocumentationParentLink failed', e, st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<DocumentationFile?> findById(Uuid uuid) async {
+    return (_database.select(_database.documentationFiles)
+          ..where((t) => t.uuid.equalsValue(uuid)))
+        .getSingleOrNull();
+  }
+
+  @override
+  Future<List<DocumentationFile>> findDuplicates({
+    required int fileSize,
+    required String fileHash,
+  }) async {
+    return (_database.select(_database.documentationFiles)
+          ..where((t) =>
+              t.fileSize.equals(fileSize) & t.fileHash.equals(fileHash)))
+        .get();
+  }
+
+  @override
+  Future<Uuid> insertDocumentationFile({
+    required DocumentationFilesCompanion companion,
+    DocumentationGeofeatureLink? parentLink,
+  }) async {
+    try {
+      return await _database.insertDocumentationFile(
+        companion: companion,
+        parentLink: parentLink,
+      );
+    } catch (e, st) {
+      _log.severe('insertDocumentationFile failed', e, st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateDocumentationFile({
+    required Uuid uuid,
+    required DocumentationFilesCompanion companion,
+  }) async {
+    try {
+      await _database.updateDocumentationFile(uuid: uuid, companion: companion);
+    } catch (e, st) {
+      _log.severe('updateDocumentationFile failed', e, st);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> replaceDocumentationFile(DocumentationFile updated) async {
+    try {
+      await _database.update(_database.documentationFiles).replace(updated);
+    } catch (e, st) {
+      _log.severe('replaceDocumentationFile failed', e, st);
       rethrow;
     }
   }

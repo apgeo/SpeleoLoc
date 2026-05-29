@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Page that lists documentation files.
@@ -49,15 +50,11 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
       String? parentTitle;
 
       if (widget.cavePlaceUuid != null) {
-        final cp = await (appDatabase.select(appDatabase.cavePlaces)
-              ..where((t) => t.uuid.equalsValue(widget.cavePlaceUuid!)))
-            .getSingleOrNull();
+        final cp = await cavePlaceRepository.findById(widget.cavePlaceUuid!);
         title = cp?.title ?? '';
         // Try to get cave title as parent.
         if (cp != null) {
-          final c = await (appDatabase.select(appDatabase.caves)
-                ..where((t) => t.uuid.equalsValue(cp.caveUuid)))
-              .getSingleOrNull();
+          final c = await caveRepository.findById(cp.caveUuid);
           parentTitle = c?.title;
         }
         _source = DocumentsSource.cavePlace(
@@ -66,18 +63,14 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
           caveTitle: parentTitle,
         );
       } else if (widget.caveUuid != null) {
-        final c = await (appDatabase.select(appDatabase.caves)
-              ..where((t) => t.uuid.equalsValue(widget.caveUuid!)))
-            .getSingleOrNull();
+        final c = await caveRepository.findById(widget.caveUuid!);
         title = c?.title ?? '';
         _source = DocumentsSource.cave(
           caveUuid: widget.caveUuid!,
           caveTitle: title,
         );
       } else if (widget.caveAreaUuid != null) {
-        final a = await (appDatabase.select(appDatabase.caveAreas)
-              ..where((t) => t.uuid.equalsValue(widget.caveAreaUuid!)))
-            .getSingleOrNull();
+        final a = await caveRepository.findCaveAreaById(widget.caveAreaUuid!);
         title = a?.title ?? '';
         _source = DocumentsSource.caveArea(
           caveAreaUuid: widget.caveAreaUuid!,

@@ -16,7 +16,7 @@ import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/utils/constants.dart';
-import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/filterable_list.dart';

@@ -1,8 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/cave_place_qr_generator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -76,48 +77,22 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
     try {
       // Load cave (only if caveUuid is provided)
       final cave = widget.caveUuid != null
-          ? await (appDatabase.select(appDatabase.caves)
-                ..where((c) => c.uuid.equalsValue(widget.caveUuid!)))
-              .getSingleOrNull()
+          ? await caveRepository.findById(widget.caveUuid!)
           : null;
 
       // Load output kind preference
-      final pref = await (appDatabase.select(appDatabase.configurations)
-            ..where((c) => c.title.equals('qr_output_kind')))
-          .getSingleOrNull();
-      final asPdf = (pref?.value ?? 'pdf') == 'pdf';
+      final outputKind = await configurationRepository.readString('qr_output_kind');
+      final asPdf = (outputKind ?? 'pdf') == 'pdf';
 
       // Load full QR generation config (JSON)
-      final configRow = await (appDatabase.select(appDatabase.configurations)
-            ..where((c) => c.title.equals(qrGenerationConfigKey)))
-          .getSingleOrNull();
-      Map<String, dynamic> cfg = {};
-      if (configRow != null) {
-        try {
-          cfg = jsonDecode(configRow.value ?? '{}');
-        } catch (_) {
-          cfg = {};
-        }
-      }
+      final cfg = await configurationRepository.readJson(qrGenerationConfigKey);
 
       // Load PDF output config (grid, template)
-      final pdfCfgRow = await (appDatabase.select(appDatabase.configurations)
-            ..where((c) => c.title.equals(pdfOutputConfigKey)))
-          .getSingleOrNull();
-      Map<String, dynamic> pdfCfg = {};
-      if (pdfCfgRow != null) {
-        try {
-          pdfCfg = jsonDecode(pdfCfgRow.value ?? '{}');
-        } catch (_) {
-          pdfCfg = {};
-        }
-      }
+      final pdfCfg = await configurationRepository.readJson(pdfOutputConfigKey);
 
       // Get cave places
       final cavePlaces = widget.cavePlaces ??
-          await (appDatabase.select(appDatabase.cavePlaces)
-                ..where((cp) => cp.caveUuid.equalsValue(widget.caveUuid!)))
-              .get();
+          await cavePlaceRepository.getCavePlaces(widget.caveUuid!);
 
       // Build generation preferences from config
       final genPrefs = GenerationPreferences(
@@ -403,7 +378,8 @@ class _InAppPdfViewerState extends State<_InAppPdfViewer> {
       _pdfController = PdfControllerPinch(
         document: PdfDocument.openFile(widget.filePath),
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.of('GeneratedQrCodeViewer').warning('Failed to open PDF ${widget.filePath}', e, st);
       _pdfController = null;
     }
   }

@@ -169,4 +169,42 @@ class RasterMapRepository implements IRasterMapRepository {
           cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<List<RasterMap>> findRasterMapsByTitleAndType({
+    required Uuid caveUuid,
+    required String title,
+    required String mapType,
+  }) async {
+    try {
+      return await (_database.select(_database.rasterMaps)
+            ..where((rm) =>
+                rm.caveUuid.equalsValue(caveUuid) &
+                rm.title.equals(title) &
+                rm.mapType.equals(mapType)))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find raster maps by title/type', e, st);
+      throw DbException('Failed to find raster maps',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<RasterMap>> findRasterMapsByHash({
+    required Uuid caveUuid,
+    required String hash,
+  }) async {
+    try {
+      return await (_database.select(_database.rasterMaps)
+            ..where((rm) =>
+                rm.caveUuid.equalsValue(caveUuid) &
+                rm.fileHash.equals(hash)))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find raster maps by hash', e, st);
+      throw DbException('Failed to find raster maps by hash',
+          cause: e, stackTrace: st);
+    }
+  }
 }

@@ -6,8 +6,9 @@ import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
-import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -430,7 +431,9 @@ class _DataExportImportPageState extends State<DataExportImportPage>
         final row = await appDatabase.customSelect(query).getSingle();
         if (row.read<int>('cnt') > 0) return true;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.of('DataExportImportPage').warning('hasAnyData count query failed', e, st);
+    }
     return false;
   }
 

@@ -1,12 +1,3 @@
-lib/screens/general_data/cave_areas_page.dart
-lib/screens/general_data/documentation_files_page.dart
-lib/screens/general_data/edit_documentation_file_page.dart
-lib/screens/general_data/raster_map_form.dart
-lib/screens/general_data/surface_areas_page.dart
-lib/screens/generated_qr_code_viewer.dart
 lib/screens/settings/data_export_import_page.dart
-lib/screens/settings/debug_info_page.dart
 lib/screens/settings/settings_database_page.dart
 lib/screens/settings/sql_command_runner.dart
-lib/utils/database_restore_helper.dart
-lib/utils/documentation_file_helper.dart
