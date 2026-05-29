@@ -6,6 +6,8 @@ import 'package:speleoloc/screens/cave_place/cave_place_coordinates_section.dart
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_pci_section.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_qcri_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_save_command.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/gps_recorder_page.dart';
@@ -16,7 +18,6 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -903,135 +904,26 @@ class _CavePlacePageState extends State<CavePlacePage>
                 // Hidden when QCRI mirrors PCI (mode=mirror) and the
                 // two values are equal — the user can reveal it with
                 // the eye-button on the area row above.
-                if (!_pciRowHidden)
-                Row(
-                  key: tourKeys['qr_field'],
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _qrEditable ? Icons.lock_open : Icons.lock_outline,
-                      ),
-                      tooltip: _qrEditable
-                          ? LocServ.inst.t('disable_qr_edit')
-                          : LocServ.inst.t('enable_qr_edit'),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: () {
-                        setState(() {
-                          _qrEditable = !_qrEditable;
-                        });
-                      },
-                    ),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _form.qr,
-                        decoration: InputDecoration(
-                          labelText: LocServ.inst.t('place_code_identifier'),
-                          filled: _form.qrModified,
-                          fillColor: _form.qrModified
-                              ? Colors.green.withValues(alpha: 0.06)
-                              : null,
-                        ),
-                        enabled: _qrEditable,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(Icons.auto_awesome, size: 20),
-                      tooltip: LocServ.inst.t('auto_generate'),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: _qrEditable ? _autoGeneratePlaceCode : null,
-                    ),
-                  ],
+                CavePlacePciSection(
+                  visible: !_pciRowHidden,
+                  form: _form,
+                  editable: _qrEditable,
+                  onEditableToggled: () => setState(() => _qrEditable = !_qrEditable),
+                  onAutoGenerate: _autoGeneratePlaceCode,
+                  rowKey: tourKeys['qr_field'],
                 ),
                 const SizedBox(height: 8),
                 // QR code resource identifier row
-                Row(
-                  children: [
-                    // View QR code – only for existing places when QCRI is set
-                    if (_currentCavePlaceId != null &&
-                        _form.qcri.text.trim().isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_2),
-                        tooltip: LocServ.inst.t('view_qr_code'),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        onPressed: () {
-                          CavePlaceQrPreviewDialog.show(
-                            context,
-                            _cavePlace!,
-                            qrIdentifierOverride: _form.qcri.text.trim().isEmpty
-                                ? null
-                                : _form.qcri.text.trim(),
-                          );
-                        },
-                      )
-                    else
-                      const SizedBox(width: 40),
-                    IconButton(
-                      icon: Icon(
-                        _qcriEditable ? Icons.lock_open : Icons.lock_outline,
-                      ),
-                      tooltip: _qcriEditable
-                          ? LocServ.inst.t('disable_qr_edit')
-                          : LocServ.inst.t('enable_qr_edit'),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: () {
-                        setState(() {
-                          _qcriEditable = !_qcriEditable;
-                        });
-                      },
-                    ),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _form.qcri,
-                        decoration: InputDecoration(
-                          labelText: LocServ.inst.t('qr_code_resource_identifier'),
-                          filled: _form.qcriModified,
-                          fillColor: _form.qcriModified
-                              ? Colors.green.withValues(alpha: 0.06)
-                              : null,
-                        ),
-                        enabled: _qcriEditable,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(Icons.auto_awesome, size: 20),
-                      tooltip: LocServ.inst.t('auto_generate'),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: _qcriEditable ? _autoGenerateQcri : null,
-                    ),
-                    const SizedBox(width: 4),
-                    Listener(
-                      onPointerDown: enableQrManualInput
-                          ? (_) => _startQrScanLongPress()
-                          : null,
-                      onPointerUp: enableQrManualInput
-                          ? (_) => _cancelQrScanLongPress()
-                          : null,
-                      onPointerCancel: enableQrManualInput
-                          ? (_) => _cancelQrScanLongPress()
-                          : null,
-                      child: IconButton(
-                        icon: const Icon(Icons.qr_code_scanner),
-                        tooltip: LocServ.inst.t('scan'),
-                        padding: const EdgeInsets.all(4),
-                        constraints:
-                            const BoxConstraints(minWidth: 36, minHeight: 36),
-                        style: IconButton.styleFrom(
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        onPressed: _openQrCodeScanner,
-                      ),
-                    ),
-                  ],
+                CavePlaceQcriSection(
+                  form: _form,
+                  editable: _qcriEditable,
+                  onEditableToggled: () => setState(() => _qcriEditable = !_qcriEditable),
+                  onAutoGenerate: _autoGenerateQcri,
+                  onOpenScanner: _openQrCodeScanner,
+                  onScanLongPressStart: _startQrScanLongPress,
+                  onScanLongPressEnd: _cancelQrScanLongPress,
+                  cavePlace: _cavePlace,
+                  currentCavePlaceId: _currentCavePlaceId,
                 ),
                 const SizedBox(height: 8),
                 CavePlaceCoordinatesSection(
