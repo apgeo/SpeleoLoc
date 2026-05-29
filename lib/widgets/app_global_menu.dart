@@ -9,7 +9,7 @@ import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -229,7 +229,7 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
   bool _handleGlobalMenuSelection(String value) {
     switch (value) {
       case '_nav_caves':
-        Navigator.pushNamedAndRemoveUntil(context, homeRoute, (route) => false);
+        AppRoutes.pushHomeReplaceAll(context);
         return true;
       case '_nav_scan':
         _navigateToScanner();
@@ -366,8 +366,7 @@ class _AppMenuDrawer extends StatelessWidget {
                 children: [
                   _navIconWithLabel(context, Icons.home, LocServ.inst.t('caves'), () {
                     Navigator.pop(context);
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, homeRoute, (route) => false);
+                    AppRoutes.pushHomeReplaceAll(context);
                   }),
                   _navIconWithLabel(context, Icons.sync, LocServ.inst.t('sync_dashboard_title'), () {
                     Navigator.pop(context);
@@ -612,7 +611,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
         borderRadius: BorderRadius.circular(12),
         onTap: () {
           widget.onClose();
-          Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
+          AppRoutes.pushCaveTrip(context, trip.uuid);
         },
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -665,7 +664,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                   tooltip: LocServ.inst.t('trip_view'),
                   onPressed: () {
                     widget.onClose();
-                    Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
+                    AppRoutes.pushCaveTrip(context, trip.uuid);
                   },
                 ),
                 IconButton(

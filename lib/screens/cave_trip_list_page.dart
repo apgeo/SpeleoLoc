@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
-import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -162,7 +162,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
         label: LocServ.inst.t('trip_view'),
         color: Colors.blue,
         onTap: () async {
-          await Navigator.pushNamed(context, caveTripRoute, arguments: activeTripId);
+          await AppRoutes.pushCaveTrip(context, activeTripId);
           _load();
         },
       ));
@@ -218,7 +218,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
                 : '${LocServ.inst.t('trip_active')} · $pts ${LocServ.inst.t('trip_points')}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
-              await Navigator.pushNamed(context, caveTripRoute, arguments: tripId);
+              await AppRoutes.pushCaveTrip(context, tripId);
               _load();
             },
           ),
@@ -271,7 +271,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
                         subtitle: Text(dateFormat.format(dt)),
                         trailing: Text('$count pts', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                         onTap: () async {
-                          await Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
+                          await AppRoutes.pushCaveTrip(context, trip.uuid);
                           _load();
                         },
                       );

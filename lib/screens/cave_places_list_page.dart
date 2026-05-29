@@ -5,6 +5,7 @@ import 'package:speleoloc/screens/cave_places/past_trips_button.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
@@ -255,7 +256,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     if (confirmed == true && mounted) {
       await caveTripService.startTrip(widget.caveUuid, controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle);
       if (mounted) {
-        await Navigator.pushNamed(context, caveTripListRoute, arguments: widget.caveUuid);
+        await AppRoutes.pushCaveTripList(context, widget.caveUuid);
         setState(() {});
       }
     }
@@ -288,7 +289,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   void _viewActiveTrip() {
     final id = caveTripService.activeTripIdNotifier.value;
     if (id == null) return;
-    Navigator.pushNamed(context, caveTripRoute, arguments: id);
+    AppRoutes.pushCaveTrip(context, id);
   }
 
   Future<void> _deleteSelectedPlaces(List<CavePlace> selected) async {
@@ -748,10 +749,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
               const SizedBox(width: TOOLBAR_BUTTON_SPACING),
               IconActionButton(
                 onPressed: () async {
-                  final result = await Navigator.pushNamed(
+                  final result = await AppRoutes.pushRasterMaps<bool>(
                     context,
-                    rasterMapsRoute,
-                    arguments: widget.caveUuid,
+                    widget.caveUuid,
                   );
                   if (result == true) _loadCavePlaces();
                 },
@@ -863,8 +863,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           PastTripsButton(
             pastTripsCount: _pastTripsCount,
             onPressed: () async {
-              await Navigator.pushNamed(context, caveTripListRoute,
-                  arguments: widget.caveUuid);
+              await AppRoutes.pushCaveTripList(context, widget.caveUuid);
               _loadTripCount();
             },
           ),
@@ -1019,13 +1018,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       },
       onBulkDelete: _deleteSelectedPlaces,
       onItemTap: (cp) async {
-        final result = await Navigator.pushNamed(
+        final result = await AppRoutes.pushCavePlace<bool>(
           context,
-          cavePlaceRoute,
-          arguments: {
-            'caveUuid': widget.caveUuid,
-            'cavePlaceUuid': cp.uuid,
-          },
+          caveUuid: widget.caveUuid,
+          cavePlaceUuid: cp.uuid,
         );
         if (result == true) _loadCavePlaces();
       },

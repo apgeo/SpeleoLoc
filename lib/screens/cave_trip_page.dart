@@ -11,7 +11,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -332,7 +332,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
         ),
       );
       if (goToManage == true && mounted) {
-        await Navigator.pushNamed(context, tripReportTemplatesRoute);
+        await AppRoutes.pushTripReportTemplates(context);
       }
       return null;
     }
@@ -368,7 +368,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
               TextButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx, null);
-                  Navigator.pushNamed(context, tripReportTemplatesRoute);
+                  AppRoutes.pushTripReportTemplates(context);
                 },
                 icon: const Icon(Icons.settings),
                 label: Text(LocServ.inst.t('manage_templates')),
@@ -518,7 +518,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       icon: Icons.article_outlined,
       label: LocServ.inst.t('trip_log'),
       color: Colors.grey[700]!,
-      onTap: () => Navigator.pushNamed(context, caveTripLogRoute, arguments: widget.tripUuid),
+      onTap: () => AppRoutes.pushCaveTripLog(context, widget.tripUuid),
     ));
 
     buttons.add(_TripToolbarButton(
@@ -736,8 +736,8 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
                   : null,
               onTap: place == null
                   ? null
-                  : () => Navigator.pushNamed(context, cavePlaceRoute,
-                      arguments: {'caveUuid': place.caveUuid, 'cavePlaceUuid': place.uuid}),
+                  : () => AppRoutes.pushCavePlace(context,
+                      caveUuid: place.caveUuid, cavePlaceUuid: place.uuid),
             );
           }),
       ],

@@ -9,6 +9,7 @@ import 'package:speleoloc/screens/trip_report_templates_page.dart';
 import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -80,12 +81,21 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
           return CavePlacesListPage(caveUuid: args ?? Uuid.zero);
         },
         cavePlaceRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map<String, Uuid?>?;
-          return CavePlacePage(caveUuid: args?['caveUuid'] ?? Uuid.zero, cavePlaceUuid: args?['cavePlaceUuid']);
+          final args = ModalRoute.of(context)?.settings.arguments
+              as CavePlaceRouteArgs?;
+          return CavePlacePage(
+            caveUuid: args?.caveUuid ?? Uuid.zero,
+            cavePlaceUuid: args?.cavePlaceUuid,
+          );
         },
         cavePlaceViewRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map<String, Uuid?>?;
-          return MapViewerPage(cavePlaceUuid: args?['cavePlaceUuid'] ?? Uuid.zero, caveUuid: args?['caveUuid'], initialRasterMapUuid: args?['initialRasterMapUuid']);
+          final args = ModalRoute.of(context)?.settings.arguments
+              as CavePlaceViewRouteArgs?;
+          return MapViewerPage(
+            cavePlaceUuid: args?.cavePlaceUuid ?? Uuid.zero,
+            caveUuid: args?.caveUuid,
+            initialRasterMapUuid: args?.initialRasterMapUuid,
+          );
         },
         rasterMapsRoute: (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Uuid?;

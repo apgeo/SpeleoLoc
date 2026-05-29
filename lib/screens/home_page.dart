@@ -15,6 +15,7 @@ import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -627,7 +628,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
-    final result = await Navigator.pushNamed(context, caveRoute, arguments: cave.uuid);
+    final result = await AppRoutes.pushCave<bool>(context, cave.uuid);
     // Always refresh cave list summary after returning: cave places/areas/maps/definitions may have changed.
     _loadCaves();
     return result;
