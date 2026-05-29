@@ -1,18 +1,20 @@
-import 'package:speleoloc/data/source/database/app_database.dart';
+﻿import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 class CavePlaceRepository implements ICavePlaceRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('CavePlaceRepository');
 
-  CavePlaceRepository(this._database, this._currentUser, this._logger);
+  CavePlaceRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<List<CavePlace>> getCavePlaces(Uuid caveUuid) async {
@@ -39,7 +41,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
     bool isMainEntrance = false,
   }) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final newUuid = Uuid.v7();
       await _database.into(_database.cavePlaces).insert(
@@ -65,7 +67,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
   @override
   Future<Uuid> addCavePlaceFromCompanion(CavePlacesCompanion companion) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final newUuid =
           companion.uuid.present ? companion.uuid.value : Uuid.v7();
@@ -102,7 +104,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
         if (old == null) {
           throw DbException('Cave place $id not found');
         }
-        final now = DateTime.now().millisecondsSinceEpoch;
+        final now = _clock.nowMs();
         final author = await _currentUser.currentOrSystem();
         final stamped = patch.copyWith(
           updatedAt: Value(now),

@@ -1,6 +1,7 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Configuration for CSV cave import.
 class CSVCavesImportConfig {
@@ -62,8 +63,9 @@ class CSVCaveImportResult {
 class CSVCaveImporter {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
+  final Clock _clock;
 
-  CSVCaveImporter(this._database, this._currentUser);
+  CSVCaveImporter(this._database, this._currentUser, {Clock clock = const SystemClock()}) : _clock = clock;
 
   /// Parse CSV rows according to the given config, skipping the header row.
   List<CSVCaveImportRow> parseRows(List<List<dynamic>> csvData, CSVCavesImportConfig config) {
@@ -169,7 +171,7 @@ class CSVCaveImporter {
       for (final row in rows) {
         if (row.caveName == null || row.caveName!.isEmpty) continue;
 
-        final now = DateTime.now().millisecondsSinceEpoch;
+        final now = _clock.nowMs();
         final author = await _currentUser.currentOrSystem();
 
         // Resolve surface area

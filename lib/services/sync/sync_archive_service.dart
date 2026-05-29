@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -12,6 +12,7 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Current on-disk sync archive format version. Bump when the layout
 /// changes in a non-backwards-compatible way.
@@ -185,12 +186,15 @@ class SyncArchiveService {
     this._db,
     this._logger, {
     Future<Directory> Function()? assetsBaseDirResolver,
-  }) : _assetsBaseDirResolver =
-            assetsBaseDirResolver ?? getApplicationDocumentsDirectory;
+    Clock clock = const SystemClock(),
+  })  : _assetsBaseDirResolver =
+            assetsBaseDirResolver ?? getApplicationDocumentsDirectory,
+        _clock = clock;
 
   final AppDatabase _db;
   final ChangeLogger _logger;
   final Future<Directory> Function() _assetsBaseDirResolver;
+  final Clock _clock;
   final _log = AppLogger.of('SyncArchiveService');
 
   static const _serializer = SyncValueSerializer();
@@ -485,7 +489,7 @@ class SyncArchiveService {
       }
     }
 
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final nowMs = _clock.nowMs();
     final pkgInfo = await _safeReadPackageInfo();
     final manifest = <String, dynamic>{
       'format': 'speleo_loc_sync',

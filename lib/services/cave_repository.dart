@@ -1,18 +1,20 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 class CaveRepository implements ICaveRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('CaveRepository');
 
-  CaveRepository(this._database, this._currentUser, this._logger);
+  CaveRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<List<Cave>> getCaves() async {
@@ -33,7 +35,7 @@ class CaveRepository implements ICaveRepository {
   Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description, String? caveLocalIndex}) async {
     try {
       final newUuid = Uuid.v7();
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final companion = CavesCompanion.insert(
         uuid: newUuid,
@@ -58,7 +60,7 @@ class CaveRepository implements ICaveRepository {
   @override
   Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description, String? caveLocalIndex}) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final old = await (_database.select(_database.caves)
             ..where((c) => c.uuid.equalsValue(id))
@@ -291,7 +293,7 @@ class CaveRepository implements ICaveRepository {
   Future<Uuid> addCaveArea(Uuid caveUuid, String title) async {
     try {
       final newUuid = Uuid.v7();
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       await _database.into(_database.caveAreas).insert(
             CaveAreasCompanion.insert(
@@ -319,7 +321,7 @@ class CaveRepository implements ICaveRepository {
     String? oldTitle,
   }) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       await (_database.update(_database.caveAreas)
             ..where((a) => a.uuid.equalsValue(uuid)))
@@ -374,7 +376,7 @@ class CaveRepository implements ICaveRepository {
   }) async {
     try {
       final newUuid = Uuid.v7();
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       await _database.into(_database.surfaceAreas).insert(
             SurfaceAreasCompanion.insert(
@@ -405,7 +407,7 @@ class CaveRepository implements ICaveRepository {
     String? generalAreaIdentifier,
   }) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       await (_database.update(_database.surfaceAreas)
             ..where((a) => a.uuid.equalsValue(existing.uuid)))

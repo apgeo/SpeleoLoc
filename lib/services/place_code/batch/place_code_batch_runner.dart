@@ -1,9 +1,10 @@
-import 'package:drift/drift.dart' show Value;
+﻿import 'package:drift/drift.dart' show Value;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_overwrite_policy.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 /// Scope of a single batch run. See §5.4 of
@@ -151,8 +152,9 @@ class PlaceCodeBatchRunner {
   final AppDatabase _db;
   final PlaceCodeService _service;
   final ICavePlaceRepository _repository;
+  final Clock _clock;
 
-  PlaceCodeBatchRunner(this._db, this._service, this._repository);
+  PlaceCodeBatchRunner(this._db, this._service, this._repository, {Clock clock = const SystemClock()}) : _clock = clock;
 
   Future<PlaceCodeBatchSummary> run({
     required PlaceCodeBatchScope scope,
@@ -327,7 +329,7 @@ class PlaceCodeBatchRunner {
 
       // Single update carrying both fields when needed.
       var patch = CavePlacesCompanion(
-        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        updatedAt: Value(_clock.nowMs()),
       );
       if (writePci) {
         patch = patch.copyWith(placeCodeIdentifier: Value(resolvedPci));

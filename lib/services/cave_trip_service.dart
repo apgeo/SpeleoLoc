@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
@@ -6,12 +6,14 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
-  CaveTripService(this._db);
+  CaveTripService(this._db, {Clock clock = const SystemClock()}) : _clock = clock;
 
   final AppDatabase _db;
+  final Clock _clock;
 
   final ValueNotifier<Uuid?> activeTripIdNotifier = ValueNotifier<Uuid?>(null);
   final ValueNotifier<bool> isPausedNotifier = ValueNotifier<bool>(false);
@@ -45,7 +47,7 @@ class CaveTripService {
     final tripUuid = await _db.insertCaveTrip(
       caveUuid: caveUuid,
       title: title,
-      startedAt: DateTime.now().millisecondsSinceEpoch,
+      startedAt: _clock.nowMs(),
       authorUuid: author,
       deviceUuid: currentUserService.deviceUuid.value,
     );

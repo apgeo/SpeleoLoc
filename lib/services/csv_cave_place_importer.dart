@@ -1,8 +1,9 @@
-import 'package:csv/csv.dart';
+﻿import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Configuration for CSV cave place import.
 class CSVCavePlacesImportConfig {
@@ -85,12 +86,14 @@ class CSVCavePlaceImporter {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final PlaceCodeService _placeCodeService;
+  final Clock _clock;
 
   CSVCavePlaceImporter(
     this._database,
     this._currentUser,
-    this._placeCodeService,
-  );
+    this._placeCodeService, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock;
 
   /// Parse a CSV string into a list of lists (rows x columns).
   /// Expects the first row to be headers.
@@ -313,7 +316,7 @@ class CSVCavePlaceImporter {
     for (final row in rows) {
       if (row.cavePlaceName == null || row.cavePlaceName!.isEmpty) continue;
 
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
 
       Uuid? targetCaveUuid = config.caveUuid;

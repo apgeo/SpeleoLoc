@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -13,6 +13,7 @@ import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/archive/archive_models.dart';
 import 'package:speleoloc/services/archive/archive_table_configs.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
 // via data_archive_service.dart keep working after the Phase 2.4 split.
 export 'package:speleoloc/services/archive/archive_models.dart';
@@ -27,9 +28,10 @@ export 'package:speleoloc/services/archive/archive_models.dart';
 /// conflict-resolution decisions via UI callbacks.
 class DataArchiveService {
   final DataExportImportRepository _repo;
+  final Clock _clock;
   final _log = AppLogger.of('DataArchiveService');
 
-  DataArchiveService(this._repo);
+  DataArchiveService(this._repo, {Clock clock = const SystemClock()}) : _clock = clock;
 
   // ---------------------------------------------------------------------------
   //  EXPORT
@@ -104,7 +106,7 @@ class DataArchiveService {
     // 5. Manifest.
     final manifest = {
       'version': 1,
-      'exportedAt': DateTime.now().millisecondsSinceEpoch,
+      'exportedAt': _clock.nowMs(),
       'isDiff': settings.diffOnly,
       'includesDocumentationFiles': settings.includeDocumentationFiles,
       'includesRasterMaps': settings.includeRasterMaps,
@@ -119,7 +121,7 @@ class DataArchiveService {
     onProgress?.call('Creating archive...');
     final zipData = ZipEncoder().encode(archive);
 
-    final now = DateTime.now();
+    final now = _clock.now();
     final ts = '${now.year}-${_pad(now.month)}-${_pad(now.day)}'
         '_${_pad(now.hour)}-${_pad(now.minute)}-${_pad(now.second)}';
     final suffix = settings.diffOnly ? '_diff' : '';
@@ -131,7 +133,7 @@ class DataArchiveService {
     // 6. Record export timestamp (full exports only).
     if (!settings.diffOnly) {
       await _repo
-          .setLastExportTimestamp(DateTime.now().millisecondsSinceEpoch);
+          .setLastExportTimestamp(_clock.nowMs());
     }
 
     return outputPath;
@@ -534,7 +536,7 @@ class DataArchiveService {
 
   /// Writes (upserts) a value into `configurations` using the open DB.
   Future<void> _writeConfigValue(String key, String value) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = _clock.nowMs();
     await appDatabase.customStatement(
       'INSERT INTO configurations (title, value, created_at, updated_at) '
       'VALUES (?, ?, ?, ?) '

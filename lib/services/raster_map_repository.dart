@@ -1,18 +1,20 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 class RasterMapRepository implements IRasterMapRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('RasterMapRepository');
 
-  RasterMapRepository(this._database, this._currentUser, this._logger);
+  RasterMapRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<List<RasterMap>> getRasterMaps(Uuid caveUuid) async {
@@ -40,7 +42,7 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> addRasterMap(RasterMapsCompanion companion) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final stamped = companion.copyWith(
         createdAt: Value(now),
@@ -61,7 +63,7 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> updateRasterMap(RasterMap rasterMap) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final old = await (_database.select(_database.rasterMaps)
             ..where((rm) => rm.uuid.equalsValue(rasterMap.uuid))
@@ -137,7 +139,7 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> updateRasterMapOrder(List<Uuid> orderedIds) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       await _database.transaction(() async {
         for (var i = 0; i < orderedIds.length; i++) {
           await (_database.update(_database.rasterMaps)

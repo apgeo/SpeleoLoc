@@ -48,6 +48,7 @@ final caveRepositoryProvider = Provider<ICaveRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -82,6 +83,7 @@ final syncArchiveServiceProvider = Provider<SyncArchiveService>(
   (ref) => SyncArchiveService(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -111,6 +113,7 @@ final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -126,6 +129,7 @@ final placeCodeBatchRunnerProvider = Provider<PlaceCodeBatchRunner>(
     ref.watch(appDatabaseProvider),
     ref.watch(placeCodeServiceProvider),
     ref.watch(cavePlaceRepositoryProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -134,6 +138,7 @@ final rasterMapRepositoryProvider = Provider<IRasterMapRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -142,11 +147,12 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
 final caveTripServiceProvider = Provider<CaveTripService>(
-  (ref) => CaveTripService(ref.watch(appDatabaseProvider)),
+  (ref) => CaveTripService(ref.watch(appDatabaseProvider), clock: ref.watch(clockProvider)),
 );
 
 /// Read/mutation surface for `cave_trips`, `cave_trip_points`, and

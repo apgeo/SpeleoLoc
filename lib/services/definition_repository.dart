@@ -1,10 +1,11 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Repository for [CavePlaceToRasterMapDefinition] — querying and persisting
 /// the image-space coordinates that link a cave place to a raster map.
@@ -12,9 +13,10 @@ class DefinitionRepository implements IDefinitionRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('DefinitionRepository');
 
-  DefinitionRepository(this._database, this._currentUser, this._logger);
+  DefinitionRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<CavePlaceToRasterMapDefinition?> findDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
@@ -53,7 +55,7 @@ class DefinitionRepository implements IDefinitionRepository {
   ) async {
     try {
       return await _database.transaction(() async {
-        final now = DateTime.now().millisecondsSinceEpoch;
+        final now = _clock.nowMs();
         final author = await _currentUser.currentOrSystem();
         final existing = await findDefinition(cavePlaceUuid, rasterMapUuid);
         if (existing != null) {
