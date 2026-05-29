@@ -19,6 +19,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Central place that wires all app-wide dependencies via Riverpod.
 ///
@@ -31,6 +32,10 @@ import 'package:speleoloc/state/app_notifiers.dart';
 /// During the migration away from the legacy global `appDatabase`, this
 /// provider returns the same instance. Tests override with an in-memory DB.
 final appDatabaseProvider = Provider<AppDatabase>((ref) => appDatabase);
+
+/// Wall-clock source. Override in tests with a [FakeClock] to make
+/// timestamp-sensitive logic deterministic.
+final clockProvider = Provider<Clock>((ref) => const SystemClock());
 
 /// Key/value access to the `configurations` table. See
 /// [IConfigurationRepository] for the contract.
@@ -69,6 +74,7 @@ final changeLoggerProvider = Provider<ChangeLogger>(
   (ref) => ChangeLogger(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 

@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Change types stored in `change_log.change_type`.
 class ChangeType {
@@ -38,10 +39,12 @@ const int kOldValueMaxBytes = 20;
 /// restoring an archive doesn't produce a change-log entry per row
 /// (the archive already carries the original log).
 class ChangeLogger {
-  ChangeLogger(this._db, this._currentUser);
+  ChangeLogger(this._db, this._currentUser, {Clock clock = const SystemClock()})
+      : _clock = clock;
 
   final AppDatabase _db;
   final CurrentUserService _currentUser;
+  final Clock _clock;
   final _log = AppLogger.of('ChangeLogger');
 
   int _suspendDepth = 0;
@@ -125,7 +128,7 @@ class ChangeLogger {
               entityTable: entityTable,
               entityUuid: entityUuid,
               changeType: changeType,
-              changedAt: DateTime.now().millisecondsSinceEpoch,
+              changedAt: _clock.nowMs(),
               changedByUserUuid: Value(_currentUser.currentUserUuid.value),
               deviceUuid: Value(_currentUser.deviceUuid.value),
             ),
