@@ -157,38 +157,39 @@ class CaveTripService {
 
   /// Appends the rendered text for the most recently added event to
   /// `cave_trips.log`, preserving any free-form text the user has typed.
-  /// Computed as the suffix difference between rendering all events and
-  /// rendering all-but-the-last event with the active method.
+  ///
+  /// PR 11c: uses `TripLogRenderer.renderTailDelta` to render only the
+  /// last event's line (O(1) for raw/classic, O(N) bounded counting for
+  /// journal). Previous implementation rendered all N events twice
+  /// (before + after) per call, giving O(N²) over the trip's lifetime.
+  /// Narrative method still requires a full regen because its paragraph
+  /// grouping can't be performed from the tail alone.
   Future<void> _appendForNewEvent(Uuid tripUuid) async {
     try {
       final method = await currentUserService.getTripLogMethod();
-      final eventsAfter =
-          await TripLogRenderer.instance.loadEvents(tripUuid);
-      if (eventsAfter.isEmpty) return;
-      final eventsBefore =
-          eventsAfter.sublist(0, eventsAfter.length - 1);
-      final before =
-          TripLogRenderer.instance.render(eventsBefore, method);
-      final after = TripLogRenderer.instance.render(eventsAfter, method);
-      if (!after.startsWith(before)) {
-        // Renderings diverge in shape (e.g. method-dependent grouping at
-        // the boundary). Fall back to full regeneration.
-        await _db.updateTripLog(tripUuid, after);
+      final events = await TripLogRenderer.instance.loadEvents(tripUuid);
+      if (events.isEmpty) return;
+
+      final delta = TripLogRenderer.instance.renderTailDelta(events, method);
+      if (delta == null) {
+        // Method (narrative) does not support incremental rendering.
+        final full = TripLogRenderer.instance.render(events, method);
+        await _db.updateTripLog(tripUuid, full);
         return;
       }
-      final delta = after.substring(before.length);
-      if (delta.isEmpty) return;
+
       final trip = await (_db.select(_db.caveTrips)
             ..where((t) => t.uuid.equalsValue(tripUuid)))
           .getSingleOrNull();
       final current = trip?.log ?? '';
-      // If the existing log already ends with this exact delta (e.g. the
-      // user appended nothing since the previous event), avoid double-
-      // appending. Otherwise append.
       if (current.isEmpty) {
-        await _db.updateTripLog(tripUuid, after);
+        // First event — write the delta as-is (no leading separator).
+        await _db.updateTripLog(tripUuid, delta);
+      } else if (current.endsWith(delta)) {
+        // Already appended (e.g. retry / duplicate call) — no-op.
+        return;
       } else {
-        await _db.updateTripLog(tripUuid, current + delta);
+        await _db.updateTripLog(tripUuid, '$current\n$delta');
       }
     } catch (e, st) {
       log.warning('appendForNewEvent failed (trip=$tripUuid)', e, st);

@@ -171,68 +171,87 @@ class TripLogRenderer {
     }
   }
 
+  /// Returns the rendered text for the **last** event in [events] in
+  /// O(1) string work (raw/classic) or O(N) bounded counting work
+  /// (journal), so appending the N-th event costs O(N) instead of
+  /// O(N²) (full re-render of N-1 events twice).
+  ///
+  /// Returns null when incremental rendering is unsupported for
+  /// [method] — currently only narrative, whose paragraph grouping
+  /// can't be done from the tail alone. Caller should fall back to
+  /// full `render`.
+  ///
+  /// For a single-event list returns the same text as
+  /// `render(events, method)` (no leading separator).
+  String? renderTailDelta(List<TripLogEvent> events, TripLogMethod method) {
+    if (events.isEmpty) return '';
+    switch (method) {
+      case TripLogMethod.raw:
+        return _renderRawLine(events.last);
+      case TripLogMethod.classic:
+        return _renderClassicLine(events.last);
+      case TripLogMethod.journal:
+        final tripStart = events.first.at;
+        int pointCount = 0;
+        for (int i = 0; i < events.length - 1; i++) {
+          final e = events[i];
+          if (e.kind == TripLogEventKind.restart) {
+            pointCount = 0;
+          } else if (e.kind == TripLogEventKind.point) {
+            pointCount++;
+          }
+        }
+        return _renderJournalLine(events.last, tripStart, pointCount);
+      case TripLogMethod.narrative:
+        return null;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // raw — verbatim terse lines, identical to the legacy format.
   // ---------------------------------------------------------------------------
-  String _renderRaw(List<TripLogEvent> events) {
-    final lines = <String>[];
-    for (final e in events) {
-      final ts = '[${_absFmt.format(e.at)}]';
-      switch (e.kind) {
-        case TripLogEventKind.start:
-          lines.add(
-              '$ts ${LocServ.inst.t('trip_log_started', {'title': e.title ?? ''})}');
-          break;
-        case TripLogEventKind.restart:
-          lines.add('$ts ${LocServ.inst.t('trip_log_restarted')}');
-          break;
-        case TripLogEventKind.end:
-          lines.add('$ts ${LocServ.inst.t('trip_log_ended')}');
-          break;
-        case TripLogEventKind.point:
-          lines.add(
-              '$ts ${LocServ.inst.t('trip_log_qr_scanned', {'label': '"${e.label}"'})}');
-          break;
-        case TripLogEventKind.documentAdded:
-          lines.add(
-              '$ts ${LocServ.inst.t('trip_log_document_added', {'label': '"${e.label}"'})}');
-          break;
-      }
+  String _renderRaw(List<TripLogEvent> events) =>
+      events.map(_renderRawLine).join('\n');
+
+  String _renderRawLine(TripLogEvent e) {
+    final ts = '[${_absFmt.format(e.at)}]';
+    switch (e.kind) {
+      case TripLogEventKind.start:
+        return '$ts ${LocServ.inst.t('trip_log_started', {'title': e.title ?? ''})}';
+      case TripLogEventKind.restart:
+        return '$ts ${LocServ.inst.t('trip_log_restarted')}';
+      case TripLogEventKind.end:
+        return '$ts ${LocServ.inst.t('trip_log_ended')}';
+      case TripLogEventKind.point:
+        return '$ts ${LocServ.inst.t('trip_log_qr_scanned', {'label': '"${e.label}"'})}';
+      case TripLogEventKind.documentAdded:
+        return '$ts ${LocServ.inst.t('trip_log_document_added', {'label': '"${e.label}"'})}';
     }
-    return lines.join('\n');
   }
 
   // ---------------------------------------------------------------------------
   // classic — full sentences, same line format.
   // ---------------------------------------------------------------------------
-  String _renderClassic(List<TripLogEvent> events) {
-    final lines = <String>[];
-    for (final e in events) {
-      final ts = '[${_absFmt.format(e.at)}]';
-      switch (e.kind) {
-        case TripLogEventKind.start:
-          lines.add(
-              '$ts ${LocServ.inst.t('trip_log_classic_started', {'title': e.title ?? ''})}');
-          break;
-        case TripLogEventKind.restart:
-          lines.add('$ts ${LocServ.inst.t('trip_log_classic_restarted')}');
-          break;
-        case TripLogEventKind.end:
-          lines.add('$ts ${LocServ.inst.t('trip_log_classic_ended')}');
-          break;
-        case TripLogEventKind.point:
-          var line = LocServ.inst
-              .t('trip_log_classic_arrived', {'label': e.label ?? ''});
-          if (e.notes != null) line = '$line (${e.notes})';
-          lines.add('$ts $line');
-          break;
-        case TripLogEventKind.documentAdded:
-          lines.add(
-              '$ts ${LocServ.inst.t('trip_log_classic_documented', {'label': e.label ?? ''})}');
-          break;
-      }
+  String _renderClassic(List<TripLogEvent> events) =>
+      events.map(_renderClassicLine).join('\n');
+
+  String _renderClassicLine(TripLogEvent e) {
+    final ts = '[${_absFmt.format(e.at)}]';
+    switch (e.kind) {
+      case TripLogEventKind.start:
+        return '$ts ${LocServ.inst.t('trip_log_classic_started', {'title': e.title ?? ''})}';
+      case TripLogEventKind.restart:
+        return '$ts ${LocServ.inst.t('trip_log_classic_restarted')}';
+      case TripLogEventKind.end:
+        return '$ts ${LocServ.inst.t('trip_log_classic_ended')}';
+      case TripLogEventKind.point:
+        var line = LocServ.inst
+            .t('trip_log_classic_arrived', {'label': e.label ?? ''});
+        if (e.notes != null) line = '$line (${e.notes})';
+        return '$ts $line';
+      case TripLogEventKind.documentAdded:
+        return '$ts ${LocServ.inst.t('trip_log_classic_documented', {'label': e.label ?? ''})}';
     }
-    return lines.join('\n');
   }
 
   // ---------------------------------------------------------------------------
@@ -243,44 +262,48 @@ class TripLogRenderer {
     int pointCount = 0;
     final lines = <String>[];
     for (final e in events) {
-      final clock = _shortTimeFmt.format(e.at);
-      final elapsed = _formatElapsed(e.at.difference(tripStart));
-      String prefix;
-      if (e.kind == TripLogEventKind.start) {
-        prefix = '[$clock]';
+      if (e.kind == TripLogEventKind.point) {
+        pointCount++;
+        lines.add(_renderJournalLine(e, tripStart, pointCount - 1));
+      } else if (e.kind == TripLogEventKind.restart) {
+        lines.add(_renderJournalLine(e, tripStart, pointCount));
+        pointCount = 0;
       } else {
-        prefix = '[$clock · +$elapsed]';
-      }
-      switch (e.kind) {
-        case TripLogEventKind.start:
-          lines.add(
-              '$prefix ${LocServ.inst.t('trip_log_journal_started', {'title': e.title ?? ''})}');
-          break;
-        case TripLogEventKind.restart:
-          pointCount = 0;
-          lines.add(
-              '$prefix ${LocServ.inst.t('trip_log_journal_restarted')}');
-          break;
-        case TripLogEventKind.end:
-          lines.add(
-              '$prefix ${LocServ.inst.t('trip_log_journal_ended')}');
-          break;
-        case TripLogEventKind.point:
-          pointCount++;
-          final key = pointCount == 1
-              ? 'trip_log_journal_first_stop'
-              : 'trip_log_journal_next_stop';
-          var line = LocServ.inst.t(key, {'label': e.label ?? ''});
-          if (e.notes != null) line = '$line (${e.notes})';
-          lines.add('$prefix $line');
-          break;
-        case TripLogEventKind.documentAdded:
-          lines.add(
-              '$prefix ${LocServ.inst.t('trip_log_journal_documented', {'label': e.label ?? ''})}');
-          break;
+        lines.add(_renderJournalLine(e, tripStart, pointCount));
       }
     }
     return lines.join('\n');
+  }
+
+  /// Renders a single journal-method line for [e]. [pointCountBefore]
+  /// is the number of point events since the last restart (or since
+  /// trip start) that occurred BEFORE [e]; the point line numbering is
+  /// `pointCountBefore + 1` for the first stop, etc.
+  String _renderJournalLine(
+      TripLogEvent e, DateTime tripStart, int pointCountBefore) {
+    final clock = _shortTimeFmt.format(e.at);
+    final elapsed = _formatElapsed(e.at.difference(tripStart));
+    final prefix = e.kind == TripLogEventKind.start
+        ? '[$clock]'
+        : '[$clock · +$elapsed]';
+    switch (e.kind) {
+      case TripLogEventKind.start:
+        return '$prefix ${LocServ.inst.t('trip_log_journal_started', {'title': e.title ?? ''})}';
+      case TripLogEventKind.restart:
+        return '$prefix ${LocServ.inst.t('trip_log_journal_restarted')}';
+      case TripLogEventKind.end:
+        return '$prefix ${LocServ.inst.t('trip_log_journal_ended')}';
+      case TripLogEventKind.point:
+        final ordinal = pointCountBefore + 1;
+        final key = ordinal == 1
+            ? 'trip_log_journal_first_stop'
+            : 'trip_log_journal_next_stop';
+        var line = LocServ.inst.t(key, {'label': e.label ?? ''});
+        if (e.notes != null) line = '$line (${e.notes})';
+        return '$prefix $line';
+      case TripLogEventKind.documentAdded:
+        return '$prefix ${LocServ.inst.t('trip_log_journal_documented', {'label': e.label ?? ''})}';
+    }
   }
 
   // ---------------------------------------------------------------------------
