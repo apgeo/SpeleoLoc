@@ -1,6 +1,6 @@
 # Documents
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 Documents (also called **documentation files**) are the multimedia
 attached to geofeatures. A **geofeature** in SpeleoLoc is any of:

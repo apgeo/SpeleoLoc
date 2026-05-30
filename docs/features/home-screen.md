@@ -1,6 +1,6 @@
 # Home screen
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 The home screen is SpeleoLoc's entry point: it lists all **caves** in
 the local database and exposes the most common global actions.

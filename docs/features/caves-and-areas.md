@@ -1,6 +1,6 @@
 # Caves and cave areas
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 ## Cave
 

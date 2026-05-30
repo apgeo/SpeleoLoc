@@ -1,6 +1,6 @@
 # FTP / SFTP sync
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 SpeleoLoc can push and pull sync archives via **FTP** or **SFTP** in
 addition to manual file exchange. This page covers how to configure

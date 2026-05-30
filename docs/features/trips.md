@@ -1,6 +1,6 @@
 # Trips
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 A **trip** records a single caving session inside one cave: its
 timestamps, an ordered list of **trip points** (visited cave places),

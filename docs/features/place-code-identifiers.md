@@ -1,6 +1,6 @@
 # Place codes (PCI) and QR payloads (QCRI)
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 Every [cave place](cave-places.md) in SpeleoLoc carries two user-facing
 identifiers used by the QR-code system:

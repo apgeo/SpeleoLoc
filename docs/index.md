@@ -59,7 +59,7 @@ reference. Start with the [Overview](overview.md) if you are new; jump into the
 ## Status
 
 SpeleoLoc is in **alpha**. Some features are partially implemented or subject
-to change. See the project [README](../README.md) for release state.
+to change.
 
 This wiki is a **work in progress**, with more or less up to date information and is subject to change as the application evolves, with both UI and features are being changed / added   — see [Contributing to this wiki](contributing-docs.md)
 for conventions.

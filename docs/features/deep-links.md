@@ -1,6 +1,6 @@
 # Deep links (`sp://`)
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 SpeleoLoc registers a custom URI scheme **`sp://`** on the device.
 Opening any URI of the form `sp://<qcri>` navigates directly to the

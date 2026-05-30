@@ -1,6 +1,6 @@
 # Overview
 
-[← Back to index](README.md)
+[← Back to index](index.md)
 
 ## The problem SpeleoLoc solves
 

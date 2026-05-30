@@ -1,6 +1,6 @@
 # Database export, import and backup
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 SpeleoLoc stores all structured data (caves, places, raster map
 metadata, trips, document records, …) in a single **SQLite database**

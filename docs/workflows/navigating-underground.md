@@ -1,6 +1,6 @@
 # Workflow: Navigating underground with QR codes
 
-[← Back to index](../README.md) · [Overview](../overview.md)
+[← Back to index](../index.md) · [Overview](../overview.md)
 
 This is the core in-cave workflow. Once a cave has been prepared (see
 [Documenting a new cave](documenting-a-new-cave.md)), teams underground

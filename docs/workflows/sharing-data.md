@@ -1,6 +1,6 @@
 # Workflow: Sharing data between teams
 
-[← Back to index](../README.md) · [Overview](../overview.md)
+[← Back to index](../index.md) · [Overview](../overview.md)
 
 SpeleoLoc has **no central server** in the traditional sense. Data is
 shared between devices in two complementary ways:

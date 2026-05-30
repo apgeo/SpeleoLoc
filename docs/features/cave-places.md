@@ -1,6 +1,6 @@
 # Cave places
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 A **cave place** is a named point of interest inside a specific cave.
 It is the central concept of SpeleoLoc: QR codes are attached to cave

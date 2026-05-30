@@ -1,6 +1,6 @@
 # Surface areas
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 A **surface area** is a named geographic region on the surface — a
 karst plateau, a massif, a region — used to group caves.

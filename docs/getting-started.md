@@ -1,6 +1,6 @@
 # Getting started
 
-[← Back to index](README.md)
+[← Back to index](index.md)
 
 ## Installation
 
@@ -82,4 +82,4 @@ If you want to explore features before committing real data:
 Full vocabulary in the [Glossary](glossary.md).
 
 Next: [Documenting a new cave](workflows/documenting-a-new-cave.md) or
-jump straight to the [Feature reference](README.md#feature-reference-screen-by-screen).
+jump straight to the [Feature reference](index.md#feature-reference-screen-by-screen).

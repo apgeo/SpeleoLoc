@@ -1,0 +1,100 @@
+site_name: SpeleoLoc
+site_description: Cave navigation and documentation app — user wiki
+site_url: https://example.com/speleoloc/
+repo_url: https://github.com/
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: ro
+          name: Română
+          build: true
+          site_name: SpeleoLoc
+          nav_translations:
+            Home: Acasă
+            Overview: Prezentare generală
+            Getting started: Primii pași
+            Glossary: Glosar
+            Workflows: Fluxuri de lucru
+            Features: Funcționalități
+            Contributing: Contribuții
+
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - Getting started: getting-started.md
+  - Glossary: glossary.md
+  - Workflows:
+      - Documenting a new cave: workflows/documenting-a-new-cave.md
+      - Navigating underground: workflows/navigating-underground.md
+      - Running a trip: workflows/running-a-trip.md
+      - Sharing data: workflows/sharing-data.md
+  - Features:
+      - Home screen: features/home-screen.md
+      - Caves and areas: features/caves-and-areas.md
+      - Cave places: features/cave-places.md
+      - Place codes & QR payloads: features/place-code-identifiers.md
+      - QR codes: features/qr-codes.md
+      - Raster maps: features/raster-maps.md
+      - Map viewer: features/map-viewer.md
+      - Documents: features/documents.md
+      - Trips: features/trips.md
+      - Trip reports: features/trip-reports.md
+      - Surface areas: features/surface-areas.md
+      - CSV import: features/csv-import.md
+      - Deep links: features/deep-links.md
+      - Users: features/users.md
+      - Sync & change log: features/sync-and-change-log.md
+      - FTP / SFTP sync: features/ftp-sync.md
+      - Settings: features/settings.md
+      - Database export / import: features/database-export-import.md
+  - Contributing: contributing-docs.md

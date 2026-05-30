@@ -1,6 +1,6 @@
 # QR codes — placing, scanning, printing
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 QR codes are the physical bridge between the real cave and the data in
 SpeleoLoc. There are two kinds:

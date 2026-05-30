@@ -1,6 +1,6 @@
 # Workflow: Running a caving trip
 
-[← Back to index](../README.md) · [Overview](../overview.md)
+[← Back to index](../index.md) · [Overview](../overview.md)
 
 A **trip** is SpeleoLoc's way of recording a single caving session
 inside one cave: when it started, what places were visited in what

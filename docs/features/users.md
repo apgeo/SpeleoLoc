@@ -1,6 +1,6 @@
 # Users
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 SpeleoLoc records **who** made each change to the database (audit
 columns + [change log](sync-and-change-log.md#change-log)). The list

@@ -1,6 +1,6 @@
 # Raster maps
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 A **raster map** is a bitmap image (JPG, PNG) representing a cave map.
 SpeleoLoc does not draw maps itself — you import scanned or rendered

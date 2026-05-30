@@ -1,6 +1,6 @@
 # Glossary
 
-[← Back to index](README.md)
+[← Back to index](index.md)
 
 Terms used throughout SpeleoLoc and this wiki.
 

@@ -1,6 +1,6 @@
 # Sync dashboard & change log
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 The **Sync dashboard** is the central place to exchange data between
 devices and to audit what changed locally. Open it from

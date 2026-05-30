@@ -1,6 +1,6 @@
 # Trip reports and templates
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 SpeleoLoc can generate a **trip report** from a trip's data — a
 printable/editable ODT or DOCX document that summarizes the trip,

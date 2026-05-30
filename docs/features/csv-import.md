@@ -1,6 +1,6 @@
 # CSV import
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 When you already have your data in spreadsheets, SpeleoLoc can bulk
 import it via CSV files. Two flavors:

@@ -1,6 +1,6 @@
 # Settings
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 Settings group global preferences and data-management actions into a
 small tree of pages. Open from **Home → ⋮ → Settings** (or the gear

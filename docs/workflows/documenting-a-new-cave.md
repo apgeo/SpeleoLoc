@@ -1,6 +1,6 @@
 # Workflow: Documenting a new cave
 
-[← Back to index](../README.md) · [Overview](../overview.md)
+[← Back to index](../index.md) · [Overview](../overview.md)
 
 This guide walks through the full end-to-end process of setting up a cave
 in SpeleoLoc from zero, so that team members can later navigate it and

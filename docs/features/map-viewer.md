@@ -1,6 +1,6 @@
 # Map viewer and point editor
 
-[← Back to index](../README.md)
+[← Back to index](../index.md)
 
 The map viewer displays a [raster map](raster-maps.md) with cave-place
 pins overlaid, and lets you pan, zoom, add and move points. It is used
