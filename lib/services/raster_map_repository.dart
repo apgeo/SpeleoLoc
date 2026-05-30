@@ -209,4 +209,19 @@ class RasterMapRepository implements IRasterMapRepository {
           cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<bool> hasAnyRasterMaps() async {
+    try {
+      final row = await _database
+          .customSelect(
+            'SELECT COUNT(*) AS cnt FROM raster_maps WHERE deleted_at IS NULL',
+          )
+          .getSingle();
+      return row.read<int>('cnt') > 0;
+    } catch (e, st) {
+      _log.severe('hasAnyRasterMaps failed', e, st);
+      throw DbException('hasAnyRasterMaps failed', cause: e, stackTrace: st);
+    }
+  }
 }

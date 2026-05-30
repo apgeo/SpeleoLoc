@@ -115,7 +115,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         break;
     }
   }
-  // Using global appDatabase instance
   List<Cave> _caves = [];
   Map<Uuid, int> _cavePlaceCounts = {};
   Map<Uuid, int> _caveRasterMapCounts = {};
@@ -356,18 +355,10 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   /// already in the local DB that would be wiped by a replace-import.
   Future<bool> _hasResidualUserData() async {
     try {
-      final mapsRow = await appDatabase
-          .customSelect('SELECT COUNT(*) AS cnt FROM raster_maps '
-              'WHERE deleted_at IS NULL')
-          .getSingle();
-      if (mapsRow.read<int>('cnt') > 0) return true;
-      final docsRow = await appDatabase
-          .customSelect('SELECT COUNT(*) AS cnt FROM documentation_files '
-              'WHERE deleted_at IS NULL')
-          .getSingle();
-      return docsRow.read<int>('cnt') > 0;
+      if (await rasterMapRepository.hasAnyRasterMaps()) return true;
+      return documentationRepository.hasAnyDocumentationFiles();
     } catch (e, st) {
-      log.warning('_caveHasMapsOrDocs query failed; treating as empty', e, st);
+      log.warning('_hasResidualUserData query failed; treating as empty', e, st);
       return false;
     }
   }

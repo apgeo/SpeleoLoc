@@ -168,6 +168,9 @@ abstract class IRasterMapRepository {
     required Uuid caveUuid,
     required String hash,
   });
+
+  /// Returns `true` when at least one raster map exists (not soft-deleted).
+  Future<bool> hasAnyRasterMaps();
 }
 
 /// Abstract contract for the cave-place ↔ raster-map definition repository.
@@ -290,5 +293,9 @@ abstract class IDocumentationRepository {
   Future<List<DocumentationFile>> getDocumentationFiles({
     DocumentationGeofeatureLink? parentLink,
   });
+
+  /// Returns `true` when at least one documentation file exists (not
+  /// soft-deleted).
+  Future<bool> hasAnyDocumentationFiles();
 }
 

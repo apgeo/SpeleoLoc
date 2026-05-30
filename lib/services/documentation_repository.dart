@@ -103,4 +103,18 @@ class DocumentationRepository implements IDocumentationRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<bool> hasAnyDocumentationFiles() async {
+    try {
+      return (_database.select(_database.documentationFiles)
+            ..where((t) => t.deletedAt.isNull())
+            ..limit(1))
+          .getSingleOrNull()
+          .then((row) => row != null);
+    } catch (e, st) {
+      _log.severe('hasAnyDocumentationFiles failed', e, st);
+      rethrow;
+    }
+  }
 }
