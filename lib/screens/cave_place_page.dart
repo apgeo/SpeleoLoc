@@ -4,26 +4,24 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_area_row.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_coordinates_section.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_entrance_handler.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_entrance_toggles.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_map_tab.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_pci_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_qcri_section.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_qr_controller.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_raster_maps_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_save_command.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_title_section.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/gps_recorder_page.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/services/service_locator.dart';
-import 'package:speleoloc/services/place_code/place_code_strategy.dart';
-import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -94,9 +92,8 @@ class _CavePlacePageState extends State<CavePlacePage>
   /// User can press the "show" button on the area row to reveal it.
   bool _pciRowHidden = false;
 
-  /// Long-press timer on the QR scan button → opens manual search dialog.
-  Timer? _qrScanLongPressTimer;
-  final TextEditingController _manualQrController = TextEditingController();
+  /// Handles all QR-scan and place-code-generation interactions.
+  late CavePlaceQrController _qrController;
 
   // Feature toggle: show interactive RasterMapPlacePointEditor in the
   // "Raster maps" tab of CavePlacePage. Disabled by default so the
@@ -108,6 +105,18 @@ class _CavePlacePageState extends State<CavePlacePage>
     super.initState();
     _currentCavePlaceId = widget.cavePlaceUuid;
     AppLogger.of('CavePlacePage').fine('initState caveUuid=${widget.caveUuid}');
+    _qrController = CavePlaceQrController(
+      state: this,
+      form: _form,
+      cavePlaceRepository: cavePlaceRepository,
+      placeCodeService: placeCodeService,
+      caveUuid: widget.caveUuid,
+      cavePlaceId: () => _currentCavePlaceId,
+      cavePlace: () => _cavePlace,
+      rebuild: setState,
+      setQrEditable: (v) => _qrEditable = v,
+      setQcriEditable: (v) => _qcriEditable = v,
+    );
     _loadData();
 
     _form.attachTextListeners(() {
@@ -121,8 +130,7 @@ class _CavePlacePageState extends State<CavePlacePage>
 
     _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
-    _qrScanLongPressTimer?.cancel();
-    _manualQrController.dispose();
+    _qrController.dispose();
     super.dispose();
   }
 
@@ -241,132 +249,35 @@ class _CavePlacePageState extends State<CavePlacePage>
     });
   }
 
-  Future<List<CavePlace>> _findOtherEntrancePlaces({required bool mainOnly}) {
-    return cavePlaceRepository.findEntrances(
-      widget.caveUuid,
-      mainOnly: mainOnly,
-      excludeUuid: _currentCavePlaceId,
-    );
-  }
-
   Future<void> _onEntranceToggleRequested(bool enabled) async {
     if (enabled == _form.isEntrance) return;
-
-    if (enabled) {
-      final confirmEnable = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('confirm')),
-          content: Text(LocServ.inst.t('confirm_mark_as_entrance')),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
-          ],
-        ),
-      );
-      if (confirmEnable != true) return;
-
-      final otherEntrances = await _findOtherEntrancePlaces(mainOnly: false);
-      if (otherEntrances.isNotEmpty && mounted) {
-        final names = otherEntrances.map((e) => e.title).join(', ');
-        final confirmContinue = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(LocServ.inst.t('other_entrances_defined_title')),
-            content: Text(
-              LocServ.inst.t('other_entrances_defined_body').replaceAll('{names}', names),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-              TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
-            ],
-          ),
-        );
-        if (confirmContinue != true) return;
-      }
-
-      setState(() {
-        _form.setEntrance(true);
-      });
-      return;
-    }
-
-    final confirmDisable = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('confirm_unmark_as_entrance')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
-        ],
-      ),
-    );
-    if (confirmDisable != true) return;
-
+    final apply = enabled
+        ? await CavePlaceEntranceHandler.confirmEnableEntrance(
+            context,
+            repository: cavePlaceRepository,
+            caveUuid: widget.caveUuid,
+            excludeUuid: _currentCavePlaceId,
+          )
+        : await CavePlaceEntranceHandler.confirmDisableEntrance(context);
+    if (!apply || !mounted) return;
     setState(() {
-      _form.setEntrance(false);
-      _form.setMainEntrance(false);
+      _form.setEntrance(enabled);
+      if (!enabled) _form.setMainEntrance(false);
     });
   }
 
   Future<void> _onMainEntranceToggleRequested(bool enabled) async {
     if (!_form.isEntrance || enabled == _form.isMainEntrance) return;
-
-    if (enabled) {
-      final confirmEnable = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(LocServ.inst.t('confirm')),
-          content: Text(LocServ.inst.t('confirm_mark_as_main_entrance')),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
-          ],
-        ),
-      );
-      if (confirmEnable != true) return;
-
-      final otherMainEntrances = await _findOtherEntrancePlaces(mainOnly: true);
-      if (otherMainEntrances.isNotEmpty && mounted) {
-        final names = otherMainEntrances.map((e) => e.title).join(', ');
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(LocServ.inst.t('main_entrance_already_defined_title')),
-            content: Text(
-              LocServ.inst.t('main_entrance_already_defined_body').replaceAll('{names}', names),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(LocServ.inst.t('ok'))),
-            ],
-          ),
-        );
-        return;
-      }
-
-      setState(() {
-        _form.setMainEntrance(true);
-      });
-      return;
-    }
-
-    final confirmDisable = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('confirm_unmark_as_main_entrance')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
-        ],
-      ),
-    );
-    if (confirmDisable != true) return;
-
-    setState(() {
-      _form.setMainEntrance(false);
-    });
+    final apply = enabled
+        ? await CavePlaceEntranceHandler.confirmEnableMainEntrance(
+            context,
+            repository: cavePlaceRepository,
+            caveUuid: widget.caveUuid,
+            excludeUuid: _currentCavePlaceId,
+          )
+        : await CavePlaceEntranceHandler.confirmDisableMainEntrance(context);
+    if (!apply || !mounted) return;
+    setState(() => _form.setMainEntrance(enabled));
   }
 
   int _computeDescriptionLines(String text) => computeDescriptionLines(text);
@@ -395,135 +306,6 @@ class _CavePlacePageState extends State<CavePlacePage>
     return confirmed == true;
   }
 
-  void _openQrCodeScanner() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => ScannerPage(onScan: _onQrScanned)),
-    );
-  }
-
-  void _startQrScanLongPress() {
-    _qrScanLongPressTimer?.cancel();
-    _qrScanLongPressTimer = Timer(const Duration(milliseconds: 2500), () {
-      if (mounted) _showManualQrInputDialog();
-    });
-  }
-
-  void _cancelQrScanLongPress() {
-    _qrScanLongPressTimer?.cancel();
-    _qrScanLongPressTimer = null;
-  }
-
-  Future<void> _showManualQrInputDialog() async {
-    _manualQrController.clear();
-    final confirmed = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(LocServ.inst.t('manual_qr_search')),
-        content: TextField(
-          controller: _manualQrController,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: LocServ.inst.t('qr_code_identifier'),
-          ),
-          onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(LocServ.inst.t('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(ctx, _manualQrController.text.trim()),
-            child: Text(LocServ.inst.t('search_place_by_qr_code_by_identifier')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != null && confirmed.isNotEmpty && mounted) {
-      // Route through the scan service to strip any deep-link prefix
-      // the user may have pasted.
-      final processed = qrScanService
-          .process(confirmed, config: await QrScanConfig.load())
-          .qcri;
-      if (processed.isNotEmpty) _onQrScanned(processed);
-    }
-  }
-
-  /// Auto-generate a PCI for this cave place using the configured strategy.
-  Future<void> _autoGeneratePlaceCode() async {
-    // Use the persisted UUID when available; for an unsaved cave place use a
-    // fresh temporary UUID so the strategy can still check uniqueness correctly
-    // (the temporary UUID will not match any existing row).
-    final effectiveUuid = _currentCavePlaceId ?? Uuid.v7();
-    try {
-      final result = await placeCodeService.generatePci(
-        caveUuid: widget.caveUuid,
-        cavePlaceUuid: effectiveUuid,
-        isMainEntrance: _form.isEntrance && _form.isMainEntrance,
-      );
-      if (!mounted) return;
-      final String? pci = switch (result) {
-        PlaceCodeGenerationOk r => r.pci,
-        PlaceCodeGenerationFallback r => r.pci,
-        PlaceCodeGenerationAborted r when
-            r.reason == PlaceCodeAbortReason.missingDatasetConfig => null,
-        _ => null,
-      };
-      if (pci == null) {
-        final isMissingConfig = result is PlaceCodeGenerationAborted &&
-            result.reason == PlaceCodeAbortReason.missingDatasetConfig;
-        SnackBarService.showWarning(
-          isMissingConfig
-              ? LocServ.inst.t('place_code_error_missing_dataset_config')
-              : LocServ.inst.t('place_code_error_generic'),
-        );
-        return;
-      }
-      setState(() {
-        _form.qr.text = pci;
-        _form.markPciTouched();
-      });
-    } catch (e, st) {
-      AppLogger.of('CavePlacePage').severe('PCI auto-generate failed', e, st);
-      if (!mounted) return;
-      SnackBarService.showError(e.toString());
-    }
-  }
-
-  /// Auto-generate the QCRI from the current PCI using the configured
-  /// QCRI mode (exact copy in mirror mode, hash in hash mode).
-  Future<void> _autoGenerateQcri() async {
-    final pci = _form.qr.text.trim();
-    if (pci.isEmpty) {
-      SnackBarService.showWarning(
-        LocServ.inst.t('place_code_identifier_required'),
-      );
-      return;
-    }
-    // Use the persisted UUID when available; for an unsaved cave place use a
-    // fresh temporary UUID so the uniqueness check covers all existing places
-    // (the temporary UUID will not exclude any row).
-    final effectiveUuid = _currentCavePlaceId ?? Uuid.v7();
-    try {
-      final qcri = await placeCodeService.computeQcri(
-        pci,
-        cavePlaceUuid: effectiveUuid,
-        isEntrance: _form.isEntrance,
-      );
-      if (!mounted) return;
-      setState(() {
-        _form.qcri.text = qcri;
-        _form.markQcriTouched();
-      });
-    } catch (e, st) {
-      AppLogger.of('CavePlacePage').severe('QCRI auto-generate failed', e, st);
-      if (!mounted) return;
-      SnackBarService.showError(e.toString());
-    }
-  }
-
   Future<void> _openGpsRecorder() async {
     final result = await Navigator.push<GpsRecorderResult>(
       context,
@@ -537,105 +319,6 @@ class _CavePlacePageState extends State<CavePlacePage>
         _form.alt.text = result.altitude!.toStringAsFixed(1);
       }
     });
-  }
-
-  void _onQrScanned(String code) async {
-    final qr = code.trim();
-    if (qr.isEmpty) {
-      if (!mounted) return;
-      SnackBarService.showWarning(LocServ.inst.t('invalid_qr_code'));
-      return;
-    }
-    final currentQcriValue = _form.qcri.text.trim();
-
-    // Check if same code is already in the QCRI field
-    if (currentQcriValue == qr) {
-      if (!mounted) return;
-      SnackBarService.showWarning(LocServ.inst.t('qr_code_already_present'));
-      return;
-    }
-
-    setState(() {
-      _form.markQcriTouched();
-    });
-
-    // Check if this code already exists as a QCRI for another cave place
-    final qcriDups = await cavePlaceRepository.findByQrCodeResourceIdentifier(
-      qr,
-      excludeUuid: _currentCavePlaceId,
-    );
-    final existing = qcriDups.isEmpty ? null : qcriDups.first;
-
-    if (existing != null) {
-      if (!mounted) return;
-      SnackBarService.showWarning(
-        'QR code ${LocServ.inst.t('already_used_for')}: "${existing.title}"',
-      );
-      return;
-    }
-
-    // If there's already a QCRI value and it's different, ask for confirmation
-    if (currentQcriValue.isNotEmpty && currentQcriValue != qr) {
-      if (!mounted) return;
-      final shouldReplace = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(LocServ.inst.t('replace_qr_code')),
-          content: Text(LocServ.inst.t('existing_qr_code_will_be_replaced')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(LocServ.inst.t('cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(LocServ.inst.t('yes')),
-            ),
-          ],
-        ),
-      );
-      if (shouldReplace != true) return;
-    }
-
-    // Set QCRI to the scanned value
-    if (!mounted) return;
-    setState(() {
-      _qcriEditable = true;
-      _form.qcri.text = qr;
-    });
-
-    // If mirror mode (exact copy), also set PCI to the scanned value
-    // — but only when PCI is currently empty, and only after verifying
-    // the value isn't already used as a PCI elsewhere.
-    final mirror = await placeCodeService.isMirrorMode();
-    if (mirror && mounted && _form.qr.text.trim().isEmpty) {
-      final pciDups = await cavePlaceRepository.findByPlaceCodeIdentifier(
-        qr,
-        excludeUuid: _currentCavePlaceId,
-      );
-      final pciDup = pciDups.isEmpty ? null : pciDups.first;
-      if (pciDup != null) {
-        if (mounted) {
-          SnackBarService.showWarning(
-            '${LocServ.inst.t('place_code_identifier')} '
-            '${LocServ.inst.t('already_used_for')}: "${pciDup.title}"',
-          );
-        }
-      } else if (mounted) {
-        setState(() {
-          _qrEditable = true;
-          _form.qr.text = qr;
-        });
-      }
-    }
-
-    // Show QR code preview based on the scanned QCRI
-    if (!mounted || _cavePlace == null) return;
-    CavePlaceQrPreviewDialog.show(
-      context,
-      _cavePlace!,
-      qrIdentifierOverride: qr,
-    );
   }
 
   Widget _buildMapTab(RasterMap rm) {
@@ -781,7 +464,7 @@ class _CavePlacePageState extends State<CavePlacePage>
                   form: _form,
                   editable: _qrEditable,
                   onEditableToggled: () => setState(() => _qrEditable = !_qrEditable),
-                  onAutoGenerate: _autoGeneratePlaceCode,
+                  onAutoGenerate: _qrController.autoGeneratePci,
                   rowKey: tourKeys['qr_field'],
                 ),
                 const SizedBox(height: 8),
@@ -790,10 +473,10 @@ class _CavePlacePageState extends State<CavePlacePage>
                   form: _form,
                   editable: _qcriEditable,
                   onEditableToggled: () => setState(() => _qcriEditable = !_qcriEditable),
-                  onAutoGenerate: _autoGenerateQcri,
-                  onOpenScanner: _openQrCodeScanner,
-                  onScanLongPressStart: _startQrScanLongPress,
-                  onScanLongPressEnd: _cancelQrScanLongPress,
+                  onAutoGenerate: _qrController.autoGenerateQcri,
+                  onOpenScanner: _qrController.openScanner,
+                  onScanLongPressStart: _qrController.startLongPress,
+                  onScanLongPressEnd: _qrController.cancelLongPress,
                   cavePlace: _cavePlace,
                   currentCavePlaceId: _currentCavePlaceId,
                 ),
