@@ -10,10 +10,13 @@ import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
-  CaveTripService(this._db, {Clock clock = const SystemClock()}) : _clock = clock;
+  CaveTripService(this._db, {Clock clock = const SystemClock()})
+      : _clock = clock,
+        _renderer = TripLogRenderer(_db);
 
   final AppDatabase _db;
   final Clock _clock;
+  final TripLogRenderer _renderer;
 
   final ValueNotifier<Uuid?> activeTripIdNotifier = ValueNotifier<Uuid?>(null);
   final ValueNotifier<bool> isPausedNotifier = ValueNotifier<bool>(false);
@@ -149,8 +152,8 @@ class CaveTripService {
   Future<void> _regenerateLog(Uuid tripUuid) async {
     try {
       final method = await currentUserService.getTripLogMethod();
-      final events = await TripLogRenderer.instance.loadEvents(tripUuid);
-      final rendered = TripLogRenderer.instance.render(events, method);
+      final events = await _renderer.loadEvents(tripUuid);
+      final rendered = _renderer.render(events, method);
       await _db.updateTripLog(tripUuid, rendered);
     } catch (e, st) {
       log.warning('regenerateLog failed (trip=$tripUuid)', e, st);
@@ -169,13 +172,13 @@ class CaveTripService {
   Future<void> _appendForNewEvent(Uuid tripUuid) async {
     try {
       final method = await currentUserService.getTripLogMethod();
-      final events = await TripLogRenderer.instance.loadEvents(tripUuid);
+      final events = await _renderer.loadEvents(tripUuid);
       if (events.isEmpty) return;
 
-      final delta = TripLogRenderer.instance.renderTailDelta(events, method);
+      final delta = _renderer.renderTailDelta(events, method);
       if (delta == null) {
         // Method (narrative) does not support incremental rendering.
-        final full = TripLogRenderer.instance.render(events, method);
+        final full = _renderer.render(events, method);
         await _db.updateTripLog(tripUuid, full);
         return;
       }

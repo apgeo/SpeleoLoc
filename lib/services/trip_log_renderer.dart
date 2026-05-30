@@ -43,8 +43,14 @@ class TripLogEvent {
 /// written to `cave_trips.log` once the live regeneration in
 /// `CaveTripService` is wired up.
 class TripLogRenderer {
-  TripLogRenderer._();
-  static final TripLogRenderer instance = TripLogRenderer._();
+  TripLogRenderer(this._db);
+
+  /// Singleton backed by the global [appDatabase]. Prefer passing a
+  /// [TripLogRenderer] constructed with an injected [AppDatabase] in
+  /// contexts where one is available (e.g. [CaveTripService]).
+  static TripLogRenderer get instance => TripLogRenderer(appDatabase);
+
+  final AppDatabase _db;
 
   static final _absFmt = DateFormat('yyyy/MM/dd HH:mm:ss');
   static final _shortTimeFmt = DateFormat('HH:mm');
@@ -59,15 +65,15 @@ class TripLogRenderer {
   /// earliest event time, then the events of the previous run, then a
   /// [restart] at `trip.tripStartedAt`, then the rest.
   Future<List<TripLogEvent>> loadEvents(Uuid tripUuid) async {
-    final trip = await (appDatabase.select(appDatabase.caveTrips)
+    final trip = await (_db.select(_db.caveTrips)
           ..where((t) => t.uuid.equalsValue(tripUuid)))
         .getSingleOrNull();
     if (trip == null) return const [];
 
-    final points = await appDatabase.getTripPoints(tripUuid);
+    final points = await _db.getTripPoints(tripUuid);
 
     // Document links (created_at + doc title).
-    final docRows = await appDatabase.customSelect(
+    final docRows = await _db.customSelect(
       'SELECT df.title AS title, dl.created_at AS created_at '
       'FROM documentation_files_to_cave_trips dl '
       'JOIN documentation_files df ON df.uuid = dl.documentation_file_uuid '
@@ -84,7 +90,7 @@ class TripLogRenderer {
         .toList();
     final placeTitles = <String, String>{};
     if (placeUuids.isNotEmpty) {
-      final places = await (appDatabase.select(appDatabase.cavePlaces)
+      final places = await (_db.select(_db.cavePlaces)
             ..where((c) => c.uuid.isIn(
                 placeUuids.map((u) => u.bytes).toList())))
           .get();
