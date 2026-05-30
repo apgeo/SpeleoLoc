@@ -17,9 +17,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Configuration key for the persisted menu mode preference.
 const String _menuModeConfigKey = 'app_menu_mode';
-// Set to true to enable the "Use popup menu" option in the drawer, which toggles the global menu mode to popup. 
-// this is a disabled/hidden option for testing purposes as it is incomplete and not usable yet.
-const bool DRAWER_AS_MENU_OPTION_ENABLED = false;
 
 /// A menu item descriptor used by the global menu system.
 class AppMenuItem {
@@ -423,15 +420,6 @@ class _AppMenuDrawer extends StatelessWidget {
                       icon: const Icon(Icons.info_outline),
                       tooltip: LocServ.inst.t('about'),
                       onPressed: () => _showAboutDialog(context),
-                    ),
-                    if (DRAWER_AS_MENU_OPTION_ENABLED)
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: LocServ.inst.t('menu_use_popup'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        AppBarMenuMixin._setMenuMode(AppMenuMode.popup);
-                      },
                     ),
                 if (_appVersion.isNotEmpty)
                   Padding(

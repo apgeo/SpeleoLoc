@@ -95,11 +95,6 @@ class _CavePlacePageState extends State<CavePlacePage>
   /// Handles all QR-scan and place-code-generation interactions.
   late CavePlaceQrController _qrController;
 
-  // Feature toggle: show interactive RasterMapPlacePointEditor in the
-  // "Raster maps" tab of CavePlacePage. Disabled by default so the
-  // page shows a plain `Image` as before the refactor.
-  static const bool USE_RASTER_EDITOR_IN_CAVEPLACE = false;
-
   @override
   void initState() {
     super.initState();
@@ -326,7 +321,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       caveUuid: widget.caveUuid,
       cavePlaceUuid: _currentCavePlaceId,
       rasterMap: rm,
-      useInteractiveEditor: USE_RASTER_EDITOR_IN_CAVEPLACE,
+      useInteractiveEditor: false,
       onSaveRequired: () => _save(closeAfterSave: false),
     );
   }
@@ -486,22 +481,6 @@ class _CavePlacePageState extends State<CavePlacePage>
                   form: _form,
                   onOpenGpsRecorder: _openGpsRecorder,
                 ),
-                Row(
-                  children: [
-                    const SizedBox(height: 8),
-
-                    /// Show/Hide GPS coordinates
-                    // IconButton(
-                    //   icon: const Icon(Icons.location_on),
-                    //   tooltip: 'Show/Hide GPS coordinates',
-                    //   onPressed: () {
-                    //     setState(() {
-                    //       _showLatLngFields = !_showLatLngFields;
-                    //     });
-                    //   },
-                    // ),
-                  ],
-                ),
 
                 /// Raster maps section
                 if (_rasterMaps.isNotEmpty) ...[
@@ -521,19 +500,6 @@ class _CavePlacePageState extends State<CavePlacePage>
                   onEntranceChanged: _onEntranceToggleRequested,
                   onMainEntranceChanged: _onMainEntranceToggleRequested,
                 ),
-                /*
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                   const SizedBox(height: 80),
-                    ElevatedButton(
-                      onPressed: _save,
-                      child: Text(LocServ.inst.t('save')),
-                    ),
-                ],
-              ),
-              */
               ],
             ),
           ),

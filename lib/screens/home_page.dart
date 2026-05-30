@@ -300,42 +300,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     // files) loader and the new archive-download importer. The legacy path
     // is gated behind [useLegacyTestDataLoad] so it can still be re-enabled
     // for debugging by flipping the flag in `lib/utils/constants.dart`.
-    if (useLegacyTestDataLoad) {
-      await _runLegacyTestDataLoad();
-    } else {
-      await _runArchiveTestDataLoad();
-    }
-  }
-
-  /// Legacy first-start test data loader. Kept intact behind
-  /// [useLegacyTestDataLoad]; superseded by [_runArchiveTestDataLoad].
-  Future<void> _runLegacyTestDataLoad() async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(LocServ.inst.t('loading_test_data')),
-          ],
-        ),
-      ),
-    );
-    try {
-      await DatabaseRestoreHelper.reinitializeDatabase(
-          populateTestData: true);
-      if (mounted) Navigator.pop(context);
-      await DatabaseRestoreHelper.restartApplication();
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        SnackBarService.showError(
-            '${LocServ.inst.t('error_reinitializing_database')}: $e');
-      }
-    }
+    await _runArchiveTestDataLoad();
   }
 
   /// New test data loader: downloads (or loads from bundled assets) the zip
