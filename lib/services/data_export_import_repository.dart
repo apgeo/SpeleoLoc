@@ -217,6 +217,22 @@ class DataExportImportRepository {
     return row.read<int>('cnt') > 0;
   }
 
+  /// Returns `true` when any caves, raster maps, or documentation files exist.
+  ///
+  /// Used by the export/import page to determine whether to show a
+  /// replace-import confirmation prompt.
+  Future<bool> hasAnyData() async {
+    for (final table in const ['caves', 'raster_maps', 'documentation_files']) {
+      final row = await _db
+          .customSelect(
+            'SELECT COUNT(*) AS cnt FROM $table WHERE deleted_at IS NULL',
+          )
+          .getSingle();
+      if (row.read<int>('cnt') > 0) return true;
+    }
+    return false;
+  }
+
   // ---------------------------------------------------------------------------
   //  Helpers
   // ---------------------------------------------------------------------------

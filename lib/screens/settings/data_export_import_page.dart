@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
@@ -19,14 +20,14 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// Export: bundles the database + documentation files + raster-map images into
 /// a zip archive.  Import: replace everything, or merge with conflict
 /// resolution.
-class DataExportImportPage extends StatefulWidget {
+class DataExportImportPage extends ConsumerStatefulWidget {
   const DataExportImportPage({super.key});
 
   @override
-  State<DataExportImportPage> createState() => _DataExportImportPageState();
+  ConsumerState<DataExportImportPage> createState() => _DataExportImportPageState();
 }
 
-class _DataExportImportPageState extends State<DataExportImportPage>
+class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     with AppBarMenuMixin<DataExportImportPage>, ProductTourMixin<DataExportImportPage> {
   @override
   String get tourId => 'data_export';
@@ -168,7 +169,7 @@ class _DataExportImportPageState extends State<DataExportImportPage>
 
     try {
       final service =
-          DataArchiveService(DataExportImportRepository(appDatabase));
+          DataArchiveService(DataExportImportRepository(ref.read(appDatabaseProvider)));
       // Belt-and-suspenders: even if [_includeFtpPasswords] were somehow
       // set to true (e.g. via tooling outside the UI gate), the
       // build-time [exportFtpPasswordsEnabled] flag still hard-disables
@@ -185,7 +186,7 @@ class _DataExportImportPageState extends State<DataExportImportPage>
         outputDir: dir,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
         profileRepository:
-            includePasswords ? FtpProfileRepository(appDatabase) : null,
+            includePasswords ? FtpProfileRepository(ref.read(appDatabaseProvider)) : null,
       );
 
       if (context.mounted) {
@@ -216,7 +217,7 @@ class _DataExportImportPageState extends State<DataExportImportPage>
     if (!context.mounted) return;
 
     // Determine import mode.
-    final repo = DataExportImportRepository(appDatabase);
+    final repo = DataExportImportRepository(ref.read(appDatabaseProvider));
     final hasData = await repo.hasData();
     if (!context.mounted) return;
 
@@ -282,7 +283,7 @@ class _DataExportImportPageState extends State<DataExportImportPage>
 
     try {
       final service =
-          DataArchiveService(DataExportImportRepository(appDatabase));
+          DataArchiveService(DataExportImportRepository(ref.read(appDatabaseProvider)));
       await service.importArchiveReplace(
         zipPath: zipPath,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
@@ -339,7 +340,7 @@ class _DataExportImportPageState extends State<DataExportImportPage>
 
     try {
       final service =
-          DataArchiveService(DataExportImportRepository(appDatabase));
+          DataArchiveService(DataExportImportRepository(ref.read(appDatabaseProvider)));
       final importResult = await service.importArchiveMerge(
         zipPath: zipPath,
         conflictResolver: resolver,
@@ -423,16 +424,11 @@ class _DataExportImportPageState extends State<DataExportImportPage>
   /// `true` when there are any caves, raster maps, or documentation files.
   Future<bool> _hasAnyData() async {
     try {
-      for (final query in [
-        'SELECT COUNT(*) AS cnt FROM caves WHERE deleted_at IS NULL',
-        'SELECT COUNT(*) AS cnt FROM raster_maps WHERE deleted_at IS NULL',
-        'SELECT COUNT(*) AS cnt FROM documentation_files WHERE deleted_at IS NULL',
-      ]) {
-        final row = await appDatabase.customSelect(query).getSingle();
-        if (row.read<int>('cnt') > 0) return true;
-      }
+      return await DataExportImportRepository(ref.read(appDatabaseProvider))
+          .hasAnyData();
     } catch (e, st) {
-      AppLogger.of('DataExportImportPage').warning('hasAnyData count query failed', e, st);
+      AppLogger.of('DataExportImportPage')
+          .warning('hasAnyData count query failed', e, st);
     }
     return false;
   }

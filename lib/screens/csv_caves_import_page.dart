@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_importer.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -10,7 +11,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///
 /// Uses [CSVImportPage] to handle file selection and column mapping,
 /// then processes the resulting data to import caves with deduplication.
-class CSVCavesImportPage extends StatefulWidget {
+class CSVCavesImportPage extends ConsumerStatefulWidget {
   /// Maximum number of duplicate matches to preview (default 5).
   final int maxPreviewDuplicates;
 
@@ -20,12 +21,11 @@ class CSVCavesImportPage extends StatefulWidget {
   });
 
   @override
-  State<CSVCavesImportPage> createState() => _CSVCavesImportPageState();
+  ConsumerState<CSVCavesImportPage> createState() => _CSVCavesImportPageState();
 }
 
-class _CSVCavesImportPageState extends State<CSVCavesImportPage> {
-  final CSVCaveImporter _importer =
-      CSVCaveImporter(appDatabase, currentUserService);
+class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
+  late final CSVCaveImporter _importer;
   bool _isProcessing = false;
   bool _hasNavigated = false;
 
@@ -48,6 +48,7 @@ class _CSVCavesImportPageState extends State<CSVCavesImportPage> {
   @override
   void initState() {
     super.initState();
+    _importer = CSVCaveImporter(ref.read(appDatabaseProvider), currentUserService);
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }
 
