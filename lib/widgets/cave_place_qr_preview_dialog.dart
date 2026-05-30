@@ -296,7 +296,13 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
         final downloads = await getDownloadsDirectory();
         if (downloads != null) return downloads;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.of('CavePlaceQrPreviewDialog').fine(
+        '_getSaveDirectory failed, falling back to app documents',
+        e,
+        st,
+      );
+    }
     return getApplicationDocumentsDirectory();
   }
 

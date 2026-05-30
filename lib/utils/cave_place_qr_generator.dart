@@ -370,7 +370,7 @@ class CavePlaceQRCodePDFGenerator {
                                         try {
                                           final colorInt = int.parse('FF${seg.fontColor}', radix: 16);
                                           segColor = PdfColor.fromInt(colorInt);
-                                        } catch (_) {}
+                                        } on FormatException catch (_) {}
                                       }
                                       return pw.TextSpan(
                                         text: seg.text,
