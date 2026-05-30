@@ -7,6 +7,7 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
+import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
@@ -142,6 +143,17 @@ void main() {
     test('getRasterMaps returns empty for new cave', () async {
       final caveUuid = await caveRepo.addCave('C');
       expect(await rasterMapRepo.getRasterMaps(caveUuid), isEmpty);
+    });
+
+    test('hasAnyRasterMaps returns false when database has no maps', () async {
+      expect(await rasterMapRepo.hasAnyRasterMaps(), isFalse);
+    });
+  });
+
+  group('DocumentationRepository', () {
+    test('hasAnyDocumentationFiles returns false when database has no files', () async {
+      final docRepo = DocumentationRepository(db);
+      expect(await docRepo.hasAnyDocumentationFiles(), isFalse);
     });
   });
 }
