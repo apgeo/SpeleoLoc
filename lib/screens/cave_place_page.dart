@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_area_row.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_coordinates_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_entrance_toggles.dart';
@@ -733,138 +734,42 @@ class _CavePlacePageState extends State<CavePlacePage>
                   descFieldKey: tourKeys['desc_field'],
                 ),
                 const SizedBox(height: 8),
-                // Cave area dropdown and manage areas button, depth
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    
-                    SizedBox(
-                      width: 80,
-                      child: TextFormField(
-                        key: tourKeys['depth_field'],
-                        controller: _form.depth,
-                        decoration: InputDecoration(
-                          labelText: "Depth '+/-'",
-                          filled: _form.depthModified,
-                          fillColor: _form.depthModified
-                              ? Colors.green.withValues(alpha: 0.06)
-                              : null,
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: true,
-                        ),
-                        inputFormatters: [depthInputFormatter],
+                // Cave area dropdown, manage-areas button, depth field, and
+                // optional PCI-row visibility toggle.
+                CavePlaceAreaRow(
+                  form: _form,
+                  caveAreas: _caveAreas,
+                  depthFieldKey: tourKeys['depth_field'],
+                  pciRowHidden: _pciRowHidden,
+                  onAreaChanged: (v) => setState(() => _form.setArea(v)),
+                  onManageAreas: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CaveAreasPage(caveUuid: widget.caveUuid),
                       ),
-                    ),
-
-                    const SizedBox(width: 28),
-
-                    Expanded(
-                      child: DropdownButtonFormField<Uuid?>(
-                        initialValue: _form.selectedCaveAreaId,
-                        decoration: InputDecoration(
-                          labelText: LocServ.inst.t('area_title'),
-                        ),
-                        items: [
-                          DropdownMenuItem<Uuid?>(
-                            value: null,
-                            child: Text(LocServ.inst.t('none')),
-                          ),
-                          ..._caveAreas.map(
-                            (a) => DropdownMenuItem<Uuid?>(
-                              value: a.uuid,
-                              child: Text(a.title),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) async {
-                          final old = _form.selectedCaveAreaId;
-                          if (v == null && old != null) {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text(LocServ.inst.t('confirm')),
-                                content: Text(
-                                  LocServ.inst.t('clear_area_confirm'),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: Text(LocServ.inst.t('cancel')),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: Text(LocServ.inst.t('yes')),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirmed == true) {
-                              setState(() {
-                                _form.setArea(null);
-                              });
-                            } else {
-                              setState(() => _form.selectedCaveAreaId = old);
-                            }
-                          } else {
-                            setState(() {
-                              _form.setArea(v);
-                            });
-                          }
-                        },
-                      ),
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.layers),
-                      tooltip: LocServ.inst.t('manage_cave_areas'),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CaveAreasPage(caveUuid: widget.caveUuid),
-                          ),
-                        );
-                        // reload areas after return
-                        final reloadedAreas =
-                            await caveRepository.getCaveAreas(widget.caveUuid);
-                        // Deduplicate by UUID to prevent DropdownButtonFormField assertion errors
-                        final seen = <dynamic>{};
-                        final deduped = reloadedAreas
-                            .where((a) => seen.add(a.uuid))
-                            .toList();
-                        setState(() {
-                          _caveAreas = deduped;
-                          // Clear selected area if it was deleted
-                          if (_form.selectedCaveAreaId != null &&
-                              !_caveAreas.any(
-                                (a) => a.uuid == _form.selectedCaveAreaId,
-                              )) {
-                            _form.selectedCaveAreaId = null;
-                          }
-                        });
-                      },
-                    ),
-
-                    if (_pciRowHidden)
-                      IconButton(
-                        icon: const Icon(Icons.visibility),
-                        tooltip: LocServ.inst.t('show_place_code_row'),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(
-                            minWidth: 36, minHeight: 36),
-                        style: IconButton.styleFrom(
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        onPressed: () =>
-                            setState(() => _pciRowHidden = false),
-                      ),
-
-                  ],
+                    );
+                    // Reload areas after returning from CaveAreasPage.
+                    final reloadedAreas =
+                        await caveRepository.getCaveAreas(widget.caveUuid);
+                    // Deduplicate by UUID to prevent DropdownButtonFormField
+                    // assertion errors.
+                    final seen = <dynamic>{};
+                    final deduped = reloadedAreas
+                        .where((a) => seen.add(a.uuid))
+                        .toList();
+                    setState(() {
+                      _caveAreas = deduped;
+                      // Clear selected area if it was deleted.
+                      if (_form.selectedCaveAreaId != null &&
+                          !_caveAreas
+                              .any((a) => a.uuid == _form.selectedCaveAreaId)) {
+                        _form.selectedCaveAreaId = null;
+                      }
+                    });
+                  },
+                  onShowPciRow: () => setState(() => _pciRowHidden = false),
                 ),
                 const SizedBox(height: 8),
                 // Place code identifier with edit toggle.
