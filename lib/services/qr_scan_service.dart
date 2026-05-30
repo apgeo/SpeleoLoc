@@ -1,6 +1,4 @@
-import 'dart:convert';
-
-import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 
@@ -30,13 +28,9 @@ class QrScanConfig {
   /// Falls back to [QrScanConfig()] on any error or if not yet saved.
   static Future<QrScanConfig> load() async {
     try {
-      final row = await (appDatabase.select(appDatabase.configurations)
-            ..where((c) => c.title.equals(qrScanConfigKey))
-            ..limit(1))
-          .getSingleOrNull();
-      if (row?.value == null) return const QrScanConfig();
-      final decoded = jsonDecode(row!.value!);
-      if (decoded is! Map) return const QrScanConfig();
+      final decoded =
+          await configurationRepository.readJson(qrScanConfigKey);
+      if (decoded.isEmpty) return const QrScanConfig();
       final rawDelimiters = decoded['urlStripDelimiters'];
       final delimiters = (rawDelimiters is List)
           ? rawDelimiters

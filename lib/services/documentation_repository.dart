@@ -91,4 +91,16 @@ class DocumentationRepository implements IDocumentationRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<List<DocumentationFile>> getDocumentationFiles({
+    DocumentationGeofeatureLink? parentLink,
+  }) async {
+    try {
+      return await _database.getDocumentationFiles(parentLink: parentLink);
+    } catch (e, st) {
+      _log.severe('getDocumentationFiles failed', e, st);
+      rethrow;
+    }
+  }
 }

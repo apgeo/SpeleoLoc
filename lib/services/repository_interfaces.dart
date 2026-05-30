@@ -283,5 +283,12 @@ abstract class IDocumentationRepository {
   /// the edit page where the caller has already constructed the updated
   /// [DocumentationFile] via `copyWith`.
   Future<void> replaceDocumentationFile(DocumentationFile updated);
+
+  /// Returns documentation files for the given [parentLink], or all files
+  /// when [parentLink] is `null`. Mirrors [AppDatabase.getDocumentationFiles]
+  /// so callers can avoid importing the global `appDatabase` symbol.
+  Future<List<DocumentationFile>> getDocumentationFiles({
+    DocumentationGeofeatureLink? parentLink,
+  });
 }
 
