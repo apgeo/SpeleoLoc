@@ -209,7 +209,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     try {
       final areas = await caveRepository.getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.of('CavePlacesListPage').warning('_loadSurfaceAreas failed', e, st);
       _surfaceAreaTitles = {};
     }
   }
@@ -470,7 +471,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     try {
       final areas = await caveRepository.getCaveAreas(widget.caveUuid);
       _areaTitles = {for (var a in areas) a.uuid: a.title};
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.of('CavePlacesListPage').warning('_loadCaveAreas failed', e, st);
       _areaTitles = {};
     }
   }
