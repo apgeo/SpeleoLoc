@@ -43,10 +43,20 @@ class TableRecreator {
     final rows = await db
         .customSelect(selectSql ?? 'SELECT * FROM ${table.actualTableName}')
         .get();
-    await migrator.drop(table);
-    await migrator.create(table);
-    for (final row in rows) {
-      await reinsert(row.data);
-    }
+    // Wrap the drop + create + per-row reinsert in a single transaction:
+    // without this each customStatement/customInsert auto-commits, causing
+    // one fsync per row (on Windows + large fixtures that turns a quick
+    // recreate into a multi-minute hang).
+    // `defer_foreign_keys` is transaction-scoped and lets us DROP a table
+    // referenced by FKs from other tables (the FK targets get re-populated
+    // before COMMIT, satisfying the deferred check).
+    await db.transaction(() async {
+      await db.customStatement('PRAGMA defer_foreign_keys = ON');
+      await migrator.drop(table);
+      await migrator.create(table);
+      for (final row in rows) {
+        await reinsert(row.data);
+      }
+    });
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:drift/drift.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/uuid.dart';
@@ -211,8 +209,13 @@ Future<void> reinsertLegacyData(
   // Disable FK checks during bulk insert so row ordering within a table
   // (e.g. self-referencing orderings, if any) never trips a constraint.
   // createAll() re-enables; we toggle explicitly for clarity.
+  // PRAGMA must run outside the transaction (it is a no-op inside one).
   await db.customStatement('PRAGMA foreign_keys = OFF');
 
+  // Wrap every insert in a single transaction. Without this, each
+  // customInsert auto-commits, triggering one fsync per row — with ~11k
+  // legacy rows on Windows this turns a ~1s migration into a 5–30 min hang.
+  await db.transaction(() async {
   // ---- surface_areas ----
   for (final r in snap.surfaceAreas) {
     await db.customInsert(
@@ -550,6 +553,7 @@ Future<void> reinsertLegacyData(
       ],
     );
   }
+  }); // end transaction
 
   await db.customStatement('PRAGMA foreign_keys = ON');
   log.info('Phase 3 complete: ${snap.totalRows} rows inserted.');
