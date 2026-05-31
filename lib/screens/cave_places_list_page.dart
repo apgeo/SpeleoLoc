@@ -751,7 +751,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
               const SizedBox(width: TOOLBAR_BUTTON_SPACING),
               IconActionButton(
                 onPressed: () async {
-                  final result = await AppRoutes.pushRasterMaps<bool>(
+                  final result = await AppRoutes.pushRasterMaps(
                     context,
                     widget.caveUuid,
                   );
@@ -1020,7 +1020,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       },
       onBulkDelete: _deleteSelectedPlaces,
       onItemTap: (cp) async {
-        final result = await AppRoutes.pushCavePlace<bool>(
+        final result = await AppRoutes.pushCavePlace(
           context,
           caveUuid: widget.caveUuid,
           cavePlaceUuid: cp.uuid,

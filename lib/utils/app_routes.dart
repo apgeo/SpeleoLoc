@@ -27,6 +27,14 @@ class CavePlaceViewRouteArgs {
 /// the page builders never have to do `as Map<String, Uuid?>?` casts —
 /// the unsafe boundary lives in exactly one place (`app.dart`).
 ///
+/// Each helper's return type is fixed to match the matching
+/// `MaterialPageRoute<T>` declared in `app.dart`'s `onGenerateRoute`.
+/// Do NOT add a `<T>` type parameter to these methods: with the named
+/// route machinery, `Navigator.pushNamed<T>` performs a runtime
+/// `route as Route<T?>?` cast, so the `T` on `pushNamed` MUST equal the
+/// `T` baked into the constructed `MaterialPageRoute<T>` or the cast
+/// throws (`MaterialPageRoute<X> is not a subtype of Route<Y?>?`).
+///
 /// Companion to PR 9 (i18n reconcile). Full `go_router` migration is
 /// deferred (logged as PR 9b in `REFACTORING_PLAN.md`); this class
 /// delivers the "type-safe routing" half without touching `navigatorKey`
@@ -34,18 +42,18 @@ class CavePlaceViewRouteArgs {
 class AppRoutes {
   const AppRoutes._();
 
-  static Future<T?> pushHomeReplaceAll<T>(BuildContext c) =>
-      Navigator.pushNamedAndRemoveUntil<T>(c, homeRoute, (_) => false);
+  static Future<void> pushHomeReplaceAll(BuildContext c) =>
+      Navigator.pushNamedAndRemoveUntil<void>(c, homeRoute, (_) => false);
 
-  static Future<T?> pushCave<T>(BuildContext c, Uuid caveUuid) =>
-      Navigator.pushNamed<T>(c, caveRoute, arguments: caveUuid);
+  static Future<bool?> pushCave(BuildContext c, Uuid caveUuid) =>
+      Navigator.pushNamed<bool>(c, caveRoute, arguments: caveUuid);
 
-  static Future<T?> pushCavePlace<T>(
+  static Future<bool?> pushCavePlace(
     BuildContext c, {
     required Uuid caveUuid,
     Uuid? cavePlaceUuid,
   }) =>
-      Navigator.pushNamed<T>(
+      Navigator.pushNamed<bool>(
         c,
         cavePlaceRoute,
         arguments: CavePlaceRouteArgs(
@@ -54,13 +62,13 @@ class AppRoutes {
         ),
       );
 
-  static Future<T?> pushCavePlaceView<T>(
+  static Future<void> pushCavePlaceView(
     BuildContext c, {
     required Uuid cavePlaceUuid,
     Uuid? caveUuid,
     Uuid? initialRasterMapUuid,
   }) =>
-      Navigator.pushNamed<T>(
+      Navigator.pushNamed<void>(
         c,
         cavePlaceViewRoute,
         arguments: CavePlaceViewRouteArgs(
@@ -70,21 +78,21 @@ class AppRoutes {
         ),
       );
 
-  static Future<T?> pushRasterMaps<T>(BuildContext c, Uuid caveUuid) =>
-      Navigator.pushNamed<T>(c, rasterMapsRoute, arguments: caveUuid);
+  static Future<bool?> pushRasterMaps(BuildContext c, Uuid caveUuid) =>
+      Navigator.pushNamed<bool>(c, rasterMapsRoute, arguments: caveUuid);
 
-  static Future<T?> pushSettings<T>(BuildContext c) =>
-      Navigator.pushNamed<T>(c, settingsRoute);
+  static Future<void> pushSettings(BuildContext c) =>
+      Navigator.pushNamed<void>(c, settingsRoute);
 
-  static Future<T?> pushCaveTrip<T>(BuildContext c, Uuid tripUuid) =>
-      Navigator.pushNamed<T>(c, caveTripRoute, arguments: tripUuid);
+  static Future<bool?> pushCaveTrip(BuildContext c, Uuid tripUuid) =>
+      Navigator.pushNamed<bool>(c, caveTripRoute, arguments: tripUuid);
 
-  static Future<T?> pushCaveTripList<T>(BuildContext c, Uuid caveUuid) =>
-      Navigator.pushNamed<T>(c, caveTripListRoute, arguments: caveUuid);
+  static Future<void> pushCaveTripList(BuildContext c, Uuid caveUuid) =>
+      Navigator.pushNamed<void>(c, caveTripListRoute, arguments: caveUuid);
 
-  static Future<T?> pushCaveTripLog<T>(BuildContext c, Uuid tripUuid) =>
-      Navigator.pushNamed<T>(c, caveTripLogRoute, arguments: tripUuid);
+  static Future<void> pushCaveTripLog(BuildContext c, Uuid tripUuid) =>
+      Navigator.pushNamed<void>(c, caveTripLogRoute, arguments: tripUuid);
 
-  static Future<T?> pushTripReportTemplates<T>(BuildContext c) =>
-      Navigator.pushNamed<T>(c, tripReportTemplatesRoute);
+  static Future<void> pushTripReportTemplates(BuildContext c) =>
+      Navigator.pushNamed<void>(c, tripReportTemplatesRoute);
 }

@@ -74,48 +74,81 @@ class _SpeleoLocAppState extends State<SpeleoLocApp> {
         useMaterial3: true,
       ),
       initialRoute: homeRoute,
-      routes: {
-        homeRoute: (context) => const HomePage(title: appName),
-        caveRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Uuid?;
-          return CavePlacesListPage(caveUuid: args ?? Uuid.zero);
-        },
-        cavePlaceRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as CavePlaceRouteArgs?;
-          return CavePlacePage(
-            caveUuid: args?.caveUuid ?? Uuid.zero,
-            cavePlaceUuid: args?.cavePlaceUuid,
-          );
-        },
-        cavePlaceViewRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as CavePlaceViewRouteArgs?;
-          return MapViewerPage(
-            cavePlaceUuid: args?.cavePlaceUuid ?? Uuid.zero,
-            caveUuid: args?.caveUuid,
-            initialRasterMapUuid: args?.initialRasterMapUuid,
-          );
-        },
-        rasterMapsRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Uuid?;
-          return RasterMapsPage(caveUuid: args ?? Uuid.zero);
-        },
-        settingsRoute: (context) => const SettingsMainPage(),
-        caveTripRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Uuid?;
-          return CaveTripPage(tripUuid: args ?? Uuid.zero);
-        },
-        caveTripListRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Uuid?;
-          return CaveTripListPage(caveUuid: args ?? Uuid.zero);
-        },
-        caveTripLogRoute: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Uuid?;
-          return CaveTripLogPage(tripUuid: args ?? Uuid.zero);
-        },
-        tripReportTemplatesRoute: (context) =>
-            const TripReportTemplatesPage(),
+      // PR 9 follow-up: use `onGenerateRoute` instead of `routes:` so each
+      // route is built as a `MaterialPageRoute<T>` whose `T` matches what
+      // the page actually pops. The `routes:` map always produces
+      // `MaterialPageRoute<dynamic>`, which makes `Navigator.pushNamed<T>`
+      // throw `MaterialPageRoute<dynamic> is not a subtype of Route<T?>?`
+      // for any non-dynamic `T` (see `AppRoutes.pushCave`/`pushCavePlace`
+      // call sites that await a `bool` result).
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case homeRoute:
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const HomePage(title: appName),
+            );
+          case caveRoute:
+            final args = settings.arguments as Uuid?;
+            return MaterialPageRoute<bool>(
+              settings: settings,
+              builder: (_) => CavePlacesListPage(caveUuid: args ?? Uuid.zero),
+            );
+          case cavePlaceRoute:
+            final args = settings.arguments as CavePlaceRouteArgs?;
+            return MaterialPageRoute<bool>(
+              settings: settings,
+              builder: (_) => CavePlacePage(
+                caveUuid: args?.caveUuid ?? Uuid.zero,
+                cavePlaceUuid: args?.cavePlaceUuid,
+              ),
+            );
+          case cavePlaceViewRoute:
+            final args = settings.arguments as CavePlaceViewRouteArgs?;
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => MapViewerPage(
+                cavePlaceUuid: args?.cavePlaceUuid ?? Uuid.zero,
+                caveUuid: args?.caveUuid,
+                initialRasterMapUuid: args?.initialRasterMapUuid,
+              ),
+            );
+          case rasterMapsRoute:
+            final args = settings.arguments as Uuid?;
+            return MaterialPageRoute<bool>(
+              settings: settings,
+              builder: (_) => RasterMapsPage(caveUuid: args ?? Uuid.zero),
+            );
+          case settingsRoute:
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const SettingsMainPage(),
+            );
+          case caveTripRoute:
+            final args = settings.arguments as Uuid?;
+            return MaterialPageRoute<bool>(
+              settings: settings,
+              builder: (_) => CaveTripPage(tripUuid: args ?? Uuid.zero),
+            );
+          case caveTripListRoute:
+            final args = settings.arguments as Uuid?;
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => CaveTripListPage(caveUuid: args ?? Uuid.zero),
+            );
+          case caveTripLogRoute:
+            final args = settings.arguments as Uuid?;
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => CaveTripLogPage(tripUuid: args ?? Uuid.zero),
+            );
+          case tripReportTemplatesRoute:
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const TripReportTemplatesPage(),
+            );
+        }
+        return null;
       },
       builder: (context, child) => Stack(
         children: [SizedBox.expand(child: child!), const AppToastHost()],

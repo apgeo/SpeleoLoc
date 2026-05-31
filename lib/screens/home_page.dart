@@ -584,7 +584,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
-    final result = await AppRoutes.pushCave<bool>(context, cave.uuid);
+    final result = await AppRoutes.pushCave(context, cave.uuid);
     // Always refresh cave list summary after returning: cave places/areas/maps/definitions may have changed.
     _loadCaves();
     return result;
