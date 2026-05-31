@@ -156,4 +156,48 @@ void main() {
       expect(await docRepo.hasAnyDocumentationFiles(), isFalse);
     });
   });
+
+  group('CavePlaceRepository finders', () {
+    test('findCavePlaceByTitle returns the matching place', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Alpha');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Beta');
+      final hit = await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Beta');
+      expect(hit, isNotNull);
+      expect(hit!.title, 'Beta');
+      final miss =
+          await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Gamma');
+      expect(miss, isNull);
+    });
+
+    test('findByIds returns rows in the requested set', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'A');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'B');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'C');
+      final all = await cavePlaceRepo.getCavePlaces(caveUuid);
+      final firstTwo = all.take(2).map((p) => p.uuid).toList();
+      final rows = await cavePlaceRepo.findByIds(firstTwo);
+      expect(rows.map((r) => r.uuid).toSet(), firstTwo.toSet());
+    });
+
+    test('findByIds short-circuits on empty input', () async {
+      expect(await cavePlaceRepo.findByIds(const <Uuid>[]), isEmpty);
+    });
+
+    test('findEntrances filters by isEntrance / isMainEntrance', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Plain');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Side', isEntrance: true);
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Main',
+          isEntrance: true, isMainEntrance: true);
+
+      final entrances = await cavePlaceRepo.findEntrances(caveUuid);
+      expect(entrances.map((p) => p.title).toSet(), {'Side', 'Main'});
+
+      final mainOnly =
+          await cavePlaceRepo.findEntrances(caveUuid, mainOnly: true);
+      expect(mainOnly.single.title, 'Main');
+    });
+  });
 }
