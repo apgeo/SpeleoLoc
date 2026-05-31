@@ -737,13 +737,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
               if (mounted) setState(() => _img = RawImageData(decoded.width, decoded.height, pixels));
             }
           } catch (e) {
-            debugPrint('[RasterMapPlacePointEditor] Error decoding image: $e');
+            log.warning('Error decoding image', e);
           }
         } else {
           decodeImageToRawCached(widget.imageFile.path).then((raw) {
             if (raw != null && mounted) setState(() => _img = raw);
           }).catchError((e) {
-            debugPrint('[RasterMapPlacePointEditor] Error decoding image async: $e');
+            log.warning('Error decoding image async', e);
           });
         }
       }

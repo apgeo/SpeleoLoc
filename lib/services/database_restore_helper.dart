@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/test_database_loader.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:restart_app/restart_app.dart';
 
 /// Reusable helper for database reinitialize / restore operations.
@@ -52,8 +53,8 @@ class DatabaseRestoreHelper {
     final event = DatabaseMigrationMonitor.consumeLatest();
     if (event == null) return;
     if (event.toVersion <= event.fromVersion) return;
-    debugPrint(
-      '[DatabaseRestore] Migration detected after $source: '
+    AppLogger.of('DatabaseRestoreHelper').info(
+      'Migration detected after $source: '
       'v${event.fromVersion} -> v${event.toVersion} at ${event.timestamp.toIso8601String()}',
     );
   }

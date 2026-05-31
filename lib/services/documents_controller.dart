@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 //  DocumentsSource — describes where documents come from
@@ -130,7 +131,7 @@ class DocumentsController extends ChangeNotifier {
     } catch (e) {
       _documents = [];
       _error = e.toString();
-      debugPrint('[DocumentsController] Error loading documents: $e');
+      log.warning('Error loading documents', e);
     }
 
     _isLoading = false;

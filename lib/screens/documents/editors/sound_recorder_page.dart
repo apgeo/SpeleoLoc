@@ -11,6 +11,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -110,7 +111,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
 
       if (mounted) setState(() => _recorderReady = true);
     } catch (e) {
-      debugPrint('[SoundRecorderPage] init error: $e');
+      log.warning('init error', e);
     }
   }
 
@@ -141,7 +142,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         if (mounted) setState(() => _hasRecording = true);
       }
     } catch (e) {
-      debugPrint('[SoundRecorderPage] load existing recording error: $e');
+      log.warning('load existing recording error', e);
     }
   }
 
@@ -252,7 +253,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         _hasRecording = false;
       });
     } catch (e) {
-      debugPrint('[SoundRecorderPage] start recording error: $e');
+      log.warning('start recording error', e);
       if (mounted) {
         SnackBarService.showError(LocServ.inst.t('recording_error'));
       }
@@ -283,7 +284,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         _hasRecording = _recordedPath != null;
       });
     } catch (e) {
-      debugPrint('[SoundRecorderPage] stop recording error: $e');
+      log.warning('stop recording error', e);
     }
   }
 
@@ -293,7 +294,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
       await _waveController.stop();
       setState(() => _isPaused = true);
     } catch (e) {
-      debugPrint('[SoundRecorderPage] pause error: $e');
+      log.warning('pause error', e);
     }
   }
 
@@ -303,7 +304,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
       await _waveController.record();
       setState(() => _isPaused = false);
     } catch (e) {
-      debugPrint('[SoundRecorderPage] resume error: $e');
+      log.warning('resume error', e);
     }
   }
 
@@ -368,7 +369,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         setState(() => _isPlaying = true);
       }
     } catch (e) {
-      debugPrint('[SoundRecorderPage] playback error: $e');
+      log.warning('playback error', e);
     }
   }
 

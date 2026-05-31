@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -154,7 +155,7 @@ class TripReportExportService {
     const closingTag = '</office:text>';
     final idx = xml.lastIndexOf(closingTag);
     if (idx == -1) {
-      debugPrint('Warning: <office:text> closing tag not found in ODT content.xml');
+      log.warning('<office:text> closing tag not found in ODT content.xml');
       return xml;
     }
     return '${xml.substring(0, idx)}$paragraphs\n$closingTag${xml.substring(idx + closingTag.length)}';
@@ -190,7 +191,7 @@ class TripReportExportService {
     const closingTag = '</w:body>';
     final idx = xml.lastIndexOf(closingTag);
     if (idx == -1) {
-      debugPrint('Warning: <w:body> closing tag not found in DOCX document.xml');
+      log.warning('<w:body> closing tag not found in DOCX document.xml');
       return xml;
     }
     return '${xml.substring(0, idx)}$paragraphs\n$closingTag${xml.substring(idx + closingTag.length)}';

@@ -8,6 +8,7 @@ import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -71,7 +72,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       }
       setState(() => _capturedFile = File(xFile.path));
     } catch (e) {
-      debugPrint('[CameraCapturePage] Camera error: $e');
+      log.warning('Camera error', e);
       if (mounted) {
         SnackBarService.showError(LocServ.inst.t('camera_error'));
         Navigator.pop(context);

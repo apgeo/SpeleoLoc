@@ -187,7 +187,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         _decodedImage = null;
       }
     } catch (e) {
-      debugPrint('[MapViewerPage] Error loading image: $e');
+      _log.warning('Error loading image', e);
       _imageFile = null;
       _decodedImage = null;
       _isDecodingImage = false;

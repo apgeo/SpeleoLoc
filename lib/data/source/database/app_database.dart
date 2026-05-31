@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 import 'package:speleoloc/data/source/database/test_data_helper.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 export 'package:speleoloc/utils/uuid.dart' show Uuid, UuidConverter;
@@ -38,8 +39,8 @@ class DatabaseMigrationMonitor {
       toVersion: toVersion,
       timestamp: DateTime.now(),
     );
-    debugPrint(
-      '[DatabaseMigration] Upgrade performed: v$fromVersion -> v$toVersion',
+    AppLogger.of('DatabaseMigrationMonitor').info(
+      'Upgrade performed: v$fromVersion -> v$toVersion',
     );
   }
 

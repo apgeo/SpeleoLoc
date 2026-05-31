@@ -19,6 +19,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -155,7 +156,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     try {
       await _controller.loadDocuments();
     } catch (e) {
-      debugPrint('[GeofeatureDocumentsPage] Error loading documents: $e');
+      log.warning('Error loading documents', e);
     }
     _applyFilter();
     if (mounted) setState(() => _isLoading = false);

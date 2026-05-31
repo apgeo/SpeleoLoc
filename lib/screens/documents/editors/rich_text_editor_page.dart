@@ -6,6 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -96,7 +97,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
         _quillController.document = Document.fromJson(deltaJson);
       }
     } catch (e) {
-      debugPrint('[RichTextEditorPage] Error loading file: $e');
+      log.warning('Error loading file', e);
     }
     if (mounted) {
       // Capture initial snapshot now that the document is loaded.

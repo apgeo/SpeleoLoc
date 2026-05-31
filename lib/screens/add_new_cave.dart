@@ -4,6 +4,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
@@ -128,7 +129,7 @@ class _CaveFormPageState extends State<CaveFormPage>
         if (mounted) Navigator.pop(context, id);
       }
     } catch (e, st) {
-      debugPrint('AddNewCave._save error: $e\n$st');
+      log.severe('_save error', e, st);
       if (mounted) {
         SnackBarService.showError(e);
       }
