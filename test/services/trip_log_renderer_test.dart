@@ -145,4 +145,54 @@ void main() {
       expect(out, contains('restarted'));
     });
   });
+
+  group('renderTailDelta — parity with full render', () {
+    // PR 11c: appending the i-th event via renderTailDelta + previous log
+    // must produce the same output as a full render of all events.
+    for (final method in const [
+      TripLogMethod.raw,
+      TripLogMethod.classic,
+      TripLogMethod.journal,
+    ]) {
+      test('${method.name}: incremental append == full render', () {
+        final all = sample();
+        // Simulate the live append loop: starting from the first event,
+        // append each subsequent event via renderTailDelta.
+        var built = r.renderTailDelta([all.first], method)!;
+        for (int i = 2; i <= all.length; i++) {
+          final delta = r.renderTailDelta(all.sublist(0, i), method);
+          expect(delta, isNotNull,
+              reason: 'method=$method should support incremental rendering');
+          built = '$built\n$delta';
+        }
+        expect(built, equals(r.render(all, method)));
+      });
+    }
+
+    test('narrative: returns null (incremental unsupported)', () {
+      expect(
+        r.renderTailDelta(sample(), TripLogMethod.narrative),
+        isNull,
+      );
+    });
+
+    test('journal: restart resets the point counter', () {
+      final events = [
+        ev(TripLogEventKind.start, start, title: 'T'),
+        ev(TripLogEventKind.point, p1, label: 'A'),
+        ev(TripLogEventKind.point, p2, label: 'B'),
+        ev(TripLogEventKind.restart, p2.add(const Duration(minutes: 1)),
+            title: 'T'),
+        ev(TripLogEventKind.point,
+            p2.add(const Duration(minutes: 2)), label: 'C'),
+      ];
+      final delta = r.renderTailDelta(events, TripLogMethod.journal)!;
+      // Last event is the first point after restart → renderer must
+      // treat it as the first stop. We assert by comparing to the
+      // suffix of a full render.
+      final full = r.render(events, TripLogMethod.journal);
+      expect(full.endsWith(delta), isTrue,
+          reason: 'incremental delta must match the tail of full render');
+    });
+  });
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// Overlay audio player widget.
 ///
@@ -86,7 +87,7 @@ class _SoundFileViewerState extends State<SoundFileViewer> {
         _play();
       }
     } catch (e) {
-      debugPrint('[SoundFileViewer] prepare error: $e');
+      log.warning('prepare error', e);
     }
   }
 

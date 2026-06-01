@@ -13,9 +13,11 @@ import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
-import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/filterable_list.dart';
@@ -113,7 +115,6 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         break;
     }
   }
-  // Using global appDatabase instance
   List<Cave> _caves = [];
   Map<Uuid, int> _cavePlaceCounts = {};
   Map<Uuid, int> _caveRasterMapCounts = {};
@@ -226,20 +227,12 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     try {
       _caves = await caveRepository.getCaves();
       // compute place counts
-      final allPlaces = await (appDatabase.select(appDatabase.cavePlaces)).get();
-      _cavePlaceCounts = {};
-      for (var p in allPlaces) {
-        _cavePlaceCounts[p.caveUuid] = (_cavePlaceCounts[p.caveUuid] ?? 0) + 1;
-      }
+      _cavePlaceCounts = await cavePlaceRepository.getCavePlaceCountsByCave();
       // compute raster map counts
-      final allRasterMaps = await (appDatabase.select(appDatabase.rasterMaps)).get();
-      _caveRasterMapCounts = {};
-      for (var rm in allRasterMaps) {
-        _caveRasterMapCounts[rm.caveUuid] = (_caveRasterMapCounts[rm.caveUuid] ?? 0) + 1;
-      }
+      _caveRasterMapCounts = await rasterMapRepository.getRasterMapCountsByCave();
 
       // load surface area titles for display on the cave list
-      final areas = await (appDatabase.select(appDatabase.surfaceAreas)).get();
+      final areas = await caveRepository.getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
 
       if (!mounted) return;
@@ -306,42 +299,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     // files) loader and the new archive-download importer. The legacy path
     // is gated behind [useLegacyTestDataLoad] so it can still be re-enabled
     // for debugging by flipping the flag in `lib/utils/constants.dart`.
-    if (useLegacyTestDataLoad) {
-      await _runLegacyTestDataLoad();
-    } else {
-      await _runArchiveTestDataLoad();
-    }
-  }
-
-  /// Legacy first-start test data loader. Kept intact behind
-  /// [useLegacyTestDataLoad]; superseded by [_runArchiveTestDataLoad].
-  Future<void> _runLegacyTestDataLoad() async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(LocServ.inst.t('loading_test_data')),
-          ],
-        ),
-      ),
-    );
-    try {
-      await DatabaseRestoreHelper.reinitializeDatabase(
-          populateTestData: true);
-      if (mounted) Navigator.pop(context);
-      await DatabaseRestoreHelper.restartApplication();
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        SnackBarService.showError(
-            '${LocServ.inst.t('error_reinitializing_database')}: $e');
-      }
-    }
+    await _runArchiveTestDataLoad();
   }
 
   /// New test data loader: downloads (or loads from bundled assets) the zip
@@ -397,17 +355,10 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   /// already in the local DB that would be wiped by a replace-import.
   Future<bool> _hasResidualUserData() async {
     try {
-      final mapsRow = await appDatabase
-          .customSelect('SELECT COUNT(*) AS cnt FROM raster_maps '
-              'WHERE deleted_at IS NULL')
-          .getSingle();
-      if (mapsRow.read<int>('cnt') > 0) return true;
-      final docsRow = await appDatabase
-          .customSelect('SELECT COUNT(*) AS cnt FROM documentation_files '
-              'WHERE deleted_at IS NULL')
-          .getSingle();
-      return docsRow.read<int>('cnt') > 0;
-    } catch (_) {
+      if (await rasterMapRepository.hasAnyRasterMaps()) return true;
+      return documentationRepository.hasAnyDocumentationFiles();
+    } catch (e, st) {
+      log.warning('_hasResidualUserData query failed; treating as empty', e, st);
       return false;
     }
   }
@@ -633,7 +584,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
-    final result = await Navigator.pushNamed(context, caveRoute, arguments: cave.uuid);
+    final result = await AppRoutes.pushCave(context, cave.uuid);
     // Always refresh cave list summary after returning: cave places/areas/maps/definitions may have changed.
     _loadCaves();
     return result;

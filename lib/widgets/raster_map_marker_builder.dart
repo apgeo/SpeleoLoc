@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
@@ -333,7 +334,13 @@ class RasterMapMarkerBuilder {
               c.definition!.yCoordinate == imageY.toInt())
           .firstOrNull;
       label = match?.cavePlace.title ?? '';
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.of('RasterMapMarkerBuilder').fine(
+        'label lookup failed for marker at ($imageX, $imageY)',
+        e,
+        st,
+      );
+    }
 
     return [
       Positioned(

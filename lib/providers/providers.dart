@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
+import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
@@ -16,6 +19,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Central place that wires all app-wide dependencies via Riverpod.
 ///
@@ -29,11 +33,22 @@ import 'package:speleoloc/state/app_notifiers.dart';
 /// provider returns the same instance. Tests override with an in-memory DB.
 final appDatabaseProvider = Provider<AppDatabase>((ref) => appDatabase);
 
+/// Wall-clock source. Override in tests with a [FakeClock] to make
+/// timestamp-sensitive logic deterministic.
+final clockProvider = Provider<Clock>((ref) => const SystemClock());
+
+/// Key/value access to the `configurations` table. See
+/// [IConfigurationRepository] for the contract.
+final configurationRepositoryProvider = Provider<IConfigurationRepository>(
+  (ref) => ConfigurationRepository(ref.watch(appDatabaseProvider)),
+);
+
 final caveRepositoryProvider = Provider<ICaveRepository>(
   (ref) => CaveRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -48,6 +63,7 @@ final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
   final svc = CurrentUserService(
     ref.watch(appDatabaseProvider),
     ref.watch(userRepositoryProvider),
+    ref.watch(configurationRepositoryProvider),
   );
   // Fire-and-forget init; readers that need the values before init finishes
   // should await `svc.initialize()` themselves.
@@ -59,6 +75,7 @@ final changeLoggerProvider = Provider<ChangeLogger>(
   (ref) => ChangeLogger(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -66,6 +83,7 @@ final syncArchiveServiceProvider = Provider<SyncArchiveService>(
   (ref) => SyncArchiveService(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -95,6 +113,7 @@ final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -110,6 +129,7 @@ final placeCodeBatchRunnerProvider = Provider<PlaceCodeBatchRunner>(
     ref.watch(appDatabaseProvider),
     ref.watch(placeCodeServiceProvider),
     ref.watch(cavePlaceRepositoryProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -118,6 +138,7 @@ final rasterMapRepositoryProvider = Provider<IRasterMapRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
@@ -126,11 +147,28 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 
 final caveTripServiceProvider = Provider<CaveTripService>(
-  (ref) => CaveTripService.instance,
+  (ref) => CaveTripService(ref.watch(appDatabaseProvider), clock: ref.watch(clockProvider)),
+);
+
+/// Read/mutation surface for `cave_trips`, `cave_trip_points`, and
+/// `trip_report_templates` tables. Trip runtime state lives in
+/// [CaveTripService]; this provider exposes the pure DB operations so
+/// screens stop reaching into the global [AppDatabase].
+final caveTripRepositoryProvider = Provider<ICaveTripRepository>(
+  (ref) => CaveTripRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// Documentation-file helper surface used by editor pages and the
+/// documentation list. Currently only exposes `getDocumentationParentLink`;
+/// other writes still flow through [DocumentationFileHelper] until those
+/// call-sites are migrated in a follow-up PR-2 slice.
+final documentationRepositoryProvider = Provider<IDocumentationRepository>(
+  (ref) => DocumentationRepository(ref.watch(appDatabaseProvider)),
 );
 
 /// Session-level preferences that persist for the lifetime of the app process.

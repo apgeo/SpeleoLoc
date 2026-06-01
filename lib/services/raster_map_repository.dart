@@ -5,14 +5,16 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 class RasterMapRepository implements IRasterMapRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('RasterMapRepository');
 
-  RasterMapRepository(this._database, this._currentUser, this._logger);
+  RasterMapRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<List<RasterMap>> getRasterMaps(Uuid caveUuid) async {
@@ -40,7 +42,7 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> addRasterMap(RasterMapsCompanion companion) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final stamped = companion.copyWith(
         createdAt: Value(now),
@@ -61,7 +63,7 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> updateRasterMap(RasterMap rasterMap) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final old = await (_database.select(_database.rasterMaps)
             ..where((rm) => rm.uuid.equalsValue(rasterMap.uuid))
@@ -137,7 +139,7 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> updateRasterMapOrder(List<Uuid> orderedIds) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       await _database.transaction(() async {
         for (var i = 0; i < orderedIds.length; i++) {
           await (_database.update(_database.rasterMaps)
@@ -151,6 +153,75 @@ class RasterMapRepository implements IRasterMapRepository {
     } catch (e, st) {
       _log.severe('Failed to update raster map order', e, st);
       throw DbException('Failed to update raster map order', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Map<Uuid, int>> getRasterMapCountsByCave() async {
+    try {
+      final rows = await _database.select(_database.rasterMaps).get();
+      final counts = <Uuid, int>{};
+      for (final rm in rows) {
+        counts[rm.caveUuid] = (counts[rm.caveUuid] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e, st) {
+      _log.severe('Failed to count raster maps by cave', e, st);
+      throw DbException('Failed to count raster maps by cave',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<RasterMap>> findRasterMapsByTitleAndType({
+    required Uuid caveUuid,
+    required String title,
+    required String mapType,
+  }) async {
+    try {
+      return await (_database.select(_database.rasterMaps)
+            ..where((rm) =>
+                rm.caveUuid.equalsValue(caveUuid) &
+                rm.title.equals(title) &
+                rm.mapType.equals(mapType)))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find raster maps by title/type', e, st);
+      throw DbException('Failed to find raster maps',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<RasterMap>> findRasterMapsByHash({
+    required Uuid caveUuid,
+    required String hash,
+  }) async {
+    try {
+      return await (_database.select(_database.rasterMaps)
+            ..where((rm) =>
+                rm.caveUuid.equalsValue(caveUuid) &
+                rm.fileHash.equals(hash)))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find raster maps by hash', e, st);
+      throw DbException('Failed to find raster maps by hash',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<bool> hasAnyRasterMaps() async {
+    try {
+      final row = await _database
+          .customSelect(
+            'SELECT COUNT(*) AS cnt FROM raster_maps WHERE deleted_at IS NULL',
+          )
+          .getSingle();
+      return row.read<int>('cnt') > 0;
+    } catch (e, st) {
+      _log.severe('hasAnyRasterMaps failed', e, st);
+      throw DbException('hasAnyRasterMaps failed', cause: e, stackTrace: st);
     }
   }
 }

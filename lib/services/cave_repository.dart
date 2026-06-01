@@ -1,18 +1,20 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 class CaveRepository implements ICaveRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('CaveRepository');
 
-  CaveRepository(this._database, this._currentUser, this._logger);
+  CaveRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<List<Cave>> getCaves() async {
@@ -33,7 +35,7 @@ class CaveRepository implements ICaveRepository {
   Future<Uuid> addCave(String title, {Uuid? surfaceAreaUuid, String? description, String? caveLocalIndex}) async {
     try {
       final newUuid = Uuid.v7();
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final companion = CavesCompanion.insert(
         uuid: newUuid,
@@ -58,7 +60,7 @@ class CaveRepository implements ICaveRepository {
   @override
   Future<void> updateCave(Uuid id, String title, {Uuid? surfaceAreaUuid, String? description, String? caveLocalIndex}) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final old = await (_database.select(_database.caves)
             ..where((c) => c.uuid.equalsValue(id))
@@ -249,6 +251,214 @@ class CaveRepository implements ICaveRepository {
     } catch (e, st) {
       _log.severe('Failed to load cave areas', e, st);
       throw DbException('Failed to load cave areas', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Cave?> findById(Uuid uuid) async {
+    try {
+      return await (_database.select(_database.caves)
+            ..where((c) => c.uuid.equalsValue(uuid)))
+          .getSingleOrNull();
+    } catch (e, st) {
+      _log.severe('Failed to find cave by id', e, st);
+      throw DbException('Failed to find cave', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<SurfaceArea>> getSurfaceAreas() async {
+    try {
+      return await _database.select(_database.surfaceAreas).get();
+    } catch (e, st) {
+      _log.severe('Failed to load surface areas', e, st);
+      throw DbException('Failed to load surface areas',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<CaveArea?> findCaveAreaById(Uuid uuid) async {
+    try {
+      return await (_database.select(_database.caveAreas)
+            ..where((a) => a.uuid.equalsValue(uuid)))
+          .getSingleOrNull();
+    } catch (e, st) {
+      _log.severe('Failed to find cave area by id', e, st);
+      throw DbException('Failed to find cave area', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Uuid> addCaveArea(Uuid caveUuid, String title) async {
+    try {
+      final newUuid = Uuid.v7();
+      final now = _clock.nowMs();
+      final author = await _currentUser.currentOrSystem();
+      await _database.into(_database.caveAreas).insert(
+            CaveAreasCompanion.insert(
+              uuid: newUuid,
+              title: title,
+              caveUuid: caveUuid,
+              createdAt: Value(now),
+              updatedAt: Value(now),
+              createdByUserUuid: Value(author),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
+      await _logger.logInsert('cave_areas', newUuid);
+      return newUuid;
+    } catch (e, st) {
+      _log.severe('Failed to add cave area', e, st);
+      throw DbException('Failed to add cave area', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> updateCaveAreaTitle({
+    required Uuid uuid,
+    required String newTitle,
+    String? oldTitle,
+  }) async {
+    try {
+      final now = _clock.nowMs();
+      final author = await _currentUser.currentOrSystem();
+      await (_database.update(_database.caveAreas)
+            ..where((a) => a.uuid.equalsValue(uuid)))
+          .write(
+        CaveAreasCompanion(
+          title: Value(newTitle),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
+        ),
+      );
+      if (oldTitle != null && oldTitle != newTitle) {
+        await _logger.logUpdate(
+          'cave_areas',
+          uuid,
+          oldValues: {'title': oldTitle},
+          newValues: {'title': newTitle},
+        );
+      }
+    } catch (e, st) {
+      _log.severe('Failed to update cave area', e, st);
+      throw DbException('Failed to update cave area',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> deleteCaveArea(CaveArea area) async {
+    try {
+      await (_database.delete(_database.caveAreas)
+            ..where((a) => a.uuid.equalsValue(area.uuid)))
+          .go();
+      await _logger.logDelete(
+        'cave_areas',
+        area.uuid,
+        oldValues: {
+          'title': area.title,
+          'cave_uuid': area.caveUuid,
+        },
+      );
+    } catch (e, st) {
+      _log.severe('Failed to delete cave area', e, st);
+      throw DbException('Failed to delete cave area',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Uuid> addSurfaceArea({
+    required String title,
+    String? description,
+    String? generalAreaIdentifier,
+  }) async {
+    try {
+      final newUuid = Uuid.v7();
+      final now = _clock.nowMs();
+      final author = await _currentUser.currentOrSystem();
+      await _database.into(_database.surfaceAreas).insert(
+            SurfaceAreasCompanion.insert(
+              uuid: newUuid,
+              title: title,
+              description: Value(description),
+              generalAreaIdentifier: Value(generalAreaIdentifier),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+              createdByUserUuid: Value(author),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
+      await _logger.logInsert('surface_areas', newUuid);
+      return newUuid;
+    } catch (e, st) {
+      _log.severe('Failed to add surface area', e, st);
+      throw DbException('Failed to add surface area',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> updateSurfaceArea({
+    required SurfaceArea existing,
+    required String title,
+    String? description,
+    String? generalAreaIdentifier,
+  }) async {
+    try {
+      final now = _clock.nowMs();
+      final author = await _currentUser.currentOrSystem();
+      await (_database.update(_database.surfaceAreas)
+            ..where((a) => a.uuid.equalsValue(existing.uuid)))
+          .write(
+        SurfaceAreasCompanion(
+          title: Value(title),
+          description: Value(description),
+          generalAreaIdentifier: Value(generalAreaIdentifier),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
+        ),
+      );
+      await _logger.logUpdate(
+        'surface_areas',
+        existing.uuid,
+        oldValues: {
+          'title': existing.title,
+          'description': existing.description,
+          'general_area_identifier': existing.generalAreaIdentifier,
+        },
+        newValues: {
+          'title': title,
+          'description': description,
+          'general_area_identifier': generalAreaIdentifier,
+        },
+      );
+    } catch (e, st) {
+      _log.severe('Failed to update surface area', e, st);
+      throw DbException('Failed to update surface area',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> deleteSurfaceArea(SurfaceArea area) async {
+    try {
+      await (_database.delete(_database.surfaceAreas)
+            ..where((a) => a.uuid.equalsValue(area.uuid)))
+          .go();
+      await _logger.logDelete(
+        'surface_areas',
+        area.uuid,
+        oldValues: {
+          'title': area.title,
+          'description': area.description,
+        },
+      );
+    } catch (e, st) {
+      _log.severe('Failed to delete surface area', e, st);
+      throw DbException('Failed to delete surface area',
+          cause: e, stackTrace: st);
     }
   }
 }

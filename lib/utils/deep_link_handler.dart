@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
-import 'package:drift/drift.dart' as drift;
 
 /// Handles deep links in the "sp://<dl_input>" format.
 ///
@@ -80,22 +80,10 @@ class DeepLinkHandler {
 
   /// Save the last opened cave ID to configurations.
   static Future<void> saveLastOpenCave(Uuid caveUuid) async {
-    final existing = await (appDatabase.select(appDatabase.configurations)
-          ..where((c) => c.title.equals(lastOpenCaveKey)))
-        .getSingleOrNull();
-    if (existing == null) {
-      await appDatabase.into(appDatabase.configurations).insert(
-          ConfigurationsCompanion.insert(
-              title: lastOpenCaveKey,
-              value: drift.Value(caveUuid.toString())));
-    } else {
-      await appDatabase.update(appDatabase.configurations).replace(
-          Configuration(
-              id: existing.id,
-              title: lastOpenCaveKey,
-              value: caveUuid.toString(),
-              isSynced: existing.isSynced));
-    }
+    await configurationRepository.writeString(
+      lastOpenCaveKey,
+      caveUuid.toString(),
+    );
   }
 
   void _showWarning(BuildContext context, String message) {

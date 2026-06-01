@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
-import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -51,14 +52,12 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
   }
 
   Future<void> _load() async {
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(widget.caveUuid)))
-        .getSingleOrNull();
-    final allTrips = await appDatabase.getCaveTrips(widget.caveUuid);
+    final cave = await caveRepository.findById(widget.caveUuid);
+    final allTrips = await caveTripRepository.getCaveTrips(widget.caveUuid);
     final ended = allTrips.where((t) => t.tripEndedAt != null).toList();
     Map<Uuid, int> counts = {};
     for (final trip in ended) {
-      final points = await appDatabase.getTripPoints(trip.uuid);
+      final points = await caveTripRepository.getTripPoints(trip.uuid);
       counts[trip.uuid] = points.length;
     }
     if (mounted) {
@@ -74,7 +73,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     final caveName = _cave?.title ?? '';
     final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
     final defaultTitle = '$caveName $dateStr';
-    final existingTitles = await appDatabase.getCaveTripTitles(widget.caveUuid);
+    final existingTitles = await caveTripRepository.getCaveTripTitles(widget.caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
     final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
@@ -163,7 +162,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
         label: LocServ.inst.t('trip_view'),
         color: Colors.blue,
         onTap: () async {
-          await Navigator.pushNamed(context, caveTripRoute, arguments: activeTripId);
+          await AppRoutes.pushCaveTrip(context, activeTripId);
           _load();
         },
       ));
@@ -197,7 +196,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
 
   Widget _buildActiveTripCard(Uuid tripId) {
     return FutureBuilder<CaveTrip?>(
-      future: (appDatabase.select(appDatabase.caveTrips)..where((t) => t.uuid.equalsValue(tripId))).getSingleOrNull(),
+      future: caveTripRepository.findById(tripId),
       builder: (context, snap) {
         final trip = snap.data;
         if (trip == null) return const SizedBox.shrink();
@@ -219,7 +218,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
                 : '${LocServ.inst.t('trip_active')} · $pts ${LocServ.inst.t('trip_points')}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
-              await Navigator.pushNamed(context, caveTripRoute, arguments: tripId);
+              await AppRoutes.pushCaveTrip(context, tripId);
               _load();
             },
           ),
@@ -272,7 +271,7 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
                         subtitle: Text(dateFormat.format(dt)),
                         trailing: Text('$count pts', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                         onTap: () async {
-                          await Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
+                          await AppRoutes.pushCaveTrip(context, trip.uuid);
                           _load();
                         },
                       );

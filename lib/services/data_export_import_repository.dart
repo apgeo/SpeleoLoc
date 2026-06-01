@@ -1,5 +1,6 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Data access layer for export/import operations.
@@ -8,8 +9,9 @@ import 'package:speleoloc/utils/constants.dart';
 /// are isolated here, keeping business logic in [DataArchiveService].
 class DataExportImportRepository {
   final AppDatabase _db;
+  final Clock _clock;
 
-  DataExportImportRepository(this._db);
+  DataExportImportRepository(this._db, {Clock clock = const SystemClock()}) : _clock = clock;
 
   // ---------------------------------------------------------------------------
   //  Export queries
@@ -72,7 +74,7 @@ class DataExportImportRepository {
   }
 
   Future<void> setLastExportTimestamp(int timestamp) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = _clock.nowMs();
     final existing = await _db
         .customSelect(
           'SELECT id FROM configurations WHERE title = ?',
@@ -213,6 +215,22 @@ class DataExportImportRepository {
     final row =
         await _db.customSelect('SELECT COUNT(*) AS cnt FROM caves').getSingle();
     return row.read<int>('cnt') > 0;
+  }
+
+  /// Returns `true` when any caves, raster maps, or documentation files exist.
+  ///
+  /// Used by the export/import page to determine whether to show a
+  /// replace-import confirmation prompt.
+  Future<bool> hasAnyData() async {
+    for (final table in const ['caves', 'raster_maps', 'documentation_files']) {
+      final row = await _db
+          .customSelect(
+            'SELECT COUNT(*) AS cnt FROM $table WHERE deleted_at IS NULL',
+          )
+          .getSingle();
+      if (row.read<int>('cnt') > 0) return true;
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------------------

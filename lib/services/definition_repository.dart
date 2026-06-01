@@ -5,6 +5,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Repository for [CavePlaceToRasterMapDefinition] — querying and persisting
 /// the image-space coordinates that link a cave place to a raster map.
@@ -12,9 +13,10 @@ class DefinitionRepository implements IDefinitionRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('DefinitionRepository');
 
-  DefinitionRepository(this._database, this._currentUser, this._logger);
+  DefinitionRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<CavePlaceToRasterMapDefinition?> findDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
@@ -53,7 +55,7 @@ class DefinitionRepository implements IDefinitionRepository {
   ) async {
     try {
       return await _database.transaction(() async {
-        final now = DateTime.now().millisecondsSinceEpoch;
+        final now = _clock.nowMs();
         final author = await _currentUser.currentOrSystem();
         final existing = await findDefinition(cavePlaceUuid, rasterMapUuid);
         if (existing != null) {
@@ -176,6 +178,23 @@ class DefinitionRepository implements IDefinitionRepository {
     } catch (e, st) {
       _log.severe('deleteAllDefinitionsForRasterMap error', e, st);
       throw DbException('Failed to delete all definitions for raster map', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlaceToRasterMapDefinition>> getDefinitionsForRasterMaps(
+    Iterable<Uuid> rasterMapUuids,
+  ) async {
+    final ids = rasterMapUuids.toList(growable: false);
+    if (ids.isEmpty) return const <CavePlaceToRasterMapDefinition>[];
+    try {
+      return await (_database.select(_database.cavePlaceToRasterMapDefinitions)
+            ..where((d) => d.rasterMapUuid.isInValues(ids)))
+          .get();
+    } catch (e, st) {
+      _log.severe('getDefinitionsForRasterMaps error', e, st);
+      throw DbException('Failed to load definitions for raster maps',
+          cause: e, stackTrace: st);
     }
   }
 }

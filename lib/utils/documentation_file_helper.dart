@@ -7,7 +7,6 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -195,7 +194,7 @@ class DocumentationFileHelper {
       createdAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     );
 
-    final docId = await appDatabase.insertDocumentationFile(
+    final docId = await documentationRepository.insertDocumentationFile(
       companion: companion,
       parentLink: parentLink,
     );
@@ -216,9 +215,7 @@ class DocumentationFileHelper {
     String? description,
     required SavedFileInfo savedFile,
   }) async {
-    final old = await (appDatabase.select(appDatabase.documentationFiles)
-          ..where((t) => t.uuid.equalsValue(id)))
-        .getSingleOrNull();
+    final old = await documentationRepository.findById(id);
     final author = await currentUserService.currentOrSystem();
     final companion = DocumentationFilesCompanion(
       uuid: drift.Value(id),
@@ -231,7 +228,8 @@ class DocumentationFileHelper {
       lastModifiedByUserUuid: drift.Value(author),
     );
 
-    await appDatabase.updateDocumentationFile(uuid: id, companion: companion);
+    await documentationRepository.updateDocumentationFile(
+        uuid: id, companion: companion);
     if (old != null) {
       await changeLogger.logUpdate(
         'documentation_files',
@@ -263,10 +261,10 @@ class DocumentationFileHelper {
     required int fileSize,
     required String fileHash,
   }) async {
-    return (appDatabase.select(appDatabase.documentationFiles)
-          ..where((t) =>
-              t.fileSize.equals(fileSize) & t.fileHash.equals(fileHash)))
-        .get();
+    return documentationRepository.findDuplicates(
+      fileSize: fileSize,
+      fileHash: fileHash,
+    );
   }
 }
 

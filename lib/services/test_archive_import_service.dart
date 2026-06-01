@@ -97,7 +97,9 @@ class TestArchiveImportService {
     } finally {
       try {
         if (await tempFile.exists()) await tempFile.delete();
-      } catch (_) {}
+      } catch (e, st) {
+        AppLogger.of('TestArchiveImport').fine('Temp archive cleanup failed', e, st);
+      }
     }
   }
 }

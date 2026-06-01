@@ -9,7 +9,10 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
@@ -54,8 +57,29 @@ IRasterMapRepository get rasterMapRepository =>
     rootContainer.read(rasterMapRepositoryProvider);
 IDefinitionRepository get definitionRepository =>
     rootContainer.read(definitionRepositoryProvider);
+ICaveTripRepository get caveTripRepository =>
+    rootContainer.read(caveTripRepositoryProvider);
+IDocumentationRepository get documentationRepository =>
+    rootContainer.read(documentationRepositoryProvider);
+CaveTripService get caveTripService =>
+    rootContainer.read(caveTripServiceProvider);
 IUserRepository get userRepository =>
     rootContainer.read(userRepositoryProvider);
 CurrentUserService get currentUserService =>
     rootContainer.read(currentUserServiceProvider);
+
+/// Configuration repository accessor with a test-friendly fallback.
+///
+/// Most callers go through the provider; widget tests that pump
+/// [SpeleoLocApp] directly (without an [UncontrolledProviderScope]) cannot
+/// resolve through [rootContainer]. To preserve the pre-PR-1 behaviour for
+/// those tests — and any imperative bootstrap code that runs before
+/// [initRootContainer] — fall back to a fresh repository backed by the
+/// global [appDatabase]. Both code paths target the same database, so
+/// behaviour is observationally identical.
+IConfigurationRepository get configurationRepository {
+  final c = _rootContainer;
+  if (c == null) return ConfigurationRepository(appDatabase);
+  return c.read(configurationRepositoryProvider);
+}
 ChangeLogger get changeLogger => rootContainer.read(changeLoggerProvider);

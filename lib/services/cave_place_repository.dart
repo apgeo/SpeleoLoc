@@ -5,14 +5,16 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 class CavePlaceRepository implements ICavePlaceRepository {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ChangeLogger _logger;
+  final Clock _clock;
   final _log = AppLogger.of('CavePlaceRepository');
 
-  CavePlaceRepository(this._database, this._currentUser, this._logger);
+  CavePlaceRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
 
   @override
   Future<List<CavePlace>> getCavePlaces(Uuid caveUuid) async {
@@ -39,7 +41,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
     bool isMainEntrance = false,
   }) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final newUuid = Uuid.v7();
       await _database.into(_database.cavePlaces).insert(
@@ -65,7 +67,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
   @override
   Future<Uuid> addCavePlaceFromCompanion(CavePlacesCompanion companion) async {
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
+      final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final newUuid =
           companion.uuid.present ? companion.uuid.value : Uuid.v7();
@@ -102,7 +104,7 @@ class CavePlaceRepository implements ICavePlaceRepository {
         if (old == null) {
           throw DbException('Cave place $id not found');
         }
-        final now = DateTime.now().millisecondsSinceEpoch;
+        final now = _clock.nowMs();
         final author = await _currentUser.currentOrSystem();
         final stamped = patch.copyWith(
           updatedAt: Value(now),
@@ -218,6 +220,125 @@ class CavePlaceRepository implements ICavePlaceRepository {
     } catch (e, st) {
       _log.severe('Failed to find cave place by code', e, st);
       throw DbException('Failed to find cave place by code',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<CavePlace?> findCavePlaceByTitle(Uuid caveUuid, String title) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) =>
+                cp.caveUuid.equalsValue(caveUuid) & cp.title.equals(title)))
+          .getSingleOrNull();
+    } catch (e, st) {
+      _log.severe('Failed to find cave place by title', e, st);
+      throw DbException('Failed to find cave place by title',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findByIds(Iterable<Uuid> uuids) async {
+    final ids = uuids.toList(growable: false);
+    if (ids.isEmpty) return const <CavePlace>[];
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) => cp.uuid.isInValues(ids)))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find cave places by ids', e, st);
+      throw DbException('Failed to find cave places by ids',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findByPlaceCodeIdentifier(
+    String code, {
+    Uuid? caveUuid,
+    Uuid? excludeUuid,
+  }) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) =>
+                (caveUuid != null
+                    ? cp.caveUuid.equalsValue(caveUuid)
+                    : const Constant(true)) &
+                cp.placeCodeIdentifier.equals(code) &
+                (excludeUuid != null
+                    ? cp.uuid.equalsValue(excludeUuid).not()
+                    : const Constant(true))))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find cave places by PCI', e, st);
+      throw DbException('Failed to find cave places by PCI',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findByQrCodeResourceIdentifier(
+    String code, {
+    Uuid? excludeUuid,
+  }) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) =>
+                cp.qrCodeResourceIdentifier.equals(code) &
+                (excludeUuid != null
+                    ? cp.uuid.equalsValue(excludeUuid).not()
+                    : const Constant(true))))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find cave places by QCRI', e, st);
+      throw DbException('Failed to find cave places by QCRI',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<List<CavePlace>> findEntrances(
+    Uuid caveUuid, {
+    bool mainOnly = false,
+    Uuid? excludeUuid,
+  }) async {
+    try {
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) {
+              final sameCave = cp.caveUuid.equalsValue(caveUuid);
+              final flag = mainOnly
+                  ? cp.isMainEntrance.equals(1)
+                  : cp.isEntrance.equals(1);
+              final notExcluded = excludeUuid != null
+                  ? cp.uuid.equalsValue(excludeUuid).not()
+                  : const Constant(true);
+              return sameCave & flag & notExcluded;
+            }))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to find entrances', e, st);
+      throw DbException('Failed to find entrances',
+          cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<Map<Uuid, int>> getCavePlaceCountsByCave() async {
+    try {
+      final rows = await _database
+          .customSelect(
+            'SELECT cave_uuid, COUNT(*) AS cnt FROM cave_places GROUP BY cave_uuid',
+          )
+          .get();
+      return {
+        for (final row in rows)
+          Uuid.fromBytes(row.data['cave_uuid'] as List<int>):
+              row.data['cnt'] as int,
+      };
+    } catch (e, st) {
+      _log.severe('Failed to count cave places by cave', e, st);
+      throw DbException('Failed to count cave places by cave',
           cause: e, stackTrace: st);
     }
   }

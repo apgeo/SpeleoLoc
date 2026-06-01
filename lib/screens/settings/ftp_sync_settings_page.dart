@@ -5,6 +5,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport_factory.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -401,7 +402,9 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     } finally {
       try {
         await transport.disconnect();
-      } catch (_) {}
+      } catch (e, st) {
+        AppLogger.of('FtpSyncSettings').fine('disconnect after test failed', e, st);
+      }
     }
     if (!mounted) return;
     setState(() => _testing = false);

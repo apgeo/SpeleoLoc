@@ -7,19 +7,16 @@ import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
-import 'package:speleoloc/services/cave_trip_service.dart';
-import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
-import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Configuration key for the persisted menu mode preference.
 const String _menuModeConfigKey = 'app_menu_mode';
-// Set to true to enable the "Use popup menu" option in the drawer, which toggles the global menu mode to popup. 
-// this is a disabled/hidden option for testing purposes as it is incomplete and not usable yet.
-const bool DRAWER_AS_MENU_OPTION_ENABLED = false;
 
 /// A menu item descriptor used by the global menu system.
 class AppMenuItem {
@@ -56,7 +53,9 @@ Future<void> initAppMenuMode() async {
   try {
     final info = await PackageInfo.fromPlatform();
     _appVersion = 'v${info.version}+${info.buildNumber}';
-  } catch (_) {
+  } catch (e, st) {
+    AppLogger.of('AppGlobalMenu')
+        .warning('PackageInfo.fromPlatform failed; version hidden', e, st);
     _appVersion = '';
   }
 }
@@ -227,7 +226,7 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
   bool _handleGlobalMenuSelection(String value) {
     switch (value) {
       case '_nav_caves':
-        Navigator.pushNamedAndRemoveUntil(context, homeRoute, (route) => false);
+        AppRoutes.pushHomeReplaceAll(context);
         return true;
       case '_nav_scan':
         _navigateToScanner();
@@ -364,8 +363,7 @@ class _AppMenuDrawer extends StatelessWidget {
                 children: [
                   _navIconWithLabel(context, Icons.home, LocServ.inst.t('caves'), () {
                     Navigator.pop(context);
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, homeRoute, (route) => false);
+                    AppRoutes.pushHomeReplaceAll(context);
                   }),
                   _navIconWithLabel(context, Icons.sync, LocServ.inst.t('sync_dashboard_title'), () {
                     Navigator.pop(context);
@@ -422,15 +420,6 @@ class _AppMenuDrawer extends StatelessWidget {
                       icon: const Icon(Icons.info_outline),
                       tooltip: LocServ.inst.t('about'),
                       onPressed: () => _showAboutDialog(context),
-                    ),
-                    if (DRAWER_AS_MENU_OPTION_ENABLED)
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: LocServ.inst.t('menu_use_popup'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        AppBarMenuMixin._setMenuMode(AppMenuMode.popup);
-                      },
                     ),
                 if (_appVersion.isNotEmpty)
                   Padding(
@@ -564,14 +553,10 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
   }
 
   Future<void> _load() async {
-    final trip = await (appDatabase.select(appDatabase.caveTrips)
-          ..where((t) => t.uuid.equalsValue(widget.tripId)))
-        .getSingleOrNull();
+    final trip = await caveTripRepository.findById(widget.tripId);
     if (trip == null) return;
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(trip.caveUuid)))
-        .getSingleOrNull();
-    final points = await appDatabase.getTripPoints(widget.tripId);
+    final cave = await caveRepository.findById(trip.caveUuid);
+    final points = await caveTripRepository.getTripPoints(widget.tripId);
     final last5 = points.reversed.take(5).toList().reversed.toList();
     final placeIds = last5
       .map((p) => p.cavePlaceUuid)
@@ -580,9 +565,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
       .toList();
     Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
-      final places = await (appDatabase.select(appDatabase.cavePlaces)
-            ..where((cp) => cp.uuid.isInValues(placeIds)))
-          .get();
+      final places = await cavePlaceRepository.findByIds(placeIds);
       placesById = {for (var p in places) p.uuid: p};
     }
     if (mounted) setState(() {
@@ -616,7 +599,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
         borderRadius: BorderRadius.circular(12),
         onTap: () {
           widget.onClose();
-          Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
+          AppRoutes.pushCaveTrip(context, trip.uuid);
         },
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -669,7 +652,7 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                   tooltip: LocServ.inst.t('trip_view'),
                   onPressed: () {
                     widget.onClose();
-                    Navigator.pushNamed(context, caveTripRoute, arguments: trip.uuid);
+                    AppRoutes.pushCaveTrip(context, trip.uuid);
                   },
                 ),
                 IconButton(

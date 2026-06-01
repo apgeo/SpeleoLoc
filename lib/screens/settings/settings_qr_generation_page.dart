@@ -215,7 +215,7 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
             onChanged: (v) {
               try {
                 onChanged(int.parse(v.startsWith('0x') ? v : '0x$v'));
-              } catch (_) {}
+              } on FormatException catch (_) {}
             },
           ),
         ),

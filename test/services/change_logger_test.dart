@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
@@ -16,7 +17,7 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger ref;
     final userRepo = UserRepository(db, () => ref);
-    final currentUser = CurrentUserService(db, userRepo);
+    final currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
     await currentUser.initialize();
     ref = ChangeLogger(db, currentUser);
     logger = ref;

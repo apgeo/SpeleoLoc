@@ -8,6 +8,7 @@ import 'package:speleoloc/services/place_code/qcri_hasher.dart';
 import 'package:speleoloc/services/place_code/strategies/global_hierarchical_strategy.dart';
 import 'package:speleoloc/services/place_code/strategies/per_area_sequential_strategy.dart';
 import 'package:speleoloc/services/place_code/strategies/per_cave_sequential_strategy.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 /// QCRI generation mode.
@@ -53,8 +54,8 @@ class PlaceCodeService {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map) return Map<String, dynamic>.from(decoded);
-    } catch (_) {
-      // Fall through to empty config.
+    } catch (e, st) {
+      log.warning('strategy config blob corrupt; using empty config', e, st);
     }
     return const {};
   }
@@ -76,8 +77,9 @@ class PlaceCodeService {
           return n;
         }
       }
-    } catch (_) {
-      // ignore
+    } catch (e, st) {
+      log.warning('QCRI hash-config length read failed; using default 8',
+          e, st);
     }
     return 8;
   }
@@ -94,8 +96,9 @@ class PlaceCodeService {
       if (decoded is Map && decoded['entrance_hash'] is bool) {
         return decoded['entrance_hash'] as bool;
       }
-    } catch (_) {
-      // ignore
+    } catch (e, st) {
+      log.warning('QCRI entrance_hash flag read failed; assuming false',
+          e, st);
     }
     return false;
   }
@@ -110,8 +113,8 @@ class PlaceCodeService {
       if (decoded is Map && decoded['salt'] is String) {
         return (decoded['salt'] as String).trim();
       }
-    } catch (_) {
-      // ignore
+    } catch (e, st) {
+      log.warning('QCRI salt read failed; using empty salt', e, st);
     }
     return '';
   }

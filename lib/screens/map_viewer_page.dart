@@ -6,6 +6,7 @@ import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
@@ -53,6 +54,7 @@ class MapViewerPage extends StatefulWidget {
 }
 
 class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage>, ProductTourMixin<MapViewerPage> {
+  static final _log = AppLogger.of('MapViewerPage');
   @override
   String get tourId => 'map_viewer';
   @override
@@ -165,7 +167,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     // requiring a user tap)
     try {
       _editorController.setCavePlaceId(_selectedPlaceId);
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('setCavePlaceId failed (initial)', e, st);
+    }
 
     // load image (for color sampling if needed)
     try {
@@ -183,7 +187,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         _decodedImage = null;
       }
     } catch (e) {
-      debugPrint('[MapViewerPage] Error loading image: $e');
+      _log.warning('Error loading image', e);
       _imageFile = null;
       _decodedImage = null;
       _isDecodingImage = false;
@@ -192,7 +196,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     // Reset zoom so a new raster map doesn't inherit the previous scale/position.
     try {
       _editorController.resetZoom();
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('resetZoom after load failed', e, st);
+    }
 
     // Center on initially selected place if it has coordinates.
     // Use a short delay (instead of a bare postFrameCallback) so that PhotoView
@@ -216,7 +222,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
           // issue even when there is nothing to zoom to).
           try {
             _editorController.resetZoom();
-          } catch (_) {}
+          } catch (e, st) {
+            _log.fine('resetZoom (post-frame fallback) failed', e, st);
+          }
         }
       });
     });
@@ -328,7 +336,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         });
         try {
           _editorController.resetZoom();
-        } catch (_) {}
+        } catch (e, st) {
+          _log.fine('resetZoom on raster select failed', e, st);
+        }
         await _loadDefinitionsForSelected();
       },
       onCavePlaceSelected: (cpwd) {
@@ -340,7 +350,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
 
         try {
           _editorController.setCavePlaceId(_selectedPlaceId);
-        } catch (_) {}
+        } catch (e, st) {
+          _log.fine('setCavePlaceId on cave place select failed', e, st);
+        }
 
         if (hasDef) {
           final x = cpwd.definition!.xCoordinate!.toDouble();

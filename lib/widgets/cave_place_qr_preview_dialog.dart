@@ -10,6 +10,7 @@ import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/cave_place_qr_generator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -144,7 +145,8 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
       );
       version = code.typeNumber;
       moduleCount = code.moduleCount;
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.of('CavePlaceQrPreviewDialog').fine('QR code analysis failed', e, st);
       version = null;
       moduleCount = null;
     }
@@ -294,7 +296,13 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
         final downloads = await getDownloadsDirectory();
         if (downloads != null) return downloads;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.of('CavePlaceQrPreviewDialog').fine(
+        '_getSaveDirectory failed, falling back to app documents',
+        e,
+        st,
+      );
+    }
     return getApplicationDocumentsDirectory();
   }
 

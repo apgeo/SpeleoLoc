@@ -4,8 +4,10 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
+import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
@@ -24,7 +26,7 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
     final userRepo = UserRepository(db, () => loggerRef);
-    currentUser = CurrentUserService(db, userRepo);
+    currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
     await currentUser.initialize();
     loggerRef = ChangeLogger(db, currentUser);
     logger = loggerRef;
@@ -141,6 +143,61 @@ void main() {
     test('getRasterMaps returns empty for new cave', () async {
       final caveUuid = await caveRepo.addCave('C');
       expect(await rasterMapRepo.getRasterMaps(caveUuid), isEmpty);
+    });
+
+    test('hasAnyRasterMaps returns false when database has no maps', () async {
+      expect(await rasterMapRepo.hasAnyRasterMaps(), isFalse);
+    });
+  });
+
+  group('DocumentationRepository', () {
+    test('hasAnyDocumentationFiles returns false when database has no files', () async {
+      final docRepo = DocumentationRepository(db);
+      expect(await docRepo.hasAnyDocumentationFiles(), isFalse);
+    });
+  });
+
+  group('CavePlaceRepository finders', () {
+    test('findCavePlaceByTitle returns the matching place', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Alpha');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Beta');
+      final hit = await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Beta');
+      expect(hit, isNotNull);
+      expect(hit!.title, 'Beta');
+      final miss =
+          await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Gamma');
+      expect(miss, isNull);
+    });
+
+    test('findByIds returns rows in the requested set', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'A');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'B');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'C');
+      final all = await cavePlaceRepo.getCavePlaces(caveUuid);
+      final firstTwo = all.take(2).map((p) => p.uuid).toList();
+      final rows = await cavePlaceRepo.findByIds(firstTwo);
+      expect(rows.map((r) => r.uuid).toSet(), firstTwo.toSet());
+    });
+
+    test('findByIds short-circuits on empty input', () async {
+      expect(await cavePlaceRepo.findByIds(const <Uuid>[]), isEmpty);
+    });
+
+    test('findEntrances filters by isEntrance / isMainEntrance', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Plain');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Side', isEntrance: true);
+      await cavePlaceRepo.addCavePlace(caveUuid, 'Main',
+          isEntrance: true, isMainEntrance: true);
+
+      final entrances = await cavePlaceRepo.findEntrances(caveUuid);
+      expect(entrances.map((p) => p.title).toSet(), {'Side', 'Main'});
+
+      final mainOnly =
+          await cavePlaceRepo.findEntrances(caveUuid, mainOnly: true);
+      expect(mainOnly.single.title, 'Main');
     });
   });
 }

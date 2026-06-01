@@ -1,21 +1,29 @@
-import 'package:drift/drift.dart';
+﻿import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
+import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
-  CaveTripService._();
-  static final CaveTripService instance = CaveTripService._();
+  CaveTripService(this._db, {Clock clock = const SystemClock()})
+      : _clock = clock,
+        _renderer = TripLogRenderer(_db);
+
+  final AppDatabase _db;
+  final Clock _clock;
+  final TripLogRenderer _renderer;
 
   final ValueNotifier<Uuid?> activeTripIdNotifier = ValueNotifier<Uuid?>(null);
   final ValueNotifier<bool> isPausedNotifier = ValueNotifier<bool>(false);
 
   Future<void> initActiveTrip() async {
     try {
-      final row = await (appDatabase.select(appDatabase.configurations)
+      final row = await (_db.select(_db.configurations)
             ..where((c) => c.title.equals(activeTripConfigKey)))
           .getSingleOrNull();
       final parsed = Uuid.tryParse(row?.value);
@@ -24,23 +32,25 @@ class CaveTripService {
         // unended.  Using getActiveTrip() (most-recent-unended) was wrong:
         // a different orphaned trip could satisfy that query while the config
         // trip has already been ended, or vice-versa.
-        final trip = await (appDatabase.select(appDatabase.caveTrips)
+        final trip = await (_db.select(_db.caveTrips)
               ..where(
                   (t) => t.uuid.equalsValue(parsed) & t.tripEndedAt.isNull()))
             .getSingleOrNull();
         activeTripIdNotifier.value = trip != null ? parsed : null;
         if (trip == null) await _clearConfig();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('initActiveTrip failed; leaving active trip unset', e, st);
+    }
   }
 
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
     isPausedNotifier.value = false;
     final author = await currentUserService.currentOrSystem();
-    final tripUuid = await appDatabase.insertCaveTrip(
+    final tripUuid = await _db.insertCaveTrip(
       caveUuid: caveUuid,
       title: title,
-      startedAt: DateTime.now().millisecondsSinceEpoch,
+      startedAt: _clock.nowMs(),
       authorUuid: author,
       deviceUuid: currentUserService.deviceUuid.value,
     );
@@ -55,7 +65,7 @@ class CaveTripService {
   Future<void> restartTrip(Uuid tripUuid) async {
     isPausedNotifier.value = false;
     final author = await currentUserService.currentOrSystem();
-    await appDatabase.restartCaveTrip(tripUuid, authorUuid: author);
+    await _db.restartCaveTrip(tripUuid, authorUuid: author);
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
     await _regenerateLog(tripUuid);
@@ -65,7 +75,7 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id != null) {
       final author = await currentUserService.currentOrSystem();
-      await appDatabase.endCaveTrip(id, authorUuid: author);
+      await _db.endCaveTrip(id, authorUuid: author);
       await _appendForNewEvent(id);
     }
     await _clearConfig();
@@ -93,10 +103,12 @@ class CaveTripService {
     if (id == null || isPausedNotifier.value) return;
     try {
       final author = await currentUserService.currentOrSystem();
-      await appDatabase.insertTripPoint(
+      await _db.insertTripPoint(
           tripUuid: id, cavePlaceUuid: cavePlaceUuid, authorUuid: author);
       await _appendForNewEvent(id);
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
+    }
   }
 
   /// `textContent` is accepted for backwards compatibility with callers but
@@ -110,12 +122,14 @@ class CaveTripService {
     if (id == null || isPausedNotifier.value) return;
     try {
       final author = await currentUserService.currentOrSystem();
-      await appDatabase.linkDocumentToTrip(docUuid, id, authorUuid: author);
+      await _db.linkDocumentToTrip(docUuid, id, authorUuid: author);
       await _appendForNewEvent(id);
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('linkDocument failed (doc=$docUuid)', e, st);
+    }
   }
 
-  Future<CaveTrip?> getActiveTrip() => appDatabase.getActiveTrip();
+  Future<CaveTrip?> getActiveTrip() => _db.getActiveTrip();
 
   /// Returns the cave UUID of the currently tracked active trip, or [null]
   /// when no trip is active.  Uses [activeTripIdNotifier] as the single source
@@ -124,7 +138,7 @@ class CaveTripService {
   Future<Uuid?> getActiveTripCaveId() async {
     final id = activeTripIdNotifier.value;
     if (id == null) return null;
-    final trip = await (appDatabase.select(appDatabase.caveTrips)
+    final trip = await (_db.select(_db.caveTrips)
           ..where((t) => t.uuid.equalsValue(id)))
         .getSingleOrNull();
     return trip?.caveUuid;
@@ -138,48 +152,53 @@ class CaveTripService {
   Future<void> _regenerateLog(Uuid tripUuid) async {
     try {
       final method = await currentUserService.getTripLogMethod();
-      final events = await TripLogRenderer.instance.loadEvents(tripUuid);
-      final rendered = TripLogRenderer.instance.render(events, method);
-      await appDatabase.updateTripLog(tripUuid, rendered);
-    } catch (_) {}
+      final events = await _renderer.loadEvents(tripUuid);
+      final rendered = _renderer.render(events, method);
+      await _db.updateTripLog(tripUuid, rendered);
+    } catch (e, st) {
+      log.warning('regenerateLog failed (trip=$tripUuid)', e, st);
+    }
   }
 
   /// Appends the rendered text for the most recently added event to
   /// `cave_trips.log`, preserving any free-form text the user has typed.
-  /// Computed as the suffix difference between rendering all events and
-  /// rendering all-but-the-last event with the active method.
+  ///
+  /// PR 11c: uses `TripLogRenderer.renderTailDelta` to render only the
+  /// last event's line (O(1) for raw/classic, O(N) bounded counting for
+  /// journal). Previous implementation rendered all N events twice
+  /// (before + after) per call, giving O(N²) over the trip's lifetime.
+  /// Narrative method still requires a full regen because its paragraph
+  /// grouping can't be performed from the tail alone.
   Future<void> _appendForNewEvent(Uuid tripUuid) async {
     try {
       final method = await currentUserService.getTripLogMethod();
-      final eventsAfter =
-          await TripLogRenderer.instance.loadEvents(tripUuid);
-      if (eventsAfter.isEmpty) return;
-      final eventsBefore =
-          eventsAfter.sublist(0, eventsAfter.length - 1);
-      final before =
-          TripLogRenderer.instance.render(eventsBefore, method);
-      final after = TripLogRenderer.instance.render(eventsAfter, method);
-      if (!after.startsWith(before)) {
-        // Renderings diverge in shape (e.g. method-dependent grouping at
-        // the boundary). Fall back to full regeneration.
-        await appDatabase.updateTripLog(tripUuid, after);
+      final events = await _renderer.loadEvents(tripUuid);
+      if (events.isEmpty) return;
+
+      final delta = _renderer.renderTailDelta(events, method);
+      if (delta == null) {
+        // Method (narrative) does not support incremental rendering.
+        final full = _renderer.render(events, method);
+        await _db.updateTripLog(tripUuid, full);
         return;
       }
-      final delta = after.substring(before.length);
-      if (delta.isEmpty) return;
-      final trip = await (appDatabase.select(appDatabase.caveTrips)
+
+      final trip = await (_db.select(_db.caveTrips)
             ..where((t) => t.uuid.equalsValue(tripUuid)))
           .getSingleOrNull();
       final current = trip?.log ?? '';
-      // If the existing log already ends with this exact delta (e.g. the
-      // user appended nothing since the previous event), avoid double-
-      // appending. Otherwise append.
       if (current.isEmpty) {
-        await appDatabase.updateTripLog(tripUuid, after);
+        // First event — write the delta as-is (no leading separator).
+        await _db.updateTripLog(tripUuid, delta);
+      } else if (current.endsWith(delta)) {
+        // Already appended (e.g. retry / duplicate call) — no-op.
+        return;
       } else {
-        await appDatabase.updateTripLog(tripUuid, current + delta);
+        await _db.updateTripLog(tripUuid, '$current\n$delta');
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log.warning('appendForNewEvent failed (trip=$tripUuid)', e, st);
+    }
   }
 
   /// Public hook called by the trip log page after the user picks a new
@@ -190,20 +209,16 @@ class CaveTripService {
     await _regenerateLog(tripUuid);
   }
 
-  Future<void> _saveConfig(Uuid tripUuid) async {
-    await appDatabase.into(appDatabase.configurations).insertOnConflictUpdate(
-          ConfigurationsCompanion.insert(
-            title: activeTripConfigKey,
-            value: Value(tripUuid.toString()),
-            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
-          ),
-        );
+  Future<void> _saveConfig(Uuid tripUuid) {
+    return rootContainer
+        .read(configurationRepositoryProvider)
+        .writeString(activeTripConfigKey, tripUuid.toString());
   }
 
-  Future<void> _clearConfig() async {
-    await (appDatabase.delete(appDatabase.configurations)
-          ..where((c) => c.title.equals(activeTripConfigKey)))
-        .go();
+  Future<void> _clearConfig() {
+    return rootContainer
+        .read(configurationRepositoryProvider)
+        .delete(activeTripConfigKey);
   }
 
   static final _suffixRe = RegExp(r'\s+\[\d+\]$');
@@ -218,5 +233,3 @@ class CaveTripService {
     }
   }
 }
-
-final caveTripService = CaveTripService.instance;

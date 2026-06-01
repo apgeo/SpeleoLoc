@@ -12,6 +12,7 @@ import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_image_cache.dart';
 import 'package:speleoloc/widgets/raster_map_marker_builder.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
@@ -523,6 +524,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
 }
 
 class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> with TickerProviderStateMixin {
+  static final _log = AppLogger.of('RasterMapPlacePointEditor');
   // Selected image-space coordinates
   double? _imageSelectedX;
   double? _imageSelectedY;
@@ -680,7 +682,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           } else {
             _img = null;
           }
-        } catch (_) {
+        } catch (e, st) {
+          _log.fine('initState: simple decoder failed', e, st);
           _img = null;
         }
       } else {
@@ -734,13 +737,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
               if (mounted) setState(() => _img = RawImageData(decoded.width, decoded.height, pixels));
             }
           } catch (e) {
-            debugPrint('[RasterMapPlacePointEditor] Error decoding image: $e');
+            log.warning('Error decoding image', e);
           }
         } else {
           decodeImageToRawCached(widget.imageFile.path).then((raw) {
             if (raw != null && mounted) setState(() => _img = raw);
           }).catchError((e) {
-            debugPrint('[RasterMapPlacePointEditor] Error decoding image async: $e');
+            log.warning('Error decoding image async', e);
           });
         }
       }
@@ -800,7 +803,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             final pixels = Uint8List.fromList(decoded.getBytes());
             setState(() => _img = RawImageData(decoded.width, decoded.height, pixels));
           }
-        } catch (_) {
+        } catch (e, st) {
+          _log.fine('setUseImageTextColor: simple decoder failed', e, st);
           setState(() => _img = null);
         }
       } else {
@@ -851,7 +855,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         }
         return;
       }
-    } catch (_) {
+    } catch (e, st) {
+      _log.fine('applyControllerCavePlaceId lookup failed', e, st);
       // not found or no definition; fallthrough to clear
     }
 
@@ -1169,7 +1174,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // Update controller to highlight the new cave place
     try {
       widget.controller?.setCavePlaceId(cpwd.cavePlace.uuid);
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('controller.setCavePlaceId failed', e, st);
+    }
 
     // Zoom/pan to the new place's definition coordinates if available
     final autoZoom = widget.controller?.autoZoomToPoints ?? true;
@@ -1189,7 +1196,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           } else if (autoZoom) {
             _moveToPoint(imageX, imageY, targetScale: 1.2, animate: animate);
           }
-        } catch (_) {}
+        } catch (e, st) {
+          _log.fine('moveToPoint after cave place select failed', e, st);
+        }
       });
     }
 

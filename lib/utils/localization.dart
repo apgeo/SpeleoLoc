@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// LocalizationService
 ///
@@ -26,8 +27,10 @@ class LocServ {
       final jsonStr = await rootBundle.loadString('assets/i18n/$locale.json');
       final Map<String, dynamic> map = jsonDecode(jsonStr) as Map<String, dynamic>;
       _strings[locale] = map.map((k, v) => MapEntry(k, v.toString()));
-    } catch (_) {
+    } catch (e, st) {
       // locale file not found or parse error – leave empty
+      AppLogger.of('LocServ').warning(
+          'Failed to load locale "$locale"; falling back to defaults', e, st);
     }
   }
 

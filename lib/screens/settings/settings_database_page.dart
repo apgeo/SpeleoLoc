@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:speleoloc/utils/database_restore_helper.dart';
+import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';

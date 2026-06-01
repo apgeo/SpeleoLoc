@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:crypto/crypto.dart';
-import 'package:drift/drift.dart' show BooleanExpressionOperators, Value;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -131,12 +131,11 @@ class _RasterMapFormState extends State<RasterMapForm>
     }
 
     // Check for a duplicate (title, map_type, cave_uuid) matching the DB UNIQUE constraint.
-    final existingMaps = await (appDatabase.select(appDatabase.rasterMaps)
-          ..where((rm) =>
-              rm.caveUuid.equalsValue(widget.caveUuid) &
-              rm.title.equals(title) &
-              rm.mapType.equals(_selectedMapType!)))
-        .get();
+    final existingMaps = await rasterMapRepository.findRasterMapsByTitleAndType(
+      caveUuid: widget.caveUuid,
+      title: title,
+      mapType: _selectedMapType!,
+    );
     final isDuplicate = existingMaps.any(
       (rm) => widget.rasterMap == null || rm.uuid != widget.rasterMap!.uuid,
     );
@@ -148,11 +147,10 @@ class _RasterMapFormState extends State<RasterMapForm>
     // Check for a duplicate image (same SHA-256 hash, same cave).
     // Only run this check when a new image was picked in this session.
     if (_pendingFileHash != null) {
-      final hashMatches = await (appDatabase.select(appDatabase.rasterMaps)
-            ..where((rm) =>
-                rm.caveUuid.equalsValue(widget.caveUuid) &
-                rm.fileHash.equals(_pendingFileHash!)))
-          .get();
+      final hashMatches = await rasterMapRepository.findRasterMapsByHash(
+        caveUuid: widget.caveUuid,
+        hash: _pendingFileHash!,
+      );
       RasterMap? hashDuplicate;
       for (final rm in hashMatches) {
         if (widget.rasterMap == null || rm.uuid != widget.rasterMap!.uuid) {

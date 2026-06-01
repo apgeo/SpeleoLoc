@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
@@ -31,7 +32,7 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
     final userRepo = UserRepository(db, () => loggerRef);
-    final currentUser = CurrentUserService(db, userRepo);
+    final currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
     await currentUser.initialize();
     loggerRef = ChangeLogger(db, currentUser);
     final caveRepo = CaveRepository(db, currentUser, loggerRef);

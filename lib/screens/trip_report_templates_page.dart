@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -32,7 +33,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
   }
 
   Future<void> _load() async {
-    final templates = await appDatabase.getTripReportTemplates();
+    final templates = await caveTripRepository.getTripReportTemplates();
     if (mounted) {
       setState(() {
         _templates = templates;
@@ -93,7 +94,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
 
     try {
       final storedFileName = await service.storeTemplateFile(pickedFile);
-      await appDatabase.insertTripReportTemplate(
+      await caveTripRepository.insertTripReportTemplate(
         title: title,
         fileName: storedFileName,
         fileSize: pickedFile.lengthSync(),
@@ -130,7 +131,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
 
     try {
       await TripReportExportService.instance.deleteTemplateFile(template.fileName);
-      await appDatabase.deleteTripReportTemplate(template.uuid);
+      await caveTripRepository.deleteTripReportTemplate(template.uuid);
       await _load();
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('template_deleted'));

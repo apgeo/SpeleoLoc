@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -42,7 +43,8 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
     if (ext == 'pdf') {
       try {
         _pdfController = PdfControllerPinch(document: PdfDocument.openFile(widget.file.path));
-      } catch (_) {
+      } catch (e, st) {
+        AppLogger.of('DocFileViewer').warning('Failed to open PDF ${widget.file.path}', e, st);
         _pdfController = null;
       }
     }

@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -67,7 +69,7 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
         _imageBytes = await widget.initialFile!.readAsBytes();
       }
     } catch (e) {
-      debugPrint('[ImageEditorPage] Error loading image: $e');
+      log.warning('Error loading image', e);
     }
     if (mounted) setState(() => _isLoading = false);
   }
@@ -98,7 +100,7 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
           bytes: editedBytes,
         );
 
-        final parentLink = await appDatabase.getDocumentationParentLink(
+        final parentLink = await documentationRepository.getDocumentationParentLink(
           cavePlaceUuid: widget.cavePlaceUuid,
           caveUuid: widget.caveUuid,
           caveAreaUuid: widget.caveAreaUuid,

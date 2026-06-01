@@ -8,6 +8,7 @@ import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
@@ -157,25 +158,19 @@ class QrCodeLookupHandler {
     if (!context.mounted) return cavePlace;
 
     if (bestMapUuid != null) {
-      await Navigator.pushNamed(
+      await AppRoutes.pushCavePlaceView(
         context,
-        cavePlaceViewRoute,
-        arguments: {
-          'caveUuid': cavePlace.caveUuid,
-          'cavePlaceUuid': cavePlace.uuid,
-          'initialRasterMapUuid': bestMapUuid,
-        },
+        cavePlaceUuid: cavePlace.uuid,
+        caveUuid: cavePlace.caveUuid,
+        initialRasterMapUuid: bestMapUuid,
       );
     } else {
       SnackBarService.showWarning(
           LocServ.inst.t('no_map_definition_for_place'));
-      await Navigator.pushNamed(
+      await AppRoutes.pushCavePlace(
         context,
-        cavePlaceRoute,
-        arguments: {
-          'caveUuid': cavePlace.caveUuid,
-          'cavePlaceUuid': cavePlace.uuid,
-        },
+        caveUuid: cavePlace.caveUuid,
+        cavePlaceUuid: cavePlace.uuid,
       );
     }
 
@@ -313,9 +308,7 @@ class QrCodeLookupHandler {
       }
     } else {
       // Trip running for a DIFFERENT cave — offer to stop it first.
-      final otherCave = await (appDatabase.select(appDatabase.caves)
-            ..where((c) => c.uuid.equalsValue(activeTripCaveId)))
-          .getSingleOrNull();
+      final otherCave = await caveRepository.findById(activeTripCaveId);
       final otherCaveTitle =
           otherCave?.title ?? activeTripCaveId.toString();
       if (!context.mounted) return;
@@ -394,12 +387,10 @@ class QrCodeLookupHandler {
   }
 
   Future<void> _startTripForCave(BuildContext context, Uuid caveUuid) async {
-    final cave = await (appDatabase.select(appDatabase.caves)
-          ..where((c) => c.uuid.equalsValue(caveUuid)))
-        .getSingleOrNull();
+    final cave = await caveRepository.findById(caveUuid);
     final defaultTitle =
         '${cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final existingTitles = await appDatabase.getCaveTripTitles(caveUuid);
+    final existingTitles = await caveTripRepository.getCaveTripTitles(caveUuid);
     final suggestedTitle =
         CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_overwrite_policy.dart';
@@ -92,7 +93,7 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
     final userRepo = UserRepository(db, () => loggerRef);
-    currentUser = CurrentUserService(db, userRepo);
+    currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
     await currentUser.initialize();
     loggerRef = ChangeLogger(db, currentUser);
     logger = loggerRef;

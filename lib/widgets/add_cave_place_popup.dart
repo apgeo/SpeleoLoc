@@ -54,9 +54,7 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
   }
 
   Future<void> _loadCaveAreas() async {
-    final areas = await (appDatabase.select(appDatabase.caveAreas)
-          ..where((ca) => ca.caveUuid.equalsValue(widget.caveUuid)))
-        .get();
+    final areas = await caveRepository.getCaveAreas(widget.caveUuid);
     if (mounted) setState(() => _caveAreas = areas);
   }
 
@@ -67,11 +65,8 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
       return false;
     }
     // Check uniqueness
-    final existing = await (appDatabase.select(appDatabase.cavePlaces)
-          ..where((cp) =>
-              cp.caveUuid.equalsValue(widget.caveUuid) &
-              cp.title.equals(title)))
-        .getSingleOrNull();
+    final existing = await cavePlaceRepository.findCavePlaceByTitle(
+        widget.caveUuid, title);
     if (existing != null) {
       if (mounted) {
         setState(() => _titleError = LocServ.inst.t('title_already_exists'));
@@ -89,11 +84,10 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
       return true; // PCI is optional
     }
     // Check uniqueness within cave
-    final existing = await (appDatabase.select(appDatabase.cavePlaces)
-          ..where((cp) =>
-              cp.caveUuid.equalsValue(widget.caveUuid) &
-              cp.placeCodeIdentifier.equals(qrText)))
-        .getSingleOrNull();
+    final matches = await cavePlaceRepository.findByPlaceCodeIdentifier(
+        qrText,
+        caveUuid: widget.caveUuid);
+    final existing = matches.firstOrNull;
     if (existing != null) {
       if (mounted) {
         setState(() => _qrError = LocServ.inst

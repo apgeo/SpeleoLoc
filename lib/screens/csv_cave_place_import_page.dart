@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/data/source/database/app_database.dart' show Uuid;
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_place_importer.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -12,7 +14,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// then processes the resulting data to import cave places.
 ///
 /// Pass [caveUuid] for single-cave import mode, or omit/null for multiple-cave mode.
-class CSVCavePlacesImportPage extends StatefulWidget {
+class CSVCavePlacesImportPage extends ConsumerStatefulWidget {
   /// If non-null, import is scoped to this single cave.
   final Uuid? caveUuid;
 
@@ -26,12 +28,11 @@ class CSVCavePlacesImportPage extends StatefulWidget {
   });
 
   @override
-  State<CSVCavePlacesImportPage> createState() => _CSVCavePlacesImportPageState();
+  ConsumerState<CSVCavePlacesImportPage> createState() => _CSVCavePlacesImportPageState();
 }
 
-class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
-  final CSVCavePlaceImporter _importer =
-      CSVCavePlaceImporter(appDatabase, currentUserService, placeCodeService);
+class _CSVCavePlacesImportPageState extends ConsumerState<CSVCavePlacesImportPage> {
+  late final CSVCavePlaceImporter _importer;
   bool _isProcessing = false;
   bool _hasNavigated = false;
 
@@ -63,6 +64,8 @@ class _CSVCavePlacesImportPageState extends State<CSVCavePlacesImportPage> {
   @override
   void initState() {
     super.initState();
+    _importer = CSVCavePlaceImporter(
+        ref.read(appDatabaseProvider), currentUserService, placeCodeService);
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }
 

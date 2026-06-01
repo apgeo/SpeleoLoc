@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -10,7 +10,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
+import 'package:speleoloc/services/sync/sync_table_handler.dart';
+import 'package:speleoloc/services/sync/sync_table_registry.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/clock.dart';
 
 /// Current on-disk sync archive format version. Bump when the layout
 /// changes in a non-backwards-compatible way.
@@ -158,16 +161,6 @@ class SyncArchiveSchemaMismatchException implements Exception {
   }
 }
 
-/// Metadata columns that are excluded from "differing fields" computation:
-/// they are bookkeeping, not meaningful user content.
-const _metaColumnsForDiff = <String>{
-  'created_at',
-  'updated_at',
-  'deleted_at',
-  'created_by_user_uuid',
-  'last_modified_by_user_uuid',
-};
-
 /// Offline archive-based sync across devices.
 ///
 /// Export produces a `.zip` containing, in addition to a small manifest,
@@ -184,240 +177,31 @@ class SyncArchiveService {
     this._db,
     this._logger, {
     Future<Directory> Function()? assetsBaseDirResolver,
-  }) : _assetsBaseDirResolver =
-            assetsBaseDirResolver ?? getApplicationDocumentsDirectory;
+    Clock clock = const SystemClock(),
+  })  : _assetsBaseDirResolver =
+            assetsBaseDirResolver ?? getApplicationDocumentsDirectory,
+        _clock = clock,
+        _registry = SyncTableRegistry(_db);
 
   final AppDatabase _db;
   final ChangeLogger _logger;
   final Future<Directory> Function() _assetsBaseDirResolver;
+  final Clock _clock;
+  final SyncTableRegistry _registry;
   final _log = AppLogger.of('SyncArchiveService');
 
   static const _serializer = SyncValueSerializer();
   static const _assetsPrefix = 'assets/';
 
-  // Tables exported (in FK-dependency order). Each entry is a small struct
-  // holding dump/restore callbacks so the big ordered list is the single
-  // source of truth for sync scope.
-  List<_SyncTable> _syncedTables() => <_SyncTable>[
-        _SyncTable(
-          name: 'users',
-          dump: () async => (await _db.select(_db.users).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<User>(
-            rows,
-            (j) => User.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.users,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'surface_areas',
-          dump: () async => (await _db.select(_db.surfaceAreas).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<SurfaceArea>(
-            rows,
-            (j) => SurfaceArea.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.surfaceAreas,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'caves',
-          dump: () async => (await _db.select(_db.caves).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<Cave>(
-            rows,
-            (j) => Cave.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caves,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'cave_areas',
-          dump: () async => (await _db.select(_db.caveAreas).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<CaveArea>(
-            rows,
-            (j) => CaveArea.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caveAreas,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'cave_places',
-          dump: () async => (await _db.select(_db.cavePlaces).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<CavePlace>(
-            rows,
-            (j) => CavePlace.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.cavePlaces,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'raster_maps',
-          dump: () async => (await _db.select(_db.rasterMaps).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<RasterMap>(
-            rows,
-            (j) => RasterMap.fromJson(
-              // Older archives (schema ≤ v12) lack order_index.
-              // Supply a safe default so deserialization never fails on
-              // the non-nullable int field.
-              {'order_index': 0, ...j},
-              serializer: _serializer,
-            ),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.rasterMaps,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'cave_place_to_raster_map_definitions',
-          dump: () async =>
-              (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async =>
-              _upsertRows<CavePlaceToRasterMapDefinition>(
-            rows,
-            (j) => CavePlaceToRasterMapDefinition.fromJson(
-              j,
-              serializer: _serializer,
-            ),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.cavePlaceToRasterMapDefinitions,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'cave_trips',
-          dump: () async => (await _db.select(_db.caveTrips).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<CaveTrip>(
-            rows,
-            (j) => CaveTrip.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caveTrips,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'cave_trip_points',
-          dump: () async => (await _db.select(_db.caveTripPoints).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<CaveTripPoint>(
-            rows,
-            (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caveTripPoints,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'documentation_files',
-          dump: () async => (await _db.select(_db.documentationFiles).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => _upsertRows<DocumentationFile>(
-            rows,
-            (j) => DocumentationFile.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.documentationFiles,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'documentation_files_to_geofeatures',
-          dump: () async =>
-              (await _db.select(_db.documentationFilesToGeofeatures).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async =>
-              _upsertRows<DocumentationFilesToGeofeature>(
-            rows,
-            (j) => DocumentationFilesToGeofeature.fromJson(
-              j,
-              serializer: _serializer,
-            ),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.documentationFilesToGeofeatures,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'documentation_files_to_cave_trips',
-          dump: () async =>
-              (await _db.select(_db.documentationFilesToCaveTrips).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async =>
-              _upsertRows<DocumentationFilesToCaveTrip>(
-            rows,
-            (j) => DocumentationFilesToCaveTrip.fromJson(
-              j,
-              serializer: _serializer,
-            ),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            // Link table has no updated_at; LWW falls back to created_at.
-            (r) => r.createdAt,
-            _db.documentationFilesToCaveTrips,
-            resolver,
-          ),
-        ),
-        _SyncTable(
-          name: 'trip_report_templates',
-          dump: () async =>
-              (await _db.select(_db.tripReportTemplates).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async => _upsertRows<TripReportTemplate>(
-            rows,
-            (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.tripReportTemplates,
-            resolver,
-          ),
-        ),
-      ];
+  /// Ordered list of synced tables — delegates to [SyncTableRegistry] so
+  /// the big table-handler list lives in one place.
+  List<SyncTableHandler> _syncedTables() => _registry.tables();
+
+  // ---------------------------------------------------------------------------
+  //  EXPORT
+  // ---------------------------------------------------------------------------
+
+  /// Writes a sync archive to [outputDir] and returns the file.
 
   // ---------------------------------------------------------------------------
   //  EXPORT
@@ -484,7 +268,7 @@ class SyncArchiveService {
       }
     }
 
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final nowMs = _clock.nowMs();
     final pkgInfo = await _safeReadPackageInfo();
     final manifest = <String, dynamic>{
       'format': 'speleo_loc_sync',
@@ -908,119 +692,6 @@ class SyncArchiveService {
   //  helpers
   // ---------------------------------------------------------------------------
 
-  /// Upserts incoming rows with LWW semantics. Returns per-row counters.
-  ///
-  /// If [resolver] is non-null, every conflicting update (same UUID, at least
-  /// one differing column other than audit bookkeeping) is routed through it
-  /// before applying a decision. When the resolver returns `null`, default
-  /// LWW applies.
-  Future<_UpsertCounters> _upsertRows<D extends Insertable<D>>(
-    List<Map<String, dynamic>> rows,
-    D Function(Map<String, dynamic>) fromJson,
-    Map<String, dynamic> Function(D) toJson,
-    Uuid Function(D) uuidOf,
-    int? Function(D) tsOf,
-    TableInfo<Table, D> table,
-    ConflictResolver? resolver,
-  ) async {
-    var inserted = 0;
-    var updated = 0;
-    var skipped = 0;
-
-    for (final raw in rows) {
-      final D incoming;
-      try {
-        incoming = fromJson(raw);
-      } catch (e) {
-        _log.warning('skipping malformed ${table.actualTableName} row: $e');
-        continue;
-      }
-      final uuid = uuidOf(incoming);
-      final incomingTs = tsOf(incoming) ?? 0;
-
-      final local = await _loadLocal<D>(table, uuid);
-      if (local == null) {
-        await _db.into(table).insert(incoming);
-        inserted++;
-        continue;
-      }
-
-      final localTs = tsOf(local) ?? 0;
-      final localJson = toJson(local);
-      final incomingJson = toJson(incoming);
-      final diff = _diffMeaningfulFields(localJson, incomingJson);
-
-      if (diff.isEmpty) {
-        // Identical payloads → count as skipped, no-op.
-        skipped++;
-        continue;
-      }
-
-      var action = incomingTs > localTs
-          ? SyncConflictAction.useIncoming
-          : SyncConflictAction.keepLocal;
-
-      if (resolver != null) {
-        final decision = await resolver(SyncConflict(
-          tableName: table.actualTableName,
-          entityUuid: uuid,
-          localFields: localJson,
-          incomingFields: incomingJson,
-          differingFields: diff,
-          localUpdatedAt: localTs == 0 ? null : localTs,
-          incomingUpdatedAt: incomingTs == 0 ? null : incomingTs,
-        ));
-        if (decision == SyncConflictAction.cancel) {
-          throw const SyncImportCancelledException();
-        }
-        if (decision != null) action = decision;
-      }
-
-      if (action == SyncConflictAction.useIncoming) {
-        await _db.into(table).insert(
-              incoming,
-              mode: InsertMode.insertOrReplace,
-            );
-        updated++;
-      } else {
-        skipped++;
-      }
-    }
-
-    return _UpsertCounters(
-      inserted: inserted,
-      updated: updated,
-      skipped: skipped,
-    );
-  }
-
-  /// Loads a single row from [table] by its [uuid] and returns it as the
-  /// table's DataClass, or `null` if no such row exists.
-  Future<D?> _loadLocal<D>(TableInfo<Table, D> table, Uuid uuid) async {
-    final row = await _db.customSelect(
-      'SELECT * FROM ${table.actualTableName} WHERE uuid = ? LIMIT 1',
-      variables: [Variable<Uint8List>(uuid.bytes)],
-    ).getSingleOrNull();
-    if (row == null) return null;
-    return await table.map(row.data);
-  }
-
-  /// Returns the list of columns whose JSON values differ between [a] and
-  /// [b], excluding audit-bookkeeping columns that should not count as
-  /// user-visible conflicts.
-  List<String> _diffMeaningfulFields(
-    Map<String, dynamic> a,
-    Map<String, dynamic> b,
-  ) {
-    final keys = <String>{...a.keys, ...b.keys};
-    final diff = <String>[];
-    for (final k in keys) {
-      if (_metaColumnsForDiff.contains(k)) continue;
-      if (a[k] != b[k]) diff.add(k);
-    }
-    return diff;
-  }
-
   ArchiveFile _jsonlFile(String name, List<Map<String, dynamic>> rows) {
     final buf = StringBuffer();
     for (final r in rows) {
@@ -1294,23 +965,3 @@ class _AssetResult {
   const _AssetResult({required this.copied, required this.skipped});
 }
 
-class _UpsertCounters {
-  final int inserted;
-  final int updated;
-  final int skipped;
-  const _UpsertCounters({
-    required this.inserted,
-    required this.updated,
-    required this.skipped,
-  });
-}
-
-class _SyncTable {
-  final String name;
-  final Future<List<Map<String, dynamic>>> Function() dump;
-  final Future<_UpsertCounters> Function(
-    List<Map<String, dynamic>> rows,
-    ConflictResolver? resolver,
-  ) upsert;
-  _SyncTable({required this.name, required this.dump, required this.upsert});
-}

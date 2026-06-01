@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -70,7 +72,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       }
       setState(() => _capturedFile = File(xFile.path));
     } catch (e) {
-      debugPrint('[CameraCapturePage] Camera error: $e');
+      log.warning('Camera error', e);
       if (mounted) {
         SnackBarService.showError(LocServ.inst.t('camera_error'));
         Navigator.pop(context);
@@ -100,7 +102,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       await ImageCompressor.compressFile(_capturedFile!, compressionSettings);
 
       final saved = await DocumentationFileHelper.saveExternalFile(_capturedFile!);
-      final parentLink = await appDatabase.getDocumentationParentLink(
+      final parentLink = await documentationRepository.getDocumentationParentLink(
         cavePlaceUuid: widget.cavePlaceUuid,
         caveUuid: widget.caveUuid,
         caveAreaUuid: widget.caveAreaUuid,
