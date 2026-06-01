@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Centralized logging facade.
@@ -39,6 +40,23 @@ class AppLogger {
         buf.write('\n${record.stackTrace}');
       }
       debugPrint(buf.toString());
+
+      // Forward WARNING+ to Sentry in release builds so production errors are
+      // captured without any changes at call sites. The DSN is injected at
+      // build time via --dart-define=SENTRY_DSN=... and is empty in debug
+      // builds (where Sentry.init is a no-op), so this branch is safe to run
+      // unconditionally.
+      if (record.level >= Level.WARNING && !kDebugMode) {
+        Sentry.captureException(
+          record.error ?? record.message,
+          stackTrace: record.stackTrace,
+          hint: Hint.withMap({
+            'logger': record.loggerName,
+            'level': record.level.name,
+            'message': record.message,
+          }),
+        );
+      }
     });
 
     // React to runtime debug toggle.

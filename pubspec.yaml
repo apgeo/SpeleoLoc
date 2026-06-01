@@ -52,6 +52,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   geolocator: ^13.0.2
   flex_color_picker: ^3.7.1
+  sentry_flutter: ^8.14.0
   flutter_localizations:
     sdk: flutter
 
