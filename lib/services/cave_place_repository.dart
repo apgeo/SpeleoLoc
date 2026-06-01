@@ -326,12 +326,16 @@ class CavePlaceRepository implements ICavePlaceRepository {
   @override
   Future<Map<Uuid, int>> getCavePlaceCountsByCave() async {
     try {
-      final rows = await _database.select(_database.cavePlaces).get();
-      final counts = <Uuid, int>{};
-      for (final p in rows) {
-        counts[p.caveUuid] = (counts[p.caveUuid] ?? 0) + 1;
-      }
-      return counts;
+      final rows = await _database
+          .customSelect(
+            'SELECT cave_uuid, COUNT(*) AS cnt FROM cave_places GROUP BY cave_uuid',
+          )
+          .get();
+      return {
+        for (final row in rows)
+          Uuid.fromBytes(row.data['cave_uuid'] as List<int>):
+              row.data['cnt'] as int,
+      };
     } catch (e, st) {
       _log.severe('Failed to count cave places by cave', e, st);
       throw DbException('Failed to count cave places by cave',
