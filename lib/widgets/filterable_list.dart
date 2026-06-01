@@ -750,10 +750,37 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
     final destructiveColor =
         theme.bulkActionDestructiveColor ?? Colors.red;
 
-    final Widget? labelWidget = widget.headerLabel ??
+    // Item count suffix appended to the header label:
+    //   no active filter  →  "(45)"
+    //   filter active     →  "(5 /45)"
+    final totalCount = widget.items.length;
+    final filteredCount = _filtered.length;
+    final isFiltering = _query.value.trim().isNotEmpty;
+    final countText = isFiltering
+        ? '($filteredCount /$totalCount)'
+        : '($totalCount)';
+    final countStyle = labelStyle.copyWith(
+      fontSize: (labelStyle.fontSize ?? 14.0) * 0.9,
+      color: isFiltering
+          ? Theme.of(context).colorScheme.primary
+          : Colors.grey[500],
+    );
+
+    final Widget? baseLabel = widget.headerLabel ??
         (widget.headerLabelText != null
             ? Text(widget.headerLabelText!, style: labelStyle)
             : null);
+    final Widget? labelWidget = baseLabel == null
+        ? null
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(child: baseLabel),
+              Text(countText, style: countStyle),
+            ],
+          );
 
     return KeyedSubtree(
       key: widget.headerKey,
