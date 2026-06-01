@@ -628,6 +628,9 @@ class RasterMapPlacePointEditorController {
   void setAnimatePointTransitions(bool v) {
     animatePointTransitions = v;
   }
+
+  /// Toggles the cave-places filter text field in the embedded nav bar.
+  void toggleCavePlaceFilter() => _state?._toggleNavBarCavePlaceFilter();
 }
 
 class RasterMapPlacePointEditor extends StatefulWidget {
@@ -845,6 +848,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   // Key for the embedded nav bar (for programmatic scrolling)
   final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
 
+  /// UUIDs that are currently visible after nav-bar text filtering.
+  /// `null` means no filter is active and all places are shown.
+  Set<Uuid>? _visiblePlaceUuids;
+
   static const bool SHOW_SAVE_CAVE_PLACE_BUTTON = false;
 
   @override
@@ -1030,6 +1037,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   void _setShowTapModeCheckbox(bool v) {
     if (mounted) setState(() => _showTapModeCheckbox = v);
+  }
+
+  /// Delegates the filter-toggle request to the embedded nav bar.
+  void _toggleNavBarCavePlaceFilter() {
+    _navBarKey.currentState?.toggleFilter();
   }
 
   void _setUseImageTextColor(bool v) {
@@ -1608,6 +1620,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             onCavePlaceSelected: (cpwd) => _handleNavCavePlaceSelected(cpwd),
             caveAreaTitles: widget.caveAreaTitles,
             groupByCaveArea: widget.groupPlacesByCaveArea,
+            onVisiblePlaceUuidsChanged: (uuids) {
+              setState(() => _visiblePlaceUuids = uuids);
+            },
           ),
 
         Expanded(
@@ -1689,6 +1704,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                         definitions: widget.cavePlacesWithDefinitions,
                         controllerValue: controllerValue,
                         specialPointKeys: specialPointKeys,
+                        visiblePlaceUuids: _visiblePlaceUuids,
                         useImageTextColor: _useImageTextColor,
                         img: _img,
                         defaultLabelColor: widget.defaultLabelColor,

@@ -325,6 +325,11 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
+      value: 'filter_cave_places',
+      icon: Icons.search,
+      label: LocServ.inst.t('filter_cave_places'),
+    ),
+    AppMenuItem(
       value: 'sort_cave_places',
       icon: Icons.sort_by_alpha,
       label: LocServ.inst.t('sort_cave_places_navbar'),
@@ -343,7 +348,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   @override
   void onScreenMenuItemSelected(String value) {
-    if (value == 'sort_cave_places') {
+    if (value == 'filter_cave_places') {
+      _editorController.toggleCavePlaceFilter();
+    } else if (value == 'sort_cave_places') {
       _showCavePlacesSortDialog();
     } else if (value == 'sort_raster_maps') {
       _showSortDialog();

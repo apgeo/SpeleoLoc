@@ -947,6 +947,7 @@
   "sort_has_qr_code_yes": "Has QR code",
   "sort_has_qr_code_no": "No QR code",
   "sort_cave_places_navbar": "Sort cave places list",
+  "filter_cave_places": "Filter cave places",
   "sort_cave_place_field_lastModified": "Last modified",
   "sort_cave_place_field_title": "Title (alphabetical)",
   "sort_cave_place_field_caveArea": "Cave area",

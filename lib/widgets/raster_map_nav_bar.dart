@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Configuration that controls sizing and layout of the [RasterMapNavBar].
 class RasterMapNavBarStyle {
@@ -95,6 +96,7 @@ class RasterMapNavBar extends StatefulWidget {
     this.showCavePlacesList = true,
     this.caveAreaTitles = const {},
     this.groupByCaveArea = false,
+    this.onVisiblePlaceUuidsChanged,
   });
 
   final List<RasterMap> rasterMaps;
@@ -122,6 +124,12 @@ class RasterMapNavBar extends StatefulWidget {
   /// "area boxes" (requires [caveAreaTitles] to be populated).
   final bool groupByCaveArea;
 
+  /// Called whenever the active filter changes.  The argument is a
+  /// [Set<Uuid>] of the place UUIDs that pass the filter, or `null` when
+  /// the filter is cleared (meaning all places are visible).  The parent
+  /// widget uses this to hide/show map markers accordingly.
+  final void Function(Set<Uuid>?)? onVisiblePlaceUuidsChanged;
+
   @override
   State<RasterMapNavBar> createState() => RasterMapNavBarState();
 }
@@ -137,6 +145,17 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
   // Cache for image path futures so they're not re-awaited on rebuild
   final Map<String, Future<String>> _imagePathFutures = {};
 
+  // ── Cave-places text filter ───────────────────────────────────────────────
+  /// Whether the filter text field is currently shown.
+  bool _filterVisible = false;
+
+  /// Controller for the filter text field.
+  final TextEditingController _filterController = TextEditingController();
+
+  /// The currently-active filter set.  `null` = no filter (all visible).
+  /// Non-null = only the UUIDs in this set should be shown.
+  Set<Uuid>? _filteredIds;
+
   @override
   void initState() {
     super.initState();
@@ -149,12 +168,19 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     if (widget.selectedPlaceId != oldWidget.selectedPlaceId) {
       _selectedPlaceNotifier.value = widget.selectedPlaceId;
     }
+    // When the places list is replaced (e.g. after sorting), re-apply any
+    // active filter so the map markers and horizontal list stay in sync.
+    if (!identical(widget.cavePlacesWithDefinitions, oldWidget.cavePlacesWithDefinitions) &&
+        _filterController.text.isNotEmpty) {
+      _applyFilter(_filterController.text);
+    }
   }
 
   @override
   void dispose() {
     _placesScrollController.dispose();
     _selectedPlaceNotifier.dispose();
+    _filterController.dispose();
     super.dispose();
   }
 
@@ -181,6 +207,86 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     );
   }
 
+  // ── Filter ────────────────────────────────────────────────────────────────
+
+  /// Toggles the filter text field visibility.  Clears the filter when hiding.
+  void toggleFilter() {
+    setState(() {
+      _filterVisible = !_filterVisible;
+      if (!_filterVisible && _filterController.text.isNotEmpty) {
+        _filterController.clear();
+        _applyFilter('');
+      }
+    });
+  }
+
+  /// Recomputes [_filteredIds] from [query] and notifies the parent.
+  void _applyFilter(String query) {
+    final q = query.toLowerCase().trim();
+    Set<Uuid>? result;
+    if (q.isEmpty) {
+      result = null;
+    } else {
+      result = {};
+      for (final cpwd in widget.cavePlacesWithDefinitions) {
+        final cp = cpwd.cavePlace;
+        bool match = cp.title.toLowerCase().contains(q);
+        if (!match) match = cp.description?.toLowerCase().contains(q) ?? false;
+        if (!match) {
+          match = cp.placeCodeIdentifier?.toLowerCase().contains(q) ?? false;
+        }
+        if (!match) {
+          final areaTitle = cp.caveAreaUuid != null
+              ? (widget.caveAreaTitles[cp.caveAreaUuid] ?? '')
+              : '';
+          match = areaTitle.toLowerCase().contains(q);
+        }
+        if (match) result.add(cp.uuid);
+      }
+    }
+    setState(() => _filteredIds = result);
+    widget.onVisiblePlaceUuidsChanged?.call(result);
+  }
+
+  /// Builds the compact filter input row shown above the places list.
+  Widget _buildFilterRow(BuildContext context, RasterMapNavBarStyle s) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
+      child: SizedBox(
+        height: 34,
+        child: TextField(
+          controller: _filterController,
+          autofocus: true,
+          style: TextStyle(fontSize: s.placesTitleFontSize + 1),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            hintText: LocServ.inst.t('filter_cave_places'),
+            hintStyle: const TextStyle(fontSize: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(17)),
+            suffixIcon: ListenableBuilder(
+              listenable: _filterController,
+              builder: (_, __) => _filterController.text.isEmpty
+                  ? const SizedBox.shrink()
+                  : IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        _filterController.clear();
+                        _applyFilter('');
+                      },
+                    ),
+            ),
+          ),
+          onChanged: _applyFilter,
+        ),
+      ),
+    );
+  }
+
   Future<String> _getImagePath(String fileName) {
     return _imagePathFutures[fileName] ??= (() async {
       final directory = await getApplicationDocumentsDirectory();
@@ -195,6 +301,8 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.showRasterMapsList) _buildRasterMapsList(context, s),
+        if (widget.showCavePlacesList && _filterVisible)
+          _buildFilterRow(context, s),
         if (widget.showCavePlacesList) _buildCavePlacesList(context, s),
       ],
     );
@@ -309,14 +417,21 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     const double groupHeaderHeight = 14.0;
     const double groupHeaderFontSize = 9.0;
 
+    // Apply active filter (null means show all).
+    final displayList = _filteredIds == null
+        ? widget.cavePlacesWithDefinitions
+        : widget.cavePlacesWithDefinitions
+            .where((c) => _filteredIds!.contains(c.cavePlace.uuid))
+            .toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: ValueListenableBuilder<Uuid?>(
         valueListenable: _selectedPlaceNotifier,
         builder: (context, selectedId, _) {
-          if (widget.groupByCaveArea && widget.cavePlacesWithDefinitions.isNotEmpty) {
+          if (widget.groupByCaveArea && displayList.isNotEmpty) {
             // ── Grouped mode: SingleChildScrollView + Row of area boxes ───────
-            final groups = _groupByCaveArea(widget.cavePlacesWithDefinitions);
+            final groups = _groupByCaveArea(displayList);
             return SizedBox(
               height: listHeight + groupHeaderHeight + 8,
               child: SingleChildScrollView(
@@ -394,9 +509,9 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
             child: ListView.builder(
               controller: _placesScrollController,
               scrollDirection: Axis.horizontal,
-              itemCount: widget.cavePlacesWithDefinitions.length,
+              itemCount: displayList.length,
               itemBuilder: (context, idx) {
-                final cpwd = widget.cavePlacesWithDefinitions[idx];
+                final cpwd = displayList[idx];
                 final hasDef = cpwd.definition != null &&
                     cpwd.definition!.xCoordinate != null &&
                     cpwd.definition!.yCoordinate != null;

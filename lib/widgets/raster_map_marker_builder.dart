@@ -104,10 +104,15 @@ class RasterMapMarkerBuilder {
 
   /// Build overlay widgets for existing cave-place definition markers (red dots
   /// + labels), skipping "special" points that get their own distinct markers.
+  ///
+  /// When [visiblePlaceUuids] is non-null, only places whose UUID is contained
+  /// in the set are rendered — enabling live text filtering without rebuilding
+  /// the parent widget tree.  Pass `null` to show all markers (default).
   static List<Widget> buildDefinitionMarkers({
     required List<CavePlaceWithDefinition> definitions,
     required PhotoViewControllerValue controllerValue,
     required Set<String> specialPointKeys,
+    Set<Uuid>? visiblePlaceUuids,
     required bool useImageTextColor,
     required RawImageData? img,
     required Color defaultLabelColor,
@@ -121,6 +126,11 @@ class RasterMapMarkerBuilder {
 
     for (final cpwd
         in definitions.where((cpwd) => cpwd.definition != null)) {
+      // Skip marker if a filter is active and this place is not in the visible set.
+      if (visiblePlaceUuids != null &&
+          !visiblePlaceUuids.contains(cpwd.cavePlace.uuid)) {
+        continue;
+      }
       final def = cpwd.definition!;
       final imageX = (def.xCoordinate ?? 0).toDouble();
       final imageY = (def.yCoordinate ?? 0).toDouble();

@@ -945,6 +945,7 @@
   "sort_has_qr_code_yes": "Are cod QR",
   "sort_has_qr_code_no": "Fără cod QR",
   "sort_cave_places_navbar": "Sortare locuri peșteră",
+  "filter_cave_places": "Filtrare locuri peșteră",
   "sort_cave_place_field_lastModified": "Ultima modificare",
   "sort_cave_place_field_title": "Titlu (alfabetic)",
   "sort_cave_place_field_caveArea": "Zonă peșteră",
