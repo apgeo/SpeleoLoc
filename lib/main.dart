@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:speleoloc/app.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/document_format_registry.dart';
@@ -11,9 +13,27 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 
 void main() async {
+  // DSN is injected at build time: --dart-define=SENTRY_DSN=https://...
+  // An empty DSN means Sentry.init is a no-op, so debug/CI builds without
+  // a DSN work normally without any changes here.
+  const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = sentryDsn;
+      // Only capture events in release builds to avoid noise during development.
+      options.environment = kReleaseMode ? 'production' : 'development';
+      options.tracesSampleRate = kReleaseMode ? 0.2 : 0.0;
+    },
+    appRunner: () => _runApp(),
+  );
+}
+
+Future<void> _runApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize unified logging facade before anything else emits output.
+  // The AppLogger listener forwards WARNING+ records to Sentry automatically.
   AppLogger.init();
 
   // Create the root Riverpod container. The same instance is shared with the
