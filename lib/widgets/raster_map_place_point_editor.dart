@@ -488,6 +488,7 @@ class RasterMapPlacePointEditorController {
     this.textOutlineEnabled = true,
     this.textOutlineWidth = RasterMapEditorConstants.defaultTextOutlineWidth,
     this.textBackgroundEnabled = false,
+    this.fadeFilteredMarkers = true,
     this.keepZoomOnNavigation = false,
     this.initialZoomLevel = RasterMapEditorConstants.defaultInitialZoomLevel,
     this.initialTapDefinesNewPoint = false,
@@ -542,6 +543,12 @@ class RasterMapPlacePointEditorController {
   /// When true, a 40%-transparent rounded-corner background box is drawn
   /// behind marker label text for additional readability. Disabled by default.
   bool textBackgroundEnabled;
+
+  /// When true (default) and a cave-places text filter is active, markers for
+  /// filtered-out places are rendered at 25 % opacity with no label so the
+  /// user can still see where they are on the map.
+  /// When false, filtered-out markers are hidden entirely.
+  bool fadeFilteredMarkers;
 
   /// When true, navigating to another point preserves the current zoom level
   /// instead of resetting/changing it.
@@ -673,6 +680,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.tripOverlay,
     this.caveAreaTitles = const {},
     this.groupPlacesByCaveArea = false,
+    this.fadeFilteredMarkers = true,
   });
 
   final File imageFile;
@@ -763,6 +771,12 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// When true, the embedded nav bar renders cave places in grouped "area
   /// boxes". Requires [caveAreaTitles] to be populated.
   final bool groupPlacesByCaveArea;
+
+  /// When true (default) and a cave-places text filter is active, markers for
+  /// filtered-out places are rendered at 25 % opacity with no label so the
+  /// user can still see where they are on the map.
+  /// When false, filtered-out markers are hidden entirely.
+  final bool fadeFilteredMarkers;
 
   @override
   State<RasterMapPlacePointEditor> createState() =>
@@ -1705,6 +1719,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                         controllerValue: controllerValue,
                         specialPointKeys: specialPointKeys,
                         visiblePlaceUuids: _visiblePlaceUuids,
+                        fadeFilteredMarkers: widget.controller?.fadeFilteredMarkers ?? widget.fadeFilteredMarkers,
                         useImageTextColor: _useImageTextColor,
                         img: _img,
                         defaultLabelColor: widget.defaultLabelColor,

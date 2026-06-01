@@ -105,14 +105,18 @@ class RasterMapMarkerBuilder {
   /// Build overlay widgets for existing cave-place definition markers (red dots
   /// + labels), skipping "special" points that get their own distinct markers.
   ///
-  /// When [visiblePlaceUuids] is non-null, only places whose UUID is contained
-  /// in the set are rendered — enabling live text filtering without rebuilding
-  /// the parent widget tree.  Pass `null` to show all markers (default).
+  /// When [visiblePlaceUuids] is non-null a filter is active:
+  ///   • [fadeFilteredMarkers] = true (default): filtered-out places are
+  ///     rendered as a faded dot at 25 % opacity with no label and no gesture
+  ///     handlers, so the user can still see where they are.
+  ///   • [fadeFilteredMarkers] = false: filtered-out places are hidden entirely.
+  /// Pass [visiblePlaceUuids] = null to show all markers (no filter active).
   static List<Widget> buildDefinitionMarkers({
     required List<CavePlaceWithDefinition> definitions,
     required PhotoViewControllerValue controllerValue,
     required Set<String> specialPointKeys,
     Set<Uuid>? visiblePlaceUuids,
+    bool fadeFilteredMarkers = true,
     required bool useImageTextColor,
     required RawImageData? img,
     required Color defaultLabelColor,
@@ -126,11 +130,10 @@ class RasterMapMarkerBuilder {
 
     for (final cpwd
         in definitions.where((cpwd) => cpwd.definition != null)) {
-      // Skip marker if a filter is active and this place is not in the visible set.
-      if (visiblePlaceUuids != null &&
-          !visiblePlaceUuids.contains(cpwd.cavePlace.uuid)) {
-        continue;
-      }
+      // Determine visibility when a filter is active.
+      final isFiltered = visiblePlaceUuids != null &&
+          !visiblePlaceUuids.contains(cpwd.cavePlace.uuid);
+      if (isFiltered && !fadeFilteredMarkers) continue;
       final def = cpwd.definition!;
       final imageX = (def.xCoordinate ?? 0).toDouble();
       final imageY = (def.yCoordinate ?? 0).toDouble();
@@ -146,6 +149,33 @@ class RasterMapMarkerBuilder {
 
       final key = '${imageX.toInt()},${imageY.toInt()}';
       final isSpecial = specialPointKeys.contains(key);
+
+      // ── Fade mode: filtered-out place — faded dot, no label, no gestures ──
+      if (isFiltered) {
+        widgets.add(
+          Positioned(
+            left: viewportPos.dx - (redDotSize / 2),
+            top: viewportPos.dy - (redDotSize / 2),
+            child: Opacity(
+              opacity: 0.25,
+              child: Container(
+                width: redDotSize + 8,
+                height: redDotSize + 8,
+                alignment: Alignment.center,
+                child: Container(
+                  width: redDotSize,
+                  height: redDotSize,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue; // no label, no gesture handler
+      }
 
       if (!isSpecial) {
         widgets.add(
