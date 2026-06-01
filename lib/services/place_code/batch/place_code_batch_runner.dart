@@ -1,4 +1,4 @@
-﻿import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show Value;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_overwrite_policy.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
