@@ -1,4 +1,4 @@
-﻿import 'package:csv/csv.dart';
+import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
