@@ -130,3 +130,7 @@ const String ambiguityPolicyPreferLastCave = 'prefer_last_cave';
 // Raster-map sort option (persisted so MapViewerPage and QR handler agree)
 const String rasterMapSortFieldKey = 'raster_map_sort_field';
 const String rasterMapSortAscKey = 'raster_map_sort_asc';
+
+// Cave-places nav bar sort option (horizontal list in RasterMapNavBar)
+const String cavePlacesNavBarSortFieldKey = 'cave_places_navbar_sort_field';
+const String cavePlacesNavBarSortAscKey = 'cave_places_navbar_sort_asc';

@@ -26,6 +26,239 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 export 'package:speleoloc/widgets/raster_map_image_cache.dart';
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Cave-place nav bar sort options
+// ---------------------------------------------------------------------------
+
+/// Field by which the cave-places horizontal list (nav bar) is sorted.
+enum CavePlaceSortField {
+  lastModified,
+  title,
+  caveArea,
+  depth,
+  qrCodeIdentifier,
+  isEntrance,
+  hasQrCode,
+  definitionsCount,
+}
+
+/// Bundles sort field + direction for the cave-places nav bar.
+class CavePlaceSortOption {
+  const CavePlaceSortOption({
+    this.field = CavePlaceSortField.lastModified,
+    this.ascending = false,
+  });
+
+  final CavePlaceSortField field;
+  final bool ascending;
+
+  /// Whether the current sort field produces visible grouping in the list.
+  bool get groupByCaveArea => field == CavePlaceSortField.caveArea;
+
+  CavePlaceSortOption copyWith({CavePlaceSortField? field, bool? ascending}) =>
+      CavePlaceSortOption(
+        field: field ?? this.field,
+        ascending: ascending ?? this.ascending,
+      );
+
+  /// Loads the persisted cave-places nav bar sort. Returns `null` if nothing
+  /// has been saved yet (so the caller can fall back to another source).
+  static Future<CavePlaceSortOption?> _loadIfSaved() async {
+    final fieldStr =
+        await SettingsHelper.loadStringConfig(cavePlacesNavBarSortFieldKey);
+    if (fieldStr.isEmpty) return null;
+    final ascStr =
+        await SettingsHelper.loadStringConfig(cavePlacesNavBarSortAscKey, 'false');
+    final field = CavePlaceSortField.values.firstWhere(
+      (f) => f.name == fieldStr,
+      orElse: () => CavePlaceSortField.lastModified,
+    );
+    return CavePlaceSortOption(field: field, ascending: ascStr == 'true');
+  }
+
+  /// Loads the persisted sort.  When no nav-bar-specific config exists, falls
+  /// back to the sort currently set in [CavePlacesListPage] (read from the
+  /// `filterable_sort_cave_places_list_sort` config key).
+  static Future<CavePlaceSortOption> load() async {
+    final saved = await _loadIfSaved();
+    if (saved != null) return saved;
+
+    // Fall back: read CavePlacesListPage sort
+    final json = await SettingsHelper.loadJsonConfig(
+      'filterable_sort_cave_places_list_sort',
+      () => const {},
+    );
+    final primaryFieldId = json['primaryFieldId'] as String? ?? 'last_modified';
+    final primaryAscending = json['primaryAscending'] as bool? ?? false;
+    const idToField = {
+      'last_modified': CavePlaceSortField.lastModified,
+      'title': CavePlaceSortField.title,
+      'cave_area': CavePlaceSortField.caveArea,
+      'depth': CavePlaceSortField.depth,
+      'qr_code_identifier': CavePlaceSortField.qrCodeIdentifier,
+      'is_entrance': CavePlaceSortField.isEntrance,
+      'has_qr_code': CavePlaceSortField.hasQrCode,
+      'definitions_count': CavePlaceSortField.definitionsCount,
+    };
+    return CavePlaceSortOption(
+      field: idToField[primaryFieldId] ?? CavePlaceSortField.lastModified,
+      ascending: primaryAscending,
+    );
+  }
+
+  /// Persists this sort option.
+  Future<void> save() async {
+    await SettingsHelper.saveStringConfig(cavePlacesNavBarSortFieldKey, field.name);
+    await SettingsHelper.saveStringConfig(cavePlacesNavBarSortAscKey, ascending.toString());
+  }
+
+  /// Returns a sorted copy of [places].
+  List<CavePlaceWithDefinition> apply(
+    List<CavePlaceWithDefinition> places,
+    Map<Uuid, String> areaTitles,
+    Map<Uuid, int> definitionCountByPlace,
+  ) {
+    final sorted = List<CavePlaceWithDefinition>.from(places);
+    final dir = ascending ? 1 : -1;
+    switch (field) {
+      case CavePlaceSortField.lastModified:
+        sorted.sort((a, b) => dir *
+            (a.cavePlace.updatedAt ?? 0)
+                .compareTo(b.cavePlace.updatedAt ?? 0));
+      case CavePlaceSortField.title:
+        sorted.sort((a, b) => dir *
+            a.cavePlace.title.toLowerCase().compareTo(
+                b.cavePlace.title.toLowerCase()));
+      case CavePlaceSortField.caveArea:
+        sorted.sort((a, b) {
+          final at = a.cavePlace.caveAreaUuid != null
+              ? (areaTitles[a.cavePlace.caveAreaUuid] ?? '')
+              : '';
+          final bt = b.cavePlace.caveAreaUuid != null
+              ? (areaTitles[b.cavePlace.caveAreaUuid] ?? '')
+              : '';
+          return dir * at.toLowerCase().compareTo(bt.toLowerCase());
+        });
+      case CavePlaceSortField.depth:
+        sorted.sort((a, b) => dir *
+            (a.cavePlace.depthInCave ?? double.infinity)
+                .compareTo(b.cavePlace.depthInCave ?? double.infinity));
+      case CavePlaceSortField.qrCodeIdentifier:
+        sorted.sort((a, b) {
+          final av = a.cavePlace.placeCodeIdentifier;
+          final bv = b.cavePlace.placeCodeIdentifier;
+          if (av == null && bv == null) return 0;
+          if (av == null) return dir;
+          if (bv == null) return -dir;
+          return dir * av.compareTo(bv);
+        });
+      case CavePlaceSortField.isEntrance:
+        int rank(CavePlace p) =>
+            p.isMainEntrance == 1 ? 2 : (p.isEntrance == 1 ? 1 : 0);
+        sorted.sort(
+            (a, b) => dir * rank(a.cavePlace).compareTo(rank(b.cavePlace)));
+      case CavePlaceSortField.hasQrCode:
+        sorted.sort((a, b) => dir *
+            (a.cavePlace.placeCodeIdentifier != null ? 1 : 0)
+                .compareTo(b.cavePlace.placeCodeIdentifier != null ? 1 : 0));
+      case CavePlaceSortField.definitionsCount:
+        sorted.sort((a, b) => dir *
+            (definitionCountByPlace[a.cavePlace.uuid] ?? 0)
+                .compareTo(definitionCountByPlace[b.cavePlace.uuid] ?? 0));
+    }
+    return sorted;
+  }
+}
+
+/// Opens a dialog for choosing a [CavePlaceSortOption] for the nav bar list.
+///
+/// Returns the chosen option, or `null` if dismissed.
+Future<CavePlaceSortOption?> showCavePlacesSortDialog(
+  BuildContext context,
+  CavePlaceSortOption current,
+) {
+  return showDialog<CavePlaceSortOption>(
+    context: context,
+    builder: (context) => _CavePlacesSortDialog(current: current),
+  );
+}
+
+class _CavePlacesSortDialog extends StatefulWidget {
+  const _CavePlacesSortDialog({required this.current});
+  final CavePlaceSortOption current;
+
+  @override
+  State<_CavePlacesSortDialog> createState() => _CavePlacesSortDialogState();
+}
+
+class _CavePlacesSortDialogState extends State<_CavePlacesSortDialog> {
+  late CavePlaceSortField _field;
+  late bool _ascending;
+
+  @override
+  void initState() {
+    super.initState();
+    _field = widget.current.field;
+    _ascending = widget.current.ascending;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = LocServ.inst;
+    return AlertDialog(
+      title: Text(loc.t('sort_cave_places_navbar')),
+      contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final field in CavePlaceSortField.values)
+              RadioListTile<CavePlaceSortField>(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(loc.t('sort_cave_place_field_${field.name}')),
+                value: field,
+                groupValue: _field,
+                onChanged: (v) => setState(() => _field = v!),
+              ),
+            const Divider(height: 16),
+            Row(
+              children: [
+                ChoiceChip(
+                  label: Text(loc.t('sort_asc')),
+                  selected: _ascending,
+                  onSelected: (_) => setState(() => _ascending = true),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(loc.t('sort_desc')),
+                  selected: !_ascending,
+                  onSelected: (_) => setState(() => _ascending = false),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(loc.t('cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            CavePlaceSortOption(field: _field, ascending: _ascending),
+          ),
+          child: Text(loc.t('apply')),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Raster-map sort options
 // ---------------------------------------------------------------------------
 
@@ -435,6 +668,8 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.onSaveDefinitionRequested,
     this.caveUuid,
     this.tripOverlay,
+    this.caveAreaTitles = const {},
+    this.groupPlacesByCaveArea = false,
   });
 
   final File imageFile;
@@ -517,6 +752,14 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// route (lines, direction arrows, and incremental point numbers) on top
   /// of the raster map.
   final TripOverlayData? tripOverlay;
+
+  /// Cave area title map forwarded to [RasterMapNavBar] for group headers.
+  /// Only used when [groupPlacesByCaveArea] is true.
+  final Map<Uuid, String> caveAreaTitles;
+
+  /// When true, the embedded nav bar renders cave places in grouped "area
+  /// boxes". Requires [caveAreaTitles] to be populated.
+  final bool groupPlacesByCaveArea;
 
   @override
   State<RasterMapPlacePointEditor> createState() =>
@@ -1363,6 +1606,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             style: widget.navBarStyle,
             onRasterMapSelected: (rm) => _handleNavRasterMapSelected(rm),
             onCavePlaceSelected: (cpwd) => _handleNavCavePlaceSelected(cpwd),
+            caveAreaTitles: widget.caveAreaTitles,
+            groupByCaveArea: widget.groupPlacesByCaveArea,
           ),
 
         Expanded(

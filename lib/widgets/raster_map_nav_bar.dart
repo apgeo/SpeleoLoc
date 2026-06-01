@@ -93,6 +93,8 @@ class RasterMapNavBar extends StatefulWidget {
     this.placesListAlignment = 0.5,
     this.showRasterMapsList = true,
     this.showCavePlacesList = true,
+    this.caveAreaTitles = const {},
+    this.groupByCaveArea = false,
   });
 
   final List<RasterMap> rasterMaps;
@@ -111,6 +113,14 @@ class RasterMapNavBar extends StatefulWidget {
 
   final bool showRasterMapsList;
   final bool showCavePlacesList;
+
+  /// When provided and [groupByCaveArea] is true, the places list displays
+  /// items grouped visually by cave area using these titles for headers.
+  final Map<Uuid, String> caveAreaTitles;
+
+  /// When true, the cave-places horizontal list renders items in grouped
+  /// "area boxes" (requires [caveAreaTitles] to be populated).
+  final bool groupByCaveArea;
 
   @override
   State<RasterMapNavBar> createState() => RasterMapNavBarState();
@@ -295,14 +305,93 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
         s.placesListHeight ?? math.min(s.placesListMaxHeight, screenH * s.placesListHeightFraction);
     final titleGap = listHeight <= 44 ? 1.0 : 2.0;
 
+    // Group-header strip height (only in cave-area grouping mode)
+    const double groupHeaderHeight = 14.0;
+    const double groupHeaderFontSize = 9.0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: SizedBox(
-        height: listHeight,
-        child: ValueListenableBuilder<Uuid?>(
-          valueListenable: _selectedPlaceNotifier,
-          builder: (context, selectedId, _) {
-            return ListView.builder(
+      child: ValueListenableBuilder<Uuid?>(
+        valueListenable: _selectedPlaceNotifier,
+        builder: (context, selectedId, _) {
+          if (widget.groupByCaveArea && widget.cavePlacesWithDefinitions.isNotEmpty) {
+            // ── Grouped mode: SingleChildScrollView + Row of area boxes ───────
+            final groups = _groupByCaveArea(widget.cavePlacesWithDefinitions);
+            return SizedBox(
+              height: listHeight + groupHeaderHeight + 8,
+              child: SingleChildScrollView(
+                controller: _placesScrollController,
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: groups.map((g) {
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300, width: 1),
+                        borderRadius: BorderRadius.circular(6),
+                        color: Theme.of(context).colorScheme.surface,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Cave area title strip
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 2, 4, 1),
+                            child: SizedBox(
+                              height: groupHeaderHeight,
+                              child: Text(
+                                g.areaTitle,
+                                style: TextStyle(
+                                  fontSize: groupHeaderFontSize,
+                                  color: Theme.of(context).hintColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          // Items in the group
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: g.items.map((cpwd) {
+                              final hasDef = cpwd.definition != null &&
+                                  cpwd.definition!.xCoordinate != null &&
+                                  cpwd.definition!.yCoordinate != null;
+                              final isSelected = selectedId != null &&
+                                  selectedId == cpwd.cavePlace.uuid;
+                              final key = _placeItemKeys.putIfAbsent(
+                                  cpwd.cavePlace.uuid, () => GlobalKey());
+                              return GestureDetector(
+                                onTap: () {
+                                  _selectedPlaceNotifier.value = cpwd.cavePlace.uuid;
+                                  widget.onCavePlaceSelected(cpwd);
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    ensurePlaceItemVisible(cpwd.cavePlace.uuid);
+                                  });
+                                },
+                                child: _buildPlaceItem(
+                                  context, s, cpwd, isSelected, hasDef,
+                                  key, titleGap,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
+          }
+
+          // ── Default mode: ListView.builder ────────────────────────────────
+          return SizedBox(
+            height: listHeight,
+            child: ListView.builder(
               controller: _placesScrollController,
               scrollDirection: Axis.horizontal,
               itemCount: widget.cavePlacesWithDefinitions.length,
@@ -312,65 +401,107 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                     cpwd.definition!.xCoordinate != null &&
                     cpwd.definition!.yCoordinate != null;
                 final isSelected = selectedId != null && selectedId == cpwd.cavePlace.uuid;
-
-                final key = _placeItemKeys.putIfAbsent(cpwd.cavePlace.uuid, () => GlobalKey());
+                final key = _placeItemKeys.putIfAbsent(
+                    cpwd.cavePlace.uuid, () => GlobalKey());
 
                 return GestureDetector(
                   onTap: () {
                     _selectedPlaceNotifier.value = cpwd.cavePlace.uuid;
                     widget.onCavePlaceSelected(cpwd);
-
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       ensurePlaceItemVisible(cpwd.cavePlace.uuid);
                     });
                   },
-                  child: Container(
-                    key: key,
-                    margin: const EdgeInsets.symmetric(horizontal: 1),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: isSelected
-                        ? BoxDecoration(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.12), //withOpacity
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Theme.of(context).primaryColor.withValues(alpha: 0.35), //withOpacity
-                              width: 1,
-                            ),
-                          )
-                        : null,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: isSelected ? s.placesAvatarRadiusSelected : s.placesAvatarRadius,
-                          backgroundColor: hasDef
-                              ? (isSelected ? Colors.blue : const Color.fromARGB(255, 252, 136, 127))
-                              : Colors.grey[400],
-                          child:
-                              Text(cpwd.cavePlace.title.isNotEmpty ? cpwd.cavePlace.title[0].toUpperCase() : '?'),
-                        ),
-                        SizedBox(height: titleGap),
-                        SizedBox(
-                          width: s.placesTitleWidth,
-                          child: Text(
-                            cpwd.cavePlace.title,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                            style: TextStyle(
-                                fontSize: s.placesTitleFontSize,
-                                color: isSelected ? Theme.of(context).primaryColor : null),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: _buildPlaceItem(
+                    context, s, cpwd, isSelected, hasDef, key, titleGap,
                   ),
                 );
               },
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
+
+  /// Builds a single place item widget (shared by flat and grouped modes).
+  Widget _buildPlaceItem(
+    BuildContext context,
+    RasterMapNavBarStyle s,
+    CavePlaceWithDefinition cpwd,
+    bool isSelected,
+    bool hasDef,
+    Key key,
+    double titleGap,
+  ) {
+    return Container(
+      key: key,
+      margin: const EdgeInsets.symmetric(horizontal: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: isSelected
+          ? BoxDecoration(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            )
+          : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: isSelected ? s.placesAvatarRadiusSelected : s.placesAvatarRadius,
+            backgroundColor: hasDef
+                ? (isSelected ? Colors.blue : const Color.fromARGB(255, 252, 136, 127))
+                : Colors.grey[400],
+            child: Text(
+                cpwd.cavePlace.title.isNotEmpty ? cpwd.cavePlace.title[0].toUpperCase() : '?'),
+          ),
+          SizedBox(height: titleGap),
+          SizedBox(
+            width: s.placesTitleWidth,
+            child: Text(
+              cpwd.cavePlace.title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+              style: TextStyle(
+                  fontSize: s.placesTitleFontSize,
+                  color: isSelected ? Theme.of(context).primaryColor : null),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Groups [places] by cave area, preserving the existing order within each group.
+  List<_PlaceGroup> _groupByCaveArea(List<CavePlaceWithDefinition> places) {
+    final ordered = <String>[];   // ordered list of group keys (area title)
+    final map = <String, List<CavePlaceWithDefinition>>{};
+
+    for (final cpwd in places) {
+      final areaTitle = cpwd.cavePlace.caveAreaUuid != null
+          ? (widget.caveAreaTitles[cpwd.cavePlace.caveAreaUuid] ?? '')
+          : '';
+      if (!map.containsKey(areaTitle)) {
+        ordered.add(areaTitle);
+        map[areaTitle] = [];
+      }
+      map[areaTitle]!.add(cpwd);
+    }
+
+    return ordered
+        .map((key) => _PlaceGroup(areaTitle: key.isEmpty ? '—' : key, items: map[key]!))
+        .toList();
+  }
+}
+
+/// Internal data class for a group of places sharing a cave area.
+class _PlaceGroup {
+  const _PlaceGroup({required this.areaTitle, required this.items});
+  final String areaTitle;
+  final List<CavePlaceWithDefinition> items;
 }

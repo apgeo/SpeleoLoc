@@ -91,6 +91,12 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   Map<Uuid, String> _caveAreaTitles = {};
 
+  // Cave-places nav bar sort
+  CavePlaceSortOption _cavePlaceSortOption = const CavePlaceSortOption();
+
+  // Definitions count across all raster maps (for sort by definitions_count)
+  Map<Uuid, int> _definitionCountByPlace = {};
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +108,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     _loadDefinitionsForSelected();
     _loadCaveAreas();
     _loadCompactNavState();
+    _loadCavePlaceSortOption();
 
     // Seed selected image coordinates from existing definition (so save uses them if unchanged)
     if (_selectedDefinition != null) {
@@ -126,20 +133,57 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     if (mounted) setState(() => _compactNavBar = val == 'true');
   }
 
+  Future<void> _loadCavePlaceSortOption() async {
+    final option = await CavePlaceSortOption.load();
+    if (mounted) {
+      setState(() {
+        _cavePlaceSortOption = option;
+        _placesWithDefinitions = _sortPlaces(_placesWithDefinitions);
+      });
+    }
+  }
+
+  /// Applies the current [_cavePlaceSortOption] to [places] and returns the
+  /// sorted copy.
+  List<CavePlaceWithDefinition> _sortPlaces(List<CavePlaceWithDefinition> places) =>
+      _cavePlaceSortOption.apply(places, _caveAreaTitles, _definitionCountByPlace);
+
   Future<void> _loadCaveAreas() async {
     final areas = await caveRepository.getCaveAreas(widget.rasterMap.caveUuid);
     if (mounted) {
       setState(() {
         _caveAreaTitles = {for (final a in areas) a.uuid: a.title};
+        // Re-sort with updated area titles (needed for cave_area sort field)
+        _placesWithDefinitions = _sortPlaces(_placesWithDefinitions);
       });
     }
   }
 
   Future<void> _loadRasterMaps() async {
     final maps = await rasterMapRepository.getRasterMaps(widget.rasterMap.caveUuid);
+
+    // Collect definition counts across all raster maps for the definitions_count sort.
+    if (maps.isNotEmpty) {
+      final rasterMapIds = maps.map((r) => r.uuid).toList();
+      try {
+        final allDefs = await definitionRepository.getDefinitionsForRasterMaps(rasterMapIds);
+        final placeToRasters = <Uuid, Set<Uuid>>{};
+        for (final d in allDefs) {
+          placeToRasters.putIfAbsent(d.cavePlaceUuid, () => <Uuid>{}).add(d.rasterMapUuid);
+        }
+        _definitionCountByPlace = {
+          for (final e in placeToRasters.entries) e.key: e.value.length,
+        };
+      } catch (e, st) {
+        AppLogger.of('RasterMapPlaceSelector').warning('_loadRasterMaps: failed to load all defs', e, st);
+        _definitionCountByPlace = {};
+      }
+    }
+
     if (mounted) {
       setState(() {
         _rasterMaps = _editorController.sortOption.apply(maps, _placesWithDefinitions);
+        _placesWithDefinitions = _sortPlaces(_placesWithDefinitions);
       });
     }
   }
@@ -152,7 +196,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     final file = await getDocumentsFile(_selectedRasterMap.fileName);
     if (!mounted) return;
     setState(() {
-      _placesWithDefinitions = defs;
+      _placesWithDefinitions = _sortPlaces(defs);
       _selectedDefinition = _findDefinition(
         _selectedCavePlaceId,
         _placesWithDefinitions,
@@ -281,6 +325,11 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
+      value: 'sort_cave_places',
+      icon: Icons.sort_by_alpha,
+      label: LocServ.inst.t('sort_cave_places_navbar'),
+    ),
+    AppMenuItem(
       value: 'sort_raster_maps',
       icon: Icons.sort,
       label: LocServ.inst.t('sort_raster_maps'),
@@ -294,11 +343,23 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   @override
   void onScreenMenuItemSelected(String value) {
-    if (value == 'sort_raster_maps') {
+    if (value == 'sort_cave_places') {
+      _showCavePlacesSortDialog();
+    } else if (value == 'sort_raster_maps') {
       _showSortDialog();
     } else if (value == 'manage_raster_maps') {
       _openRasterMapsPage();
     }
+  }
+
+  Future<void> _showCavePlacesSortDialog() async {
+    final option = await showCavePlacesSortDialog(context, _cavePlaceSortOption);
+    if (option == null || !mounted) return;
+    await option.save();
+    setState(() {
+      _cavePlaceSortOption = option;
+      _placesWithDefinitions = _sortPlaces(_placesWithDefinitions);
+    });
   }
 
   Future<void> _showSortDialog() async {
@@ -472,6 +533,8 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
                           onRemoveDefinitionRequested: _handleRemoveDefinition,
                           onSaveDefinitionRequested: widget.isReadonly ? null : _definePlace,
                           caveUuid: widget.rasterMap.caveUuid,
+                          caveAreaTitles: _caveAreaTitles,
+                          groupPlacesByCaveArea: _cavePlaceSortOption.groupByCaveArea,
                           onCavePlaceAdded: () {
                             _loadDefinitionsForSelected();
                           },
