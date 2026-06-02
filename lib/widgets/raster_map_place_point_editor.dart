@@ -2623,8 +2623,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         ),
       ),
 
-        const SizedBox(height: 2),
-
         // Action bar: horizontal Row at bottom in portrait / landscape-tablet;
         // moved to a right-side vertical overlay in landscape-phone mode
         // (rendered inside the Stack above; see _buildLandscapePhoneActionBar).

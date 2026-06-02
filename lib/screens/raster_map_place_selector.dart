@@ -460,6 +460,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
+      extendBody: true,
       appBar: _isFullScreen ? null : AppBar(
         titleSpacing: 0,
         title: Column(

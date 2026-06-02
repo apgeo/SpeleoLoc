@@ -382,6 +382,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
+      extendBody: true,
       appBar: _isFullScreen ? null : AppBar(
         titleSpacing: 0,
         title: Text(

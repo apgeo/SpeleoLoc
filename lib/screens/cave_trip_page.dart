@@ -617,6 +617,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
+      extendBody: true,
       appBar: _isFullScreen ? null : AppBar(
         title: Text(trip.title),
         actions: [
