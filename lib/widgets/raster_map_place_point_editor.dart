@@ -7,6 +7,8 @@ import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_image_filter.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_filter_panel.dart';
 import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_image_cache.dart';
@@ -638,6 +640,29 @@ class RasterMapPlacePointEditorController {
 
   /// Toggles the cave-places filter text field in the embedded nav bar.
   void toggleCavePlaceFilter() => _state?._toggleNavBarCavePlaceFilter();
+
+  /// Programmatically show or hide the side toolbar.
+  void setToolbarVisible(bool v) => _state?._setToolbarVisible(v);
+
+  /// Navigates (selects) the next cave place that has no point defined for
+  /// the current raster map.
+  void navigateToNextUndefined() => _state?._navigateToNextUndefined();
+
+  /// Ensures the cave-places horizontal list is visible.
+  void ensurePlacesListVisible() => _state?._ensurePlacesListVisible();
+
+  /// Ensures the raster-maps horizontal list is visible.
+  void ensureMapsListVisible() => _state?._ensureMapsListVisible();
+
+  /// Ensures both horizontal lists are visible (call when switching format).
+  void ensureBothListsVisible() => _state?._ensureBothListsVisible();
+
+  /// Enters or leaves full-screen mode (hides the nav bar; the parent should
+  /// hide its own AppBar via the [onFullScreenChanged] callback).
+  void setFullScreen(bool v) => _state?._setFullScreen(v);
+
+  /// Inverts or restores the raster-map image colours.
+  void setColorInverted(bool v) => _state?._setColorInverted(v);
 }
 
 class RasterMapPlacePointEditor extends StatefulWidget {
@@ -681,6 +706,11 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.caveAreaTitles = const {},
     this.groupPlacesByCaveArea = false,
     this.fadeFilteredMarkers = true,
+    this.toolbarSide = ToolbarSide.left,
+    this.onSortCavePlacesRequested,
+    this.onSortRasterMapsRequested,
+    this.onManageRasterMapsRequested,
+    this.onFullScreenChanged,
   });
 
   final File imageFile;
@@ -778,10 +808,31 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// When false, filtered-out markers are hidden entirely.
   final bool fadeFilteredMarkers;
 
+  /// Which side of the map the side toolbar appears on.
+  final ToolbarSide toolbarSide;
+
+  /// Called when the user picks "Sort cave places" from the toolbar menu.
+  final VoidCallback? onSortCavePlacesRequested;
+
+  /// Called when the user picks "Sort raster maps" from the toolbar menu.
+  final VoidCallback? onSortRasterMapsRequested;
+
+  /// Called when the user picks "Manage raster maps" from the toolbar menu.
+  final VoidCallback? onManageRasterMapsRequested;
+
+  /// Called when the full-screen state changes.  The boolean argument is
+  /// `true` when entering full-screen and `false` when leaving it.  The
+  /// parent should use this to hide / show its own AppBar.
+  final void Function(bool isFullScreen)? onFullScreenChanged;
+
   @override
   State<RasterMapPlacePointEditor> createState() =>
       _RasterMapPlacePointEditorState();
 }
+
+/// Controls which side of the map the [RasterMapPlacePointEditor] side toolbar
+/// is anchored to.
+enum ToolbarSide { left, right }
 
 class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> with TickerProviderStateMixin {
   static final _log = AppLogger.of('RasterMapPlacePointEditor');
@@ -866,7 +917,125 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// `null` means no filter is active and all places are shown.
   Set<Uuid>? _visiblePlaceUuids;
 
+  /// Whether the side toolbar is currently shown.
+  /// Static so the chosen state persists for the entire app instance,
+  /// surviving navigation away and back to any map screen.
+  static bool _toolbarVisible = false;
+
+  /// Whether the nav bar shows the horizontal raster-maps list.
+  bool _navBarShowMaps = true;
+
+  /// Whether the nav bar shows the horizontal cave-places list.
+  bool _navBarShowPlaces = true;
+
+  /// Whether the map is in full-screen mode (nav bar hidden, parent AppBar
+  /// hidden via [widget.onFullScreenChanged] callback).
+  bool _fullScreen = false;
+
+  /// Saved [_showNavBar] value just before entering full-screen, so we can
+  /// restore it when the user exits full-screen.
+  bool? _showNavBarBeforeFullScreen;
+
+  /// Saved [_navBarShowMaps] / [_navBarShowPlaces] before entering full-screen.
+  /// Used to restore them when exiting full-screen, unless the user changed
+  /// them while in full-screen.
+  bool? _navBarShowMapsBeforeFS;
+  bool? _navBarShowPlacesBeforeFS;
+  /// Tracks whether the user explicitly toggled the nav-bar lists while in
+  /// full-screen (so we don't restore the saved value for that list).
+  bool _navBarShowMapsChangedInFS = false;
+  bool _navBarShowPlacesChangedInFS = false;
+
+  // ── Landscape-phone auto-fullscreen ──────────────────────────────────────
+  /// Whether the last known orientation was landscape-phone.  Used in
+  /// [didChangeDependencies] to detect orientation-change transitions.
+  bool _prevIsLandscapePhone = false;
+  /// True when the current fullscreen state was triggered automatically by
+  /// entering landscape-phone mode (so we can auto-exit on portrait).
+  bool _fullScreenAutomatic = false;
+
+  // ── Image-processing filter ───────────────────────────────────────────────
+  //
+  // Stores a filter per raster-map UUID so switching maps preserves each
+  // map's last-used filter.  Keyed by [selectedRasterMapUuid].
+  // Static so it survives navigation within the same app instance.
+  static final Map<Uuid, RasterMapImageFilter> _filterPerMap = {};
+
+  /// Returns the active filter for the current raster map.
+  RasterMapImageFilter get _activeFilter =>
+      widget.selectedRasterMapUuid != null
+          ? (_filterPerMap[widget.selectedRasterMapUuid!] ??
+              RasterMapImageFilter.normal)
+          : RasterMapImageFilter.normal;
+
+  void _setFilter(RasterMapImageFilter f) {
+    if (!mounted) return;
+    final key = widget.selectedRasterMapUuid;
+    if (key != null) {
+      _filterPerMap[key] = f;
+    }
+    setState(() {});
+  }
+
+  /// Back-compat: called by the controller's setColorInverted().
+  /// Converts the boolean into an invert-mode preset.
+  void _setColorInverted(bool v) {
+    final current = _activeFilter;
+    if (v) {
+      // Switch to invert preset while preserving brightness/contrast.
+      _setFilter(RasterMapImageFilter(
+        mode: RasterMapFilterMode.invert,
+        brightness: current.brightness,
+        contrast: current.contrast,
+      ));
+    } else {
+      // Return to normal only if the current mode is invert.
+      if (current.mode == RasterMapFilterMode.invert ||
+          (current.mode == RasterMapFilterMode.custom && current.invertEnabled && !current.grayscaleEnabled && !current.sepiaEnabled && !current.highContrastEnabled && !current.nightRedEnabled)) {
+        _setFilter(RasterMapImageFilter(
+          brightness: current.brightness,
+          contrast: current.contrast,
+        ));
+      }
+    }
+  }
+
+  bool get _colorInverted =>
+      _activeFilter.mode == RasterMapFilterMode.invert ||
+      (_activeFilter.mode == RasterMapFilterMode.custom && _activeFilter.invertEnabled);
+
+  void _toggleColorInversion() => _setColorInverted(!_colorInverted);
+
   static const bool SHOW_SAVE_CAVE_PLACE_BUTTON = false;
+
+  /// Returns true when the device is a phone (short side < 600 dp) in
+  /// landscape orientation (width > height).
+  static bool _computeIsLandscapePhone(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final size = mq.size;
+    final shortSide = size.shortestSide;
+    return shortSide < 600 && size.width > size.height;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isLP = _computeIsLandscapePhone(context);
+    if (isLP != _prevIsLandscapePhone) {
+      _prevIsLandscapePhone = isLP;
+      // Schedule after frame so layout is stable.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (isLP && !_fullScreen) {
+          _fullScreenAutomatic = true;
+          _setFullScreen(true);
+        } else if (!isLP && _fullScreenAutomatic && _fullScreen) {
+          _fullScreenAutomatic = false;
+          _setFullScreen(false);
+        }
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -1054,8 +1223,115 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   }
 
   /// Delegates the filter-toggle request to the embedded nav bar.
+  /// Also ensures the cave-places horizontal list is visible so the filter
+  /// field is reachable.
   void _toggleNavBarCavePlaceFilter() {
+    _ensurePlacesListVisible();
     _navBarKey.currentState?.toggleFilter();
+  }
+
+  /// Ensures the cave-places horizontal list in the nav bar is visible.
+  /// Called before any action that targets the places list (filter, sort).
+  void _ensurePlacesListVisible() {
+    if (!_navBarShowPlaces) {
+      setState(() => _navBarShowPlaces = true);
+    }
+  }
+
+  /// Ensures the raster-maps horizontal list in the nav bar is visible.
+  /// Called before any action that targets the maps list (sort, manage).
+  void _ensureMapsListVisible() {
+    if (!_navBarShowMaps) {
+      setState(() => _navBarShowMaps = true);
+    }
+  }
+
+  /// Shows both horizontal lists in the nav bar (used when switching format).
+  void _ensureBothListsVisible() {
+    if (!_navBarShowMaps || !_navBarShowPlaces) {
+      setState(() {
+        _navBarShowMaps = true;
+        _navBarShowPlaces = true;
+      });
+    }
+  }
+
+  void _setToolbarVisible(bool v) {
+    if (mounted) setState(() => _toolbarVisible = v);
+  }
+
+  void _setFullScreen(bool v) {
+    if (!mounted || _fullScreen == v) return;
+    setState(() {
+      _fullScreen = v;
+      if (v) {
+        // Save current nav bar visibility, then hide it for full-screen.
+        _showNavBarBeforeFullScreen = _showNavBar;
+        _showNavBar = false;
+        // Save nav-bar list visibility and hide both lists.
+        _navBarShowMapsBeforeFS = _navBarShowMaps;
+        _navBarShowPlacesBeforeFS = _navBarShowPlaces;
+        _navBarShowMapsChangedInFS = false;
+        _navBarShowPlacesChangedInFS = false;
+        _navBarShowMaps = false;
+        _navBarShowPlaces = false;
+      } else {
+        // Restore nav bar visibility to whatever it was before full-screen.
+        if (_showNavBarBeforeFullScreen != null) {
+          _showNavBar = _showNavBarBeforeFullScreen!;
+          _showNavBarBeforeFullScreen = null;
+        }
+        // Restore nav-bar list visibility unless the user changed them in FS.
+        if (!_navBarShowMapsChangedInFS && _navBarShowMapsBeforeFS != null) {
+          _navBarShowMaps = _navBarShowMapsBeforeFS!;
+        }
+        if (!_navBarShowPlacesChangedInFS && _navBarShowPlacesBeforeFS != null) {
+          _navBarShowPlaces = _navBarShowPlacesBeforeFS!;
+        }
+        _navBarShowMapsBeforeFS = null;
+        _navBarShowPlacesBeforeFS = null;
+        _navBarShowMapsChangedInFS = false;
+        _navBarShowPlacesChangedInFS = false;
+      }
+    });
+    widget.onFullScreenChanged?.call(v);
+  }
+
+  void _toggleFullScreen() => _setFullScreen(!_fullScreen);
+
+  /// Selects (navigates to) the next cave place in [cavePlacesWithDefinitions]
+  /// that has no point defined for the current raster map.  Wraps around.
+  /// If the current place has no selection, starts from the beginning.
+  Future<void> _navigateToNextUndefined() async {
+    final places = widget.cavePlacesWithDefinitions;
+    if (places.isEmpty) return;
+    final currentUuid = widget.controller?.cavePlaceUuid;
+    // Start searching after the currently-selected item (or from index 0).
+    final startIdx = currentUuid == null
+        ? 0
+        : (places.indexWhere((c) => c.cavePlace.uuid == currentUuid) + 1) %
+            places.length;
+    // Walk from startIdx, wrapping once, looking for an undefined place.
+    for (var i = 0; i < places.length; i++) {
+      final idx = (startIdx + i) % places.length;
+      final cpwd = places[idx];
+      final def = cpwd.definition;
+      final hasPoint =
+          def != null && def.xCoordinate != null && def.yCoordinate != null;
+      if (!hasPoint) {
+        await _handleNavCavePlaceSelected(cpwd);
+        // Scroll to the item in the nav bar.
+        _navBarKey.currentState?.ensurePlaceItemVisible(cpwd.cavePlace.uuid);
+        return;
+      }
+    }
+    // All places have a definition — show a brief snack.
+    if (mounted) {
+      SnackBarService.showInfo(
+        LocServ.inst.t('all_places_have_definitions'),
+        duration: RasterMapEditorConstants.shortSnackbarDuration,
+      );
+    }
   }
 
   void _setUseImageTextColor(bool v) {
@@ -1617,9 +1893,439 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     SnackBarService.showInfo(LocServ.inst.t('long_tap_detected', {'cavePlaceTitle': cavePlaceTitle}), duration: RasterMapEditorConstants.mediumSnackbarDuration);
   }
 
+  // ── Image-processing helpers ──────────────────────────────────────────────
+
+  /// Builds the popup menu items for the image-processing button.
+  List<PopupMenuEntry<String>> _buildImgProcessingMenuItems() {
+    final t = LocServ.inst.t;
+    final current = _activeFilter;
+
+    PopupMenuEntry<String> preset(
+      String value,
+      IconData icon,
+      String label,
+      bool active,
+    ) =>
+        PopupMenuItem<String>(
+          value: value,
+          child: _MenuRow(icon, label, active: active),
+        );
+
+    return [
+      // Reset to normal
+      preset('normal',       Icons.image,                  t('img_mode_normal'),        current.isNormal),
+      const PopupMenuDivider(),
+      // Single-mode presets
+      preset('invert',       Icons.invert_colors,          t('invert_colors'),          current.mode == RasterMapFilterMode.invert),
+      preset('grayscale',    Icons.filter_b_and_w,         t('img_filter_grayscale'),   current.mode == RasterMapFilterMode.grayscale),
+      preset('sepia',        Icons.photo_filter,           t('img_filter_sepia'),       current.mode == RasterMapFilterMode.sepia),
+      preset('high_contrast',Icons.contrast,               t('img_filter_high_contrast'),current.mode == RasterMapFilterMode.highContrast),
+      preset('night_red',    Icons.nights_stay_outlined,   t('img_filter_night_red'),   current.mode == RasterMapFilterMode.nightRed),
+      const PopupMenuDivider(),
+      // Additive / advanced panel
+      PopupMenuItem<String>(
+        value: 'custom',
+        child: _MenuRow(
+          Icons.tune,
+          t('img_filter_custom'),
+          active: current.mode == RasterMapFilterMode.custom,
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _onImgProcessingSelected(String value) async {
+    switch (value) {
+      case 'normal':
+        _setFilter(RasterMapImageFilter.normal);
+      case 'invert':
+        _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.invert));
+      case 'grayscale':
+        _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.grayscale));
+      case 'sepia':
+        _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.sepia));
+      case 'high_contrast':
+        _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.highContrast));
+      case 'night_red':
+        _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.nightRed));
+      case 'custom':
+        final result = await showRasterMapFilterPanel(context, _activeFilter);
+        if (result != null && mounted) {
+          // An all-off custom filter is equivalent to normal.
+          if (result.isNormal) {
+            _setFilter(RasterMapImageFilter.normal);
+          } else {
+            _setFilter(result);
+          }
+        }
+    }
+  }
+
+  // ── Side toolbar helpers ──────────────────────────────────────────────────
+  // All visual constants live in _ToolbarStyle (see bottom of this file).
+
+  // ── Action-bar button list (shared by bottom-bar and landscape right-bar) ──
+
+  /// Returns the list of icon buttons that belong to the action bar.
+  /// Used both by the bottom Row (portrait) and the right-side Column (landscape phone).
+  List<Widget> _buildActionBarButtons(BuildContext context) {
+    return [
+      // Legend toggle (always available)
+      IconButton(
+        onPressed: () async {
+          await _commitPendingPointIfNeeded();
+          if (mounted) setState(() => _showLegend = !_showLegend);
+        },
+        icon: Icon(Icons.info_outline, size: 20, color: _showLegend ? Colors.blue : null),
+        tooltip: LocServ.inst.t('toggle_legend'),
+        padding: const EdgeInsets.all(2),
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+      ),
+      // Action buttons (edit mode only)
+      if (!widget.isReadonly) ...[
+        // Tap mode toggle
+        if (_showTapModeCheckbox)
+          IconButton(
+            onPressed: () async {
+              await _commitPendingPointIfNeeded();
+              if (mounted) {
+                setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
+                _scheduleStatusOverlayHide();
+              }
+            },
+            icon: Icon(
+              _tapDefinesNewPoint ? Icons.edit_location_alt : Icons.touch_app,
+              size: 20,
+              color: _tapDefinesNewPoint ? Colors.blue : Colors.orange,
+            ),
+            tooltip: _tapDefinesNewPoint
+                ? LocServ.inst.t('tap_mode_define_point')
+                : LocServ.inst.t('tap_mode_select_place'),
+            padding: const EdgeInsets.all(2),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          ),
+        // Reset point
+        IconButton(
+          onPressed: _userHasSelectedNewPoint ? _resetPointToInitial : null,
+          icon: const Icon(Icons.undo, size: 20),
+          tooltip: LocServ.inst.t('reset_point'),
+          padding: const EdgeInsets.all(2),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        ),
+        // Remove definition
+        if (widget.onRemoveDefinitionRequested != null)
+          IconButton(
+            onPressed: _handleRemoveDefinition,
+            icon: Icon(Icons.delete_outline, size: 20, color: Colors.red[400]),
+            tooltip: LocServ.inst.t('remove_definition'),
+            padding: const EdgeInsets.all(2),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          ),
+        // Add new cave place (tap-to-define)
+        if (widget.caveUuid != null && widget.onCavePlaceAdded != null)
+          IconButton(
+            onPressed: _waitingForNewCavePlaceTap
+                ? () => setState(() => _waitingForNewCavePlaceTap = false)
+                : _handleAddCavePlace,
+            icon: Icon(
+              Icons.add_location_alt,
+              size: 20,
+              color: _waitingForNewCavePlaceTap ? Colors.green : null,
+            ),
+            tooltip: LocServ.inst.t('add_cave_place_quick'),
+            padding: const EdgeInsets.all(2),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              backgroundColor: _waitingForNewCavePlaceTap
+                  ? Colors.green.withValues(alpha: 0.15)
+                  : null,
+            ),
+          ),
+        // Save / define place on map
+        if (SHOW_SAVE_CAVE_PLACE_BUTTON && widget.onSaveDefinitionRequested != null)
+          IconButton(
+            onPressed: widget.onSaveDefinitionRequested,
+            icon: Icon(Icons.save_alt, size: 24,
+                color: Theme.of(context).colorScheme.primary),
+            tooltip: LocServ.inst.t('define_place_on_map'),
+            padding: const EdgeInsets.all(2),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          ),
+      ],
+      // View-mode actions (always available)
+      if (widget.controller?.cavePlaceUuid != null)
+        IconButton(
+          onPressed: _openCavePlacePage,
+          icon: const Icon(Icons.open_in_new, size: 20),
+          tooltip: LocServ.inst.t('open_cave_place'),
+          padding: const EdgeInsets.all(2),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        ),
+      if (widget.controller?.cavePlaceUuid != null)
+        IconButton(
+          onPressed: _openCavePlaceDocuments,
+          icon: const Icon(Icons.description, size: 20),
+          tooltip: LocServ.inst.t('documentation'),
+          padding: const EdgeInsets.all(2),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        ),
+    ];
+  }
+
+  /// Builds the right-side vertical action bar used in landscape-phone mode.
+  /// It is added to the map Stack so the map fills the full height.
+  Widget _buildLandscapePhoneActionBar(BuildContext context) {
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    return Positioned(
+      right: 8,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          decoration: BoxDecoration(
+            color: surfaceColor.withValues(alpha: _ToolbarStyle.bgAlpha),
+            border: Border.all(
+              color: _ToolbarStyle.borderColor,
+              width: _ToolbarStyle.borderWidth,
+            ),
+            borderRadius: BorderRadius.circular(_ToolbarStyle.radius),
+            boxShadow: const [
+              BoxShadow(
+                color: _ToolbarStyle.shadowColor,
+                blurRadius: _ToolbarStyle.shadowBlur,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _buildActionBarButtons(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The small toggle button that shows/hides the side toolbar.
+  /// Wrapped in a visible container (shadow + border) so it reads on any
+  /// background (white map, black map, etc.).
+  Widget _buildToolbarToggleButton(BuildContext context) {
+    final onLeft = widget.toolbarSide == ToolbarSide.left;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    return Positioned(
+      left: onLeft ? _ToolbarStyle.sideMargin : null,
+      right: onLeft ? null : _ToolbarStyle.sideMargin,
+      top: _ToolbarStyle.sideMargin,
+      child: Container(
+        padding: const EdgeInsets.all(_ToolbarStyle.togglePad),
+        decoration: BoxDecoration(
+          color: surfaceColor.withValues(alpha: _ToolbarStyle.bgAlpha),
+          border: Border.all(
+            color: _ToolbarStyle.borderColor,
+            width: _ToolbarStyle.borderWidth,
+          ),
+          borderRadius: BorderRadius.circular(_ToolbarStyle.radius),
+          boxShadow: const [
+            BoxShadow(
+              color: _ToolbarStyle.shadowColor,
+              blurRadius: _ToolbarStyle.shadowBlur,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: _OverlayIconButton(
+          icon: _toolbarVisible ? Icons.chevron_left : Icons.chevron_right,
+          iconFlip: !onLeft,
+          tooltip: _toolbarVisible
+              ? LocServ.inst.t('hide_toolbar')
+              : LocServ.inst.t('show_toolbar'),
+          active: _toolbarVisible,
+          onPressed: () => setState(() => _toolbarVisible = !_toolbarVisible),
+        ),
+      ),
+    );
+  }
+
+  /// The semi-transparent vertical toolbar anchored to the chosen side.
+  /// Height adjusts automatically to fit the current set of buttons.
+  Widget _buildSideToolbar(BuildContext context) {
+    final onLeft = widget.toolbarSide == ToolbarSide.left;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+
+    final undefinedCount = widget.cavePlacesWithDefinitions
+        .where((c) =>
+            c.definition == null ||
+            c.definition!.xCoordinate == null ||
+            c.definition!.yCoordinate == null)
+        .length;
+
+    // ── Nav-bar view toggle menu items ───────────────────────────────────
+    final navViewItems = <PopupMenuEntry<String>>[
+      CheckedPopupMenuItem<String>(
+        value: 'toggle_maps',
+        checked: _navBarShowMaps,
+        child: Text(LocServ.inst.t('toolbar_toggle_maps')),
+      ),
+      CheckedPopupMenuItem<String>(
+        value: 'toggle_places',
+        checked: _navBarShowPlaces,
+        child: Text(LocServ.inst.t('toolbar_toggle_places')),
+      ),
+    ];
+
+    // ── Actions menu items (mirrors the app drawer menu) ─────────────────
+    final actionItems = <PopupMenuEntry<String>>[
+      PopupMenuItem<String>(
+        value: 'filter_cave_places',
+        child: _MenuRow(Icons.search, LocServ.inst.t('filter_cave_places')),
+      ),
+      PopupMenuItem<String>(
+        value: 'sort_cave_places',
+        child: _MenuRow(Icons.sort_by_alpha, LocServ.inst.t('sort_cave_places_navbar')),
+      ),
+      PopupMenuItem<String>(
+        value: 'sort_raster_maps',
+        child: _MenuRow(Icons.sort, LocServ.inst.t('sort_raster_maps')),
+      ),
+      PopupMenuItem<String>(
+        value: 'manage_raster_maps',
+        child: _MenuRow(Icons.map_outlined, LocServ.inst.t('manage_raster_maps')),
+      ),
+    ];
+
+    final buttons = <Widget>[
+      // Navigate to next place without a defined point
+      _OverlayIconButton(
+        icon: Icons.location_searching,
+        tooltip: undefinedCount > 0
+            ? LocServ.inst.t('next_undefined_place_count', {'count': undefinedCount.toString()})
+            : LocServ.inst.t('all_places_have_definitions'),
+        active: false,
+        enabled: undefinedCount > 0,
+        onPressed: _navigateToNextUndefined,
+      ),
+      // Toggle cave-places filter in the nav bar
+      _OverlayIconButton(
+        icon: Icons.search,
+        tooltip: LocServ.inst.t('filter_cave_places'),
+        active: _visiblePlaceUuids != null,
+        onPressed: _toggleNavBarCavePlaceFilter,
+      ),
+      // Nav-bar view toggles (show/hide maps list, show/hide places list)
+      _OverlayPopupButton(
+        icon: Icons.layers_outlined,
+        tooltip: LocServ.inst.t('navbar_view_options'),
+        items: navViewItems,
+        onSelected: (value) {
+          if (value == 'toggle_maps') {
+            setState(() {
+              _navBarShowMaps = !_navBarShowMaps;
+              if (_fullScreen) _navBarShowMapsChangedInFS = true;
+            });
+          } else if (value == 'toggle_places') {
+            setState(() {
+              _navBarShowPlaces = !_navBarShowPlaces;
+              if (_fullScreen) _navBarShowPlacesChangedInFS = true;
+            });
+          }
+        },
+      ),
+      // More actions (filter / sort / manage — mirrors app drawer)
+      _OverlayPopupButton(
+        icon: Icons.more_vert,
+        tooltip: LocServ.inst.t('more_actions'),
+        items: actionItems,
+        onSelected: (value) {
+          if (value == 'filter_cave_places') {
+            // _toggleNavBarCavePlaceFilter already calls _ensurePlacesListVisible
+            _toggleNavBarCavePlaceFilter();
+          } else if (value == 'sort_cave_places') {
+            _ensurePlacesListVisible();
+            widget.onSortCavePlacesRequested?.call();
+          } else if (value == 'sort_raster_maps') {
+            _ensureMapsListVisible();
+            widget.onSortRasterMapsRequested?.call();
+          } else if (value == 'manage_raster_maps') {
+            _ensureMapsListVisible();
+            widget.onManageRasterMapsRequested?.call();
+          }
+        },
+      ),
+      // Toggle full-screen (hides nav bar + parent AppBar, keeps bottom bar)
+      _OverlayIconButton(
+        icon: _fullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
+        tooltip: LocServ.inst.t(_fullScreen ? 'exit_full_screen' : 'full_screen'),
+        active: _fullScreen,
+        onPressed: _toggleFullScreen,
+      ),
+      // Invert raster-map colours (quick toggle, also available in the processing menu)
+      _OverlayIconButton(
+        icon: Icons.invert_colors,
+        tooltip: LocServ.inst.t(_colorInverted ? 'invert_colors_restore' : 'invert_colors'),
+        active: _colorInverted,
+        onPressed: _toggleColorInversion,
+      ),
+      // ── Image processing ──────────────────────────────────────────────────
+      // Active indicator: any non-normal filter is highlighted.
+      _OverlayPopupButton(
+        icon: Icons.tune,
+        tooltip: LocServ.inst.t('img_processing'),
+        active: !_activeFilter.isNormal,
+        items: _buildImgProcessingMenuItems(),
+        onSelected: _onImgProcessingSelected,
+      ),
+    ];
+
+    return Positioned(
+      left: onLeft ? _ToolbarStyle.sideMargin : null,
+      right: onLeft ? null : _ToolbarStyle.sideMargin,
+      top: _ToolbarStyle.toolbarTopOffset,
+      child: Container(
+        padding: const EdgeInsets.all(_ToolbarStyle.panelPad),
+        decoration: BoxDecoration(
+          color: surfaceColor.withValues(alpha: _ToolbarStyle.bgAlpha),
+          border: Border.all(
+            color: _ToolbarStyle.borderColor,
+            width: _ToolbarStyle.borderWidth,
+          ),
+          borderRadius: BorderRadius.circular(_ToolbarStyle.radius),
+          boxShadow: const [
+            BoxShadow(
+              color: _ToolbarStyle.shadowColor,
+              blurRadius: _ToolbarStyle.shadowBlur,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: buttons
+              .expand((b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)])
+              .toList()
+              ..removeLast(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return PopScope(
+      // While in full-screen mode the hardware/gesture back action should
+      // exit full-screen rather than pop the parent page.
+      canPop: !_fullScreen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _fullScreen) _toggleFullScreen();
+      },
+      child: Column(
       children: [
         // Embedded nav bar (raster maps + cave places) when enabled
         if (_showNavBar)
@@ -1630,6 +2336,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             selectedRasterMapUuid: widget.selectedRasterMapUuid,
             selectedPlaceId: widget.controller?.cavePlaceUuid,
             style: widget.navBarStyle,
+            showRasterMapsList: _navBarShowMaps,
+            showCavePlacesList: _navBarShowPlaces,
             onRasterMapSelected: (rm) => _handleNavRasterMapSelected(rm),
             onCavePlaceSelected: (cpwd) => _handleNavCavePlaceSelected(cpwd),
             caveAreaTitles: widget.caveAreaTitles,
@@ -1658,23 +2366,31 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             child: ClipRect(
               child: Stack(
                 children: [
-                  PhotoView(
-                    controller: _photoViewController,
-                    scaleStateController: _scaleStateController,
-                    imageProvider: widget.imageProvider ?? FileImage(widget.imageFile),
-                    minScale: _gestureZoomEnabled
-                        ? PhotoViewComputedScale.contained * 0.5
-                        : PhotoViewComputedScale.contained,
-                    maxScale: _gestureZoomEnabled
-                        ? PhotoViewComputedScale.covered * 4.8
-                        : PhotoViewComputedScale.contained,
-                    initialScale: PhotoViewComputedScale.contained,
-                    enableRotation: false,
-                    basePosition: Alignment.topLeft,
-                    disableGestures: true,
-                    loadingBuilder: (context, event) =>
-                        const Center(child: CircularProgressIndicator()),
-                  ),
+                  // Apply image-processing filter. The filter is computed from
+                  // RasterMapImageFilter.toColorFilter() which returns null when
+                  // no processing is needed (no shader overhead at rest).
+                  () {
+                    final photoView = PhotoView(
+                      controller: _photoViewController,
+                      scaleStateController: _scaleStateController,
+                      imageProvider: widget.imageProvider ?? FileImage(widget.imageFile),
+                      minScale: _gestureZoomEnabled
+                          ? PhotoViewComputedScale.contained * 0.5
+                          : PhotoViewComputedScale.contained,
+                      maxScale: _gestureZoomEnabled
+                          ? PhotoViewComputedScale.covered * 4.8
+                          : PhotoViewComputedScale.contained,
+                      initialScale: PhotoViewComputedScale.contained,
+                      enableRotation: false,
+                      basePosition: Alignment.topLeft,
+                      disableGestures: true,
+                      loadingBuilder: (context, event) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
+                    final cf = _activeFilter.toColorFilter();
+                    if (cf == null) return photoView;
+                    return ColorFiltered(colorFilter: cf, child: photoView);
+                  }(),
                 Positioned.fill(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -1860,10 +2576,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                     ],
                   ),
                 ),
-                // Zoom controls overlay (bottom-right corner)
+                // Zoom controls overlay (bottom-right corner).
+                // In landscape-phone mode shift left to avoid the right action bar.
                 if (_showZoomControls)
                   Positioned(
-                    right: 8,
+                    right: _computeIsLandscapePhone(context) ? 56 : 8,
                     bottom: 8,
                     child: Container(
                       decoration: BoxDecoration(
@@ -1890,6 +2607,16 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                       ),
                     ),
                   ),
+
+                // ── Side toolbar toggle button (top-left or top-right) ────────
+                _buildToolbarToggleButton(context),
+
+                // ── Side toolbar (left or right, shown when _toolbarVisible) ──
+                if (_toolbarVisible) _buildSideToolbar(context),
+
+                // ── Landscape-phone: right-side vertical action bar ───────────
+                if (_computeIsLandscapePhone(context))
+                  _buildLandscapePhoneActionBar(context),
               ],
             ),
           ),
@@ -1898,119 +2625,16 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
         const SizedBox(height: 2),
 
-        // Action bar (bottom-toolbar) with legend toggle, edit actions, and cave place quick-add
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-              // Legend toggle (always available)
-              IconButton(
-                onPressed: () async {
-                  await _commitPendingPointIfNeeded();
-                  if (mounted) setState(() => _showLegend = !_showLegend);
-                },
-                icon: Icon(Icons.info_outline, size: 20, color: _showLegend ? Colors.blue : null),
-                tooltip: LocServ.inst.t('toggle_legend'),
-                padding: const EdgeInsets.all(2),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              ),
-              // Action buttons (edit mode only)
-              if (!widget.isReadonly) ...[
-              // Tap mode toggle
-              if (_showTapModeCheckbox)
-                IconButton(
-                  onPressed: () async {
-                    await _commitPendingPointIfNeeded();
-                    if (mounted) {
-                      setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
-                      _scheduleStatusOverlayHide();
-                    }
-                  },
-                  icon: Icon(
-                    // tap_mode_define_point icon options to consider: move_up, edit_location, edit_location_alt, swipe_up, swipe_right_alt
-                    _tapDefinesNewPoint ? Icons.edit_location_alt : Icons.touch_app,
-                    size: 20,
-                    color: _tapDefinesNewPoint ? Colors.blue : Colors.orange,
-                  ),
-                  tooltip: _tapDefinesNewPoint
-                      ? LocServ.inst.t('tap_mode_define_point')
-                      : LocServ.inst.t('tap_mode_select_place'),
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                ),
-              // Reset point
-              IconButton(
-                onPressed: _userHasSelectedNewPoint ? _resetPointToInitial : null,
-                icon: const Icon(Icons.undo, size: 20),
-                tooltip: LocServ.inst.t('reset_point'),
-                padding: const EdgeInsets.all(2),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              ),
-              // Remove definition
-              if (widget.onRemoveDefinitionRequested != null)
-                IconButton(
-                  onPressed: _handleRemoveDefinition,
-                  icon: Icon(Icons.delete_outline, size: 20, color: Colors.red[400]),
-                  tooltip: LocServ.inst.t('remove_definition'),
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                ),
-              // Add new cave place (tap-to-define)
-              if (widget.caveUuid != null && widget.onCavePlaceAdded != null)
-                IconButton(
-                  onPressed: _waitingForNewCavePlaceTap
-                      ? () => setState(() => _waitingForNewCavePlaceTap = false)
-                      : _handleAddCavePlace,
-                  icon: Icon(
-                    Icons.add_location_alt,
-                    size: 20,
-                    color: _waitingForNewCavePlaceTap ? Colors.green : null,
-                  ),
-                  tooltip: LocServ.inst.t('add_cave_place_quick'),
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  style: IconButton.styleFrom(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    backgroundColor: _waitingForNewCavePlaceTap ? Colors.green.withValues(alpha: 0.15) : null,
-                  ),
-                ),
-              // Save / define place on map
-              if (SHOW_SAVE_CAVE_PLACE_BUTTON && widget.onSaveDefinitionRequested != null)
-                IconButton(
-                  onPressed: widget.onSaveDefinitionRequested,
-                  icon: Icon(Icons.save_alt, size: 24, color: Theme.of(context).colorScheme.primary),
-                  tooltip: LocServ.inst.t('define_place_on_map'),
-                  padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                ),
-            ],
-            // View-mode actions (always available)
-            if (widget.controller?.cavePlaceUuid != null)
-              IconButton(
-                onPressed: _openCavePlacePage,
-                icon: const Icon(Icons.open_in_new, size: 20),
-                tooltip: LocServ.inst.t('open_cave_place'),
-                padding: const EdgeInsets.all(2),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              ),
-            if (widget.controller?.cavePlaceUuid != null)
-              IconButton(
-                onPressed: _openCavePlaceDocuments,
-                icon: const Icon(Icons.description, size: 20),
-                tooltip: LocServ.inst.t('documentation'),
-                padding: const EdgeInsets.all(2),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              ),
-          ],
-        ),
-
-        const SizedBox(height: 4),
+        // Action bar: horizontal Row at bottom in portrait / landscape-tablet;
+        // moved to a right-side vertical overlay in landscape-phone mode
+        // (rendered inside the Stack above; see _buildLandscapePhoneActionBar).
+        if (!_computeIsLandscapePhone(context)) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: _buildActionBarButtons(context),
+          ),
+          const SizedBox(height: 4),
+        ],
 
         if (widget.debugUi) ...[
           Row(
@@ -2048,6 +2672,202 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
               ),
             ],
           ),
+        ],
+      ],
+    ),  // Column
+  );    // PopScope
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TOOLBAR STYLE CONSTANTS
+// Edit values here to change the look of the entire side-toolbar system.
+// ───────────────────────────────────────────────────────────────────────────
+abstract final class _ToolbarStyle {
+  // ── Sizes ───────────────────────────────────────────────────────────────────
+
+  /// Button cell width & height.  Small size is 32 px.
+  static const double btnSize   = 40.0;
+
+  /// Icon size inside each button cell.  Scaled proportionally from 18 px.
+  static const double iconSize  = 28.0;
+
+  /// Padding inside the toggle-button wrapper container.
+  static const double togglePad = 1.0;
+
+  /// Distance from the map edge to the toolbar / toggle anchor.
+  static const double sideMargin = 10.0;
+
+  /// Vertical gap between the toggle-button wrapper and the toolbar panel.
+  static const double toggleGap = 4.0;
+
+  /// Inner padding of the toolbar panel container.
+  static const double panelPad  = 1.0;
+
+  /// Vertical gap between buttons inside the toolbar panel.
+  static const double btnGap    = 2.0;
+
+  /// Corner radius for the toolbar / toggle wrapper containers.
+  static const double radius    = 8.0;
+
+  /// Corner radius for individual button ink-well cells.
+  static const double btnRadius = 6.0;
+
+  /// Border width for toolbar containers.
+  static const double borderWidth = 1.0;
+
+  /// Drop-shadow blur radius.
+  static const double shadowBlur  = 4.0;
+
+  // ── Transparency / colour ─────────────────────────────────────────────────
+
+  /// Opacity of toolbar / toggle-wrapper background (semi-transparent).
+  static const double bgAlpha       = 0.55;
+
+  /// Opacity of an active (highlighted) button background.
+  static const double activeBgAlpha = 0.15;
+
+  /// Opacity of normal (non-active, non-disabled) icons.
+  static const double iconAlpha     = 0.75;
+
+  /// Border colour for toolbar containers.  Grey 400 ≈ #BDBDBD.
+  static const Color borderColor = Color(0xFFBDBDBD);
+
+  /// Drop-shadow colour.
+  static const Color shadowColor = Colors.black26;
+
+  // ── Derived ───────────────────────────────────────────────────────────────────
+
+  /// Top offset of the toolbar panel =
+  ///   sideMargin + (togglePad + btnSize + togglePad) + toggleGap.
+  static const double toolbarTopOffset =
+      sideMargin + (2 * togglePad + btnSize) + toggleGap;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TOOLBAR WIDGETS
+// ───────────────────────────────────────────────────────────────────────────
+
+/// A plain icon button used inside the side toolbar.
+/// Size and colours are driven entirely by [_ToolbarStyle].
+class _OverlayIconButton extends StatelessWidget {
+  const _OverlayIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.active = false,
+    this.enabled = true,
+    this.iconFlip = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool active;
+  final bool enabled;
+
+  /// When true the icon is horizontally mirrored (for right-side chevrons).
+  final bool iconFlip;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final iconColor = !enabled
+        ? Theme.of(context).disabledColor
+        : active
+            ? primary
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
+    Widget iconWidget = Icon(icon, size: _ToolbarStyle.iconSize, color: iconColor);
+    if (iconFlip) {
+      iconWidget = Transform.scale(scaleX: -1, child: iconWidget);
+    }
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: enabled ? onPressed : null,
+        borderRadius: BorderRadius.circular(_ToolbarStyle.btnRadius),
+        child: Container(
+          width: _ToolbarStyle.btnSize,
+          height: _ToolbarStyle.btnSize,
+          decoration: BoxDecoration(
+            color: active
+                ? primary.withValues(alpha: _ToolbarStyle.activeBgAlpha)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(_ToolbarStyle.btnRadius),
+          ),
+          alignment: Alignment.center,
+          child: iconWidget,
+        ),
+      ),
+    );
+  }
+}
+
+/// A popup-menu button styled to match [_OverlayIconButton].
+/// Size and colours are driven entirely by [_ToolbarStyle].
+class _OverlayPopupButton extends StatelessWidget {
+  const _OverlayPopupButton({
+    required this.icon,
+    required this.tooltip,
+    required this.items,
+    required this.onSelected,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final List<PopupMenuEntry<String>> items;
+  final FutureOr<void> Function(String) onSelected;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final iconColor = active
+        ? primary
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
+    return PopupMenuButton<String>(
+      tooltip: tooltip,
+      onSelected: onSelected,
+      itemBuilder: (_) => items,
+      child: Container(
+        width: _ToolbarStyle.btnSize,
+        height: _ToolbarStyle.btnSize,
+        decoration: BoxDecoration(
+          color: active
+              ? primary.withValues(alpha: _ToolbarStyle.activeBgAlpha)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(_ToolbarStyle.btnRadius),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, size: _ToolbarStyle.iconSize, color: iconColor),
+      ),
+    );
+  }
+}
+
+/// A row with an icon and a label used inside popup menu items in the toolbar.
+class _MenuRow extends StatelessWidget {
+  const _MenuRow(this.icon, this.label, {this.active = false});
+  final IconData icon;
+  final String label;
+  /// When true a check icon is shown on the right, indicating active state.
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: active ? TextStyle(color: color, fontWeight: FontWeight.w600) : null)),
+        if (active) ...[
+          const SizedBox(width: 8),
+          Icon(Icons.check, size: 16, color: color),
         ],
       ],
     );
