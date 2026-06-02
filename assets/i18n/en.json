@@ -613,6 +613,7 @@
   "trip_log_resumed": "Trip resumed",
   "trip_log_qr_scanned": "Point: {label}",
   "trip_log_document_added": "Document added: {label}",
+  "trip_log_saved": "Trip log saved",
   "trip_log_method_raw": "Raw (timestamps + terse messages)",
   "trip_log_method_classic": "Classic (full sentences)",
   "trip_log_method_journal": "Field journal (elapsed time + sequence)",
