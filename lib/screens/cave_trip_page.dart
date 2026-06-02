@@ -59,6 +59,9 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   /// false = list view, true = map view
   bool _showMapView = false;
 
+  /// When true the AppBar is hidden (full-screen map mode).
+  bool _isFullScreen = false;
+
   // Route playback animation state
   bool _isPlayingRoute = false;
   int _animatedPointCount = 0;
@@ -614,7 +617,7 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
+      appBar: _isFullScreen ? null : AppBar(
         title: Text(trip.title),
         actions: [
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
@@ -798,6 +801,9 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
                     imageProvider: _imageProviderCache[imageFile.path] ??= FileImage(imageFile),
                     cavePlacesWithDefinitions: _placesWithDefs,
                     isReadonly: true,
+                    onFullScreenChanged: (isFullScreen) {
+                      setState(() => _isFullScreen = isFullScreen);
+                    },
                     tripOverlay: visibleIds.isNotEmpty
                         ? TripOverlayData(
                             orderedCavePlaceIds: visibleIds,

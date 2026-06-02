@@ -95,6 +95,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   // Compact nav bar mode toggle
   bool _compactNavBar = false;
 
+  /// When true the AppBar is hidden (full-screen map mode).
+  bool _isFullScreen = false;
+
   // Key for the RasterMapNavBar so we can programmatically scroll items.
   final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
 
@@ -306,6 +309,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         cavePlacesWithDefinitions: _placesWithDefs,
         isReadonly: true,
         debugUi: false,
+        onFullScreenChanged: (isFullScreen) {
+          setState(() => _isFullScreen = isFullScreen);
+        },
         onMarkerTap: (cpwd) {
           if (cpwd.definition == null) return;
           // update selection UI only — editor handles controller selection
@@ -376,7 +382,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
+      appBar: _isFullScreen ? null : AppBar(
         titleSpacing: 0,
         title: Text(
           _cavePlace?.title ?? LocServ.inst.t('view_raster_maps'),

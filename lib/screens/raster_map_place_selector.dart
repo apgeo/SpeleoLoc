@@ -79,6 +79,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   // Compact nav bar mode toggle
   bool _compactNavBar = false;
 
+  /// When true the AppBar is hidden (full-screen map mode).
+  bool _isFullScreen = false;
+
   List<RasterMap> _rasterMaps = [];
   late RasterMap _selectedRasterMap;
   late Uuid _selectedCavePlaceId;
@@ -349,12 +352,16 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   @override
   void onScreenMenuItemSelected(String value) {
     if (value == 'filter_cave_places') {
+      // toggleCavePlaceFilter already calls ensurePlacesListVisible internally
       _editorController.toggleCavePlaceFilter();
     } else if (value == 'sort_cave_places') {
+      _editorController.ensurePlacesListVisible();
       _showCavePlacesSortDialog();
     } else if (value == 'sort_raster_maps') {
+      _editorController.ensureMapsListVisible();
       _showSortDialog();
     } else if (value == 'manage_raster_maps') {
+      _editorController.ensureMapsListVisible();
       _openRasterMapsPage();
     }
   }
@@ -453,7 +460,7 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
+      appBar: _isFullScreen ? null : AppBar(
         titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,6 +489,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
               setState(() {
                 _compactNavBar = !_compactNavBar;
               });
+              // Switching format — make both lists visible so neither is
+              // unexpectedly hidden after the format change.
+              _editorController.ensureBothListsVisible();
               SettingsHelper.saveStringConfig(compactNavBarKey, _compactNavBar.toString());
             },
           ),
@@ -544,6 +554,12 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
                           groupPlacesByCaveArea: _cavePlaceSortOption.groupByCaveArea,
                           onCavePlaceAdded: () {
                             _loadDefinitionsForSelected();
+                          },
+                          onSortCavePlacesRequested: _showCavePlacesSortDialog,
+                          onSortRasterMapsRequested: _showSortDialog,
+                          onManageRasterMapsRequested: _openRasterMapsPage,
+                          onFullScreenChanged: (isFullScreen) {
+                            setState(() => _isFullScreen = isFullScreen);
                           },
                           onImagePointChanged: (x, y) {
                             setState(() {
