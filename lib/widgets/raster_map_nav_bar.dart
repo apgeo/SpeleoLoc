@@ -19,8 +19,10 @@ class RasterMapNavBarStyle {
     this.rasterMapListHeight,
     this.rasterMapListHeightFraction = 0.14,
     this.rasterMapListMaxHeight = 96,
+    this.rasterMapListMaxHeightNoTitle = 72,
     this.rasterMapItemMarginH = 6.0,
     this.rasterMapItemMarginV = 8.0,
+    this.showRasterMapTitles = true,
     this.placesAvatarRadius = 12.0,
     this.placesAvatarRadiusSelected = 14.0,
     this.placesTitleFontSize = 12.0,
@@ -42,8 +44,10 @@ class RasterMapNavBarStyle {
         rasterMapListHeight = null,
         rasterMapListHeightFraction = 0.10,
         rasterMapListMaxHeight = 64,
+        rasterMapListMaxHeightNoTitle = 48,
         rasterMapItemMarginH = 4.0,
         rasterMapItemMarginV = 4.0,
+        showRasterMapTitles = true,
         placesAvatarRadius = 9.0,
         placesAvatarRadiusSelected = 11.0,
         placesTitleFontSize = 10.0,
@@ -62,8 +66,14 @@ class RasterMapNavBarStyle {
   final double? rasterMapListHeight;
   final double rasterMapListHeightFraction;
   final double rasterMapListMaxHeight;
+  /// Max height to use for the raster-maps list when [showRasterMapTitles] is
+  /// false (tighter, since no title row is rendered).
+  final double rasterMapListMaxHeightNoTitle;
   final double rasterMapItemMarginH;
   final double rasterMapItemMarginV;
+  /// When false the horizontal raster-maps list renders only the thumbnails
+  /// (no title under each item) and the row collapses to a smaller height.
+  final bool showRasterMapTitles;
   final double placesAvatarRadius;
   final double placesAvatarRadiusSelected;
   final double placesTitleFontSize;
@@ -71,6 +81,35 @@ class RasterMapNavBarStyle {
   final double? placesListHeight;
   final double placesListHeightFraction;
   final double placesListMaxHeight;
+
+  /// Returns a copy of this style with selected fields overridden.
+  RasterMapNavBarStyle copyWith({
+    bool? showRasterMapTitles,
+  }) {
+    return RasterMapNavBarStyle(
+      rasterMapItemWidth: rasterMapItemWidth,
+      rasterMapImageSize: rasterMapImageSize,
+      rasterMapPlaceholderSize: rasterMapPlaceholderSize,
+      rasterMapIconSize: rasterMapIconSize,
+      rasterMapBrokenIconSize: rasterMapBrokenIconSize,
+      rasterMapTitleFontSize: rasterMapTitleFontSize,
+      rasterMapTitleWidth: rasterMapTitleWidth,
+      rasterMapListHeight: rasterMapListHeight,
+      rasterMapListHeightFraction: rasterMapListHeightFraction,
+      rasterMapListMaxHeight: rasterMapListMaxHeight,
+      rasterMapListMaxHeightNoTitle: rasterMapListMaxHeightNoTitle,
+      rasterMapItemMarginH: rasterMapItemMarginH,
+      rasterMapItemMarginV: rasterMapItemMarginV,
+      showRasterMapTitles: showRasterMapTitles ?? this.showRasterMapTitles,
+      placesAvatarRadius: placesAvatarRadius,
+      placesAvatarRadiusSelected: placesAvatarRadiusSelected,
+      placesTitleFontSize: placesTitleFontSize,
+      placesTitleWidth: placesTitleWidth,
+      placesListHeight: placesListHeight,
+      placesListHeightFraction: placesListHeightFraction,
+      placesListMaxHeight: placesListMaxHeight,
+    );
+  }
 }
 
 /// A reusable widget containing:
@@ -312,11 +351,23 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
 
   Widget _buildRasterMapsList(BuildContext context, RasterMapNavBarStyle s) {
     final screenH = MediaQuery.of(context).size.height;
-    final listHeight =
-        s.rasterMapListHeight ?? math.min(s.rasterMapListMaxHeight, screenH * s.rasterMapListHeightFraction);
+    final double listHeight;
+    if (s.showRasterMapTitles) {
+      listHeight =
+          s.rasterMapListHeight ?? math.min(s.rasterMapListMaxHeight, screenH * s.rasterMapListHeightFraction);
+    } else {
+      // Titles hidden: collapse to the thumbnail height plus a small breathing
+      // room so the row occupies minimal vertical space.
+      listHeight = math.min(
+        s.rasterMapListMaxHeightNoTitle,
+        s.rasterMapPlaceholderSize + (s.rasterMapItemMarginV * 2) + 4,
+      );
+    }
+    // Tighter vertical padding when titles are off so the band stays compact.
+    final vPad = s.showRasterMapTitles ? 10.0 : 2.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 10.0),
+      padding: EdgeInsets.symmetric(horizontal: 2.0, vertical: vPad),
       child: Row(
         children: [
           Expanded(
@@ -379,19 +430,21 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                               );
                             },
                           ),
-                          const SizedBox(height: 4),
-                          Flexible(
-                            child: SizedBox(
-                              width: s.rasterMapTitleWidth,
-                              child: Text(
-                                rm.title,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: TextStyle(fontSize: s.rasterMapTitleFontSize),
-                                textAlign: TextAlign.center,
+                          if (s.showRasterMapTitles) ...[
+                            const SizedBox(height: 4),
+                            Flexible(
+                              child: SizedBox(
+                                width: s.rasterMapTitleWidth,
+                                child: Text(
+                                  rm.title,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: TextStyle(fontSize: s.rasterMapTitleFontSize),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

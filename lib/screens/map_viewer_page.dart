@@ -11,13 +11,13 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
-import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 
 class MapViewerPage extends StatefulWidget {
   const MapViewerPage({
@@ -53,7 +53,7 @@ class MapViewerPage extends StatefulWidget {
   State<MapViewerPage> createState() => _MapViewerPageState();
 }
 
-class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage>, ProductTourMixin<MapViewerPage> {
+class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage>, ProductTourMixin<MapViewerPage>, RasterMapScreenMixin<MapViewerPage> {
   static final _log = AppLogger.of('MapViewerPage');
   @override
   String get tourId => 'map_viewer';
@@ -95,6 +95,16 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   // Compact nav bar mode toggle
   bool _compactNavBar = false;
 
+  /// Whether the external RasterMapNavBar shows the raster-maps list.
+  bool _navBarShowMaps = true;
+
+  /// Whether the external RasterMapNavBar shows the cave-places list.
+  /// Starts hidden; revealed via the editor toolbar or app-drawer menu.
+  bool _navBarShowPlaces = true;
+
+  /// Current cave-place sort applied to the nav bar list.
+  CavePlaceSortOption _cavePlaceSortOption = const CavePlaceSortOption();
+
   /// When true the AppBar is hidden (full-screen map mode).
   bool _isFullScreen = false;
 
@@ -106,9 +116,14 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    // Forward the page's external nav bar key to the editor so toolbar
+    // buttons that target the nav bar (filter, scroll-to-place) work even
+    // though the nav bar is built outside the editor widget.
+    _editorController.externalNavBarKey = _navBarKey;
     _isLoading = true;
     _loadAll();
     _loadCompactNavState();
+    _loadCavePlaceSortOption();
   }
 
   Future<void> _loadCompactNavState() async {
@@ -247,6 +262,16 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
+      value: 'filter_cave_places',
+      icon: Icons.search,
+      label: LocServ.inst.t('filter_cave_places'),
+    ),
+    AppMenuItem(
+      value: 'sort_cave_places',
+      icon: Icons.sort_by_alpha,
+      label: LocServ.inst.t('sort_cave_places_navbar'),
+    ),
+    AppMenuItem(
       value: 'sort_raster_maps',
       icon: Icons.sort,
       label: LocServ.inst.t('sort_raster_maps'),
@@ -260,7 +285,12 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
 
   @override
   void onScreenMenuItemSelected(String value) {
-    if (value == 'sort_raster_maps') {
+    if (value == 'filter_cave_places') {
+      _editorController.toggleCavePlaceFilter();
+    } else if (value == 'sort_cave_places') {
+      _editorController.ensurePlacesListVisible();
+      _showCavePlacesSortDialog();
+    } else if (value == 'sort_raster_maps') {
       _showSortDialog();
     } else if (value == 'manage_raster_maps') {
       _openRasterMapsPage();
@@ -280,18 +310,29 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     await option.save();
   }
 
+  Future<void> _loadCavePlaceSortOption() async {
+    final option = await CavePlaceSortOption.load();
+    if (mounted) setState(() => _cavePlaceSortOption = option);
+  }
+
+  Future<void> _showCavePlacesSortDialog() async {
+    _editorController.ensurePlacesListVisible();
+    final option = await showCavePlacesSortDialog(context, _cavePlaceSortOption);
+    if (option == null || !mounted) return;
+    await option.save();
+    setState(() {
+      _cavePlaceSortOption = option;
+      _placesWithDefs = option.apply(_placesWithDefs, const {}, const {});
+    });
+  }
+
   Future<void> _openRasterMapsPage() async {
     final caveUuid = _cavePlace?.caveUuid ?? widget.caveUuid;
     if (caveUuid == null) return;
-    final changed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RasterMapsPage(caveUuid: caveUuid),
-      ),
+    await openRasterMapsPage(
+      caveUuid: caveUuid,
+      onChanged: _loadAll,
     );
-    if ((changed == true) && mounted) {
-      _loadAll();
-    }
   }
 
   void _ensurePlaceItemVisible(Uuid cavePlaceUuid) {
@@ -307,8 +348,15 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         imageFile: file,
         imageProvider: _imageProviderCache[imagePath] ??= FileImage(file),
         cavePlacesWithDefinitions: _placesWithDefs,
+        selectedRasterMapUuid: _selectedRasterMap?.uuid,
+        rasterMaps: _rasterMaps,
         isReadonly: true,
         debugUi: false,
+        onSortCavePlacesRequested: _showCavePlacesSortDialog,
+        onSortRasterMapsRequested: _showSortDialog,
+        onManageRasterMapsRequested: _openRasterMapsPage,
+        onNavBarShowRasterMapsChanged: (v) => setState(() => _navBarShowMaps = v),
+        onNavBarShowCavePlacesChanged: (v) => setState(() => _navBarShowPlaces = v),
         onFullScreenChanged: (isFullScreen) {
           setState(() => _isFullScreen = isFullScreen);
         },
@@ -336,10 +384,16 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       imageProviderCache: _imageProviderCache,
       placesListAlignment: widget.placesListAlignment,
       style: _compactNavBar ? const RasterMapNavBarStyle.compact() : const RasterMapNavBarStyle(),
+      showRasterMapsList: _navBarShowMaps,
+      showCavePlacesList: _navBarShowPlaces,
+      onVisiblePlaceUuidsChanged: (uuids) =>
+          _editorController.setVisiblePlaceUuids(uuids),
       onRasterMapSelected: (rm) async {
         setState(() {
           _selectedRasterMap = rm;
         });
+        // Keep the editor in sync so colour filters key off the new map.
+        _editorController.externalNavBarKey = _navBarKey;
         try {
           _editorController.resetZoom();
         } catch (e, st) {

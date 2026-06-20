@@ -23,6 +23,12 @@
             "type": "dart",
             "flutterMode": "release",
             "toolArgs": ["--dart-define-from-file=build_settings.json"]
+        },
+        {
+            "name": "speleo_loc_local_archive",
+            "request": "launch",
+            "type": "dart",
+            "toolArgs": ["--dart-define-from-file=build_settings_local_archive.json"]
         }
     ]
 }

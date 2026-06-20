@@ -10,10 +10,10 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
-import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 
 class RasterMapPlaceSelectorPage extends StatefulWidget {
   const RasterMapPlaceSelectorPage({
@@ -38,7 +38,10 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
 }
 
 class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
-    with AppBarMenuMixin<RasterMapPlaceSelectorPage>, ProductTourMixin<RasterMapPlaceSelectorPage> {
+    with
+        AppBarMenuMixin<RasterMapPlaceSelectorPage>,
+        ProductTourMixin<RasterMapPlaceSelectorPage>,
+        RasterMapScreenMixin<RasterMapPlaceSelectorPage> {
   @override
   String get tourId => 'raster_map_place_selector';
   @override
@@ -389,16 +392,13 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _openRasterMapsPage() async {
-    final changed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RasterMapsPage(caveUuid: widget.rasterMap.caveUuid),
-      ),
+    await openRasterMapsPage(
+      caveUuid: widget.rasterMap.caveUuid,
+      onChanged: () async {
+        await _loadRasterMaps();
+        await _loadDefinitionsForSelected();
+      },
     );
-    if ((changed == true) && mounted) {
-      await _loadRasterMaps();
-      await _loadDefinitionsForSelected();
-    }
   }
 
   /// Public function to zoom and pan to a specific cave place point

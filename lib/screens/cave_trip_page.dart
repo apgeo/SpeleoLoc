@@ -16,7 +16,9 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveTripPage extends StatefulWidget {
@@ -27,7 +29,12 @@ class CaveTripPage extends StatefulWidget {
   State<CaveTripPage> createState() => _CaveTripPageState();
 }
 
-class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMixin, AppBarMenuMixin<CaveTripPage>, ProductTourMixin<CaveTripPage> {
+class _CaveTripPageState extends State<CaveTripPage>
+    with
+        TickerProviderStateMixin,
+        AppBarMenuMixin<CaveTripPage>,
+        ProductTourMixin<CaveTripPage>,
+        RasterMapScreenMixin<CaveTripPage> {
   @override
   String get tourId => 'cave_trip';
   @override
@@ -49,6 +56,11 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   List<CavePlaceWithDefinition> _placesWithDefs = [];
   File? _rasterImageFile;
   final Map<String, ImageProvider> _imageProviderCache = {};
+  final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
+  bool _navBarShowMaps = true;
+  bool _navBarShowPlaces = true;
+  Uuid? _selectedPlaceId;
+  CavePlaceSortOption _cavePlaceSortOption = const CavePlaceSortOption();
   final RasterMapPlacePointEditorController _editorController =
       RasterMapPlacePointEditorController(
     showLegend: false,
@@ -75,6 +87,26 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   @override
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
+      value: 'filter_cave_places',
+      icon: Icons.search,
+      label: LocServ.inst.t('filter_cave_places'),
+    ),
+    AppMenuItem(
+      value: 'sort_cave_places',
+      icon: Icons.sort_by_alpha,
+      label: LocServ.inst.t('sort_cave_places_navbar'),
+    ),
+    AppMenuItem(
+      value: 'sort_raster_maps',
+      icon: Icons.sort,
+      label: LocServ.inst.t('sort_raster_maps'),
+    ),
+    AppMenuItem(
+      value: 'manage_raster_maps',
+      icon: Icons.map,
+      label: LocServ.inst.t('manage_raster_maps'),
+    ),
+    AppMenuItem(
       value: 'rename_trip',
       icon: Icons.edit,
       label: LocServ.inst.t('trip_rename'),
@@ -88,7 +120,18 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
 
   @override
   void onScreenMenuItemSelected(String value) async {
-    if (value == 'rename_trip') {
+    if (value == 'filter_cave_places') {
+      _editorController.toggleCavePlaceFilter();
+    } else if (value == 'sort_cave_places') {
+      _editorController.ensurePlacesListVisible();
+      _showCavePlacesSortDialog();
+    } else if (value == 'sort_raster_maps') {
+      _editorController.ensureMapsListVisible();
+      _showRasterMapSortDialog();
+    } else if (value == 'manage_raster_maps') {
+      _editorController.ensureMapsListVisible();
+      _openRasterMapsPage();
+    } else if (value == 'rename_trip') {
       await _renameTrip();
     } else if (value == 'delete_trip') {
       await _deleteTrip();
@@ -98,6 +141,8 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    _editorController.externalNavBarKey = _navBarKey;
+    _loadCavePlaceSortOption();
     _load();
     caveTripService.activeTripIdNotifier.addListener(_onTripStateChanged);
     caveTripService.isPausedNotifier.addListener(_onTripStateChanged);
@@ -626,7 +671,8 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
       ),
       body: Column(
         children: [
-          KeyedSubtree(key: tourKeys['toolbar'], child: _buildActionToolbar()),
+          if (!isLandscapePhone)
+            KeyedSubtree(key: tourKeys['toolbar'], child: _buildActionToolbar()),
           Expanded(
             key: tourKeys['map'],
             child: _showMapView ? _buildMapView() : _buildListView(
@@ -765,32 +811,40 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
 
     return Column(
       children: [
-        // Raster map selector (when multiple maps exist)
-        if (_rasterMaps.length > 1)
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: _rasterMaps.length,
-              itemBuilder: (context, i) {
-                final rm = _rasterMaps[i];
-                final isSelected = rm.uuid == _selectedRasterMap?.uuid;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: ChoiceChip(
-                    label: Text(rm.title, style: const TextStyle(fontSize: 11)),
-                    selected: isSelected,
-                    onSelected: (_) async {
-                      setState(() => _selectedRasterMap = rm);
-                      await _loadRasterMapData();
-                    },
-                    visualDensity: VisualDensity.compact,
-                  ),
-                );
-              },
-            ),
-          ),
+        // Shared raster-maps + cave-places nav bar.
+        // Always present so the external nav bar key is mounted;
+        // raster-maps list shows only when there are multiple maps.
+        RasterMapNavBar(
+          key: _navBarKey,
+          rasterMaps: _rasterMaps,
+          cavePlacesWithDefinitions: _placesWithDefs,
+          selectedRasterMapUuid: _selectedRasterMap?.uuid,
+          selectedPlaceId: _selectedPlaceId,
+          imageProviderCache: _imageProviderCache,
+          showRasterMapsList: _rasterMaps.length > 1 && _navBarShowMaps,
+          showCavePlacesList: _navBarShowPlaces,
+          style: const RasterMapNavBarStyle.compact().copyWith(showRasterMapTitles: false),
+          onVisiblePlaceUuidsChanged: (uuids) =>
+              _editorController.setVisiblePlaceUuids(uuids),
+          onRasterMapSelected: (rm) async {
+            setState(() => _selectedRasterMap = rm);
+            await _loadRasterMapData();
+          },
+          onCavePlaceSelected: (cpwd) {
+            final def = cpwd.definition;
+            setState(() => _selectedPlaceId = cpwd.cavePlace.uuid);
+            _editorController.setCavePlaceId(cpwd.cavePlace.uuid);
+            if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _editorController.panToPoint(
+                    def.xCoordinate!.toDouble(), def.yCoordinate!.toDouble());
+              });
+            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _navBarKey.currentState?.ensurePlaceItemVisible(cpwd.cavePlace.uuid);
+            });
+          },
+        ),
         // Map editor
         Expanded(
           child: imageFile != null
@@ -801,10 +855,17 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
                     imageFile: imageFile,
                     imageProvider: _imageProviderCache[imageFile.path] ??= FileImage(imageFile),
                     cavePlacesWithDefinitions: _placesWithDefs,
+                    selectedRasterMapUuid: _selectedRasterMap?.uuid,
+                    rasterMaps: _rasterMaps,
                     isReadonly: true,
                     onFullScreenChanged: (isFullScreen) {
                       setState(() => _isFullScreen = isFullScreen);
                     },
+                    onSortCavePlacesRequested: _showCavePlacesSortDialog,
+                    onSortRasterMapsRequested: _showRasterMapSortDialog,
+                    onManageRasterMapsRequested: _openRasterMapsPage,
+                    onNavBarShowRasterMapsChanged: (v) => setState(() => _navBarShowMaps = v),
+                    onNavBarShowCavePlacesChanged: (v) => setState(() => _navBarShowPlaces = v),
                     tripOverlay: visibleIds.isNotEmpty
                         ? TripOverlayData(
                             orderedCavePlaceIds: visibleIds,
@@ -815,6 +876,47 @@ class _CaveTripPageState extends State<CaveTripPage> with TickerProviderStateMix
               : Center(child: Text(LocServ.inst.t('no_raster_maps'))),
         ),
       ],
+    );
+  }
+
+  Future<void> _showRasterMapSortDialog() async {
+    final option = await showRasterMapSortDialog(
+      context,
+      _editorController.sortOption,
+    );
+    if (option == null || !mounted) return;
+    setState(() {
+      _editorController.sortOption = option;
+      _rasterMaps = option.apply(_rasterMaps, _placesWithDefs);
+    });
+    await option.save();
+  }
+
+  Future<void> _loadCavePlaceSortOption() async {
+    final option = await CavePlaceSortOption.load();
+    if (mounted) setState(() => _cavePlaceSortOption = option);
+  }
+
+  Future<void> _showCavePlacesSortDialog() async {
+    _editorController.ensurePlacesListVisible();
+    final option = await showCavePlacesSortDialog(context, _cavePlaceSortOption);
+    if (option == null || !mounted) return;
+    await option.save();
+    setState(() {
+      _cavePlaceSortOption = option;
+      _placesWithDefs = option.apply(_placesWithDefs, const {}, const {});
+    });
+  }
+
+  Future<void> _openRasterMapsPage() async {
+    final cave = _cave;
+    if (cave == null) return;
+    await openRasterMapsPage(
+      caveUuid: cave.uuid,
+      onChanged: () async {
+        await _load();
+        await _loadRasterMapData();
+      },
     );
   }
 }

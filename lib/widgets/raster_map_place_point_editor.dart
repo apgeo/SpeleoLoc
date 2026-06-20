@@ -568,6 +568,19 @@ class RasterMapPlacePointEditorController {
   /// Defaults to [RasterMapSortField.orderIndex] ascending (DB order).
   RasterMapSortOption sortOption = const RasterMapSortOption();
 
+  /// When set, the editor delegates nav-bar interactions (filter toggle,
+  /// ensure-item-visible, set-selected-place) to this external key instead
+  /// of its own internal embedded-nav-bar key. Set this in [initState] of
+  /// the parent page when the [RasterMapNavBar] is built outside the editor.
+  GlobalKey<RasterMapNavBarState>? externalNavBarKey;
+
+  /// Update the set of cave-place UUIDs visible after text filtering.
+  /// Passing null clears the filter (all places visible). Call this from
+  /// the parent page when using an external [RasterMapNavBar] so that
+  /// filtered-out markers are faded/hidden on the map.
+  void setVisiblePlaceUuids(Set<Uuid>? uuids) =>
+      _state?._setVisiblePlaceUuids(uuids);
+
   void setShowLegend(bool v) {
     showLegend = v;
     _state?._setShowLegend(v);
@@ -711,6 +724,8 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.onSortRasterMapsRequested,
     this.onManageRasterMapsRequested,
     this.onFullScreenChanged,
+    this.onNavBarShowRasterMapsChanged,
+    this.onNavBarShowCavePlacesChanged,
   });
 
   final File imageFile;
@@ -825,6 +840,14 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// parent should use this to hide / show its own AppBar.
   final void Function(bool isFullScreen)? onFullScreenChanged;
 
+  /// Called when the editor's "show raster-maps list" flag changes so the
+  /// parent can mirror it to an external [RasterMapNavBar].
+  final ValueChanged<bool>? onNavBarShowRasterMapsChanged;
+
+  /// Called when the editor's "show cave-places list" flag changes so the
+  /// parent can mirror it to an external [RasterMapNavBar].
+  final ValueChanged<bool>? onNavBarShowCavePlacesChanged;
+
   @override
   State<RasterMapPlacePointEditor> createState() =>
       _RasterMapPlacePointEditorState();
@@ -912,6 +935,18 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   // Key for the embedded nav bar (for programmatic scrolling)
   final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
+
+  /// Returns the effective [RasterMapNavBarState] — the external nav bar
+  /// provided via [widget.controller?.externalNavBarKey] when set, falling
+  /// back to the editor's own embedded nav bar.
+  RasterMapNavBarState? get _effectiveNavBarState =>
+      widget.controller?.externalNavBarKey?.currentState ?? _navBarKey.currentState;
+
+  /// Update the set of cave-place UUIDs currently visible after text filtering.
+  /// Called by the controller when the parent page uses an external nav bar.
+  void _setVisiblePlaceUuids(Set<Uuid>? uuids) {
+    if (mounted) setState(() => _visiblePlaceUuids = uuids);
+  }
 
   /// UUIDs that are currently visible after nav-bar text filtering.
   /// `null` means no filter is active and all places are shown.
@@ -1227,7 +1262,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// field is reachable.
   void _toggleNavBarCavePlaceFilter() {
     _ensurePlacesListVisible();
-    _navBarKey.currentState?.toggleFilter();
+    _effectiveNavBarState?.toggleFilter();
   }
 
   /// Ensures the cave-places horizontal list in the nav bar is visible.
@@ -1235,6 +1270,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   void _ensurePlacesListVisible() {
     if (!_navBarShowPlaces) {
       setState(() => _navBarShowPlaces = true);
+      widget.onNavBarShowCavePlacesChanged?.call(true);
     }
   }
 
@@ -1243,6 +1279,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   void _ensureMapsListVisible() {
     if (!_navBarShowMaps) {
       setState(() => _navBarShowMaps = true);
+      widget.onNavBarShowRasterMapsChanged?.call(true);
     }
   }
 
@@ -1321,7 +1358,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       if (!hasPoint) {
         await _handleNavCavePlaceSelected(cpwd);
         // Scroll to the item in the nav bar.
-        _navBarKey.currentState?.ensurePlaceItemVisible(cpwd.cavePlace.uuid);
+        _effectiveNavBarState?.ensurePlaceItemVisible(cpwd.cavePlace.uuid);
         return;
       }
     }
@@ -1521,7 +1558,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           nearest.definition!.yCoordinate!.toDouble(),
         );
         await _handleNavCavePlaceSelected(nearest, notifyMarkerTap: true);
-        _navBarKey.currentState?.setSelectedPlaceId(nearest.cavePlace.uuid);
+        _effectiveNavBarState?.setSelectedPlaceId(nearest.cavePlace.uuid);
       }
       return;
     }
@@ -1976,10 +2013,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           await _commitPendingPointIfNeeded();
           if (mounted) setState(() => _showLegend = !_showLegend);
         },
-        icon: Icon(Icons.info_outline, size: 20, color: _showLegend ? Colors.blue : null),
+        icon: Icon(Icons.info_outline, size: 25, color: _showLegend ? Colors.blue : null),
         tooltip: LocServ.inst.t('toggle_legend'),
         padding: const EdgeInsets.all(2),
-        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
         style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
       ),
       // Action buttons (edit mode only)
@@ -1996,33 +2033,33 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             },
             icon: Icon(
               _tapDefinesNewPoint ? Icons.edit_location_alt : Icons.touch_app,
-              size: 20,
+              size: 25,
               color: _tapDefinesNewPoint ? Colors.blue : Colors.orange,
             ),
             tooltip: _tapDefinesNewPoint
                 ? LocServ.inst.t('tap_mode_define_point')
                 : LocServ.inst.t('tap_mode_select_place'),
             padding: const EdgeInsets.all(2),
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
             style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
           ),
         // Reset point
         IconButton(
           onPressed: _userHasSelectedNewPoint ? _resetPointToInitial : null,
-          icon: const Icon(Icons.undo, size: 20),
+          icon: const Icon(Icons.undo, size: 25),
           tooltip: LocServ.inst.t('reset_point'),
           padding: const EdgeInsets.all(2),
-          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
           style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
         ),
         // Remove definition
         if (widget.onRemoveDefinitionRequested != null)
           IconButton(
             onPressed: _handleRemoveDefinition,
-            icon: Icon(Icons.delete_outline, size: 20, color: Colors.red[400]),
+            icon: Icon(Icons.delete_outline, size: 25, color: Colors.red[400]),
             tooltip: LocServ.inst.t('remove_definition'),
             padding: const EdgeInsets.all(2),
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
             style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
           ),
         // Add new cave place (tap-to-define)
@@ -2033,12 +2070,12 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                 : _handleAddCavePlace,
             icon: Icon(
               Icons.add_location_alt,
-              size: 20,
+              size: 25,
               color: _waitingForNewCavePlaceTap ? Colors.green : null,
             ),
             tooltip: LocServ.inst.t('add_cave_place_quick'),
             padding: const EdgeInsets.all(2),
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
             style: IconButton.styleFrom(
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               backgroundColor: _waitingForNewCavePlaceTap
@@ -2050,11 +2087,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         if (SHOW_SAVE_CAVE_PLACE_BUTTON && widget.onSaveDefinitionRequested != null)
           IconButton(
             onPressed: widget.onSaveDefinitionRequested,
-            icon: Icon(Icons.save_alt, size: 24,
+            icon: Icon(Icons.save_alt, size: 30,
                 color: Theme.of(context).colorScheme.primary),
             tooltip: LocServ.inst.t('define_place_on_map'),
             padding: const EdgeInsets.all(2),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
           ),
       ],
@@ -2062,19 +2099,19 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       if (widget.controller?.cavePlaceUuid != null)
         IconButton(
           onPressed: _openCavePlacePage,
-          icon: const Icon(Icons.open_in_new, size: 20),
+          icon: const Icon(Icons.open_in_new, size: 25),
           tooltip: LocServ.inst.t('open_cave_place'),
           padding: const EdgeInsets.all(2),
-          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
           style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
         ),
       if (widget.controller?.cavePlaceUuid != null)
         IconButton(
           onPressed: _openCavePlaceDocuments,
-          icon: const Icon(Icons.description, size: 20),
+          icon: const Icon(Icons.description, size: 25),
           tooltip: LocServ.inst.t('documentation'),
           padding: const EdgeInsets.all(2),
-          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
           style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
         ),
     ];
@@ -2107,7 +2144,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _buildActionBarButtons(context),
+            children: _buildActionBarButtons(context)
+                .expand((b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)])
+                .toList()
+                ..removeLast(),
           ),
         ),
       ),
@@ -2154,6 +2194,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     );
   }
 
+  /// The vertical map side toolbar
   /// The semi-transparent vertical toolbar anchored to the chosen side.
   /// Height adjusts automatically to fit the current set of buttons.
   Widget _buildSideToolbar(BuildContext context) {
@@ -2226,15 +2267,19 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         items: navViewItems,
         onSelected: (value) {
           if (value == 'toggle_maps') {
+            final next = !_navBarShowMaps;
             setState(() {
-              _navBarShowMaps = !_navBarShowMaps;
+              _navBarShowMaps = next;
               if (_fullScreen) _navBarShowMapsChangedInFS = true;
             });
+            widget.onNavBarShowRasterMapsChanged?.call(next);
           } else if (value == 'toggle_places') {
+            final next = !_navBarShowPlaces;
             setState(() {
-              _navBarShowPlaces = !_navBarShowPlaces;
+              _navBarShowPlaces = next;
               if (_fullScreen) _navBarShowPlacesChangedInFS = true;
             });
+            widget.onNavBarShowCavePlacesChanged?.call(next);
           }
         },
       ),
