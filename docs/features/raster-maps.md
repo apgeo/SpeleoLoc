@@ -70,6 +70,16 @@ The selector offers:
 - **zoom-to-fit** and **zoom-to-point** helpers,
 - optional **route playback** for trip visualization.
 
+## Display effects (view-only)
+
+When viewing any raster map you can apply non-destructive **image effects**
+from the map's side toolbar — invert, grayscale, sepia, high contrast,
+night-red, and custom brightness/contrast — to make faint or dark scans
+easier to read. These never alter the stored image and are remembered per
+map for the current app session only. You can also toggle **full-screen**
+to maximise the image. See
+[Map viewer — image effects](map-viewer.md#image-effects-view-only).
+
 ## Image performance
 
 - Very large raster maps (tens of megapixels) are supported but will

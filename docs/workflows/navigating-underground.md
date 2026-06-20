@@ -60,6 +60,13 @@ You can freely switch between tabs. Swipe or tap the raster maps tab to
 see the place on a plane view, projected profile, etc. The point is
 highlighted with a pulse animation so it is easy to find.
 
+> **Underground tip**: faint or dark map scans are hard to read by
+> headlamp. Use the map's side toolbar to **invert colours**, boost
+> **contrast**, or switch to the **night-red** effect (kinder to
+> dark-adapted eyes), and tap **full-screen** to use the whole display.
+> These are view-only and never change your data. See
+> [Map viewer — image effects](../features/map-viewer.md#image-effects-view-only).
+
 See [Cave places](../features/cave-places.md) and
 [Map viewer](../features/map-viewer.md).
 

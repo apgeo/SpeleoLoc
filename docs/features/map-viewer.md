@@ -46,6 +46,71 @@ Points can appear in different colors:
 Toggle the legend from the menu; colors and hit threshold are app
 constants.
 
+## Map side toolbar
+
+Every screen that hosts the map (the cave place **Raster maps** tab, the
+**Raster map place selector**, the standalone **map viewer**, and the
+**trip map**) shows a vertical, semi-transparent **side toolbar** anchored
+to the left edge of the image. A **chevron** above it hides or reveals the
+whole toolbar so it never gets in the way of the map. From top to bottom it
+offers:
+
+- **Go to next undefined place** (target icon) — jumps to the next cave
+  place that has no point defined on the current map. Greyed out once every
+  place is placed; shows the remaining count in its tooltip.
+- **Filter cave places** (magnifier) — toggles the cave-place filter in the
+  navigation bar.
+- **Nav-bar view options** (layers) — a checkable menu to show or hide the
+  **maps list** and the **places list** inside the navigation bar.
+- **More actions** (⋮) — filter / sort cave places, sort raster maps, and
+  open **Manage raster maps**. Mirrors the screen's drawer menu.
+- **Full-screen** — see below.
+- **Invert colours** — see [Image effects](#image-effects-view-only).
+- **Image processing** (sliders) — see [Image effects](#image-effects-view-only).
+
+The exact button set adapts to the screen (e.g. the read-only map viewer
+omits editing-only actions).
+
+## Full-screen mode
+
+The **full-screen** button (expand icon) hides the navigation bar and the
+parent app bar to give the map image the maximum possible area; the bottom
+action bar stays available. Tap the button again (now a collapse icon) to
+return to the normal layout. Any nav-bar visibility changes you make while
+full-screen are remembered when you exit.
+
+## Landscape-phone layout
+
+On phones held in **landscape** (short side &lt; 600 dp), the screen
+automatically collapses secondary UI to give the map more room. Rotating
+back to portrait restores the full layout.
+
+## Image effects (view-only)
+
+The **image processing** button (sliders icon) applies non-destructive
+display filters to the raster-map image — handy for reading faint pencil
+lines, dark scans, or for dark-adaptation underground. It offers single-tap
+**presets** plus a **custom** panel:
+
+| Preset | Effect |
+|---|---|
+| **Normal** | Raw image, no processing. |
+| **Invert** | Inverts all RGB channels (dark map → light). Also available as the standalone **invert colours** toolbar button. |
+| **Grayscale** | Luminosity-weighted desaturation. |
+| **Sepia** | Warm sepia tone. |
+| **High contrast** | Sharpens contrast and reduces saturation — good for faint lines. |
+| **Night red** | Removes green/blue, leaving a red tint friendly to dark-adapted eyes. |
+| **Custom** | Opens a bottom-sheet panel (see below). |
+
+The **custom** panel lets you stack effects additively: checkboxes for
+invert / grayscale / sepia / high-contrast / night-red, plus a
+**brightness** slider (−1.00 … +1.00) and a **contrast** slider
+(0.20 … 3.00), with **Reset**, **Cancel** and **Apply**.
+
+> Image effects are purely visual: they never modify the stored image file
+> or the point definitions, and they are **not** saved to disk. The chosen
+> effect is remembered **per raster map for the current app session** only.
+
 ## Point-definition workflow (on the cave place page)
 
 1. Open the cave place.
