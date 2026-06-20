@@ -64,9 +64,10 @@ There are three ways to create cave places, pick what fits best:
 ### 5a. One by one, manually
 
 1. On the cave's **places list**, press **Add place**.
-2. Enter the title, description, depth, optional GPS, optional QR code
-   identifier. If you do not know the QR number yet, leave it blank —
-   you can fill it in once the labels are printed and physically mounted.
+2. Enter the title, description, depth, optional GPS, optional **place
+   code identifier (PCI)**. If you do not know the code yet, leave it
+   blank — you can fill it in once the labels are printed and physically
+   mounted.
 
 See [Cave places](../features/cave-places.md).
 
@@ -86,7 +87,7 @@ When adding places that are best identified visually:
 
 1. Open a raster map in the viewer with tap-mode = **Define new place**.
 2. Tap the map where the place is. A quick-add dialog asks for title,
-   area and QR code.
+   area and place code (PCI).
 
 See [Map viewer and point editor](../features/map-viewer.md).
 

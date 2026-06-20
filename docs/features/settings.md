@@ -11,15 +11,26 @@ The list mirrors the order shown in the app:
 ## General
 
 - **App language** — current choice and available translations
-  (English, Romanian, …).
+  (English, Romanian, …). Changing the language restarts the UI
+  to apply the new locale.
 - **Show home toolbar** — display a visible action toolbar on the home
   screen instead of tucking actions into the end-drawer menu.
-- **Enable QR manual input (long-press)** — allows long-pressing the
-  scan icon to open a typed-input dialog. Useful when labels are
-  damaged.
-- **Auto product tour** — turn the first-visit highlight overlays on
-  or off.
-- Other visual/ergonomic toggles (compact nav bar, tap-auto-save, …).
+  This is a **persistent** setting (survives app restarts).
+- **Auto-add entrance place** — when creating a new cave, automatically
+  add a cave place pre-flagged as the main entrance. On by default;
+  disable if you prefer to create the entrance place manually.
+- **Allow main object bulk deletes** — enables bulk-delete actions for
+  caves, cave areas, and cave places. Turn off to reduce the risk of
+  accidental mass deletion.
+- **Ask on QR scan ambiguity** — when a scanned QR code matches places
+  in more than one cave, show a dialog to let you choose the target
+  cave. When disabled, the app silently picks the most recently opened
+  cave instead.
+- **Ask on deep-link ambiguity** — same policy applied to `sp://`
+  deep-links opened from outside the app.
+- **Reset product tours** — clears the "already shown" flag for every
+  highlight tour in the app, so first-visit overlays will reappear on
+  the next visit to each screen.
 
 ## Image compression
 

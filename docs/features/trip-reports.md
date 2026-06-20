@@ -49,6 +49,37 @@ Typical fields you will want to include:
 - An embedded trip map image.
 - Team members (typed into the trip log or a dedicated field).
 
+## Trip log format
+
+Every trip has a **trip log** — a text record of events (scans, pauses,
+resumes, stops) that is generated automatically as the trip runs.  Four
+rendering styles are available:
+
+| Method | Style | Timestamp prefix |
+|---|---|---|
+| **Raw** | Terse one-liners using short i18n message keys. Retained for backwards compatibility. | `[yyyy/MM/dd HH:mm:ss]` |
+| **Classic** *(default)* | Full-sentence phrasing of every event, one entry per line. | `[yyyy/MM/dd HH:mm:ss]` |
+| **Journal** | Field-journal style with elapsed time from trip start and sequence-aware phrasing ("first stop", "next stop", …). | `[HH:mm · +Δ]` |
+| **Narrative** | Prose paragraphs grouping consecutive movements and summarizing pauses. Suitable for pasting directly into a report. | none |
+
+### Switching the method
+
+Open a trip's log page (**View trip → Log** or the log icon on the
+trip screen). Tap the **book icon** (📖) in the app bar to open the
+method picker. Selecting a different method:
+
+1. Asks for confirmation (the existing text will be replaced).
+2. Regenerates the log from the trip's stored event sequence using the
+   new method.
+3. Saves the new text immediately.
+
+The chosen method is stored per-user in the app's configuration and is
+also used for the **next** trip you run — you only need to set it once.
+
+> **Tip**: If you want a polished report export, switch to **Narrative**
+> before generating the ODT/DOCX report, then switch back to your
+> everyday preference afterwards.
+
 ## Generating a report
 
 1. Open a trip (from the cave's **Past trips** list or the active trip

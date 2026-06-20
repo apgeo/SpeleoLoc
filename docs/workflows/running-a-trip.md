@@ -68,6 +68,12 @@ are preserved.
 
 - **Review** the trip's map and list — numbered points, route, log
   entries.
+- **Choose a trip log format** — the log is generated in one of four
+  styles: *Raw*, *Classic* (default), *Journal*, or *Narrative*. Open
+  the log page (**View trip → Log**) and tap the **book icon** in the
+  app bar to switch. The setting is remembered for future trips.
+  *Narrative* produces the most polished prose for report export.
+  See [Trip reports](../features/trip-reports.md#trip-log-format).
 - **Generate a trip report**:
   1. Ensure you have a template registered (**Home → ⋮ → Trip report
      templates**). See [Trip reports](../features/trip-reports.md).
