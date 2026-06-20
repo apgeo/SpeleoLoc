@@ -1357,8 +1357,12 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           def != null && def.xCoordinate != null && def.yCoordinate != null;
       if (!hasPoint) {
         await _handleNavCavePlaceSelected(cpwd);
-        // Scroll to the item in the nav bar.
-        _effectiveNavBarState?.ensurePlaceItemVisible(cpwd.cavePlace.uuid);
+        // Ensure the cave-places list is visible, then scroll to the item.
+        _ensurePlacesListVisible();
+        final uuid = cpwd.cavePlace.uuid;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _effectiveNavBarState?.ensurePlaceItemVisible(uuid);
+        });
         return;
       }
     }
@@ -1487,7 +1491,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   }
 
   Future<void> _onImageTap(
-    TapDownDetails details,
+    TapUpDetails details,
     PhotoViewControllerValue controllerValue,
   ) async {
     if (widget.isReadonly) return;
@@ -1752,6 +1756,19 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   }) async {
     final canSwitch = await _autoSaveIfNeeded();
     if (!canSwitch) return;
+
+    // _autoSaveIfNeeded clears _imageSelectedX/Y only when it actually saved
+    // (i.e. _userHasSelectedNewPoint was true). When it returned early (no tap),
+    // _imageSelectedX/Y may still hold stale initState coordinates from the
+    // previous cave place. Clear them now so the incoming place starts clean
+    // and those old coordinates cannot be accidentally saved for the new place.
+    if (mounted) {
+      setState(() {
+        _userHasSelectedNewPoint = false;
+        _imageSelectedX = null;
+        _imageSelectedY = null;
+      });
+    }
 
     // Update controller to highlight the new cave place
     try {
@@ -2396,7 +2413,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             // Tap: forward to the image-tap handler with current controller state.
-            onTapDown: (details) {
+            // onTapUp (not onTapDown) is used so the handler fires only after the
+            // gesture arena resolves. When an overlay toolbar button is tapped, its
+            // InkWell wins the arena and this callback is never called, preventing
+            // the tap from also moving the map point.
+            onTapUp: (details) {
               final cv = PhotoViewControllerValue(
                 scale: _photoViewController.scale,
                 position: _photoViewController.position,
