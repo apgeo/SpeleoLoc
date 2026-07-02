@@ -277,10 +277,10 @@ packages:
     dependency: "direct main"
     description:
       name: dchs_flutter_beacon
-      sha256: fb88355e494877ff2ec963472a35dd052d6f7954a9c9a851f648eff492a18b50
+      sha256: d713882502946fe4189bc0ba6542c3670a3ed8670f1d5494da5e1c59394df26d
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.9"
+    version: "0.6.8"
   device_info_plus:
     dependency: transitive
     description:

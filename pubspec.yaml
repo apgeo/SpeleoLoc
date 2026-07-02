@@ -55,7 +55,10 @@ dependencies:
   sentry_flutter: ^9.0.0
   flutter_localizations:
     sdk: flutter
-  dchs_flutter_beacon: ^0.6.9
+  # BLE beacon support (Beacon Lab / phase 0). Pinned to 0.6.8: 0.6.9 ships a
+  # broken android/build.gradle (kotlin{} block without the kotlin-android
+  # plugin applied) that fails the Android build. Re-check on newer releases.
+  dchs_flutter_beacon: 0.6.8
   flutter_blue_plus: ^2.3.10
 
 dev_dependencies:
