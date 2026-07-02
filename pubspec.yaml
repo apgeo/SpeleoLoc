@@ -55,6 +55,8 @@ dependencies:
   sentry_flutter: ^9.0.0
   flutter_localizations:
     sdk: flutter
+  dchs_flutter_beacon: ^0.6.9
+  flutter_blue_plus: ^2.3.10
 
 dev_dependencies:
   flutter_test:

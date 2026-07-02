@@ -46,6 +46,8 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>SpeleoLoc uses your location to record GPS coordinates of the entrance cave places on demand, only if you use this feature.</string>
+	<string>SpeleoLoc uses your location to record GPS coordinates of the entrance cave places on demand, and to detect nearby location beacons (iBeacon) placed in caves, only if you use these features.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>SpeleoLoc uses Bluetooth to detect nearby location beacons placed in caves and to read their diagnostics (battery, temperature).</string>
 </dict>
 </plist>
