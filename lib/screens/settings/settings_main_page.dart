@@ -10,7 +10,7 @@ import 'package:speleoloc/screens/settings/settings_database_page.dart';
 import 'package:speleoloc/screens/settings/users_page.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
-import 'package:speleoloc/screens/settings/beacon_lab_page.dart';
+import 'package:speleoloc/screens/settings/settings_beacons_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -177,12 +177,12 @@ class _SettingsMainPageState extends State<SettingsMainPage>
             ),
             _SettingsSection(
               icon: Icons.bluetooth_searching,
-              title: LocServ.inst.t('beacon_lab'),
-              subtitle: LocServ.inst.t('beacon_lab_desc'),
+              title: LocServ.inst.t('settings_beacons'),
+              subtitle: LocServ.inst.t('settings_beacons_desc'),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const BeaconLabPage()),
+                  MaterialPageRoute(builder: (_) => const SettingsBeaconsPage()),
                 );
               },
             ),

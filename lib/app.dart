@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/home_page.dart';
+import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/screens/cave_places_list_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/cave_trip_page.dart';
@@ -26,17 +27,30 @@ class SpeleoLocApp extends StatefulWidget {
   State<SpeleoLocApp> createState() => _SpeleoLocAppState();
 }
 
-class _SpeleoLocAppState extends State<SpeleoLocApp> {
+class _SpeleoLocAppState extends State<SpeleoLocApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     DeepLinkHandler.instance.init(navigatorKey);
+    // Fire-and-forget: stays off unless enabled in settings AND
+    // permissions are already granted; all failures are logged only.
+    BeaconDetectionService.instance.start();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    BeaconDetectionService.instance.stop();
     DeepLinkHandler.instance.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Foreground-only scanning (background detection is a later phase).
+    BeaconDetectionService.instance.onLifecycle(state);
   }
 
   @override

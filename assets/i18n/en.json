@@ -1113,5 +1113,17 @@
   "cave_beacons_title": "Cave beacons",
   "cave_beacons_empty": "No beacons registered in this cave yet",
   "beacon_last_seen": "Last seen",
-  "beacon_never_seen": "never"
+  "beacon_never_seen": "never",
+  "settings_beacons": "Beacon detection",
+  "settings_beacons_desc": "Automatic place detection via BLE beacons, thresholds, diagnostics",
+  "beacon_detection_enable": "Detect beacons automatically",
+  "beacon_detection_enable_desc": "While the app is open, passing near a registered beacon identifies the place and records a trip point",
+  "beacon_detection_threshold": "Signal trigger threshold",
+  "beacon_detection_threshold_desc": "Trigger when signal is stronger than {v} dBm (closer to 0 = must be nearer)",
+  "beacon_detection_cooldown": "Re-trigger cooldown",
+  "beacon_detection_cooldown_desc": "The same beacon triggers again after {v} min",
+  "beacon_detection_auto_open": "Open place on detection",
+  "beacon_detection_auto_open_desc": "Navigate to the detected place like a QR scan (off = notification only)",
+  "beacon_detection_not_running": "Detection could not start — check Bluetooth is on",
+  "beacon_place_detected": "Place detected"
 }

@@ -1111,5 +1111,17 @@
   "cave_beacons_title": "Beaconurile peșterii",
   "cave_beacons_empty": "Niciun beacon înregistrat în această peșteră încă",
   "beacon_last_seen": "Văzut ultima dată",
-  "beacon_never_seen": "niciodată"
+  "beacon_never_seen": "niciodată",
+  "settings_beacons": "Detectare beaconuri",
+  "settings_beacons_desc": "Detectare automată a locurilor prin beaconuri BLE, praguri, diagnostic",
+  "beacon_detection_enable": "Detectează beaconurile automat",
+  "beacon_detection_enable_desc": "Cu aplicația deschisă, trecerea pe lângă un beacon înregistrat identifică locul și adaugă un punct de tură",
+  "beacon_detection_threshold": "Prag de declanșare a semnalului",
+  "beacon_detection_threshold_desc": "Declanșează când semnalul este mai puternic de {v} dBm (mai aproape de 0 = trebuie să fii mai aproape)",
+  "beacon_detection_cooldown": "Pauză între redeclanșări",
+  "beacon_detection_cooldown_desc": "Același beacon declanșează din nou după {v} min",
+  "beacon_detection_auto_open": "Deschide locul la detectare",
+  "beacon_detection_auto_open_desc": "Navighează la locul detectat ca la scanarea unui QR (dezactivat = doar notificare)",
+  "beacon_detection_not_running": "Detectarea nu a putut porni — verifică dacă Bluetooth este pornit",
+  "beacon_place_detected": "Loc detectat"
 }
