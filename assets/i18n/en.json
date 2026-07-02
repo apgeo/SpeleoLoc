@@ -1125,5 +1125,12 @@
   "beacon_detection_auto_open": "Open place on detection",
   "beacon_detection_auto_open_desc": "Navigate to the detected place like a QR scan (off = notification only)",
   "beacon_detection_not_running": "Detection could not start — check Bluetooth is on",
-  "beacon_place_detected": "Place detected"
+  "beacon_place_detected": "Place detected",
+  "beacon_background_enable": "Keep detecting in background",
+  "beacon_background_enable_desc": "Scanning continues with the screen off or another app open; detections ring a loud alert (Android)",
+  "beacon_background_interval": "Background scan interval",
+  "beacon_background_interval_desc": "One short scan burst every {v} seconds (longer = less phone battery)",
+  "beacon_background_notif_title": "SpeleoLoc beacon detection",
+  "beacon_background_notif_text": "Scanning for cave beacons…",
+  "beacon_background_notif_denied": "Notification permission is required for background alerts"
 }

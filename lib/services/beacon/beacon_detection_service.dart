@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:dchs_flutter_beacon/dchs_flutter_beacon.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
@@ -51,6 +53,17 @@ class BeaconDetectionService {
   bool _running = false;
   bool get isRunning => _running;
 
+  /// True between app-pause and app-resume while the foreground service
+  /// keeps scanning; triggers then alert via notification + loud sound.
+  bool _inBackground = false;
+  bool _fgsInitialized = false;
+
+  /// Scan burst length in background duty-cycle mode.
+  static const int _backgroundScanBurstMs = 5000;
+
+  /// AltBeacon foreground defaults, restored when returning to the app.
+  static const int _foregroundScanPeriodMs = 1100;
+
   /// Starts detection when enabled AND permissions are already granted.
   /// Safe to call unconditionally (app start, resume, settings change) —
   /// every failure path only logs.
@@ -94,6 +107,14 @@ class BeaconDetectionService {
     await _registrationsSub?.cancel();
     _registrationsSub = null;
     _engine = null;
+    if (_inBackground) {
+      _inBackground = false;
+      try {
+        await FlutterForegroundTask.stopService();
+      } catch (e, st) {
+        _log.warning('Foreground service stop failed', e, st);
+      }
+    }
     if (_running) _log.info('Beacon detection stopped');
     _running = false;
   }
@@ -104,14 +125,108 @@ class BeaconDetectionService {
     await start();
   }
 
-  /// App lifecycle hook: foreground-only scanning.
+  /// App lifecycle hook. With background detection enabled the scan
+  /// survives app pause inside a foreground service (duty-cycled);
+  /// otherwise scanning is foreground-only.
   void onLifecycle(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      start();
+      if (_inBackground) {
+        unawaited(_exitBackgroundMode());
+      } else {
+        start();
+      }
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      stop();
+      if (_running && (_engine?.config.backgroundEnabled ?? false)) {
+        unawaited(_enterBackgroundMode());
+      } else {
+        stop();
+      }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Background mode (Android foreground service + duty-cycled scanning)
+  // ---------------------------------------------------------------------------
+
+  Future<void> _enterBackgroundMode() async {
+    if (_inBackground || !Platform.isAndroid) return;
+    try {
+      final config = _engine?.config;
+      if (config == null) return;
+      _initForegroundTask();
+      final result = await FlutterForegroundTask.startService(
+        serviceId: 7001,
+        serviceTypes: const [ForegroundServiceTypes.connectedDevice],
+        notificationTitle: LocServ.inst.t('beacon_background_notif_title'),
+        notificationText: LocServ.inst.t('beacon_background_notif_text'),
+      );
+      if (result is! ServiceRequestSuccess) {
+        _log.warning('Foreground service refused: $result — '
+            'stopping detection with the app');
+        await stop();
+        return;
+      }
+      // Duty cycle: one ~5 s burst per configured interval. A burst
+      // delivers a single aggregated ranging callback, so debounce is
+      // dropped to 1 in background (2 bursts could be a minute apart).
+      final between =
+          (config.backgroundScanIntervalSec * 1000 - _backgroundScanBurstMs)
+              .clamp(0, 3600000);
+      await flutterBeacon.setScanPeriod(_backgroundScanBurstMs);
+      await flutterBeacon.setBetweenScanPeriod(between);
+      _engine?.config = config.copyWith(debounceCount: 1);
+      _inBackground = true;
+      _log.info('Background detection: burst ${_backgroundScanBurstMs}ms '
+          'every ${config.backgroundScanIntervalSec}s');
+    } catch (e, st) {
+      _log.warning('Failed to enter background detection mode', e, st);
+      await stop();
+    }
+  }
+
+  Future<void> _exitBackgroundMode() async {
+    _inBackground = false;
+    if (!Platform.isAndroid) return;
+    try {
+      await FlutterForegroundTask.stopService();
+    } catch (e, st) {
+      _log.warning('Foreground service stop failed', e, st);
+    }
+    try {
+      await flutterBeacon.setScanPeriod(_foregroundScanPeriodMs);
+      await flutterBeacon.setBetweenScanPeriod(0);
+    } catch (e, st) {
+      _log.warning('Restoring scan periods failed', e, st);
+    }
+    // Restore the persisted debounce settings.
+    try {
+      final config = await BeaconDetectionConfig.load();
+      _engine?.config = config;
+    } catch (_) {}
+    if (!_running) await start();
+  }
+
+  void _initForegroundTask() {
+    if (_fgsInitialized) return;
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'beacon_background_service',
+        channelName: 'Beacon background scanning',
+        channelDescription:
+            'Keeps beacon detection running while SpeleoLoc is not on screen',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.nothing(),
+        allowWakeLock: true,
+      ),
+    );
+    _fgsInitialized = true;
   }
 
   Future<bool> _permissionsAlreadyGranted() async {
@@ -174,13 +289,22 @@ class BeaconDetectionService {
             placeTitle: place.title);
       }
 
-      SnackBarService.showSuccess(
-        '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"'
-        '${tripPointRecorded ? ' · ${LocServ.inst.t('trip_point_added')}' : ''}',
-      );
-
-      if ((_engine?.config.autoOpenPlace ?? false)) {
-        await _openPlace(place);
+      if (_inBackground) {
+        // App not on screen: loud notification instead of a toast.
+        await BeaconAlertNotifier.instance.showDetection(
+          placeTitle: place.title,
+          tripPointRecorded: tripPointRecorded,
+          caveUuid: place.caveUuid,
+          placeUuid: place.uuid,
+        );
+      } else {
+        SnackBarService.showSuccess(
+          '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"'
+          '${tripPointRecorded ? ' · ${LocServ.inst.t('trip_point_added')}' : ''}',
+        );
+        if ((_engine?.config.autoOpenPlace ?? false)) {
+          await _openPlace(place);
+        }
       }
     } catch (e, st) {
       _log.warning('Beacon trigger handling failed', e, st);

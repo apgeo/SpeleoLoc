@@ -1123,5 +1123,12 @@
   "beacon_detection_auto_open": "Deschide locul la detectare",
   "beacon_detection_auto_open_desc": "Navighează la locul detectat ca la scanarea unui QR (dezactivat = doar notificare)",
   "beacon_detection_not_running": "Detectarea nu a putut porni — verifică dacă Bluetooth este pornit",
-  "beacon_place_detected": "Loc detectat"
+  "beacon_place_detected": "Loc detectat",
+  "beacon_background_enable": "Continuă detectarea în fundal",
+  "beacon_background_enable_desc": "Scanarea continuă cu ecranul stins sau cu altă aplicație deschisă; detectările sună o alertă puternică (Android)",
+  "beacon_background_interval": "Interval de scanare în fundal",
+  "beacon_background_interval_desc": "O scurtă rafală de scanare la fiecare {v} secunde (mai lung = mai puțină baterie)",
+  "beacon_background_notif_title": "Detectare beaconuri SpeleoLoc",
+  "beacon_background_notif_text": "Se scanează beaconurile din peșteră…",
+  "beacon_background_notif_denied": "Permisiunea de notificări este necesară pentru alertele în fundal"
 }

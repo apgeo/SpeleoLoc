@@ -27,6 +27,14 @@ class BeaconDetectionConfig {
   /// false (default) show only a toast and record the trip point.
   final bool autoOpenPlace;
 
+  /// Keep detecting with the app in the background via a foreground
+  /// service (Android). Detections raise a loud notification.
+  final bool backgroundEnabled;
+
+  /// Background duty cycle: one scan burst starts every this many seconds
+  /// (20–60 s per the requirement; the burst itself is ~5 s).
+  final int backgroundScanIntervalSec;
+
   const BeaconDetectionConfig({
     this.enabled = false,
     this.rssiThresholdDbm = -75,
@@ -34,6 +42,8 @@ class BeaconDetectionConfig {
     this.debounceWindowSec = 5,
     this.cooldownSec = 300,
     this.autoOpenPlace = false,
+    this.backgroundEnabled = false,
+    this.backgroundScanIntervalSec = 30,
   });
 
   BeaconDetectionConfig copyWith({
@@ -43,6 +53,8 @@ class BeaconDetectionConfig {
     int? debounceWindowSec,
     int? cooldownSec,
     bool? autoOpenPlace,
+    bool? backgroundEnabled,
+    int? backgroundScanIntervalSec,
   }) =>
       BeaconDetectionConfig(
         enabled: enabled ?? this.enabled,
@@ -51,6 +63,9 @@ class BeaconDetectionConfig {
         debounceWindowSec: debounceWindowSec ?? this.debounceWindowSec,
         cooldownSec: cooldownSec ?? this.cooldownSec,
         autoOpenPlace: autoOpenPlace ?? this.autoOpenPlace,
+        backgroundEnabled: backgroundEnabled ?? this.backgroundEnabled,
+        backgroundScanIntervalSec:
+            backgroundScanIntervalSec ?? this.backgroundScanIntervalSec,
       );
 
   Map<String, dynamic> toJson() => {
@@ -60,6 +75,8 @@ class BeaconDetectionConfig {
         'debounceWindowSec': debounceWindowSec,
         'cooldownSec': cooldownSec,
         'autoOpenPlace': autoOpenPlace,
+        'backgroundEnabled': backgroundEnabled,
+        'backgroundScanIntervalSec': backgroundScanIntervalSec,
       };
 
   static BeaconDetectionConfig fromJson(Map<String, dynamic> j) {
@@ -72,6 +89,10 @@ class BeaconDetectionConfig {
           j['debounceWindowSec'] as int? ?? d.debounceWindowSec,
       cooldownSec: j['cooldownSec'] as int? ?? d.cooldownSec,
       autoOpenPlace: j['autoOpenPlace'] as bool? ?? d.autoOpenPlace,
+      backgroundEnabled:
+          j['backgroundEnabled'] as bool? ?? d.backgroundEnabled,
+      backgroundScanIntervalSec: j['backgroundScanIntervalSec'] as int? ??
+          d.backgroundScanIntervalSec,
     );
   }
 

@@ -111,6 +111,8 @@ void main() {
         debounceWindowSec: 7,
         cooldownSec: 120,
         autoOpenPlace: true,
+        backgroundEnabled: true,
+        backgroundScanIntervalSec: 45,
       );
       final back = BeaconDetectionConfig.fromJson(cfg.toJson());
       expect(back.enabled, cfg.enabled);
@@ -119,6 +121,8 @@ void main() {
       expect(back.debounceWindowSec, cfg.debounceWindowSec);
       expect(back.cooldownSec, cfg.cooldownSec);
       expect(back.autoOpenPlace, cfg.autoOpenPlace);
+      expect(back.backgroundEnabled, cfg.backgroundEnabled);
+      expect(back.backgroundScanIntervalSec, cfg.backgroundScanIntervalSec);
     });
 
     test('fromJson falls back to defaults for missing keys', () {
@@ -128,6 +132,8 @@ void main() {
       expect(cfg.debounceCount, 2);
       expect(cfg.cooldownSec, 300);
       expect(cfg.autoOpenPlace, isFalse);
+      expect(cfg.backgroundEnabled, isFalse);
+      expect(cfg.backgroundScanIntervalSec, 30);
     });
   });
 }

@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dchs_flutter_beacon/dchs_flutter_beacon.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/screens/settings/beacon_lab_page.dart';
+import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
@@ -60,6 +64,27 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
     if (enable && !BeaconDetectionService.instance.isRunning) {
       SnackBarService.showWarning(LocServ.inst.t('beacon_detection_not_running'));
     }
+  }
+
+  Future<void> _toggleBackground(bool enable) async {
+    final cfg = _config;
+    if (cfg == null) return;
+    if (enable) {
+      // Loud alerts need notification permission (Android 13+/iOS)…
+      await BeaconAlertNotifier.instance.ensureInitialized();
+      final notifOk = await BeaconAlertNotifier.instance.requestPermission();
+      if (!notifOk) {
+        SnackBarService.showWarning(
+            LocServ.inst.t('beacon_background_notif_denied'));
+        return;
+      }
+      // …and multi-hour scanning needs a battery-optimisation exemption.
+      if (Platform.isAndroid &&
+          !await Permission.ignoreBatteryOptimizations.isGranted) {
+        await Permission.ignoreBatteryOptimizations.request();
+      }
+    }
+    await _update(cfg.copyWith(backgroundEnabled: enable));
   }
 
   @override
@@ -125,6 +150,34 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                   onChanged: cfg.enabled
                       ? (v) => _update(cfg.copyWith(autoOpenPlace: v))
                       : null,
+                ),
+                const Divider(),
+                SwitchListTile(
+                  title: Text(LocServ.inst.t('beacon_background_enable')),
+                  subtitle:
+                      Text(LocServ.inst.t('beacon_background_enable_desc')),
+                  value: cfg.backgroundEnabled,
+                  onChanged: cfg.enabled ? _toggleBackground : null,
+                ),
+                ListTile(
+                  title: Text(LocServ.inst.t('beacon_background_interval')),
+                  subtitle: Text(LocServ.inst.t(
+                      'beacon_background_interval_desc',
+                      {'v': '${cfg.backgroundScanIntervalSec}'})),
+                ),
+                Slider(
+                  min: 20,
+                  max: 60,
+                  divisions: 8,
+                  value:
+                      cfg.backgroundScanIntervalSec.toDouble().clamp(20, 60),
+                  label: '${cfg.backgroundScanIntervalSec} s',
+                  onChanged: cfg.enabled && cfg.backgroundEnabled
+                      ? (v) => setState(() => _config = cfg.copyWith(
+                          backgroundScanIntervalSec: v.round()))
+                      : null,
+                  onChangeEnd: (v) => _update(
+                      cfg.copyWith(backgroundScanIntervalSec: v.round())),
                 ),
                 const Divider(),
                 ListTile(
