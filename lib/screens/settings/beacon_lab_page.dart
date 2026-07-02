@@ -130,9 +130,13 @@ class _BeaconLabPageState extends State<BeaconLabPage>
         bytes: bytes,
       );
       if (outputPath == null) return;
-      // Desktop platforms return a path without writing the bytes.
-      if (!File(outputPath).existsSync()) {
-        await File(outputPath).writeAsBytes(bytes);
+      // Android/iOS write [bytes] via the system picker and return a SAF
+      // content path that dart:io cannot open (PathNotFoundException).
+      // Only desktop returns a real path without writing the file.
+      if (!Platform.isAndroid && !Platform.isIOS) {
+        if (!File(outputPath).existsSync()) {
+          await File(outputPath).writeAsBytes(bytes);
+        }
       }
       SnackBarService.showSuccess(LocServ.inst.t(
           'beacon_lab_log_exported', {'n': '${_logLines.length}'}));
