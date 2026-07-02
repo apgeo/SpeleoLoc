@@ -73,7 +73,9 @@ app.*.map.json
 # Keep test fixtures tracked, ignore only generated app test outputs
 /test_data/app_tests/
 
-.github/
+# CI workflows are tracked; only local prompt/agent scratch dirs stay ignored
+.github/prompts/
+.github/agents/
 test_data/pictures/
 
 # for now contributing-docs.md is not in public repo
@@ -81,3 +83,6 @@ docs/contributing-docs.md
 
 # Live-integration FTP credentials (opt-in, never committed)
 test_data/ftp_test.json
+
+/resource_docs/
+.claude/
