@@ -1098,5 +1098,18 @@
   "beacon_lab_bt_off": "Bluetooth este oprit",
   "beacon_lab_add_uuid": "Adaugă UUID de proximitate",
   "beacon_lab_invalid_uuid": "Format UUID invalid",
-  "beacon_lab_android_all_note": "Android scanează toate beaconurile iBeacon; lista UUID de mai sus este necesară doar pe iOS."
+  "beacon_lab_android_all_note": "Android scanează toate beaconurile iBeacon; lista UUID de mai sus este necesară doar pe iOS.",
+  "beacons_section_title": "Beaconuri BLE",
+  "beacon_assign": "Asociază beacon",
+  "beacon_unassign": "Dezasociază beaconul",
+  "beacon_unassign_confirm": "Elimini beaconul {identity} de la acest loc?",
+  "beacon_registered": "Beacon asociat acestui loc",
+  "beacon_unregistered": "Beacon dezasociat",
+  "beacon_already_registered": "deja asociat",
+  "beacon_picker_title": "Beaconuri în apropiere",
+  "beacon_picker_searching": "Se caută beaconuri… ține telefonul lângă tag",
+  "cave_beacons_title": "Beaconurile peșterii",
+  "cave_beacons_empty": "Niciun beacon înregistrat în această peșteră încă",
+  "beacon_last_seen": "Văzut ultima dată",
+  "beacon_never_seen": "niciodată"
 }

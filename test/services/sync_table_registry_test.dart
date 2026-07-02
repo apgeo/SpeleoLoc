@@ -21,7 +21,7 @@ void main() {
     await db.close();
   });
 
-  test('tables() returns the expected 13 handlers in FK order', () {
+  test('tables() returns the expected 14 handlers in FK order', () {
     final names = registry.tables().map((t) => t.name).toList();
     expect(names, const <String>[
       // Parents first.
@@ -30,6 +30,7 @@ void main() {
       'caves',
       'cave_areas',
       'cave_places',
+      'cave_place_beacons',
       'raster_maps',
       'cave_place_to_raster_map_definitions',
       'cave_trips',

@@ -59,6 +59,7 @@ void main() {
         (V11ToV12Migration(), 12),
         (V12ToV13Migration(), 13),
         (V13ToV14Migration(), 14),
+        (V14ToV15Migration(), 15),
       ];
       for (final (m, v) in cases) {
         expect(m.toVersion, v);
@@ -80,20 +81,20 @@ void main() {
           ];
 
       // Pre-v7: legacy step runs (calls createAll at the latest schema),
-      // V7->V8 is gated off (from != 7), and V8..V14 run as no-op-ish
+      // V7->V8 is gated off (from != 7), and V8..V15 run as no-op-ish
       // idempotent backfills against the already-current schema.
-      expect(appliedFor(5), [7, 9, 10, 11, 12, 13, 14]);
-      expect(appliedFor(6), [7, 9, 10, 11, 12, 13, 14]);
+      expect(appliedFor(5), [7, 9, 10, 11, 12, 13, 14, 15]);
+      expect(appliedFor(6), [7, 9, 10, 11, 12, 13, 14, 15]);
 
       // From v7: every migration from v8 onward fires.
-      expect(appliedFor(7), [8, 9, 10, 11, 12, 13, 14]);
+      expect(appliedFor(7), [8, 9, 10, 11, 12, 13, 14, 15]);
 
       // Mid-ladder upgrade: only the remaining steps fire.
-      expect(appliedFor(10), [11, 12, 13, 14]);
-      expect(appliedFor(13), [14]);
+      expect(appliedFor(10), [11, 12, 13, 14, 15]);
+      expect(appliedFor(14), [15]);
 
       // Already current: nothing fires.
-      expect(appliedFor(14), isEmpty);
+      expect(appliedFor(15), isEmpty);
     });
   });
 }

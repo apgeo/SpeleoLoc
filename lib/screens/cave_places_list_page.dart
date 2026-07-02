@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_beacons_page.dart';
 import 'package:speleoloc/screens/cave_places/past_trips_button.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
@@ -122,6 +123,13 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       if (result == true) {
         _loadCavePlaces();
       }
+    } else if (value == 'beacons') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CaveBeaconsPage(caveUuid: widget.caveUuid),
+        ),
+      );
     } else if (value == 'delete') {
       final confirmed = await showDialog<bool>(
         context: context,
@@ -837,6 +845,16 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                         const Icon(Icons.edit_note, size: 20),
                         const SizedBox(width: 8),
                         Text(LocServ.inst.t('edit_cave')),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'beacons',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bluetooth, size: 20),
+                        const SizedBox(width: 8),
+                        Text(LocServ.inst.t('cave_beacons_title')),
                       ],
                     ),
                   ),

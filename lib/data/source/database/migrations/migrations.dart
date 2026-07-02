@@ -386,6 +386,29 @@ class V13ToV14Migration extends SchemaMigration {
   }
 }
 
+/// v14 → v15: create `cave_place_beacons` (BLE beacon registrations —
+/// beacon identity → cave place, plus health telemetry). New table only;
+/// idempotent thanks to CREATE TABLE IF NOT EXISTS in tables.drift.
+class V14ToV15Migration extends SchemaMigration {
+  const V14ToV15Migration();
+
+  @override
+  int get toVersion => 15;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.cavePlaceBeacons);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_identity '
+      'ON cave_place_beacons(proximity_uuid, major, minor)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place '
+      'ON cave_place_beacons(cave_place_uuid)',
+    );
+  }
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -400,6 +423,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V11ToV12Migration(),
   V12ToV13Migration(),
   V13ToV14Migration(),
+  V14ToV15Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

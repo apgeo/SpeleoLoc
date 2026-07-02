@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
@@ -110,6 +111,16 @@ final usersStreamProvider = StreamProvider<List<User>>((ref) {
 
 final cavePlaceRepositoryProvider = Provider<ICavePlaceRepository>(
   (ref) => CavePlaceRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(currentUserServiceProvider),
+    ref.watch(changeLoggerProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
+/// BLE beacon registrations (cave_place_beacons).
+final beaconRepositoryProvider = Provider<BeaconRepository>(
+  (ref) => BeaconRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(currentUserServiceProvider),
     ref.watch(changeLoggerProvider),

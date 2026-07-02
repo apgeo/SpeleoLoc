@@ -1100,5 +1100,18 @@
   "beacon_lab_bt_off": "Bluetooth is turned off",
   "beacon_lab_add_uuid": "Add proximity UUID",
   "beacon_lab_invalid_uuid": "Invalid UUID format",
-  "beacon_lab_android_all_note": "Android scans all iBeacons; the UUID list above is required on iOS only."
+  "beacon_lab_android_all_note": "Android scans all iBeacons; the UUID list above is required on iOS only.",
+  "beacons_section_title": "BLE beacons",
+  "beacon_assign": "Assign beacon",
+  "beacon_unassign": "Unassign beacon",
+  "beacon_unassign_confirm": "Remove beacon {identity} from this place?",
+  "beacon_registered": "Beacon assigned to this place",
+  "beacon_unregistered": "Beacon unassigned",
+  "beacon_already_registered": "already assigned",
+  "beacon_picker_title": "Nearby beacons",
+  "beacon_picker_searching": "Searching for beacons… hold the phone next to the tag",
+  "cave_beacons_title": "Cave beacons",
+  "cave_beacons_empty": "No beacons registered in this cave yet",
+  "beacon_last_seen": "Last seen",
+  "beacon_never_seen": "never"
 }

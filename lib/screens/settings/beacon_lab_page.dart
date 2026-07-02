@@ -7,16 +7,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
-import 'package:permission_handler/permission_handler.dart';
-import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/services/beacon/bp1003_advertisement_parser.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
-
-/// Configuration key holding the comma-separated proximity UUID list used
-/// for iBeacon ranging regions (required on iOS, informative on Android).
-const String beaconLabRegionUuidsKey = 'beacon_lab_region_uuids';
 
 /// Phase-0 diagnostics screen for BLE beacon hardware validation.
 ///
@@ -80,19 +75,12 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   }
 
   Future<void> _loadRegionUuids() async {
-    final raw = await SettingsHelper.loadStringConfig(beaconLabRegionUuidsKey);
-    if (raw.trim().isEmpty) return;
-    setState(() {
-      _regionUuids = raw
-          .split(',')
-          .map((s) => s.trim().toUpperCase())
-          .where((s) => s.isNotEmpty)
-          .toList();
-    });
+    final uuids = await BeaconScanHelper.loadRegionUuids();
+    setState(() => _regionUuids = uuids);
   }
 
-  Future<void> _saveRegionUuids() => SettingsHelper.saveStringConfig(
-      beaconLabRegionUuidsKey, _regionUuids.join(','));
+  Future<void> _saveRegionUuids() =>
+      BeaconScanHelper.saveRegionUuids(_regionUuids);
 
   // ---------------------------------------------------------------------------
   // Capture log
@@ -156,35 +144,17 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   }
 
   // ---------------------------------------------------------------------------
-  // Permissions
-  // ---------------------------------------------------------------------------
-
-  /// Android runtime permissions for BLE scanning. On iOS the plugins
-  /// trigger the native CoreLocation / CoreBluetooth prompts themselves.
-  Future<bool> _ensureAndroidPermissions() async {
-    if (!Platform.isAndroid) return true;
-    final statuses = await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.locationWhenInUse,
-    ].request();
-    final denied = statuses.entries.where((e) => !e.value.isGranted).toList();
-    if (denied.isEmpty) return true;
-    _log.warning('BLE permissions denied: '
-        '${denied.map((e) => e.key.toString()).join(', ')}');
-    if (mounted) {
-      SnackBarService.showWarning(
-          LocServ.inst.t('beacon_lab_permissions_missing'));
-      if (denied.any((e) => e.value.isPermanentlyDenied)) {
-        await openAppSettings();
-      }
-    }
-    return false;
-  }
-
-  // ---------------------------------------------------------------------------
   // iBeacon ranging (dchs_flutter_beacon)
   // ---------------------------------------------------------------------------
+
+  Future<bool> _ensureAndroidPermissions() async {
+    final ok = await BeaconScanHelper.ensureAndroidPermissions();
+    if (!ok && mounted) {
+      SnackBarService.showWarning(
+          LocServ.inst.t('beacon_lab_permissions_missing'));
+    }
+    return ok;
+  }
 
   Future<void> _startRanging() async {
     if (_ranging) return;
@@ -198,14 +168,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
       return;
     }
 
-    // iOS requires an explicit proximity UUID per region; Android ranges
-    // every iBeacon with a single wildcard region.
-    final regions = Platform.isIOS
-        ? [
-            for (final uuid in _regionUuids)
-              Region(identifier: 'speleoloc-$uuid', proximityUUID: uuid)
-          ]
-        : [Region(identifier: 'speleoloc-all')];
+    final regions = BeaconScanHelper.buildRegions(_regionUuids);
 
     _rangingSub = flutterBeacon.ranging(regions).listen(
       (result) {

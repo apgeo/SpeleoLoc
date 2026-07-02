@@ -19,12 +19,19 @@ class SyncTableRegistry {
   final _log = AppLogger.of('SyncTableRegistry');
 
   /// Metadata columns excluded from conflict diff (audit/bookkeeping).
+  /// The last_* entries are cave_place_beacons health telemetry — devices
+  /// legitimately observe different values, so they must not raise
+  /// conflicts (LWW still propagates them).
   static const _metaColumnsForDiff = <String>{
     'created_at',
     'updated_at',
     'deleted_at',
     'created_by_user_uuid',
     'last_modified_by_user_uuid',
+    'last_seen_at',
+    'last_battery_mv',
+    'last_temperature_c',
+    'last_humidity_pct',
   };
 
   static const SyncValueSerializer serializer = _serializer;
@@ -103,6 +110,21 @@ class SyncTableRegistry {
             (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.cavePlaces,
+            resolver,
+          ),
+        ),
+        SyncTableHandler(
+          name: 'cave_place_beacons',
+          dump: () async => (await _db.select(_db.cavePlaceBeacons).get())
+              .map((r) => r.toJson(serializer: _serializer))
+              .toList(),
+          upsert: (rows, resolver) async => upsertRows<CavePlaceBeacon>(
+            rows,
+            (j) => CavePlaceBeacon.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.uuid,
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.cavePlaceBeacons,
             resolver,
           ),
         ),

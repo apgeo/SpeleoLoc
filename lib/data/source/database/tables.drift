@@ -267,6 +267,36 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
     UNIQUE(documentation_file_uuid, cave_trip_uuid) ON CONFLICT ROLLBACK
 );
 
+-- Table: cave_place_beacons
+-- BLE beacon registrations: maps a physical iBeacon tag (identity =
+-- proximity UUID + major + minor, treated as opaque — hardware tests showed
+-- the vendor's MAC-derivation rule does not hold) to a cave place, the
+-- beacon analogue of a QR label. Health columns (last_seen_at, battery,
+-- temperature) are local telemetry refreshed on each encounter.
+CREATE TABLE IF NOT EXISTS cave_place_beacons (
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_place_uuid             BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    proximity_uuid              TEXT(36) NOT NULL, -- canonical uppercase 8-4-4-4-12
+    major                       INTEGER NOT NULL,
+    minor                       INTEGER NOT NULL,
+    mac_address                 TEXT(17),          -- AA:BB:CC:DD:EE:FF, Android-sourced
+    local_name                  TEXT(32),          -- BP1003 name, e.g. K02109b
+    model                       TEXT(32),          -- free text: HCBB22 / H8 / ...
+    measured_power              INTEGER,           -- advertised RSSI@1m, for proximity calc
+    notes                       TEXT,
+    last_seen_at                INTEGER,
+    last_battery_mv             INTEGER,
+    last_temperature_c          REAL,
+    last_humidity_pct           REAL,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    UNIQUE(proximity_uuid, major, minor, cave_uuid) ON CONFLICT ROLLBACK
+);
+
 -- Table: trip_report_templates
 CREATE TABLE IF NOT EXISTS trip_report_templates (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,

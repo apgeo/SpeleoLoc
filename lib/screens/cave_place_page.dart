@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_area_row.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_beacon_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_coordinates_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_entrance_handler.dart';
@@ -476,6 +477,15 @@ class _CavePlacePageState extends State<CavePlacePage>
                   currentCavePlaceId: _currentCavePlaceId,
                 ),
                 const SizedBox(height: 8),
+                // BLE beacon registrations (persisted places only).
+                if (_currentCavePlaceId != null) ...[
+                  CavePlaceBeaconSection(
+                    key: ValueKey('beacons-$_currentCavePlaceId'),
+                    cavePlaceUuid: _currentCavePlaceId!,
+                    caveUuid: widget.caveUuid,
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 CavePlaceCoordinatesSection(
                   visible: _showLatLngFields,
                   form: _form,
