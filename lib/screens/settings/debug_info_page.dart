@@ -2,21 +2,22 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
-class DebugInfoPage extends StatefulWidget {
+class DebugInfoPage extends ConsumerStatefulWidget {
   const DebugInfoPage({super.key});
 
   @override
-  State<DebugInfoPage> createState() => _DebugInfoPageState();
+  ConsumerState<DebugInfoPage> createState() => _DebugInfoPageState();
 }
 
-class _DebugInfoPageState extends State<DebugInfoPage> {
+class _DebugInfoPageState extends ConsumerState<DebugInfoPage> {
   String? _dbPath;
   String? _dataDir;
   List<Configuration> _configs = [];
@@ -30,7 +31,9 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
 
   Future<void> _load() async {
     final dir = await getApplicationDocumentsDirectory();
-    final configs = await configurationRepository.getAllRows();
+    final configs = await ref
+        .read(configurationRepositoryProvider)
+        .getAllRows();
     if (!mounted) return;
     setState(() {
       _dataDir = dir.path;
@@ -84,16 +87,18 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
     );
     controller.dispose();
     if (saved == null || !mounted) return;
-    await configurationRepository.replaceRow(
-      Configuration(
-        id: config.id,
-        title: config.title,
-        value: saved.isEmpty ? null : saved,
-        isSynced: config.isSynced,
-        createdAt: config.createdAt,
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
-      ),
-    );
+    await ref
+        .read(configurationRepositoryProvider)
+        .replaceRow(
+          Configuration(
+            id: config.id,
+            title: config.title,
+            value: saved.isEmpty ? null : saved,
+            isSynced: config.isSynced,
+            createdAt: config.createdAt,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
     await _reload();
   }
 
@@ -141,12 +146,14 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
     titleCtrl.dispose();
     valueCtrl.dispose();
     if (saved != true || titleCtrl.text.trim().isEmpty || !mounted) return;
-    await configurationRepository.insertRow(
-      ConfigurationsCompanion.insert(
-        title: titleCtrl.text.trim(),
-        value: drift.Value(valueCtrl.text.isEmpty ? null : valueCtrl.text),
-      ),
-    );
+    await ref
+        .read(configurationRepositoryProvider)
+        .insertRow(
+          ConfigurationsCompanion.insert(
+            title: titleCtrl.text.trim(),
+            value: drift.Value(valueCtrl.text.isEmpty ? null : valueCtrl.text),
+          ),
+        );
     await _reload();
   }
 

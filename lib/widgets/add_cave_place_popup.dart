@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -17,16 +18,16 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///
 /// Returns the newly created [CavePlace] id via `Navigator.pop` when saved,
 /// or `null` when cancelled.
-class AddCavePlacePopup extends StatefulWidget {
+class AddCavePlacePopup extends ConsumerStatefulWidget {
   const AddCavePlacePopup({super.key, required this.caveUuid});
 
   final Uuid caveUuid;
 
   @override
-  State<AddCavePlacePopup> createState() => _AddCavePlacePopupState();
+  ConsumerState<AddCavePlacePopup> createState() => _AddCavePlacePopupState();
 }
 
-class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
+class _AddCavePlacePopupState extends ConsumerState<AddCavePlacePopup> {
   final _titleController = TextEditingController();
   final _depthController = TextEditingController(text: '-');
   final _qrController = TextEditingController();
@@ -51,7 +52,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
   }
 
   Future<void> _loadCaveAreas() async {
-    final areas = await caveRepository.getCaveAreas(widget.caveUuid);
+    final areas = await ref
+        .read(caveRepositoryProvider)
+        .getCaveAreas(widget.caveUuid);
     if (mounted) setState(() => _caveAreas = areas);
   }
 
@@ -62,10 +65,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
       return false;
     }
     // Check uniqueness
-    final existing = await cavePlaceRepository.findCavePlaceByTitle(
-      widget.caveUuid,
-      title,
-    );
+    final existing = await ref
+        .read(cavePlaceRepositoryProvider)
+        .findCavePlaceByTitle(widget.caveUuid, title);
     if (existing != null) {
       if (mounted) {
         setState(() => _titleError = LocServ.inst.t('title_already_exists'));
@@ -83,10 +85,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
       return true; // PCI is optional
     }
     // Check uniqueness within cave
-    final matches = await cavePlaceRepository.findByPlaceCodeIdentifier(
-      qrText,
-      caveUuid: widget.caveUuid,
-    );
+    final matches = await ref
+        .read(cavePlaceRepositoryProvider)
+        .findByPlaceCodeIdentifier(qrText, caveUuid: widget.caveUuid);
     final existing = matches.firstOrNull;
     if (existing != null) {
       if (mounted) {
@@ -139,18 +140,22 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
 
     try {
       final newUuid = Uuid.v7();
-      final companion = await placeCodeService.applyPciToCompanion(
-        CavePlacesCompanion.insert(
-          uuid: newUuid,
-          title: title,
-          caveUuid: widget.caveUuid,
-          placeCodeIdentifier: Value(qr),
-          caveAreaUuid: Value(_selectedCaveAreaId),
-          depthInCave: Value(depth),
-        ),
-        cavePlaceUuid: newUuid,
-      );
-      await cavePlaceRepository.addCavePlaceFromCompanion(companion);
+      final companion = await ref
+          .read(placeCodeServiceProvider)
+          .applyPciToCompanion(
+            CavePlacesCompanion.insert(
+              uuid: newUuid,
+              title: title,
+              caveUuid: widget.caveUuid,
+              placeCodeIdentifier: Value(qr),
+              caveAreaUuid: Value(_selectedCaveAreaId),
+              depthInCave: Value(depth),
+            ),
+            cavePlaceUuid: newUuid,
+          );
+      await ref
+          .read(cavePlaceRepositoryProvider)
+          .addCavePlaceFromCompanion(companion);
       if (mounted) {
         Navigator.pop(context, newUuid);
       }
