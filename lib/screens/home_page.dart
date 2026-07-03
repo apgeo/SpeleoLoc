@@ -13,7 +13,6 @@ import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
@@ -637,12 +636,16 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   Future<void> _showManualQrInputDialog() async {
-    final result = await QrCodeLookupHandler.manualInputAndHandle(context);
+    final result = await ref
+        .read(qrCodeLookupHandlerProvider)
+        .manualInputAndHandle(context);
     if (result != null) _loadCaves();
   }
 
   Future<void> _scanAndLookupQr() async {
-    final result = await QrCodeLookupHandler.openAndHandle(context);
+    final result = await ref
+        .read(qrCodeLookupHandlerProvider)
+        .openAndHandle(context);
     if (result != null) _loadCaves();
   }
 

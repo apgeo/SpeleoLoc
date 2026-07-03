@@ -7,7 +7,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -56,12 +56,20 @@ Future<QrAmbiguityPolicy> loadQrAmbiguityPolicy(QrLookupSource source) async {
 /// navigation to the matching place.
 class QrCodeLookupHandler {
   final QrCodeLookupService _service;
+  final CaveTripService _tripService;
+  final IRasterMapRepository _rasterMapRepo;
+  final IDefinitionRepository _definitionRepo;
+  final ICaveRepository _caveRepo;
+  final ICaveTripRepository _tripRepo;
 
-  QrCodeLookupHandler(this._service);
-
-  /// Default-configured handler using the global [appDatabase].
-  factory QrCodeLookupHandler.defaultInstance() =>
-      QrCodeLookupHandler(QrCodeLookupService(appDatabase));
+  QrCodeLookupHandler(
+    this._service,
+    this._tripService,
+    this._rasterMapRepo,
+    this._definitionRepo,
+    this._caveRepo,
+    this._tripRepo,
+  );
 
   /// Process [rawCode] end-to-end: preprocess payload, lookup, resolve
   /// ambiguity, handle entrance prompts, record trip point, navigate.
@@ -128,9 +136,9 @@ class QrCodeLookupHandler {
       await _handleEntranceScan(context, cavePlace);
     } else {
       // Record a trip point when there is an active trip for this place's cave.
-      final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+      final activeTripCaveId = await _tripService.getActiveTripCaveId();
       if (activeTripCaveId == cavePlace.caveUuid) {
-        await caveTripService.recordPoint(
+        await _tripService.recordPoint(
           cavePlace.uuid,
           placeTitle: cavePlace.title,
         );
@@ -142,13 +150,13 @@ class QrCodeLookupHandler {
 
     // Find the best raster map to open: first in sort order that has a
     // definition for this cave place.  If none found, fall back to CavePlacePage.
-    final allMaps = await rasterMapRepository.getRasterMaps(cavePlace.caveUuid);
+    final allMaps = await _rasterMapRepo.getRasterMaps(cavePlace.caveUuid);
     Uuid? bestMapUuid;
     if (allMaps.isNotEmpty) {
       final sortOption = await RasterMapSortOption.load();
       final sortedMaps = sortOption.apply(allMaps, []);
       for (final rm in sortedMaps) {
-        final def = await definitionRepository.findDefinition(
+        final def = await _definitionRepo.findDefinition(
           cavePlace.uuid,
           rm.uuid,
         );
@@ -281,7 +289,7 @@ class QrCodeLookupHandler {
     BuildContext context,
     CavePlace cavePlace,
   ) async {
-    final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+    final activeTripCaveId = await _tripService.getActiveTripCaveId();
     if (!context.mounted) return;
 
     if (activeTripCaveId == null) {
@@ -305,7 +313,7 @@ class QrCodeLookupHandler {
         await _performStopTrip();
       } else if (context.mounted) {
         // Still in cave — record the entrance scan as a trip point.
-        await caveTripService.recordPoint(
+        await _tripService.recordPoint(
           cavePlace.uuid,
           placeTitle: cavePlace.title,
         );
@@ -313,7 +321,7 @@ class QrCodeLookupHandler {
       }
     } else {
       // Trip running for a DIFFERENT cave — offer to stop it first.
-      final otherCave = await caveRepository.findById(activeTripCaveId);
+      final otherCave = await _caveRepo.findById(activeTripCaveId);
       final otherCaveTitle = otherCave?.title ?? activeTripCaveId.toString();
       if (!context.mounted) return;
 
@@ -391,10 +399,10 @@ class QrCodeLookupHandler {
   }
 
   Future<void> _startTripForCave(BuildContext context, Uuid caveUuid) async {
-    final cave = await caveRepository.findById(caveUuid);
+    final cave = await _caveRepo.findById(caveUuid);
     final defaultTitle =
         '${cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final existingTitles = await caveTripRepository.getCaveTripTitles(caveUuid);
+    final existingTitles = await _tripRepo.getCaveTripTitles(caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(
       defaultTitle,
       existingTitles,
@@ -429,12 +437,12 @@ class QrCodeLookupHandler {
       final title = controller.text.trim().isNotEmpty
           ? controller.text.trim()
           : suggestedTitle;
-      await caveTripService.startTrip(caveUuid, title);
+      await _tripService.startTrip(caveUuid, title);
     }
   }
 
   Future<void> _performStopTrip() async {
-    await caveTripService.stopTrip();
+    await _tripService.stopTrip();
     SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
   }
 
@@ -450,7 +458,7 @@ class QrCodeLookupHandler {
   ///
   /// [currentCaveId] scopes the lookup to a single cave when the caller has
   /// that context (e.g. CavePlacesListPage).
-  static Future<CavePlace?> openAndHandle(
+  Future<CavePlace?> openAndHandle(
     BuildContext context, {
     Uuid? currentCaveId,
   }) async {
@@ -475,7 +483,7 @@ class QrCodeLookupHandler {
       if (scannedCode != null && context.mounted) {
         final policy = await loadQrAmbiguityPolicy(QrLookupSource.scan);
         if (!context.mounted) return null;
-        return QrCodeLookupHandler.defaultInstance().handleScannedCode(
+        return handleScannedCode(
           context,
           scannedCode!,
           currentCaveId: currentCaveId,
@@ -522,7 +530,7 @@ class QrCodeLookupHandler {
   ///
   /// Shows a text-input dialog, then runs the full lookup flow with
   /// payload preprocessing enabled.
-  static Future<CavePlace?> manualInputAndHandle(
+  Future<CavePlace?> manualInputAndHandle(
     BuildContext context, {
     Uuid? currentCaveId,
   }) async {
@@ -558,7 +566,7 @@ class QrCodeLookupHandler {
     }
     final policy = await loadQrAmbiguityPolicy(QrLookupSource.scan);
     if (!context.mounted) return null;
-    return QrCodeLookupHandler.defaultInstance().handleScannedCode(
+    return handleScannedCode(
       context,
       confirmed,
       currentCaveId: currentCaveId,

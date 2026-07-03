@@ -23,7 +23,6 @@ import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CavePlacesListPage extends ConsumerStatefulWidget {
@@ -694,7 +693,8 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   }
 
   Future<void> _onScan(String code) async {
-    final result = await QrCodeLookupHandler.defaultInstance()
+    final result = await ref
+        .read(qrCodeLookupHandlerProvider)
         .handleScannedCode(context, code, currentCaveId: widget.caveUuid);
     if (result != null && mounted) _loadCavePlaces();
   }
@@ -806,10 +806,9 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                     : null,
                 child: IconActionButton(
                   onPressed: () async {
-                    final result = await QrCodeLookupHandler.openAndHandle(
-                      context,
-                      currentCaveId: widget.caveUuid,
-                    );
+                    final result = await ref
+                        .read(qrCodeLookupHandlerProvider)
+                        .openAndHandle(context, currentCaveId: widget.caveUuid);
                     if (result != null && mounted) _loadCavePlaces();
                   },
                   icon: Icons.qr_code_scanner,

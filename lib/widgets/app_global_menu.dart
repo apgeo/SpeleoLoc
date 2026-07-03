@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
-import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
@@ -266,7 +266,9 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
   }
 
   void _navigateToScanner() async {
-    await QrCodeLookupHandler.openAndHandle(context);
+    await rootContainer
+        .read(qrCodeLookupHandlerProvider)
+        .openAndHandle(context);
   }
 
   static void _setMenuMode(AppMenuMode mode) {

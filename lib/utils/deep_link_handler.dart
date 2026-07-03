@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -68,14 +69,16 @@ class DeepLinkHandler {
     final policy = await loadQrAmbiguityPolicy(QrLookupSource.deepLink);
     if (!context.mounted) return;
 
-    await QrCodeLookupHandler.defaultInstance().handleScannedCode(
-      context,
-      code,
-      ambiguityPolicy: policy,
-      // Deep-link prefix has already been stripped in handleUri; skipping
-      // the handler's own preprocessing avoids re-parsing the URL.
-      preprocessPayload: false,
-    );
+    await rootContainer
+        .read(qrCodeLookupHandlerProvider)
+        .handleScannedCode(
+          context,
+          code,
+          ambiguityPolicy: policy,
+          // Deep-link prefix has already been stripped in handleUri; skipping
+          // the handler's own preprocessing avoids re-parsing the URL.
+          preprocessPayload: false,
+        );
   }
 
   /// Save the last opened cave ID to configurations.

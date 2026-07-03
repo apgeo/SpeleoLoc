@@ -13,6 +13,7 @@ import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
+import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
@@ -20,6 +21,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
+import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 /// Central place that wires all app-wide dependencies via Riverpod.
@@ -180,6 +182,19 @@ final caveTripRepositoryProvider = Provider<ICaveTripRepository>(
   (ref) => CaveTripRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
+  ),
+);
+
+/// Canonical QR-code lookup handler (camera scans, manual input, deep links).
+/// Fully injected so it is unit-testable without the service_locator globals.
+final qrCodeLookupHandlerProvider = Provider<QrCodeLookupHandler>(
+  (ref) => QrCodeLookupHandler(
+    QrCodeLookupService(ref.watch(appDatabaseProvider)),
+    ref.watch(caveTripServiceProvider),
+    ref.watch(rasterMapRepositoryProvider),
+    ref.watch(definitionRepositoryProvider),
+    ref.watch(caveRepositoryProvider),
+    ref.watch(caveTripRepositoryProvider),
   ),
 );
 
