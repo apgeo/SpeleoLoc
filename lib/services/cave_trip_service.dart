@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/change_logger.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -11,12 +11,19 @@ import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
-  CaveTripService(this._db, this._logger, {Clock clock = const SystemClock()})
-    : _clock = clock,
-      _renderer = TripLogRenderer(_db);
+  CaveTripService(
+    this._db,
+    this._logger,
+    this._currentUser,
+    this._configRepo, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock,
+       _renderer = TripLogRenderer(_db);
 
   final AppDatabase _db;
   final ChangeLogger _logger;
+  final CurrentUserService _currentUser;
+  final IConfigurationRepository _configRepo;
   final Clock _clock;
   final TripLogRenderer _renderer;
 
@@ -49,13 +56,13 @@ class CaveTripService {
 
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
     isPausedNotifier.value = false;
-    final author = await currentUserService.currentOrSystem();
+    final author = await _currentUser.currentOrSystem();
     final tripUuid = await _db.insertCaveTrip(
       caveUuid: caveUuid,
       title: title,
       startedAt: _clock.nowMs(),
       authorUuid: author,
-      deviceUuid: currentUserService.deviceUuid.value,
+      deviceUuid: _currentUser.deviceUuid.value,
     );
     await _logger.logInsert('cave_trips', tripUuid);
     await _saveConfig(tripUuid);
@@ -68,7 +75,7 @@ class CaveTripService {
   /// inserting a new one). The title is unchanged.
   Future<void> restartTrip(Uuid tripUuid) async {
     isPausedNotifier.value = false;
-    final author = await currentUserService.currentOrSystem();
+    final author = await _currentUser.currentOrSystem();
     final old = await _tripRow(tripUuid);
     await _db.restartCaveTrip(tripUuid, authorUuid: author);
     final updated = await _tripRow(tripUuid);
@@ -94,7 +101,7 @@ class CaveTripService {
   Future<void> stopTrip() async {
     final id = activeTripIdNotifier.value;
     if (id != null) {
-      final author = await currentUserService.currentOrSystem();
+      final author = await _currentUser.currentOrSystem();
       final old = await _tripRow(id);
       await _db.endCaveTrip(id, authorUuid: author);
       final updated = await _tripRow(id);
@@ -132,7 +139,7 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
-      final author = await currentUserService.currentOrSystem();
+      final author = await _currentUser.currentOrSystem();
       final pointUuid = await _db.insertTripPoint(
         tripUuid: id,
         cavePlaceUuid: cavePlaceUuid,
@@ -158,7 +165,7 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
-      final author = await currentUserService.currentOrSystem();
+      final author = await _currentUser.currentOrSystem();
       await _db.linkDocumentToTrip(docUuid, id, authorUuid: author);
       // linkDocumentToTrip upserts and does not return the row uuid; fetch
       // it for the audit entry.
@@ -204,7 +211,7 @@ class CaveTripService {
   /// triggered the regeneration.
   Future<void> _regenerateLog(Uuid tripUuid) async {
     try {
-      final method = await currentUserService.getTripLogMethod();
+      final method = await _currentUser.getTripLogMethod();
       final events = await _renderer.loadEvents(tripUuid);
       final rendered = _renderer.render(events, method);
       await _db.updateTripLog(tripUuid, rendered);
@@ -224,7 +231,7 @@ class CaveTripService {
   /// grouping can't be performed from the tail alone.
   Future<void> _appendForNewEvent(Uuid tripUuid) async {
     try {
-      final method = await currentUserService.getTripLogMethod();
+      final method = await _currentUser.getTripLogMethod();
       final events = await _renderer.loadEvents(tripUuid);
       if (events.isEmpty) return;
 
@@ -266,7 +273,7 @@ class CaveTripService {
     Uuid tripUuid,
     TripLogMethod method,
   ) async {
-    await currentUserService.setTripLogMethod(method);
+    await _currentUser.setTripLogMethod(method);
     final old = await _tripRow(tripUuid);
     await _regenerateLog(tripUuid);
     final updated = await _tripRow(tripUuid);
@@ -281,15 +288,11 @@ class CaveTripService {
   }
 
   Future<void> _saveConfig(Uuid tripUuid) {
-    return rootContainer
-        .read(configurationRepositoryProvider)
-        .writeString(activeTripConfigKey, tripUuid.toString());
+    return _configRepo.writeString(activeTripConfigKey, tripUuid.toString());
   }
 
   Future<void> _clearConfig() {
-    return rootContainer
-        .read(configurationRepositoryProvider)
-        .delete(activeTripConfigKey);
+    return _configRepo.delete(activeTripConfigKey);
   }
 
   static final _suffixRe = RegExp(r'\s+\[\d+\]$');

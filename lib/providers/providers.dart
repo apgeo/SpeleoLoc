@@ -166,6 +166,8 @@ final caveTripServiceProvider = Provider<CaveTripService>(
   (ref) => CaveTripService(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
+    ref.watch(currentUserServiceProvider),
+    ref.watch(configurationRepositoryProvider),
     clock: ref.watch(clockProvider),
   ),
 );
