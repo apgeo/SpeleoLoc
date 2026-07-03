@@ -9,6 +9,7 @@ import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_image_filter.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_filter_panel.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_img_processing_menu.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_place_point_editor_controller.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_toolbar_widgets.dart';
 import 'package:speleoloc/widgets/raster_map/trip_overlay_data.dart';
@@ -1457,69 +1458,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   }
 
   // ── Image-processing helpers ──────────────────────────────────────────────
-
-  /// Builds the popup menu items for the image-processing button.
-  List<PopupMenuEntry<String>> _buildImgProcessingMenuItems() {
-    final t = LocServ.inst.t;
-    final current = _activeFilter;
-
-    PopupMenuEntry<String> preset(
-      String value,
-      IconData icon,
-      String label,
-      bool active,
-    ) => PopupMenuItem<String>(
-      value: value,
-      child: OverlayMenuRow(icon, label, active: active),
-    );
-
-    return [
-      // Reset to normal
-      preset('normal', Icons.image, t('img_mode_normal'), current.isNormal),
-      const PopupMenuDivider(),
-      // Single-mode presets
-      preset(
-        'invert',
-        Icons.invert_colors,
-        t('invert_colors'),
-        current.mode == RasterMapFilterMode.invert,
-      ),
-      preset(
-        'grayscale',
-        Icons.filter_b_and_w,
-        t('img_filter_grayscale'),
-        current.mode == RasterMapFilterMode.grayscale,
-      ),
-      preset(
-        'sepia',
-        Icons.photo_filter,
-        t('img_filter_sepia'),
-        current.mode == RasterMapFilterMode.sepia,
-      ),
-      preset(
-        'high_contrast',
-        Icons.contrast,
-        t('img_filter_high_contrast'),
-        current.mode == RasterMapFilterMode.highContrast,
-      ),
-      preset(
-        'night_red',
-        Icons.nights_stay_outlined,
-        t('img_filter_night_red'),
-        current.mode == RasterMapFilterMode.nightRed,
-      ),
-      const PopupMenuDivider(),
-      // Additive / advanced panel
-      PopupMenuItem<String>(
-        value: 'custom',
-        child: OverlayMenuRow(
-          Icons.tune,
-          t('img_filter_custom'),
-          active: current.mode == RasterMapFilterMode.custom,
-        ),
-      ),
-    ];
-  }
+  // Menu items are built by buildImgProcessingMenuItems() in
+  // raster_map/raster_map_img_processing_menu.dart; selection is handled below.
 
   Future<void> _onImgProcessingSelected(String value) async {
     switch (value) {
@@ -1924,7 +1864,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         icon: Icons.tune,
         tooltip: LocServ.inst.t('img_processing'),
         active: !_activeFilter.isNormal,
-        items: _buildImgProcessingMenuItems(),
+        items: buildImgProcessingMenuItems(_activeFilter),
         onSelected: _onImgProcessingSelected,
       ),
     ];
