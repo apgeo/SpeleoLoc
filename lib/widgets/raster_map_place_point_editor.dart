@@ -33,6 +33,40 @@ export 'package:speleoloc/widgets/raster_map_image_cache.dart';
 export 'package:speleoloc/widgets/raster_map/raster_map_sort_options.dart';
 export 'package:speleoloc/widgets/raster_map/trip_overlay_data.dart';
 
+/// The subset of the editor State's behaviour that
+/// [RasterMapPlacePointEditorController] drives. The editor State implements
+/// this so the controller can hold a reference to the editor without depending
+/// on the private State type (lets the controller live in its own file).
+abstract interface class RasterMapEditorHost {
+  void setVisiblePlaceUuids(Set<Uuid>? uuids);
+  void setShowLegend(bool v);
+  void setShowZoomControls(bool v);
+  void setGestureZoomEnabled(bool v);
+  void setUseImageTextColor(bool v);
+  void applyControllerCavePlaceId();
+  void zoomToPoint(double imageX, double imageY, {double zoomLevel});
+  void moveToPoint(
+    double imageX,
+    double imageY, {
+    double? targetScale,
+    bool animate,
+  });
+  void zoomIn();
+  void zoomOut();
+  void resetZoom();
+  void zoomToFitPoints(List<Offset> imagePoints, {double padding});
+  void setShowNavBar(bool v);
+  void setShowTapModeCheckbox(bool v);
+  void toggleNavBarCavePlaceFilter();
+  void setToolbarVisible(bool v);
+  Future<void> navigateToNextUndefined();
+  void ensurePlacesListVisible();
+  void ensureMapsListVisible();
+  void ensureBothListsVisible();
+  void setFullScreen(bool v);
+  void setColorInverted(bool v);
+}
+
 /// - `isReadonly` - when true, taps won't change the selected point.
 /// - `onImagePointChanged` - callback(ImageX, ImageY) when user selects a point.
 ///
@@ -60,7 +94,7 @@ class RasterMapPlacePointEditorController {
     this.initialTapDefinesNewPoint = false,
   });
 
-  _RasterMapPlacePointEditorState? _state;
+  RasterMapEditorHost? _state;
 
   /// Controls whether the embedded legend is shown.
   bool showLegend;
@@ -143,33 +177,33 @@ class RasterMapPlacePointEditorController {
   /// the parent page when using an external [RasterMapNavBar] so that
   /// filtered-out markers are faded/hidden on the map.
   void setVisiblePlaceUuids(Set<Uuid>? uuids) =>
-      _state?._setVisiblePlaceUuids(uuids);
+      _state?.setVisiblePlaceUuids(uuids);
 
   void setShowLegend(bool v) {
     showLegend = v;
-    _state?._setShowLegend(v);
+    _state?.setShowLegend(v);
   }
 
   void setShowZoomControls(bool v) {
     showZoomControls = v;
-    _state?._setShowZoomControls(v);
+    _state?.setShowZoomControls(v);
   }
 
   void setGestureZoomEnabled(bool v) {
     gestureZoomEnabled = v;
-    _state?._setGestureZoomEnabled(v);
+    _state?.setGestureZoomEnabled(v);
   }
 
   /// Enable/disable sampling the image to determine label text color.
   void setUseImageTextColor(bool v) {
     useImageTextColor = v;
-    _state?._setUseImageTextColor(v);
+    _state?.setUseImageTextColor(v);
   }
 
   /// Update the default cavePlaceUuid at runtime and notify the state.
   void setCavePlaceId(Uuid? id) {
     cavePlaceUuid = id;
-    _state?._applyControllerCavePlaceId();
+    _state?.applyControllerCavePlaceId();
   }
 
   /// Zooms/pans to center the provided image-space point.
@@ -181,7 +215,7 @@ class RasterMapPlacePointEditorController {
 
   /// Pans to center the given image-space point while keeping the current zoom.
   void panToPoint(double imageX, double imageY) =>
-      _state?._moveToPoint(imageX, imageY, animate: animatePointTransitions);
+      _state?.moveToPoint(imageX, imageY, animate: animatePointTransitions);
 
   void zoomIn() => _state?.zoomIn();
   void zoomOut() => _state?.zoomOut();
@@ -191,11 +225,11 @@ class RasterMapPlacePointEditorController {
   void zoomToFitPoints(
     List<Offset> imagePoints, {
     double padding = RasterMapEditorConstants.defaultZoomToFitPadding,
-  }) => _state?._zoomToFitPoints(imagePoints, padding: padding);
+  }) => _state?.zoomToFitPoints(imagePoints, padding: padding);
 
   void setShowNavBar(bool v) {
     showNavBar = v;
-    _state?._setShowNavBar(v);
+    _state?.setShowNavBar(v);
   }
 
   /// Detaches the controller from its current editor state.
@@ -206,7 +240,7 @@ class RasterMapPlacePointEditorController {
 
   void setShowTapModeCheckbox(bool v) {
     showTapModeCheckbox = v;
-    _state?._setShowTapModeCheckbox(v);
+    _state?.setShowTapModeCheckbox(v);
   }
 
   /// Update the animate-point-transitions flag. Reads by the state at
@@ -216,30 +250,30 @@ class RasterMapPlacePointEditorController {
   }
 
   /// Toggles the cave-places filter text field in the embedded nav bar.
-  void toggleCavePlaceFilter() => _state?._toggleNavBarCavePlaceFilter();
+  void toggleCavePlaceFilter() => _state?.toggleNavBarCavePlaceFilter();
 
   /// Programmatically show or hide the side toolbar.
-  void setToolbarVisible(bool v) => _state?._setToolbarVisible(v);
+  void setToolbarVisible(bool v) => _state?.setToolbarVisible(v);
 
   /// Navigates (selects) the next cave place that has no point defined for
   /// the current raster map.
-  void navigateToNextUndefined() => _state?._navigateToNextUndefined();
+  void navigateToNextUndefined() => _state?.navigateToNextUndefined();
 
   /// Ensures the cave-places horizontal list is visible.
-  void ensurePlacesListVisible() => _state?._ensurePlacesListVisible();
+  void ensurePlacesListVisible() => _state?.ensurePlacesListVisible();
 
   /// Ensures the raster-maps horizontal list is visible.
-  void ensureMapsListVisible() => _state?._ensureMapsListVisible();
+  void ensureMapsListVisible() => _state?.ensureMapsListVisible();
 
   /// Ensures both horizontal lists are visible (call when switching format).
-  void ensureBothListsVisible() => _state?._ensureBothListsVisible();
+  void ensureBothListsVisible() => _state?.ensureBothListsVisible();
 
   /// Enters or leaves full-screen mode (hides the nav bar; the parent should
   /// hide its own AppBar via the [onFullScreenChanged] callback).
-  void setFullScreen(bool v) => _state?._setFullScreen(v);
+  void setFullScreen(bool v) => _state?.setFullScreen(v);
 
   /// Inverts or restores the raster-map image colours.
-  void setColorInverted(bool v) => _state?._setColorInverted(v);
+  void setColorInverted(bool v) => _state?.setColorInverted(v);
 }
 
 class RasterMapPlacePointEditor extends StatefulWidget {
@@ -430,7 +464,8 @@ class RasterMapPlacePointEditor extends StatefulWidget {
 enum ToolbarSide { left, right }
 
 class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin
+    implements RasterMapEditorHost {
   static final _log = AppLogger.of('RasterMapPlacePointEditor');
   // Selected image-space coordinates
   double? _imageSelectedX;
@@ -527,7 +562,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
   /// Update the set of cave-place UUIDs currently visible after text filtering.
   /// Called by the controller when the parent page uses an external nav bar.
-  void _setVisiblePlaceUuids(Set<Uuid>? uuids) {
+  @override
+  void setVisiblePlaceUuids(Set<Uuid>? uuids) {
     if (mounted) setState(() => _visiblePlaceUuids = uuids);
   }
 
@@ -598,7 +634,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
   /// Back-compat: called by the controller's setColorInverted().
   /// Converts the boolean into an invert-mode preset.
-  void _setColorInverted(bool v) {
+  @override
+  void setColorInverted(bool v) {
     final current = _activeFilter;
     if (v) {
       // Switch to invert preset while preserving brightness/contrast.
@@ -633,7 +670,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       (_activeFilter.mode == RasterMapFilterMode.custom &&
           _activeFilter.invertEnabled);
 
-  void _toggleColorInversion() => _setColorInverted(!_colorInverted);
+  void _toggleColorInversion() => setColorInverted(!_colorInverted);
 
   static const bool SHOW_SAVE_CAVE_PLACE_BUTTON = false;
 
@@ -657,10 +694,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         if (!mounted) return;
         if (isLP && !_fullScreen) {
           _fullScreenAutomatic = true;
-          _setFullScreen(true);
+          setFullScreen(true);
         } else if (!isLP && _fullScreenAutomatic && _fullScreen) {
           _fullScreenAutomatic = false;
-          _setFullScreen(false);
+          setFullScreen(false);
         }
       });
     }
@@ -698,7 +735,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     widget.controller?._state = this;
 
     // apply controller's cavePlaceUuid (if any) so initial highlight shows
-    _applyControllerCavePlaceId();
+    applyControllerCavePlaceId();
 
     _photoViewController = PhotoViewController();
     _scaleStateController = PhotoViewScaleStateController();
@@ -854,7 +891,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         widget.controller?.useImageTextColor ?? widget.useImageTextColor;
     final oldVal =
         oldWidget.controller?.useImageTextColor ?? oldWidget.useImageTextColor;
-    if (newVal != oldVal) _setUseImageTextColor(newVal);
+    if (newVal != oldVal) setUseImageTextColor(newVal);
 
     // if controller instance changed, rebind state
     if (oldWidget.controller != widget.controller) {
@@ -868,42 +905,49 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     // marker is built with the up-to-date coordinate data.
     if (widget.cavePlacesWithDefinitions !=
         oldWidget.cavePlacesWithDefinitions) {
-      _applyControllerCavePlaceId();
+      applyControllerCavePlaceId();
     }
   }
 
   // Methods used by controller to update state at runtime
-  void _setShowLegend(bool v) {
+  @override
+  void setShowLegend(bool v) {
     if (mounted) setState(() => _showLegend = v);
   }
 
-  void _setShowZoomControls(bool v) {
+  @override
+  void setShowZoomControls(bool v) {
     if (mounted) setState(() => _showZoomControls = v);
   }
 
-  void _setGestureZoomEnabled(bool v) {
+  @override
+  void setGestureZoomEnabled(bool v) {
     if (mounted) setState(() => _gestureZoomEnabled = v);
   }
 
-  void _setShowNavBar(bool v) {
+  @override
+  void setShowNavBar(bool v) {
     if (mounted) setState(() => _showNavBar = v);
   }
 
-  void _setShowTapModeCheckbox(bool v) {
+  @override
+  void setShowTapModeCheckbox(bool v) {
     if (mounted) setState(() => _showTapModeCheckbox = v);
   }
 
   /// Delegates the filter-toggle request to the embedded nav bar.
   /// Also ensures the cave-places horizontal list is visible so the filter
   /// field is reachable.
-  void _toggleNavBarCavePlaceFilter() {
-    _ensurePlacesListVisible();
+  @override
+  void toggleNavBarCavePlaceFilter() {
+    ensurePlacesListVisible();
     _effectiveNavBarState?.toggleFilter();
   }
 
   /// Ensures the cave-places horizontal list in the nav bar is visible.
   /// Called before any action that targets the places list (filter, sort).
-  void _ensurePlacesListVisible() {
+  @override
+  void ensurePlacesListVisible() {
     if (!_navBarShowPlaces) {
       setState(() => _navBarShowPlaces = true);
       widget.onNavBarShowCavePlacesChanged?.call(true);
@@ -912,7 +956,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
   /// Ensures the raster-maps horizontal list in the nav bar is visible.
   /// Called before any action that targets the maps list (sort, manage).
-  void _ensureMapsListVisible() {
+  @override
+  void ensureMapsListVisible() {
     if (!_navBarShowMaps) {
       setState(() => _navBarShowMaps = true);
       widget.onNavBarShowRasterMapsChanged?.call(true);
@@ -920,7 +965,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   }
 
   /// Shows both horizontal lists in the nav bar (used when switching format).
-  void _ensureBothListsVisible() {
+  @override
+  void ensureBothListsVisible() {
     if (!_navBarShowMaps || !_navBarShowPlaces) {
       setState(() {
         _navBarShowMaps = true;
@@ -929,11 +975,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     }
   }
 
-  void _setToolbarVisible(bool v) {
+  @override
+  void setToolbarVisible(bool v) {
     if (mounted) setState(() => _toolbarVisible = v);
   }
 
-  void _setFullScreen(bool v) {
+  @override
+  void setFullScreen(bool v) {
     if (!mounted || _fullScreen == v) return;
     setState(() {
       _fullScreen = v;
@@ -971,12 +1019,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     widget.onFullScreenChanged?.call(v);
   }
 
-  void _toggleFullScreen() => _setFullScreen(!_fullScreen);
+  void _toggleFullScreen() => setFullScreen(!_fullScreen);
 
   /// Selects (navigates to) the next cave place in [cavePlacesWithDefinitions]
   /// that has no point defined for the current raster map.  Wraps around.
   /// If the current place has no selection, starts from the beginning.
-  Future<void> _navigateToNextUndefined() async {
+  @override
+  Future<void> navigateToNextUndefined() async {
     final places = widget.cavePlacesWithDefinitions;
     if (places.isEmpty) return;
     final currentUuid = widget.controller?.cavePlaceUuid;
@@ -995,7 +1044,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       if (!hasPoint) {
         await _handleNavCavePlaceSelected(cpwd);
         // Ensure the cave-places list is visible, then scroll to the item.
-        _ensurePlacesListVisible();
+        ensurePlacesListVisible();
         final uuid = cpwd.cavePlace.uuid;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _effectiveNavBarState?.ensurePlaceItemVisible(uuid);
@@ -1012,7 +1061,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     }
   }
 
-  void _setUseImageTextColor(bool v) {
+  @override
+  void setUseImageTextColor(bool v) {
     if (!mounted) return;
     if (_useImageTextColor == v) return;
     setState(() => _useImageTextColor = v);
@@ -1051,7 +1101,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   /// Apply controller-provided `cavePlaceUuid` by locating the corresponding
   /// definition (if present) in `widget.cavePlacesWithDefinitions` and
   /// storing its image-space coordinates in `_initialControllerCavePlaceX/Y`.
-  void _applyControllerCavePlaceId() {
+  @override
+  void applyControllerCavePlaceId() {
     final id = widget.controller?.cavePlaceUuid;
     if (id == null) {
       if (_initialControllerCavePlaceX != null ||
@@ -1249,9 +1300,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     widget.onImagePointChanged?.call(_imageSelectedX!, _imageSelectedY!);
   }
 
+  @override
   void zoomIn() =>
       _zoomAtViewportCenter(clampZoom(_photoViewController.scale! * 1.2));
 
+  @override
   void zoomOut() =>
       _zoomAtViewportCenter(clampZoom(_photoViewController.scale! / 1.2));
 
@@ -1270,6 +1323,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     _photoViewController.position = newPos;
   }
 
+  @override
   void resetZoom() {
     _panZoomController.stop();
     _scaleStateController.scaleState = PhotoViewScaleState.initial;
@@ -1311,6 +1365,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   }
 
   /// Programmatically pan/zoom to center an image-space point in the viewport.
+  @override
   void zoomToPoint(double imageX, double imageY, {double zoomLevel = 2.5}) {
     _photoViewController.scale = zoomLevel;
 
@@ -1326,7 +1381,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   }
 
   /// Zoom/pan to fit a bounding box of image-space points with padding.
-  void _zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) {
+  @override
+  void zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) {
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
     final transform = fitPointsTransform(
       imagePoints,
@@ -1347,7 +1403,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     return offsetForPoint(imageX, imageY, scale, viewport);
   }
 
-  void _moveToPoint(
+  @override
+  void moveToPoint(
     double imageX,
     double imageY, {
     double? targetScale,
@@ -1467,11 +1524,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         try {
           if (keepZoom) {
             // Always pan to point, keeping current scale
-            _moveToPoint(imageX, imageY, animate: animate);
+            moveToPoint(imageX, imageY, animate: animate);
           } else if (_isZoomed()) {
-            _moveToPoint(imageX, imageY, animate: animate);
+            moveToPoint(imageX, imageY, animate: animate);
           } else if (autoZoom) {
-            _moveToPoint(imageX, imageY, targetScale: 1.2, animate: animate);
+            moveToPoint(imageX, imageY, targetScale: 1.2, animate: animate);
           }
         } catch (e, st) {
           _log.fine('moveToPoint after cave place select failed', e, st);
@@ -2031,14 +2088,14 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
             : LocServ.inst.t('all_places_have_definitions'),
         active: false,
         enabled: undefinedCount > 0,
-        onPressed: _navigateToNextUndefined,
+        onPressed: navigateToNextUndefined,
       ),
       // Toggle cave-places filter in the nav bar
       OverlayIconButton(
         icon: Icons.search,
         tooltip: LocServ.inst.t('filter_cave_places'),
         active: _visiblePlaceUuids != null,
-        onPressed: _toggleNavBarCavePlaceFilter,
+        onPressed: toggleNavBarCavePlaceFilter,
       ),
       // Nav-bar view toggles (show/hide maps list, show/hide places list)
       OverlayPopupButton(
@@ -2070,16 +2127,16 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         items: actionItems,
         onSelected: (value) {
           if (value == 'filter_cave_places') {
-            // _toggleNavBarCavePlaceFilter already calls _ensurePlacesListVisible
-            _toggleNavBarCavePlaceFilter();
+            // toggleNavBarCavePlaceFilter already calls ensurePlacesListVisible
+            toggleNavBarCavePlaceFilter();
           } else if (value == 'sort_cave_places') {
-            _ensurePlacesListVisible();
+            ensurePlacesListVisible();
             widget.onSortCavePlacesRequested?.call();
           } else if (value == 'sort_raster_maps') {
-            _ensureMapsListVisible();
+            ensureMapsListVisible();
             widget.onSortRasterMapsRequested?.call();
           } else if (value == 'manage_raster_maps') {
-            _ensureMapsListVisible();
+            ensureMapsListVisible();
             widget.onManageRasterMapsRequested?.call();
           }
         },
