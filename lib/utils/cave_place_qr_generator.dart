@@ -171,12 +171,24 @@ class QrImageRenderer {
       errorCorrectionLevel: ecLevel,
     );
 
-    // Measure title text (if any)
+    // Resolve the label from the configured template (e.g. "@place_title,
+    // @depth") — the same template the PDF path uses — instead of only the
+    // place title, so image and PDF output agree. `resolve` returns plain
+    // text with #fz/#fc directives stripped; the image path renders it in a
+    // single style (multi-line supported via embedded newlines).
     TextPainter? titlePainter;
-    if (prefs.includeTitle && place.title.isNotEmpty) {
+    final labelText = prefs.includeTitle
+        ? QrLabelTemplateEngine.resolve(
+            template: prefs.labelTemplate,
+            place: place,
+            caveTitle: prefs.caveTitle,
+            areaTitle: prefs.areaTitle,
+          )
+        : '';
+    if (labelText.isNotEmpty) {
       titlePainter = TextPainter(
         text: TextSpan(
-          text: place.title,
+          text: labelText,
           style: TextStyle(
             color: const Color(0xFF000000),
             fontSize: prefs.labelFontSize,
@@ -326,7 +338,12 @@ class CavePlaceQRCodePDFGenerator {
                         return pw.Expanded(child: pw.SizedBox());
                       }
                       final place = pagePlaces[idx];
-                      final data = _qrDataForPlace(place, prefs);
+                      // Single source of truth for the encoded payload,
+                      // shared with the image path (finding 4.5).
+                      final data = QrImageRenderer._qrDataForPlace(
+                        place,
+                        prefs,
+                      );
 
                       // Parse segments for potential font size/color overrides
                       final segments = QrLabelTemplateEngine.parseSegments(
@@ -471,16 +488,6 @@ class CavePlaceQRCodePDFGenerator {
       default:
         return BarcodeQRCorrectionLevel.medium;
     }
-  }
-
-  String _qrDataForPlace(CavePlace place, [GenerationPreferences? prefs]) {
-    final raw =
-        place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
-    if (raw.isEmpty) return raw;
-    if (prefs?.includeDeepLinkPrefix ?? true) {
-      return '$deepLinkPrefix$raw';
-    }
-    return raw;
   }
 
   String _sanitizeFilename(String inName) =>
