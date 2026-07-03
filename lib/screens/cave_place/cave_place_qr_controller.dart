@@ -170,9 +170,10 @@ class CavePlaceQrController {
     }
 
     if (currentQcriValue.isNotEmpty && currentQcriValue != qr) {
-      if (!_mounted) return;
+      final ctx = _context;
+      if (!ctx.mounted) return;
       final shouldReplace = await showDialog<bool>(
-        context: _context,
+        context: ctx,
         builder: (ctx) => AlertDialog(
           title: Text(LocServ.inst.t('replace_qr_code')),
           content: Text(LocServ.inst.t('existing_qr_code_will_be_replaced')),
@@ -219,12 +220,9 @@ class CavePlaceQrController {
       }
     }
 
-    if (!_mounted || _cavePlace() == null) return;
-    CavePlaceQrPreviewDialog.show(
-      _context,
-      _cavePlace()!,
-      qrIdentifierOverride: qr,
-    );
+    final ctx = _context;
+    if (!ctx.mounted || _cavePlace() == null) return;
+    CavePlaceQrPreviewDialog.show(ctx, _cavePlace()!, qrIdentifierOverride: qr);
   }
 
   // ── Auto-generate ─────────────────────────────────────────────────────────

@@ -95,6 +95,7 @@ class _CaveTripListPageState extends State<CaveTripListPage>
       existingTitles,
     );
     final controller = TextEditingController(text: suggestedTitle);
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

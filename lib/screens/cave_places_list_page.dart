@@ -264,6 +264,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
       existingTitles,
     );
     final controller = TextEditingController(text: suggestedTitle);
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -571,7 +572,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
                               widget.caveUuid,
                               rm.uuid,
                             );
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         await Navigator.push(
                           context,
                           MaterialPageRoute(

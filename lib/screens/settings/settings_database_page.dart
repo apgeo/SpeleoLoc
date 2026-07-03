@@ -125,7 +125,7 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
 
     if (confirmed != true) return;
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     final confirmed2 = await showDialog<bool>(
       context: context,
       builder: (context) => ConfirmDialog(text: LocServ.inst.t(reconfirmKey)),

@@ -2045,6 +2045,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     }
     if (caveUuid == null) return;
 
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -2064,6 +2065,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     _saveDefinitionIfNeeded();
     final cavePlaceUuid = widget.controller?.cavePlaceUuid;
     if (cavePlaceUuid == null) return;
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(

@@ -69,6 +69,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
         '',
       ),
     );
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

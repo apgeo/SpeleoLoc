@@ -232,7 +232,7 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (await _onWillPop()) {
-          if (mounted) Navigator.of(context).pop();
+          if (context.mounted) Navigator.of(context).pop();
         }
       },
       child: Scaffold(

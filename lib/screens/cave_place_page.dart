@@ -283,14 +283,20 @@ class _CavePlacePageState extends State<CavePlacePage>
 
   Future<void> _onEntranceToggleRequested(bool enabled) async {
     if (enabled == _form.isEntrance) return;
-    final apply = enabled
-        ? await CavePlaceEntranceHandler.confirmEnableEntrance(
-            context,
-            repository: cavePlaceRepository,
-            caveUuid: widget.caveUuid,
-            excludeUuid: _currentCavePlaceId,
-          )
-        : await CavePlaceEntranceHandler.confirmDisableEntrance(context);
+    // if/else (rather than a ternary) so each awaited call is the first
+    // await in its branch — the context argument is used before any async
+    // gap, which the analyzer can see.
+    final bool apply;
+    if (enabled) {
+      apply = await CavePlaceEntranceHandler.confirmEnableEntrance(
+        context,
+        repository: cavePlaceRepository,
+        caveUuid: widget.caveUuid,
+        excludeUuid: _currentCavePlaceId,
+      );
+    } else {
+      apply = await CavePlaceEntranceHandler.confirmDisableEntrance(context);
+    }
     if (!apply || !mounted) return;
     setState(() {
       _form.setEntrance(enabled);
@@ -300,14 +306,19 @@ class _CavePlacePageState extends State<CavePlacePage>
 
   Future<void> _onMainEntranceToggleRequested(bool enabled) async {
     if (!_form.isEntrance || enabled == _form.isMainEntrance) return;
-    final apply = enabled
-        ? await CavePlaceEntranceHandler.confirmEnableMainEntrance(
-            context,
-            repository: cavePlaceRepository,
-            caveUuid: widget.caveUuid,
-            excludeUuid: _currentCavePlaceId,
-          )
-        : await CavePlaceEntranceHandler.confirmDisableMainEntrance(context);
+    final bool apply;
+    if (enabled) {
+      apply = await CavePlaceEntranceHandler.confirmEnableMainEntrance(
+        context,
+        repository: cavePlaceRepository,
+        caveUuid: widget.caveUuid,
+        excludeUuid: _currentCavePlaceId,
+      );
+    } else {
+      apply = await CavePlaceEntranceHandler.confirmDisableMainEntrance(
+        context,
+      );
+    }
     if (!apply || !mounted) return;
     setState(() => _form.setMainEntrance(enabled));
   }
@@ -370,7 +381,7 @@ class _CavePlacePageState extends State<CavePlacePage>
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (await _onWillPop()) {
-          if (mounted) Navigator.of(context).pop();
+          if (context.mounted) Navigator.of(context).pop();
         }
       },
       child: Scaffold(

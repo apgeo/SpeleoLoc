@@ -238,7 +238,7 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (await _onWillPop()) {
-          if (mounted) Navigator.of(context).pop();
+          if (context.mounted) Navigator.of(context).pop();
         }
       },
       child: Scaffold(

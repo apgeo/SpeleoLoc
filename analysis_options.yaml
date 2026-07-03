@@ -23,7 +23,11 @@ analyzer:
     depend_on_referenced_packages: ignore
     unintended_html_in_doc_comment: ignore
     unnecessary_underscores: ignore
-    use_build_context_synchronously: ignore
+    # Was blanket-ignored, which hid a real crash class (using a BuildContext
+    # after an async gap without a mounted guard). All existing call sites
+    # are now guarded, so it is promoted to a build-failing warning to keep
+    # new violations out.
+    use_build_context_synchronously: warning
     # Refactoring guardrails (see docs/REFACTORING_PLAN.md). Surfaced as
     # `info` so they show up in the IDE / CI logs without breaking the
     # build during the migration. Promote to `warning` / `error` once the

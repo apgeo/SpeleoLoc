@@ -177,6 +177,7 @@ class _SyncPageState extends ConsumerState<SyncPage>
     final path = picked?.files.single.path;
     if (path == null) return;
 
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
