@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
-class CaveAreasPage extends StatefulWidget {
+class CaveAreasPage extends ConsumerStatefulWidget {
   const CaveAreasPage({super.key, required this.caveUuid});
 
   final Uuid caveUuid;
 
   @override
-  State<CaveAreasPage> createState() => _CaveAreasPageState();
+  ConsumerState<CaveAreasPage> createState() => _CaveAreasPageState();
 }
 
-class _CaveAreasPageState extends State<CaveAreasPage>
+class _CaveAreasPageState extends ConsumerState<CaveAreasPage>
     with AppBarMenuMixin<CaveAreasPage>, ProductTourMixin<CaveAreasPage> {
   @override
   String get tourId => 'cave_areas';
@@ -49,7 +50,9 @@ class _CaveAreasPageState extends State<CaveAreasPage>
   }
 
   void _loadAreas() async {
-    final areas = await caveRepository.getCaveAreas(widget.caveUuid);
+    final areas = await ref
+        .read(caveRepositoryProvider)
+        .getCaveAreas(widget.caveUuid);
     if (!mounted) return;
     setState(() {
       _areas = areas;
@@ -82,13 +85,17 @@ class _CaveAreasPageState extends State<CaveAreasPage>
               final title = controller.text.trim();
               if (title.isEmpty) return;
               if (existing == null) {
-                await caveRepository.addCaveArea(widget.caveUuid, title);
+                await ref
+                    .read(caveRepositoryProvider)
+                    .addCaveArea(widget.caveUuid, title);
               } else {
-                await caveRepository.updateCaveAreaTitle(
-                  uuid: existing.uuid,
-                  newTitle: title,
-                  oldTitle: existing.title,
-                );
+                await ref
+                    .read(caveRepositoryProvider)
+                    .updateCaveAreaTitle(
+                      uuid: existing.uuid,
+                      newTitle: title,
+                      oldTitle: existing.title,
+                    );
               }
               if (!context.mounted) return;
               Navigator.pop(context, true);
@@ -129,7 +136,7 @@ class _CaveAreasPageState extends State<CaveAreasPage>
     );
 
     if (confirmed == true) {
-      await caveRepository.deleteCaveArea(area);
+      await ref.read(caveRepositoryProvider).deleteCaveArea(area);
       _changed = true;
       _loadAreas();
       if (!mounted) return;

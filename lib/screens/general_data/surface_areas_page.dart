@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
@@ -8,14 +9,14 @@ import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class SurfaceAreasPage extends StatefulWidget {
+class SurfaceAreasPage extends ConsumerStatefulWidget {
   const SurfaceAreasPage({super.key});
 
   @override
-  State<SurfaceAreasPage> createState() => _SurfaceAreasPageState();
+  ConsumerState<SurfaceAreasPage> createState() => _SurfaceAreasPageState();
 }
 
-class _SurfaceAreasPageState extends State<SurfaceAreasPage>
+class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
     with AppBarMenuMixin<SurfaceAreasPage>, ProductTourMixin<SurfaceAreasPage> {
   @override
   String get tourId => 'surface_areas';
@@ -69,7 +70,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
   }
 
   void _loadAreas() async {
-    final areas = await caveRepository.getSurfaceAreas();
+    final areas = await ref.read(caveRepositoryProvider).getSurfaceAreas();
     if (!mounted) return;
     setState(() {
       _areas = areas;
@@ -147,18 +148,22 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
                   ? null
                   : identifierController.text.trim();
               if (existing == null) {
-                await caveRepository.addSurfaceArea(
-                  title: title,
-                  description: desc,
-                  generalAreaIdentifier: identifier,
-                );
+                await ref
+                    .read(caveRepositoryProvider)
+                    .addSurfaceArea(
+                      title: title,
+                      description: desc,
+                      generalAreaIdentifier: identifier,
+                    );
               } else {
-                await caveRepository.updateSurfaceArea(
-                  existing: existing,
-                  title: title,
-                  description: desc,
-                  generalAreaIdentifier: identifier,
-                );
+                await ref
+                    .read(caveRepositoryProvider)
+                    .updateSurfaceArea(
+                      existing: existing,
+                      title: title,
+                      description: desc,
+                      generalAreaIdentifier: identifier,
+                    );
               }
               if (!context.mounted) return;
               Navigator.pop(context, true);
@@ -197,7 +202,7 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
     );
 
     if (confirmed == true) {
-      await caveRepository.deleteSurfaceArea(area);
+      await ref.read(caveRepositoryProvider).deleteSurfaceArea(area);
       _changed = true;
       _loadAreas();
       if (!mounted) return;

@@ -2,10 +2,11 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -18,17 +19,17 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// Whether to apply image compression when picking raster map images.
 const bool kCompressRasterMapImages = false;
 
-class RasterMapForm extends StatefulWidget {
+class RasterMapForm extends ConsumerStatefulWidget {
   const RasterMapForm({super.key, required this.caveUuid, this.rasterMap});
 
   final Uuid caveUuid;
   final RasterMap? rasterMap;
 
   @override
-  State<RasterMapForm> createState() => _RasterMapFormState();
+  ConsumerState<RasterMapForm> createState() => _RasterMapFormState();
 }
 
-class _RasterMapFormState extends State<RasterMapForm>
+class _RasterMapFormState extends ConsumerState<RasterMapForm>
     with AppBarMenuMixin<RasterMapForm>, ProductTourMixin<RasterMapForm> {
   @override
   String get tourId => 'raster_map_form';
@@ -162,11 +163,13 @@ class _RasterMapFormState extends State<RasterMapForm>
     }
 
     // Check for a duplicate (title, map_type, cave_uuid) matching the DB UNIQUE constraint.
-    final existingMaps = await rasterMapRepository.findRasterMapsByTitleAndType(
-      caveUuid: widget.caveUuid,
-      title: title,
-      mapType: _selectedMapType!,
-    );
+    final existingMaps = await ref
+        .read(rasterMapRepositoryProvider)
+        .findRasterMapsByTitleAndType(
+          caveUuid: widget.caveUuid,
+          title: title,
+          mapType: _selectedMapType!,
+        );
     final isDuplicate = existingMaps.any(
       (rm) => widget.rasterMap == null || rm.uuid != widget.rasterMap!.uuid,
     );
@@ -178,10 +181,12 @@ class _RasterMapFormState extends State<RasterMapForm>
     // Check for a duplicate image (same SHA-256 hash, same cave).
     // Only run this check when a new image was picked in this session.
     if (_pendingFileHash != null) {
-      final hashMatches = await rasterMapRepository.findRasterMapsByHash(
-        caveUuid: widget.caveUuid,
-        hash: _pendingFileHash!,
-      );
+      final hashMatches = await ref
+          .read(rasterMapRepositoryProvider)
+          .findRasterMapsByHash(
+            caveUuid: widget.caveUuid,
+            hash: _pendingFileHash!,
+          );
       RasterMap? hashDuplicate;
       for (final rm in hashMatches) {
         if (widget.rasterMap == null || rm.uuid != widget.rasterMap!.uuid) {
@@ -232,7 +237,7 @@ class _RasterMapFormState extends State<RasterMapForm>
         caveAreaUuid: widget.rasterMap!.caveAreaUuid,
         orderIndex: widget.rasterMap!.orderIndex,
       );
-      await rasterMapRepository.updateRasterMap(updated);
+      await ref.read(rasterMapRepositoryProvider).updateRasterMap(updated);
     } else {
       final companion = RasterMapsCompanion.insert(
         uuid: Uuid.v7(),
@@ -243,7 +248,7 @@ class _RasterMapFormState extends State<RasterMapForm>
         fileSize: Value(fileSize),
         caveUuid: widget.caveUuid,
       );
-      await rasterMapRepository.addRasterMap(companion);
+      await ref.read(rasterMapRepositoryProvider).addRasterMap(companion);
     }
     if (mounted) Navigator.pop(context, true);
   }

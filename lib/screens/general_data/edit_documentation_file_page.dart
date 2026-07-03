@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
@@ -12,7 +13,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
-class EditDocumentationFilePage extends StatefulWidget {
+class EditDocumentationFilePage extends ConsumerStatefulWidget {
   const EditDocumentationFilePage({
     super.key,
     this.documentationFile,
@@ -27,11 +28,12 @@ class EditDocumentationFilePage extends StatefulWidget {
   final Uuid? caveAreaUuid;
 
   @override
-  State<EditDocumentationFilePage> createState() =>
+  ConsumerState<EditDocumentationFilePage> createState() =>
       _EditDocumentationFilePageState();
 }
 
-class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
+class _EditDocumentationFilePageState
+    extends ConsumerState<EditDocumentationFilePage>
     with
         AppBarMenuMixin<EditDocumentationFilePage>,
         ProductTourMixin<EditDocumentationFilePage> {
@@ -137,7 +139,9 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
 
     if (widget.documentationFile != null) {
       final old = widget.documentationFile!;
-      final author = await currentUserService.currentOrSystem();
+      final author = await ref
+          .read(currentUserServiceProvider)
+          .currentOrSystem();
       final updated = old.copyWith(
         title: title,
         description: drift.Value(description),
@@ -147,25 +151,29 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
         updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
         lastModifiedByUserUuid: drift.Value(author),
       );
-      await documentationRepository.replaceDocumentationFile(updated);
-      await changeLogger.logUpdate(
-        'documentation_files',
-        old.uuid,
-        oldValues: {
-          'title': old.title,
-          'description': old.description,
-          'file_name': old.fileName,
-          'file_size': old.fileSize,
-          'file_hash': old.fileHash,
-        },
-        newValues: {
-          'title': title,
-          'description': description,
-          'file_name': fileNameToStore,
-          'file_size': _fileSize,
-          'file_hash': _fileHash,
-        },
-      );
+      await ref
+          .read(documentationRepositoryProvider)
+          .replaceDocumentationFile(updated);
+      await ref
+          .read(changeLoggerProvider)
+          .logUpdate(
+            'documentation_files',
+            old.uuid,
+            oldValues: {
+              'title': old.title,
+              'description': old.description,
+              'file_name': old.fileName,
+              'file_size': old.fileSize,
+              'file_hash': old.fileHash,
+            },
+            newValues: {
+              'title': title,
+              'description': description,
+              'file_name': fileNameToStore,
+              'file_size': _fileSize,
+              'file_hash': _fileHash,
+            },
+          );
       if (mounted) Navigator.pop(context, true);
       return;
     }
@@ -179,11 +187,13 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
       return;
     }
 
-    final parentLink = await documentationRepository.getDocumentationParentLink(
-      cavePlaceUuid: widget.cavePlaceUuid,
-      caveUuid: widget.caveUuid,
-      caveAreaUuid: widget.caveAreaUuid,
-    );
+    final parentLink = await ref
+        .read(documentationRepositoryProvider)
+        .getDocumentationParentLink(
+          cavePlaceUuid: widget.cavePlaceUuid,
+          caveUuid: widget.caveUuid,
+          caveAreaUuid: widget.caveAreaUuid,
+        );
 
     // Insert new (use insert ctor which expects plain values for required fields)
     final companion = DocumentationFilesCompanion.insert(
@@ -203,11 +213,15 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
     );
 
     try {
-      final newUuid = await documentationRepository.insertDocumentationFile(
-        companion: withOptional,
-        parentLink: parentLink,
-      );
-      await changeLogger.logInsert('documentation_files', newUuid);
+      final newUuid = await ref
+          .read(documentationRepositoryProvider)
+          .insertDocumentationFile(
+            companion: withOptional,
+            parentLink: parentLink,
+          );
+      await ref
+          .read(changeLoggerProvider)
+          .logInsert('documentation_files', newUuid);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {

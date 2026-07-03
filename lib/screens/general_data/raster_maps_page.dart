@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/providers.dart';
 // fix import as bellow
 // import 'package:speleoloc/screens/general_data/raster_map_form.dart';
 import 'raster_map_form.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -13,16 +14,16 @@ import 'package:speleoloc/widgets/full_screen_image_viewer.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class RasterMapsPage extends StatefulWidget {
+class RasterMapsPage extends ConsumerStatefulWidget {
   const RasterMapsPage({super.key, required this.caveUuid});
 
   final Uuid caveUuid;
 
   @override
-  State<RasterMapsPage> createState() => _RasterMapsPageState();
+  ConsumerState<RasterMapsPage> createState() => _RasterMapsPageState();
 }
 
-class _RasterMapsPageState extends State<RasterMapsPage>
+class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
     with AppBarMenuMixin<RasterMapsPage>, ProductTourMixin<RasterMapsPage> {
   @override
   String get tourId => 'raster_maps';
@@ -59,12 +60,14 @@ class _RasterMapsPageState extends State<RasterMapsPage>
   }
 
   void _loadRasterMaps() async {
-    _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
+    _rasterMaps = await ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(widget.caveUuid);
     if (mounted) setState(() {});
   }
 
   void _deleteRasterMap(Uuid id) async {
-    await rasterMapRepository.deleteRasterMap(id);
+    await ref.read(rasterMapRepositoryProvider).deleteRasterMap(id);
     _changed = true;
     _loadRasterMaps();
     if (mounted) {
@@ -73,8 +76,10 @@ class _RasterMapsPageState extends State<RasterMapsPage>
   }
 
   Future<void> _forceDeleteRasterMap(Uuid id) async {
-    await definitionRepository.deleteAllDefinitionsForRasterMap(id);
-    await rasterMapRepository.deleteRasterMap(id);
+    await ref
+        .read(definitionRepositoryProvider)
+        .deleteAllDefinitionsForRasterMap(id);
+    await ref.read(rasterMapRepositoryProvider).deleteRasterMap(id);
     _changed = true;
     _loadRasterMaps();
     if (mounted) {
@@ -84,7 +89,9 @@ class _RasterMapsPageState extends State<RasterMapsPage>
 
   Future<void> _confirmDeleteRasterMap(Uuid id) async {
     final loc = LocServ.inst;
-    final count = await definitionRepository.countDefinitionsForRasterMap(id);
+    final count = await ref
+        .read(definitionRepositoryProvider)
+        .countDefinitionsForRasterMap(id);
     if (!mounted) return;
     if (count > 0) {
       final confirmed = await showDialog<bool>(
@@ -319,9 +326,9 @@ class _RasterMapsPageState extends State<RasterMapsPage>
           _rasterMaps.insert(newIndex, item);
         });
         _changed = true;
-        await rasterMapRepository.updateRasterMapOrder(
-          _rasterMaps.map((rm) => rm.uuid).toList(),
-        );
+        await ref
+            .read(rasterMapRepositoryProvider)
+            .updateRasterMapOrder(_rasterMaps.map((rm) => rm.uuid).toList());
       },
       itemBuilder: (context, index) {
         final rm = _rasterMaps[index];

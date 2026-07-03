@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Page that lists documentation files.
@@ -13,7 +14,7 @@ import 'package:speleoloc/utils/localization.dart';
 ///
 /// Internally this builds a [GeofeatureDocumentsPage] so all display logic
 /// is shared.
-class DocumentationFilesPage extends StatefulWidget {
+class DocumentationFilesPage extends ConsumerStatefulWidget {
   const DocumentationFilesPage({
     super.key,
     this.cavePlaceUuid,
@@ -26,10 +27,12 @@ class DocumentationFilesPage extends StatefulWidget {
   final Uuid? caveAreaUuid;
 
   @override
-  State<DocumentationFilesPage> createState() => _DocumentationFilesPageState();
+  ConsumerState<DocumentationFilesPage> createState() =>
+      _DocumentationFilesPageState();
 }
 
-class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
+class _DocumentationFilesPageState
+    extends ConsumerState<DocumentationFilesPage> {
   DocumentsSource? _source;
   bool _isLoading = true;
 
@@ -56,11 +59,15 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
       String? parentTitle;
 
       if (widget.cavePlaceUuid != null) {
-        final cp = await cavePlaceRepository.findById(widget.cavePlaceUuid!);
+        final cp = await ref
+            .read(cavePlaceRepositoryProvider)
+            .findById(widget.cavePlaceUuid!);
         title = cp?.title ?? '';
         // Try to get cave title as parent.
         if (cp != null) {
-          final c = await caveRepository.findById(cp.caveUuid);
+          final c = await ref
+              .read(caveRepositoryProvider)
+              .findById(cp.caveUuid);
           parentTitle = c?.title;
         }
         _source = DocumentsSource.cavePlace(
@@ -69,14 +76,18 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
           caveTitle: parentTitle,
         );
       } else if (widget.caveUuid != null) {
-        final c = await caveRepository.findById(widget.caveUuid!);
+        final c = await ref
+            .read(caveRepositoryProvider)
+            .findById(widget.caveUuid!);
         title = c?.title ?? '';
         _source = DocumentsSource.cave(
           caveUuid: widget.caveUuid!,
           caveTitle: title,
         );
       } else if (widget.caveAreaUuid != null) {
-        final a = await caveRepository.findCaveAreaById(widget.caveAreaUuid!);
+        final a = await ref
+            .read(caveRepositoryProvider)
+            .findCaveAreaById(widget.caveAreaUuid!);
         title = a?.title ?? '';
         _source = DocumentsSource.caveArea(
           caveAreaUuid: widget.caveAreaUuid!,
