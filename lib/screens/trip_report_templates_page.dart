@@ -2,8 +2,9 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -14,15 +15,16 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///   - View the list of stored templates
 ///   - Add new templates (ODF/DOCX) from the device
 ///   - Delete templates with confirmation
-class TripReportTemplatesPage extends StatefulWidget {
+class TripReportTemplatesPage extends ConsumerStatefulWidget {
   const TripReportTemplatesPage({super.key});
 
   @override
-  State<TripReportTemplatesPage> createState() =>
+  ConsumerState<TripReportTemplatesPage> createState() =>
       _TripReportTemplatesPageState();
 }
 
-class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
+class _TripReportTemplatesPageState
+    extends ConsumerState<TripReportTemplatesPage> {
   List<TripReportTemplate> _templates = [];
   bool _loading = true;
 
@@ -33,7 +35,9 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
   }
 
   Future<void> _load() async {
-    final templates = await caveTripRepository.getTripReportTemplates();
+    final templates = await ref
+        .read(caveTripRepositoryProvider)
+        .getTripReportTemplates();
     if (mounted) {
       setState(() {
         _templates = templates;
@@ -100,12 +104,14 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
 
     try {
       final storedFileName = await service.storeTemplateFile(pickedFile);
-      await caveTripRepository.insertTripReportTemplate(
-        title: title,
-        fileName: storedFileName,
-        fileSize: pickedFile.lengthSync(),
-        format: format,
-      );
+      await ref
+          .read(caveTripRepositoryProvider)
+          .insertTripReportTemplate(
+            title: title,
+            fileName: storedFileName,
+            fileSize: pickedFile.lengthSync(),
+            format: format,
+          );
       await _load();
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('template_added'));
@@ -141,7 +147,9 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
       await TripReportExportService.instance.deleteTemplateFile(
         template.fileName,
       );
-      await caveTripRepository.deleteTripReportTemplate(template.uuid);
+      await ref
+          .read(caveTripRepositoryProvider)
+          .deleteTripReportTemplate(template.uuid);
       await _load();
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('template_deleted'));

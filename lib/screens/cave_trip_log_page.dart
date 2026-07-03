@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class CaveTripLogPage extends StatefulWidget {
+class CaveTripLogPage extends ConsumerStatefulWidget {
   const CaveTripLogPage({super.key, required this.tripUuid});
   final Uuid tripUuid;
 
   @override
-  State<CaveTripLogPage> createState() => _CaveTripLogPageState();
+  ConsumerState<CaveTripLogPage> createState() => _CaveTripLogPageState();
 }
 
-class _CaveTripLogPageState extends State<CaveTripLogPage>
+class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
     with ProductTourMixin<CaveTripLogPage> {
   @override
   String get tourId => 'cave_trip_log';
@@ -52,8 +53,12 @@ class _CaveTripLogPageState extends State<CaveTripLogPage>
   }
 
   Future<void> _load() async {
-    final trip = await caveTripRepository.findById(widget.tripUuid);
-    final method = await currentUserService.getTripLogMethod();
+    final trip = await ref
+        .read(caveTripRepositoryProvider)
+        .findById(widget.tripUuid);
+    final method = await ref
+        .read(currentUserServiceProvider)
+        .getTripLogMethod();
     if (mounted) {
       setState(() {
         _controller.text = trip?.log ?? '';
@@ -66,7 +71,9 @@ class _CaveTripLogPageState extends State<CaveTripLogPage>
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await caveTripRepository.updateTripLog(widget.tripUuid, _controller.text);
+      await ref
+          .read(caveTripRepositoryProvider)
+          .updateTripLog(widget.tripUuid, _controller.text);
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_log_saved'));
         Navigator.pop(context);
@@ -98,9 +105,13 @@ class _CaveTripLogPageState extends State<CaveTripLogPage>
     if (ok != true || !mounted) return;
     setState(() => _saving = true);
     try {
-      await caveTripService.regenerateLogWithMethod(widget.tripUuid, method);
+      await ref
+          .read(caveTripServiceProvider)
+          .regenerateLogWithMethod(widget.tripUuid, method);
       // Reload the trip text from DB after regeneration.
-      final trip = await caveTripRepository.findById(widget.tripUuid);
+      final trip = await ref
+          .read(caveTripRepositoryProvider)
+          .findById(widget.tripUuid);
       if (mounted) {
         setState(() {
           _controller.text = trip?.log ?? '';
