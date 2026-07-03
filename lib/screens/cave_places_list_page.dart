@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_beacons_page.dart';
@@ -8,7 +10,6 @@ import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
@@ -25,16 +26,16 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class CavePlacesListPage extends StatefulWidget {
+class CavePlacesListPage extends ConsumerStatefulWidget {
   const CavePlacesListPage({super.key, required this.caveUuid});
 
   final Uuid caveUuid;
 
   @override
-  State<CavePlacesListPage> createState() => _CavePlacesListPageState();
+  ConsumerState<CavePlacesListPage> createState() => _CavePlacesListPageState();
 }
 
-class _CavePlacesListPageState extends State<CavePlacesListPage>
+class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     with
         AppBarMenuMixin<CavePlacesListPage>,
         ProductTourMixin<CavePlacesListPage> {
@@ -65,7 +66,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   ];
   @override
   List<AppMenuItem> get screenMenuItems {
-    final activeTripId = caveTripService.activeTripIdNotifier.value;
+    final activeTripId = ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .value;
     return [
       if (activeTripId == null)
         AppMenuItem(
@@ -163,7 +167,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
         ),
       );
       if (confirmed == true) {
-        await caveRepository.deleteCave(widget.caveUuid);
+        await ref.read(caveRepositoryProvider).deleteCave(widget.caveUuid);
         if (!mounted) return;
         Navigator.pop(context, true);
       }
@@ -212,14 +216,18 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    caveTripService.activeTripIdNotifier.addListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .addListener(_onTripStateChanged);
     _loadCave();
     _loadSurfaceAreas();
     _loadCavePlaces();
     _loadTripCount();
     // Live-refresh when cave_places table changes from any source (this
     // screen's mutations, other screens, imports, DB merges).
-    _cavePlacesSub = cavePlaceRepository
+    _cavePlacesSub = ref
+        .read(cavePlaceRepositoryProvider)
         .watchCavePlaces(widget.caveUuid)
         .skip(1) // initial load is handled by explicit _loadCavePlaces above
         .listen((_) {
@@ -230,7 +238,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
 
   Future<void> _loadSurfaceAreas() async {
     try {
-      final areas = await caveRepository.getSurfaceAreas();
+      final areas = await ref.read(caveRepositoryProvider).getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
     } catch (e, st) {
       AppLogger.of(
@@ -248,7 +256,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   }
 
   Future<void> _loadTripCount() async {
-    final trips = await caveTripRepository.getCaveTrips(widget.caveUuid);
+    final trips = await ref
+        .read(caveTripRepositoryProvider)
+        .getCaveTrips(widget.caveUuid);
     final ended = trips.where((t) => t.tripEndedAt != null).length;
     if (mounted) setState(() => _pastTripsCount = ended);
   }
@@ -256,9 +266,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   Future<void> _startTrip() async {
     final defaultTitle =
         '${_cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final existingTitles = await caveTripRepository.getCaveTripTitles(
-      widget.caveUuid,
-    );
+    final existingTitles = await ref
+        .read(caveTripRepositoryProvider)
+        .getCaveTripTitles(widget.caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(
       defaultTitle,
       existingTitles,
@@ -289,12 +299,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
       ),
     );
     if (confirmed == true && mounted) {
-      await caveTripService.startTrip(
-        widget.caveUuid,
-        controller.text.trim().isNotEmpty
-            ? controller.text.trim()
-            : suggestedTitle,
-      );
+      await ref
+          .read(caveTripServiceProvider)
+          .startTrip(
+            widget.caveUuid,
+            controller.text.trim().isNotEmpty
+                ? controller.text.trim()
+                : suggestedTitle,
+          );
       if (mounted) {
         await AppRoutes.pushCaveTripList(context, widget.caveUuid);
         setState(() {});
@@ -304,7 +316,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
 
   /// Stops the active trip immediately (no confirmation dialog).
   Future<void> _performStopTrip() async {
-    await caveTripService.stopTrip();
+    await ref.read(caveTripServiceProvider).stopTrip();
     if (mounted) {
       SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
       setState(() {});
@@ -333,14 +345,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   }
 
   void _viewActiveTrip() {
-    final id = caveTripService.activeTripIdNotifier.value;
+    final id = ref.read(caveTripServiceProvider).activeTripIdNotifier.value;
     if (id == null) return;
     AppRoutes.pushCaveTrip(context, id);
   }
 
   Future<void> _deleteSelectedPlaces(List<CavePlace> selected) async {
     for (final cp in selected) {
-      await cavePlaceRepository.deleteCavePlace(cp.uuid);
+      await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(cp.uuid);
     }
     await _loadCavePlaces();
   }
@@ -367,7 +379,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   }
 
   Future<void> _openRasterMapPlaceSelector() async {
-    final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
+    final rasterMaps = await ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(widget.caveUuid);
     if (rasterMaps.isEmpty) {
       if (mounted)
         SnackBarService.showWarning(LocServ.inst.t('no_raster_maps_for_cave'));
@@ -379,13 +393,13 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
       return;
     }
     final rm = rasterMaps.first;
-    final cavePlacesWithDefs = await definitionRepository
+    final cavePlacesWithDefs = await ref
+        .read(definitionRepositoryProvider)
         .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
     final firstPlaceId = _cavePlaces.first.uuid;
-    final existing = await definitionRepository.findDefinition(
-      firstPlaceId,
-      rm.uuid,
-    );
+    final existing = await ref
+        .read(definitionRepositoryProvider)
+        .findDefinition(firstPlaceId, rm.uuid);
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -417,7 +431,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
     _listController.dispose();
     _qrScanLongPressTimer?.cancel();
     _manualQrSearchController.dispose();
-    caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .removeListener(_onTripStateChanged);
     super.dispose();
   }
 
@@ -468,7 +485,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   }
 
   Future<void> _loadCave() async {
-    _cave = await caveRepository.findById(widget.caveUuid);
+    _cave = await ref.read(caveRepositoryProvider).findById(widget.caveUuid);
     // Save last open cave for deep link resolution
     DeepLinkHandler.saveLastOpenCave(widget.caveUuid);
     if (!mounted) return;
@@ -480,19 +497,23 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
       'CavePlacesListPage',
     ).fine('_loadCavePlaces() for caveUuid=${widget.caveUuid}');
 
-    _cavePlaces = await cavePlaceRepository.getCavePlaces(widget.caveUuid);
+    _cavePlaces = await ref
+        .read(cavePlaceRepositoryProvider)
+        .getCavePlaces(widget.caveUuid);
     await _loadCaveAreas();
 
     // Compute raster maps count and how many raster maps have definitions for each cave place
-    final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
+    final rasterMaps = await ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(widget.caveUuid);
     final rasterMapIds = rasterMaps.map((r) => r.uuid).toList();
     _rasterMapsCountForCave = rasterMapIds.length;
 
     Map<Uuid, Set<Uuid>> placeToRasters = {};
     if (rasterMapIds.isNotEmpty) {
-      final defs = await definitionRepository.getDefinitionsForRasterMaps(
-        rasterMapIds,
-      );
+      final defs = await ref
+          .read(definitionRepositoryProvider)
+          .getDefinitionsForRasterMaps(rasterMapIds);
       for (final d in defs) {
         final cpId = d.cavePlaceUuid;
         final rmId = d.rasterMapUuid;
@@ -523,7 +544,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
 
   Future<void> _loadCaveAreas() async {
     try {
-      final areas = await caveRepository.getCaveAreas(widget.caveUuid);
+      final areas = await ref
+          .read(caveRepositoryProvider)
+          .getCaveAreas(widget.caveUuid);
       _areaTitles = {for (var a in areas) a.uuid: a.title};
     } catch (e, st) {
       AppLogger.of(
@@ -535,13 +558,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
 
   Future<void> _showDefinitionsReport(Uuid cavePlaceUuid) async {
     // Load raster maps for cave and check if definition exists for each
-    final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
+    final rasterMaps = await ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(widget.caveUuid);
     final List<Map<String, dynamic>> rows = [];
     for (final rm in rasterMaps) {
-      final def = await definitionRepository.findDefinition(
-        cavePlaceUuid,
-        rm.uuid,
-      );
+      final def = await ref
+          .read(definitionRepositoryProvider)
+          .findDefinition(cavePlaceUuid, rm.uuid);
       rows.add({'rasterMap': rm, 'defined': def != null, 'definition': def});
     }
 
@@ -565,9 +589,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
                     return InkWell(
                       onTap: () async {
                         Navigator.pop(context);
-                        final existing = await definitionRepository
+                        final existing = await ref
+                            .read(definitionRepositoryProvider)
                             .findDefinition(cavePlaceUuid, rm.uuid);
-                        final cavePlacesWithDefs = await definitionRepository
+                        final cavePlacesWithDefs = await ref
+                            .read(definitionRepositoryProvider)
                             .getCavePlacesWithDefinitionsForRasterMap(
                               widget.caveUuid,
                               rm.uuid,
@@ -637,7 +663,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage>
   }
 
   Future<void> _deleteCavePlace(Uuid id) async {
-    await cavePlaceRepository.deleteCavePlace(id);
+    await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(id);
     _loadCavePlaces();
     if (mounted)
       SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
