@@ -66,11 +66,31 @@ void main() {
       expect(r.hadUrlStrip, false);
     });
 
-    test('URL ending with a delimiter is not stripped (nothing after)', () {
+    test('trailing slash is trimmed, yielding the last segment', () {
+      // A trailing delimiter used to leave the whole URL unstripped; now it is
+      // trimmed so the real last segment is returned (finding 4.4).
+      final r = service.process('https://example.com/cave/CAVE001/');
+      expect(r.qcri, 'CAVE001');
+      expect(r.hadUrlStrip, true);
+    });
+
+    test('single trailing-slash segment yields that segment', () {
       final r = service.process('https://example.com/cave/');
-      // Last slash is final char → nothing to strip to.
-      expect(r.hadUrlStrip, false);
-      expect(r.qcri, 'https://example.com/cave/');
+      expect(r.qcri, 'cave');
+      expect(r.hadUrlStrip, true);
+    });
+
+    test('query parameter value is extracted', () {
+      final r = service.process('https://mysite.com/scan?id=CAVE001');
+      expect(r.qcri, 'CAVE001');
+      expect(r.hadUrlStrip, true);
+    });
+
+    test('delimiters inside the host are never matched', () {
+      // Only the path/query is searched, so the host is never split on.
+      final r = service.process('https://ex-ample.com/CAVE001');
+      expect(r.qcri, 'CAVE001');
+      expect(r.hadUrlStrip, true);
     });
 
     test('URL strip happens before deep-link strip', () {

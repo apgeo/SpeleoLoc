@@ -116,15 +116,32 @@ class QrScanService {
     if (config.stripUrlToLastDelimiter &&
         (working.startsWith('http://') || working.startsWith('https://')) &&
         config.urlStripDelimiters.isNotEmpty) {
-      int lastIdx = -1;
-      for (final ch in config.urlStripDelimiters) {
-        if (ch.length == 1) {
-          final idx = working.lastIndexOf(ch);
-          if (idx > lastIdx) lastIdx = idx;
+      final delims = config.urlStripDelimiters
+          .where((d) => d.length == 1)
+          .toSet();
+
+      // Search only the path + query, never the scheme or host — otherwise a
+      // '/' from `https://` or the host would be matched. Parsing also lets us
+      // trim a trailing delimiter (e.g. a trailing '/') so it doesn't mask the
+      // real last segment. Falls back to the whole string for payloads that
+      // don't parse as a URI.
+      String searchable = working;
+      final uri = Uri.tryParse(working);
+      if (uri != null) {
+        var tail = uri.hasQuery ? '${uri.path}?${uri.query}' : uri.path;
+        while (tail.isNotEmpty && delims.contains(tail[tail.length - 1])) {
+          tail = tail.substring(0, tail.length - 1);
         }
+        if (tail.isNotEmpty) searchable = tail;
       }
-      if (lastIdx >= 0 && lastIdx < working.length - 1) {
-        working = working.substring(lastIdx + 1).trim();
+
+      int lastIdx = -1;
+      for (final ch in delims) {
+        final idx = searchable.lastIndexOf(ch);
+        if (idx > lastIdx) lastIdx = idx;
+      }
+      if (lastIdx >= 0 && lastIdx < searchable.length - 1) {
+        working = searchable.substring(lastIdx + 1).trim();
         hadUrlStrip = true;
       }
     }
