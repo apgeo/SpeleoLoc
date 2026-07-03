@@ -174,7 +174,10 @@ final caveTripServiceProvider = Provider<CaveTripService>(
 /// [CaveTripService]; this provider exposes the pure DB operations so
 /// screens stop reaching into the global [AppDatabase].
 final caveTripRepositoryProvider = Provider<ICaveTripRepository>(
-  (ref) => CaveTripRepository(ref.watch(appDatabaseProvider)),
+  (ref) => CaveTripRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(changeLoggerProvider),
+  ),
 );
 
 /// Documentation-file helper surface used by editor pages and the
@@ -182,7 +185,10 @@ final caveTripRepositoryProvider = Provider<ICaveTripRepository>(
 /// other writes still flow through [DocumentationFileHelper] until those
 /// call-sites are migrated in a follow-up PR-2 slice.
 final documentationRepositoryProvider = Provider<IDocumentationRepository>(
-  (ref) => DocumentationRepository(ref.watch(appDatabaseProvider)),
+  (ref) => DocumentationRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(changeLoggerProvider),
+  ),
 );
 
 /// Session-level preferences that persist for the lifetime of the app process.

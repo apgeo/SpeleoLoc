@@ -293,4 +293,10 @@ abstract class IDocumentationRepository {
   /// Returns `true` when at least one documentation file exists (not
   /// soft-deleted).
   Future<bool> hasAnyDocumentationFiles();
+
+  /// Deletes the documentation file with [uuid] plus its geofeature/trip
+  /// link rows, writing a change-log tombstone for every removed row so
+  /// the delete propagates to peers on sync. Always use this instead of
+  /// [AppDatabase.deleteDocumentationFileByUuid] outside bulk-load paths.
+  Future<void> deleteDocumentationFile(Uuid uuid);
 }

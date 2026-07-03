@@ -1,4 +1,5 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -12,9 +13,10 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// [AppDatabase]. Full DI of the trip service is the subject of PR 3.
 class CaveTripRepository implements ICaveTripRepository {
   final AppDatabase _database;
+  final ChangeLogger _logger;
   final _log = AppLogger.of('CaveTripRepository');
 
-  CaveTripRepository(this._database);
+  CaveTripRepository(this._database, this._logger);
 
   @override
   Future<CaveTrip?> findById(Uuid uuid) async {
@@ -89,7 +91,47 @@ class CaveTripRepository implements ICaveTripRepository {
   @override
   Future<void> deleteCaveTrip(Uuid tripUuid) async {
     try {
-      await _database.deleteCaveTrip(tripUuid);
+      await _database.transaction(() async {
+        // Snapshot the rows the cascade will remove, then log a tombstone
+        // for every one of them: sync propagates deletes per-uuid via
+        // change_log, so a missing child tombstone leaves orphaned rows on
+        // peers (and fails their deferred-FK check on import).
+        final trip = await findById(tripUuid);
+        final points = await _database.getTripPoints(tripUuid);
+        final docLinks = await (_database.select(
+          _database.documentationFilesToCaveTrips,
+        )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).get();
+
+        await _database.deleteCaveTrip(tripUuid);
+
+        if (trip != null) {
+          await _logger.logDelete(
+            'cave_trips',
+            tripUuid,
+            oldValues: {'title': trip.title, 'cave_uuid': trip.caveUuid},
+          );
+        }
+        for (final p in points) {
+          await _logger.logDelete(
+            'cave_trip_points',
+            p.uuid,
+            oldValues: {
+              'cave_trip_uuid': p.caveTripUuid,
+              'cave_place_uuid': p.cavePlaceUuid,
+            },
+          );
+        }
+        for (final l in docLinks) {
+          await _logger.logDelete(
+            'documentation_files_to_cave_trips',
+            l.uuid,
+            oldValues: {
+              'documentation_file_uuid': l.documentationFileUuid,
+              'cave_trip_uuid': l.caveTripUuid,
+            },
+          );
+        }
+      });
     } catch (e, st) {
       _log.severe('Failed to delete cave trip', e, st);
       throw DbException('Failed to delete cave trip', cause: e, stackTrace: st);
@@ -133,7 +175,20 @@ class CaveTripRepository implements ICaveTripRepository {
   @override
   Future<void> deleteTripReportTemplate(Uuid uuid) async {
     try {
-      await _database.deleteTripReportTemplate(uuid);
+      await _database.transaction(() async {
+        final template = await _database.getTripReportTemplate(uuid);
+        await _database.deleteTripReportTemplate(uuid);
+        if (template != null) {
+          await _logger.logDelete(
+            'trip_report_templates',
+            uuid,
+            oldValues: {
+              'title': template.title,
+              'file_name': template.fileName,
+            },
+          );
+        }
+      });
     } catch (e, st) {
       _log.severe('Failed to delete trip report template', e, st);
       throw DbException(

@@ -156,7 +156,7 @@ void main() {
     test(
       'hasAnyDocumentationFiles returns false when database has no files',
       () async {
-        final docRepo = DocumentationRepository(db);
+        final docRepo = DocumentationRepository(db, logger);
         expect(await docRepo.hasAnyDocumentationFiles(), isFalse);
       },
     );
