@@ -103,7 +103,11 @@ class DataExportImportRepository {
   Future<void> attachImportedDb(String path) async {
     // Normalize Windows back-slashes for SQLite.
     final safePath = path.replaceAll('\\', '/');
-    await _db.customStatement("ATTACH DATABASE '$safePath' AS imported");
+    // Bind the filename as a parameter rather than interpolating it into the
+    // SQL — a path containing a single quote would otherwise break the
+    // statement (or inject) (finding 3.8). SQLite accepts a bound parameter
+    // for the ATTACH filename expression.
+    await _db.customStatement('ATTACH DATABASE ? AS imported', [safePath]);
   }
 
   Future<void> detachImportedDb() async {
