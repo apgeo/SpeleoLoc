@@ -45,15 +45,20 @@ class AppLogger {
       // build time via --dart-define=SENTRY_DSN=... and is empty in debug
       // builds (where Sentry.init is a no-op), so this branch is safe to run
       // unconditionally.
+      //
+      // The free-form log message is deliberately NOT sent: messages across
+      // the app embed user content (cave/place names, file paths), which must
+      // not be uploaded to a third party without consent (finding 6.5). We
+      // report the structured error object when present, or a content-free
+      // placeholder otherwise, and group events by their source (logger +
+      // level) rather than by message text.
       if (record.level >= Level.WARNING && !kDebugMode) {
         Sentry.captureException(
-          record.error ?? record.message,
+          record.error ?? _LoggedWarning(record.loggerName, record.level.name),
           stackTrace: record.stackTrace,
-          hint: Hint.withMap({
-            'logger': record.loggerName,
-            'level': record.level.name,
-            'message': record.message,
-          }),
+          withScope: (scope) {
+            scope.fingerprint = [record.loggerName, record.level.name];
+          },
         );
       }
     });
@@ -75,4 +80,15 @@ class AppLogger {
 /// runtime type name: `log.info('...')`.
 extension AppLoggerX on Object {
   Logger get log => Logger(runtimeType.toString());
+}
+
+/// Placeholder exception reported to Sentry for a WARNING+ log record that
+/// carried no error object. Holds NO message content, so user data from the
+/// log line is never uploaded (see [AppLogger.init], finding 6.5).
+class _LoggedWarning implements Exception {
+  _LoggedWarning(this.loggerName, this.level);
+  final String loggerName;
+  final String level;
+  @override
+  String toString() => '$level logged by "$loggerName"';
 }
