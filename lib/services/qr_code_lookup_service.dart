@@ -28,13 +28,18 @@ class QrCodeLookupService {
     final code = rawCode.trim();
     if (code.isEmpty) return [];
 
+    // Case-insensitive match: QCRI is always lowercase base36, but a PCI can
+    // carry user-typed mixed case, and a QR reader may report a different
+    // case than what was stored. Compare LOWER(column) == LOWER(code) so a
+    // scan still resolves regardless of case (finding 4.7).
+    final lower = code.toLowerCase();
     List<CavePlace> places;
     if (currentCaveId != null) {
       places =
           await (_db.select(_db.cavePlaces)..where(
                 (cp) =>
-                    (cp.placeCodeIdentifier.equals(code) |
-                        cp.qrCodeResourceIdentifier.equals(code)) &
+                    (cp.placeCodeIdentifier.lower().equals(lower) |
+                        cp.qrCodeResourceIdentifier.lower().equals(lower)) &
                     cp.caveUuid.equalsValue(currentCaveId),
               ))
               .get();
@@ -42,8 +47,8 @@ class QrCodeLookupService {
       places =
           await (_db.select(_db.cavePlaces)..where(
                 (cp) =>
-                    cp.placeCodeIdentifier.equals(code) |
-                    cp.qrCodeResourceIdentifier.equals(code),
+                    cp.placeCodeIdentifier.lower().equals(lower) |
+                    cp.qrCodeResourceIdentifier.lower().equals(lower),
               ))
               .get();
     }
