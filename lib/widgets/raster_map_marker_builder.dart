@@ -364,24 +364,30 @@ class RasterMapMarkerBuilder {
     required double outlineWidth,
     required bool bgEnabled,
     required void Function(String title) onLongPress,
+    String? cavePlaceTitle,
   }) {
     final vp = imageToViewport(imageX, imageY, controllerValue);
 
-    String label = '';
-    try {
-      final match = definitions
-          .where(
-            (c) =>
-                c.definition != null &&
-                c.definition!.xCoordinate == imageX.toInt() &&
-                c.definition!.yCoordinate == imageY.toInt(),
-          )
-          .firstOrNull;
-      label = match?.cavePlace.title ?? '';
-    } catch (e, st) {
-      AppLogger.of(
-        'RasterMapMarkerBuilder',
-      ).fine('label lookup failed for marker at ($imageX, $imageY)', e, st);
+    // Prefer the title the caller resolved from the cave-place UUID. Only fall
+    // back to a pixel-coordinate lookup (ambiguous when two places share a
+    // coordinate — finding 4.6) when no title was supplied.
+    String label = cavePlaceTitle ?? '';
+    if (label.isEmpty) {
+      try {
+        final match = definitions
+            .where(
+              (c) =>
+                  c.definition != null &&
+                  c.definition!.xCoordinate == imageX.toInt() &&
+                  c.definition!.yCoordinate == imageY.toInt(),
+            )
+            .firstOrNull;
+        label = match?.cavePlace.title ?? '';
+      } catch (e, st) {
+        AppLogger.of(
+          'RasterMapMarkerBuilder',
+        ).fine('label lookup failed for marker at ($imageX, $imageY)', e, st);
+      }
     }
 
     return [

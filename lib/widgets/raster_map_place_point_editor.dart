@@ -919,6 +919,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   // Decoded image for color-sampling (now stored as raw RGBA for fast sampling)
   RawImageData? _img;
 
+  // Natural pixel dimensions of the displayed image, resolved from the image
+  // provider. Lets tap coordinates be clamped to the image bounds even when
+  // [_img] (the full RGBA decode) is not loaded — the common case when
+  // color-sampling is disabled (finding 4.3).
+  int? _naturalImgW;
+  int? _naturalImgH;
+
   // Last-known PhotoView viewport size (updated in the LayoutBuilder). This
   // is used by `zoomToPoint` so offsets are computed relative to the actual
   // editor viewport instead of the full screen (fixes image moving off-screen).
@@ -1237,6 +1244,26 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       _img = null;
       decodedImageCache.remove(widget.imageFile.path);
     }
+
+    _captureNaturalImageSize();
+  }
+
+  /// Resolves the displayed image's natural pixel size from its provider and
+  /// stores it in [_naturalImgW]/[_naturalImgH]. Independent of [_img], so tap
+  /// clamping works even when color-sampling is off.
+  void _captureNaturalImageSize() {
+    final provider = widget.imageProvider ?? FileImage(widget.imageFile);
+    final stream = provider.resolve(ImageConfiguration.empty);
+    ImageStreamListener? listener;
+    listener = ImageStreamListener((info, _) {
+      if (mounted) {
+        _naturalImgW = info.image.width;
+        _naturalImgH = info.image.height;
+      }
+      final l = listener;
+      if (l != null) stream.removeListener(l);
+    });
+    stream.addListener(listener);
   }
 
   @override
@@ -1262,6 +1289,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     // data so stale pixels from the old image are not used for text color.
     if (widget.imageFile.path != oldWidget.imageFile.path) {
       _img = null;
+      _naturalImgW = null;
+      _naturalImgH = null;
+      _captureNaturalImageSize();
       if (_useImageTextColor) {
         if (widget.useSimpleViewerForTests) {
           try {
@@ -1593,8 +1623,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     // When waiting for a new-cave-place tap, capture coordinates,
     // open popup, and auto-save the definition.
     if (_waitingForNewCavePlaceTap) {
-      final imgW = _img?.width.toDouble();
-      final imgH = _img?.height.toDouble();
+      final imgW = (_img?.width ?? _naturalImgW)?.toDouble();
+      final imgH = (_img?.height ?? _naturalImgH)?.toDouble();
       final mxX = (imgW != null && imgW > 0) ? (imgW - 1.0) : double.infinity;
       final mxY = (imgH != null && imgH > 0) ? (imgH - 1.0) : double.infinity;
       final cx = rawX.clamp(0.0, mxX);
@@ -1667,8 +1697,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       return;
     }
 
-    final imgWidth = _img?.width.toDouble();
-    final imgHeight = _img?.height.toDouble();
+    final imgWidth = (_img?.width ?? _naturalImgW)?.toDouble();
+    final imgHeight = (_img?.height ?? _naturalImgH)?.toDouble();
 
     final maxX = (imgWidth != null && imgWidth > 0)
         ? (imgWidth - 1.0)
@@ -2771,6 +2801,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                                 outlineEnabled: outlineEnabled,
                                 outlineWidth: outlineWidth,
                                 bgEnabled: bgEnabled,
+                                cavePlaceTitle:
+                                    _initialControllerCavePlaceTitle,
                                 onLongPress: _showLongTapToast,
                               ),
                             );
