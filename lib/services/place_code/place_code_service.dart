@@ -39,7 +39,7 @@ class PlaceCodeService {
   final QcriHasher _hasher;
 
   PlaceCodeService(this._db, {QcriHasher? hasher})
-      : _hasher = hasher ?? const QcriHasher();
+    : _hasher = hasher ?? const QcriHasher();
 
   // ----- Active strategy -----
 
@@ -78,8 +78,11 @@ class PlaceCodeService {
         }
       }
     } catch (e, st) {
-      log.warning('QCRI hash-config length read failed; using default 8',
-          e, st);
+      log.warning(
+        'QCRI hash-config length read failed; using default 8',
+        e,
+        st,
+      );
     }
     return 8;
   }
@@ -97,8 +100,7 @@ class PlaceCodeService {
         return decoded['entrance_hash'] as bool;
       }
     } catch (e, st) {
-      log.warning('QCRI entrance_hash flag read failed; assuming false',
-          e, st);
+      log.warning('QCRI entrance_hash flag read failed; assuming false', e, st);
     }
     return false;
   }
@@ -120,10 +122,11 @@ class PlaceCodeService {
   }
 
   Future<String?> _readConfig(String key) async {
-    final row = await (_db.select(_db.configurations)
-          ..where((c) => c.title.equals(key))
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.configurations)
+              ..where((c) => c.title.equals(key))
+              ..limit(1))
+            .getSingleOrNull();
     return row?.value;
   }
 
@@ -138,8 +141,9 @@ class PlaceCodeService {
   Future<PlaceCodeStrategy> activeStrategy() async {
     final id = await _readActiveStrategyId();
     final blob = await _readStrategyConfigBlob();
-    final strategyConfig =
-        (blob[id] is Map) ? Map<String, dynamic>.from(blob[id] as Map) : const <String, dynamic>{};
+    final strategyConfig = (blob[id] is Map)
+        ? Map<String, dynamic>.from(blob[id] as Map)
+        : const <String, dynamic>{};
     return _build(id, strategyConfig);
   }
 
@@ -177,7 +181,8 @@ class PlaceCodeService {
     if (mode == QcriMode.mirror) {
       final useHashForEntrance = await _readEntranceHashInMirrorMode();
       if (useHashForEntrance) {
-        final entrance = isEntrance ?? await _isCavePlaceEntrance(cavePlaceUuid);
+        final entrance =
+            isEntrance ?? await _isCavePlaceEntrance(cavePlaceUuid);
         if (entrance) {
           // Fall through to hash computation below.
         } else {
@@ -190,29 +195,38 @@ class PlaceCodeService {
     var length = await _readQcriLength();
     final userSalt = await _readQcriSalt();
     while (length <= QcriHasher.maxLength) {
-      final candidate = _hasher.hash(pci, length: length, userSalt: userSalt.isEmpty ? null : userSalt);
+      final candidate = _hasher.hash(
+        pci,
+        length: length,
+        userSalt: userSalt.isEmpty ? null : userSalt,
+      );
       final taken = await _qcriTakenExceptSelf(candidate, cavePlaceUuid);
       if (!taken) return candidate;
       length++;
     }
     // Fall back to the maximum-length hash even if it collides; the
     // caller will see the duplicate and can decide.
-    return _hasher.hash(pci, length: QcriHasher.maxLength, userSalt: userSalt.isEmpty ? null : userSalt);
+    return _hasher.hash(
+      pci,
+      length: QcriHasher.maxLength,
+      userSalt: userSalt.isEmpty ? null : userSalt,
+    );
   }
 
   Future<bool> _isCavePlaceEntrance(Uuid cavePlaceUuid) async {
-    final row = await (_db.select(_db.cavePlaces)
-          ..where((cp) => cp.uuid.equalsValue(cavePlaceUuid))
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.cavePlaces)
+              ..where((cp) => cp.uuid.equalsValue(cavePlaceUuid))
+              ..limit(1))
+            .getSingleOrNull();
     if (row == null) return false;
     return row.isEntrance == 1;
   }
 
   Future<bool> _qcriTakenExceptSelf(String qcri, Uuid cavePlaceUuid) async {
-    final dup = await (_db.select(_db.cavePlaces)
-          ..where((cp) => cp.qrCodeResourceIdentifier.equals(qcri)))
-        .get();
+    final dup = await (_db.select(
+      _db.cavePlaces,
+    )..where((cp) => cp.qrCodeResourceIdentifier.equals(qcri))).get();
     return dup.any((row) => row.uuid != cavePlaceUuid);
   }
 

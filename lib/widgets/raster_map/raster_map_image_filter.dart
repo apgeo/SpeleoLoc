@@ -55,8 +55,8 @@ class RasterMapImageFilter {
     this.highContrastEnabled = false,
     this.nightRedEnabled = false,
     // adjustable parameters (used in presets AND custom mode)
-    this.brightness = 0.0,   // range –1.0 … +1.0
-    this.contrast  = 1.0,    // range  0.2 … 3.0
+    this.brightness = 0.0, // range –1.0 … +1.0
+    this.contrast = 1.0, // range  0.2 … 3.0
   });
 
   final RasterMapFilterMode mode;
@@ -89,17 +89,16 @@ class RasterMapImageFilter {
     bool? nightRedEnabled,
     double? brightness,
     double? contrast,
-  }) =>
-      RasterMapImageFilter(
-        mode: mode ?? this.mode,
-        invertEnabled: invertEnabled ?? this.invertEnabled,
-        grayscaleEnabled: grayscaleEnabled ?? this.grayscaleEnabled,
-        sepiaEnabled: sepiaEnabled ?? this.sepiaEnabled,
-        highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
-        nightRedEnabled: nightRedEnabled ?? this.nightRedEnabled,
-        brightness: brightness ?? this.brightness,
-        contrast: contrast ?? this.contrast,
-      );
+  }) => RasterMapImageFilter(
+    mode: mode ?? this.mode,
+    invertEnabled: invertEnabled ?? this.invertEnabled,
+    grayscaleEnabled: grayscaleEnabled ?? this.grayscaleEnabled,
+    sepiaEnabled: sepiaEnabled ?? this.sepiaEnabled,
+    highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
+    nightRedEnabled: nightRedEnabled ?? this.nightRedEnabled,
+    brightness: brightness ?? this.brightness,
+    contrast: contrast ?? this.contrast,
+  );
 
   /// Returns [null] when no filter should be applied (normal mode, no
   /// brightness/contrast adjustments), allowing the caller to skip wrapping
@@ -136,19 +135,51 @@ class RasterMapImageFilter {
 
     // Identity matrix
     List<double> m = [
-      1, 0, 0, 0, 0,
-      0, 1, 0, 0, 0,
-      0, 0, 1, 0, 0,
-      0, 0, 0, 1, 0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
     ];
 
     // ── Helper matrices ───────────────────────────────────────────────────────
 
     List<double> invertMatrix() => [
-      -1,  0,  0, 0, 255,
-       0, -1,  0, 0, 255,
-       0,  0, -1, 0, 255,
-       0,  0,  0, 1,   0,
+      -1,
+      0,
+      0,
+      0,
+      255,
+      0,
+      -1,
+      0,
+      0,
+      255,
+      0,
+      0,
+      -1,
+      0,
+      255,
+      0,
+      0,
+      0,
+      1,
+      0,
     ];
 
     List<double> grayscaleMatrix() => const [
@@ -156,30 +187,62 @@ class RasterMapImageFilter {
       0.2126, 0.7152, 0.0722, 0, 0,
       0.2126, 0.7152, 0.0722, 0, 0,
       0.2126, 0.7152, 0.0722, 0, 0,
-      0,      0,      0,      1, 0,
+      0, 0, 0, 1, 0,
     ];
 
     List<double> sepiaMatrix() => const [
-      0.393, 0.769, 0.189, 0, 0,
-      0.349, 0.686, 0.168, 0, 0,
-      0.272, 0.534, 0.131, 0, 0,
-      0,     0,     0,     1, 0,
+      0.393,
+      0.769,
+      0.189,
+      0,
+      0,
+      0.349,
+      0.686,
+      0.168,
+      0,
+      0,
+      0.272,
+      0.534,
+      0.131,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
     ];
 
     // High contrast: multiply channels by 2 and offset so mid-grey stays grey.
     List<double> highContrastMatrix() => [
-       2, 0, 0, 0, -128 / 255 * 255,  // equivalent to offset -0.5 in 0-255 range
-       0, 2, 0, 0, -128 / 255 * 255,
-       0, 0, 2, 0, -128 / 255 * 255,
-       0, 0, 0, 1, 0,
+      2, 0, 0, 0, -128 / 255 * 255, // equivalent to offset -0.5 in 0-255 range
+      0, 2, 0, 0, -128 / 255 * 255,
+      0, 0, 2, 0, -128 / 255 * 255,
+      0, 0, 0, 1, 0,
     ];
 
     // Night-red: remove green and blue channels entirely.
     List<double> nightRedMatrix() => const [
-      1, 0, 0, 0, 0,
-      0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0,
-      0, 0, 0, 1, 0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
     ];
 
     List<double> brightnessContrastMatrix(double b, double c) {
@@ -187,10 +250,26 @@ class RasterMapImageFilter {
       //   out = c * in + (b + (1 - c) * 0.502) * 255
       final offset = (b + (1.0 - c) * 0.502) * 255;
       return [
-        c, 0, 0, 0, offset,
-        0, c, 0, 0, offset,
-        0, 0, c, 0, offset,
-        0, 0, 0, 1, 0,
+        c,
+        0,
+        0,
+        0,
+        offset,
+        0,
+        c,
+        0,
+        0,
+        offset,
+        0,
+        0,
+        c,
+        0,
+        offset,
+        0,
+        0,
+        0,
+        1,
+        0,
       ];
     }
 
@@ -219,10 +298,10 @@ class RasterMapImageFilter {
       case RasterMapFilterMode.custom:
         // Apply each enabled flag in a deterministic order.
         if (grayscaleEnabled) m = compose(grayscaleMatrix(), m);
-        if (sepiaEnabled)     m = compose(sepiaMatrix(), m);
+        if (sepiaEnabled) m = compose(sepiaMatrix(), m);
         if (highContrastEnabled) m = compose(highContrastMatrix(), m);
-        if (nightRedEnabled)  m = compose(nightRedMatrix(), m);
-        if (invertEnabled)    m = compose(invertMatrix(), m);
+        if (nightRedEnabled) m = compose(nightRedMatrix(), m);
+        if (invertEnabled) m = compose(invertMatrix(), m);
     }
 
     // Always apply brightness/contrast as the final step when non-identity.
@@ -237,6 +316,7 @@ class RasterMapImageFilter {
   static RasterMapImageFilter preset(RasterMapFilterMode mode) =>
       RasterMapImageFilter(mode: mode);
 
-  static const RasterMapImageFilter normal =
-      RasterMapImageFilter(mode: RasterMapFilterMode.normal);
+  static const RasterMapImageFilter normal = RasterMapImageFilter(
+    mode: RasterMapFilterMode.normal,
+  );
 }

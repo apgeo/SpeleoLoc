@@ -13,19 +13,21 @@ void main() {
   });
 
   group('applyProfile', () {
-    test('applies preset resolution and quality for every non-manual profile',
-        () {
-      const base = ImageCompressionSettings(enabled: true);
-      for (final p in ImageCompressionProfile.values) {
-        if (p == ImageCompressionProfile.manual) continue;
-        final applied = base.applyProfile(p);
-        final (res, q) = ImageCompressionSettings.presets[p]!;
-        expect(applied.profile, p, reason: p.name);
-        expect(applied.maxResolution, res, reason: p.name);
-        expect(applied.quality, q, reason: p.name);
-        expect(applied.enabled, isTrue, reason: 'enabled flag is preserved');
-      }
-    });
+    test(
+      'applies preset resolution and quality for every non-manual profile',
+      () {
+        const base = ImageCompressionSettings(enabled: true);
+        for (final p in ImageCompressionProfile.values) {
+          if (p == ImageCompressionProfile.manual) continue;
+          final applied = base.applyProfile(p);
+          final (res, q) = ImageCompressionSettings.presets[p]!;
+          expect(applied.profile, p, reason: p.name);
+          expect(applied.maxResolution, res, reason: p.name);
+          expect(applied.quality, q, reason: p.name);
+          expect(applied.enabled, isTrue, reason: 'enabled flag is preserved');
+        }
+      },
+    );
 
     test('manual profile keeps current maxResolution/quality untouched', () {
       const base = ImageCompressionSettings(
@@ -66,8 +68,7 @@ void main() {
           maxResolution: 1234,
           quality: 50,
         );
-        final restored =
-            ImageCompressionSettings.fromJson(original.toJson());
+        final restored = ImageCompressionSettings.fromJson(original.toJson());
         expect(restored.enabled, original.enabled, reason: p.name);
         expect(restored.profile, original.profile, reason: p.name);
         expect(restored.maxResolution, original.maxResolution, reason: p.name);

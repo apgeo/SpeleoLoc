@@ -12,16 +12,22 @@ void main() {
       final versions = schemaMigrations.map((m) => m.toVersion).toList();
       final sorted = [...versions]..sort();
       expect(versions, sorted, reason: 'registry must be in ascending order');
-      expect(versions.toSet().length, versions.length,
-          reason: 'no duplicate toVersion values');
+      expect(
+        versions.toSet().length,
+        versions.length,
+        reason: 'no duplicate toVersion values',
+      );
     });
 
     test('covers every version from 7 to the latest contiguously', () {
       final versions = schemaMigrations.map((m) => m.toVersion).toList();
       expect(versions.first, 7);
       for (var i = 1; i < versions.length; i++) {
-        expect(versions[i], versions[i - 1] + 1,
-            reason: 'gap between v${versions[i - 1]} and v${versions[i]}');
+        expect(
+          versions[i],
+          versions[i - 1] + 1,
+          reason: 'gap between v${versions[i - 1]} and v${versions[i]}',
+        );
       }
     });
 
@@ -63,12 +69,21 @@ void main() {
       ];
       for (final (m, v) in cases) {
         expect(m.toVersion, v);
-        expect(m.shouldApply(v - 1), isTrue,
-            reason: '${m.runtimeType} should apply when from == toVersion-1');
-        expect(m.shouldApply(v), isFalse,
-            reason: '${m.runtimeType} must not re-apply at its target version');
-        expect(m.shouldApply(v + 1), isFalse,
-            reason: '${m.runtimeType} must not run when already past target');
+        expect(
+          m.shouldApply(v - 1),
+          isTrue,
+          reason: '${m.runtimeType} should apply when from == toVersion-1',
+        );
+        expect(
+          m.shouldApply(v),
+          isFalse,
+          reason: '${m.runtimeType} must not re-apply at its target version',
+        );
+        expect(
+          m.shouldApply(v + 1),
+          isFalse,
+          reason: '${m.runtimeType} must not run when already past target',
+        );
       }
     });
 
@@ -76,9 +91,9 @@ void main() {
       // Walking the same algorithm the engine uses, check which steps
       // fire for representative starting versions.
       List<int> appliedFor(int from) => [
-            for (final m in schemaMigrations)
-              if (m.shouldApply(from)) m.toVersion,
-          ];
+        for (final m in schemaMigrations)
+          if (m.shouldApply(from)) m.toVersion,
+      ];
 
       // Pre-v7: legacy step runs (calls createAll at the latest schema),
       // V7->V8 is gated off (from != 7), and V8..V15 run as no-op-ish

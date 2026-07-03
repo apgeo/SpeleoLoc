@@ -36,10 +36,7 @@ class CavePlaceRasterMapsSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Text(
               '${LocServ.inst.t('raster_maps')}:',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           DefaultTabController(
@@ -71,8 +68,8 @@ class CavePlaceRasterMapsSection extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      onPressed: currentTabIndex <
-                              (tabController?.length ?? 0) - 1
+                      onPressed:
+                          currentTabIndex < (tabController?.length ?? 0) - 1
                           ? () => tabController?.animateTo(currentTabIndex + 1)
                           : null,
                       icon: const Icon(Icons.arrow_right),
@@ -83,8 +80,7 @@ class CavePlaceRasterMapsSection extends StatelessWidget {
                   height: 350,
                   child: TabBarView(
                     controller: tabController,
-                    children:
-                        rasterMaps.map((rm) => buildMapTab(rm)).toList(),
+                    children: rasterMaps.map((rm) => buildMapTab(rm)).toList(),
                   ),
                 ),
               ],

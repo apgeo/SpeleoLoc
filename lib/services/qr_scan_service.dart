@@ -28,33 +28,32 @@ class QrScanConfig {
   /// Falls back to [QrScanConfig()] on any error or if not yet saved.
   static Future<QrScanConfig> load() async {
     try {
-      final decoded =
-          await configurationRepository.readJson(qrScanConfigKey);
+      final decoded = await configurationRepository.readJson(qrScanConfigKey);
       if (decoded.isEmpty) return const QrScanConfig();
       final rawDelimiters = decoded['urlStripDelimiters'];
       final delimiters = (rawDelimiters is List)
           ? rawDelimiters
-              .whereType<String>()
-              .where((s) => s.length == 1)
-              .toList()
+                .whereType<String>()
+                .where((s) => s.length == 1)
+                .toList()
           : const <String>['/', '='];
       return QrScanConfig(
         stripUrlToLastDelimiter:
             decoded['stripUrlToLastDelimiter'] as bool? ?? true,
-        urlStripDelimiters:
-            delimiters.isEmpty ? const ['/', '='] : delimiters,
+        urlStripDelimiters: delimiters.isEmpty ? const ['/', '='] : delimiters,
       );
     } catch (e, st) {
-      AppLogger.of('QrScanConfig')
-          .warning('QR scan config decode failed; using defaults', e, st);
+      AppLogger.of(
+        'QrScanConfig',
+      ).warning('QR scan config decode failed; using defaults', e, st);
       return const QrScanConfig();
     }
   }
 
   Map<String, dynamic> toJson() => {
-        'stripUrlToLastDelimiter': stripUrlToLastDelimiter,
-        'urlStripDelimiters': urlStripDelimiters,
-      };
+    'stripUrlToLastDelimiter': stripUrlToLastDelimiter,
+    'urlStripDelimiters': urlStripDelimiters,
+  };
 }
 
 /// Result of processing a raw scanned QR payload.
@@ -97,8 +96,10 @@ class QrScanService {
   /// [config] defaults to [QrScanConfig()] (URL stripping enabled, using
   /// `/` and `=` as delimiters). Pass a loaded config to respect user
   /// settings.
-  QrScanResult process(String payload,
-      {QrScanConfig config = const QrScanConfig()}) {
+  QrScanResult process(
+    String payload, {
+    QrScanConfig config = const QrScanConfig(),
+  }) {
     final trimmed = payload.trim();
     if (trimmed.isEmpty) {
       return QrScanResult(

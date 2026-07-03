@@ -73,8 +73,10 @@ class BeaconDetectionService {
       final config = await BeaconDetectionConfig.load();
       if (!config.enabled) return;
       if (!await _permissionsAlreadyGranted()) {
-        _log.info('Beacon detection enabled but permissions missing; '
-            'staying off until granted via settings');
+        _log.info(
+          'Beacon detection enabled but permissions missing; '
+          'staying off until granted via settings',
+        );
         return;
       }
       await flutterBeacon.initializeScanning;
@@ -83,16 +85,19 @@ class BeaconDetectionService {
       _watchRegistrations();
 
       final uuids = await BeaconScanHelper.loadRegionUuids();
-      _rangingSub =
-          flutterBeacon.ranging(BeaconScanHelper.buildRegions(uuids)).listen(
-        _onRangingResult,
-        onError: (Object e, StackTrace st) =>
-            _log.warning('Detection ranging error', e, st),
-      );
+      _rangingSub = flutterBeacon
+          .ranging(BeaconScanHelper.buildRegions(uuids))
+          .listen(
+            _onRangingResult,
+            onError: (Object e, StackTrace st) =>
+                _log.warning('Detection ranging error', e, st),
+          );
       _running = true;
-      _log.info('Beacon detection started '
-          '(threshold ${config.rssiThresholdDbm} dBm, '
-          'cooldown ${config.cooldownSec} s)');
+      _log.info(
+        'Beacon detection started '
+        '(threshold ${config.rssiThresholdDbm} dBm, '
+        'cooldown ${config.cooldownSec} s)',
+      );
     } catch (e, st) {
       // Platform channels are unavailable in widget tests and detection
       // must never break app startup — log and stay off.
@@ -162,8 +167,10 @@ class BeaconDetectionService {
         notificationText: LocServ.inst.t('beacon_background_notif_text'),
       );
       if (result is! ServiceRequestSuccess) {
-        _log.warning('Foreground service refused: $result — '
-            'stopping detection with the app');
+        _log.warning(
+          'Foreground service refused: $result — '
+          'stopping detection with the app',
+        );
         await stop();
         return;
       }
@@ -177,8 +184,10 @@ class BeaconDetectionService {
       await flutterBeacon.setBetweenScanPeriod(between);
       _engine?.config = config.copyWith(debounceCount: 1);
       _inBackground = true;
-      _log.info('Background detection: burst ${_backgroundScanBurstMs}ms '
-          'every ${config.backgroundScanIntervalSec}s');
+      _log.info(
+        'Background detection: burst ${_backgroundScanBurstMs}ms '
+        'every ${config.backgroundScanIntervalSec}s',
+      );
     } catch (e, st) {
       _log.warning('Failed to enter background detection mode', e, st);
       await stop();
@@ -239,17 +248,20 @@ class BeaconDetectionService {
   /// (assign/unassign/import all refresh it automatically).
   void _watchRegistrations() {
     final db = appDatabase;
-    _registrationsSub = (db.select(db.cavePlaceBeacons)
-          ..where((b) => b.deletedAt.isNull()))
-        .watch()
-        .listen((rows) {
-      _engine?.updateRegistrations({
-        for (final r in rows)
-          '${r.proximityUuid.toUpperCase()}/${r.major}/${r.minor}'
-      });
-    }, onError: (Object e, StackTrace st) {
-      _log.warning('Registration watch error', e, st);
-    });
+    _registrationsSub =
+        (db.select(
+          db.cavePlaceBeacons,
+        )..where((b) => b.deletedAt.isNull())).watch().listen(
+          (rows) {
+            _engine?.updateRegistrations({
+              for (final r in rows)
+                '${r.proximityUuid.toUpperCase()}/${r.major}/${r.minor}',
+            });
+          },
+          onError: (Object e, StackTrace st) {
+            _log.warning('Registration watch error', e, st);
+          },
+        );
   }
 
   void _onRangingResult(RangingResult result) {
@@ -276,8 +288,10 @@ class BeaconDetectionService {
 
       final selected = await _selectMatch(matches);
       final place = selected.cavePlace;
-      _log.info('Beacon trigger → place "${place.title}" '
-          '(${b.proximityUUID}/${b.major}/${b.minor}, ${b.rssi} dBm)');
+      _log.info(
+        'Beacon trigger → place "${place.title}" '
+        '(${b.proximityUUID}/${b.major}/${b.minor}, ${b.rssi} dBm)',
+      );
 
       unawaited(beaconRepository.updateHealth(selected.beacon.uuid));
 
@@ -285,8 +299,7 @@ class BeaconDetectionService {
       final activeTripCaveId = await caveTripService.getActiveTripCaveId();
       final tripPointRecorded = activeTripCaveId == place.caveUuid;
       if (tripPointRecorded) {
-        await caveTripService.recordPoint(place.uuid,
-            placeTitle: place.title);
+        await caveTripService.recordPoint(place.uuid, placeTitle: place.title);
       }
 
       if (_inBackground) {
@@ -347,8 +360,10 @@ class BeaconDetectionService {
       final sortOption = await RasterMapSortOption.load();
       final sortedMaps = sortOption.apply(allMaps, []);
       for (final rm in sortedMaps) {
-        final def =
-            await definitionRepository.findDefinition(place.uuid, rm.uuid);
+        final def = await definitionRepository.findDefinition(
+          place.uuid,
+          rm.uuid,
+        );
         if (def != null) {
           bestMapUuid = rm.uuid;
           break;

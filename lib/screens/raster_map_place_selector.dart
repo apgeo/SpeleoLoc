@@ -34,7 +34,8 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
   final bool initialTapDefinesNewPoint;
 
   @override
-  State<RasterMapPlaceSelectorPage> createState() => _RasterMapPlaceSelectorPageState();
+  State<RasterMapPlaceSelectorPage> createState() =>
+      _RasterMapPlaceSelectorPageState();
 }
 
 class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
@@ -48,9 +49,21 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'map', titleLocKey: 'tour_raster_map_selector_map_title', bodyLocKey: 'tour_raster_map_selector_map_body'),
-    TourStepDef(keyId: 'navbar', titleLocKey: 'tour_raster_map_selector_navbar_title', bodyLocKey: 'tour_raster_map_selector_navbar_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_raster_map_selector_menu_title', bodyLocKey: 'tour_raster_map_selector_menu_body'),
+    TourStepDef(
+      keyId: 'map',
+      titleLocKey: 'tour_raster_map_selector_map_title',
+      bodyLocKey: 'tour_raster_map_selector_map_body',
+    ),
+    TourStepDef(
+      keyId: 'navbar',
+      titleLocKey: 'tour_raster_map_selector_navbar_title',
+      bodyLocKey: 'tour_raster_map_selector_navbar_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_raster_map_selector_menu_title',
+      bodyLocKey: 'tour_raster_map_selector_menu_body',
+    ),
   ];
 
   // Selected image-space coordinates received from the editor widget
@@ -58,24 +71,24 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   double? _imageSelectedY;
 
   // Controller for programmatic editor actions (widget-internal legend/controls hidden — placed at bottom)
-  final RasterMapPlacePointEditorController _editorController =
-      RasterMapPlacePointEditorController(
-        showLegend: false,
-        showZoomControls: !false,
-        showNavBar: true,
-        showTapModeCheckbox: true,
-        initialTapDefinesNewPoint: true,
-        
-        autoZoomToPoints: true,
-        keepZoomOnNavigation: true,
+  final RasterMapPlacePointEditorController
+  _editorController = RasterMapPlacePointEditorController(
+    showLegend: false,
+    showZoomControls: !false,
+    showNavBar: true,
+    showTapModeCheckbox: true,
+    initialTapDefinesNewPoint: true,
 
-        //todo: check/fix - label color not working in most cases, maybe something to do with the source of calculation and moment
-        useImageTextColor: true,
-        //todo: check - seems like when enabled, the zoom is constrained to a max level, jumping back if zoomed too far on point switch
-        animatePointTransitions: true,
-        // gestureZoomEnabled: !true,
-        
-      );
+    autoZoomToPoints: true,
+    keepZoomOnNavigation: true,
+
+    //todo: check/fix - label color not working in most cases, maybe something to do with the source of calculation and moment
+    useImageTextColor: true,
+    //todo: check - seems like when enabled, the zoom is constrained to a max level, jumping back if zoomed too far on point switch
+    animatePointTransitions: true,
+
+    // gestureZoomEnabled: !true,
+  );
 
   static const bool DEBUG_UI = false;
 
@@ -126,7 +139,8 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     _editorController.setCavePlaceId(_selectedCavePlaceId);
 
     // propagate widget-level tap-mode preference to the controller
-    _editorController.initialTapDefinesNewPoint = widget.initialTapDefinesNewPoint;
+    _editorController.initialTapDefinesNewPoint =
+        widget.initialTapDefinesNewPoint;
 
     // In view-only mode, don't auto-zoom to points when not already zoomed
     if (widget.isReadonly) {
@@ -135,7 +149,10 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _loadCompactNavState() async {
-    final val = await SettingsHelper.loadStringConfig(compactNavBarKey, 'false');
+    final val = await SettingsHelper.loadStringConfig(
+      compactNavBarKey,
+      'false',
+    );
     if (mounted) setState(() => _compactNavBar = val == 'true');
   }
 
@@ -151,8 +168,13 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
 
   /// Applies the current [_cavePlaceSortOption] to [places] and returns the
   /// sorted copy.
-  List<CavePlaceWithDefinition> _sortPlaces(List<CavePlaceWithDefinition> places) =>
-      _cavePlaceSortOption.apply(places, _caveAreaTitles, _definitionCountByPlace);
+  List<CavePlaceWithDefinition> _sortPlaces(
+    List<CavePlaceWithDefinition> places,
+  ) => _cavePlaceSortOption.apply(
+    places,
+    _caveAreaTitles,
+    _definitionCountByPlace,
+  );
 
   Future<void> _loadCaveAreas() async {
     final areas = await caveRepository.getCaveAreas(widget.rasterMap.caveUuid);
@@ -166,39 +188,51 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _loadRasterMaps() async {
-    final maps = await rasterMapRepository.getRasterMaps(widget.rasterMap.caveUuid);
+    final maps = await rasterMapRepository.getRasterMaps(
+      widget.rasterMap.caveUuid,
+    );
 
     // Collect definition counts across all raster maps for the definitions_count sort.
     if (maps.isNotEmpty) {
       final rasterMapIds = maps.map((r) => r.uuid).toList();
       try {
-        final allDefs = await definitionRepository.getDefinitionsForRasterMaps(rasterMapIds);
+        final allDefs = await definitionRepository.getDefinitionsForRasterMaps(
+          rasterMapIds,
+        );
         final placeToRasters = <Uuid, Set<Uuid>>{};
         for (final d in allDefs) {
-          placeToRasters.putIfAbsent(d.cavePlaceUuid, () => <Uuid>{}).add(d.rasterMapUuid);
+          placeToRasters
+              .putIfAbsent(d.cavePlaceUuid, () => <Uuid>{})
+              .add(d.rasterMapUuid);
         }
         _definitionCountByPlace = {
           for (final e in placeToRasters.entries) e.key: e.value.length,
         };
       } catch (e, st) {
-        AppLogger.of('RasterMapPlaceSelector').warning('_loadRasterMaps: failed to load all defs', e, st);
+        AppLogger.of(
+          'RasterMapPlaceSelector',
+        ).warning('_loadRasterMaps: failed to load all defs', e, st);
         _definitionCountByPlace = {};
       }
     }
 
     if (mounted) {
       setState(() {
-        _rasterMaps = _editorController.sortOption.apply(maps, _placesWithDefinitions);
+        _rasterMaps = _editorController.sortOption.apply(
+          maps,
+          _placesWithDefinitions,
+        );
         _placesWithDefinitions = _sortPlaces(_placesWithDefinitions);
       });
     }
   }
 
   Future<void> _loadDefinitionsForSelected() async {
-    final defs = await definitionRepository.getCavePlacesWithDefinitionsForRasterMap(
-      _selectedRasterMap.caveUuid,
-      _selectedRasterMap.uuid,
-    );
+    final defs = await definitionRepository
+        .getCavePlacesWithDefinitionsForRasterMap(
+          _selectedRasterMap.caveUuid,
+          _selectedRasterMap.uuid,
+        );
     final file = await getDocumentsFile(_selectedRasterMap.fileName);
     if (!mounted) return;
     setState(() {
@@ -215,7 +249,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     try {
       _editorController.setCavePlaceId(_selectedCavePlaceId);
     } catch (e, st) {
-      AppLogger.of('RasterMapPlaceSelector').fine('setCavePlaceId after load failed', e, st);
+      AppLogger.of(
+        'RasterMapPlaceSelector',
+      ).fine('setCavePlaceId after load failed', e, st);
     }
   }
 
@@ -223,7 +259,10 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     Uuid cavePlaceUuid,
     List<CavePlaceWithDefinition> list,
   ) {
-    return list.where((c) => c.cavePlace.uuid == cavePlaceUuid).firstOrNull?.definition;
+    return list
+        .where((c) => c.cavePlace.uuid == cavePlaceUuid)
+        .firstOrNull
+        ?.definition;
   }
 
   Future<bool> _confirmAutoSaveIfNeeded() async {
@@ -258,11 +297,21 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     double imageX,
     double imageY,
   ) async {
-    final saved = await definitionRepository.saveDefinition(cavePlaceUuid, rasterMapUuid, imageX, imageY);
+    final saved = await definitionRepository.saveDefinition(
+      cavePlaceUuid,
+      rasterMapUuid,
+      imageX,
+      imageY,
+    );
     // keep local list in sync so subsequent navigation reflects the persisted state
-    final idx = _placesWithDefinitions.indexWhere((c) => c.cavePlace.uuid == cavePlaceUuid);
+    final idx = _placesWithDefinitions.indexWhere(
+      (c) => c.cavePlace.uuid == cavePlaceUuid,
+    );
     if (idx >= 0) {
-      _placesWithDefinitions[idx] = CavePlaceWithDefinition(_placesWithDefinitions[idx].cavePlace, saved);
+      _placesWithDefinitions[idx] = CavePlaceWithDefinition(
+        _placesWithDefinitions[idx].cavePlace,
+        saved,
+      );
     }
   }
 
@@ -278,11 +327,19 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     return true;
   }
 
-  Future<bool> _handleRemoveDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
-    final removed = await definitionRepository.deleteDefinition(cavePlaceUuid, rasterMapUuid);
+  Future<bool> _handleRemoveDefinition(
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
+  ) async {
+    final removed = await definitionRepository.deleteDefinition(
+      cavePlaceUuid,
+      rasterMapUuid,
+    );
     if (removed) {
       // Update local list so the UI reflects the deletion immediately.
-      final idx = _placesWithDefinitions.indexWhere((c) => c.cavePlace.uuid == cavePlaceUuid);
+      final idx = _placesWithDefinitions.indexWhere(
+        (c) => c.cavePlace.uuid == cavePlaceUuid,
+      );
       if (idx >= 0) {
         _placesWithDefinitions[idx] = CavePlaceWithDefinition(
           _placesWithDefinitions[idx].cavePlace,
@@ -370,7 +427,10 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _showCavePlacesSortDialog() async {
-    final option = await showCavePlacesSortDialog(context, _cavePlaceSortOption);
+    final option = await showCavePlacesSortDialog(
+      context,
+      _cavePlaceSortOption,
+    );
     if (option == null || !mounted) return;
     await option.save();
     setState(() {
@@ -452,7 +512,8 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
         .where((c) => c.cavePlace.uuid == _selectedCavePlaceId)
         .map((c) => c.cavePlace)
         .firstOrNull;
-    final caveAreaSuffix = (selectedCp?.caveAreaUuid != null &&
+    final caveAreaSuffix =
+        (selectedCp?.caveAreaUuid != null &&
             _caveAreaTitles.containsKey(selectedCp!.caveAreaUuid))
         ? ' (${_caveAreaTitles[selectedCp.caveAreaUuid!]})'
         : '';
@@ -461,118 +522,147 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       extendBody: true,
-      appBar: _isFullScreen ? null : AppBar(
-        titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _selectedRasterMap.title,
-              style: const TextStyle(fontSize: 16),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (cavePlaceTitle != null)
-              Text(
-                '$cavePlaceTitle$caveAreaSuffix',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context).hintColor,
-                ),
+      appBar: _isFullScreen
+          ? null
+          : AppBar(
+              titleSpacing: 0,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedRasterMap.title,
+                    style: const TextStyle(fontSize: 16),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (cavePlaceTitle != null)
+                    Text(
+                      '$cavePlaceTitle$caveAreaSuffix',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).hintColor,
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: LocServ.inst.t('compact_nav'),
-            icon: Icon(_compactNavBar ? Icons.view_compact : Icons.view_comfortable),
-            onPressed: () {
-              setState(() {
-                _compactNavBar = !_compactNavBar;
-              });
-              // Switching format — make both lists visible so neither is
-              // unexpectedly hidden after the format change.
-              _editorController.ensureBothListsVisible();
-              SettingsHelper.saveStringConfig(compactNavBarKey, _compactNavBar.toString());
-            },
-          ),
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
+              actions: [
+                IconButton(
+                  tooltip: LocServ.inst.t('compact_nav'),
+                  icon: Icon(
+                    _compactNavBar
+                        ? Icons.view_compact
+                        : Icons.view_comfortable,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _compactNavBar = !_compactNavBar;
+                    });
+                    // Switching format — make both lists visible so neither is
+                    // unexpectedly hidden after the format change.
+                    _editorController.ensureBothListsVisible();
+                    SettingsHelper.saveStringConfig(
+                      compactNavBarKey,
+                      _compactNavBar.toString(),
+                    );
+                  },
+                ),
+                KeyedSubtree(
+                  key: tourKeys['menu'],
+                  child: buildAppBarMenuButton(),
+                ),
+              ],
+            ),
       // bottom controls: legend + zoom controls + save button — responsive layout
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(8.0),
-        child: LayoutBuilder(builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 520;
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 520;
 
-          if (isNarrow) {
-            return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Row(children: [
-                  // const Expanded(child: RasterMapPointsLegend()),
-                  // const SizedBox(width: 12),
-                ]),
-              ),
-            ]);
-          }
+            if (isNarrow) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Row(
+                      children: [
+                        // const Expanded(child: RasterMapPointsLegend()),
+                        // const SizedBox(width: 12),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
 
-          return Row(children: [
-            // const Padding(padding: EdgeInsets.only(left: 4.0), child: RasterMapPointsLegend()),
-            // const SizedBox(width: 12),
-          ]);
-        }),
+            return Row(
+              children: [
+                // const Padding(padding: EdgeInsets.only(left: 4.0), child: RasterMapPointsLegend()),
+                // const SizedBox(width: 12),
+              ],
+            );
+          },
+        ),
       ),
 
       body: !_imageLoaded
           ? const Center(child: CircularProgressIndicator())
           : _imageFile == null
-              ? Center(child: Text(LocServ.inst.t('image_not_found')))
-              : Column(
-                  children: [
-                    // Editor handles image display, taps, overlays and zoom controls.
-                    Expanded(
-                      key: tourKeys['map'],
-                      child: ClipRect(
-                        child: RasterMapPlacePointEditor(
-                          controller: _editorController,
-                          imageFile: _imageFile!,
-                          cavePlacesWithDefinitions: _placesWithDefinitions,
-                          initialImageX: _selectedDefinition?.xCoordinate?.toDouble(),
-                          initialImageY: _selectedDefinition?.yCoordinate?.toDouble(),
-                          isReadonly: widget.isReadonly,
-                          debugUi: DEBUG_UI,
-                          rasterMaps: _rasterMaps,
-                          selectedRasterMapUuid: _selectedRasterMap.uuid,
-                          navBarStyle: _compactNavBar ? const RasterMapNavBarStyle.compact() : const RasterMapNavBarStyle(),
-                          onRasterMapSelected: _onRasterMapSelected,
-                          onCavePlaceSelected: _onCavePlaceSelected,
-                          onAutoSaveRequested: _handleAutoSaveRequested,
-                          onRemoveDefinitionRequested: _handleRemoveDefinition,
-                          onSaveDefinitionRequested: widget.isReadonly ? null : _definePlace,
-                          caveUuid: widget.rasterMap.caveUuid,
-                          caveAreaTitles: _caveAreaTitles,
-                          groupPlacesByCaveArea: _cavePlaceSortOption.groupByCaveArea,
-                          onCavePlaceAdded: () {
-                            _loadDefinitionsForSelected();
-                          },
-                          onSortCavePlacesRequested: _showCavePlacesSortDialog,
-                          onSortRasterMapsRequested: _showSortDialog,
-                          onManageRasterMapsRequested: _openRasterMapsPage,
-                          onFullScreenChanged: (isFullScreen) {
-                            setState(() => _isFullScreen = isFullScreen);
-                          },
-                          onImagePointChanged: (x, y) {
-                            setState(() {
-                              _imageSelectedX = x;
-                              _imageSelectedY = y;
-                            });
-                          },
-                        ),
-                      ),
+          ? Center(child: Text(LocServ.inst.t('image_not_found')))
+          : Column(
+              children: [
+                // Editor handles image display, taps, overlays and zoom controls.
+                Expanded(
+                  key: tourKeys['map'],
+                  child: ClipRect(
+                    child: RasterMapPlacePointEditor(
+                      controller: _editorController,
+                      imageFile: _imageFile!,
+                      cavePlacesWithDefinitions: _placesWithDefinitions,
+                      initialImageX: _selectedDefinition?.xCoordinate
+                          ?.toDouble(),
+                      initialImageY: _selectedDefinition?.yCoordinate
+                          ?.toDouble(),
+                      isReadonly: widget.isReadonly,
+                      debugUi: DEBUG_UI,
+                      rasterMaps: _rasterMaps,
+                      selectedRasterMapUuid: _selectedRasterMap.uuid,
+                      navBarStyle: _compactNavBar
+                          ? const RasterMapNavBarStyle.compact()
+                          : const RasterMapNavBarStyle(),
+                      onRasterMapSelected: _onRasterMapSelected,
+                      onCavePlaceSelected: _onCavePlaceSelected,
+                      onAutoSaveRequested: _handleAutoSaveRequested,
+                      onRemoveDefinitionRequested: _handleRemoveDefinition,
+                      onSaveDefinitionRequested: widget.isReadonly
+                          ? null
+                          : _definePlace,
+                      caveUuid: widget.rasterMap.caveUuid,
+                      caveAreaTitles: _caveAreaTitles,
+                      groupPlacesByCaveArea:
+                          _cavePlaceSortOption.groupByCaveArea,
+                      onCavePlaceAdded: () {
+                        _loadDefinitionsForSelected();
+                      },
+                      onSortCavePlacesRequested: _showCavePlacesSortDialog,
+                      onSortRasterMapsRequested: _showSortDialog,
+                      onManageRasterMapsRequested: _openRasterMapsPage,
+                      onFullScreenChanged: (isFullScreen) {
+                        setState(() => _isFullScreen = isFullScreen);
+                      },
+                      onImagePointChanged: (x, y) {
+                        setState(() {
+                          _imageSelectedX = x;
+                          _imageSelectedY = y;
+                        });
+                      },
                     ),
-                  ],
+                  ),
                 ),
+              ],
+            ),
     );
   }
 }

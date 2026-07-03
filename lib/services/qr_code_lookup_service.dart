@@ -21,40 +21,49 @@ class QrCodeLookupService {
   /// Looks up cave places whose PCI or QCRI equals [rawCode].
   ///
   /// Returns an empty list when [rawCode] is empty after trimming.
-  Future<List<QrLookupResult>> lookup(String rawCode, {Uuid? currentCaveId}) async {
+  Future<List<QrLookupResult>> lookup(
+    String rawCode, {
+    Uuid? currentCaveId,
+  }) async {
     final code = rawCode.trim();
     if (code.isEmpty) return [];
 
     List<CavePlace> places;
     if (currentCaveId != null) {
-      places = await (_db.select(_db.cavePlaces)
-            ..where((cp) =>
-                (cp.placeCodeIdentifier.equals(code) |
+      places =
+          await (_db.select(_db.cavePlaces)..where(
+                (cp) =>
+                    (cp.placeCodeIdentifier.equals(code) |
                         cp.qrCodeResourceIdentifier.equals(code)) &
-                cp.caveUuid.equalsValue(currentCaveId)))
-          .get();
+                    cp.caveUuid.equalsValue(currentCaveId),
+              ))
+              .get();
     } else {
-      places = await (_db.select(_db.cavePlaces)
-            ..where((cp) =>
-                cp.placeCodeIdentifier.equals(code) |
-                cp.qrCodeResourceIdentifier.equals(code)))
-          .get();
+      places =
+          await (_db.select(_db.cavePlaces)..where(
+                (cp) =>
+                    cp.placeCodeIdentifier.equals(code) |
+                    cp.qrCodeResourceIdentifier.equals(code),
+              ))
+              .get();
     }
 
     if (places.isEmpty) return [];
 
     // Fetch cave titles for all matching places
     final caveIds = places.map((p) => p.caveUuid).toSet();
-    final caves = await (_db.select(_db.caves)
-          ..where((c) => c.uuid.isInValues(caveIds)))
-        .get();
+    final caves = await (_db.select(
+      _db.caves,
+    )..where((c) => c.uuid.isInValues(caveIds))).get();
     final caveTitles = {for (final c in caves) c.uuid: c.title};
 
     return places
-        .map((p) => QrLookupResult(
-              cavePlace: p,
-              caveTitle: caveTitles[p.caveUuid] ?? '',
-            ))
+        .map(
+          (p) => QrLookupResult(
+            cavePlace: p,
+            caveTitle: caveTitles[p.caveUuid] ?? '',
+          ),
+        )
         .toList();
   }
 }

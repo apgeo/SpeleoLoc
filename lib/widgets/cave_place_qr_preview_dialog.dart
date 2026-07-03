@@ -23,11 +23,16 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// settings and displays it in a properly sized, zoomable dialog.
 class CavePlaceQrPreviewDialog extends StatefulWidget {
   final CavePlace cavePlace;
+
   /// When set, overrides [cavePlace.placeCodeIdentifier] for the preview.
   /// Use this to preview unsaved changes before the user hits save.
   final String? qrIdentifierOverride;
 
-  const CavePlaceQrPreviewDialog({super.key, required this.cavePlace, this.qrIdentifierOverride});
+  const CavePlaceQrPreviewDialog({
+    super.key,
+    required this.cavePlace,
+    this.qrIdentifierOverride,
+  });
 
   @override
   State<CavePlaceQrPreviewDialog> createState() =>
@@ -37,7 +42,11 @@ class CavePlaceQrPreviewDialog extends StatefulWidget {
   /// [qrIdentifierOverride] lets callers preview a code that has not
   /// been saved yet (e.g. an unsaved value in the form field).
   /// Does nothing if there is no code identifier to render.
-  static void show(BuildContext context, CavePlace cavePlace, {String? qrIdentifierOverride}) {
+  static void show(
+    BuildContext context,
+    CavePlace cavePlace, {
+    String? qrIdentifierOverride,
+  }) {
     final effectiveQr = qrIdentifierOverride ?? cavePlace.placeCodeIdentifier;
     if (effectiveQr == null || effectiveQr.isEmpty) return;
     showDialog(
@@ -72,15 +81,17 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
       final prefs = GenerationPreferences(
         includeTitle: cfg['includeTitle'] ?? true,
         qrSizePx: cfg['qrSizePx'] ?? QrGenerationDefaults.qrSizePx,
-        imagePaddingPx: cfg['imagePaddingPx'] ?? QrGenerationDefaults.imagePaddingPx,
+        imagePaddingPx:
+            cfg['imagePaddingPx'] ?? QrGenerationDefaults.imagePaddingPx,
         labelFontSize: (cfg['labelFontSize'] is num)
             ? (cfg['labelFontSize'] as num).toDouble()
             : QrGenerationDefaults.labelFontSize,
         qrBgColor: cfg['qrBgColor'] ?? QrGenerationDefaults.qrBgColor,
         qrFgColor: cfg['qrFgColor'] ?? QrGenerationDefaults.qrFgColor,
-        qrErrorCorrectionLevel: cfg['qrErrorCorrectionLevel'] ??
+        qrErrorCorrectionLevel:
+            cfg['qrErrorCorrectionLevel'] ??
             QrGenerationDefaults.errorCorrectionLevel,
-        includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,            
+        includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,
       );
       if (mounted) {
         setState(() {
@@ -100,30 +111,42 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
 
   int _ecLevel(String level) {
     switch (level.toUpperCase()) {
-      case 'L': return QrErrorCorrectLevel.L;
-      case 'Q': return QrErrorCorrectLevel.Q;
-      case 'H': return QrErrorCorrectLevel.H;
-      default:   return QrErrorCorrectLevel.M;
+      case 'L':
+        return QrErrorCorrectLevel.L;
+      case 'Q':
+        return QrErrorCorrectLevel.Q;
+      case 'H':
+        return QrErrorCorrectLevel.H;
+      default:
+        return QrErrorCorrectLevel.M;
     }
   }
 
   /// Returns the single-letter code for a [QrErrorCorrectLevel] integer.
   String _ecLevelLetter(int level) {
     switch (level) {
-      case QrErrorCorrectLevel.L: return 'L';
-      case QrErrorCorrectLevel.Q: return 'Q';
-      case QrErrorCorrectLevel.H: return 'H';
-      default:                    return 'M';
+      case QrErrorCorrectLevel.L:
+        return 'L';
+      case QrErrorCorrectLevel.Q:
+        return 'Q';
+      case QrErrorCorrectLevel.H:
+        return 'H';
+      default:
+        return 'M';
     }
   }
 
   /// Returns the localised description for a [QrErrorCorrectLevel] integer.
   String _ecLevelDescription(int level) {
     switch (level) {
-      case QrErrorCorrectLevel.L: return LocServ.inst.t('qr_ec_low');
-      case QrErrorCorrectLevel.Q: return LocServ.inst.t('qr_ec_quartile');
-      case QrErrorCorrectLevel.H: return LocServ.inst.t('qr_ec_high');
-      default:                    return LocServ.inst.t('qr_ec_medium');
+      case QrErrorCorrectLevel.L:
+        return LocServ.inst.t('qr_ec_low');
+      case QrErrorCorrectLevel.Q:
+        return LocServ.inst.t('qr_ec_quartile');
+      case QrErrorCorrectLevel.H:
+        return LocServ.inst.t('qr_ec_high');
+      default:
+        return LocServ.inst.t('qr_ec_medium');
     }
   }
 
@@ -146,13 +169,15 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
       version = code.typeNumber;
       moduleCount = code.moduleCount;
     } catch (e, st) {
-      AppLogger.of('CavePlaceQrPreviewDialog').fine('QR code analysis failed', e, st);
+      AppLogger.of(
+        'CavePlaceQrPreviewDialog',
+      ).fine('QR code analysis failed', e, st);
       version = null;
       moduleCount = null;
     }
 
     final letter = _ecLevelLetter(ecLevelInt);
-    final desc   = _ecLevelDescription(ecLevelInt);
+    final desc = _ecLevelDescription(ecLevelInt);
 
     showDialog(
       context: context,
@@ -189,19 +214,24 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                   Expanded(
                     child: SelectableText(
                       payload,
-                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                            fontFamily: 'monospace',
-                          ),
+                      style: Theme.of(
+                        ctx,
+                      ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
                     tooltip: LocServ.inst.t('debug_info_copy_value'),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: payload));
-                      SnackBarService.showSuccess(LocServ.inst.t('debug_info_copied'));
+                      SnackBarService.showSuccess(
+                        LocServ.inst.t('debug_info_copied'),
+                      );
                     },
                   ),
                 ],
@@ -219,7 +249,6 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
     );
   }
 
-
   Widget _buildQrContent(String qrId) {
     final prefs = _prefs!;
     final padding = prefs.imagePaddingPx.toDouble();
@@ -234,7 +263,9 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             AspectRatio(
               aspectRatio: 1,
               child: QrImageView(
-                data: prefs.includeDeepLinkPrefix ? '$deepLinkPrefix$qrId' : '$qrId',
+                data: prefs.includeDeepLinkPrefix
+                    ? '$deepLinkPrefix$qrId'
+                    : '$qrId',
                 version: QrVersions.auto,
                 gapless: true,
                 errorCorrectionLevel: _ecLevel(prefs.qrErrorCorrectionLevel),
@@ -297,18 +328,21 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
         if (downloads != null) return downloads;
       }
     } catch (e, st) {
-      AppLogger.of('CavePlaceQrPreviewDialog').fine(
-        '_getSaveDirectory failed, falling back to app documents',
-        e,
-        st,
-      );
+      AppLogger.of(
+        'CavePlaceQrPreviewDialog',
+      ).fine('_getSaveDirectory failed, falling back to app documents', e, st);
     }
     return getApplicationDocumentsDirectory();
   }
 
   Future<void> _exportImage(BuildContext context) async {
-    final effectiveId = widget.qrIdentifierOverride ?? widget.cavePlace.placeCodeIdentifier;
-    if (effectiveId == null || effectiveId.isEmpty || _prefs == null || _exporting) return;
+    final effectiveId =
+        widget.qrIdentifierOverride ?? widget.cavePlace.placeCodeIdentifier;
+    if (effectiveId == null ||
+        effectiveId.isEmpty ||
+        _prefs == null ||
+        _exporting)
+      return;
 
     // Capture the live rendered widget — this is correct by definition since
     // it is exactly what the user sees, and avoids the off-screen canvas
@@ -316,15 +350,20 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
     setState(() => _exporting = true);
     Uint8List bytes;
     try {
-      final boundary = _qrRepaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _qrRepaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) throw StateError('QR widget is not rendered yet');
       // pixelRatio: 3 gives ~1200 px for a typical 400 px logical QR, matching
       // the quality of a direct high-DPI render.
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) throw StateError('Failed to encode QR image to PNG');
-      bytes = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+      if (byteData == null)
+        throw StateError('Failed to encode QR image to PNG');
+      bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      );
     } catch (e) {
       if (mounted) {
         setState(() => _exporting = false);
@@ -335,7 +374,10 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
     if (mounted) setState(() => _exporting = false);
     if (!context.mounted) return;
 
-    final placeName = widget.cavePlace.title.replaceAll(RegExp(r'[^\w\-]'), '_');
+    final placeName = widget.cavePlace.title.replaceAll(
+      RegExp(r'[^\w\-]'),
+      '_',
+    );
     final fileName = 'qr_$placeName.png';
     final picturesDir = await _resolvePicturesDirectory();
     if (!context.mounted) return;
@@ -392,7 +434,9 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
           final file = File('$dir/$fileName');
           await file.writeAsBytes(bytes);
           if (context.mounted) {
-            SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: ${file.path}');
+            SnackBarService.showSuccess(
+              '${LocServ.inst.t('files_saved')}: ${file.path}',
+            );
           }
         } else {
           final output = await FilePicker.platform.saveFile(
@@ -403,14 +447,18 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
           if (output == null || !context.mounted) return;
           await File(output).writeAsBytes(bytes);
           if (context.mounted) {
-            SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: $output');
+            SnackBarService.showSuccess(
+              '${LocServ.inst.t('files_saved')}: $output',
+            );
           }
         }
       } else {
         final file = File('${picturesDir.path}/$fileName');
         await file.writeAsBytes(bytes);
         if (context.mounted) {
-          SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: ${file.path}');
+          SnackBarService.showSuccess(
+            '${LocServ.inst.t('files_saved')}: ${file.path}',
+          );
         }
       }
     } catch (e) {
@@ -420,7 +468,8 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveId = widget.qrIdentifierOverride ?? widget.cavePlace.placeCodeIdentifier;
+    final effectiveId =
+        widget.qrIdentifierOverride ?? widget.cavePlace.placeCodeIdentifier;
     final hasEffectiveId = effectiveId != null && effectiveId.isNotEmpty;
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -444,7 +493,10 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                 IconButton(
                   icon: const Icon(Icons.close),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -452,7 +504,10 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             const SizedBox(height: 8),
             // QR content area
             if (_loading)
-              const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()))
+              const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              )
             else if (_error != null)
               SizedBox(
                 height: 200,
@@ -468,7 +523,9 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             else
               SizedBox(
                 height: 200,
-                child: Center(child: Text(LocServ.inst.t('no_qr_code_defined'))),
+                child: Center(
+                  child: Text(LocServ.inst.t('no_qr_code_defined')),
+                ),
               ),
             const SizedBox(height: 4),
             // QR code number label
@@ -478,11 +535,10 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
                 child: Text(
                   '#$effectiveId',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.55),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
                 ),
               ),
             // Bottom action row
@@ -541,20 +597,13 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 130,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.labelSmall),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodySmall),
           ),
         ],
       ),
     );
   }
 }
-

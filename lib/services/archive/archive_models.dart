@@ -67,8 +67,8 @@ class ImportResult {
 
 /// Callback the sync engine invokes per conflict.
 /// Return [ConflictAction] to continue, or `null` to cancel import.
-typedef ConflictResolver = Future<ConflictAction?> Function(
-    ImportConflict conflict);
+typedef ConflictResolver =
+    Future<ConflictAction?> Function(ImportConflict conflict);
 
 /// Optional progress reporting.
 typedef ProgressCallback = void Function(String message);

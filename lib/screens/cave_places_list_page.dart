@@ -34,7 +34,10 @@ class CavePlacesListPage extends StatefulWidget {
   State<CavePlacesListPage> createState() => _CavePlacesListPageState();
 }
 
-class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenuMixin<CavePlacesListPage>, ProductTourMixin<CavePlacesListPage> {
+class _CavePlacesListPageState extends State<CavePlacesListPage>
+    with
+        AppBarMenuMixin<CavePlacesListPage>,
+        ProductTourMixin<CavePlacesListPage> {
   static const bool _pinTopControls = true;
   static const double TOOLBAR_BUTTON_SPACING = 1;
   @override
@@ -43,9 +46,22 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   final tourKeys = TourKeySet(['add', 'list', 'menu']);
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'add', titleLocKey: 'tour_cave_places_list_add_title', bodyLocKey: 'tour_cave_places_list_add_body'),
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_cave_places_list_list_title', bodyLocKey: 'tour_cave_places_list_list_body', align: ContentAlign.top),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_places_list_menu_title', bodyLocKey: 'tour_cave_places_list_menu_body'),
+    TourStepDef(
+      keyId: 'add',
+      titleLocKey: 'tour_cave_places_list_add_title',
+      bodyLocKey: 'tour_cave_places_list_add_body',
+    ),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_cave_places_list_list_title',
+      bodyLocKey: 'tour_cave_places_list_list_body',
+      align: ContentAlign.top,
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_cave_places_list_menu_title',
+      bodyLocKey: 'tour_cave_places_list_menu_body',
+    ),
   ];
   @override
   List<AppMenuItem> get screenMenuItems {
@@ -56,7 +72,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           value: 'start_trip',
           icon: Icons.play_arrow,
           label: LocServ.inst.t('trip_start'),
-          color: Colors.green
+          color: Colors.green,
           // color: Colors.green.shade900
         ),
       // else ...[
@@ -104,9 +120,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     if (value == 'edit_cave') {
       final result = await Navigator.push<Uuid?>(
         context,
-        MaterialPageRoute(
-          builder: (_) => CaveFormPage(cave: _cave),
-        ),
+        MaterialPageRoute(builder: (_) => CaveFormPage(cave: _cave)),
       );
       if (result != null) {
         await _loadCave();
@@ -170,6 +184,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       await _openRasterMapPlaceSelector();
     }
   }
+
   // Using global appDatabase instance
   Cave? _cave;
   List<CavePlace> _cavePlaces = [];
@@ -208,9 +223,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         .watchCavePlaces(widget.caveUuid)
         .skip(1) // initial load is handled by explicit _loadCavePlaces above
         .listen((_) {
-      if (!mounted) return;
-      _loadCavePlaces();
-    });
+          if (!mounted) return;
+          _loadCavePlaces();
+        });
   }
 
   Future<void> _loadSurfaceAreas() async {
@@ -218,7 +233,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       final areas = await caveRepository.getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
     } catch (e, st) {
-      AppLogger.of('CavePlacesListPage').warning('_loadSurfaceAreas failed', e, st);
+      AppLogger.of(
+        'CavePlacesListPage',
+      ).warning('_loadSurfaceAreas failed', e, st);
       _surfaceAreaTitles = {};
     }
   }
@@ -237,9 +254,15 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _startTrip() async {
-    final defaultTitle = '${_cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
-    final existingTitles = await caveTripRepository.getCaveTripTitles(widget.caveUuid);
-    final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
+    final defaultTitle =
+        '${_cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
+    final existingTitles = await caveTripRepository.getCaveTripTitles(
+      widget.caveUuid,
+    );
+    final suggestedTitle = CaveTripService.uniqueTripTitle(
+      defaultTitle,
+      existingTitles,
+    );
     final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -247,7 +270,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         title: Text(LocServ.inst.t('trip_name_dialog_title')),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('trip_title_hint'),
+          ),
           autofocus: true,
         ),
         actions: [
@@ -259,11 +284,16 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(LocServ.inst.t('ok')),
           ),
-        ]
+        ],
       ),
     );
     if (confirmed == true && mounted) {
-      await caveTripService.startTrip(widget.caveUuid, controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle);
+      await caveTripService.startTrip(
+        widget.caveUuid,
+        controller.text.trim().isNotEmpty
+            ? controller.text.trim()
+            : suggestedTitle,
+      );
       if (mounted) {
         await AppRoutes.pushCaveTripList(context, widget.caveUuid);
         setState(() {});
@@ -287,8 +317,14 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         title: Text(LocServ.inst.t('confirm')),
         content: Text(LocServ.inst.t('trip_stop_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
         ],
       ),
     );
@@ -315,7 +351,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => GeneratedQRCodeViewer(cavePlaces: selectedFromController),
+          builder: (_) =>
+              GeneratedQRCodeViewer(cavePlaces: selectedFromController),
         ),
       );
     } else {
@@ -331,18 +368,23 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   Future<void> _openRasterMapPlaceSelector() async {
     final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
     if (rasterMaps.isEmpty) {
-      if (mounted) SnackBarService.showWarning(LocServ.inst.t('no_raster_maps_for_cave'));
+      if (mounted)
+        SnackBarService.showWarning(LocServ.inst.t('no_raster_maps_for_cave'));
       return;
     }
     if (_cavePlaces.isEmpty) {
-      if (mounted) SnackBarService.showWarning(LocServ.inst.t('no_cave_places'));
+      if (mounted)
+        SnackBarService.showWarning(LocServ.inst.t('no_cave_places'));
       return;
     }
     final rm = rasterMaps.first;
     final cavePlacesWithDefs = await definitionRepository
         .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
     final firstPlaceId = _cavePlaces.first.uuid;
-    final existing = await definitionRepository.findDefinition(firstPlaceId, rm.uuid);
+    final existing = await definitionRepository.findDefinition(
+      firstPlaceId,
+      rm.uuid,
+    );
     if (!mounted) return;
     await Navigator.push(
       context,
@@ -412,8 +454,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           ElevatedButton(
             onPressed: () =>
                 Navigator.pop(ctx, _manualQrSearchController.text.trim()),
-            child:
-                Text(LocServ.inst.t('search_place_by_qr_code_by_identifier')),
+            child: Text(
+              LocServ.inst.t('search_place_by_qr_code_by_identifier'),
+            ),
           ),
         ],
       ),
@@ -432,7 +475,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _loadCavePlaces() async {
-    AppLogger.of('CavePlacesListPage').fine('_loadCavePlaces() for caveUuid=${widget.caveUuid}');
+    AppLogger.of(
+      'CavePlacesListPage',
+    ).fine('_loadCavePlaces() for caveUuid=${widget.caveUuid}');
 
     _cavePlaces = await cavePlaceRepository.getCavePlaces(widget.caveUuid);
     await _loadCaveAreas();
@@ -444,18 +489,18 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
 
     Map<Uuid, Set<Uuid>> placeToRasters = {};
     if (rasterMapIds.isNotEmpty) {
-      final defs = await definitionRepository
-          .getDefinitionsForRasterMaps(rasterMapIds);
+      final defs = await definitionRepository.getDefinitionsForRasterMaps(
+        rasterMapIds,
+      );
       for (final d in defs) {
         final cpId = d.cavePlaceUuid;
         final rmId = d.rasterMapUuid;
-        placeToRasters
-            .putIfAbsent(cpId, () => <Uuid>{})
-            .add(rmId);
+        placeToRasters.putIfAbsent(cpId, () => <Uuid>{}).add(rmId);
       }
     }
     _definitionCountByPlace = {
-      for (var cp in _cavePlaces) cp.uuid: (placeToRasters[cp.uuid]?.length ?? 0),
+      for (var cp in _cavePlaces)
+        cp.uuid: (placeToRasters[cp.uuid]?.length ?? 0),
     };
 
     if (!mounted) return;
@@ -480,7 +525,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
       final areas = await caveRepository.getCaveAreas(widget.caveUuid);
       _areaTitles = {for (var a in areas) a.uuid: a.title};
     } catch (e, st) {
-      AppLogger.of('CavePlacesListPage').warning('_loadCaveAreas failed', e, st);
+      AppLogger.of(
+        'CavePlacesListPage',
+      ).warning('_loadCaveAreas failed', e, st);
       _areaTitles = {};
     }
   }
@@ -490,7 +537,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
     final rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid);
     final List<Map<String, dynamic>> rows = [];
     for (final rm in rasterMaps) {
-      final def = await definitionRepository.findDefinition(cavePlaceUuid, rm.uuid);
+      final def = await definitionRepository.findDefinition(
+        cavePlaceUuid,
+        rm.uuid,
+      );
       rows.add({'rasterMap': rm, 'defined': def != null, 'definition': def});
     }
 
@@ -502,10 +552,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         title: Text(LocServ.inst.t('definitions_report_title')),
         content: SizedBox(
           width: double.maxFinite,
-          height: ((rows.length * 72).clamp(
-            120,
-            400,
-          )).toDouble(),
+          height: ((rows.length * 72).clamp(120, 400)).toDouble(),
           child: rows.isEmpty
               ? Center(child: Text(LocServ.inst.t('no_raster_maps_for_cave')))
               : ListView.separated(
@@ -516,33 +563,34 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                     final defined = rows[index]['defined'] as bool;
                     return InkWell(
                       onTap: () async {
-                          Navigator.pop(context);
-                          final existing = await definitionRepository.findDefinition(
-                            cavePlaceUuid,
-                            rm.uuid,
-                          );
-                          final cavePlacesWithDefs = await definitionRepository
-                              .getCavePlacesWithDefinitionsForRasterMap(
-                                widget.caveUuid,
-                                rm.uuid,
-                              );
-                          if (!mounted) return;
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RasterMapPlaceSelectorPage(
-                                rasterMap: rm,
-                                cavePlaceUuid: cavePlaceUuid,
-                                cavePlacesWithDefinitions: cavePlacesWithDefs,
-                                existingDefinition: existing,
-                                initialTapDefinesNewPoint: false,
-                              ),
+                        Navigator.pop(context);
+                        final existing = await definitionRepository
+                            .findDefinition(cavePlaceUuid, rm.uuid);
+                        final cavePlacesWithDefs = await definitionRepository
+                            .getCavePlacesWithDefinitionsForRasterMap(
+                              widget.caveUuid,
+                              rm.uuid,
+                            );
+                        if (!mounted) return;
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RasterMapPlaceSelectorPage(
+                              rasterMap: rm,
+                              cavePlaceUuid: cavePlaceUuid,
+                              cavePlacesWithDefinitions: cavePlacesWithDefs,
+                              existingDefinition: existing,
+                              initialTapDefinesNewPoint: false,
                             ),
-                          );
-                          if (mounted) await _loadCavePlaces();
+                          ),
+                        );
+                        if (mounted) await _loadCavePlaces();
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 4,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -556,7 +604,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                Icon(Icons.open_in_new, size: 18, color: Colors.grey[600]),
+                                Icon(
+                                  Icons.open_in_new,
+                                  size: 18,
+                                  color: Colors.grey[600],
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -586,7 +638,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   Future<void> _deleteCavePlace(Uuid id) async {
     await cavePlaceRepository.deleteCavePlace(id);
     _loadCavePlaces();
-    if (mounted) SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
+    if (mounted)
+      SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
   }
 
   Future<void> _confirmDeleteCavePlace(Uuid id) async {
@@ -613,12 +666,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
   }
 
   Future<void> _onScan(String code) async {
-    final result =
-        await QrCodeLookupHandler.defaultInstance().handleScannedCode(
-      context,
-      code,
-      currentCaveId: widget.caveUuid,
-    );
+    final result = await QrCodeLookupHandler.defaultInstance()
+        .handleScannedCode(context, code, currentCaveId: widget.caveUuid);
     if (result != null && mounted) _loadCavePlaces();
   }
 
@@ -633,7 +682,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(_cave?.title ?? LocServ.inst.t('loading')),
-            if (_cave?.surfaceAreaUuid != null && _surfaceAreaTitles[_cave!.surfaceAreaUuid] != null)
+            if (_cave?.surfaceAreaUuid != null &&
+                _surfaceAreaTitles[_cave!.surfaceAreaUuid] != null)
               Text(
                 _surfaceAreaTitles[_cave!.surfaceAreaUuid]!,
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -668,10 +718,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildTopControls(),
-                        _buildPlacesList(),
-                      ],
+                      children: [_buildTopControls(), _buildPlacesList()],
                     ),
                   ),
                 ),
@@ -810,7 +857,8 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                   final result = await Navigator.push<bool?>(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CSVCavePlacesImportPage(caveUuid: widget.caveUuid),
+                      builder: (_) =>
+                          CSVCavePlacesImportPage(caveUuid: widget.caveUuid),
                     ),
                   );
                   if (result == true) _loadCavePlaces();
@@ -862,7 +910,11 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete, size: 20, color: Colors.red.shade700),
+                        Icon(
+                          Icons.delete,
+                          size: 20,
+                          color: Colors.red.shade700,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           LocServ.inst.t('delete_cave'),
@@ -975,8 +1027,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
           label: LocServ.inst.t('sort_depth'),
           // Treat null depth as +infinity so unspecified entries sort last
           // when ascending.
-          compare: (a, b) => (a.depthInCave ?? double.infinity)
-              .compareTo(b.depthInCave ?? double.infinity),
+          compare: (a, b) => (a.depthInCave ?? double.infinity).compareTo(
+            b.depthInCave ?? double.infinity,
+          ),
         ),
         FilterableListSortField<CavePlace>(
           id: 'qr_code_identifier',
@@ -1022,8 +1075,9 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         FilterableListSortField<CavePlace>(
           id: 'definitions_count',
           label: LocServ.inst.t('sort_definitions_count'),
-          compare: (a, b) => (_definitionCountByPlace[a.uuid] ?? 0)
-              .compareTo(_definitionCountByPlace[b.uuid] ?? 0),
+          compare: (a, b) => (_definitionCountByPlace[a.uuid] ?? 0).compareTo(
+            _definitionCountByPlace[b.uuid] ?? 0,
+          ),
         ),
       ],
       filter: (cp, qLower) {
@@ -1049,9 +1103,7 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
         final bool isMainEntrance = cp.isMainEntrance == 1;
         final bool isEntrance = isMainEntrance || cp.isEntrance == 1;
         return ColoredBox(
-          color: isEntrance
-              ? const Color(0xFFF5F5F5)
-              : const Color(0x00000000),
+          color: isEntrance ? const Color(0xFFF5F5F5) : const Color(0x00000000),
           child: child,
         );
       },
@@ -1068,10 +1120,18 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                   Row(
                     children: [
                       if (isMainEntrance) ...[
-                        const Icon(Icons.door_front_door, size: 15, color: Colors.blue),
+                        const Icon(
+                          Icons.door_front_door,
+                          size: 15,
+                          color: Colors.blue,
+                        ),
                         const SizedBox(width: 4),
                       ] else if (isEntrance) ...[
-                        Icon(Icons.door_front_door_outlined, size: 15, color: Colors.grey[600]),
+                        Icon(
+                          Icons.door_front_door_outlined,
+                          size: 15,
+                          color: Colors.grey[600],
+                        ),
                         const SizedBox(width: 4),
                       ],
                       Expanded(
@@ -1113,9 +1173,10 @@ class _CavePlacesListPageState extends State<CavePlacesListPage> with AppBarMenu
                 final count = _definitionCountByPlace[cp.uuid] ?? 0;
                 final Color col = (count == 0)
                     ? Colors.red.withValues(alpha: 0.8)
-                    : (count == _rasterMapsCountForCave && _rasterMapsCountForCave > 0)
-                        ? Colors.green.withValues(alpha: 0.8)
-                        : Colors.grey;
+                    : (count == _rasterMapsCountForCave &&
+                          _rasterMapsCountForCave > 0)
+                    ? Colors.green.withValues(alpha: 0.8)
+                    : Colors.grey;
                 return InkWell(
                   onTap: () => _showDefinitionsReport(cp.uuid),
                   child: Padding(

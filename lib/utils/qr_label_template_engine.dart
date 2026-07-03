@@ -35,10 +35,14 @@ class QrLabelTemplateEngine {
     result = result.replaceAll('@description', place.description ?? '');
     result = result.replaceAll('@cave_title', caveTitle ?? '');
     result = result.replaceAll('@area_title', areaTitle ?? '');
-    result = result.replaceAll('@place_code_identifier',
-        place.placeCodeIdentifier ?? '');
-    result = result.replaceAll('@qr_res_identifier',
-        place.qrCodeResourceIdentifier ?? '');
+    result = result.replaceAll(
+      '@place_code_identifier',
+      place.placeCodeIdentifier ?? '',
+    );
+    result = result.replaceAll(
+      '@qr_res_identifier',
+      place.qrCodeResourceIdentifier ?? '',
+    );
     result = result.replaceAll('@depth', _formatDepth(place.depthInCave));
 
     // Handle \n as newline
@@ -64,10 +68,14 @@ class QrLabelTemplateEngine {
     resolved = resolved.replaceAll('@description', place.description ?? '');
     resolved = resolved.replaceAll('@cave_title', caveTitle ?? '');
     resolved = resolved.replaceAll('@area_title', areaTitle ?? '');
-    resolved = resolved.replaceAll('@place_code_identifier',
-        place.placeCodeIdentifier ?? '');
-    resolved = resolved.replaceAll('@qr_res_identifier',
-        place.qrCodeResourceIdentifier ?? '');
+    resolved = resolved.replaceAll(
+      '@place_code_identifier',
+      place.placeCodeIdentifier ?? '',
+    );
+    resolved = resolved.replaceAll(
+      '@qr_res_identifier',
+      place.qrCodeResourceIdentifier ?? '',
+    );
     resolved = resolved.replaceAll('@depth', _formatDepth(place.depthInCave));
 
     // Handle \n as newline
@@ -87,11 +95,13 @@ class QrLabelTemplateEngine {
 
       if (text.isEmpty) continue;
 
-      segments.add(LabelSegment(
-        text: text,
-        fontSize: fontSizeStr != null ? double.tryParse(fontSizeStr) : null,
-        fontColor: fontColorStr,
-      ));
+      segments.add(
+        LabelSegment(
+          text: text,
+          fontSize: fontSizeStr != null ? double.tryParse(fontSizeStr) : null,
+          fontColor: fontColorStr,
+        ),
+      );
     }
 
     if (segments.isEmpty) {

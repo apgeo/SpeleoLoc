@@ -25,12 +25,16 @@ class LocServ {
     if (_strings.containsKey(locale)) return;
     try {
       final jsonStr = await rootBundle.loadString('assets/i18n/$locale.json');
-      final Map<String, dynamic> map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final Map<String, dynamic> map =
+          jsonDecode(jsonStr) as Map<String, dynamic>;
       _strings[locale] = map.map((k, v) => MapEntry(k, v.toString()));
     } catch (e, st) {
       // locale file not found or parse error – leave empty
       AppLogger.of('LocServ').warning(
-          'Failed to load locale "$locale"; falling back to defaults', e, st);
+        'Failed to load locale "$locale"; falling back to defaults',
+        e,
+        st,
+      );
     }
   }
 

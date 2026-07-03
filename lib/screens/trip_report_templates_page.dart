@@ -55,14 +55,19 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
     final format = service.detectFormat(pickedFile.path);
     if (format == null) {
       if (mounted) {
-        SnackBarService.showWarning(LocServ.inst.t('template_unsupported_format'));
+        SnackBarService.showWarning(
+          LocServ.inst.t('template_unsupported_format'),
+        );
       }
       return;
     }
 
     // Ask for a title
     final titleController = TextEditingController(
-      text: pickedFile.uri.pathSegments.last.replaceAll(RegExp(r'\.(odt|docx)$'), ''),
+      text: pickedFile.uri.pathSegments.last.replaceAll(
+        RegExp(r'\.(odt|docx)$'),
+        '',
+      ),
     );
     final confirmed = await showDialog<bool>(
       context: context,
@@ -114,7 +119,9 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('template_delete_confirm', {'name': template.title})),
+        content: Text(
+          LocServ.inst.t('template_delete_confirm', {'name': template.title}),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -130,7 +137,9 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
     if (confirmed != true) return;
 
     try {
-      await TripReportExportService.instance.deleteTemplateFile(template.fileName);
+      await TripReportExportService.instance.deleteTemplateFile(
+        template.fileName,
+      );
       await caveTripRepository.deleteTripReportTemplate(template.uuid);
       await _load();
       if (mounted) {
@@ -144,9 +153,7 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(LocServ.inst.t('template_manage_title')),
-      ),
+      appBar: AppBar(title: Text(LocServ.inst.t('template_manage_title'))),
       floatingActionButton: FloatingActionButton(
         onPressed: _addTemplate,
         child: const Icon(Icons.add),
@@ -154,35 +161,35 @@ class _TripReportTemplatesPageState extends State<TripReportTemplatesPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _templates.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      LocServ.inst.t('template_none'),
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _templates.length,
-                  itemBuilder: (context, index) {
-                    final t = _templates[index];
-                    return ListTile(
-                      leading: Icon(
-                        t.format == 'odt' ? Icons.description : Icons.article,
-                        color: t.format == 'odt' ? Colors.blue : Colors.indigo,
-                      ),
-                      title: Text(t.title),
-                      subtitle: Text(
-                        '${t.format.toUpperCase()} · ${_formatFileSize(t.fileSize)}',
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteTemplate(t),
-                      ),
-                    );
-                  },
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  LocServ.inst.t('template_none'),
+                  style: TextStyle(color: Colors.grey[600]),
                 ),
+              ),
+            )
+          : ListView.builder(
+              itemCount: _templates.length,
+              itemBuilder: (context, index) {
+                final t = _templates[index];
+                return ListTile(
+                  leading: Icon(
+                    t.format == 'odt' ? Icons.description : Icons.article,
+                    color: t.format == 'odt' ? Colors.blue : Colors.indigo,
+                  ),
+                  title: Text(t.title),
+                  subtitle: Text(
+                    '${t.format.toUpperCase()} · ${_formatFileSize(t.fileSize)}',
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteTemplate(t),
+                  ),
+                );
+              },
+            ),
     );
   }
 

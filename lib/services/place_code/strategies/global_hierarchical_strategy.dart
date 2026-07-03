@@ -73,17 +73,17 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
 
   @override
   Map<String, dynamic> get defaultConfig => const {
-        kCountryCode: '',
-        kCountryCodeWidth: 3,
-        kOrganizationCode: '',
-        kOrganizationCodeWidth: 3,
-        kAreaIdentifierWidth: 3,
-        kCaveLocalIndexWidth: 3,
-        kCavePlaceLocalIndexWidth: 4,
-        kAllowNonDigit: false,
-        kMainEntranceSuffix: '0001',
-        kSegmentSeparator: '',
-      };
+    kCountryCode: '',
+    kCountryCodeWidth: 3,
+    kOrganizationCode: '',
+    kOrganizationCodeWidth: 3,
+    kAreaIdentifierWidth: 3,
+    kCaveLocalIndexWidth: 3,
+    kCavePlaceLocalIndexWidth: 4,
+    kAllowNonDigit: false,
+    kMainEntranceSuffix: '0001',
+    kSegmentSeparator: '',
+  };
 
   String get _country => (_config[kCountryCode] as String?) ?? '';
   String get _org => (_config[kOrganizationCode] as String?) ?? '';
@@ -112,10 +112,11 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
       );
     }
 
-    final cave = await (_db.select(_db.caves)
-          ..where((c) => c.uuid.equalsValue(caveUuid))
-          ..limit(1))
-        .getSingleOrNull();
+    final cave =
+        await (_db.select(_db.caves)
+              ..where((c) => c.uuid.equalsValue(caveUuid))
+              ..limit(1))
+            .getSingleOrNull();
     if (cave == null) {
       return const PlaceCodeGenerationResult.skipped(
         PlaceCodeSkipReason.caveMissing,
@@ -130,10 +131,11 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
       areaSegment = '0' * _areaIdentifierWidth;
       fallback = FallbackReason.noSurfaceArea;
     } else {
-      final area = await (_db.select(_db.surfaceAreas)
-            ..where((a) => a.uuid.equalsValue(cave.surfaceAreaUuid!))
-            ..limit(1))
-          .getSingleOrNull();
+      final area =
+          await (_db.select(_db.surfaceAreas)
+                ..where((a) => a.uuid.equalsValue(cave.surfaceAreaUuid!))
+                ..limit(1))
+              .getSingleOrNull();
       final identifier = area?.generalAreaIdentifier;
       if (identifier == null || identifier.isEmpty) {
         areaSegment = '9' * _areaIdentifierWidth;
@@ -155,8 +157,7 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
       // expected to know about this side effect. The change_log is not
       // emitted from this layer; the integration step in Phase 3 wires
       // it through the repository if needed.)
-      await (_db.update(_db.caves)
-            ..where((c) => c.uuid.equalsValue(caveUuid)))
+      await (_db.update(_db.caves)..where((c) => c.uuid.equalsValue(caveUuid)))
           .write(CavesCompanion(caveLocalIndex: Value(caveLocal)));
     }
 
@@ -207,22 +208,23 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
 
     // Baseline match check (warning-level in §4.2; we return a soft
     // i18n key the caller can render as a non-blocking warning).
-    final cave = await (_db.select(_db.caves)
-          ..where((c) => c.uuid.equalsValue(caveUuid))
-          ..limit(1))
-        .getSingleOrNull();
+    final cave =
+        await (_db.select(_db.caves)
+              ..where((c) => c.uuid.equalsValue(caveUuid))
+              ..limit(1))
+            .getSingleOrNull();
     if (cave != null && cave.surfaceAreaUuid != null) {
-      final area = await (_db.select(_db.surfaceAreas)
-            ..where((a) => a.uuid.equalsValue(cave.surfaceAreaUuid!))
-            ..limit(1))
-          .getSingleOrNull();
+      final area =
+          await (_db.select(_db.surfaceAreas)
+                ..where((a) => a.uuid.equalsValue(cave.surfaceAreaUuid!))
+                ..limit(1))
+              .getSingleOrNull();
       final areaSegment = area?.generalAreaIdentifier ?? '';
       final expectedBaseline =
           _country + _org + areaSegment + (cave.caveLocalIndex ?? '');
       final actualBaseline =
           parsed.country + parsed.organization + parsed.area + parsed.caveLocal;
-      if (expectedBaseline.isNotEmpty &&
-          expectedBaseline != actualBaseline) {
+      if (expectedBaseline.isNotEmpty && expectedBaseline != actualBaseline) {
         // Caller may treat as warning-with-override (§4.2 Q-S1a).
         return 'place_code_warning_baseline_mismatch';
       }
@@ -292,18 +294,19 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
   }
 
   Future<bool> _pciExistsExceptSelf(String pci, Uuid cavePlaceUuid) async {
-    final dup = await (_db.select(_db.cavePlaces)
-          ..where((cp) =>
-              cp.uuid.equalsValue(cavePlaceUuid).not() &
-              cp.placeCodeIdentifier.equals(pci)))
-        .get();
+    final dup =
+        await (_db.select(_db.cavePlaces)..where(
+              (cp) =>
+                  cp.uuid.equalsValue(cavePlaceUuid).not() &
+                  cp.placeCodeIdentifier.equals(pci),
+            ))
+            .get();
     return dup.isNotEmpty;
   }
 
   _ParsedPci? _tryParse(String pci) {
     final countryW = (_config[kCountryCodeWidth] as num?)?.toInt() ?? 3;
-    final orgW =
-        (_config[kOrganizationCodeWidth] as num?)?.toInt() ?? 3;
+    final orgW = (_config[kOrganizationCodeWidth] as num?)?.toInt() ?? 3;
     final caveW = _caveLocalIndexWidth;
     final placeW = _cavePlaceLocalIndexWidth;
     final sep = _sep;
@@ -321,7 +324,9 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
           organization: pci.substring(countryW, countryW + orgW),
           area: pci.substring(fixedHead, fixedHead + areaLen),
           caveLocal: pci.substring(
-              fixedHead + areaLen, fixedHead + areaLen + caveW),
+            fixedHead + areaLen,
+            fixedHead + areaLen + caveW,
+          ),
           placeLocal: pci.substring(fixedHead + areaLen + caveW),
         );
       } catch (_) {
@@ -353,5 +358,11 @@ class _ParsedPci {
     required this.caveLocal,
     required this.placeLocal,
   });
-  List<String> get segments => [country, organization, area, caveLocal, placeLocal];
+  List<String> get segments => [
+    country,
+    organization,
+    area,
+    caveLocal,
+    placeLocal,
+  ];
 }

@@ -91,7 +91,8 @@ class QrCodeLookupHandler {
     }
     if (code.isEmpty) {
       SnackBarService.showWarning(
-          '${LocServ.inst.t('invalid_qr_code_detail')}: \'$rawCode\'');
+        '${LocServ.inst.t('invalid_qr_code_detail')}: \'$rawCode\'',
+      );
       return null;
     }
 
@@ -99,7 +100,8 @@ class QrCodeLookupHandler {
 
     if (results.isEmpty) {
       SnackBarService.showWarning(
-          '${LocServ.inst.t('cave_place_not_found')}: \'$rawCode\'');
+        '${LocServ.inst.t('cave_place_not_found')}: \'$rawCode\'',
+      );
       return null;
     }
 
@@ -146,8 +148,10 @@ class QrCodeLookupHandler {
       final sortOption = await RasterMapSortOption.load();
       final sortedMaps = sortOption.apply(allMaps, []);
       for (final rm in sortedMaps) {
-        final def =
-            await definitionRepository.findDefinition(cavePlace.uuid, rm.uuid);
+        final def = await definitionRepository.findDefinition(
+          cavePlace.uuid,
+          rm.uuid,
+        );
         if (def != null) {
           bestMapUuid = rm.uuid;
           break;
@@ -166,7 +170,8 @@ class QrCodeLookupHandler {
       );
     } else {
       SnackBarService.showWarning(
-          LocServ.inst.t('no_map_definition_for_place'));
+        LocServ.inst.t('no_map_definition_for_place'),
+      );
       await AppRoutes.pushCavePlace(
         context,
         caveUuid: cavePlace.caveUuid,
@@ -176,7 +181,8 @@ class QrCodeLookupHandler {
 
     if (context.mounted) {
       SnackBarService.showSuccess(
-          '${LocServ.inst.t('cave_place_identified')}: "${cavePlace.title}"');
+        '${LocServ.inst.t('cave_place_identified')}: "${cavePlace.title}"',
+      );
     }
 
     return cavePlace;
@@ -187,7 +193,8 @@ class QrCodeLookupHandler {
   // ---------------------------------------------------------------------------
 
   Future<QrLookupResult> _pickByLastOpenCave(
-      List<QrLookupResult> results) async {
+    List<QrLookupResult> results,
+  ) async {
     final lastCaveId = await _getLastOpenCaveId();
     if (lastCaveId != null) {
       for (final r in results) {
@@ -249,9 +256,7 @@ class QrCodeLookupHandler {
               Navigator.pop(ctx);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const SettingsGeneralPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const SettingsGeneralPage()),
               );
             },
             child: Text(LocServ.inst.t('open_settings')),
@@ -309,18 +314,18 @@ class QrCodeLookupHandler {
     } else {
       // Trip running for a DIFFERENT cave — offer to stop it first.
       final otherCave = await caveRepository.findById(activeTripCaveId);
-      final otherCaveTitle =
-          otherCave?.title ?? activeTripCaveId.toString();
+      final otherCaveTitle = otherCave?.title ?? activeTripCaveId.toString();
       if (!context.mounted) return;
 
       final stopOther = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(LocServ.inst.t('confirm')),
-          content: Text(LocServ.inst.t(
-            'scan_entrance_stop_other_trip',
-            {'cave': otherCaveTitle},
-          )),
+          content: Text(
+            LocServ.inst.t('scan_entrance_stop_other_trip', {
+              'cave': otherCaveTitle,
+            }),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -340,8 +345,7 @@ class QrCodeLookupHandler {
             context: context,
             builder: (ctx) => AlertDialog(
               title: Text(LocServ.inst.t('trip_start')),
-              content:
-                  Text(LocServ.inst.t('scan_entrance_start_after_stop')),
+              content: Text(LocServ.inst.t('scan_entrance_start_after_stop')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
@@ -391,8 +395,10 @@ class QrCodeLookupHandler {
     final defaultTitle =
         '${cave?.title ?? ''} ${dateFormat.format(DateTime.now())}';
     final existingTitles = await caveTripRepository.getCaveTripTitles(caveUuid);
-    final suggestedTitle =
-        CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
+    final suggestedTitle = CaveTripService.uniqueTripTitle(
+      defaultTitle,
+      existingTitles,
+    );
 
     if (!context.mounted) return;
     final controller = TextEditingController(text: suggestedTitle);
@@ -402,8 +408,9 @@ class QrCodeLookupHandler {
         title: Text(LocServ.inst.t('trip_name_dialog_title')),
         content: TextField(
           controller: controller,
-          decoration:
-              InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('trip_title_hint'),
+          ),
           autofocus: true,
         ),
         actions: [
@@ -458,9 +465,11 @@ class QrCodeLookupHandler {
       await Navigator.push<void>(
         context,
         MaterialPageRoute(
-          builder: (_) => ScannerPage(onScan: (code) {
-            scannedCode = code;
-          }),
+          builder: (_) => ScannerPage(
+            onScan: (code) {
+              scannedCode = code;
+            },
+          ),
         ),
       );
       if (scannedCode != null && context.mounted) {
@@ -501,8 +510,7 @@ class QrCodeLookupHandler {
       }
     } else {
       if (context.mounted) {
-        SnackBarService.showWarning(
-            LocServ.inst.t('camera_permission_denied'));
+        SnackBarService.showWarning(LocServ.inst.t('camera_permission_denied'));
       }
     }
     return null;
@@ -538,8 +546,9 @@ class QrCodeLookupHandler {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child:
-                Text(LocServ.inst.t('search_place_by_qr_code_by_identifier')),
+            child: Text(
+              LocServ.inst.t('search_place_by_qr_code_by_identifier'),
+            ),
           ),
         ],
       ),

@@ -30,9 +30,21 @@ class _RasterMapsPageState extends State<RasterMapsPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'add', titleLocKey: 'tour_raster_maps_add_title', bodyLocKey: 'tour_raster_maps_add_body'),
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_raster_maps_list_title', bodyLocKey: 'tour_raster_maps_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_raster_maps_menu_title', bodyLocKey: 'tour_raster_maps_menu_body'),
+    TourStepDef(
+      keyId: 'add',
+      titleLocKey: 'tour_raster_maps_add_title',
+      bodyLocKey: 'tour_raster_maps_add_body',
+    ),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_raster_maps_list_title',
+      bodyLocKey: 'tour_raster_maps_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_raster_maps_menu_title',
+      bodyLocKey: 'tour_raster_maps_menu_body',
+    ),
   ];
 
   List<RasterMap> _rasterMaps = [];
@@ -105,8 +117,14 @@ class _RasterMapsPageState extends State<RasterMapsPage>
           title: Text(loc.t('confirm')),
           content: Text('${loc.t('delete')}?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(loc.t('cancel'))),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(loc.t('yes'))),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(loc.t('yes')),
+            ),
           ],
         ),
       );
@@ -115,7 +133,8 @@ class _RasterMapsPageState extends State<RasterMapsPage>
       }
     }
   }
-Future<String> _getFullImagePath(String fileName) async {
+
+  Future<String> _getFullImagePath(String fileName) async {
     final directory = await getApplicationDocumentsDirectory();
     return '${directory.path}/$fileName';
   }
@@ -136,7 +155,9 @@ Future<String> _getFullImagePath(String fileName) async {
   void _editRasterMap(RasterMap rm) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RasterMapForm(caveUuid: widget.caveUuid, rasterMap: rm)),
+      MaterialPageRoute(
+        builder: (_) => RasterMapForm(caveUuid: widget.caveUuid, rasterMap: rm),
+      ),
     );
     if (result == true) {
       _changed = true;
@@ -152,71 +173,77 @@ Future<String> _getFullImagePath(String fileName) async {
         if (!didPop) Navigator.pop(context, _changed);
       },
       child: Scaffold(
-      key: appMenuScaffoldKey,
-      endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
-        title: Text(LocServ.inst.t('raster_maps')),
-        actions: [
-          IconButton(
-            key: tourKeys['add'],
-            icon: const Icon(Icons.add),
-            tooltip: LocServ.inst.t('add_raster_map'),
-            onPressed: _reorderMode ? null : () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => RasterMapForm(caveUuid: widget.caveUuid)),
-              );
-              if (result == true) {
-                _changed = true;
-                _loadRasterMaps();
-              }
-            },
-          ),
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Compact toolbar ──────────────────────────────────────────
-          Material(
-            elevation: 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              child: Row(
-                children: [
-                  Text(
-                    _reorderMode
-                        ? LocServ.inst.t('reorder_maps_hint')
-                        : '',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(
-                      Icons.sort,
-                      color: _reorderMode
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
+        appBar: AppBar(
+          title: Text(LocServ.inst.t('raster_maps')),
+          actions: [
+            IconButton(
+              key: tourKeys['add'],
+              icon: const Icon(Icons.add),
+              tooltip: LocServ.inst.t('add_raster_map'),
+              onPressed: _reorderMode
+                  ? null
+                  : () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RasterMapForm(caveUuid: widget.caveUuid),
+                        ),
+                      );
+                      if (result == true) {
+                        _changed = true;
+                        _loadRasterMaps();
+                      }
+                    },
+            ),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Compact toolbar ──────────────────────────────────────────
+            Material(
+              elevation: 1,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                child: Row(
+                  children: [
+                    Text(
+                      _reorderMode ? LocServ.inst.t('reorder_maps_hint') : '',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    tooltip: _reorderMode
-                        ? LocServ.inst.t('reorder_maps_done')
-                        : LocServ.inst.t('reorder_maps'),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    onPressed: () => setState(() => _reorderMode = !_reorderMode),
-                  ),
-                ],
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(
+                        Icons.sort,
+                        color: _reorderMode
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                      tooltip: _reorderMode
+                          ? LocServ.inst.t('reorder_maps_done')
+                          : LocServ.inst.t('reorder_maps'),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      onPressed: () =>
+                          setState(() => _reorderMode = !_reorderMode),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          // ── List ─────────────────────────────────────────────────────
-          Expanded(
-            child: _reorderMode ? _buildReorderableList() : _buildNormalList(),
-          ),
-        ],
+            // ── List ─────────────────────────────────────────────────────
+            Expanded(
+              child: _reorderMode
+                  ? _buildReorderableList()
+                  : _buildNormalList(),
+            ),
+          ],
+        ),
       ),
-      )
     );
   }
 
@@ -228,49 +255,51 @@ Future<String> _getFullImagePath(String fileName) async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ..._rasterMaps.map((rm) => Column(
-              children: [
-                ListTile(
-                  leading: SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: FutureBuilder<String>(
-                      future: _getFullImagePath(rm.fileName),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          return Image.file(
-                            File(snapshot.data!),
-                            fit: BoxFit.cover,
-                          );
-                        } else {
-                          return const Icon(Icons.image);
-                        }
-                      },
+            ..._rasterMaps.map(
+              (rm) => Column(
+                children: [
+                  ListTile(
+                    leading: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: FutureBuilder<String>(
+                        future: _getFullImagePath(rm.fileName),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            return Image.file(
+                              File(snapshot.data!),
+                              fit: BoxFit.cover,
+                            );
+                          } else {
+                            return const Icon(Icons.image);
+                          }
+                        },
+                      ),
+                    ),
+                    title: Text(rm.title),
+                    onTap: () => _viewImage(rm),
+                    hoverColor: Colors.grey[200],
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconActionButton(
+                          onPressed: () => _editRasterMap(rm),
+                          icon: Icons.edit,
+                          tooltip: LocServ.inst.t('edit_raster_map'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconActionButton(
+                          onPressed: () => _confirmDeleteRasterMap(rm.uuid),
+                          icon: Icons.delete,
+                          tooltip: LocServ.inst.t('delete_raster_map'),
+                        ),
+                      ],
                     ),
                   ),
-                  title: Text(rm.title),
-                  onTap: () => _viewImage(rm),
-                  hoverColor: Colors.grey[200],
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconActionButton(
-                        onPressed: () => _editRasterMap(rm),
-                        icon: Icons.edit,
-                        tooltip: LocServ.inst.t('edit_raster_map'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconActionButton(
-                        onPressed: () => _confirmDeleteRasterMap(rm.uuid),
-                        icon: Icons.delete,
-                        tooltip: LocServ.inst.t('delete_raster_map'),
-                      ),
-                    ],
-                  ),
-                ),
-                Divider(height: 1, color: Colors.grey[300]),
-              ],
-            )),
+                  Divider(height: 1, color: Colors.grey[300]),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -309,7 +338,10 @@ Future<String> _getFullImagePath(String fileName) async {
                     future: _getFullImagePath(rm.fileName),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
-                        return Image.file(File(snapshot.data!), fit: BoxFit.cover);
+                        return Image.file(
+                          File(snapshot.data!),
+                          fit: BoxFit.cover,
+                        );
                       } else {
                         return const Icon(Icons.image);
                       }

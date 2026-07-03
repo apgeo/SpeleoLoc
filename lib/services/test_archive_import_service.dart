@@ -45,8 +45,9 @@ class TestArchiveImportService {
         final response = await request.close();
         if (response.statusCode < 200 || response.statusCode >= 300) {
           throw Exception(
-              'HTTP ${response.statusCode} ${response.reasonPhrase} '
-              'while downloading $value');
+            'HTTP ${response.statusCode} ${response.reasonPhrase} '
+            'while downloading $value',
+          );
         }
         final builder = BytesBuilder(copy: false);
         await for (final chunk in response) {
@@ -80,16 +81,16 @@ class TestArchiveImportService {
     onProgress?.call('Preparing archive...');
     final tempDir = await getTemporaryDirectory();
     // .zip extension is irrelevant to ZipDecoder but harmless to use.
-    final tempFile =
-        File(p.join(tempDir.path, 'test_archive_download.zip'));
+    final tempFile = File(p.join(tempDir.path, 'test_archive_download.zip'));
     if (await tempFile.exists()) {
       await tempFile.delete();
     }
     await tempFile.writeAsBytes(bytes, flush: true);
 
     try {
-      final service =
-          DataArchiveService(DataExportImportRepository(appDatabase));
+      final service = DataArchiveService(
+        DataExportImportRepository(appDatabase),
+      );
       await service.importArchiveReplace(
         zipPath: tempFile.path,
         onProgress: onProgress,
@@ -98,7 +99,9 @@ class TestArchiveImportService {
       try {
         if (await tempFile.exists()) await tempFile.delete();
       } catch (e, st) {
-        AppLogger.of('TestArchiveImport').fine('Temp archive cleanup failed', e, st);
+        AppLogger.of(
+          'TestArchiveImport',
+        ).fine('Temp archive cleanup failed', e, st);
       }
     }
   }

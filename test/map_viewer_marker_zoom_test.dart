@@ -7,10 +7,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 void main() {
-  testWidgets('markers remain visible after programmatic zoom', (
-    tester,
-  ) async {
-
+  testWidgets('markers remain visible after programmatic zoom', (tester) async {
     final tmp = await Directory.systemTemp.createTemp('rmp_test');
     final file = File('${tmp.path}/test.png');
 
@@ -26,8 +23,20 @@ void main() {
     // Create a cave place + definition to show a marker at (50,50)
     final cavePlaceUuid = Uuid.v7();
     final rasterMapUuid = Uuid.v7();
-    final cavePlace = CavePlace(uuid: cavePlaceUuid, caveUuid: Uuid.v7(), title: 'P1', isEntrance: 0, isMainEntrance: 0);
-    final def = CavePlaceToRasterMapDefinition(uuid: Uuid.v7(), cavePlaceUuid: cavePlaceUuid, rasterMapUuid: rasterMapUuid, xCoordinate: 50, yCoordinate: 50);
+    final cavePlace = CavePlace(
+      uuid: cavePlaceUuid,
+      caveUuid: Uuid.v7(),
+      title: 'P1',
+      isEntrance: 0,
+      isMainEntrance: 0,
+    );
+    final def = CavePlaceToRasterMapDefinition(
+      uuid: Uuid.v7(),
+      cavePlaceUuid: cavePlaceUuid,
+      rasterMapUuid: rasterMapUuid,
+      xCoordinate: 50,
+      yCoordinate: 50,
+    );
     final cpwd = CavePlaceWithDefinition(cavePlace, def);
 
     final controller = RasterMapPlacePointEditorController();

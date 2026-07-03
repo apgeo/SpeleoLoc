@@ -31,11 +31,7 @@ class DocumentThumbnailWidgets {
           children: [
             Center(child: Icon(icon, size: 22, color: baseColor)),
             if (extLabel != null)
-              Positioned(
-                right: 3,
-                bottom: 3,
-                child: _extChip(extLabel),
-              ),
+              Positioned(right: 3, bottom: 3, child: _extChip(extLabel)),
           ],
         ),
       );
@@ -51,11 +47,7 @@ class DocumentThumbnailWidgets {
           child: Center(child: Icon(icon, size: 42, color: baseColor)),
         ),
         if (extLabel != null)
-          Positioned(
-            right: 6,
-            bottom: 6,
-            child: _extChip(extLabel),
-          ),
+          Positioned(right: 6, bottom: 6, child: _extChip(extLabel)),
       ],
     );
   }
@@ -148,11 +140,7 @@ class DocumentThumbnailWidgets {
     );
 
     if (isSmall) {
-      tile = SizedBox(
-        width: 48,
-        height: 48,
-        child: tile,
-      );
+      tile = SizedBox(width: 48, height: 48, child: tile);
     }
 
     return tile;
@@ -175,13 +163,13 @@ class DocumentThumbnailWidgets {
   static Future<String> _readPreviewText(File? file, String fileName) async {
     if (file == null || !await file.exists()) return '';
     try {
-      final bytes = await file.openRead(0, 4096).fold<List<int>>(
-        <int>[],
-        (all, chunk) {
-          all.addAll(chunk);
-          return all;
-        },
-      );
+      final bytes = await file.openRead(0, 4096).fold<List<int>>(<int>[], (
+        all,
+        chunk,
+      ) {
+        all.addAll(chunk);
+        return all;
+      });
       var raw = utf8.decode(bytes, allowMalformed: true);
       if (fileName.toLowerCase().endsWith('.rtf')) {
         raw = _stripRtf(raw);

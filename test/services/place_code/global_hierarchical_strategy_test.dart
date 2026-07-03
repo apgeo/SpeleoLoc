@@ -16,7 +16,9 @@ void main() {
 
   Future<Uuid> addArea({String? identifier}) async {
     final id = Uuid.v7();
-    await db.into(db.surfaceAreas).insert(
+    await db
+        .into(db.surfaceAreas)
+        .insert(
           SurfaceAreasCompanion.insert(
             uuid: id,
             title: 'A-$id',
@@ -28,7 +30,9 @@ void main() {
 
   Future<Uuid> addCave({Uuid? surfaceAreaUuid, String? localIndex}) async {
     final id = Uuid.v7();
-    await db.into(db.caves).insert(
+    await db
+        .into(db.caves)
+        .insert(
           CavesCompanion.insert(
             uuid: id,
             title: 'C-$id',
@@ -41,7 +45,9 @@ void main() {
 
   Future<Uuid> addPlace(Uuid caveUuid, {String? pci}) async {
     final id = Uuid.v7();
-    await db.into(db.cavePlaces).insert(
+    await db
+        .into(db.cavePlaces)
+        .insert(
           CavePlacesCompanion.insert(
             uuid: id,
             title: 'P-$id',
@@ -53,17 +59,17 @@ void main() {
   }
 
   Map<String, dynamic> goodConfig() => {
-        GlobalHierarchicalStrategy.kCountryCode: '881',
-        GlobalHierarchicalStrategy.kCountryCodeWidth: 3,
-        GlobalHierarchicalStrategy.kOrganizationCode: '028',
-        GlobalHierarchicalStrategy.kOrganizationCodeWidth: 3,
-        GlobalHierarchicalStrategy.kAreaIdentifierWidth: 3,
-        GlobalHierarchicalStrategy.kCaveLocalIndexWidth: 3,
-        GlobalHierarchicalStrategy.kCavePlaceLocalIndexWidth: 4,
-        GlobalHierarchicalStrategy.kAllowNonDigit: false,
-        GlobalHierarchicalStrategy.kMainEntranceSuffix: '0001',
-        GlobalHierarchicalStrategy.kSegmentSeparator: '',
-      };
+    GlobalHierarchicalStrategy.kCountryCode: '881',
+    GlobalHierarchicalStrategy.kCountryCodeWidth: 3,
+    GlobalHierarchicalStrategy.kOrganizationCode: '028',
+    GlobalHierarchicalStrategy.kOrganizationCodeWidth: 3,
+    GlobalHierarchicalStrategy.kAreaIdentifierWidth: 3,
+    GlobalHierarchicalStrategy.kCaveLocalIndexWidth: 3,
+    GlobalHierarchicalStrategy.kCavePlaceLocalIndexWidth: 4,
+    GlobalHierarchicalStrategy.kAllowNonDigit: false,
+    GlobalHierarchicalStrategy.kMainEntranceSuffix: '0001',
+    GlobalHierarchicalStrategy.kSegmentSeparator: '',
+  };
 
   test('aborts when country/organization code is missing', () async {
     final cave = await addCave();
@@ -75,64 +81,71 @@ void main() {
       isMainEntrance: false,
     );
     expect(r, isA<PlaceCodeGenerationAborted>());
-    expect((r as PlaceCodeGenerationAborted).reason,
-        PlaceCodeAbortReason.missingDatasetConfig);
-  });
-
-  test('uses zeros area segment (Fallback) when cave has no surface area',
-      () async {
-    final cave = await addCave();
-    final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
-    final r = await strat.generate(
-      caveUuid: cave,
-      cavePlaceUuid: p,
-      isMainEntrance: false,
+    expect(
+      (r as PlaceCodeGenerationAborted).reason,
+      PlaceCodeAbortReason.missingDatasetConfig,
     );
-    expect(r, isA<PlaceCodeGenerationFallback>());
-    final fb = r as PlaceCodeGenerationFallback;
-    expect(fb.fallback, FallbackReason.noSurfaceArea);
-    // PCI contains '000' as the area segment (default areaIdentifierWidth=3).
-    expect(fb.pci, startsWith('881028000'));
   });
 
   test(
-      'uses nines area segment (Fallback) when surface area has no general_area_identifier',
-      () async {
-    final area = await addArea();
-    final cave = await addCave(surfaceAreaUuid: area);
-    final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
-    final r = await strat.generate(
-      caveUuid: cave,
-      cavePlaceUuid: p,
-      isMainEntrance: false,
-    );
-    expect(r, isA<PlaceCodeGenerationFallback>());
-    final fb = r as PlaceCodeGenerationFallback;
-    expect(fb.fallback, FallbackReason.noIdentifier);
-    // PCI contains '999' as the area segment (default areaIdentifierWidth=3).
-    expect(fb.pci, startsWith('881028999'));
-  });
+    'uses zeros area segment (Fallback) when cave has no surface area',
+    () async {
+      final cave = await addCave();
+      final p = await addPlace(cave);
+      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final r = await strat.generate(
+        caveUuid: cave,
+        cavePlaceUuid: p,
+        isMainEntrance: false,
+      );
+      expect(r, isA<PlaceCodeGenerationFallback>());
+      final fb = r as PlaceCodeGenerationFallback;
+      expect(fb.fallback, FallbackReason.noSurfaceArea);
+      // PCI contains '000' as the area segment (default areaIdentifierWidth=3).
+      expect(fb.pci, startsWith('881028000'));
+    },
+  );
 
-  test('first place gets baseline + main_entrance_suffix when is_main_entrance',
-      () async {
-    final area = await addArea(identifier: '2048');
-    final cave = await addCave(surfaceAreaUuid: area);
-    final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
-    final r = await strat.generate(
-      caveUuid: cave,
-      cavePlaceUuid: p,
-      isMainEntrance: true,
-    );
-    expect((r as PlaceCodeGenerationOk).pci, '88102820480010001');
-    // Cave local index was persisted.
-    final caveRow = await (db.select(db.caves)
-          ..where((c) => c.uuid.equalsValue(cave)))
-        .getSingle();
-    expect(caveRow.caveLocalIndex, '001');
-  });
+  test(
+    'uses nines area segment (Fallback) when surface area has no general_area_identifier',
+    () async {
+      final area = await addArea();
+      final cave = await addCave(surfaceAreaUuid: area);
+      final p = await addPlace(cave);
+      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final r = await strat.generate(
+        caveUuid: cave,
+        cavePlaceUuid: p,
+        isMainEntrance: false,
+      );
+      expect(r, isA<PlaceCodeGenerationFallback>());
+      final fb = r as PlaceCodeGenerationFallback;
+      expect(fb.fallback, FallbackReason.noIdentifier);
+      // PCI contains '999' as the area segment (default areaIdentifierWidth=3).
+      expect(fb.pci, startsWith('881028999'));
+    },
+  );
+
+  test(
+    'first place gets baseline + main_entrance_suffix when is_main_entrance',
+    () async {
+      final area = await addArea(identifier: '2048');
+      final cave = await addCave(surfaceAreaUuid: area);
+      final p = await addPlace(cave);
+      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final r = await strat.generate(
+        caveUuid: cave,
+        cavePlaceUuid: p,
+        isMainEntrance: true,
+      );
+      expect((r as PlaceCodeGenerationOk).pci, '88102820480010001');
+      // Cave local index was persisted.
+      final caveRow = await (db.select(
+        db.caves,
+      )..where((c) => c.uuid.equalsValue(cave))).getSingle();
+      expect(caveRow.caveLocalIndex, '001');
+    },
+  );
 
   test('non-main places skip the reserved main_entrance_suffix', () async {
     final area = await addArea(identifier: '2048');
@@ -160,14 +173,14 @@ void main() {
       isMainEntrance: false,
     );
     expect((r as PlaceCodeGenerationOk).pci.substring(10, 13), '002');
-    final cave2Row = await (db.select(db.caves)
-          ..where((c) => c.uuid.equalsValue(cave2)))
-        .getSingle();
+    final cave2Row = await (db.select(
+      db.caves,
+    )..where((c) => c.uuid.equalsValue(cave2))).getSingle();
     expect(cave2Row.caveLocalIndex, '002');
     // cave1's index unchanged.
-    final cave1Row = await (db.select(db.caves)
-          ..where((c) => c.uuid.equalsValue(cave1)))
-        .getSingle();
+    final cave1Row = await (db.select(
+      db.caves,
+    )..where((c) => c.uuid.equalsValue(cave1))).getSingle();
     expect(cave1Row.caveLocalIndex, '001');
   });
 
@@ -177,8 +190,11 @@ void main() {
     final p = await addPlace(cave);
     final strat = GlobalHierarchicalStrategy(db, goodConfig());
     expect(
-      await strat.validate('8810282048001000A',
-          cavePlaceUuid: p, caveUuid: cave),
+      await strat.validate(
+        '8810282048001000A',
+        cavePlaceUuid: p,
+        caveUuid: cave,
+      ),
       anyOf(
         'place_code_error_must_be_digits',
         'place_code_warning_baseline_mismatch',
@@ -192,8 +208,11 @@ void main() {
     final p = await addPlace(cave);
     final strat = GlobalHierarchicalStrategy(db, goodConfig());
     expect(
-      await strat.validate('88102820480010005',
-          cavePlaceUuid: p, caveUuid: cave),
+      await strat.validate(
+        '88102820480010005',
+        cavePlaceUuid: p,
+        caveUuid: cave,
+      ),
       isNull,
     );
   });
@@ -205,8 +224,11 @@ void main() {
     final p2 = await addPlace(cave);
     final strat = GlobalHierarchicalStrategy(db, goodConfig());
     expect(
-      await strat.validate('88102820480010005',
-          cavePlaceUuid: p2, caveUuid: cave),
+      await strat.validate(
+        '88102820480010005',
+        cavePlaceUuid: p2,
+        caveUuid: cave,
+      ),
       'place_code_error_not_unique',
     );
   });

@@ -99,16 +99,16 @@ class FtpProfile {
   }
 
   Map<String, Object?> toJson() => {
-        'profileUuid': profileUuid,
-        'displayName': displayName,
-        'protocol': protocol.name,
-        'host': host,
-        'port': port,
-        'username': username,
-        'remoteFolder': remoteFolder,
-        'allowInvalidCertificate': allowInvalidCertificate,
-        'passiveMode': passiveMode,
-      };
+    'profileUuid': profileUuid,
+    'displayName': displayName,
+    'protocol': protocol.name,
+    'host': host,
+    'port': port,
+    'username': username,
+    'remoteFolder': remoteFolder,
+    'allowInvalidCertificate': allowInvalidCertificate,
+    'passiveMode': passiveMode,
+  };
 
   static FtpProfile fromJson(Map<String, Object?> json) {
     final protoName = (json['protocol'] as String?) ?? 'ftp';

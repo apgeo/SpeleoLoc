@@ -23,9 +23,21 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'add', titleLocKey: 'tour_surface_areas_add_title', bodyLocKey: 'tour_surface_areas_add_body'),
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_surface_areas_list_title', bodyLocKey: 'tour_surface_areas_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_surface_areas_menu_title', bodyLocKey: 'tour_surface_areas_menu_body'),
+    TourStepDef(
+      keyId: 'add',
+      titleLocKey: 'tour_surface_areas_add_title',
+      bodyLocKey: 'tour_surface_areas_add_body',
+    ),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_surface_areas_list_title',
+      bodyLocKey: 'tour_surface_areas_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_surface_areas_menu_title',
+      bodyLocKey: 'tour_surface_areas_menu_body',
+    ),
   ];
 
   List<SurfaceArea> _areas = [];
@@ -36,7 +48,9 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
   List<AppMenuItem> get screenMenuItems => [
     AppMenuItem(
       value: 'toggle_generate_icons',
-      icon: _showGenerateIcons ? Icons.check_box : Icons.check_box_outline_blank,
+      icon: _showGenerateIcons
+          ? Icons.check_box
+          : Icons.check_box_outline_blank,
       label: LocServ.inst.t('show_generate_codes_icons'),
     ),
   ];
@@ -64,19 +78,28 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
 
   Future<void> _showAddEditDialog({SurfaceArea? existing}) async {
     final controller = TextEditingController(text: existing?.title ?? '');
-    final descController = TextEditingController(text: existing?.description ?? '');
-    final identifierController =
-        TextEditingController(text: existing?.generalAreaIdentifier ?? '');
+    final descController = TextEditingController(
+      text: existing?.description ?? '',
+    );
+    final identifierController = TextEditingController(
+      text: existing?.generalAreaIdentifier ?? '',
+    );
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(existing == null ? LocServ.inst.t('add_surface_area') : LocServ.inst.t('edit')),
+        title: Text(
+          existing == null
+              ? LocServ.inst.t('add_surface_area')
+              : LocServ.inst.t('edit'),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: controller,
-              decoration: InputDecoration(labelText: LocServ.inst.t('enter_surface_area_title')),
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('enter_surface_area_title'),
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -88,7 +111,9 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
             const SizedBox(height: 8),
             TextField(
               controller: descController,
-              decoration: InputDecoration(labelText: LocServ.inst.t('description')),
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('description'),
+              ),
               maxLines: 3,
             ),
           ],
@@ -107,12 +132,17 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
                 );
               },
             ),
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
           TextButton(
             onPressed: () async {
               final title = controller.text.trim();
               if (title.isEmpty) return;
-              final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
+              final desc = descController.text.trim().isEmpty
+                  ? null
+                  : descController.text.trim();
               final identifier = identifierController.text.trim().isEmpty
                   ? null
                   : identifierController.text.trim();
@@ -154,8 +184,14 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
         title: Text(LocServ.inst.t('confirm')),
         content: Text(LocServ.inst.t('delete_area_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(LocServ.inst.t('yes'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
         ],
       ),
     );
@@ -182,7 +218,11 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
         appBar: AppBar(
           title: Text(LocServ.inst.t('manage_surface_areas')),
           actions: [
-            IconButton(key: tourKeys['add'], onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+            IconButton(
+              key: tourKeys['add'],
+              onPressed: () => _showAddEditDialog(),
+              icon: const Icon(Icons.add),
+            ),
             KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
           ],
         ),
@@ -195,7 +235,10 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
             return ListTile(
               title: Text(area.title),
               subtitle: area.description != null && area.description!.isNotEmpty
-                  ? Text(area.description!, style: const TextStyle(fontSize: 12, color: Colors.grey))
+                  ? Text(
+                      area.description!,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    )
                   : null,
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -206,14 +249,21 @@ class _SurfaceAreasPageState extends State<SurfaceAreasPage>
                         context,
                         scope: PerAreaScope(area.uuid),
                         confirmTitle: LocServ.inst.t('generate_codes'),
-                        confirmBody:
-                            LocServ.inst.t('generate_codes_confirm_area'),
+                        confirmBody: LocServ.inst.t(
+                          'generate_codes_confirm_area',
+                        ),
                       ),
                       icon: const Icon(Icons.auto_awesome),
                       tooltip: LocServ.inst.t('generate_codes'),
                     ),
-                  IconButton(onPressed: () => _showAddEditDialog(existing: area), icon: const Icon(Icons.edit)),
-                  IconButton(onPressed: () => _confirmDelete(area), icon: const Icon(Icons.delete)),
+                  IconButton(
+                    onPressed: () => _showAddEditDialog(existing: area),
+                    icon: const Icon(Icons.edit),
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmDelete(area),
+                    icon: const Icon(Icons.delete),
+                  ),
                 ],
               ),
             );

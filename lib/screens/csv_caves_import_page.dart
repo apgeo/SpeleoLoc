@@ -15,10 +15,7 @@ class CSVCavesImportPage extends ConsumerStatefulWidget {
   /// Maximum number of duplicate matches to preview (default 5).
   final int maxPreviewDuplicates;
 
-  const CSVCavesImportPage({
-    super.key,
-    this.maxPreviewDuplicates = 5,
-  });
+  const CSVCavesImportPage({super.key, this.maxPreviewDuplicates = 5});
 
   @override
   ConsumerState<CSVCavesImportPage> createState() => _CSVCavesImportPageState();
@@ -30,25 +27,28 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
   bool _hasNavigated = false;
 
   List<CSVColumnDefinition> get _columnDefinitions => [
-        CSVColumnDefinition(
-          key: 'cave_name',
-          label: LocServ.inst.t('csv_field_cave_name'),
-          required: true,
-        ),
-        CSVColumnDefinition(
-          key: 'description',
-          label: LocServ.inst.t('csv_field_description'),
-        ),
-        CSVColumnDefinition(
-          key: 'surface_area',
-          label: LocServ.inst.t('csv_field_surface_area'),
-        ),
-      ];
+    CSVColumnDefinition(
+      key: 'cave_name',
+      label: LocServ.inst.t('csv_field_cave_name'),
+      required: true,
+    ),
+    CSVColumnDefinition(
+      key: 'description',
+      label: LocServ.inst.t('csv_field_description'),
+    ),
+    CSVColumnDefinition(
+      key: 'surface_area',
+      label: LocServ.inst.t('csv_field_surface_area'),
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _importer = CSVCaveImporter(ref.read(appDatabaseProvider), currentUserService);
+    _importer = CSVCaveImporter(
+      ref.read(appDatabaseProvider),
+      currentUserService,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }
 
@@ -135,8 +135,9 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
     List<CaveExistingMatch> matches,
     int totalCount,
   ) async {
-    final previewCount =
-        matches.length > widget.maxPreviewDuplicates ? widget.maxPreviewDuplicates : matches.length;
+    final previewCount = matches.length > widget.maxPreviewDuplicates
+        ? widget.maxPreviewDuplicates
+        : matches.length;
     final preview = matches.take(previewCount).toList();
 
     return showDialog<bool>(
@@ -154,19 +155,24 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ...preview.map((m) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                      '• ${m.caveName}${m.surfaceArea != null ? ' (${m.surfaceArea})' : ''}',
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  )),
+              ...preview.map(
+                (m) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    '• ${m.caveName}${m.surfaceArea != null ? ' (${m.surfaceArea})' : ''}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
               if (totalCount > previewCount)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     '... ${LocServ.inst.t('and')} ${totalCount - previewCount} ${LocServ.inst.t('more')}',
-                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
+                    style: const TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),
@@ -198,9 +204,15 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${LocServ.inst.t('csv_caves_created')}: ${result.cavesCreated}'),
-            Text('${LocServ.inst.t('csv_surface_areas_created')}: ${result.surfaceAreasCreated}'),
-            Text('${LocServ.inst.t('csv_caves_skipped')}: ${result.skippedDuplicates}'),
+            Text(
+              '${LocServ.inst.t('csv_caves_created')}: ${result.cavesCreated}',
+            ),
+            Text(
+              '${LocServ.inst.t('csv_surface_areas_created')}: ${result.surfaceAreasCreated}',
+            ),
+            Text(
+              '${LocServ.inst.t('csv_caves_skipped')}: ${result.skippedDuplicates}',
+            ),
           ],
         ),
         actions: [

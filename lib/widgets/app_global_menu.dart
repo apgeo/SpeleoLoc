@@ -39,23 +39,29 @@ class AppMenuItem {
 enum AppMenuMode { popup, drawer }
 
 /// Global notifier so all screens share the same menu mode.
-final ValueNotifier<AppMenuMode> _menuModeNotifier =
-    ValueNotifier(AppMenuMode.drawer);
+final ValueNotifier<AppMenuMode> _menuModeNotifier = ValueNotifier(
+  AppMenuMode.drawer,
+);
 
 /// Cached app version string, populated at startup.
 String _appVersion = '';
 
 /// Call once at app startup to load the persisted menu mode.
 Future<void> initAppMenuMode() async {
-  final stored = await SettingsHelper.loadStringConfig(_menuModeConfigKey, 'drawer');
-  _menuModeNotifier.value =
-      stored == 'popup' ? AppMenuMode.popup : AppMenuMode.drawer;
+  final stored = await SettingsHelper.loadStringConfig(
+    _menuModeConfigKey,
+    'drawer',
+  );
+  _menuModeNotifier.value = stored == 'popup'
+      ? AppMenuMode.popup
+      : AppMenuMode.drawer;
   try {
     final info = await PackageInfo.fromPlatform();
     _appVersion = 'v${info.version}+${info.buildNumber}';
   } catch (e, st) {
-    AppLogger.of('AppGlobalMenu')
-        .warning('PackageInfo.fromPlatform failed; version hidden', e, st);
+    AppLogger.of(
+      'AppGlobalMenu',
+    ).warning('PackageInfo.fromPlatform failed; version hidden', e, st);
     _appVersion = '';
   }
 }
@@ -95,7 +101,8 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
   void onScreenMenuItemSelected(String value) {}
 
   /// GlobalKey for the Scaffold. Screens must set `key: appMenuScaffoldKey`.
-  final GlobalKey<ScaffoldState> appMenuScaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> appMenuScaffoldKey =
+      GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -170,18 +177,20 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
 
         // Screen-specific items
         for (final item in screenMenuItems) {
-          items.add(PopupMenuItem<String>(
-            value: item.value,
-            child: Row(
-              children: [
-                Icon(item.icon, size: 20),
-                if (item.label != null) ...[
-                  const SizedBox(width: 8),
-                  Text(item.label!),
+          items.add(
+            PopupMenuItem<String>(
+              value: item.value,
+              child: Row(
+                children: [
+                  Icon(item.icon, size: 20),
+                  if (item.label != null) ...[
+                    const SizedBox(width: 8),
+                    Text(item.label!),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ));
+          );
         }
 
         if (screenMenuItems.isNotEmpty) {
@@ -194,29 +203,31 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
         // Help tour
         if (this is ProductTourMixin) {
           items.add(const PopupMenuDivider());
-          items.add(PopupMenuItem<String>(
-            value: '_help',
-            child: Row(
-              children: [
-                const Icon(Icons.help_outline, size: 20),
-                const SizedBox(width: 8),
-                Text(LocServ.inst.t('help_tour')),
-              ],
+          items.add(
+            PopupMenuItem<String>(
+              value: '_help',
+              child: Row(
+                children: [
+                  const Icon(Icons.help_outline, size: 20),
+                  const SizedBox(width: 8),
+                  Text(LocServ.inst.t('help_tour')),
+                ],
+              ),
             ),
-          ));
+          );
         }
 
         // Mode toggle
         items.add(const PopupMenuDivider());
-        items.add(PopupMenuItem<String>(
-          value: '_toggle_menu_mode',
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.menu_open, size: 20),
-            ],
+        items.add(
+          PopupMenuItem<String>(
+            value: '_toggle_menu_mode',
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [const Icon(Icons.menu_open, size: 20)],
+            ),
           ),
-        ));
+        );
 
         return items;
       },
@@ -232,16 +243,22 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
         _navigateToScanner();
         return true;
       case '_nav_documents':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const DocumentationFilesPage()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DocumentationFilesPage()),
+        );
         return true;
       case '_nav_settings':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SettingsMainPage()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsMainPage()),
+        );
         return true;
       case '_nav_sync':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SyncDashboardPage()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SyncDashboardPage()),
+        );
         return true;
       default:
         return false;
@@ -255,7 +272,9 @@ mixin AppBarMenuMixin<T extends StatefulWidget> on State<T> {
   static void _setMenuMode(AppMenuMode mode) {
     _menuModeNotifier.value = mode;
     SettingsHelper.saveStringConfig(
-        _menuModeConfigKey, mode == AppMenuMode.popup ? 'popup' : 'drawer');
+      _menuModeConfigKey,
+      mode == AppMenuMode.popup ? 'popup' : 'drawer',
+    );
   }
 }
 
@@ -285,11 +304,31 @@ class _GlobalNavRowState extends State<_GlobalNavRow> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          _navIconWithLabel(Icons.home, LocServ.inst.t('caves'), () => _go('_nav_caves')),
-          _navIconWithLabel(Icons.sync, LocServ.inst.t('sync_dashboard_title'), () => _go('_nav_sync')),
-          _navIconWithLabel(Icons.description, LocServ.inst.t('documentation'), () => _go('_nav_documents')),
-          _navIconWithLabel(Icons.settings, LocServ.inst.t('settings'), () => _go('_nav_settings')),
-          _navIconWithLabel(Icons.qr_code_scanner, LocServ.inst.t('scan'), () => _go('_nav_scan'))
+          _navIconWithLabel(
+            Icons.home,
+            LocServ.inst.t('caves'),
+            () => _go('_nav_caves'),
+          ),
+          _navIconWithLabel(
+            Icons.sync,
+            LocServ.inst.t('sync_dashboard_title'),
+            () => _go('_nav_sync'),
+          ),
+          _navIconWithLabel(
+            Icons.description,
+            LocServ.inst.t('documentation'),
+            () => _go('_nav_documents'),
+          ),
+          _navIconWithLabel(
+            Icons.settings,
+            LocServ.inst.t('settings'),
+            () => _go('_nav_settings'),
+          ),
+          _navIconWithLabel(
+            Icons.qr_code_scanner,
+            LocServ.inst.t('scan'),
+            () => _go('_nav_scan'),
+          ),
         ],
       ),
     );
@@ -299,19 +338,26 @@ class _GlobalNavRowState extends State<_GlobalNavRow> {
     return SizedBox(
       width: 88,
       child: InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48),
-            const SizedBox(height: 3),
-            FittedBox(fit: BoxFit.scaleDown, child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
-          ],
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48),
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -340,56 +386,103 @@ class _AppMenuDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12),
-            Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            // Screen-specific items
-            if (screenItems.isNotEmpty) ...[
-              ...screenItems.map((item) => ListTile(
-                    leading: Icon(item.icon),
-                    title: item.label != null ? Text(item.label!) : null,
-                    dense: true,
-                    onTap: () => onScreenItemTap(item),
-                    visualDensity: VisualDensity.compact,
-                    iconColor: item.color
-                  )),
-              const Divider(),
-            ],
-            // Global navigation items with labels
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
-              child: Wrap(
-                alignment: WrapAlignment.spaceEvenly,
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  _navIconWithLabel(context, Icons.home, LocServ.inst.t('caves'), () {
-                    Navigator.pop(context);
-                    AppRoutes.pushHomeReplaceAll(context);
-                  }),
-                  _navIconWithLabel(context, Icons.sync, LocServ.inst.t('sync_dashboard_title'), () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const SyncDashboardPage()));
-                  }),
-                  _navIconWithLabel(context, Icons.description, LocServ.inst.t('documentation'), () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const DocumentationFilesPage()));
-                  }),
-                  _navIconWithLabel(context, Icons.settings, LocServ.inst.t('settings'), () {
-                    Navigator.pop(context);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const SettingsMainPage()));
-                  }),
-                  _navIconWithLabel(context, Icons.qr_code_scanner, LocServ.inst.t('scan'), () {
-                    Navigator.pop(context);
-                    onScanPressed?.call();
-                  }),
-                ],
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Screen-specific items
+                    if (screenItems.isNotEmpty) ...[
+                      ...screenItems.map(
+                        (item) => ListTile(
+                          leading: Icon(item.icon),
+                          title: item.label != null ? Text(item.label!) : null,
+                          dense: true,
+                          onTap: () => onScreenItemTap(item),
+                          visualDensity: VisualDensity.compact,
+                          iconColor: item.color,
+                        ),
+                      ),
+                      const Divider(),
+                    ],
+                    // Global navigation items with labels
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6.0,
+                        vertical: 4.0,
+                      ),
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceEvenly,
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          _navIconWithLabel(
+                            context,
+                            Icons.home,
+                            LocServ.inst.t('caves'),
+                            () {
+                              Navigator.pop(context);
+                              AppRoutes.pushHomeReplaceAll(context);
+                            },
+                          ),
+                          _navIconWithLabel(
+                            context,
+                            Icons.sync,
+                            LocServ.inst.t('sync_dashboard_title'),
+                            () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SyncDashboardPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          _navIconWithLabel(
+                            context,
+                            Icons.description,
+                            LocServ.inst.t('documentation'),
+                            () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const DocumentationFilesPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          _navIconWithLabel(
+                            context,
+                            Icons.settings,
+                            LocServ.inst.t('settings'),
+                            () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SettingsMainPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          _navIconWithLabel(
+                            context,
+                            Icons.qr_code_scanner,
+                            LocServ.inst.t('scan'),
+                            () {
+                              Navigator.pop(context);
+                              onScanPressed?.call();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            ],
-            ),
-            ),
             ),
             // FTP sync: a persistent mini card always visible at the bottom.
             // Shows a quick "Sync now" button when idle, live progress while
@@ -400,7 +493,10 @@ class _AppMenuDrawer extends StatelessWidget {
               valueListenable: caveTripService.activeTripIdNotifier,
               builder: (context, tripId, _) {
                 if (tripId == null) return const SizedBox.shrink();
-                return _ActiveTripCard(tripId: tripId, onClose: () => Navigator.pop(context));
+                return _ActiveTripCard(
+                  tripId: tripId,
+                  onClose: () => Navigator.pop(context),
+                );
               },
             ),
             // Help tour + Mode toggle icon + version label at bottom
@@ -421,18 +517,20 @@ class _AppMenuDrawer extends StatelessWidget {
                       tooltip: LocServ.inst.t('about'),
                       onPressed: () => _showAboutDialog(context),
                     ),
-                if (_appVersion.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4.0),
-                    child: Text(
-                      _appVersion,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                    if (_appVersion.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Text(
+                          _appVersion,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.45),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                  ],
                 ),
               ],
             ),
@@ -443,23 +541,35 @@ class _AppMenuDrawer extends StatelessWidget {
     );
   }
 
-  Widget _navIconWithLabel(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+  Widget _navIconWithLabel(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return SizedBox(
       width: 60,
       child: InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 36),
-            const SizedBox(height: 3),
-            FittedBox(fit: BoxFit.scaleDown, child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
-          ],
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 36),
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -516,7 +626,6 @@ class _AppMenuDrawer extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _ActiveTripCard extends StatefulWidget {
@@ -559,26 +668,29 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
     final points = await caveTripRepository.getTripPoints(widget.tripId);
     final last5 = points.reversed.take(5).toList().reversed.toList();
     final placeIds = last5
-      .map((p) => p.cavePlaceUuid)
-      .whereType<Uuid>()
-      .toSet()
-      .toList();
+        .map((p) => p.cavePlaceUuid)
+        .whereType<Uuid>()
+        .toSet()
+        .toList();
     Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
       final places = await cavePlaceRepository.findByIds(placeIds);
       placesById = {for (var p in places) p.uuid: p};
     }
-    if (mounted) setState(() {
-      _trip = trip;
-      _cave = cave;
-      _points = last5;
-      _placesById = placesById;
-      _totalPoints = points.length;
-    });
+    if (mounted)
+      setState(() {
+        _trip = trip;
+        _cave = cave;
+        _points = last5;
+        _placesById = placesById;
+        _totalPoints = points.length;
+      });
   }
 
   String _formatDuration(int startMs) {
-    final d = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(startMs));
+    final d = DateTime.now().difference(
+      DateTime.fromMillisecondsSinceEpoch(startMs),
+    );
     final h = d.inHours;
     final m = d.inMinutes.remainder(60);
     return h > 0 ? '${h}h ${m}m' : '${m}m';
@@ -606,87 +718,115 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Row(children: [
-              Icon(
-                isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
-                color: isPaused ? Colors.orange : Colors.green,
-                size: 10,
+              Row(
+                children: [
+                  Icon(
+                    isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
+                    color: isPaused ? Colors.orange : Colors.green,
+                    size: 10,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      trip.title,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isPaused)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(
+                        Icons.pause_circle,
+                        size: 10,
+                        color: Colors.orange,
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(width: 4),
-              Expanded(child: Text(trip.title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-              if (isPaused)
-                const Padding(
-                  padding: EdgeInsets.only(left: 4),
-                  child: Icon(Icons.pause_circle, size: 10, color: Colors.orange),
+              if (_cave != null)
+                Text(
+                  _cave!.title,
+                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                 ),
-            ]),
-            if (_cave != null)
-              Text(_cave!.title, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-            Text('${_formatDuration(trip.tripStartedAt)} · $_totalPoints pts', style: const TextStyle(fontSize: 10)),
-            if (_points.isNotEmpty) ...[
-              const Divider(height: 8),
-              ..._points.map((pt) {
-                final place = _placesById[pt.cavePlaceUuid];
-                final time = dateTimeFormat.format(DateTime.fromMillisecondsSinceEpoch(pt.scannedAt));
-                return Text('$time ${place?.title ?? '#${pt.cavePlaceUuid}'}',
-                    style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis);
-              }),
-              if (_totalPoints > _points.length)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    '+${_totalPoints - _points.length} ${LocServ.inst.t('trip_cave_places_short')}',
-                    style: TextStyle(fontSize: 9, color: Colors.grey[700]),
+              Text(
+                '${_formatDuration(trip.tripStartedAt)} · $_totalPoints pts',
+                style: const TextStyle(fontSize: 10),
+              ),
+              if (_points.isNotEmpty) ...[
+                const Divider(height: 8),
+                ..._points.map((pt) {
+                  final place = _placesById[pt.cavePlaceUuid];
+                  final time = dateTimeFormat.format(
+                    DateTime.fromMillisecondsSinceEpoch(pt.scannedAt),
+                  );
+                  return Text(
+                    '$time ${place?.title ?? '#${pt.cavePlaceUuid}'}',
+                    style: const TextStyle(fontSize: 10),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }),
+                if (_totalPoints > _points.length)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '+${_totalPoints - _points.length} ${LocServ.inst.t('trip_cave_places_short')}',
+                      style: TextStyle(fontSize: 9, color: Colors.grey[700]),
+                    ),
                   ),
-                ),
-            ],
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.route, size: 28),
-                  padding: EdgeInsets.zero,
-                  color: Colors.blue,
-                  constraints: const BoxConstraints(),
-                  tooltip: LocServ.inst.t('trip_view'),
-                  onPressed: () {
-                    widget.onClose();
-                    AppRoutes.pushCaveTrip(context, trip.uuid);
-                  },
-                ),
-                IconButton(
-                  icon: Icon(
-                    isPaused ? Icons.play_circle : Icons.pause_circle,
-                    size: 28,
-                    color: isPaused ? Colors.green : Colors.orange,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: isPaused ? LocServ.inst.t('trip_resume') : LocServ.inst.t('trip_pause'),
-                  onPressed: () {
-                    if (isPaused) {
-                      caveTripService.resumeTrip();
-                    } else {
-                      caveTripService.pauseTrip();
-                    }
-                    setState(() {});
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.stop, size: 28, color: Colors.red),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: LocServ.inst.t('trip_stop'),
-                  onPressed: () async {
-                    widget.onClose();
-                    await caveTripService.stopTrip();
-                  },
-                ),
               ],
-            ),
-          ],
-        ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.route, size: 28),
+                    padding: EdgeInsets.zero,
+                    color: Colors.blue,
+                    constraints: const BoxConstraints(),
+                    tooltip: LocServ.inst.t('trip_view'),
+                    onPressed: () {
+                      widget.onClose();
+                      AppRoutes.pushCaveTrip(context, trip.uuid);
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isPaused ? Icons.play_circle : Icons.pause_circle,
+                      size: 28,
+                      color: isPaused ? Colors.green : Colors.orange,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: isPaused
+                        ? LocServ.inst.t('trip_resume')
+                        : LocServ.inst.t('trip_pause'),
+                    onPressed: () {
+                      if (isPaused) {
+                        caveTripService.resumeTrip();
+                      } else {
+                        caveTripService.pauseTrip();
+                      }
+                      setState(() {});
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.stop, size: 28, color: Colors.red),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: LocServ.inst.t('trip_stop'),
+                    onPressed: () async {
+                      widget.onClose();
+                      await caveTripService.stopTrip();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

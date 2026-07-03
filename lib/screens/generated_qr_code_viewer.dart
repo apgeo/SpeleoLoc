@@ -26,25 +26,35 @@ class GeneratedQRCodeViewer extends StatefulWidget {
   final List<CavePlace>? cavePlaces;
 
   const GeneratedQRCodeViewer({super.key, this.caveUuid, this.cavePlaces})
-      : assert(
-          (caveUuid == null) != (cavePlaces == null),
-          'Provide exactly one of caveUuid or cavePlaces, not both or neither.',
-        );
+    : assert(
+        (caveUuid == null) != (cavePlaces == null),
+        'Provide exactly one of caveUuid or cavePlaces, not both or neither.',
+      );
 
   @override
   State<GeneratedQRCodeViewer> createState() => _GeneratedQRCodeViewerState();
 }
 
 class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
-    with AppBarMenuMixin<GeneratedQRCodeViewer>, ProductTourMixin<GeneratedQRCodeViewer> {
+    with
+        AppBarMenuMixin<GeneratedQRCodeViewer>,
+        ProductTourMixin<GeneratedQRCodeViewer> {
   @override
   String get tourId => 'generated_qr_viewer';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'pdf', titleLocKey: 'tour_generated_qr_viewer_pdf_title', bodyLocKey: 'tour_generated_qr_viewer_pdf_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_generated_qr_viewer_menu_title', bodyLocKey: 'tour_generated_qr_viewer_menu_body'),
+    TourStepDef(
+      keyId: 'pdf',
+      titleLocKey: 'tour_generated_qr_viewer_pdf_title',
+      bodyLocKey: 'tour_generated_qr_viewer_pdf_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_generated_qr_viewer_menu_title',
+      bodyLocKey: 'tour_generated_qr_viewer_menu_body',
+    ),
   ];
 
   GenerationResult? _result;
@@ -81,7 +91,9 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
           : null;
 
       // Load output kind preference
-      final outputKind = await configurationRepository.readString('qr_output_kind');
+      final outputKind = await configurationRepository.readString(
+        'qr_output_kind',
+      );
       final asPdf = (outputKind ?? 'pdf') == 'pdf';
 
       // Load full QR generation config (JSON)
@@ -91,7 +103,8 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
       final pdfCfg = await configurationRepository.readJson(pdfOutputConfigKey);
 
       // Get cave places
-      final cavePlaces = widget.cavePlaces ??
+      final cavePlaces =
+          widget.cavePlaces ??
           await cavePlaceRepository.getCavePlaces(widget.caveUuid!);
 
       // Build generation preferences from config
@@ -196,7 +209,8 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const SettingsQrGenerationPage()),
+                        builder: (_) => const SettingsQrGenerationPage(),
+                      ),
                     );
                     if (autoRefreshQrAfterSettings && mounted) _generate();
                   },
@@ -208,7 +222,8 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const SettingsPdfOutputPage()),
+                        builder: (_) => const SettingsPdfOutputPage(),
+                      ),
                     );
                     if (autoRefreshQrAfterSettings && mounted) _generate();
                   },
@@ -308,7 +323,9 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
           await File('${subDir.path}/${f.name}').writeAsBytes(f.bytes);
         }
         if (context.mounted) {
-          SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: ${subDir.path}');
+          SnackBarService.showSuccess(
+            '${LocServ.inst.t('files_saved')}: ${subDir.path}',
+          );
         }
       } else {
         final dir = await FilePicker.platform.getDirectoryPath(
@@ -344,14 +361,16 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
         await File(output).writeAsBytes(bytes);
       }
       if (context.mounted) {
-        SnackBarService.showSuccess('${LocServ.inst.t('files_saved')}: $output');
+        SnackBarService.showSuccess(
+          '${LocServ.inst.t('files_saved')}: $output',
+        );
       }
     }
   }
 
   Future<String> _writeTempFile(String name, Uint8List bytes) async {
     final dir = await getTemporaryDirectory();
-  final path = '${dir.path}/$name';
+    final path = '${dir.path}/$name';
     await File(path).writeAsBytes(bytes, flush: true);
     return path;
   }
@@ -379,7 +398,9 @@ class _InAppPdfViewerState extends State<_InAppPdfViewer> {
         document: PdfDocument.openFile(widget.filePath),
       );
     } catch (e, st) {
-      AppLogger.of('GeneratedQrCodeViewer').warning('Failed to open PDF ${widget.filePath}', e, st);
+      AppLogger.of(
+        'GeneratedQrCodeViewer',
+      ).warning('Failed to open PDF ${widget.filePath}', e, st);
       _pdfController = null;
     }
   }

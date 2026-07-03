@@ -14,10 +14,6 @@ class IconActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      tooltip: tooltip,
-    );
+    return IconButton(onPressed: onPressed, icon: Icon(icon), tooltip: tooltip);
   }
 }

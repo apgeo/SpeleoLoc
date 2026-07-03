@@ -24,32 +24,35 @@ enum ToastType { info, success, warning, error }
 class SnackBarService {
   const SnackBarService._();
 
-  static const _errorDuration   = Duration(seconds: 5);
+  static const _errorDuration = Duration(seconds: 5);
   static const _warningDuration = Duration(seconds: 4);
   static const _successDuration = Duration(seconds: 3);
-  static const _infoDuration    = Duration(seconds: 2);
+  static const _infoDuration = Duration(seconds: 2);
 
   /// Show a red error toast. Accepts [AppException] or any [Object].
   static void showError(Object error, {Duration? duration}) {
     final msg = error is AppException ? error.message : error.toString();
-    _ToastManager.instance.show(msg, ToastType.error,
-        duration: duration ?? _errorDuration);
+    _ToastManager.instance.show(
+      msg,
+      ToastType.error,
+      duration: duration ?? _errorDuration,
+    );
   }
 
   /// Show a green success / confirmation toast.
-  static void showSuccess(String message, {Duration? duration}) =>
-      _ToastManager.instance.show(message, ToastType.success,
-          duration: duration ?? _successDuration);
+  static void showSuccess(String message, {Duration? duration}) => _ToastManager
+      .instance
+      .show(message, ToastType.success, duration: duration ?? _successDuration);
 
   /// Show an amber warning toast (validation failures, non-critical issues).
-  static void showWarning(String message, {Duration? duration}) =>
-      _ToastManager.instance.show(message, ToastType.warning,
-          duration: duration ?? _warningDuration);
+  static void showWarning(String message, {Duration? duration}) => _ToastManager
+      .instance
+      .show(message, ToastType.warning, duration: duration ?? _warningDuration);
 
   /// Show a blue informational toast.
-  static void showInfo(String message, {Duration? duration}) =>
-      _ToastManager.instance.show(message, ToastType.info,
-          duration: duration ?? _infoDuration);
+  static void showInfo(String message, {Duration? duration}) => _ToastManager
+      .instance
+      .show(message, ToastType.info, duration: duration ?? _infoDuration);
 }
 
 // ---------------------------------------------------------------------------
@@ -62,11 +65,12 @@ class _ToastData {
   final ToastType type;
   final Duration duration;
 
-  const _ToastData(
-      {required this.id,
-      required this.message,
-      required this.type,
-      required this.duration});
+  const _ToastData({
+    required this.id,
+    required this.message,
+    required this.type,
+    required this.duration,
+  });
 }
 
 class _ToastManager {
@@ -129,7 +133,9 @@ class _ToastHostState extends State<_ToastHost> with TickerProviderStateMixin {
   void addToast(_ToastData data) {
     if (!mounted) return;
     final ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 280));
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
     final toast = _LiveToast(data: data, controller: ctrl);
     setState(() => _toasts.insert(0, toast)); // newest at top
     ctrl.forward();
@@ -161,13 +167,12 @@ class _ToastHostState extends State<_ToastHost> with TickerProviderStateMixin {
   Widget _buildToast(_LiveToast t) {
     return SlideTransition(
       key: ValueKey(t.data.id),
-      position: Tween<Offset>(
-              begin: const Offset(0, 0.6), end: Offset.zero)
+      position: Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero)
           .animate(
-              CurvedAnimation(parent: t.controller, curve: Curves.easeOutCubic)),
+            CurvedAnimation(parent: t.controller, curve: Curves.easeOutCubic),
+          ),
       child: FadeTransition(
-        opacity:
-            CurvedAnimation(parent: t.controller, curve: Curves.easeIn),
+        opacity: CurvedAnimation(parent: t.controller, curve: Curves.easeIn),
         child: Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: _ToastCard(data: t.data, onDismiss: () => _dismiss(t)),
@@ -196,10 +201,16 @@ class _ToastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (data.type) {
-      ToastType.info    => (const Color(0xFF1565C0), Icons.info_outline),
-      ToastType.success => (const Color(0xFF2E7D32), Icons.check_circle_outline),
-      ToastType.warning => (const Color(0xFFE65100), Icons.warning_amber_rounded),
-      ToastType.error   => (const Color(0xFFC62828), Icons.error_outline),
+      ToastType.info => (const Color(0xFF1565C0), Icons.info_outline),
+      ToastType.success => (
+        const Color(0xFF2E7D32),
+        Icons.check_circle_outline,
+      ),
+      ToastType.warning => (
+        const Color(0xFFE65100),
+        Icons.warning_amber_rounded,
+      ),
+      ToastType.error => (const Color(0xFFC62828), Icons.error_outline),
     };
 
     return Material(
@@ -220,9 +231,10 @@ class _ToastCard extends StatelessWidget {
                 child: Text(
                   data.message,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.5,
-                      height: 1.35),
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    height: 1.35,
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
@@ -237,4 +249,3 @@ class _ToastCard extends StatelessWidget {
     );
   }
 }
-

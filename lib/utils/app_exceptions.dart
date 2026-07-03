@@ -32,11 +32,7 @@ abstract class AppException implements Exception {
 
 /// Raised by repositories when a database operation fails.
 class DbException extends AppException {
-  const DbException(
-    super.message, {
-    super.cause,
-    super.stackTrace,
-  });
+  const DbException(super.message, {super.cause, super.stackTrace});
 }
 
 /// Raised when input data fails a business-level validation rule
@@ -59,10 +55,5 @@ class IoException extends AppException {
   /// Optional path that triggered the failure.
   final String? path;
 
-  const IoException(
-    super.message, {
-    this.path,
-    super.cause,
-    super.stackTrace,
-  });
+  const IoException(super.message, {this.path, super.cause, super.stackTrace});
 }

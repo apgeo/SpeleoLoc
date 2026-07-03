@@ -38,33 +38,34 @@ class PerAreaSequentialStrategy extends PlaceCodeStrategy {
 
   @override
   Map<String, dynamic> get defaultConfig => const {
-        kStartAt: 1,
-        kStep: 1,
-        kZeroPadWidth: 0,
-        kMainEntranceFirst: true,
-      };
+    kStartAt: 1,
+    kStep: 1,
+    kZeroPadWidth: 0,
+    kMainEntranceFirst: true,
+  };
 
   int get _startAt => (_config[kStartAt] as num?)?.toInt() ?? 1;
   int get _step => (_config[kStep] as num?)?.toInt() ?? 1;
   int get _zeroPadWidth => (_config[kZeroPadWidth] as num?)?.toInt() ?? 0;
-  bool get _mainEntranceFirst =>
-      (_config[kMainEntranceFirst] as bool?) ?? true;
+  bool get _mainEntranceFirst => (_config[kMainEntranceFirst] as bool?) ?? true;
 
-  String _format(int n) =>
-      _zeroPadWidth > 0 ? n.toString().padLeft(_zeroPadWidth, '0') : n.toString();
+  String _format(int n) => _zeroPadWidth > 0
+      ? n.toString().padLeft(_zeroPadWidth, '0')
+      : n.toString();
 
   Future<Uuid?> _surfaceAreaOf(Uuid caveUuid) async {
-    final cave = await (_db.select(_db.caves)
-          ..where((c) => c.uuid.equalsValue(caveUuid))
-          ..limit(1))
-        .getSingleOrNull();
+    final cave =
+        await (_db.select(_db.caves)
+              ..where((c) => c.uuid.equalsValue(caveUuid))
+              ..limit(1))
+            .getSingleOrNull();
     return cave?.surfaceAreaUuid;
   }
 
   Future<Set<Uuid>> _caveUuidsInArea(Uuid surfaceAreaUuid) async {
-    final caves = await (_db.select(_db.caves)
-          ..where((c) => c.surfaceAreaUuid.equalsValue(surfaceAreaUuid)))
-        .get();
+    final caves = await (_db.select(
+      _db.caves,
+    )..where((c) => c.surfaceAreaUuid.equalsValue(surfaceAreaUuid))).get();
     return caves.map((c) => c.uuid).toSet();
   }
 
@@ -84,11 +85,13 @@ class PerAreaSequentialStrategy extends PlaceCodeStrategy {
     }
 
     final caveUuids = await _caveUuidsInArea(areaUuid);
-    final dup = await (_db.select(_db.cavePlaces)
-          ..where((cp) =>
-              cp.uuid.equalsValue(cavePlaceUuid).not() &
-              cp.placeCodeIdentifier.equals(pci)))
-        .get();
+    final dup =
+        await (_db.select(_db.cavePlaces)..where(
+              (cp) =>
+                  cp.uuid.equalsValue(cavePlaceUuid).not() &
+                  cp.placeCodeIdentifier.equals(pci),
+            ))
+            .get();
     final hit = dup.where((cp) => caveUuids.contains(cp.caveUuid));
     if (hit.isNotEmpty) {
       return 'place_code_error_duplicate_in_area';
@@ -111,9 +114,9 @@ class PerAreaSequentialStrategy extends PlaceCodeStrategy {
     final caveUuids = await _caveUuidsInArea(areaUuid);
 
     final used = <int>{};
-    final rows = await (_db.select(_db.cavePlaces)
-          ..where((cp) => cp.uuid.equalsValue(cavePlaceUuid).not()))
-        .get();
+    final rows = await (_db.select(
+      _db.cavePlaces,
+    )..where((cp) => cp.uuid.equalsValue(cavePlaceUuid).not())).get();
     for (final row in rows) {
       if (!caveUuids.contains(row.caveUuid)) continue;
       final v = row.placeCodeIdentifier;

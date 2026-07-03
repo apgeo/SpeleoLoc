@@ -40,20 +40,20 @@ class PerCaveSequentialStrategy extends PlaceCodeStrategy {
 
   @override
   Map<String, dynamic> get defaultConfig => const {
-        kStartAt: 1,
-        kStep: 1,
-        kZeroPadWidth: 0,
-        kMainEntranceFirst: true,
-      };
+    kStartAt: 1,
+    kStep: 1,
+    kZeroPadWidth: 0,
+    kMainEntranceFirst: true,
+  };
 
   int get _startAt => (_config[kStartAt] as num?)?.toInt() ?? 1;
   int get _step => (_config[kStep] as num?)?.toInt() ?? 1;
   int get _zeroPadWidth => (_config[kZeroPadWidth] as num?)?.toInt() ?? 0;
-  bool get _mainEntranceFirst =>
-      (_config[kMainEntranceFirst] as bool?) ?? true;
+  bool get _mainEntranceFirst => (_config[kMainEntranceFirst] as bool?) ?? true;
 
-  String _format(int n) =>
-      _zeroPadWidth > 0 ? n.toString().padLeft(_zeroPadWidth, '0') : n.toString();
+  String _format(int n) => _zeroPadWidth > 0
+      ? n.toString().padLeft(_zeroPadWidth, '0')
+      : n.toString();
 
   @override
   Future<String?> validate(
@@ -69,12 +69,14 @@ class PerCaveSequentialStrategy extends PlaceCodeStrategy {
       return 'place_code_error_below_start_at';
     }
     // Uniqueness within the cave.
-    final dup = await (_db.select(_db.cavePlaces)
-          ..where((cp) =>
-              cp.caveUuid.equalsValue(caveUuid) &
-              cp.uuid.equalsValue(cavePlaceUuid).not() &
-              cp.placeCodeIdentifier.equals(pci)))
-        .get();
+    final dup =
+        await (_db.select(_db.cavePlaces)..where(
+              (cp) =>
+                  cp.caveUuid.equalsValue(caveUuid) &
+                  cp.uuid.equalsValue(cavePlaceUuid).not() &
+                  cp.placeCodeIdentifier.equals(pci),
+            ))
+            .get();
     if (dup.isNotEmpty) {
       return 'place_code_error_duplicate_in_cave';
     }
@@ -95,11 +97,13 @@ class PerCaveSequentialStrategy extends PlaceCodeStrategy {
     }
 
     // Gather existing numeric codes in this cave (excluding ourselves).
-    final rows = await (_db.select(_db.cavePlaces)
-          ..where((cp) =>
-              cp.caveUuid.equalsValue(caveUuid) &
-              cp.uuid.equalsValue(cavePlaceUuid).not()))
-        .get();
+    final rows =
+        await (_db.select(_db.cavePlaces)..where(
+              (cp) =>
+                  cp.caveUuid.equalsValue(caveUuid) &
+                  cp.uuid.equalsValue(cavePlaceUuid).not(),
+            ))
+            .get();
     final used = <int>{};
     for (final row in rows) {
       final v = row.placeCodeIdentifier;
@@ -119,12 +123,14 @@ class PerCaveSequentialStrategy extends PlaceCodeStrategy {
     Uuid cavePlaceUuid,
     String pci,
   ) async {
-    final dup = await (_db.select(_db.cavePlaces)
-          ..where((cp) =>
-              cp.caveUuid.equalsValue(caveUuid) &
-              cp.uuid.equalsValue(cavePlaceUuid).not() &
-              cp.placeCodeIdentifier.equals(pci)))
-        .get();
+    final dup =
+        await (_db.select(_db.cavePlaces)..where(
+              (cp) =>
+                  cp.caveUuid.equalsValue(caveUuid) &
+                  cp.uuid.equalsValue(cavePlaceUuid).not() &
+                  cp.placeCodeIdentifier.equals(pci),
+            ))
+            .get();
     return dup.isNotEmpty;
   }
 }

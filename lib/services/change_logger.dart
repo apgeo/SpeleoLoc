@@ -40,7 +40,7 @@ const int kOldValueMaxBytes = 20;
 /// (the archive already carries the original log).
 class ChangeLogger {
   ChangeLogger(this._db, this._currentUser, {Clock clock = const SystemClock()})
-      : _clock = clock;
+    : _clock = clock;
 
   final AppDatabase _db;
   final CurrentUserService _currentUser;
@@ -122,7 +122,9 @@ class ChangeLogger {
   ) async {
     final changeUuid = Uuid.v7();
     try {
-      await _db.into(_db.changeLog).insert(
+      await _db
+          .into(_db.changeLog)
+          .insert(
             ChangeLogCompanion.insert(
               uuid: changeUuid,
               entityTable: entityTable,

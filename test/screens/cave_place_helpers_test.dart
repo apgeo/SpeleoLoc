@@ -49,8 +49,7 @@ void main() {
     final caveUuid = Uuid.v7();
     final areaUuid10 = Uuid.v7();
     final areaUuid20 = Uuid.v7();
-    CavePlace mk(Uuid id, String title,
-        {String? qr, Uuid? areaId}) =>
+    CavePlace mk(Uuid id, String title, {String? qr, Uuid? areaId}) =>
         CavePlace(
           uuid: id,
           title: title,
@@ -78,18 +77,21 @@ void main() {
     });
 
     test('filters by title (case-insensitive)', () {
-      expect(filterCavePlaces(places, 'sump', areaTitles).map((p) => p.uuid),
-          [u2]);
+      expect(filterCavePlaces(places, 'sump', areaTitles).map((p) => p.uuid), [
+        u2,
+      ]);
     });
 
     test('filters by qr code substring', () {
-      expect(
-          filterCavePlaces(places, '2002', areaTitles).map((p) => p.uuid), [u2]);
+      expect(filterCavePlaces(places, '2002', areaTitles).map((p) => p.uuid), [
+        u2,
+      ]);
     });
 
     test('filters by area title', () {
-      expect(filterCavePlaces(places, 'deep', areaTitles).map((p) => p.uuid),
-          [u2]);
+      expect(filterCavePlaces(places, 'deep', areaTitles).map((p) => p.uuid), [
+        u2,
+      ]);
     });
 
     test('whitespace-only query returns all', () {

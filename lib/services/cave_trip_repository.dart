@@ -19,9 +19,9 @@ class CaveTripRepository implements ICaveTripRepository {
   @override
   Future<CaveTrip?> findById(Uuid uuid) async {
     try {
-      return await (_database.select(_database.caveTrips)
-            ..where((t) => t.uuid.equalsValue(uuid)))
-          .getSingleOrNull();
+      return await (_database.select(
+        _database.caveTrips,
+      )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
     } catch (e, st) {
       _log.severe('Failed to find cave trip by id', e, st);
       throw DbException('Failed to find cave trip', cause: e, stackTrace: st);
@@ -34,8 +34,7 @@ class CaveTripRepository implements ICaveTripRepository {
       return await _database.getCaveTrips(caveUuid);
     } catch (e, st) {
       _log.severe('Failed to load cave trips', e, st);
-      throw DbException('Failed to load cave trips',
-          cause: e, stackTrace: st);
+      throw DbException('Failed to load cave trips', cause: e, stackTrace: st);
     }
   }
 
@@ -45,8 +44,11 @@ class CaveTripRepository implements ICaveTripRepository {
       return await _database.getCaveTripTitles(caveUuid);
     } catch (e, st) {
       _log.severe('Failed to load cave trip titles', e, st);
-      throw DbException('Failed to load cave trip titles',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to load cave trip titles',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -56,8 +58,7 @@ class CaveTripRepository implements ICaveTripRepository {
       return await _database.getTripPoints(tripUuid);
     } catch (e, st) {
       _log.severe('Failed to load trip points', e, st);
-      throw DbException('Failed to load trip points',
-          cause: e, stackTrace: st);
+      throw DbException('Failed to load trip points', cause: e, stackTrace: st);
     }
   }
 
@@ -67,8 +68,11 @@ class CaveTripRepository implements ICaveTripRepository {
       return await _database.getTripReportTemplates();
     } catch (e, st) {
       _log.severe('Failed to load trip report templates', e, st);
-      throw DbException('Failed to load trip report templates',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to load trip report templates',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -78,8 +82,7 @@ class CaveTripRepository implements ICaveTripRepository {
       await _database.renameCaveTrip(tripUuid, newTitle);
     } catch (e, st) {
       _log.severe('Failed to rename cave trip', e, st);
-      throw DbException('Failed to rename cave trip',
-          cause: e, stackTrace: st);
+      throw DbException('Failed to rename cave trip', cause: e, stackTrace: st);
     }
   }
 
@@ -89,8 +92,7 @@ class CaveTripRepository implements ICaveTripRepository {
       await _database.deleteCaveTrip(tripUuid);
     } catch (e, st) {
       _log.severe('Failed to delete cave trip', e, st);
-      throw DbException('Failed to delete cave trip',
-          cause: e, stackTrace: st);
+      throw DbException('Failed to delete cave trip', cause: e, stackTrace: st);
     }
   }
 
@@ -100,8 +102,7 @@ class CaveTripRepository implements ICaveTripRepository {
       await _database.updateTripLog(tripUuid, log);
     } catch (e, st) {
       _log.severe('Failed to update trip log', e, st);
-      throw DbException('Failed to update trip log',
-          cause: e, stackTrace: st);
+      throw DbException('Failed to update trip log', cause: e, stackTrace: st);
     }
   }
 
@@ -121,8 +122,11 @@ class CaveTripRepository implements ICaveTripRepository {
       );
     } catch (e, st) {
       _log.severe('Failed to insert trip report template', e, st);
-      throw DbException('Failed to insert trip report template',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to insert trip report template',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -132,8 +136,11 @@ class CaveTripRepository implements ICaveTripRepository {
       await _database.deleteTripReportTemplate(uuid);
     } catch (e, st) {
       _log.severe('Failed to delete trip report template', e, st);
-      throw DbException('Failed to delete trip report template',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to delete trip report template',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 }

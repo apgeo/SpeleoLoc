@@ -29,10 +29,26 @@ class _CaveFormPageState extends State<CaveFormPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_add_new_cave_title_field_title', bodyLocKey: 'tour_add_new_cave_title_field_body'),
-    TourStepDef(keyId: 'desc_field', titleLocKey: 'tour_add_new_cave_desc_field_title', bodyLocKey: 'tour_add_new_cave_desc_field_body'),
-    TourStepDef(keyId: 'area_dropdown', titleLocKey: 'tour_add_new_cave_area_dropdown_title', bodyLocKey: 'tour_add_new_cave_area_dropdown_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_add_new_cave_menu_title', bodyLocKey: 'tour_add_new_cave_menu_body'),
+    TourStepDef(
+      keyId: 'title_field',
+      titleLocKey: 'tour_add_new_cave_title_field_title',
+      bodyLocKey: 'tour_add_new_cave_title_field_body',
+    ),
+    TourStepDef(
+      keyId: 'desc_field',
+      titleLocKey: 'tour_add_new_cave_desc_field_title',
+      bodyLocKey: 'tour_add_new_cave_desc_field_body',
+    ),
+    TourStepDef(
+      keyId: 'area_dropdown',
+      titleLocKey: 'tour_add_new_cave_area_dropdown_title',
+      bodyLocKey: 'tour_add_new_cave_area_dropdown_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_add_new_cave_menu_title',
+      bodyLocKey: 'tour_add_new_cave_menu_body',
+    ),
   ];
 
   @override
@@ -96,7 +112,9 @@ class _CaveFormPageState extends State<CaveFormPage>
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      final desc = _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim();
+      final desc = _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim();
       final localIdx = _caveLocalIndexController.text.trim().isEmpty
           ? null
           : _caveLocalIndexController.text.trim();
@@ -117,7 +135,10 @@ class _CaveFormPageState extends State<CaveFormPage>
           caveLocalIndex: localIdx,
         );
         // Auto-add entrance cave place if setting is enabled (default: true)
-        final autoAdd = await SettingsHelper.loadStringConfig(autoAddEntrancePlaceKey, 'true');
+        final autoAdd = await SettingsHelper.loadStringConfig(
+          autoAddEntrancePlaceKey,
+          'true',
+        );
         if (autoAdd == 'true') {
           await cavePlaceRepository.addCavePlace(
             id,
@@ -151,7 +172,9 @@ class _CaveFormPageState extends State<CaveFormPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isEditing ? LocServ.inst.t('edit_cave') : LocServ.inst.t('add_new_cave'),
+              isEditing
+                  ? LocServ.inst.t('edit_cave')
+                  : LocServ.inst.t('add_new_cave'),
               style: const TextStyle(fontSize: 16),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -165,7 +188,9 @@ class _CaveFormPageState extends State<CaveFormPage>
               ),
           ],
         ),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -176,14 +201,20 @@ class _CaveFormPageState extends State<CaveFormPage>
               TextFormField(
                 key: tourKeys['title_field'],
                 controller: _titleController,
-                decoration: InputDecoration(labelText: LocServ.inst.t('cave_title')),
-                validator: (v) => (v == null || v.trim().isEmpty) ? LocServ.inst.t('title_required') : null,
+                decoration: InputDecoration(
+                  labelText: LocServ.inst.t('cave_title'),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? LocServ.inst.t('title_required')
+                    : null,
               ),
               const SizedBox(height: 10),
               TextFormField(
                 key: tourKeys['desc_field'],
                 controller: _descriptionController,
-                decoration: InputDecoration(labelText: LocServ.inst.t('description')),
+                decoration: InputDecoration(
+                  labelText: LocServ.inst.t('description'),
+                ),
                 maxLines: 3,
               ),
               const SizedBox(height: 10),
@@ -193,12 +224,23 @@ class _CaveFormPageState extends State<CaveFormPage>
                   Expanded(
                     child: DropdownButtonFormField<Uuid?>(
                       initialValue: _selectedSurfaceAreaId,
-                      decoration: InputDecoration(labelText: LocServ.inst.t('area_title')),
+                      decoration: InputDecoration(
+                        labelText: LocServ.inst.t('area_title'),
+                      ),
                       items: [
-                        DropdownMenuItem(value: null, child: Text(LocServ.inst.t('none'))),
-                        ..._surfaceAreas.map((a) => DropdownMenuItem(value: a.uuid, child: Text(a.title))),
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text(LocServ.inst.t('none')),
+                        ),
+                        ..._surfaceAreas.map(
+                          (a) => DropdownMenuItem(
+                            value: a.uuid,
+                            child: Text(a.title),
+                          ),
+                        ),
                       ],
-                      onChanged: (v) => setState(() => _selectedSurfaceAreaId = v),
+                      onChanged: (v) =>
+                          setState(() => _selectedSurfaceAreaId = v),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -208,7 +250,9 @@ class _CaveFormPageState extends State<CaveFormPage>
                     onPressed: () async {
                       final result = await Navigator.push<bool?>(
                         context,
-                        MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SurfaceAreasPage(),
+                        ),
                       );
                       if (result == true) _loadSurfaceAreas();
                     },
@@ -228,7 +272,13 @@ class _CaveFormPageState extends State<CaveFormPage>
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
-                      child: Text(_saving ? LocServ.inst.t('saving') : (isEditing ? LocServ.inst.t('save') : LocServ.inst.t('add'))),
+                      child: Text(
+                        _saving
+                            ? LocServ.inst.t('saving')
+                            : (isEditing
+                                  ? LocServ.inst.t('save')
+                                  : LocServ.inst.t('add')),
+                      ),
                     ),
                   ),
                 ],

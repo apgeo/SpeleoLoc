@@ -24,9 +24,21 @@ class _ScannerPageState extends State<ScannerPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'camera', titleLocKey: 'tour_scanner_camera_title', bodyLocKey: 'tour_scanner_camera_body'),
-    TourStepDef(keyId: 'torch', titleLocKey: 'tour_scanner_torch_title', bodyLocKey: 'tour_scanner_torch_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_scanner_menu_title', bodyLocKey: 'tour_scanner_menu_body'),
+    TourStepDef(
+      keyId: 'camera',
+      titleLocKey: 'tour_scanner_camera_title',
+      bodyLocKey: 'tour_scanner_camera_body',
+    ),
+    TourStepDef(
+      keyId: 'torch',
+      titleLocKey: 'tour_scanner_torch_title',
+      bodyLocKey: 'tour_scanner_torch_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_scanner_menu_title',
+      bodyLocKey: 'tour_scanner_menu_body',
+    ),
   ];
 
   final MobileScannerController _controller = MobileScannerController();
@@ -40,7 +52,7 @@ class _ScannerPageState extends State<ScannerPage>
       if (mounted) setState(() => _scanConfig = cfg);
     });
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
@@ -50,7 +62,7 @@ class _ScannerPageState extends State<ScannerPage>
   @override
   Widget build(BuildContext context) {
     // initDatabase();
-    
+
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
@@ -68,20 +80,22 @@ class _ScannerPageState extends State<ScannerPage>
       body: KeyedSubtree(
         key: tourKeys['camera'],
         child: MobileScanner(
-        controller: _controller,
-        onDetect: (capture) {
-          final List<Barcode> barcodes = capture.barcodes;
-          if (barcodes.isNotEmpty) {
-            final code = barcodes.first.rawValue ?? '';
-            if (code.isNotEmpty) {
-              _controller.stop();
-              final processed = qrScanService.process(code, config: _scanConfig).qcri;
-              widget.onScan(processed);
-              if (mounted) Navigator.pop(context);
+          controller: _controller,
+          onDetect: (capture) {
+            final List<Barcode> barcodes = capture.barcodes;
+            if (barcodes.isNotEmpty) {
+              final code = barcodes.first.rawValue ?? '';
+              if (code.isNotEmpty) {
+                _controller.stop();
+                final processed = qrScanService
+                    .process(code, config: _scanConfig)
+                    .qcri;
+                widget.onScan(processed);
+                if (mounted) Navigator.pop(context);
+              }
             }
-          }
-        },
-      ),
+          },
+        ),
       ),
     );
   }

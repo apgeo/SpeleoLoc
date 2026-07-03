@@ -18,10 +18,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// Returns the newly created [CavePlace] id via `Navigator.pop` when saved,
 /// or `null` when cancelled.
 class AddCavePlacePopup extends StatefulWidget {
-  const AddCavePlacePopup({
-    super.key,
-    required this.caveUuid,
-  });
+  const AddCavePlacePopup({super.key, required this.caveUuid});
 
   final Uuid caveUuid;
 
@@ -66,7 +63,9 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     }
     // Check uniqueness
     final existing = await cavePlaceRepository.findCavePlaceByTitle(
-        widget.caveUuid, title);
+      widget.caveUuid,
+      title,
+    );
     if (existing != null) {
       if (mounted) {
         setState(() => _titleError = LocServ.inst.t('title_already_exists'));
@@ -85,15 +84,18 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     }
     // Check uniqueness within cave
     final matches = await cavePlaceRepository.findByPlaceCodeIdentifier(
-        qrText,
-        caveUuid: widget.caveUuid);
+      qrText,
+      caveUuid: widget.caveUuid,
+    );
     final existing = matches.firstOrNull;
     if (existing != null) {
       if (mounted) {
-        setState(() => _qrError = LocServ.inst
-            .t('qr_already_exists')
-            .replaceAll('{qr}', qrText)
-            .replaceAll('{title}', existing.title));
+        setState(
+          () => _qrError = LocServ.inst
+              .t('qr_already_exists')
+              .replaceAll('{qr}', qrText)
+              .replaceAll('{title}', existing.title),
+        );
       }
       return false;
     }
@@ -123,12 +125,14 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     final depthIsSignOnly = depthRaw == '-' || depthRaw == '+';
 
     if (!depthIsSignOnly && depthRaw.isNotEmpty && depth == null) {
-      if (mounted) SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
+      if (mounted)
+        SnackBarService.showWarning(LocServ.inst.t('depth_invalid_number'));
       setState(() => _isSaving = false);
       return;
     }
     if (depth != null && (depth < -5000 || depth > 5000)) {
-      if (mounted) SnackBarService.showWarning(LocServ.inst.t('depth_out_of_range'));
+      if (mounted)
+        SnackBarService.showWarning(LocServ.inst.t('depth_out_of_range'));
       setState(() => _isSaving = false);
       return;
     }
@@ -164,17 +168,19 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ScannerPage(onScan: (code) {
-          final qr = code.trim();
-          if (qr.isNotEmpty) {
-            _qrController.text = qr;
-            Navigator.pop(context); // close scanner
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
-            );
-          }
-        }),
+        builder: (_) => ScannerPage(
+          onScan: (code) {
+            final qr = code.trim();
+            if (qr.isNotEmpty) {
+              _qrController.text = qr;
+              Navigator.pop(context); // close scanner
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
+              );
+            }
+          },
+        ),
       ),
     );
   }
@@ -229,10 +235,12 @@ class _AddCavePlacePopupState extends State<AddCavePlacePopup> {
                         value: null,
                         child: Text(LocServ.inst.t('none')),
                       ),
-                      ..._caveAreas.map((a) => DropdownMenuItem<Uuid?>(
-                            value: a.uuid,
-                            child: Text(a.title),
-                          )),
+                      ..._caveAreas.map(
+                        (a) => DropdownMenuItem<Uuid?>(
+                          value: a.uuid,
+                          child: Text(a.title),
+                        ),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _selectedCaveAreaId = v),
                   ),

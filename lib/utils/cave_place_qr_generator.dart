@@ -163,9 +163,7 @@ class QrImageRenderer {
       data: data,
       version: QrVersions.auto,
       gapless: true,
-      dataModuleStyle: QrDataModuleStyle(
-        color: ui.Color(prefs.qrFgColor),
-      ),
+      dataModuleStyle: QrDataModuleStyle(color: ui.Color(prefs.qrFgColor)),
       eyeStyle: QrEyeStyle(
         eyeShape: QrEyeShape.square,
         color: ui.Color(prefs.qrFgColor),
@@ -202,10 +200,7 @@ class QrImageRenderer {
 
     // Background
     final bgPaint = Paint()..color = ui.Color(prefs.backgroundColor);
-    canvas.drawRect(
-      ui.Rect.fromLTWH(0, 0, imgWidth, imgHeight),
-      bgPaint,
-    );
+    canvas.drawRect(ui.Rect.fromLTWH(0, 0, imgWidth, imgHeight), bgPaint);
 
     // QR code (drawn inside padded area)
     canvas.save();
@@ -243,8 +238,12 @@ class QrImageRenderer {
     }
   }
 
-  static String _qrDataForPlace(CavePlace place, [GenerationPreferences? prefs]) {
-    final raw = place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
+  static String _qrDataForPlace(
+    CavePlace place, [
+    GenerationPreferences? prefs,
+  ]) {
+    final raw =
+        place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
     if (raw.isEmpty) return raw;
     if (prefs?.includeDeepLinkPrefix ?? true) {
       return '$deepLinkPrefix$raw';
@@ -328,7 +327,7 @@ class CavePlaceQRCodePDFGenerator {
                       }
                       final place = pagePlaces[idx];
                       final data = _qrDataForPlace(place, prefs);
-                      
+
                       // Parse segments for potential font size/color overrides
                       final segments = QrLabelTemplateEngine.parseSegments(
                         template: prefs.labelTemplate,
@@ -356,7 +355,10 @@ class CavePlaceQRCodePDFGenerator {
                                   ),
                                   data: data,
                                   color: PdfColor.fromInt(prefs.qrFgColor),
-                                  textStyle: pw.TextStyle(font: font, fontBold: fontBold),
+                                  textStyle: pw.TextStyle(
+                                    font: font,
+                                    fontBold: fontBold,
+                                  ),
                                 ),
                               ),
                               if (prefs.includeTitle) pw.SizedBox(height: 2),
@@ -368,7 +370,10 @@ class CavePlaceQRCodePDFGenerator {
                                       PdfColor? segColor;
                                       if (seg.fontColor != null) {
                                         try {
-                                          final colorInt = int.parse('FF${seg.fontColor}', radix: 16);
+                                          final colorInt = int.parse(
+                                            'FF${seg.fontColor}',
+                                            radix: 16,
+                                          );
                                           segColor = PdfColor.fromInt(colorInt);
                                         } on FormatException catch (_) {}
                                       }
@@ -377,7 +382,12 @@ class CavePlaceQRCodePDFGenerator {
                                         style: pw.TextStyle(
                                           font: font,
                                           fontBold: fontBold,
-                                          fontSize: seg.fontSize ?? (prefs.labelFontSize * 0.5).clamp(6, 14),
+                                          fontSize:
+                                              seg.fontSize ??
+                                              (prefs.labelFontSize * 0.5).clamp(
+                                                6,
+                                                14,
+                                              ),
                                           fontWeight: pw.FontWeight.bold,
                                           color: segColor,
                                         ),
@@ -423,11 +433,9 @@ class CavePlaceQRCodePDFGenerator {
     for (final place in places) {
       final imgBytes = await QrImageRenderer.render(place, prefs);
       final name = '${_sanitizeFilename(place.title)}.png';
-      files.add(GeneratedFile(
-        name: name,
-        bytes: imgBytes,
-        mimeType: 'image/png',
-      ));
+      files.add(
+        GeneratedFile(name: name, bytes: imgBytes, mimeType: 'image/png'),
+      );
     }
 
     // Always create ZIP when requested or when preference says so
@@ -466,7 +474,8 @@ class CavePlaceQRCodePDFGenerator {
   }
 
   String _qrDataForPlace(CavePlace place, [GenerationPreferences? prefs]) {
-    final raw = place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
+    final raw =
+        place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
     if (raw.isEmpty) return raw;
     if (prefs?.includeDeepLinkPrefix ?? true) {
       return '$deepLinkPrefix$raw';

@@ -19,8 +19,8 @@ class RemoteFileEntry {
 /// Byte-progress callback for up/down transfers. [bytesTransferred] is
 /// cumulative, [totalBytes] is the file size when known (otherwise null for
 /// streaming sources).
-typedef TransferProgressCallback = void Function(
-    int bytesTransferred, int? totalBytes);
+typedef TransferProgressCallback =
+    void Function(int bytesTransferred, int? totalBytes);
 
 /// Transport-agnostic interface over an archive-exchange backend.
 ///
@@ -112,7 +112,8 @@ class FtpTransportException implements Exception {
   final Object? cause;
   const FtpTransportException(this.message, [this.cause]);
   @override
-  String toString() => 'FtpTransportException: $message'
+  String toString() =>
+      'FtpTransportException: $message'
       '${cause != null ? ' (cause: $cause)' : ''}';
 }
 

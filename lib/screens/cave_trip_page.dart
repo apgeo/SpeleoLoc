@@ -41,9 +41,22 @@ class _CaveTripPageState extends State<CaveTripPage>
   final tourKeys = TourKeySet(['toolbar', 'map', 'menu']);
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'toolbar', titleLocKey: 'tour_cave_trip_toolbar_title', bodyLocKey: 'tour_cave_trip_toolbar_body'),
-    TourStepDef(keyId: 'map', titleLocKey: 'tour_cave_trip_map_title', bodyLocKey: 'tour_cave_trip_map_body', align: ContentAlign.top),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_trip_menu_title', bodyLocKey: 'tour_cave_trip_menu_body'),
+    TourStepDef(
+      keyId: 'toolbar',
+      titleLocKey: 'tour_cave_trip_toolbar_title',
+      bodyLocKey: 'tour_cave_trip_toolbar_body',
+    ),
+    TourStepDef(
+      keyId: 'map',
+      titleLocKey: 'tour_cave_trip_map_title',
+      bodyLocKey: 'tour_cave_trip_map_body',
+      align: ContentAlign.top,
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_cave_trip_menu_title',
+      bodyLocKey: 'tour_cave_trip_menu_body',
+    ),
   ];
   CaveTrip? _trip;
   Cave? _cave;
@@ -56,17 +69,18 @@ class _CaveTripPageState extends State<CaveTripPage>
   List<CavePlaceWithDefinition> _placesWithDefs = [];
   File? _rasterImageFile;
   final Map<String, ImageProvider> _imageProviderCache = {};
-  final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
+  final GlobalKey<RasterMapNavBarState> _navBarKey =
+      GlobalKey<RasterMapNavBarState>();
   bool _navBarShowMaps = true;
   bool _navBarShowPlaces = true;
   Uuid? _selectedPlaceId;
   CavePlaceSortOption _cavePlaceSortOption = const CavePlaceSortOption();
   final RasterMapPlacePointEditorController _editorController =
       RasterMapPlacePointEditorController(
-    showLegend: false,
-    showZoomControls: true,
-    gestureZoomEnabled: true,
-  );
+        showLegend: false,
+        showZoomControls: true,
+        gestureZoomEnabled: true,
+      );
 
   /// false = list view, true = map view
   bool _showMapView = false;
@@ -171,10 +185,10 @@ class _CaveTripPageState extends State<CaveTripPage>
     final cave = await caveRepository.findById(trip.caveUuid);
     final points = await caveTripRepository.getTripPoints(widget.tripUuid);
     final placeIds = points
-      .map((p) => p.cavePlaceUuid)
-      .whereType<Uuid>()
-      .toSet()
-      .toList();
+        .map((p) => p.cavePlaceUuid)
+        .whereType<Uuid>()
+        .toSet()
+        .toList();
     Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
       final places = await cavePlaceRepository.findByIds(placeIds);
@@ -238,7 +252,10 @@ class _CaveTripPageState extends State<CaveTripPage>
     final duration = Duration(milliseconds: 800 * totalPoints);
     _playbackController = AnimationController(vsync: this, duration: duration)
       ..addListener(() {
-        final count = (_playbackController!.value * totalPoints).ceil().clamp(0, totalPoints);
+        final count = (_playbackController!.value * totalPoints).ceil().clamp(
+          0,
+          totalPoints,
+        );
         if (count != _animatedPointCount) {
           setState(() => _animatedPointCount = count);
         }
@@ -268,10 +285,14 @@ class _CaveTripPageState extends State<CaveTripPage>
   void _zoomToTripExtent() {
     final imagePoints = <Offset>[];
     for (final pt in _points) {
-      final cpwd = _placesWithDefs.where((c) => c.cavePlace.uuid == pt.cavePlaceUuid).firstOrNull;
+      final cpwd = _placesWithDefs
+          .where((c) => c.cavePlace.uuid == pt.cavePlaceUuid)
+          .firstOrNull;
       final def = cpwd?.definition;
       if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
-        imagePoints.add(Offset(def.xCoordinate!.toDouble(), def.yCoordinate!.toDouble()));
+        imagePoints.add(
+          Offset(def.xCoordinate!.toDouble(), def.yCoordinate!.toDouble()),
+        );
       }
     }
     if (imagePoints.isNotEmpty) {
@@ -282,20 +303,25 @@ class _CaveTripPageState extends State<CaveTripPage>
   // --- Export map as image ---
 
   Future<void> _exportMapImage() async {
-    final boundary = _mapRepaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    final boundary =
+        _mapRepaintKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
     if (boundary == null) return;
     final image = await boundary.toImage(pixelRatio: 2.0);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     if (byteData == null) return;
 
     final dir = await getApplicationDocumentsDirectory();
-    final tripTitle = _trip?.title.replaceAll(RegExp(r'[^\w\-]'), '_') ?? 'trip';
+    final tripTitle =
+        _trip?.title.replaceAll(RegExp(r'[^\w\-]'), '_') ?? 'trip';
     final ts = DateTime.now().millisecondsSinceEpoch;
     final file = File('${dir.path}/trip_map_${tripTitle}_$ts.png');
     await file.writeAsBytes(byteData.buffer.asUint8List());
 
     if (mounted) {
-      SnackBarService.showSuccess('${LocServ.inst.t('trip_map_exported')}: ${file.path}');
+      SnackBarService.showSuccess(
+        '${LocServ.inst.t('trip_map_exported')}: ${file.path}',
+      );
     }
   }
 
@@ -306,7 +332,8 @@ class _CaveTripPageState extends State<CaveTripPage>
     final log = trip.log;
     if (log == null || log.trim().isEmpty) {
       if (mounted) {
-        if (mounted) SnackBarService.showWarning(LocServ.inst.t('trip_export_no_log'));
+        if (mounted)
+          SnackBarService.showWarning(LocServ.inst.t('trip_export_no_log'));
       }
       return;
     }
@@ -338,7 +365,9 @@ class _CaveTripPageState extends State<CaveTripPage>
 
       // On desktop, FilePicker returns a path but does NOT write the file
       // (bytes param is ignored). Write it ourselves.
-      final finalPath = outputPath.endsWith('.$ext') ? outputPath : '$outputPath.$ext';
+      final finalPath = outputPath.endsWith('.$ext')
+          ? outputPath
+          : '$outputPath.$ext';
       if (!File(finalPath).existsSync()) {
         await File(finalPath).writeAsBytes(docBytes);
       }
@@ -444,12 +473,20 @@ class _CaveTripPageState extends State<CaveTripPage>
         title: Text(LocServ.inst.t('trip_name_rename_dialog_title')),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('trip_title_hint'),
+          ),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('ok'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('ok')),
+          ),
         ],
       ),
     );
@@ -472,8 +509,14 @@ class _CaveTripPageState extends State<CaveTripPage>
         title: Text(LocServ.inst.t('confirm')),
         content: Text(LocServ.inst.t('trip_stop_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
         ],
       ),
     );
@@ -493,8 +536,14 @@ class _CaveTripPageState extends State<CaveTripPage>
         title: Text(LocServ.inst.t('confirm')),
         content: Text(LocServ.inst.t('trip_delete_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
         ],
       ),
     );
@@ -519,7 +568,9 @@ class _CaveTripPageState extends State<CaveTripPage>
   }
 
   String _formatDuration(int startMs, int? endMs) {
-    final end = endMs != null ? DateTime.fromMillisecondsSinceEpoch(endMs) : DateTime.now();
+    final end = endMs != null
+        ? DateTime.fromMillisecondsSinceEpoch(endMs)
+        : DateTime.now();
     final start = DateTime.fromMillisecondsSinceEpoch(startMs);
     final d = end.difference(start);
     final h = d.inHours;
@@ -532,82 +583,108 @@ class _CaveTripPageState extends State<CaveTripPage>
     final buttons = <_TripToolbarButton>[];
 
     if (_isActive) {
-      buttons.add(_TripToolbarButton(
-        icon: Icons.stop_circle,
-        label: LocServ.inst.t('trip_stop'),
-        color: Colors.red,
-        onTap: _stopTrip,
-      ));
+      buttons.add(
+        _TripToolbarButton(
+          icon: Icons.stop_circle,
+          label: LocServ.inst.t('trip_stop'),
+          color: Colors.red,
+          onTap: _stopTrip,
+        ),
+      );
       if (isPaused) {
-        buttons.add(_TripToolbarButton(
-          icon: Icons.play_circle,
-          label: LocServ.inst.t('trip_resume'),
-          color: Colors.green,
-          onTap: () { caveTripService.resumeTrip(); setState(() {}); },
-        ));
+        buttons.add(
+          _TripToolbarButton(
+            icon: Icons.play_circle,
+            label: LocServ.inst.t('trip_resume'),
+            color: Colors.green,
+            onTap: () {
+              caveTripService.resumeTrip();
+              setState(() {});
+            },
+          ),
+        );
       } else {
-        buttons.add(_TripToolbarButton(
-          icon: Icons.pause_circle,
-          label: LocServ.inst.t('trip_pause'),
-          color: Colors.orange,
-          onTap: () { caveTripService.pauseTrip(); setState(() {}); },
-        ));
+        buttons.add(
+          _TripToolbarButton(
+            icon: Icons.pause_circle,
+            label: LocServ.inst.t('trip_pause'),
+            color: Colors.orange,
+            onTap: () {
+              caveTripService.pauseTrip();
+              setState(() {});
+            },
+          ),
+        );
       }
     } else {
-      buttons.add(_TripToolbarButton(
-        icon: Icons.replay,
-        label: LocServ.inst.t('trip_restart'),
-        color: Colors.blue,
-        onTap: _restartTrip,
-      ));
+      buttons.add(
+        _TripToolbarButton(
+          icon: Icons.replay,
+          label: LocServ.inst.t('trip_restart'),
+          color: Colors.blue,
+          onTap: _restartTrip,
+        ),
+      );
     }
 
-    buttons.add(_TripToolbarButton(
-      icon: Icons.article_outlined,
-      label: LocServ.inst.t('trip_log'),
-      color: Colors.grey[700]!,
-      onTap: () => AppRoutes.pushCaveTripLog(context, widget.tripUuid),
-    ));
+    buttons.add(
+      _TripToolbarButton(
+        icon: Icons.article_outlined,
+        label: LocServ.inst.t('trip_log'),
+        color: Colors.grey[700]!,
+        onTap: () => AppRoutes.pushCaveTripLog(context, widget.tripUuid),
+      ),
+    );
 
-    buttons.add(_TripToolbarButton(
-      icon: Icons.file_download_outlined,
-      label: LocServ.inst.t('trip_export_report'),
-      color: Colors.grey[700]!,
-      onTap: _exportTripReport,
-    ));
+    buttons.add(
+      _TripToolbarButton(
+        icon: Icons.file_download_outlined,
+        label: LocServ.inst.t('trip_export_report'),
+        color: Colors.grey[700]!,
+        onTap: _exportTripReport,
+      ),
+    );
 
     // List/map toggle
     if (_rasterMaps.isNotEmpty) {
-      buttons.add(_TripToolbarButton(
-        icon: _showMapView ? Icons.list : Icons.map,
-        label: _showMapView
-            ? LocServ.inst.t('trip_list_view')
-            : LocServ.inst.t('trip_map_view'),
-        color: Colors.grey[700]!,
-        onTap: () => setState(() => _showMapView = !_showMapView),
-      ));
+      buttons.add(
+        _TripToolbarButton(
+          icon: _showMapView ? Icons.list : Icons.map,
+          label: _showMapView
+              ? LocServ.inst.t('trip_list_view')
+              : LocServ.inst.t('trip_map_view'),
+          color: Colors.grey[700]!,
+          onTap: () => setState(() => _showMapView = !_showMapView),
+        ),
+      );
     }
 
     // Map-only buttons
     if (_showMapView && _rasterMaps.isNotEmpty) {
-      buttons.add(_TripToolbarButton(
-        icon: _isPlayingRoute ? Icons.stop : Icons.play_arrow,
-        label: LocServ.inst.t('trip_play_route'),
-        color: _isPlayingRoute ? Colors.red : Colors.deepPurple,
-        onTap: _isPlayingRoute ? _stopPlayback : _startPlayback,
-      ));
-      buttons.add(_TripToolbarButton(
-        icon: Icons.fit_screen,
-        label: LocServ.inst.t('trip_zoom_extent'),
-        color: Colors.grey[700]!,
-        onTap: _zoomToTripExtent,
-      ));
-      buttons.add(_TripToolbarButton(
-        icon: Icons.image_outlined,
-        label: LocServ.inst.t('trip_export_map'),
-        color: Colors.grey[700]!,
-        onTap: _exportMapImage,
-      ));
+      buttons.add(
+        _TripToolbarButton(
+          icon: _isPlayingRoute ? Icons.stop : Icons.play_arrow,
+          label: LocServ.inst.t('trip_play_route'),
+          color: _isPlayingRoute ? Colors.red : Colors.deepPurple,
+          onTap: _isPlayingRoute ? _stopPlayback : _startPlayback,
+        ),
+      );
+      buttons.add(
+        _TripToolbarButton(
+          icon: Icons.fit_screen,
+          label: LocServ.inst.t('trip_zoom_extent'),
+          color: Colors.grey[700]!,
+          onTap: _zoomToTripExtent,
+        ),
+      );
+      buttons.add(
+        _TripToolbarButton(
+          icon: Icons.image_outlined,
+          label: LocServ.inst.t('trip_export_map'),
+          color: Colors.grey[700]!,
+          onTap: _exportMapImage,
+        ),
+      );
     }
 
     return Container(
@@ -663,25 +740,35 @@ class _CaveTripPageState extends State<CaveTripPage>
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       extendBody: true,
-      appBar: _isFullScreen ? null : AppBar(
-        title: Text(trip.title),
-        actions: [
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
+      appBar: _isFullScreen
+          ? null
+          : AppBar(
+              title: Text(trip.title),
+              actions: [
+                KeyedSubtree(
+                  key: tourKeys['menu'],
+                  child: buildAppBarMenuButton(),
+                ),
+              ],
+            ),
       body: Column(
         children: [
           if (!isLandscapePhone)
-            KeyedSubtree(key: tourKeys['toolbar'], child: _buildActionToolbar()),
+            KeyedSubtree(
+              key: tourKeys['toolbar'],
+              child: _buildActionToolbar(),
+            ),
           Expanded(
             key: tourKeys['map'],
-            child: _showMapView ? _buildMapView() : _buildListView(
-              trip: trip,
-              isPaused: isPaused,
-              dateTimeFormat: dateTimeFormat,
-              startDt: startDt,
-              endDt: endDt,
-            ),
+            child: _showMapView
+                ? _buildMapView()
+                : _buildListView(
+                    trip: trip,
+                    isPaused: isPaused,
+                    dateTimeFormat: dateTimeFormat,
+                    startDt: startDt,
+                    endDt: endDt,
+                  ),
           ),
         ],
       ),
@@ -705,23 +792,37 @@ class _CaveTripPageState extends State<CaveTripPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_cave != null)
-                  Row(children: [
-                    const Icon(Icons.location_on, size: 16),
-                    const SizedBox(width: 4),
-                    Text(_cave!.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ]),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        _cave!.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 4),
-                Text('${LocServ.inst.t('trip_started')}: ${dateTimeFormat.format(startDt)}'),
+                Text(
+                  '${LocServ.inst.t('trip_started')}: ${dateTimeFormat.format(startDt)}',
+                ),
                 if (endDt != null)
-                  Text('${LocServ.inst.t('trip_ended')}: ${dateTimeFormat.format(endDt)}'),
-                Text('${LocServ.inst.t('trip_duration')}: ${_formatDuration(trip.tripStartedAt, trip.tripEndedAt)}'),
+                  Text(
+                    '${LocServ.inst.t('trip_ended')}: ${dateTimeFormat.format(endDt)}',
+                  ),
+                Text(
+                  '${LocServ.inst.t('trip_duration')}: ${_formatDuration(trip.tripStartedAt, trip.tripEndedAt)}',
+                ),
                 Text('${LocServ.inst.t('trip_points')}: ${_points.length}'),
                 if (_isActive) ...[
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: isPaused
                               ? Colors.orange.withValues(alpha: 0.15)
@@ -732,7 +833,9 @@ class _CaveTripPageState extends State<CaveTripPage>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
+                              isPaused
+                                  ? Icons.pause_circle
+                                  : Icons.fiber_manual_record,
                               color: isPaused ? Colors.orange : Colors.green,
                               size: 12,
                             ),
@@ -758,15 +861,21 @@ class _CaveTripPageState extends State<CaveTripPage>
         ),
         const SizedBox(height: 8),
         if (_points.isEmpty)
-          Center(child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(LocServ.inst.t('trip_no_points'), style: TextStyle(color: Colors.grey[600])),
-          ))
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                LocServ.inst.t('trip_no_points'),
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          )
         else
           ...List.generate(_points.length, (i) {
             final pt = _points[i];
-            final place =
-              pt.cavePlaceUuid == null ? null : _placesById[pt.cavePlaceUuid!];
+            final place = pt.cavePlaceUuid == null
+                ? null
+                : _placesById[pt.cavePlaceUuid!];
             final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
             return ListTile(
               dense: true,
@@ -777,7 +886,10 @@ class _CaveTripPageState extends State<CaveTripPage>
                 child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
               ),
               title: Text(place?.title ?? '#${pt.cavePlaceUuid}'),
-              subtitle: Text(dateTimeFormat.format(dt), style: const TextStyle(fontSize: 11)),
+              subtitle: Text(
+                dateTimeFormat.format(dt),
+                style: const TextStyle(fontSize: 11),
+              ),
               trailing: place?.depthInCave != null
                   ? Text(
                       '${place!.depthInCave! > 0 ? '+' : ''}${place.depthInCave}m',
@@ -786,8 +898,11 @@ class _CaveTripPageState extends State<CaveTripPage>
                   : null,
               onTap: place == null
                   ? null
-                  : () => AppRoutes.pushCavePlace(context,
-                      caveUuid: place.caveUuid, cavePlaceUuid: place.uuid),
+                  : () => AppRoutes.pushCavePlace(
+                      context,
+                      caveUuid: place.caveUuid,
+                      cavePlaceUuid: place.uuid,
+                    ),
             );
           }),
       ],
@@ -802,12 +917,12 @@ class _CaveTripPageState extends State<CaveTripPage>
     final imageFile = _rasterImageFile;
     // During playback, show only the first N points
     final visibleIds = _isPlayingRoute
-      ? _points
-        .take(_animatedPointCount)
-        .map((p) => p.cavePlaceUuid)
-        .whereType<Uuid>()
-        .toList()
-      : _points.map((p) => p.cavePlaceUuid).whereType<Uuid>().toList();
+        ? _points
+              .take(_animatedPointCount)
+              .map((p) => p.cavePlaceUuid)
+              .whereType<Uuid>()
+              .toList()
+        : _points.map((p) => p.cavePlaceUuid).whereType<Uuid>().toList();
 
     return Column(
       children: [
@@ -823,7 +938,9 @@ class _CaveTripPageState extends State<CaveTripPage>
           imageProviderCache: _imageProviderCache,
           showRasterMapsList: _rasterMaps.length > 1 && _navBarShowMaps,
           showCavePlacesList: _navBarShowPlaces,
-          style: const RasterMapNavBarStyle.compact().copyWith(showRasterMapTitles: false),
+          style: const RasterMapNavBarStyle.compact().copyWith(
+            showRasterMapTitles: false,
+          ),
           onVisiblePlaceUuidsChanged: (uuids) =>
               _editorController.setVisiblePlaceUuids(uuids),
           onRasterMapSelected: (rm) async {
@@ -834,14 +951,20 @@ class _CaveTripPageState extends State<CaveTripPage>
             final def = cpwd.definition;
             setState(() => _selectedPlaceId = cpwd.cavePlace.uuid);
             _editorController.setCavePlaceId(cpwd.cavePlace.uuid);
-            if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
+            if (def != null &&
+                def.xCoordinate != null &&
+                def.yCoordinate != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _editorController.panToPoint(
-                    def.xCoordinate!.toDouble(), def.yCoordinate!.toDouble());
+                  def.xCoordinate!.toDouble(),
+                  def.yCoordinate!.toDouble(),
+                );
               });
             }
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _navBarKey.currentState?.ensurePlaceItemVisible(cpwd.cavePlace.uuid);
+              _navBarKey.currentState?.ensurePlaceItemVisible(
+                cpwd.cavePlace.uuid,
+              );
             });
           },
         ),
@@ -853,7 +976,8 @@ class _CaveTripPageState extends State<CaveTripPage>
                   child: RasterMapPlacePointEditor(
                     controller: _editorController,
                     imageFile: imageFile,
-                    imageProvider: _imageProviderCache[imageFile.path] ??= FileImage(imageFile),
+                    imageProvider: _imageProviderCache[imageFile.path] ??=
+                        FileImage(imageFile),
                     cavePlacesWithDefinitions: _placesWithDefs,
                     selectedRasterMapUuid: _selectedRasterMap?.uuid,
                     rasterMaps: _rasterMaps,
@@ -864,12 +988,12 @@ class _CaveTripPageState extends State<CaveTripPage>
                     onSortCavePlacesRequested: _showCavePlacesSortDialog,
                     onSortRasterMapsRequested: _showRasterMapSortDialog,
                     onManageRasterMapsRequested: _openRasterMapsPage,
-                    onNavBarShowRasterMapsChanged: (v) => setState(() => _navBarShowMaps = v),
-                    onNavBarShowCavePlacesChanged: (v) => setState(() => _navBarShowPlaces = v),
+                    onNavBarShowRasterMapsChanged: (v) =>
+                        setState(() => _navBarShowMaps = v),
+                    onNavBarShowCavePlacesChanged: (v) =>
+                        setState(() => _navBarShowPlaces = v),
                     tripOverlay: visibleIds.isNotEmpty
-                        ? TripOverlayData(
-                            orderedCavePlaceIds: visibleIds,
-                          )
+                        ? TripOverlayData(orderedCavePlaceIds: visibleIds)
                         : null,
                   ),
                 )
@@ -899,7 +1023,10 @@ class _CaveTripPageState extends State<CaveTripPage>
 
   Future<void> _showCavePlacesSortDialog() async {
     _editorController.ensurePlacesListVisible();
-    final option = await showCavePlacesSortDialog(context, _cavePlaceSortOption);
+    final option = await showCavePlacesSortDialog(
+      context,
+      _cavePlaceSortOption,
+    );
     if (option == null || !mounted) return;
     await option.save();
     setState(() {
@@ -926,5 +1053,10 @@ class _TripToolbarButton {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _TripToolbarButton({required this.icon, required this.label, required this.color, required this.onTap});
+  const _TripToolbarButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 }

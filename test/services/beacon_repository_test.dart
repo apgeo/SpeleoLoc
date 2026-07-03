@@ -23,8 +23,11 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
     final userRepo = UserRepository(db, () => loggerRef);
-    final currentUser =
-        CurrentUserService(db, userRepo, ConfigurationRepository(db));
+    final currentUser = CurrentUserService(
+      db,
+      userRepo,
+      ConfigurationRepository(db),
+    );
     await currentUser.initialize();
     loggerRef = ChangeLogger(db, currentUser);
     final caveRepo = CaveRepository(db, currentUser, loggerRef);
@@ -127,14 +130,13 @@ void main() {
       expect(await repo.getBeaconsForCave(caveUuid), isEmpty);
 
       // Row still exists (soft delete), deleted_at is set.
-      final raw = await (db.select(db.cavePlaceBeacons)
-            ..where((b) => b.uuid.equalsValue(id)))
-          .getSingle();
+      final raw = await (db.select(
+        db.cavePlaceBeacons,
+      )..where((b) => b.uuid.equalsValue(id))).getSingle();
       expect(raw.deletedAt, isNotNull);
     });
 
-    test('updateHealth stamps telemetry without touching updated_at',
-        () async {
+    test('updateHealth stamps telemetry without touching updated_at', () async {
       final id = await repo.registerBeacon(
         cavePlaceUuid: placeUuid,
         caveUuid: caveUuid,
@@ -143,15 +145,22 @@ void main() {
         minor: 10,
       );
       final before = (await repo.getBeaconsForPlace(placeUuid)).single;
-      await repo.updateHealth(id,
-          batteryMv: 3287, temperatureC: 12.5, humidityPct: 98);
+      await repo.updateHealth(
+        id,
+        batteryMv: 3287,
+        temperatureC: 12.5,
+        humidityPct: 98,
+      );
       final after = (await repo.getBeaconsForPlace(placeUuid)).single;
       expect(after.lastSeenAt, isNotNull);
       expect(after.lastBatteryMv, 3287);
       expect(after.lastTemperatureC, 12.5);
       expect(after.lastHumidityPct, 98);
-      expect(after.updatedAt, before.updatedAt,
-          reason: 'telemetry must not bump the sync timestamp');
+      expect(
+        after.updatedAt,
+        before.updatedAt,
+        reason: 'telemetry must not bump the sync timestamp',
+      );
     });
 
     test('getBeaconsForCave joins place and cave titles', () async {

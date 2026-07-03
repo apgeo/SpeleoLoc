@@ -59,15 +59,15 @@ class CavePlaceQcriSection extends StatelessWidget {
         else
           const SizedBox(width: 40),
         IconButton(
-          icon: Icon(
-            editable ? Icons.lock_open : Icons.lock_outline,
-          ),
+          icon: Icon(editable ? Icons.lock_open : Icons.lock_outline),
           tooltip: editable
               ? LocServ.inst.t('disable_qr_edit')
               : LocServ.inst.t('enable_qr_edit'),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: onEditableToggled,
         ),
         Expanded(
@@ -89,20 +89,28 @@ class CavePlaceQcriSection extends StatelessWidget {
           tooltip: LocServ.inst.t('auto_generate'),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: editable ? onAutoGenerate : null,
         ),
         const SizedBox(width: 4),
         Listener(
-          onPointerDown: enableQrManualInput ? (_) => onScanLongPressStart() : null,
+          onPointerDown: enableQrManualInput
+              ? (_) => onScanLongPressStart()
+              : null,
           onPointerUp: enableQrManualInput ? (_) => onScanLongPressEnd() : null,
-          onPointerCancel: enableQrManualInput ? (_) => onScanLongPressEnd() : null,
+          onPointerCancel: enableQrManualInput
+              ? (_) => onScanLongPressEnd()
+              : null,
           child: IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: LocServ.inst.t('scan'),
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: onOpenScanner,
           ),
         ),

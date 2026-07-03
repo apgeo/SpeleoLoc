@@ -5,7 +5,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 export 'package:tutorial_coach_mark/tutorial_coach_mark.dart'
-  show ContentAlign, ShapeLightFocus;
+    show ContentAlign, ShapeLightFocus;
 
 /// Lazily creates and caches [GlobalKey]s by string identifier.
 class TourKeySet {
@@ -152,7 +152,9 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
     _tourAutoStartChecked = true;
     final autoDisabled = await areAutoToursDisabled();
     if (autoDisabled) return;
-    final seen = await SettingsHelper.loadStringConfig('$_tourSeenPrefix$tourId');
+    final seen = await SettingsHelper.loadStringConfig(
+      '$_tourSeenPrefix$tourId',
+    );
     if (seen.isEmpty && mounted) {
       // Small delay to ensure layout is fully complete
       await Future.delayed(const Duration(milliseconds: 400));
@@ -195,7 +197,9 @@ mixin ProductTourMixin<T extends StatefulWidget> on State<T> {
                   onPressed: () async {
                     await setAutoToursDisabled(true);
                     if (mounted) {
-                      SnackBarService.showInfo(LocServ.inst.t('auto_tours_disabled'));
+                      SnackBarService.showInfo(
+                        LocServ.inst.t('auto_tours_disabled'),
+                      );
                     }
                     controller.skip();
                   },
@@ -261,10 +265,7 @@ class _TourStepContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            body,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
+          Text(body, style: const TextStyle(color: Colors.white, fontSize: 14)),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.bottomRight,

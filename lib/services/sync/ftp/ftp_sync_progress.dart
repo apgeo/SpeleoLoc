@@ -141,20 +141,20 @@ class FtpSyncProgress {
 
   /// Initial idle state; used when no sync has ever run in this session.
   factory FtpSyncProgress.idle() => FtpSyncProgress(
-        phase: FtpSyncPhase.idle,
-        stepProgress: 0,
-        bytesTransferred: 0,
-        totalBytes: null,
-        currentFileName: null,
-        archivesProcessed: 0,
-        archivesTotal: 0,
-        statusMessage: '',
-        errorMessage: null,
-        startedAt: null,
-        updatedAt: DateTime.now(),
-        log: const [],
-        profileName: null,
-      );
+    phase: FtpSyncPhase.idle,
+    stepProgress: 0,
+    bytesTransferred: 0,
+    totalBytes: null,
+    currentFileName: null,
+    archivesProcessed: 0,
+    archivesTotal: 0,
+    statusMessage: '',
+    errorMessage: null,
+    startedAt: null,
+    updatedAt: DateTime.now(),
+    log: const [],
+    profileName: null,
+  );
 
   bool get isRunning =>
       phase != FtpSyncPhase.idle &&
@@ -184,10 +184,10 @@ class FtpSyncProgress {
         final perArchive = archivesTotal == 0
             ? 0.0
             : (archivesProcessed +
-                    (phase == FtpSyncPhase.importing
-                        ? 0.8 + 0.2 * stepProgress.clamp(0.0, 1.0)
-                        : 0.8 * stepProgress.clamp(0.0, 1.0))) /
-                archivesTotal;
+                      (phase == FtpSyncPhase.importing
+                          ? 0.8 + 0.2 * stepProgress.clamp(0.0, 1.0)
+                          : 0.8 * stepProgress.clamp(0.0, 1.0))) /
+                  archivesTotal;
         return 0.1 + 0.4 * perArchive.clamp(0.0, 1.0);
       case FtpSyncPhase.generatingArchive:
         return 0.5 + 0.1 * stepProgress.clamp(0.0, 1.0);
@@ -230,8 +230,7 @@ class FtpSyncProgress {
       phase: phase ?? this.phase,
       stepProgress: stepProgress ?? this.stepProgress,
       bytesTransferred: bytesTransferred ?? this.bytesTransferred,
-      totalBytes:
-          clearTotalBytes ? null : (totalBytes ?? this.totalBytes),
+      totalBytes: clearTotalBytes ? null : (totalBytes ?? this.totalBytes),
       currentFileName: clearCurrentFileName
           ? null
           : (currentFileName ?? this.currentFileName),

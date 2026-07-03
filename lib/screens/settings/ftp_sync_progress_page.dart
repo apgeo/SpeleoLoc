@@ -23,11 +23,11 @@ class FtpSyncProgressPage extends ConsumerStatefulWidget {
 }
 
 class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
-    with
-        AppBarMenuMixin<FtpSyncProgressPage>,
-        SingleTickerProviderStateMixin {
-  late final TabController _tabController =
-      TabController(length: 3, vsync: this);
+    with AppBarMenuMixin<FtpSyncProgressPage>, SingleTickerProviderStateMixin {
+  late final TabController _tabController = TabController(
+    length: 3,
+    vsync: this,
+  );
 
   @override
   void dispose() {
@@ -157,10 +157,15 @@ class _ProgressTab extends StatelessWidget {
           const SizedBox(height: 12),
           _ErrorBanner(
             message: progress.errorMessage!,
-            onOpenSettings: (progress.statusMessage == 'ftp_connection_failed' ||
+            onOpenSettings:
+                (progress.statusMessage == 'ftp_connection_failed' ||
                     progress.statusMessage == 'ftp_auth_failed')
-                ? () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const FtpSyncSettingsPage()))
+                ? () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FtpSyncSettingsPage(),
+                    ),
+                  )
                 : null,
           ),
         ],
@@ -290,10 +295,7 @@ class _PhaseHeader extends StatelessWidget {
                 style: textTheme.titleMedium,
               ),
               if (progress.profileName != null)
-                Text(
-                  progress.profileName!,
-                  style: textTheme.bodySmall,
-                ),
+                Text(progress.profileName!, style: textTheme.bodySmall),
               if (progress.startedAt != null)
                 Text(
                   '${LocServ.inst.t('ftp_started_at')} '
@@ -422,7 +424,8 @@ class _CurrentFileSection extends StatelessWidget {
             if (progress.totalBytes != null)
               _Metric(
                 label: LocServ.inst.t('ftp_bytes_label'),
-                value: '${_formatBytes(progress.bytesTransferred)} / '
+                value:
+                    '${_formatBytes(progress.bytesTransferred)} / '
                     '${_formatBytes(progress.totalBytes!)}',
               ),
             if (progress.bytesPerSecond != null)
@@ -533,7 +536,6 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-
 class _PausedBanner extends StatelessWidget {
   const _PausedBanner();
 
@@ -549,9 +551,7 @@ class _PausedBanner extends StatelessWidget {
         children: [
           const Icon(Icons.pause_circle_outline, color: Colors.blueGrey),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(LocServ.inst.t('ftp_paused_hint')),
-          ),
+          Expanded(child: Text(LocServ.inst.t('ftp_paused_hint'))),
         ],
       ),
     );

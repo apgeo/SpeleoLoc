@@ -45,11 +45,9 @@ void main() {
     return;
   }
 
-  final configFile = File(p.join(
-    Directory.current.path,
-    'test_data',
-    'ftp_test.json',
-  ));
+  final configFile = File(
+    p.join(Directory.current.path, 'test_data', 'ftp_test.json'),
+  );
   if (!configFile.existsSync()) {
     test('FTP live test skipped (missing test_data/ftp_test.json)', () {});
     return;
@@ -74,13 +72,14 @@ void main() {
     const channel = MethodChannel('plugins.flutter.io/path_provider');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'getTemporaryDirectory') {
-        final d = await Directory.systemTemp
-            .createTemp('speleoloc_ftp_live_pp_');
-        return d.path;
-      }
-      return null;
-    });
+          if (call.method == 'getTemporaryDirectory') {
+            final d = await Directory.systemTemp.createTemp(
+              'speleoloc_ftp_live_pp_',
+            );
+            return d.path;
+          }
+          return null;
+        });
   });
 
   tearDownAll(() async {
@@ -95,12 +94,17 @@ void main() {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       late ChangeLogger loggerRef;
       final userRepo = UserRepository(db, () => loggerRef);
-      final currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
+      final currentUser = CurrentUserService(
+        db,
+        userRepo,
+        ConfigurationRepository(db),
+      );
       await currentUser.initialize();
       loggerRef = ChangeLogger(db, currentUser);
       final caveRepo = CaveRepository(db, currentUser, loggerRef);
-      final assetsDir = await Directory.systemTemp
-          .createTemp('speleoloc_ftp_live_assets_');
+      final assetsDir = await Directory.systemTemp.createTemp(
+        'speleoloc_ftp_live_assets_',
+      );
       final sync = SyncArchiveService(
         db,
         loggerRef,
@@ -133,30 +137,49 @@ void main() {
       // Run #1 — first time on this device → should upload.
       await controller.startDefault();
       await _waitForTerminal(controller);
-      expect(controller.progress.phase, FtpSyncPhase.completed,
-          reason: _formatLog(controller));
-      expect(controller.progress.statusMessage, 'ftp_phase_completed',
-          reason: 'Run #1 must upload');
+      expect(
+        controller.progress.phase,
+        FtpSyncPhase.completed,
+        reason: _formatLog(controller),
+      );
+      expect(
+        controller.progress.statusMessage,
+        'ftp_phase_completed',
+        reason: 'Run #1 must upload',
+      );
 
       // Run #2 — no local mutations → must NOT re-upload.
       await controller.startDefault();
       await _waitForTerminal(controller);
-      expect(controller.progress.phase, FtpSyncPhase.completed,
-          reason: _formatLog(controller));
-      expect(controller.progress.statusMessage,
-          anyOf('ftp_phase_completed_nothing',
-              'ftp_phase_completed_download_only'),
-          reason: 'Run #2 must skip the upload');
+      expect(
+        controller.progress.phase,
+        FtpSyncPhase.completed,
+        reason: _formatLog(controller),
+      );
+      expect(
+        controller.progress.statusMessage,
+        anyOf(
+          'ftp_phase_completed_nothing',
+          'ftp_phase_completed_download_only',
+        ),
+        reason: 'Run #2 must skip the upload',
+      );
 
       // Run #3 — fresh local change → upload again.
       await Future<void>.delayed(const Duration(milliseconds: 10));
       await caveRepo.addCave('LiveTestCave2');
       await controller.startDefault();
       await _waitForTerminal(controller);
-      expect(controller.progress.phase, FtpSyncPhase.completed,
-          reason: _formatLog(controller));
-      expect(controller.progress.statusMessage, 'ftp_phase_completed',
-          reason: 'Run #3 must upload');
+      expect(
+        controller.progress.phase,
+        FtpSyncPhase.completed,
+        reason: _formatLog(controller),
+      );
+      expect(
+        controller.progress.statusMessage,
+        'ftp_phase_completed',
+        reason: 'Run #3 must upload',
+      );
     },
     timeout: const Timeout(Duration(minutes: 3)),
   );

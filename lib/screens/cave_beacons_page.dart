@@ -44,9 +44,11 @@ class _CaveBeaconsPageState extends State<CaveBeaconsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('beacon_unassign_confirm', {
-          'identity': '${item.beacon.major}/${item.beacon.minor}',
-        })),
+        content: Text(
+          LocServ.inst.t('beacon_unassign_confirm', {
+            'identity': '${item.beacon.major}/${item.beacon.minor}',
+          }),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -76,25 +78,28 @@ class _CaveBeaconsPageState extends State<CaveBeaconsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _beacons.isEmpty
-              ? Center(child: Text(LocServ.inst.t('cave_beacons_empty')))
-              : ListView.separated(
-                  itemCount: _beacons.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _tile(_beacons[i]),
-                ),
+          ? Center(child: Text(LocServ.inst.t('cave_beacons_empty')))
+          : ListView.separated(
+              itemCount: _beacons.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) => _tile(_beacons[i]),
+            ),
     );
   }
 
   Widget _tile(BeaconWithPlace item) {
     final b = item.beacon;
     final lastSeen = b.lastSeenAt != null
-        ? DateFormat('yyyy-MM-dd HH:mm')
-            .format(DateTime.fromMillisecondsSinceEpoch(b.lastSeenAt!))
+        ? DateFormat(
+            'yyyy-MM-dd HH:mm',
+          ).format(DateTime.fromMillisecondsSinceEpoch(b.lastSeenAt!))
         : LocServ.inst.t('beacon_never_seen');
     return ListTile(
       leading: const Icon(Icons.wifi_tethering),
-      title: Text(item.cavePlace.title,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        item.cavePlace.title,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(
         'major ${b.major} / minor ${b.minor} · ${b.proximityUuid}\n'
         '${LocServ.inst.t('beacon_last_seen')}: $lastSeen'

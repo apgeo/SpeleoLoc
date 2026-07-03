@@ -6,11 +6,7 @@ import 'package:photo_view/photo_view.dart';
 ///
 /// Push this route via [FullScreenImageViewer.show] or navigate to it directly.
 class FullScreenImageViewer extends StatelessWidget {
-  const FullScreenImageViewer({
-    super.key,
-    required this.imageFile,
-    this.title,
-  });
+  const FullScreenImageViewer({super.key, required this.imageFile, this.title});
 
   final File imageFile;
 
@@ -27,10 +23,8 @@ class FullScreenImageViewer extends StatelessWidget {
       context,
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => FullScreenImageViewer(
-          imageFile: imageFile,
-          title: title,
-        ),
+        builder: (_) =>
+            FullScreenImageViewer(imageFile: imageFile, title: title),
       ),
     );
   }
@@ -42,7 +36,9 @@ class FullScreenImageViewer extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: title != null ? Text(title!, style: const TextStyle(color: Colors.white)) : null,
+        title: title != null
+            ? Text(title!, style: const TextStyle(color: Colors.white))
+            : null,
       ),
       body: PhotoView(
         imageProvider: FileImage(imageFile),
@@ -51,9 +47,8 @@ class FullScreenImageViewer extends StatelessWidget {
         maxScale: PhotoViewComputedScale.covered * 5.0,
         initialScale: PhotoViewComputedScale.contained,
         enableRotation: false,
-        loadingBuilder: (context, event) => const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        loadingBuilder: (context, event) =>
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
         errorBuilder: (context, error, stackTrace) => const Center(
           child: Icon(Icons.broken_image, color: Colors.white54, size: 64),
         ),

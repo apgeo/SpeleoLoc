@@ -92,17 +92,18 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
       }
 
       _sub?.cancel();
-      _sub = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-        ),
-      ).listen(
-        _onPosition,
-        onError: (Object e, StackTrace st) {
-          _log.warning('Position stream error: $e');
-          if (mounted) setState(() => _errorMessage = e.toString());
-        },
-      );
+      _sub =
+          Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.bestForNavigation,
+            ),
+          ).listen(
+            _onPosition,
+            onError: (Object e, StackTrace st) {
+              _log.warning('Position stream error: $e');
+              if (mounted) setState(() => _errorMessage = e.toString());
+            },
+          );
     } catch (e) {
       _log.warning('Failed to start GPS: $e');
       if (mounted) setState(() => _errorMessage = e.toString());
@@ -150,8 +151,9 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         latitude: lat,
         longitude: lng,
         altitude: _avgAlt,
-        accuracyMeters:
-            _bestAccuracy.isFinite ? _bestAccuracy : _lastPosition?.accuracy,
+        accuracyMeters: _bestAccuracy.isFinite
+            ? _bestAccuracy
+            : _lastPosition?.accuracy,
         samples: _sampleCount,
       );
     });
@@ -173,10 +175,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(loc.t('gps_recorder_title'))),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _buildBody(loc),
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: _buildBody(loc)),
     );
   }
 
@@ -246,8 +245,10 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(loc.t('gps_recorder_live'),
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              loc.t('gps_recorder_live'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             if (pos == null)
               Row(
@@ -262,18 +263,22 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
                 ],
               )
             else ...[
-              _kv(loc.t('latitude'),
-                  _avgLat?.toStringAsFixed(7) ?? pos.latitude.toStringAsFixed(7)),
-              _kv(loc.t('longitude'),
-                  _avgLong?.toStringAsFixed(7) ??
-                      pos.longitude.toStringAsFixed(7)),
+              _kv(
+                loc.t('latitude'),
+                _avgLat?.toStringAsFixed(7) ?? pos.latitude.toStringAsFixed(7),
+              ),
+              _kv(
+                loc.t('longitude'),
+                _avgLong?.toStringAsFixed(7) ??
+                    pos.longitude.toStringAsFixed(7),
+              ),
               _kv(
                 loc.t('altitude'),
                 _avgAlt != null
                     ? '${_avgAlt!.toStringAsFixed(1)} m'
                     : (pos.altitude.isNaN
-                        ? '—'
-                        : '${pos.altitude.toStringAsFixed(1)} m'),
+                          ? '—'
+                          : '${pos.altitude.toStringAsFixed(1)} m'),
               ),
               _kv(
                 loc.t('gps_accuracy'),
@@ -316,8 +321,10 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
             Row(
               children: [
                 Expanded(
-                  child: Text(loc.t('gps_recorder_captured'),
-                      style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    loc.t('gps_recorder_captured'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 if (cap != null)
                   IconButton(
@@ -329,8 +336,10 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
             ),
             const SizedBox(height: 4),
             if (cap == null)
-              Text(loc.t('gps_recorder_no_capture_yet'),
-                  style: Theme.of(context).textTheme.bodySmall)
+              Text(
+                loc.t('gps_recorder_no_capture_yet'),
+                style: Theme.of(context).textTheme.bodySmall,
+              )
             else ...[
               _kv(loc.t('latitude'), cap.latitude.toStringAsFixed(7)),
               _kv(loc.t('longitude'), cap.longitude.toStringAsFixed(7)),
@@ -385,16 +394,19 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         children: [
           SizedBox(
             width: 110,
-            child: Text(k,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.grey[700])),
+            child: Text(
+              k,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+            ),
           ),
           Expanded(
             child: Text(
               v,
-              style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+              style: const TextStyle(
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
           ),
         ],

@@ -17,16 +17,30 @@ class CaveTripListPage extends StatefulWidget {
   State<CaveTripListPage> createState() => _CaveTripListPageState();
 }
 
-class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixin<CaveTripListPage>, ProductTourMixin<CaveTripListPage> {
+class _CaveTripListPageState extends State<CaveTripListPage>
+    with AppBarMenuMixin<CaveTripListPage>, ProductTourMixin<CaveTripListPage> {
   @override
   String get tourId => 'cave_trip_list';
   @override
   final tourKeys = TourKeySet(['toolbar', 'list', 'menu']);
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'toolbar', titleLocKey: 'tour_cave_trip_list_toolbar_title', bodyLocKey: 'tour_cave_trip_list_toolbar_body'),
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_cave_trip_list_list_title', bodyLocKey: 'tour_cave_trip_list_list_body', align: ContentAlign.top),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_trip_list_menu_title', bodyLocKey: 'tour_cave_trip_list_menu_body'),
+    TourStepDef(
+      keyId: 'toolbar',
+      titleLocKey: 'tour_cave_trip_list_toolbar_title',
+      bodyLocKey: 'tour_cave_trip_list_toolbar_body',
+    ),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_cave_trip_list_list_title',
+      bodyLocKey: 'tour_cave_trip_list_list_body',
+      align: ContentAlign.top,
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_cave_trip_list_menu_title',
+      bodyLocKey: 'tour_cave_trip_list_menu_body',
+    ),
   ];
   Cave? _cave;
   List<CaveTrip> _endedTrips = [];
@@ -73,8 +87,13 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     final caveName = _cave?.title ?? '';
     final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
     final defaultTitle = '$caveName $dateStr';
-    final existingTitles = await caveTripRepository.getCaveTripTitles(widget.caveUuid);
-    final suggestedTitle = CaveTripService.uniqueTripTitle(defaultTitle, existingTitles);
+    final existingTitles = await caveTripRepository.getCaveTripTitles(
+      widget.caveUuid,
+    );
+    final suggestedTitle = CaveTripService.uniqueTripTitle(
+      defaultTitle,
+      existingTitles,
+    );
     final controller = TextEditingController(text: suggestedTitle);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -82,17 +101,27 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
         title: Text(LocServ.inst.t('trip_name_dialog_title')),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(labelText: LocServ.inst.t('trip_title_hint')),
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('trip_title_hint'),
+          ),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('ok'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('ok')),
+          ),
         ],
       ),
     );
     if (confirmed == true && mounted) {
-      final title = controller.text.trim().isNotEmpty ? controller.text.trim() : suggestedTitle;
+      final title = controller.text.trim().isNotEmpty
+          ? controller.text.trim()
+          : suggestedTitle;
       await caveTripService.startTrip(widget.caveUuid, title);
       if (mounted) {
         _load();
@@ -107,8 +136,14 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
         title: Text(LocServ.inst.t('confirm')),
         content: Text(LocServ.inst.t('trip_stop_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(LocServ.inst.t('yes'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
         ],
       ),
     );
@@ -129,43 +164,59 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
     final buttons = <_ToolbarBtn>[];
 
     if (!isActiveForThisCave) {
-      buttons.add(_ToolbarBtn(
-        icon: Icons.play_circle,
-        label: LocServ.inst.t('trip_start'),
-        color: Colors.green,
-        onTap: _startTrip,
-      ));
-    } else {
-      buttons.add(_ToolbarBtn(
-        icon: Icons.stop_circle,
-        label: LocServ.inst.t('trip_stop'),
-        color: Colors.red,
-        onTap: _stopTrip,
-      ));
-      if (isPaused) {
-        buttons.add(_ToolbarBtn(
+      buttons.add(
+        _ToolbarBtn(
           icon: Icons.play_circle,
-          label: LocServ.inst.t('trip_resume'),
+          label: LocServ.inst.t('trip_start'),
           color: Colors.green,
-          onTap: () { caveTripService.resumeTrip(); setState(() {}); },
-        ));
+          onTap: _startTrip,
+        ),
+      );
+    } else {
+      buttons.add(
+        _ToolbarBtn(
+          icon: Icons.stop_circle,
+          label: LocServ.inst.t('trip_stop'),
+          color: Colors.red,
+          onTap: _stopTrip,
+        ),
+      );
+      if (isPaused) {
+        buttons.add(
+          _ToolbarBtn(
+            icon: Icons.play_circle,
+            label: LocServ.inst.t('trip_resume'),
+            color: Colors.green,
+            onTap: () {
+              caveTripService.resumeTrip();
+              setState(() {});
+            },
+          ),
+        );
       } else {
-        buttons.add(_ToolbarBtn(
-          icon: Icons.pause_circle,
-          label: LocServ.inst.t('trip_pause'),
-          color: Colors.orange,
-          onTap: () { caveTripService.pauseTrip(); setState(() {}); },
-        ));
+        buttons.add(
+          _ToolbarBtn(
+            icon: Icons.pause_circle,
+            label: LocServ.inst.t('trip_pause'),
+            color: Colors.orange,
+            onTap: () {
+              caveTripService.pauseTrip();
+              setState(() {});
+            },
+          ),
+        );
       }
-      buttons.add(_ToolbarBtn(
-        icon: Icons.route,
-        label: LocServ.inst.t('trip_view'),
-        color: Colors.blue,
-        onTap: () async {
-          await AppRoutes.pushCaveTrip(context, activeTripId);
-          _load();
-        },
-      ));
+      buttons.add(
+        _ToolbarBtn(
+          icon: Icons.route,
+          label: LocServ.inst.t('trip_view'),
+          color: Colors.blue,
+          onTap: () async {
+            await AppRoutes.pushCaveTrip(context, activeTripId);
+            _load();
+          },
+        ),
+      );
     }
 
     return Container(
@@ -184,7 +235,14 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
                 children: [
                   Icon(b.icon, size: 40, color: b.color),
                   const SizedBox(height: 4),
-                  Text(b.label, style: TextStyle(fontSize: 12, color: b.color, fontWeight: FontWeight.w500)),
+                  Text(
+                    b.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: b.color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -212,10 +270,15 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
               isPaused ? Icons.pause_circle : Icons.fiber_manual_record,
               color: isPaused ? Colors.orange : Colors.green,
             ),
-            title: Text(trip.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(isPaused
-                ? LocServ.inst.t('trip_paused')
-                : '${LocServ.inst.t('trip_active')} · $pts ${LocServ.inst.t('trip_points')}'),
+            title: Text(
+              trip.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              isPaused
+                  ? LocServ.inst.t('trip_paused')
+                  : '${LocServ.inst.t('trip_active')} · $pts ${LocServ.inst.t('trip_points')}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
               await AppRoutes.pushCaveTrip(context, tripId);
@@ -237,7 +300,9 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('trip_history')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -255,21 +320,34 @@ class _CaveTripListPageState extends State<CaveTripListPage> with AppBarMenuMixi
           Expanded(
             key: tourKeys['list'],
             child: _endedTrips.isEmpty
-                ? Center(child: Text(
-                    activeTripId != null ? '' : LocServ.inst.t('trip_no_history'),
-                    style: TextStyle(color: Colors.grey[600]),
-                  ))
+                ? Center(
+                    child: Text(
+                      activeTripId != null
+                          ? ''
+                          : LocServ.inst.t('trip_no_history'),
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  )
                 : ListView.separated(
                     itemCount: _endedTrips.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
                     itemBuilder: (context, i) {
                       final trip = _endedTrips[i];
-                      final dt = DateTime.fromMillisecondsSinceEpoch(trip.tripStartedAt);
+                      final dt = DateTime.fromMillisecondsSinceEpoch(
+                        trip.tripStartedAt,
+                      );
                       final count = _pointCounts[trip.uuid] ?? 0;
                       return ListTile(
                         title: Text(trip.title),
                         subtitle: Text(dateFormat.format(dt)),
-                        trailing: Text('$count pts', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        trailing: Text(
+                          '$count pts',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
                         onTap: () async {
                           await AppRoutes.pushCaveTrip(context, trip.uuid);
                           _load();
@@ -289,5 +367,10 @@ class _ToolbarBtn {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _ToolbarBtn({required this.icon, required this.label, required this.color, required this.onTap});
+  const _ToolbarBtn({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 }

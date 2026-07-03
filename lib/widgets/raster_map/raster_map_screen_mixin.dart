@@ -22,9 +22,7 @@ mixin RasterMapScreenMixin<T extends StatefulWidget> on State<T> {
   }) async {
     final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => RasterMapsPage(caveUuid: caveUuid),
-      ),
+      MaterialPageRoute(builder: (_) => RasterMapsPage(caveUuid: caveUuid)),
     );
     if ((changed == true) && mounted) {
       onChanged();

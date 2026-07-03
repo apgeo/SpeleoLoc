@@ -59,74 +59,73 @@ class _SyncPageState extends ConsumerState<SyncPage>
   Widget _buildBody(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            LocServ.inst.t('sync_description'),
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
+      children: [
+        Text(
+          LocServ.inst.t('sync_description'),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
 
-          // ---- Export --------------------------------------------------
-          Text(
-            LocServ.inst.t('export_settings'),
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          SwitchListTile(
-            title: Text(LocServ.inst.t('include_documentation_files')),
-            value: _includeDocumentationFiles,
-            onChanged: _busy
-                ? null
-                : (v) => setState(() => _includeDocumentationFiles = v),
-          ),
-          SwitchListTile(
-            title: Text(LocServ.inst.t('include_raster_maps')),
-            value: _includeRasterMaps,
-            onChanged:
-                _busy ? null : (v) => setState(() => _includeRasterMaps = v),
-          ),
+        // ---- Export --------------------------------------------------
+        Text(
+          LocServ.inst.t('export_settings'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        SwitchListTile(
+          title: Text(LocServ.inst.t('include_documentation_files')),
+          value: _includeDocumentationFiles,
+          onChanged: _busy
+              ? null
+              : (v) => setState(() => _includeDocumentationFiles = v),
+        ),
+        SwitchListTile(
+          title: Text(LocServ.inst.t('include_raster_maps')),
+          value: _includeRasterMaps,
+          onChanged: _busy
+              ? null
+              : (v) => setState(() => _includeRasterMaps = v),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.upload_file),
+          label: Text(LocServ.inst.t('sync_export')),
+          onPressed: _busy ? null : _export,
+        ),
+        const Divider(height: 32),
+
+        // ---- Import --------------------------------------------------
+        Text(
+          LocServ.inst.t('sync_conflict_mode_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        RadioListTile<_ConflictMode>(
+          title: Text(LocServ.inst.t('sync_conflict_mode_auto')),
+          subtitle: Text(LocServ.inst.t('sync_conflict_mode_auto_desc')),
+          value: _ConflictMode.auto,
+          groupValue: _conflictMode,
+          onChanged: _busy ? null : (v) => setState(() => _conflictMode = v!),
+        ),
+        RadioListTile<_ConflictMode>(
+          title: Text(LocServ.inst.t('sync_conflict_mode_manual')),
+          subtitle: Text(LocServ.inst.t('sync_conflict_mode_manual_desc')),
+          value: _ConflictMode.manual,
+          groupValue: _conflictMode,
+          onChanged: _busy ? null : (v) => setState(() => _conflictMode = v!),
+        ),
+        const SizedBox(height: 8),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.download),
+          label: Text(LocServ.inst.t('sync_import')),
+          onPressed: _busy ? null : _import,
+        ),
+        const SizedBox(height: 24),
+        if (_busy) const LinearProgressIndicator(),
+        if (_lastMessage != null) ...[
           const SizedBox(height: 12),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.upload_file),
-            label: Text(LocServ.inst.t('sync_export')),
-            onPressed: _busy ? null : _export,
-          ),
-          const Divider(height: 32),
-
-          // ---- Import --------------------------------------------------
-          Text(
-            LocServ.inst.t('sync_conflict_mode_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          RadioListTile<_ConflictMode>(
-            title: Text(LocServ.inst.t('sync_conflict_mode_auto')),
-            subtitle: Text(LocServ.inst.t('sync_conflict_mode_auto_desc')),
-            value: _ConflictMode.auto,
-            groupValue: _conflictMode,
-            onChanged:
-                _busy ? null : (v) => setState(() => _conflictMode = v!),
-          ),
-          RadioListTile<_ConflictMode>(
-            title: Text(LocServ.inst.t('sync_conflict_mode_manual')),
-            subtitle: Text(LocServ.inst.t('sync_conflict_mode_manual_desc')),
-            value: _ConflictMode.manual,
-            groupValue: _conflictMode,
-            onChanged:
-                _busy ? null : (v) => setState(() => _conflictMode = v!),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.download),
-            label: Text(LocServ.inst.t('sync_import')),
-            onPressed: _busy ? null : _import,
-          ),
-          const SizedBox(height: 24),
-          if (_busy) const LinearProgressIndicator(),
-          if (_lastMessage != null) ...[
-            const SizedBox(height: 12),
-            Text(_lastMessage!),
-          ],
+          Text(_lastMessage!),
         ],
-      );
+      ],
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -229,7 +228,8 @@ class _SyncPageState extends ConsumerState<SyncPage>
     } on SyncArchiveSchemaMismatchException catch (e) {
       if (!mounted) return;
       setState(() {
-        _lastMessage = '${LocServ.inst.t('sync_import_failed')}: '
+        _lastMessage =
+            '${LocServ.inst.t('sync_import_failed')}: '
             '${_formatSchemaMismatch(e)}';
       });
     } catch (e) {
@@ -301,8 +301,9 @@ class _ConflictDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AlertDialog(
-      title: Text(LocServ.inst
-          .t('sync_conflict_title', {'table': conflict.tableName})),
+      title: Text(
+        LocServ.inst.t('sync_conflict_title', {'table': conflict.tableName}),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
@@ -411,10 +412,7 @@ class _SideBySideDiff extends StatelessWidget {
         2: FlexColumnWidth(),
       },
       defaultVerticalAlignment: TableCellVerticalAlignment.top,
-      border: TableBorder.all(
-        color: theme.dividerColor,
-        width: 0.5,
-      ),
+      border: TableBorder.all(color: theme.dividerColor, width: 0.5),
       children: [
         TableRow(
           decoration: BoxDecoration(color: theme.hoverColor),
@@ -425,23 +423,25 @@ class _SideBySideDiff extends StatelessWidget {
           ],
         ),
         for (final key in differingFields)
-          TableRow(children: [
-            _cell(key, bold: true),
-            _cell('${local[key] ?? '—'}'),
-            _cell('${incoming[key] ?? '—'}'),
-          ]),
+          TableRow(
+            children: [
+              _cell(key, bold: true),
+              _cell('${local[key] ?? '—'}'),
+              _cell('${incoming[key] ?? '—'}'),
+            ],
+          ),
       ],
     );
   }
 
   Widget _cell(String text, {bool bold = false}) => Padding(
-        padding: const EdgeInsets.all(6),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.all(6),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+      ),
+    ),
+  );
 }

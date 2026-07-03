@@ -1,4 +1,4 @@
-﻿import 'package:drift/drift.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
@@ -11,8 +11,8 @@ import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
   CaveTripService(this._db, {Clock clock = const SystemClock()})
-      : _clock = clock,
-        _renderer = TripLogRenderer(_db);
+    : _clock = clock,
+      _renderer = TripLogRenderer(_db);
 
   final AppDatabase _db;
   final Clock _clock;
@@ -23,19 +23,20 @@ class CaveTripService {
 
   Future<void> initActiveTrip() async {
     try {
-      final row = await (_db.select(_db.configurations)
-            ..where((c) => c.title.equals(activeTripConfigKey)))
-          .getSingleOrNull();
+      final row = await (_db.select(
+        _db.configurations,
+      )..where((c) => c.title.equals(activeTripConfigKey))).getSingleOrNull();
       final parsed = Uuid.tryParse(row?.value);
       if (parsed != null) {
         // Look up the specific trip stored in config to verify it is still
         // unended.  Using getActiveTrip() (most-recent-unended) was wrong:
         // a different orphaned trip could satisfy that query while the config
         // trip has already been ended, or vice-versa.
-        final trip = await (_db.select(_db.caveTrips)
-              ..where(
-                  (t) => t.uuid.equalsValue(parsed) & t.tripEndedAt.isNull()))
-            .getSingleOrNull();
+        final trip =
+            await (_db.select(_db.caveTrips)..where(
+                  (t) => t.uuid.equalsValue(parsed) & t.tripEndedAt.isNull(),
+                ))
+                .getSingleOrNull();
         activeTripIdNotifier.value = trip != null ? parsed : null;
         if (trip == null) await _clearConfig();
       }
@@ -104,7 +105,10 @@ class CaveTripService {
     try {
       final author = await currentUserService.currentOrSystem();
       await _db.insertTripPoint(
-          tripUuid: id, cavePlaceUuid: cavePlaceUuid, authorUuid: author);
+        tripUuid: id,
+        cavePlaceUuid: cavePlaceUuid,
+        authorUuid: author,
+      );
       await _appendForNewEvent(id);
     } catch (e, st) {
       log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
@@ -116,8 +120,11 @@ class CaveTripService {
   /// it on subsequent re-renders. Document text is preserved in the
   /// `documentation_files` table (file content on disk) and is reachable
   /// from the document itself.
-  Future<void> linkDocument(Uuid docUuid,
-      {String? documentTitle, String? textContent}) async {
+  Future<void> linkDocument(
+    Uuid docUuid, {
+    String? documentTitle,
+    String? textContent,
+  }) async {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
     try {
@@ -138,9 +145,9 @@ class CaveTripService {
   Future<Uuid?> getActiveTripCaveId() async {
     final id = activeTripIdNotifier.value;
     if (id == null) return null;
-    final trip = await (_db.select(_db.caveTrips)
-          ..where((t) => t.uuid.equalsValue(id)))
-        .getSingleOrNull();
+    final trip = await (_db.select(
+      _db.caveTrips,
+    )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
     return trip?.caveUuid;
   }
 
@@ -183,9 +190,9 @@ class CaveTripService {
         return;
       }
 
-      final trip = await (_db.select(_db.caveTrips)
-            ..where((t) => t.uuid.equalsValue(tripUuid)))
-          .getSingleOrNull();
+      final trip = await (_db.select(
+        _db.caveTrips,
+      )..where((t) => t.uuid.equalsValue(tripUuid))).getSingleOrNull();
       final current = trip?.log ?? '';
       if (current.isEmpty) {
         // First event — write the delta as-is (no leading separator).
@@ -204,7 +211,9 @@ class CaveTripService {
   /// Public hook called by the trip log page after the user picks a new
   /// method. Persists the choice and rewrites the log.
   Future<void> regenerateLogWithMethod(
-      Uuid tripUuid, TripLogMethod method) async {
+    Uuid tripUuid,
+    TripLogMethod method,
+  ) async {
     await currentUserService.setTripLogMethod(method);
     await _regenerateLog(tripUuid);
   }
@@ -227,7 +236,7 @@ class CaveTripService {
     final titles = existingTitles.toSet();
     if (!titles.contains(proposed)) return proposed;
     final base = proposed.replaceAll(_suffixRe, '');
-    for (int i = 2;; i++) {
+    for (int i = 2; ; i++) {
       final candidate = '$base [$i]';
       if (!titles.contains(candidate)) return candidate;
     }

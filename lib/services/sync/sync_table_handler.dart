@@ -50,5 +50,6 @@ class SyncTableHandler {
   final Future<UpsertCounters> Function(
     List<Map<String, dynamic>> rows,
     ConflictResolver? resolver,
-  ) upsert;
+  )
+  upsert;
 }

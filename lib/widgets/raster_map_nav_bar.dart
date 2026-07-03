@@ -34,27 +34,27 @@ class RasterMapNavBarStyle {
 
   /// Compact style for embedding inside RasterMapPlacePointEditor.
   const RasterMapNavBarStyle.compact()
-      : rasterMapItemWidth = 64,
-        rasterMapImageSize = 36,
-        rasterMapPlaceholderSize = 42,
-        rasterMapIconSize = 22,
-        rasterMapBrokenIconSize = 18,
-        rasterMapTitleFontSize = 9.0,
-        rasterMapTitleWidth = 56,
-        rasterMapListHeight = null,
-        rasterMapListHeightFraction = 0.10,
-        rasterMapListMaxHeight = 64,
-        rasterMapListMaxHeightNoTitle = 48,
-        rasterMapItemMarginH = 4.0,
-        rasterMapItemMarginV = 4.0,
-        showRasterMapTitles = true,
-        placesAvatarRadius = 9.0,
-        placesAvatarRadiusSelected = 11.0,
-        placesTitleFontSize = 10.0,
-        placesTitleWidth = 60,
-        placesListHeight = null,
-        placesListHeightFraction = 0.08,
-        placesListMaxHeight = 56;
+    : rasterMapItemWidth = 64,
+      rasterMapImageSize = 36,
+      rasterMapPlaceholderSize = 42,
+      rasterMapIconSize = 22,
+      rasterMapBrokenIconSize = 18,
+      rasterMapTitleFontSize = 9.0,
+      rasterMapTitleWidth = 56,
+      rasterMapListHeight = null,
+      rasterMapListHeightFraction = 0.10,
+      rasterMapListMaxHeight = 64,
+      rasterMapListMaxHeightNoTitle = 48,
+      rasterMapItemMarginH = 4.0,
+      rasterMapItemMarginV = 4.0,
+      showRasterMapTitles = true,
+      placesAvatarRadius = 9.0,
+      placesAvatarRadiusSelected = 11.0,
+      placesTitleFontSize = 10.0,
+      placesTitleWidth = 60,
+      placesListHeight = null,
+      placesListHeightFraction = 0.08,
+      placesListMaxHeight = 56;
 
   final double rasterMapItemWidth;
   final double rasterMapImageSize;
@@ -66,11 +66,13 @@ class RasterMapNavBarStyle {
   final double? rasterMapListHeight;
   final double rasterMapListHeightFraction;
   final double rasterMapListMaxHeight;
+
   /// Max height to use for the raster-maps list when [showRasterMapTitles] is
   /// false (tighter, since no title row is rendered).
   final double rasterMapListMaxHeightNoTitle;
   final double rasterMapItemMarginH;
   final double rasterMapItemMarginV;
+
   /// When false the horizontal raster-maps list renders only the thumbnails
   /// (no title under each item) and the row collapses to a smaller height.
   final bool showRasterMapTitles;
@@ -83,9 +85,7 @@ class RasterMapNavBarStyle {
   final double placesListMaxHeight;
 
   /// Returns a copy of this style with selected fields overridden.
-  RasterMapNavBarStyle copyWith({
-    bool? showRasterMapTitles,
-  }) {
+  RasterMapNavBarStyle copyWith({bool? showRasterMapTitles}) {
     return RasterMapNavBarStyle(
       rasterMapItemWidth: rasterMapItemWidth,
       rasterMapImageSize: rasterMapImageSize,
@@ -179,7 +179,9 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
   final Map<Uuid, GlobalKey> _placeItemKeys = {};
 
   // Notifier so the places list updates efficiently without full rebuild.
-  final ValueNotifier<Uuid?> _selectedPlaceNotifier = ValueNotifier<Uuid?>(null);
+  final ValueNotifier<Uuid?> _selectedPlaceNotifier = ValueNotifier<Uuid?>(
+    null,
+  );
 
   // Cache for image path futures so they're not re-awaited on rebuild
   final Map<String, Future<String>> _imagePathFutures = {};
@@ -209,7 +211,10 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     }
     // When the places list is replaced (e.g. after sorting), re-apply any
     // active filter so the map markers and horizontal list stay in sync.
-    if (!identical(widget.cavePlacesWithDefinitions, oldWidget.cavePlacesWithDefinitions) &&
+    if (!identical(
+          widget.cavePlacesWithDefinitions,
+          oldWidget.cavePlacesWithDefinitions,
+        ) &&
         _filterController.text.isNotEmpty) {
       _applyFilter(_filterController.text);
     }
@@ -299,12 +304,13 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
           style: TextStyle(fontSize: s.placesTitleFontSize + 1),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 7,
+            ),
             hintText: LocServ.inst.t('filter_cave_places'),
             hintStyle: const TextStyle(fontSize: 12),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(17)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(17)),
             suffixIcon: ListenableBuilder(
               listenable: _filterController,
               builder: (_, __) => _filterController.text.isEmpty
@@ -354,7 +360,11 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     final double listHeight;
     if (s.showRasterMapTitles) {
       listHeight =
-          s.rasterMapListHeight ?? math.min(s.rasterMapListMaxHeight, screenH * s.rasterMapListHeightFraction);
+          s.rasterMapListHeight ??
+          math.min(
+            s.rasterMapListMaxHeight,
+            screenH * s.rasterMapListHeightFraction,
+          );
     } else {
       // Titles hidden: collapse to the thumbnail height plus a small breathing
       // room so the row occupies minimal vertical space.
@@ -384,11 +394,16 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                     child: Container(
                       width: s.rasterMapItemWidth,
                       margin: EdgeInsets.symmetric(
-                          horizontal: s.rasterMapItemMarginH, vertical: s.rasterMapItemMarginV),
+                        horizontal: s.rasterMapItemMarginH,
+                        vertical: s.rasterMapItemMarginV,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
-                            width: 2),
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : Colors.transparent,
+                          width: 2,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -402,8 +417,14 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                                   width: s.rasterMapPlaceholderSize,
                                   height: s.rasterMapPlaceholderSize,
                                   decoration: BoxDecoration(
-                                      color: Colors.grey[200], borderRadius: BorderRadius.circular(6)),
-                                  child: Icon(Icons.map, size: s.rasterMapIconSize, color: Colors.grey),
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.map,
+                                    size: s.rasterMapIconSize,
+                                    color: Colors.grey,
+                                  ),
                                 );
                               }
                               final f = File(snap.data!);
@@ -412,21 +433,30 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                                   width: s.rasterMapPlaceholderSize,
                                   height: s.rasterMapPlaceholderSize,
                                   decoration: BoxDecoration(
-                                      color: Colors.grey[200], borderRadius: BorderRadius.circular(6)),
-                                  child: Icon(Icons.broken_image,
-                                      size: s.rasterMapBrokenIconSize, color: Colors.grey),
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: s.rasterMapBrokenIconSize,
+                                    color: Colors.grey,
+                                  ),
                                 );
                               }
                               final cache = widget.imageProviderCache;
-                              final provider =
-                                  cache != null ? (cache[snap.data!] ??= FileImage(File(snap.data!))) : FileImage(f);
+                              final provider = cache != null
+                                  ? (cache[snap.data!] ??= FileImage(
+                                      File(snap.data!),
+                                    ))
+                                  : FileImage(f);
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: Image(
-                                    image: provider,
-                                    width: s.rasterMapImageSize,
-                                    height: s.rasterMapImageSize,
-                                    fit: BoxFit.cover),
+                                  image: provider,
+                                  width: s.rasterMapImageSize,
+                                  height: s.rasterMapImageSize,
+                                  fit: BoxFit.cover,
+                                ),
                               );
                             },
                           ),
@@ -439,7 +469,9 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                                   rm.title,
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
-                                  style: TextStyle(fontSize: s.rasterMapTitleFontSize),
+                                  style: TextStyle(
+                                    fontSize: s.rasterMapTitleFontSize,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -463,7 +495,8 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
   Widget _buildCavePlacesList(BuildContext context, RasterMapNavBarStyle s) {
     final screenH = MediaQuery.of(context).size.height;
     final listHeight =
-        s.placesListHeight ?? math.min(s.placesListMaxHeight, screenH * s.placesListHeightFraction);
+        s.placesListHeight ??
+        math.min(s.placesListMaxHeight, screenH * s.placesListHeightFraction);
     final titleGap = listHeight <= 44 ? 1.0 : 2.0;
 
     // Group-header strip height (only in cave-area grouping mode)
@@ -474,8 +507,8 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     final displayList = _filteredIds == null
         ? widget.cavePlacesWithDefinitions
         : widget.cavePlacesWithDefinitions
-            .where((c) => _filteredIds!.contains(c.cavePlace.uuid))
-            .toList();
+              .where((c) => _filteredIds!.contains(c.cavePlace.uuid))
+              .toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -494,9 +527,15 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: groups.map((g) {
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 3,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300, width: 1),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1,
+                        ),
                         borderRadius: BorderRadius.circular(6),
                         color: Theme.of(context).colorScheme.surface,
                       ),
@@ -525,24 +564,36 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: g.items.map((cpwd) {
-                              final hasDef = cpwd.definition != null &&
+                              final hasDef =
+                                  cpwd.definition != null &&
                                   cpwd.definition!.xCoordinate != null &&
                                   cpwd.definition!.yCoordinate != null;
-                              final isSelected = selectedId != null &&
+                              final isSelected =
+                                  selectedId != null &&
                                   selectedId == cpwd.cavePlace.uuid;
                               final key = _placeItemKeys.putIfAbsent(
-                                  cpwd.cavePlace.uuid, () => GlobalKey());
+                                cpwd.cavePlace.uuid,
+                                () => GlobalKey(),
+                              );
                               return GestureDetector(
                                 onTap: () {
-                                  _selectedPlaceNotifier.value = cpwd.cavePlace.uuid;
+                                  _selectedPlaceNotifier.value =
+                                      cpwd.cavePlace.uuid;
                                   widget.onCavePlaceSelected(cpwd);
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
                                     ensurePlaceItemVisible(cpwd.cavePlace.uuid);
                                   });
                                 },
                                 child: _buildPlaceItem(
-                                  context, s, cpwd, isSelected, hasDef,
-                                  key, titleGap,
+                                  context,
+                                  s,
+                                  cpwd,
+                                  isSelected,
+                                  hasDef,
+                                  key,
+                                  titleGap,
                                 ),
                               );
                             }).toList(),
@@ -565,12 +616,16 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
               itemCount: displayList.length,
               itemBuilder: (context, idx) {
                 final cpwd = displayList[idx];
-                final hasDef = cpwd.definition != null &&
+                final hasDef =
+                    cpwd.definition != null &&
                     cpwd.definition!.xCoordinate != null &&
                     cpwd.definition!.yCoordinate != null;
-                final isSelected = selectedId != null && selectedId == cpwd.cavePlace.uuid;
+                final isSelected =
+                    selectedId != null && selectedId == cpwd.cavePlace.uuid;
                 final key = _placeItemKeys.putIfAbsent(
-                    cpwd.cavePlace.uuid, () => GlobalKey());
+                  cpwd.cavePlace.uuid,
+                  () => GlobalKey(),
+                );
 
                 return GestureDetector(
                   onTap: () {
@@ -581,7 +636,13 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                     });
                   },
                   child: _buildPlaceItem(
-                    context, s, cpwd, isSelected, hasDef, key, titleGap,
+                    context,
+                    s,
+                    cpwd,
+                    isSelected,
+                    hasDef,
+                    key,
+                    titleGap,
                   ),
                 );
               },
@@ -620,12 +681,19 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
-            radius: isSelected ? s.placesAvatarRadiusSelected : s.placesAvatarRadius,
+            radius: isSelected
+                ? s.placesAvatarRadiusSelected
+                : s.placesAvatarRadius,
             backgroundColor: hasDef
-                ? (isSelected ? Colors.blue : const Color.fromARGB(255, 252, 136, 127))
+                ? (isSelected
+                      ? Colors.blue
+                      : const Color.fromARGB(255, 252, 136, 127))
                 : Colors.grey[400],
             child: Text(
-                cpwd.cavePlace.title.isNotEmpty ? cpwd.cavePlace.title[0].toUpperCase() : '?'),
+              cpwd.cavePlace.title.isNotEmpty
+                  ? cpwd.cavePlace.title[0].toUpperCase()
+                  : '?',
+            ),
           ),
           SizedBox(height: titleGap),
           SizedBox(
@@ -635,8 +703,9 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
               style: TextStyle(
-                  fontSize: s.placesTitleFontSize,
-                  color: isSelected ? Theme.of(context).primaryColor : null),
+                fontSize: s.placesTitleFontSize,
+                color: isSelected ? Theme.of(context).primaryColor : null,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -647,7 +716,7 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
 
   /// Groups [places] by cave area, preserving the existing order within each group.
   List<_PlaceGroup> _groupByCaveArea(List<CavePlaceWithDefinition> places) {
-    final ordered = <String>[];   // ordered list of group keys (area title)
+    final ordered = <String>[]; // ordered list of group keys (area title)
     final map = <String, List<CavePlaceWithDefinition>>{};
 
     for (final cpwd in places) {
@@ -662,7 +731,10 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
     }
 
     return ordered
-        .map((key) => _PlaceGroup(areaTitle: key.isEmpty ? '—' : key, items: map[key]!))
+        .map(
+          (key) =>
+              _PlaceGroup(areaTitle: key.isEmpty ? '—' : key, items: map[key]!),
+        )
         .toList();
   }
 }

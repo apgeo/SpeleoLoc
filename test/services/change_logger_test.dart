@@ -17,7 +17,11 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger ref;
     final userRepo = UserRepository(db, () => ref);
-    final currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
+    final currentUser = CurrentUserService(
+      db,
+      userRepo,
+      ConfigurationRepository(db),
+    );
     await currentUser.initialize();
     ref = ChangeLogger(db, currentUser);
     logger = ref;
@@ -28,16 +32,15 @@ void main() {
     await db.close();
   });
 
-  Future<List<ChangeLogData>> allChanges() =>
-      (db.select(db.changeLog)..orderBy([(c) => OrderingTerm.asc(c.changedAt)]))
-          .get();
+  Future<List<ChangeLogData>> allChanges() => (db.select(
+    db.changeLog,
+  )..orderBy([(c) => OrderingTerm.asc(c.changedAt)])).get();
 
   test('logInsert writes a change_log header', () async {
     await caveRepo.addCave('My Cave');
     final rows = await allChanges();
     expect(rows, hasLength(greaterThanOrEqualTo(1)));
-    final caveInsert =
-        rows.firstWhere((r) => r.entityTable == 'caves');
+    final caveInsert = rows.firstWhere((r) => r.entityTable == 'caves');
     expect(caveInsert.changeType, ChangeType.insert);
     expect(caveInsert.deviceUuid != null, isTrue);
   });
@@ -49,9 +52,9 @@ void main() {
     final upd = rows.firstWhere(
       (r) => r.entityTable == 'caves' && r.changeType == ChangeType.update,
     );
-    final fields = await (db.select(db.changeLogField)
-          ..where((f) => f.changeUuid.equalsValue(upd.uuid)))
-        .get();
+    final fields = await (db.select(
+      db.changeLogField,
+    )..where((f) => f.changeUuid.equalsValue(upd.uuid))).get();
     final fieldNames = fields.map((f) => f.fieldName).toSet();
     expect(fieldNames, contains('title'));
     expect(fieldNames, contains('description'));

@@ -46,6 +46,7 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
   bool _isEditing = false;
   bool _isLoading = true;
   Uint8List? _imageBytes;
+
   /// Set to `true` once [_onImageEditingComplete] has successfully popped
   /// the route so that [onCloseEditor] does not issue a second pop.
   bool _savePopped = false;
@@ -100,11 +101,12 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
           bytes: editedBytes,
         );
 
-        final parentLink = await documentationRepository.getDocumentationParentLink(
-          cavePlaceUuid: widget.cavePlaceUuid,
-          caveUuid: widget.caveUuid,
-          caveAreaUuid: widget.caveAreaUuid,
-        );
+        final parentLink = await documentationRepository
+            .getDocumentationParentLink(
+              cavePlaceUuid: widget.cavePlaceUuid,
+              caveUuid: widget.caveUuid,
+              caveAreaUuid: widget.caveAreaUuid,
+            );
 
         await DocumentationFileHelper.insertRecord(
           title: baseName,
@@ -144,12 +146,8 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
 
     if (_imageBytes == null || _imageBytes!.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(LocServ.inst.t('edit_image')),
-        ),
-        body: Center(
-          child: Text(LocServ.inst.t('image_not_found')),
-        ),
+        appBar: AppBar(title: Text(LocServ.inst.t('edit_image'))),
+        body: Center(child: Text(LocServ.inst.t('image_not_found'))),
       );
     }
 

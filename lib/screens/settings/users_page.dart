@@ -49,10 +49,10 @@ class _UsersPageState extends ConsumerState<UsersPage>
                 itemBuilder: (context, i) {
                   final u = users[i];
                   final isCurrent = currentUuid == u.uuid;
-                  final fullName = [u.firstName, u.lastName]
-                      .whereType<String>()
-                      .where((s) => s.isNotEmpty)
-                      .join(' ');
+                  final fullName = [
+                    u.firstName,
+                    u.lastName,
+                  ].whereType<String>().where((s) => s.isNotEmpty).join(' ');
                   return ListTile(
                     leading: Icon(
                       isCurrent ? Icons.person : Icons.person_outline,
@@ -67,9 +67,9 @@ class _UsersPageState extends ConsumerState<UsersPage>
                     trailing: isCurrent
                         ? Chip(
                             label: Text(LocServ.inst.t('current_user')),
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                           )
                         : TextButton(
                             onPressed: () async {
@@ -91,17 +91,20 @@ class _UsersPageState extends ConsumerState<UsersPage>
 
   Future<void> _showAddEditDialog({User? existing}) async {
     final usernameCtrl = TextEditingController(text: existing?.username ?? '');
-    final firstNameCtrl =
-        TextEditingController(text: existing?.firstName ?? '');
+    final firstNameCtrl = TextEditingController(
+      text: existing?.firstName ?? '',
+    );
     final lastNameCtrl = TextEditingController(text: existing?.lastName ?? '');
     final detailsCtrl = TextEditingController(text: existing?.details ?? '');
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(existing == null
-            ? LocServ.inst.t('add_user')
-            : LocServ.inst.t('edit_user')),
+        title: Text(
+          existing == null
+              ? LocServ.inst.t('add_user')
+              : LocServ.inst.t('edit_user'),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -173,9 +176,9 @@ class _UsersPageState extends ConsumerState<UsersPage>
                 if (ctx.mounted) Navigator.pop(ctx, true);
               } catch (e) {
                 if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text('$e')),
-                  );
+                  ScaffoldMessenger.of(
+                    ctx,
+                  ).showSnackBar(SnackBar(content: Text('$e')));
                 }
               }
             },

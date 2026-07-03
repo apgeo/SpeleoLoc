@@ -37,16 +37,30 @@ class TextDocumentEditorPage extends StatefulWidget {
 }
 
 class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
-    with AppBarMenuMixin<TextDocumentEditorPage>, ProductTourMixin<TextDocumentEditorPage> {
+    with
+        AppBarMenuMixin<TextDocumentEditorPage>,
+        ProductTourMixin<TextDocumentEditorPage> {
   @override
   String get tourId => 'text_document_editor';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_text_doc_editor_title_field_title', bodyLocKey: 'tour_text_doc_editor_title_field_body'),
-    TourStepDef(keyId: 'content', titleLocKey: 'tour_text_doc_editor_content_title', bodyLocKey: 'tour_text_doc_editor_content_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_text_doc_editor_menu_title', bodyLocKey: 'tour_text_doc_editor_menu_body'),
+    TourStepDef(
+      keyId: 'title_field',
+      titleLocKey: 'tour_text_doc_editor_title_field_title',
+      bodyLocKey: 'tour_text_doc_editor_title_field_body',
+    ),
+    TourStepDef(
+      keyId: 'content',
+      titleLocKey: 'tour_text_doc_editor_content_title',
+      bodyLocKey: 'tour_text_doc_editor_content_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_text_doc_editor_menu_title',
+      bodyLocKey: 'tour_text_doc_editor_menu_body',
+    ),
   ];
 
   final _titleCtrl = TextEditingController();
@@ -179,14 +193,17 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
           fileHash: savedFile.fileHash,
         );
         if (dupes.isNotEmpty && mounted) {
-          SnackBarService.showWarning('Similar file(s) already present (size+hash match).');
+          SnackBarService.showWarning(
+            'Similar file(s) already present (size+hash match).',
+          );
         }
 
-        final parentLink = await documentationRepository.getDocumentationParentLink(
-          cavePlaceUuid: widget.cavePlaceUuid,
-          caveUuid: widget.caveUuid,
-          caveAreaUuid: widget.caveAreaUuid,
-        );
+        final parentLink = await documentationRepository
+            .getDocumentationParentLink(
+              cavePlaceUuid: widget.cavePlaceUuid,
+              caveUuid: widget.caveUuid,
+              caveAreaUuid: widget.caveAreaUuid,
+            );
 
         await DocumentationFileHelper.insertRecord(
           title: title,
@@ -219,63 +236,69 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
         }
       },
       child: Scaffold(
-      key: appMenuScaffoldKey,
-      endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
-        title: Text(
-          _isEditing
-              ? LocServ.inst.t('edit_text_document')
-              : LocServ.inst.t('new_text_document'),
-        ),
-        actions: [
-          if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.save),
-              tooltip: LocServ.inst.t('save'),
-              onPressed: _save,
-            ),
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  TextField(
-                    key: tourKeys['title_field'],
-                    controller: _titleCtrl,
-                    decoration: InputDecoration(
-                      labelText: LocServ.inst.t('title'),
-                      border: const OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.next,
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
+        appBar: AppBar(
+          title: Text(
+            _isEditing
+                ? LocServ.inst.t('edit_text_document')
+                : LocServ.inst.t('new_text_document'),
+          ),
+          actions: [
+            if (_isSaving)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    key: tourKeys['content'],
-                    child: TextField(
-                      controller: _contentCtrl,
-                      decoration: InputDecoration(
-                        hintText: LocServ.inst.t('text_content_hint'),
-                        border: const OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                      ),
-                      maxLines: null,
-                      expands: true,
-                      textAlignVertical: TextAlignVertical.top,
-                      keyboardType: TextInputType.multiline,
-                    ),
-                  ),
-                ],
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.save),
+                tooltip: LocServ.inst.t('save'),
+                onPressed: _save,
               ),
-            ),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    TextField(
+                      key: tourKeys['title_field'],
+                      controller: _titleCtrl,
+                      decoration: InputDecoration(
+                        labelText: LocServ.inst.t('title'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      key: tourKeys['content'],
+                      child: TextField(
+                        controller: _contentCtrl,
+                        decoration: InputDecoration(
+                          hintText: LocServ.inst.t('text_content_hint'),
+                          border: const OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        keyboardType: TextInputType.multiline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }

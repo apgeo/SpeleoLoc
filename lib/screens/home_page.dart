@@ -45,19 +45,47 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, ProductTourMixin<HomePage> {
+class _HomePageState extends State<HomePage>
+    with AppBarMenuMixin<HomePage>, ProductTourMixin<HomePage> {
   static const bool _pinTopControls = true;
   @override
   String get tourId => 'home';
   @override
-  final tourKeys = TourKeySet(['scan_qr', 'add_cave', 'docs', 'cave_list', 'menu']);
+  final tourKeys = TourKeySet([
+    'scan_qr',
+    'add_cave',
+    'docs',
+    'cave_list',
+    'menu',
+  ]);
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'scan_qr', titleLocKey: 'tour_home_scan_qr_title', bodyLocKey: 'tour_home_scan_qr_body'),
-    TourStepDef(keyId: 'add_cave', titleLocKey: 'tour_home_add_cave_title', bodyLocKey: 'tour_home_add_cave_body'),
-    TourStepDef(keyId: 'docs', titleLocKey: 'tour_home_docs_title', bodyLocKey: 'tour_home_docs_body'),
-    TourStepDef(keyId: 'cave_list', titleLocKey: 'tour_home_cave_list_title', bodyLocKey: 'tour_home_cave_list_body', align: ContentAlign.top),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_home_menu_title', bodyLocKey: 'tour_home_menu_body'),
+    TourStepDef(
+      keyId: 'scan_qr',
+      titleLocKey: 'tour_home_scan_qr_title',
+      bodyLocKey: 'tour_home_scan_qr_body',
+    ),
+    TourStepDef(
+      keyId: 'add_cave',
+      titleLocKey: 'tour_home_add_cave_title',
+      bodyLocKey: 'tour_home_add_cave_body',
+    ),
+    TourStepDef(
+      keyId: 'docs',
+      titleLocKey: 'tour_home_docs_title',
+      bodyLocKey: 'tour_home_docs_body',
+    ),
+    TourStepDef(
+      keyId: 'cave_list',
+      titleLocKey: 'tour_home_cave_list_title',
+      bodyLocKey: 'tour_home_cave_list_body',
+      align: ContentAlign.top,
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_home_menu_title',
+      bodyLocKey: 'tour_home_menu_body',
+    ),
   ];
   @override
   List<AppMenuItem> get screenMenuItems => [
@@ -115,6 +143,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         break;
     }
   }
+
   List<Cave> _caves = [];
   Map<Uuid, int> _cavePlaceCounts = {};
   Map<Uuid, int> _caveRasterMapCounts = {};
@@ -158,7 +187,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       debugModeNotifier.value = newValue;
       // Reset counter when activating so it doesn't carry over to deactivation.
       if (newValue) _titleTapCount = 0;
-      SnackBarService.showInfo(newValue ? 'Debug mode activated' : 'Debug mode deactivated');
+      SnackBarService.showInfo(
+        newValue ? 'Debug mode activated' : 'Debug mode deactivated',
+      );
     }
   }
 
@@ -215,12 +246,16 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   Future<void> _toggleMainToolbar() async {
     final newValue = !_showMainToolbar;
     setState(() => _showMainToolbar = newValue);
-    await SettingsHelper.saveStringConfig(showHomeToolbarKey, newValue.toString());
+    await SettingsHelper.saveStringConfig(
+      showHomeToolbarKey,
+      newValue.toString(),
+    );
   }
 
   @override
   Future<void> beforeAutoTour() async {
-    if (_testDataPromptCompleter != null) await _testDataPromptCompleter!.future;
+    if (_testDataPromptCompleter != null)
+      await _testDataPromptCompleter!.future;
   }
 
   Future<void> _loadCaves() async {
@@ -229,7 +264,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       // compute place counts
       _cavePlaceCounts = await cavePlaceRepository.getCavePlaceCountsByCave();
       // compute raster map counts
-      _caveRasterMapCounts = await rasterMapRepository.getRasterMapCountsByCave();
+      _caveRasterMapCounts = await rasterMapRepository
+          .getRasterMapCountsByCave();
 
       // load surface area titles for display on the cave list
       final areas = await caveRepository.getSurfaceAreas();
@@ -308,7 +344,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   Future<void> _runArchiveTestDataLoad() async {
     if (testArchiveUrl.trim().isEmpty) {
       SnackBarService.showError(
-          LocServ.inst.t('test_archive_url_not_configured'));
+        LocServ.inst.t('test_archive_url_not_configured'),
+      );
       return;
     }
 
@@ -344,7 +381,8 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       if (mounted) {
         Navigator.pop(context);
         SnackBarService.showError(
-            '${LocServ.inst.t('error_downloading_test_archive')}: $e');
+          '${LocServ.inst.t('error_downloading_test_archive')}: $e',
+        );
       }
     } finally {
       messageNotifier.dispose();
@@ -358,11 +396,14 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       if (await rasterMapRepository.hasAnyRasterMaps()) return true;
       return documentationRepository.hasAnyDocumentationFiles();
     } catch (e, st) {
-      log.warning('_hasResidualUserData query failed; treating as empty', e, st);
+      log.warning(
+        '_hasResidualUserData query failed; treating as empty',
+        e,
+        st,
+      );
       return false;
     }
   }
-
 
   void _addNewCave() async {
     // Open AddNewCave screen to let user enter title and area
@@ -411,7 +452,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       }
     } catch (e) {
       if (mounted) {
-        SnackBarService.showError('${LocServ.inst.t('error_deleting_cave')}: $e');
+        SnackBarService.showError(
+          '${LocServ.inst.t('error_deleting_cave')}: $e',
+        );
       }
     }
   }
@@ -425,7 +468,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       builder: (ctx) => AlertDialog(
         title: Text(loc.t('confirm')),
         content: Text(
-          loc.t('delete_selected_caves_confirm').replaceAll('{count}', '$count'),
+          loc
+              .t('delete_selected_caves_confirm')
+              .replaceAll('{count}', '$count'),
         ),
         actions: [
           TextButton(
@@ -447,7 +492,9 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
       builder: (ctx) => AlertDialog(
         title: Text(loc.t('confirm')),
         content: Text(
-          loc.t('delete_selected_caves_confirm2').replaceAll('{count}', '$count'),
+          loc
+              .t('delete_selected_caves_confirm2')
+              .replaceAll('{count}', '$count'),
         ),
         actions: [
           TextButton(
@@ -488,14 +535,23 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         // the App.build method, and use it to set our appbar title.
         title: GestureDetector(
           onTap: _onTitleTap,
-          child: Text(widget.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          child: Text(
+            widget.title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
         actions: [
           if (!_showMainToolbar)
             Listener(
-              onPointerDown: enableQrManualInput ? (_) => _startQrScanLongPress() : null,
-              onPointerUp: enableQrManualInput ? (_) => _cancelQrScanLongPress() : null,
-              onPointerCancel: enableQrManualInput ? (_) => _cancelQrScanLongPress() : null,
+              onPointerDown: enableQrManualInput
+                  ? (_) => _startQrScanLongPress()
+                  : null,
+              onPointerUp: enableQrManualInput
+                  ? (_) => _cancelQrScanLongPress()
+                  : null,
+              onPointerCancel: enableQrManualInput
+                  ? (_) => _cancelQrScanLongPress()
+                  : null,
               child: IconButton(
                 key: tourKeys['scan_qr'],
                 icon: const Icon(Icons.qr_code_scanner),
@@ -522,10 +578,13 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 visualDensity: VisualDensity.compact,
                 onPressed: () {
-                  unawaited(
-                    ref.read(ftpSyncControllerProvider).startDefault(),
+                  unawaited(ref.read(ftpSyncControllerProvider).startDefault());
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FtpSyncProgressPage(),
+                    ),
                   );
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FtpSyncProgressPage()));
                 },
               ),
             ),
@@ -573,8 +632,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
   }
 
   Future<void> _showManualQrInputDialog() async {
-    final result =
-        await QrCodeLookupHandler.manualInputAndHandle(context);
+    final result = await QrCodeLookupHandler.manualInputAndHandle(context);
     if (result != null) _loadCaves();
   }
 
@@ -638,7 +696,7 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
 
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      // color: Theme.of(context).colorScheme.surfaceContainerHighest, 
+      // color: Theme.of(context).colorScheme.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
       child: Align(
         alignment: Alignment.centerLeft,
@@ -646,33 +704,34 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
           mainAxisSize: MainAxisSize.min,
           children: [
             ...List.generate(buttons.length, (i) {
-            final b = buttons[i];
-            Widget btn = Padding(
-              padding: EdgeInsets.only(right: i == buttons.length - 1 ? 0 : 3),
-              child: IconButton(
-                icon: Icon(
-                  b.icon,
-                  size: 28,
-                  color: Colors.blue[400],
+              final b = buttons[i];
+              Widget btn = Padding(
+                padding: EdgeInsets.only(
+                  right: i == buttons.length - 1 ? 0 : 3,
                 ),
-                tooltip: b.tooltip,
-                visualDensity: VisualDensity.compact,
-                splashRadius: 18,
-                padding: const EdgeInsets.all(2),
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                onPressed: b.onTap,
-              ),
-            );
-            if (i == 0 && enableQrManualInput) {
-              btn = Listener(
-                onPointerDown: (_) => _startQrScanLongPress(),
-                onPointerUp: (_) => _cancelQrScanLongPress(),
-                onPointerCancel: (_) => _cancelQrScanLongPress(),
-                child: btn,
+                child: IconButton(
+                  icon: Icon(b.icon, size: 28, color: Colors.blue[400]),
+                  tooltip: b.tooltip,
+                  visualDensity: VisualDensity.compact,
+                  splashRadius: 18,
+                  padding: const EdgeInsets.all(2),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
+                  onPressed: b.onTap,
+                ),
               );
-            }
-            return btn;
-          }),
+              if (i == 0 && enableQrManualInput) {
+                btn = Listener(
+                  onPointerDown: (_) => _startQrScanLongPress(),
+                  onPointerUp: (_) => _cancelQrScanLongPress(),
+                  onPointerCancel: (_) => _cancelQrScanLongPress(),
+                  child: btn,
+                );
+              }
+              return btn;
+            }),
             Padding(
               padding: const EdgeInsets.only(left: 3),
               child: IconButton(
@@ -682,22 +741,39 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
                 splashRadius: 18,
                 padding: const EdgeInsets.all(2),
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SyncDashboardPage())),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SyncDashboardPage()),
+                ),
               ),
             ),
             Consumer(
               builder: (context, ref, _) => Padding(
                 padding: const EdgeInsets.only(left: 3),
                 child: IconButton(
-                  icon: Icon(Icons.cloud_sync, size: 28, color: Colors.blue[400]),
+                  icon: Icon(
+                    Icons.cloud_sync,
+                    size: 28,
+                    color: Colors.blue[400],
+                  ),
                   tooltip: LocServ.inst.t('ftp_sync_title'),
                   visualDensity: VisualDensity.compact,
                   splashRadius: 18,
                   padding: const EdgeInsets.all(2),
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                   onPressed: () {
-                    unawaited(ref.read(ftpSyncControllerProvider).startDefault());
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FtpSyncProgressPage()));
+                    unawaited(
+                      ref.read(ftpSyncControllerProvider).startDefault(),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FtpSyncProgressPage(),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -712,7 +788,18 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
     return FilterableList<Cave>(
       headerKey: tourKeys['cave_list'],
       headerLabelText: '${LocServ.inst.t('caves')}:',
-      headerTrailing: [IconButton(icon: Icon(_showMainToolbar ? Icons.view_day : Icons.view_day_outlined), tooltip: LocServ.inst.t(_showMainToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar'), visualDensity: VisualDensity.compact, onPressed: _toggleMainToolbar,),],
+      headerTrailing: [
+        IconButton(
+          icon: Icon(
+            _showMainToolbar ? Icons.view_day : Icons.view_day_outlined,
+          ),
+          tooltip: LocServ.inst.t(
+            _showMainToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar',
+          ),
+          visualDensity: VisualDensity.compact,
+          onPressed: _toggleMainToolbar,
+        ),
+      ],
       enableSelection: true,
       items: _caves,
       keyOf: (c) => c.uuid,
@@ -756,14 +843,13 @@ class _HomePageState extends State<HomePage> with AppBarMenuMixin<HomePage>, Pro
         FilterableListSortField<Cave>(
           id: 'cave_places_count',
           label: LocServ.inst.t('sort_cave_places_count'),
-          compare: (a, b) => (_cavePlaceCounts[a.uuid] ?? 0)
-              .compareTo(_cavePlaceCounts[b.uuid] ?? 0),
+          compare: (a, b) => (_cavePlaceCounts[a.uuid] ?? 0).compareTo(
+            _cavePlaceCounts[b.uuid] ?? 0,
+          ),
         ),
       ],
       enableBulkDelete: _allowMainObjectBulkDeletes,
-      onBulkDelete: _allowMainObjectBulkDeletes
-          ? _deleteSelectedCaves
-          : null,
+      onBulkDelete: _allowMainObjectBulkDeletes ? _deleteSelectedCaves : null,
       searchableText: (cave) {
         final area = cave.surfaceAreaUuid != null
             ? (_surfaceAreaTitles[cave.surfaceAreaUuid] ?? '')

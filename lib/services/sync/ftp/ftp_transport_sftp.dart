@@ -24,7 +24,8 @@ class FtpTransportSftp implements IFtpTransport {
   Future<void> connect({required String password}) async {
     if (profile.protocol != FtpProtocol.sftp) {
       throw const FtpTransportException(
-          'FtpTransportSftp requires an SFTP profile');
+        'FtpTransportSftp requires an SFTP profile',
+      );
     }
     try {
       final socket = await SSHSocket.connect(
@@ -82,10 +83,13 @@ class FtpTransportSftp implements IFtpTransport {
     final probeName =
         'speleo_loc_probe_${DateTime.now().millisecondsSinceEpoch}.tmp';
     final remotePath = _joinRemote(probeName);
-    final handle = await sftp.open(remotePath,
-        mode: SftpFileOpenMode.create |
-            SftpFileOpenMode.write |
-            SftpFileOpenMode.truncate);
+    final handle = await sftp.open(
+      remotePath,
+      mode:
+          SftpFileOpenMode.create |
+          SftpFileOpenMode.write |
+          SftpFileOpenMode.truncate,
+    );
     try {
       await handle.writeBytes(makeProbeBytes());
     } finally {
@@ -108,15 +112,18 @@ class FtpTransportSftp implements IFtpTransport {
           // Exclude directories when attrs expose the type (size-only is fine
           // — directories commonly report null size, which is still acceptable
           // for filename-based filtering done upstream).
-          .map((n) => RemoteFileEntry(
-                name: n.filename,
-                size: n.attr.size ?? 0,
-                modifiedAt: n.attr.modifyTime != null
-                    ? DateTime.fromMillisecondsSinceEpoch(
-                        n.attr.modifyTime! * 1000,
-                        isUtc: true)
-                    : null,
-              ))
+          .map(
+            (n) => RemoteFileEntry(
+              name: n.filename,
+              size: n.attr.size ?? 0,
+              modifiedAt: n.attr.modifyTime != null
+                  ? DateTime.fromMillisecondsSinceEpoch(
+                      n.attr.modifyTime! * 1000,
+                      isUtc: true,
+                    )
+                  : null,
+            ),
+          )
           .toList();
     } catch (e) {
       throw FtpTransportException('SFTP list failed', e);
@@ -134,10 +141,13 @@ class FtpTransportSftp implements IFtpTransport {
     cancelToken?.throwIfCancelled();
     final total = await localFile.length();
     final remotePath = _joinRemote(remoteName);
-    final handle = await sftp.open(remotePath,
-        mode: SftpFileOpenMode.create |
-            SftpFileOpenMode.write |
-            SftpFileOpenMode.truncate);
+    final handle = await sftp.open(
+      remotePath,
+      mode:
+          SftpFileOpenMode.create |
+          SftpFileOpenMode.write |
+          SftpFileOpenMode.truncate,
+    );
     try {
       final writer = handle.write(
         localFile.openRead().cast(),

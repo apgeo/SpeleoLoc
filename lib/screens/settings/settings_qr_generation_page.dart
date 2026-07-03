@@ -17,15 +17,25 @@ class SettingsQrGenerationPage extends StatefulWidget {
 }
 
 class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
-    with AppBarMenuMixin<SettingsQrGenerationPage>, ProductTourMixin<SettingsQrGenerationPage> {
+    with
+        AppBarMenuMixin<SettingsQrGenerationPage>,
+        ProductTourMixin<SettingsQrGenerationPage> {
   @override
   String get tourId => 'settings_qr_gen';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_qr_gen_list_title', bodyLocKey: 'tour_settings_qr_gen_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_qr_gen_menu_title', bodyLocKey: 'tour_settings_qr_gen_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_settings_qr_gen_list_title',
+      bodyLocKey: 'tour_settings_qr_gen_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_settings_qr_gen_menu_title',
+      bodyLocKey: 'tour_settings_qr_gen_menu_body',
+    ),
   ];
 
   Map<String, dynamic>? _cfg;
@@ -56,20 +66,29 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
 
   Future<void> _load() async {
     final cfg = await SettingsHelper.loadJsonConfig(
-        qrGenerationConfigKey, _defaultQrConfig);
+      qrGenerationConfigKey,
+      _defaultQrConfig,
+    );
     final pdfCfg = await SettingsHelper.loadJsonConfig(
-        pdfOutputConfigKey, _defaultPdfConfig);
-    final outputKind =
-        await SettingsHelper.loadStringConfig('qr_output_kind', 'pdf');
+      pdfOutputConfigKey,
+      _defaultPdfConfig,
+    );
+    final outputKind = await SettingsHelper.loadStringConfig(
+      'qr_output_kind',
+      'pdf',
+    );
     final scanConfig = await QrScanConfig.load();
     if (mounted) {
       setState(() {
         _cfg = cfg;
         _pdfCfg = pdfCfg;
         _qrOutputKind = outputKind;
-        _templateController.text = pdfCfg['labelTemplate'] ?? defaultLabelTemplate;
+        _templateController.text =
+            pdfCfg['labelTemplate'] ?? defaultLabelTemplate;
         _scanStripUrl = scanConfig.stripUrlToLastDelimiter;
-        _scanDelimitersController.text = scanConfig.urlStripDelimiters.join(', ');
+        _scanDelimitersController.text = scanConfig.urlStripDelimiters.join(
+          ', ',
+        );
       });
     }
   }
@@ -83,7 +102,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
     List<String>? delimiters,
   }) async {
     final newStrip = stripUrl ?? _scanStripUrl;
-    final newDelimiters = delimiters ?? _parseDelimiters(_scanDelimitersController.text);
+    final newDelimiters =
+        delimiters ?? _parseDelimiters(_scanDelimitersController.text);
     final config = QrScanConfig(
       stripUrlToLastDelimiter: newStrip,
       urlStripDelimiters: newDelimiters,
@@ -147,48 +167,49 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
   /// or `null` if the user cancelled.
   Future<Color?> _showColorPickerDialog(Color initial) async {
     Color picked = initial;
-    final ok = await ColorPicker(
-      color: initial,
-      onColorChanged: (c) => picked = c,
-      heading: Text(
-        LocServ.inst.t('pick_color'),
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      subheading: Text(
-        LocServ.inst.t('pick_color'),
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
-      pickersEnabled: const <ColorPickerType, bool>{
-        ColorPickerType.both: false,
-        ColorPickerType.primary: true,
-        ColorPickerType.accent: true,
-        ColorPickerType.bw: true,
-        ColorPickerType.custom: false,
-        ColorPickerType.wheel: true,
-      },
-      enableShadesSelection: true,
-      enableTonalPalette: false,
-      showColorCode: true,
-      colorCodeHasColor: true,
-      width: 38,
-      height: 38,
-      borderRadius: 4,
-      spacing: 4,
-      runSpacing: 4,
-      wheelDiameter: 200,
-      copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-        copyButton: true,
-        pasteButton: true,
-        longPressMenu: true,
-      ),
-    ).showPickerDialog(
-      context,
-      constraints: const BoxConstraints(
-        minHeight: 480,
-        minWidth: 320,
-        maxWidth: 360,
-      ),
-    );
+    final ok =
+        await ColorPicker(
+          color: initial,
+          onColorChanged: (c) => picked = c,
+          heading: Text(
+            LocServ.inst.t('pick_color'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subheading: Text(
+            LocServ.inst.t('pick_color'),
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          pickersEnabled: const <ColorPickerType, bool>{
+            ColorPickerType.both: false,
+            ColorPickerType.primary: true,
+            ColorPickerType.accent: true,
+            ColorPickerType.bw: true,
+            ColorPickerType.custom: false,
+            ColorPickerType.wheel: true,
+          },
+          enableShadesSelection: true,
+          enableTonalPalette: false,
+          showColorCode: true,
+          colorCodeHasColor: true,
+          width: 38,
+          height: 38,
+          borderRadius: 4,
+          spacing: 4,
+          runSpacing: 4,
+          wheelDiameter: 200,
+          copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+            copyButton: true,
+            pasteButton: true,
+            longPressMenu: true,
+          ),
+        ).showPickerDialog(
+          context,
+          constraints: const BoxConstraints(
+            minHeight: 480,
+            minWidth: 320,
+            maxWidth: 360,
+          ),
+        );
     return ok ? picked : null;
   }
 
@@ -210,8 +231,7 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 .toRadixString(16)
                 .toUpperCase()
                 .replaceAll('0X', '0x'),
-            decoration:
-                InputDecoration(labelText: LocServ.inst.t(labelKey)),
+            decoration: InputDecoration(labelText: LocServ.inst.t(labelKey)),
             onChanged: (v) {
               try {
                 onChanged(int.parse(v.startsWith('0x') ? v : '0x$v'));
@@ -262,17 +282,22 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
               onTap: variable.startsWith('@') || variable == '\\n'
                   ? () => _insertVariable(variable)
                   : null,
-              child: Text(variable,
-                  style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+              child: Text(
+                variable,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(description,
-                style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+            child: Text(
+              description,
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
           ),
         ],
       ),
@@ -313,7 +338,9 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_qr_generation')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: ListView(
         key: tourKeys['list'],
@@ -328,9 +355,13 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 value: _qrOutputKind,
                 items: [
                   DropdownMenuItem(
-                      value: 'pdf', child: Text(LocServ.inst.t('pdf'))),
+                    value: 'pdf',
+                    child: Text(LocServ.inst.t('pdf')),
+                  ),
                   DropdownMenuItem(
-                      value: 'images', child: Text(LocServ.inst.t('images'))),
+                    value: 'images',
+                    child: Text(LocServ.inst.t('images')),
+                  ),
                 ],
                 onChanged: (v) async {
                   if (v == null) return;
@@ -341,9 +372,10 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
             ],
           ),
           const SizedBox(height: 16),
-          Text(LocServ.inst.t('qr_settings_title'),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            LocServ.inst.t('qr_settings_title'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -351,7 +383,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: cfg['qrSizePx'].toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('qr_size_px')),
+                    labelText: LocServ.inst.t('qr_size_px'),
+                  ),
                   keyboardType: TextInputType.number,
                   onChanged: (v) async {
                     cfg['qrSizePx'] = int.tryParse(v) ?? cfg['qrSizePx'];
@@ -364,7 +397,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: cfg['imagePaddingPx'].toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('qr_image_padding_px')),
+                    labelText: LocServ.inst.t('qr_image_padding_px'),
+                  ),
                   keyboardType: TextInputType.number,
                   onChanged: (v) async {
                     cfg['imagePaddingPx'] =
@@ -382,9 +416,11 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: cfg['labelFontSize'].toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('label_font_size')),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: LocServ.inst.t('label_font_size'),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (v) async {
                     cfg['labelFontSize'] =
                         double.tryParse(v) ?? cfg['labelFontSize'];
@@ -397,7 +433,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: cfg['labelFontFamily'].toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('label_font_family')),
+                    labelText: LocServ.inst.t('label_font_family'),
+                  ),
                   onChanged: (v) async {
                     cfg['labelFontFamily'] = v;
                     await _saveConfig(cfg);
@@ -439,7 +476,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: cfg['dpi'].toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('dpi_quality')),
+                    labelText: LocServ.inst.t('dpi_quality'),
+                  ),
                   keyboardType: TextInputType.number,
                   onChanged: (v) async {
                     cfg['dpi'] = int.tryParse(v) ?? cfg['dpi'];
@@ -450,7 +488,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  initialValue: (cfg['qrErrorCorrectionLevel'] ?? 'M').toString(),
+                  initialValue: (cfg['qrErrorCorrectionLevel'] ?? 'M')
+                      .toString(),
                   items: const [
                     DropdownMenuItem(value: 'L', child: Text('L')),
                     DropdownMenuItem(value: 'M', child: Text('M')),
@@ -464,7 +503,8 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                     if (mounted) setState(() {});
                   },
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('error_correction')),
+                    labelText: LocServ.inst.t('error_correction'),
+                  ),
                 ),
               ),
             ],
@@ -490,9 +530,10 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
             },
           ),
           const SizedBox(height: 8),
-          Text(LocServ.inst.t('pdf_qr_padding'),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            LocServ.inst.t('pdf_qr_padding'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -500,9 +541,11 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: (cfg['pdfQrPaddingH'] ?? 2.0).toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('pdf_qr_padding_h')),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: LocServ.inst.t('pdf_qr_padding_h'),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (v) async {
                     cfg['pdfQrPaddingH'] =
                         double.tryParse(v) ?? cfg['pdfQrPaddingH'];
@@ -515,9 +558,11 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 child: TextFormField(
                   initialValue: (cfg['pdfQrPaddingV'] ?? 2.0).toString(),
                   decoration: InputDecoration(
-                      labelText: LocServ.inst.t('pdf_qr_padding_v')),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                    labelText: LocServ.inst.t('pdf_qr_padding_v'),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (v) async {
                     cfg['pdfQrPaddingV'] =
                         double.tryParse(v) ?? cfg['pdfQrPaddingV'];
@@ -526,11 +571,13 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 ),
               ),
             ],
-          ),          const SizedBox(height: 24),
+          ),
+          const SizedBox(height: 24),
           // QR Label template section (stored in PDF output config)
-          Text(LocServ.inst.t('qr_label_template'),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            LocServ.inst.t('qr_label_template'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           if (_pdfCfg != null)
             TextFormField(
@@ -550,35 +597,48 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
             ),
           const SizedBox(height: 12),
           // Available variables
-          Text(LocServ.inst.t('available_variables'),
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(
+            LocServ.inst.t('available_variables'),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           _variableChip('@place_title', LocServ.inst.t('var_place_title')),
           _variableChip('@description', LocServ.inst.t('var_description')),
           _variableChip('@cave_title', LocServ.inst.t('var_cave_title')),
           _variableChip('@area_title', LocServ.inst.t('var_area_title')),
-          _variableChip('@place_code_identifier',
-              LocServ.inst.t('var_place_code_identifier')),
-          _variableChip('@qr_res_identifier',
-              LocServ.inst.t('var_qr_res_identifier')),
+          _variableChip(
+            '@place_code_identifier',
+            LocServ.inst.t('var_place_code_identifier'),
+          ),
+          _variableChip(
+            '@qr_res_identifier',
+            LocServ.inst.t('var_qr_res_identifier'),
+          ),
           _variableChip('@depth', LocServ.inst.t('var_depth')),
           const Divider(height: 16),
           _variableChip('\\n', LocServ.inst.t('var_newline')),
           const Divider(height: 16),
-          Text(LocServ.inst.t('template_formatting_help'),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(
+            LocServ.inst.t('template_formatting_help'),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           _variableChip('#fz<number>', LocServ.inst.t('var_font_size_help')),
           _variableChip('#fc<color>', LocServ.inst.t('var_font_color_help')),
           const SizedBox(height: 8),
           Text(
             LocServ.inst.t('template_example'),
-            style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
           ),
           const Divider(height: 32),
-          Text(LocServ.inst.t('qr_scan_settings_title'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            LocServ.inst.t('qr_scan_settings_title'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 4),
           SwitchListTile(
             title: Text(LocServ.inst.t('qr_scan_strip_url')),
@@ -595,10 +655,12 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
                 helperText: LocServ.inst.t('qr_scan_strip_delimiters_help'),
                 helperMaxLines: 2,
               ),
-              onEditingComplete: () =>
-                  _saveScanConfig(delimiters: _parseDelimiters(_scanDelimitersController.text)),
-              onTapOutside: (_) =>
-                  _saveScanConfig(delimiters: _parseDelimiters(_scanDelimitersController.text)),
+              onEditingComplete: () => _saveScanConfig(
+                delimiters: _parseDelimiters(_scanDelimitersController.text),
+              ),
+              onTapOutside: (_) => _saveScanConfig(
+                delimiters: _parseDelimiters(_scanDelimitersController.text),
+              ),
             ),
           ],
         ],

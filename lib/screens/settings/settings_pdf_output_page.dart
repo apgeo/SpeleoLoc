@@ -14,15 +14,25 @@ class SettingsPdfOutputPage extends StatefulWidget {
 }
 
 class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
-    with AppBarMenuMixin<SettingsPdfOutputPage>, ProductTourMixin<SettingsPdfOutputPage> {
+    with
+        AppBarMenuMixin<SettingsPdfOutputPage>,
+        ProductTourMixin<SettingsPdfOutputPage> {
   @override
   String get tourId => 'settings_pdf';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_pdf_list_title', bodyLocKey: 'tour_settings_pdf_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_pdf_menu_title', bodyLocKey: 'tour_settings_pdf_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_settings_pdf_list_title',
+      bodyLocKey: 'tour_settings_pdf_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_settings_pdf_menu_title',
+      bodyLocKey: 'tour_settings_pdf_menu_body',
+    ),
   ];
 
   Map<String, dynamic>? _cfg;
@@ -46,7 +56,9 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
 
   Future<void> _load() async {
     final cfg = await SettingsHelper.loadJsonConfig(
-        pdfOutputConfigKey, _defaultPdfConfig);
+      pdfOutputConfigKey,
+      _defaultPdfConfig,
+    );
 
     if (mounted) {
       setState(() {
@@ -58,10 +70,7 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
   }
 
   static Map<String, dynamic> _defaultPdfConfig() {
-    return {
-      'gridColumns': 4,
-      'gridRows': 5,
-    };
+    return {'gridColumns': 4, 'gridRows': 5};
   }
 
   Future<void> _saveConfig(Map<String, dynamic> cfg) async {
@@ -83,16 +92,19 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_pdf_output')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: ListView(
         key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
           // Grid layout section
-          Text(LocServ.inst.t('pdf_grid_layout'),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            LocServ.inst.t('pdf_grid_layout'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           _buildStepperRow(cfg),
         ],
@@ -183,5 +195,4 @@ class _SettingsPdfOutputPageState extends State<SettingsPdfOutputPage>
       ],
     );
   }
-
 }

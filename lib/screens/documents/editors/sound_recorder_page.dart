@@ -43,16 +43,30 @@ class SoundRecorderPage extends StatefulWidget {
 }
 
 class _SoundRecorderPageState extends State<SoundRecorderPage>
-    with AppBarMenuMixin<SoundRecorderPage>, ProductTourMixin<SoundRecorderPage> {
+    with
+        AppBarMenuMixin<SoundRecorderPage>,
+        ProductTourMixin<SoundRecorderPage> {
   @override
   String get tourId => 'sound_recorder';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'controls', titleLocKey: 'tour_sound_recorder_controls_title', bodyLocKey: 'tour_sound_recorder_controls_body'),
-    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_sound_recorder_title_field_title', bodyLocKey: 'tour_sound_recorder_title_field_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_sound_recorder_menu_title', bodyLocKey: 'tour_sound_recorder_menu_body'),
+    TourStepDef(
+      keyId: 'controls',
+      titleLocKey: 'tour_sound_recorder_controls_title',
+      bodyLocKey: 'tour_sound_recorder_controls_body',
+    ),
+    TourStepDef(
+      keyId: 'title_field',
+      titleLocKey: 'tour_sound_recorder_title_field_title',
+      bodyLocKey: 'tour_sound_recorder_title_field_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_sound_recorder_menu_title',
+      bodyLocKey: 'tour_sound_recorder_menu_body',
+    ),
   ];
 
   final _titleCtrl = TextEditingController();
@@ -102,7 +116,9 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
   Future<void> _initRecorder() async {
     try {
       await _recorder.openRecorder();
-      await _recorder.setSubscriptionDuration(const Duration(milliseconds: 100));
+      await _recorder.setSubscriptionDuration(
+        const Duration(milliseconds: 100),
+      );
       await _player.openPlayer();
 
       if (_isEditing) {
@@ -212,7 +228,9 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
           ),
         );
       } else {
-        SnackBarService.showWarning(LocServ.inst.t('microphone_permission_denied'));
+        SnackBarService.showWarning(
+          LocServ.inst.t('microphone_permission_denied'),
+        );
       }
       return;
     }
@@ -323,24 +341,24 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         info.sampleRate * info.numChannels * (info.bitsPerSample ~/ 8);
     final blockAlign = info.numChannels * (info.bitsPerSample ~/ 8);
 
-    int prefixDataBytes =
-        (_currentPositionMs / 1000.0 * bytesPerSecond).round();
+    int prefixDataBytes = (_currentPositionMs / 1000.0 * bytesPerSecond)
+        .round();
     prefixDataBytes = (prefixDataBytes ~/ blockAlign) * blockAlign;
     if (prefixDataBytes > info.dataSize) prefixDataBytes = info.dataSize;
 
     final newDataSize = prefixDataBytes + newInfo.dataSize;
 
     // Build WAV header from the original, patching chunk sizes.
-    final header =
-        Uint8List.fromList(originalWav.sublist(0, info.dataOffset));
+    final header = Uint8List.fromList(originalWav.sublist(0, info.dataOffset));
     final hd = ByteData.sublistView(header);
     hd.setUint32(4, info.dataOffset - 8 + newDataSize, Endian.little);
     hd.setUint32(info.dataOffset - 4, newDataSize, Endian.little);
 
     final merged = BytesBuilder(copy: false)
       ..add(header)
-      ..add(originalWav.sublist(
-          info.dataOffset, info.dataOffset + prefixDataBytes))
+      ..add(
+        originalWav.sublist(info.dataOffset, info.dataOffset + prefixDataBytes),
+      )
       ..add(newBytes.sublist(newInfo.dataOffset));
 
     await File(_recordedPath!).writeAsBytes(merged.toBytes(), flush: true);
@@ -386,7 +404,8 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
     String title = _titleCtrl.text.trim();
     if (title.isEmpty) {
       final now = DateTime.now();
-      title = 'rec_'
+      title =
+          'rec_'
           '${now.year}'
           '${now.month.toString().padLeft(2, '0')}'
           '${now.day.toString().padLeft(2, '0')}'
@@ -421,13 +440,15 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         );
       } else {
         // ---- CREATE ----
-        final saved =
-            await DocumentationFileHelper.saveExternalFile(recordedFile);
-        final parentLink = await documentationRepository.getDocumentationParentLink(
-          cavePlaceUuid: widget.cavePlaceUuid,
-          caveUuid: widget.caveUuid,
-          caveAreaUuid: widget.caveAreaUuid,
+        final saved = await DocumentationFileHelper.saveExternalFile(
+          recordedFile,
         );
+        final parentLink = await documentationRepository
+            .getDocumentationParentLink(
+              cavePlaceUuid: widget.cavePlaceUuid,
+              caveUuid: widget.caveUuid,
+              caveAreaUuid: widget.caveAreaUuid,
+            );
         await DocumentationFileHelper.insertRecord(
           title: title,
           savedFile: saved,
@@ -541,8 +562,9 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
                 alignment: Alignment.center,
                 child: Text(
                   LocServ.inst.t('tap_record'),
-                  style: theme.textTheme.bodyLarge
-                      ?.copyWith(color: Colors.grey),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.grey,
+                  ),
                 ),
               ),
 
@@ -564,9 +586,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
                   IconButton.filled(
                     iconSize: 36,
                     onPressed: _togglePlayback,
-                    icon: Icon(
-                      _isPlaying ? Icons.stop : Icons.play_arrow,
-                    ),
+                    icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
                   ),
                 if (_isRecording) ...[
                   // Pause / resume button
@@ -575,8 +595,7 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
                     style: IconButton.styleFrom(
                       backgroundColor: theme.colorScheme.secondary,
                     ),
-                    onPressed:
-                        _isPaused ? _resumeRecording : _pauseRecording,
+                    onPressed: _isPaused ? _resumeRecording : _pauseRecording,
                     icon: Icon(
                       _isPaused ? Icons.play_arrow : Icons.pause,
                       color: Colors.white,

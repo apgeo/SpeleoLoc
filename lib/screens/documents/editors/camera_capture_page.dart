@@ -36,16 +36,30 @@ class CameraCapturePage extends StatefulWidget {
 }
 
 class _CameraCapturePageState extends State<CameraCapturePage>
-    with AppBarMenuMixin<CameraCapturePage>, ProductTourMixin<CameraCapturePage> {
+    with
+        AppBarMenuMixin<CameraCapturePage>,
+        ProductTourMixin<CameraCapturePage> {
   @override
   String get tourId => 'camera_capture';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'preview', titleLocKey: 'tour_camera_capture_preview_title', bodyLocKey: 'tour_camera_capture_preview_body'),
-    TourStepDef(keyId: 'actions', titleLocKey: 'tour_camera_capture_actions_title', bodyLocKey: 'tour_camera_capture_actions_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_camera_capture_menu_title', bodyLocKey: 'tour_camera_capture_menu_body'),
+    TourStepDef(
+      keyId: 'preview',
+      titleLocKey: 'tour_camera_capture_preview_title',
+      bodyLocKey: 'tour_camera_capture_preview_body',
+    ),
+    TourStepDef(
+      keyId: 'actions',
+      titleLocKey: 'tour_camera_capture_actions_title',
+      bodyLocKey: 'tour_camera_capture_actions_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_camera_capture_menu_title',
+      bodyLocKey: 'tour_camera_capture_menu_body',
+    ),
   ];
 
   final ImagePicker _picker = ImagePicker();
@@ -101,12 +115,15 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       final compressionSettings = await ImageCompressionSettings.load();
       await ImageCompressor.compressFile(_capturedFile!, compressionSettings);
 
-      final saved = await DocumentationFileHelper.saveExternalFile(_capturedFile!);
-      final parentLink = await documentationRepository.getDocumentationParentLink(
-        cavePlaceUuid: widget.cavePlaceUuid,
-        caveUuid: widget.caveUuid,
-        caveAreaUuid: widget.caveAreaUuid,
+      final saved = await DocumentationFileHelper.saveExternalFile(
+        _capturedFile!,
       );
+      final parentLink = await documentationRepository
+          .getDocumentationParentLink(
+            cavePlaceUuid: widget.cavePlaceUuid,
+            caveUuid: widget.caveUuid,
+            caveAreaUuid: widget.caveAreaUuid,
+          );
       await DocumentationFileHelper.insertRecord(
         title: 'Photo ${DateTime.now().toIso8601String().substring(0, 19)}',
         savedFile: saved,
@@ -203,10 +220,7 @@ class _CameraCapturePageState extends State<CameraCapturePage>
                 Expanded(
                   key: tourKeys['preview'],
                   child: InteractiveViewer(
-                    child: Image.file(
-                      _capturedFile!,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.file(_capturedFile!, fit: BoxFit.contain),
                   ),
                 ),
                 Padding(

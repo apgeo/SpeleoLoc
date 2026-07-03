@@ -38,123 +38,123 @@ class SyncTableRegistry {
 
   /// All tables exported/imported by the sync archive, in FK order.
   List<SyncTableHandler> tables() => <SyncTableHandler>[
-        SyncTableHandler(
-          name: 'users',
-          dump: () async => (await _db.select(_db.users).get())
+    SyncTableHandler(
+      name: 'users',
+      dump: () async => (await _db.select(_db.users).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<User>(
+        rows,
+        (j) => User.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.users,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'surface_areas',
+      dump: () async => (await _db.select(_db.surfaceAreas).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<SurfaceArea>(
+        rows,
+        (j) => SurfaceArea.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.surfaceAreas,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'caves',
+      dump: () async => (await _db.select(_db.caves).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<Cave>(
+        rows,
+        (j) => Cave.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.caves,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'cave_areas',
+      dump: () async => (await _db.select(_db.caveAreas).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CaveArea>(
+        rows,
+        (j) => CaveArea.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.caveAreas,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'cave_places',
+      dump: () async => (await _db.select(_db.cavePlaces).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CavePlace>(
+        rows,
+        (j) => CavePlace.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.cavePlaces,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'cave_place_beacons',
+      dump: () async => (await _db.select(_db.cavePlaceBeacons).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CavePlaceBeacon>(
+        rows,
+        (j) => CavePlaceBeacon.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.cavePlaceBeacons,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'raster_maps',
+      dump: () async => (await _db.select(_db.rasterMaps).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<RasterMap>(
+        rows,
+        (j) => RasterMap.fromJson(
+          // Older archives (schema <= v12) lack order_index.
+          {'order_index': 0, ...j},
+          serializer: _serializer,
+        ),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.rasterMaps,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'cave_place_to_raster_map_definitions',
+      dump: () async =>
+          (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows, resolver) async => upsertRows<User>(
-            rows,
-            (j) => User.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.users,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'surface_areas',
-          dump: () async => (await _db.select(_db.surfaceAreas).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<SurfaceArea>(
-            rows,
-            (j) => SurfaceArea.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.surfaceAreas,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'caves',
-          dump: () async => (await _db.select(_db.caves).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<Cave>(
-            rows,
-            (j) => Cave.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caves,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'cave_areas',
-          dump: () async => (await _db.select(_db.caveAreas).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<CaveArea>(
-            rows,
-            (j) => CaveArea.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caveAreas,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'cave_places',
-          dump: () async => (await _db.select(_db.cavePlaces).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<CavePlace>(
-            rows,
-            (j) => CavePlace.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.cavePlaces,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'cave_place_beacons',
-          dump: () async => (await _db.select(_db.cavePlaceBeacons).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<CavePlaceBeacon>(
-            rows,
-            (j) => CavePlaceBeacon.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.cavePlaceBeacons,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'raster_maps',
-          dump: () async => (await _db.select(_db.rasterMaps).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<RasterMap>(
-            rows,
-            (j) => RasterMap.fromJson(
-              // Older archives (schema <= v12) lack order_index.
-              {'order_index': 0, ...j},
-              serializer: _serializer,
-            ),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.rasterMaps,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'cave_place_to_raster_map_definitions',
-          dump: () async =>
-              (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async =>
-              upsertRows<CavePlaceToRasterMapDefinition>(
+      upsert: (rows, resolver) async =>
+          upsertRows<CavePlaceToRasterMapDefinition>(
             rows,
             (j) => CavePlaceToRasterMapDefinition.fromJson(
               j,
@@ -166,60 +166,60 @@ class SyncTableRegistry {
             _db.cavePlaceToRasterMapDefinitions,
             resolver,
           ),
-        ),
-        SyncTableHandler(
-          name: 'cave_trips',
-          dump: () async => (await _db.select(_db.caveTrips).get())
+    ),
+    SyncTableHandler(
+      name: 'cave_trips',
+      dump: () async => (await _db.select(_db.caveTrips).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CaveTrip>(
+        rows,
+        (j) => CaveTrip.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.caveTrips,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'cave_trip_points',
+      dump: () async => (await _db.select(_db.caveTripPoints).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CaveTripPoint>(
+        rows,
+        (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.caveTripPoints,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'documentation_files',
+      dump: () async => (await _db.select(_db.documentationFiles).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<DocumentationFile>(
+        rows,
+        (j) => DocumentationFile.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.documentationFiles,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'documentation_files_to_geofeatures',
+      dump: () async =>
+          (await _db.select(_db.documentationFilesToGeofeatures).get())
               .map((r) => r.toJson(serializer: _serializer))
               .toList(),
-          upsert: (rows, resolver) async => upsertRows<CaveTrip>(
-            rows,
-            (j) => CaveTrip.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caveTrips,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'cave_trip_points',
-          dump: () async => (await _db.select(_db.caveTripPoints).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<CaveTripPoint>(
-            rows,
-            (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.caveTripPoints,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'documentation_files',
-          dump: () async => (await _db.select(_db.documentationFiles).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<DocumentationFile>(
-            rows,
-            (j) => DocumentationFile.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.documentationFiles,
-            resolver,
-          ),
-        ),
-        SyncTableHandler(
-          name: 'documentation_files_to_geofeatures',
-          dump: () async =>
-              (await _db.select(_db.documentationFilesToGeofeatures).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async =>
-              upsertRows<DocumentationFilesToGeofeature>(
+      upsert: (rows, resolver) async =>
+          upsertRows<DocumentationFilesToGeofeature>(
             rows,
             (j) => DocumentationFilesToGeofeature.fromJson(
               j,
@@ -231,15 +231,15 @@ class SyncTableRegistry {
             _db.documentationFilesToGeofeatures,
             resolver,
           ),
-        ),
-        SyncTableHandler(
-          name: 'documentation_files_to_cave_trips',
-          dump: () async =>
-              (await _db.select(_db.documentationFilesToCaveTrips).get())
-                  .map((r) => r.toJson(serializer: _serializer))
-                  .toList(),
-          upsert: (rows, resolver) async =>
-              upsertRows<DocumentationFilesToCaveTrip>(
+    ),
+    SyncTableHandler(
+      name: 'documentation_files_to_cave_trips',
+      dump: () async =>
+          (await _db.select(_db.documentationFilesToCaveTrips).get())
+              .map((r) => r.toJson(serializer: _serializer))
+              .toList(),
+      upsert: (rows, resolver) async =>
+          upsertRows<DocumentationFilesToCaveTrip>(
             rows,
             (j) => DocumentationFilesToCaveTrip.fromJson(
               j,
@@ -252,23 +252,23 @@ class SyncTableRegistry {
             _db.documentationFilesToCaveTrips,
             resolver,
           ),
-        ),
-        SyncTableHandler(
-          name: 'trip_report_templates',
-          dump: () async => (await _db.select(_db.tripReportTemplates).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
-          upsert: (rows, resolver) async => upsertRows<TripReportTemplate>(
-            rows,
-            (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
-            (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
-            (r) => r.updatedAt ?? r.createdAt,
-            _db.tripReportTemplates,
-            resolver,
-          ),
-        ),
-      ];
+    ),
+    SyncTableHandler(
+      name: 'trip_report_templates',
+      dump: () async => (await _db.select(_db.tripReportTemplates).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<TripReportTemplate>(
+        rows,
+        (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.tripReportTemplates,
+        resolver,
+      ),
+    ),
+  ];
 
   /// Generic last-writer-wins upsert with optional [resolver] callback for
   /// surfacing conflicts to the user.
@@ -318,15 +318,17 @@ class SyncTableRegistry {
           : SyncConflictAction.keepLocal;
 
       if (resolver != null) {
-        final decision = await resolver(SyncConflict(
-          tableName: table.actualTableName,
-          entityUuid: uuid,
-          localFields: localJson,
-          incomingFields: incomingJson,
-          differingFields: diff,
-          localUpdatedAt: localTs == 0 ? null : localTs,
-          incomingUpdatedAt: incomingTs == 0 ? null : incomingTs,
-        ));
+        final decision = await resolver(
+          SyncConflict(
+            tableName: table.actualTableName,
+            entityUuid: uuid,
+            localFields: localJson,
+            incomingFields: incomingJson,
+            differingFields: diff,
+            localUpdatedAt: localTs == 0 ? null : localTs,
+            incomingUpdatedAt: incomingTs == 0 ? null : incomingTs,
+          ),
+        );
         if (decision == SyncConflictAction.cancel) {
           throw const SyncImportCancelledException();
         }
@@ -334,10 +336,9 @@ class SyncTableRegistry {
       }
 
       if (action == SyncConflictAction.useIncoming) {
-        await _db.into(table).insert(
-              incoming,
-              mode: InsertMode.insertOrReplace,
-            );
+        await _db
+            .into(table)
+            .insert(incoming, mode: InsertMode.insertOrReplace);
         updated++;
       } else {
         skipped++;
@@ -352,10 +353,12 @@ class SyncTableRegistry {
   }
 
   Future<D?> _loadLocal<D>(TableInfo<Table, D> table, Uuid uuid) async {
-    final row = await _db.customSelect(
-      'SELECT * FROM ${table.actualTableName} WHERE uuid = ? LIMIT 1',
-      variables: [Variable<Uint8List>(uuid.bytes)],
-    ).getSingleOrNull();
+    final row = await _db
+        .customSelect(
+          'SELECT * FROM ${table.actualTableName} WHERE uuid = ? LIMIT 1',
+          variables: [Variable<Uint8List>(uuid.bytes)],
+        )
+        .getSingleOrNull();
     if (row == null) return null;
     return await table.map(row.data);
   }

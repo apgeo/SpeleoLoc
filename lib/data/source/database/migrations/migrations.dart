@@ -174,7 +174,9 @@ class V9ToV10Migration extends SchemaMigration {
     final info = await db.customSelect('PRAGMA table_info(cave_places)').get();
     final cols = info.map((r) => r.data['name'] as String).toSet();
     if (!cols.contains('altitude')) {
-      await db.customStatement('ALTER TABLE cave_places ADD COLUMN altitude REAL');
+      await db.customStatement(
+        'ALTER TABLE cave_places ADD COLUMN altitude REAL',
+      );
     }
   }
 }
@@ -189,8 +191,9 @@ class V10ToV11Migration extends SchemaMigration {
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
-    final cpInfo =
-        await db.customSelect('PRAGMA table_info(cave_places)').get();
+    final cpInfo = await db
+        .customSelect('PRAGMA table_info(cave_places)')
+        .get();
     final cpCols = cpInfo.map((r) => r.data['name'] as String).toSet();
     if (cpCols.contains('place_qr_code_identifier')) {
       await db.customStatement(
@@ -216,8 +219,9 @@ class V10ToV11Migration extends SchemaMigration {
       );
     }
 
-    final saInfo =
-        await db.customSelect('PRAGMA table_info(surface_areas)').get();
+    final saInfo = await db
+        .customSelect('PRAGMA table_info(surface_areas)')
+        .get();
     final saCols = saInfo.map((r) => r.data['name'] as String).toSet();
     if (!saCols.contains('general_area_identifier')) {
       await db.customStatement(
@@ -225,8 +229,9 @@ class V10ToV11Migration extends SchemaMigration {
       );
     }
 
-    final cfgInfo =
-        await db.customSelect('PRAGMA table_info(configurations)').get();
+    final cfgInfo = await db
+        .customSelect('PRAGMA table_info(configurations)')
+        .get();
     final cfgCols = cfgInfo.map((r) => r.data['name'] as String).toSet();
     if (!cfgCols.contains('is_synced')) {
       await db.customStatement(
@@ -236,15 +241,28 @@ class V10ToV11Migration extends SchemaMigration {
     }
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    await _seedConfiguration(db, 'place_code_strategy',
-        'global_hierarchical', nowMs,
-        isSynced: true);
     await _seedConfiguration(
-        db, 'place_code_strategy_config', '{}', nowMs,
-        isSynced: true);
+      db,
+      'place_code_strategy',
+      'global_hierarchical',
+      nowMs,
+      isSynced: true,
+    );
+    await _seedConfiguration(
+      db,
+      'place_code_strategy_config',
+      '{}',
+      nowMs,
+      isSynced: true,
+    );
     await _seedConfiguration(db, 'qcri_mode', 'plain', nowMs, isSynced: true);
-    await _seedConfiguration(db, 'qcri_hash_config', '{}', nowMs,
-        isSynced: true);
+    await _seedConfiguration(
+      db,
+      'qcri_hash_config',
+      '{}',
+      nowMs,
+      isSynced: true,
+    );
   }
 }
 

@@ -22,9 +22,21 @@ class _CaveAreasPageState extends State<CaveAreasPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'add', titleLocKey: 'tour_cave_areas_add_title', bodyLocKey: 'tour_cave_areas_add_body'),
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_cave_areas_list_title', bodyLocKey: 'tour_cave_areas_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_areas_menu_title', bodyLocKey: 'tour_cave_areas_menu_body'),
+    TourStepDef(
+      keyId: 'add',
+      titleLocKey: 'tour_cave_areas_add_title',
+      bodyLocKey: 'tour_cave_areas_add_body',
+    ),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_cave_areas_list_title',
+      bodyLocKey: 'tour_cave_areas_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_cave_areas_menu_title',
+      bodyLocKey: 'tour_cave_areas_menu_body',
+    ),
   ];
 
   List<CaveArea> _areas = [];
@@ -49,13 +61,22 @@ class _CaveAreasPageState extends State<CaveAreasPage>
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(existing == null ? LocServ.inst.t('add_cave_area') : LocServ.inst.t('edit')),
+        title: Text(
+          existing == null
+              ? LocServ.inst.t('add_cave_area')
+              : LocServ.inst.t('edit'),
+        ),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(labelText: LocServ.inst.t('enter_area_title')),
+          decoration: InputDecoration(
+            labelText: LocServ.inst.t('enter_area_title'),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
           TextButton(
             onPressed: () async {
               final title = controller.text.trim();
@@ -82,7 +103,9 @@ class _CaveAreasPageState extends State<CaveAreasPage>
       _changed = true;
       _loadAreas();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('area_saved'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(LocServ.inst.t('area_saved'))));
     }
   }
 
@@ -93,8 +116,14 @@ class _CaveAreasPageState extends State<CaveAreasPage>
         title: Text(LocServ.inst.t('confirm')),
         content: Text(LocServ.inst.t('delete_area_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(LocServ.inst.t('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(LocServ.inst.t('yes'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
         ],
       ),
     );
@@ -104,7 +133,9 @@ class _CaveAreasPageState extends State<CaveAreasPage>
       _changed = true;
       _loadAreas();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('area_deleted'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(LocServ.inst.t('area_deleted'))));
     }
   }
 
@@ -121,7 +152,11 @@ class _CaveAreasPageState extends State<CaveAreasPage>
         appBar: AppBar(
           title: Text(LocServ.inst.t('manage_cave_areas')),
           actions: [
-            IconButton(key: tourKeys['add'], onPressed: () => _showAddEditDialog(), icon: const Icon(Icons.add)),
+            IconButton(
+              key: tourKeys['add'],
+              onPressed: () => _showAddEditDialog(),
+              icon: const Icon(Icons.add),
+            ),
             KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
           ],
         ),
@@ -136,8 +171,14 @@ class _CaveAreasPageState extends State<CaveAreasPage>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(onPressed: () => _showAddEditDialog(existing: area), icon: const Icon(Icons.edit)),
-                  IconButton(onPressed: () => _confirmDelete(area), icon: const Icon(Icons.delete)),
+                  IconButton(
+                    onPressed: () => _showAddEditDialog(existing: area),
+                    icon: const Icon(Icons.edit),
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmDelete(area),
+                    icon: const Icon(Icons.delete),
+                  ),
                 ],
               ),
             );

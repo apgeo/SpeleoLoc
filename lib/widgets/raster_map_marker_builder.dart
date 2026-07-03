@@ -128,17 +128,16 @@ class RasterMapMarkerBuilder {
   }) {
     final List<Widget> widgets = [];
 
-    for (final cpwd
-        in definitions.where((cpwd) => cpwd.definition != null)) {
+    for (final cpwd in definitions.where((cpwd) => cpwd.definition != null)) {
       // Determine visibility when a filter is active.
-      final isFiltered = visiblePlaceUuids != null &&
+      final isFiltered =
+          visiblePlaceUuids != null &&
           !visiblePlaceUuids.contains(cpwd.cavePlace.uuid);
       if (isFiltered && !fadeFilteredMarkers) continue;
       final def = cpwd.definition!;
       final imageX = (def.xCoordinate ?? 0).toDouble();
       final imageY = (def.yCoordinate ?? 0).toDouble();
-      final viewportPos =
-          imageToViewport(imageX, imageY, controllerValue);
+      final viewportPos = imageToViewport(imageX, imageY, controllerValue);
       final textColor = textColorFromImage(
         imageX.toInt(),
         imageY.toInt(),
@@ -212,10 +211,7 @@ class RasterMapMarkerBuilder {
               behavior: HitTestBehavior.translucent,
               onTap: () => onTap(cpwd),
               onLongPress: () => onLongPress(cpwd.cavePlace.title),
-              child: SizedBox(
-                width: redDotSize + 8,
-                height: redDotSize + 8,
-              ),
+              child: SizedBox(width: redDotSize + 8, height: redDotSize + 8),
             ),
           ),
         );
@@ -282,10 +278,13 @@ class RasterMapMarkerBuilder {
           top: oldVp.dy - 10,
           child: buildLabel(
             markerLabel('old_point'),
-            textColorFromImage(oldX.toInt(), oldY.toInt(),
-                useImageTextColor: useImageTextColor,
-                img: img,
-                defaultColor: defaultLabelColor),
+            textColorFromImage(
+              oldX.toInt(),
+              oldY.toInt(),
+              useImageTextColor: useImageTextColor,
+              img: img,
+              defaultColor: defaultLabelColor,
+            ),
             outlineEnabled: outlineEnabled,
             outlineWidth: outlineWidth,
             bgEnabled: bgEnabled,
@@ -335,10 +334,13 @@ class RasterMapMarkerBuilder {
         top: newVp.dy - 10,
         child: buildLabel(
           markerLabel('new_point'),
-          textColorFromImage(newX.toInt(), newY.toInt(),
-              useImageTextColor: useImageTextColor,
-              img: img,
-              defaultColor: defaultLabelColor),
+          textColorFromImage(
+            newX.toInt(),
+            newY.toInt(),
+            useImageTextColor: useImageTextColor,
+            img: img,
+            defaultColor: defaultLabelColor,
+          ),
           outlineEnabled: outlineEnabled,
           outlineWidth: outlineWidth,
           bgEnabled: bgEnabled,
@@ -368,18 +370,18 @@ class RasterMapMarkerBuilder {
     String label = '';
     try {
       final match = definitions
-          .where((c) =>
-              c.definition != null &&
-              c.definition!.xCoordinate == imageX.toInt() &&
-              c.definition!.yCoordinate == imageY.toInt())
+          .where(
+            (c) =>
+                c.definition != null &&
+                c.definition!.xCoordinate == imageX.toInt() &&
+                c.definition!.yCoordinate == imageY.toInt(),
+          )
           .firstOrNull;
       label = match?.cavePlace.title ?? '';
     } catch (e, st) {
-      AppLogger.of('RasterMapMarkerBuilder').fine(
-        'label lookup failed for marker at ($imageX, $imageY)',
-        e,
-        st,
-      );
+      AppLogger.of(
+        'RasterMapMarkerBuilder',
+      ).fine('label lookup failed for marker at ($imageX, $imageY)', e, st);
     }
 
     return [
@@ -411,10 +413,13 @@ class RasterMapMarkerBuilder {
         top: vp.dy - 10,
         child: buildLabel(
           label,
-          textColorFromImage(imageX.toInt(), imageY.toInt(),
-              useImageTextColor: useImageTextColor,
-              img: img,
-              defaultColor: defaultLabelColor),
+          textColorFromImage(
+            imageX.toInt(),
+            imageY.toInt(),
+            useImageTextColor: useImageTextColor,
+            img: img,
+            defaultColor: defaultLabelColor,
+          ),
           outlineEnabled: outlineEnabled,
           outlineWidth: outlineWidth,
           bgEnabled: bgEnabled,
@@ -456,10 +461,13 @@ class RasterMapMarkerBuilder {
         top: vp.dy - 10,
         child: buildLabel(
           markerLabel('old_point'),
-          textColorFromImage(imageX.toInt(), imageY.toInt(),
-              useImageTextColor: useImageTextColor,
-              img: img,
-              defaultColor: defaultLabelColor),
+          textColorFromImage(
+            imageX.toInt(),
+            imageY.toInt(),
+            useImageTextColor: useImageTextColor,
+            img: img,
+            defaultColor: defaultLabelColor,
+          ),
           outlineEnabled: outlineEnabled,
           outlineWidth: outlineWidth,
           bgEnabled: bgEnabled,

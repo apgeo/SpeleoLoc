@@ -12,12 +12,18 @@ void main() {
     });
 
     test('rejects wrong-length input', () {
-      expect(() => Uuid.fromBytes(List<int>.filled(15, 0)),
-          throwsA(isA<ArgumentError>()));
-      expect(() => Uuid.fromBytes(List<int>.filled(17, 0)),
-          throwsA(isA<ArgumentError>()));
-      expect(() => Uuid.fromBytes(const <int>[]),
-          throwsA(isA<ArgumentError>()));
+      expect(
+        () => Uuid.fromBytes(List<int>.filled(15, 0)),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => Uuid.fromBytes(List<int>.filled(17, 0)),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => Uuid.fromBytes(const <int>[]),
+        throwsA(isA<ArgumentError>()),
+      );
     });
 
     test('defensively copies input so later mutations do not leak', () {
@@ -49,16 +55,18 @@ void main() {
       expect(Uuid.tryParse(canonical).toString(), canonical);
     });
 
-    test('toString produces lowercase 36-char form with hyphens at 8/13/18/23',
-        () {
-      final s = Uuid.parse(canonical).toString();
-      expect(s.length, 36);
-      expect(s[8], '-');
-      expect(s[13], '-');
-      expect(s[18], '-');
-      expect(s[23], '-');
-      expect(s, s.toLowerCase());
-    });
+    test(
+      'toString produces lowercase 36-char form with hyphens at 8/13/18/23',
+      () {
+        final s = Uuid.parse(canonical).toString();
+        expect(s.length, 36);
+        expect(s[8], '-');
+        expect(s[13], '-');
+        expect(s[18], '-');
+        expect(s[23], '-');
+        expect(s, s.toLowerCase());
+      },
+    );
   });
 
   group('Uuid.v7', () {

@@ -22,27 +22,40 @@ class TestDataHelper {
         final cave1Uuid = Uuid.v7();
         final cave2Uuid = Uuid.v7();
         final cave3Uuid = Uuid.v7();
-        await db.into(db.caves).insert(CavesCompanion.insert(
-              uuid: cave1Uuid,
-              title: 'P. Ponorul Suspendat',
-            ));
-        await db.into(db.caves).insert(CavesCompanion.insert(
-              uuid: cave2Uuid,
-              title: 'P. Ponorul Nou',
-            ));
-        await db.into(db.caves).insert(CavesCompanion.insert(
-              uuid: cave3Uuid,
-              title: 'P. Gaura cu Vâjgău',
-            ));
+        await db
+            .into(db.caves)
+            .insert(
+              CavesCompanion.insert(
+                uuid: cave1Uuid,
+                title: 'P. Ponorul Suspendat',
+              ),
+            );
+        await db
+            .into(db.caves)
+            .insert(
+              CavesCompanion.insert(uuid: cave2Uuid, title: 'P. Ponorul Nou'),
+            );
+        await db
+            .into(db.caves)
+            .insert(
+              CavesCompanion.insert(
+                uuid: cave3Uuid,
+                title: 'P. Gaura cu Vâjgău',
+              ),
+            );
 
         // ---------- Cave areas ----------
         Future<Uuid> insertArea(String title, Uuid caveUuid) async {
           final u = Uuid.v7();
-          await db.into(db.caveAreas).insert(CaveAreasCompanion.insert(
-                uuid: u,
-                title: title,
-                caveUuid: caveUuid,
-              ));
+          await db
+              .into(db.caveAreas)
+              .insert(
+                CaveAreasCompanion.insert(
+                  uuid: u,
+                  title: title,
+                  caveUuid: caveUuid,
+                ),
+              );
           return u;
         }
 
@@ -58,82 +71,122 @@ class TestDataHelper {
         // ---------- Cave places ----------
         Future<Uuid> insertPlace(String title, Uuid caveUuid) async {
           final u = Uuid.v7();
-          await db.into(db.cavePlaces).insert(CavePlacesCompanion.insert(
-                uuid: u,
-                title: title,
-                caveUuid: caveUuid,
-                placeCodeIdentifier: Value(generateRandomQr(rand)),
-              ));
+          await db
+              .into(db.cavePlaces)
+              .insert(
+                CavePlacesCompanion.insert(
+                  uuid: u,
+                  title: title,
+                  caveUuid: caveUuid,
+                  placeCodeIdentifier: Value(generateRandomQr(rand)),
+                ),
+              );
           return u;
         }
 
         final cavePlace1Uuid = await insertPlace('Intrare', cave1Uuid);
         final cavePlace2Uuid = await insertPlace('S. Sorbului', cave1Uuid);
-        final cavePlace3Uuid =
-            await insertPlace('S. Colectorului Mic', cave1Uuid);
+        final cavePlace3Uuid = await insertPlace(
+          'S. Colectorului Mic',
+          cave1Uuid,
+        );
         final cavePlace4Uuid = await insertPlace('Trifurcație', cave1Uuid);
-        final cavePlace5Uuid =
-            await insertPlace('G. Gorjului - intrare', cave1Uuid);
-        final cavePlace6Uuid =
-            await insertPlace('G. Uriașilor - sub ', cave1Uuid);
-        final cavePlace7Uuid =
-            await insertPlace('Lacul Purificării - capăt sudic', cave1Uuid);
-        final cavePlace8Uuid =
-            await insertPlace('Lacul Purificării - capăt nordic', cave1Uuid);
+        final cavePlace5Uuid = await insertPlace(
+          'G. Gorjului - intrare',
+          cave1Uuid,
+        );
+        final cavePlace6Uuid = await insertPlace(
+          'G. Uriașilor - sub ',
+          cave1Uuid,
+        );
+        final cavePlace7Uuid = await insertPlace(
+          'Lacul Purificării - capăt sudic',
+          cave1Uuid,
+        );
+        final cavePlace8Uuid = await insertPlace(
+          'Lacul Purificării - capăt nordic',
+          cave1Uuid,
+        );
 
         final cavePlace10Uuid = await insertPlace('Intrare', cave2Uuid);
-        final cavePlace11Uuid =
-            await insertPlace('Capat puturi principale - sus', cave2Uuid);
-        final cavePlace12Uuid =
-            await insertPlace('Baza puturi principale - jos', cave2Uuid);
+        final cavePlace11Uuid = await insertPlace(
+          'Capat puturi principale - sus',
+          cave2Uuid,
+        );
+        final cavePlace12Uuid = await insertPlace(
+          'Baza puturi principale - jos',
+          cave2Uuid,
+        );
         final cavePlace13Uuid = await insertPlace(
-            'Galeria Condamnatilor - baza put acces', cave2Uuid);
-        final cavePlace14Uuid =
-            await insertPlace('Galeria Condamnatilor - intrare', cave2Uuid);
+          'Galeria Condamnatilor - baza put acces',
+          cave2Uuid,
+        );
+        final cavePlace14Uuid = await insertPlace(
+          'Galeria Condamnatilor - intrare',
+          cave2Uuid,
+        );
         final cavePlace15Uuid = await insertPlace('cascada 1', cave2Uuid);
         final cavePlace16Uuid = await insertPlace('cascada 2', cave2Uuid);
 
         final cavePlace17Uuid = await insertPlace('Intrare', cave3Uuid);
         final cavePlace18Uuid = await insertPlace('La lift', cave3Uuid);
-        final cavePlace19Uuid =
-            await insertPlace('Sala mare intrare', cave3Uuid);
+        final cavePlace19Uuid = await insertPlace(
+          'Sala mare intrare',
+          cave3Uuid,
+        );
         final cavePlace20Uuid = await insertPlace('La scara', cave3Uuid);
         final cavePlace21Uuid = await insertPlace('maini curente', cave3Uuid);
-        final cavePlace22Uuid =
-            await insertPlace('intrare pe activ', cave3Uuid);
-        final cavePlace23Uuid =
-            await insertPlace('baza puturi activ', cave3Uuid);
+        final cavePlace22Uuid = await insertPlace(
+          'intrare pe activ',
+          cave3Uuid,
+        );
+        final cavePlace23Uuid = await insertPlace(
+          'baza puturi activ',
+          cave3Uuid,
+        );
 
         // Reference so unused analysis doesn't complain
         final _ = [area1Uuid, area2Uuid, area3Uuid, area4Uuid, area5Uuid];
 
         // ---------- Surface places ----------
         final surface2Uuid = Uuid.v7();
-        await db.into(db.surfacePlaces).insert(SurfacePlacesCompanion.insert(
-              uuid: Uuid.v7(),
-              title: 'Parking Lot',
-              description: Value('Main parking area'),
-              type: Value('parking'),
-              latitude: Value(45.0),
-              longitude: Value(2.0),
-            ));
-        await db.into(db.surfacePlaces).insert(SurfacePlacesCompanion.insert(
-              uuid: surface2Uuid,
-              title: 'Entrance Access',
-              description: Value('Path to cave entrance'),
-              type: Value('access'),
-              latitude: Value(45.0),
-              longitude: Value(2.0),
-            ));
+        await db
+            .into(db.surfacePlaces)
+            .insert(
+              SurfacePlacesCompanion.insert(
+                uuid: Uuid.v7(),
+                title: 'Parking Lot',
+                description: Value('Main parking area'),
+                type: Value('parking'),
+                latitude: Value(45.0),
+                longitude: Value(2.0),
+              ),
+            );
+        await db
+            .into(db.surfacePlaces)
+            .insert(
+              SurfacePlacesCompanion.insert(
+                uuid: surface2Uuid,
+                title: 'Entrance Access',
+                description: Value('Path to cave entrance'),
+                type: Value('access'),
+                latitude: Value(45.0),
+                longitude: Value(2.0),
+              ),
+            );
 
         // ---------- Cave entrances ----------
-        await db.into(db.caveEntrances).insert(CaveEntrancesCompanion.insert(
-              uuid: Uuid.v7(),
-              caveUuid: cave1Uuid,
-              surfacePlaceUuid: Value(surface2Uuid),
-              isMainEntrance: Value(1),
-              title: Value('Main Entrance'),
-            ));
+        await db
+            .into(db.caveEntrances)
+            .insert(
+              CaveEntrancesCompanion.insert(
+                uuid: Uuid.v7(),
+                caveUuid: cave1Uuid,
+                surfacePlaceUuid: Value(surface2Uuid),
+                isMainEntrance: Value(1),
+                title: Value('Main Entrance'),
+              ),
+            );
 
         // ---------- Raster maps ----------
         final assetDir = 'test_data/maps';
@@ -164,8 +217,12 @@ class TestDataHelper {
             data = await rootBundle.load('$assetDir/$assetFile');
             bytes = data.buffer.asUint8List();
           } catch (e) {
-            final repoPath =
-                p.join(Directory.current.path, 'test_data', 'maps', assetFile);
+            final repoPath = p.join(
+              Directory.current.path,
+              'test_data',
+              'maps',
+              assetFile,
+            );
             final repoFile = File(repoPath);
             if (await repoFile.exists()) {
               bytes = await repoFile.readAsBytes();
@@ -175,7 +232,8 @@ class TestDataHelper {
           }
 
           final subfolder = Directory('${documents.path}/cave_$caveUuid');
-          if (!await subfolder.exists()) await subfolder.create(recursive: true);
+          if (!await subfolder.exists())
+            await subfolder.create(recursive: true);
           final ext = p.extension(assetFile);
           final fileName =
               'raster_${DateTime.now().millisecondsSinceEpoch}$ext';
@@ -184,16 +242,20 @@ class TestDataHelper {
           await file.writeAsBytes(bytes, flush: true);
 
           final rasterUuid = Uuid.v7();
-          await db.into(db.rasterMaps).insert(RasterMapsCompanion.insert(
-                uuid: rasterUuid,
-                title: assetFile,
-                mapType: 'plane view',
-                fileName: 'cave_$caveUuid/$fileName',
-                caveUuid: caveUuid,
-                caveAreaUuid: caveAreaUuid == null
-                    ? const Value.absent()
-                    : Value(caveAreaUuid),
-              ));
+          await db
+              .into(db.rasterMaps)
+              .insert(
+                RasterMapsCompanion.insert(
+                  uuid: rasterUuid,
+                  title: assetFile,
+                  mapType: 'plane view',
+                  fileName: 'cave_$caveUuid/$fileName',
+                  caveUuid: caveUuid,
+                  caveAreaUuid: caveAreaUuid == null
+                      ? const Value.absent()
+                      : Value(caveAreaUuid),
+                ),
+              );
 
           try {
             Map<String, int>? getImageDimensions(Uint8List data) {
@@ -273,13 +335,15 @@ class TestDataHelper {
                 final y = rand.nextInt(maxY.clamp(1, 10000));
                 await db
                     .into(db.cavePlaceToRasterMapDefinitions)
-                    .insert(CavePlaceToRasterMapDefinitionsCompanion.insert(
-                      uuid: Uuid.v7(),
-                      xCoordinate: Value(x),
-                      yCoordinate: Value(y),
-                      cavePlaceUuid: placeUuid,
-                      rasterMapUuid: rasterUuid,
-                    ));
+                    .insert(
+                      CavePlaceToRasterMapDefinitionsCompanion.insert(
+                        uuid: Uuid.v7(),
+                        xCoordinate: Value(x),
+                        yCoordinate: Value(y),
+                        cavePlaceUuid: placeUuid,
+                        rasterMapUuid: rasterUuid,
+                      ),
+                    );
               }
             }
           } catch (_) {}
@@ -338,17 +402,25 @@ class TestDataHelper {
             final assetCaveUuid = assetEntry.value;
             if (assetCaveUuid == entryCaveUuid) {
               await addRasterForCave(
-                  assetCaveUuid, places[ci], assetFile, places,
-                  caveAreaUuid: null);
+                assetCaveUuid,
+                places[ci],
+                assetFile,
+                places,
+                caveAreaUuid: null,
+              );
             }
           }
         }
 
         // ---------- Configurations ----------
-        await db.into(db.configurations).insert(ConfigurationsCompanion.insert(
-              title: 'version',
-              value: Value('1.0'),
-            ));
+        await db
+            .into(db.configurations)
+            .insert(
+              ConfigurationsCompanion.insert(
+                title: 'version',
+                value: Value('1.0'),
+              ),
+            );
       });
     } catch (e, stackTrace) {
       _log.info('ERROR during populateTestData: $e');
@@ -357,7 +429,8 @@ class TestDataHelper {
     } finally {
       stopwatch.stop();
       _log.info(
-          'populateTestData completed in ${stopwatch.elapsedMilliseconds} ms');
+        'populateTestData completed in ${stopwatch.elapsedMilliseconds} ms',
+      );
     }
   }
 }

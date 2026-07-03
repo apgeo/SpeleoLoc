@@ -28,8 +28,10 @@ void main() {
     });
 
     test('applies scale', () {
-      expect(offsetForPoint(200, 100, 2.0, viewport),
-          Offset(800 / 2 - 200 * 2, 600 / 2 - 100 * 2));
+      expect(
+        offsetForPoint(200, 100, 2.0, viewport),
+        Offset(800 / 2 - 200 * 2, 600 / 2 - 100 * 2),
+      );
     });
   });
 
@@ -44,8 +46,7 @@ void main() {
       final t = fitPointsTransform([const Offset(100, 100)], viewport)!;
       expect(t.scale, kMaxZoom);
       // Centered: offset = viewport/2 - point * scale
-      expect(t.offset,
-          Offset(400 - 100 * kMaxZoom, 300 - 100 * kMaxZoom));
+      expect(t.offset, Offset(400 - 100 * kMaxZoom, 300 - 100 * kMaxZoom));
     });
 
     test('spread points: scale fits bounding box with padding', () {
@@ -60,10 +61,10 @@ void main() {
     });
 
     test('clamps scale to kMaxZoom when points are tiny', () {
-      final t = fitPointsTransform(
-        [const Offset(0, 0), const Offset(0.001, 0.001)],
-        viewport,
-      )!;
+      final t = fitPointsTransform([
+        const Offset(0, 0),
+        const Offset(0.001, 0.001),
+      ], viewport)!;
       expect(t.scale, kMaxZoom);
     });
   });

@@ -21,7 +21,11 @@ class RasterMapPointsLegend extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _legendItemSmall(color: Colors.blue, label: LocServ.inst.t('legend_current'), size: 9),
+              _legendItemSmall(
+                color: Colors.blue,
+                label: LocServ.inst.t('legend_current'),
+                size: 9,
+              ),
               const SizedBox(height: 4),
               _legendItemLayered(label: LocServ.inst.t('legend_new')),
             ],
@@ -30,9 +34,17 @@ class RasterMapPointsLegend extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _legendItemOutlinedSmall(color: Colors.blue, label: LocServ.inst.t('legend_original'), size: 9),
+              _legendItemOutlinedSmall(
+                color: Colors.blue,
+                label: LocServ.inst.t('legend_original'),
+                size: 9,
+              ),
               const SizedBox(height: 4),
-              _legendItemSmall(color: Colors.red, label: LocServ.inst.t('legend_existing'), size: 9),
+              _legendItemSmall(
+                color: Colors.red,
+                label: LocServ.inst.t('legend_existing'),
+                size: 9,
+              ),
             ],
           ),
         ],
@@ -40,7 +52,11 @@ class RasterMapPointsLegend extends StatelessWidget {
     );
   }
 
-  Widget _legendItemSmall({required Color color, required String label, double size = 10}) {
+  Widget _legendItemSmall({
+    required Color color,
+    required String label,
+    double size = 10,
+  }) {
     return Row(
       children: [
         Container(
@@ -54,13 +70,20 @@ class RasterMapPointsLegend extends StatelessWidget {
     );
   }
 
-  Widget _legendItemOutlinedSmall({required Color color, required String label, double size = 10}) {
+  Widget _legendItemOutlinedSmall({
+    required Color color,
+    required String label,
+    double size = 10,
+  }) {
     return Row(
       children: [
         Container(
           width: size,
           height: size,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2),
+          ),
         ),
         const SizedBox(width: 6),
         Text(label, style: const TextStyle(fontSize: 11)),
@@ -79,8 +102,22 @@ class RasterMapPointsLegend extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Container(width: big, height: big, decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle)),
-              Container(width: small, height: small, decoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
+              Container(
+                width: big,
+                height: big,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Container(
+                width: small,
+                height: small,
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                ),
+              ),
             ],
           ),
         ),

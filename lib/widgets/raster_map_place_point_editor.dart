@@ -66,11 +66,14 @@ class CavePlaceSortOption {
   /// Loads the persisted cave-places nav bar sort. Returns `null` if nothing
   /// has been saved yet (so the caller can fall back to another source).
   static Future<CavePlaceSortOption?> _loadIfSaved() async {
-    final fieldStr =
-        await SettingsHelper.loadStringConfig(cavePlacesNavBarSortFieldKey);
+    final fieldStr = await SettingsHelper.loadStringConfig(
+      cavePlacesNavBarSortFieldKey,
+    );
     if (fieldStr.isEmpty) return null;
-    final ascStr =
-        await SettingsHelper.loadStringConfig(cavePlacesNavBarSortAscKey, 'false');
+    final ascStr = await SettingsHelper.loadStringConfig(
+      cavePlacesNavBarSortAscKey,
+      'false',
+    );
     final field = CavePlaceSortField.values.firstWhere(
       (f) => f.name == fieldStr,
       orElse: () => CavePlaceSortField.lastModified,
@@ -110,8 +113,14 @@ class CavePlaceSortOption {
 
   /// Persists this sort option.
   Future<void> save() async {
-    await SettingsHelper.saveStringConfig(cavePlacesNavBarSortFieldKey, field.name);
-    await SettingsHelper.saveStringConfig(cavePlacesNavBarSortAscKey, ascending.toString());
+    await SettingsHelper.saveStringConfig(
+      cavePlacesNavBarSortFieldKey,
+      field.name,
+    );
+    await SettingsHelper.saveStringConfig(
+      cavePlacesNavBarSortAscKey,
+      ascending.toString(),
+    );
   }
 
   /// Returns a sorted copy of [places].
@@ -124,13 +133,21 @@ class CavePlaceSortOption {
     final dir = ascending ? 1 : -1;
     switch (field) {
       case CavePlaceSortField.lastModified:
-        sorted.sort((a, b) => dir *
-            (a.cavePlace.updatedAt ?? 0)
-                .compareTo(b.cavePlace.updatedAt ?? 0));
+        sorted.sort(
+          (a, b) =>
+              dir *
+              (a.cavePlace.updatedAt ?? 0).compareTo(
+                b.cavePlace.updatedAt ?? 0,
+              ),
+        );
       case CavePlaceSortField.title:
-        sorted.sort((a, b) => dir *
-            a.cavePlace.title.toLowerCase().compareTo(
-                b.cavePlace.title.toLowerCase()));
+        sorted.sort(
+          (a, b) =>
+              dir *
+              a.cavePlace.title.toLowerCase().compareTo(
+                b.cavePlace.title.toLowerCase(),
+              ),
+        );
       case CavePlaceSortField.caveArea:
         sorted.sort((a, b) {
           final at = a.cavePlace.caveAreaUuid != null
@@ -142,9 +159,13 @@ class CavePlaceSortOption {
           return dir * at.toLowerCase().compareTo(bt.toLowerCase());
         });
       case CavePlaceSortField.depth:
-        sorted.sort((a, b) => dir *
-            (a.cavePlace.depthInCave ?? double.infinity)
-                .compareTo(b.cavePlace.depthInCave ?? double.infinity));
+        sorted.sort(
+          (a, b) =>
+              dir *
+              (a.cavePlace.depthInCave ?? double.infinity).compareTo(
+                b.cavePlace.depthInCave ?? double.infinity,
+              ),
+        );
       case CavePlaceSortField.qrCodeIdentifier:
         sorted.sort((a, b) {
           final av = a.cavePlace.placeCodeIdentifier;
@@ -158,15 +179,24 @@ class CavePlaceSortOption {
         int rank(CavePlace p) =>
             p.isMainEntrance == 1 ? 2 : (p.isEntrance == 1 ? 1 : 0);
         sorted.sort(
-            (a, b) => dir * rank(a.cavePlace).compareTo(rank(b.cavePlace)));
+          (a, b) => dir * rank(a.cavePlace).compareTo(rank(b.cavePlace)),
+        );
       case CavePlaceSortField.hasQrCode:
-        sorted.sort((a, b) => dir *
-            (a.cavePlace.placeCodeIdentifier != null ? 1 : 0)
-                .compareTo(b.cavePlace.placeCodeIdentifier != null ? 1 : 0));
+        sorted.sort(
+          (a, b) =>
+              dir *
+              (a.cavePlace.placeCodeIdentifier != null ? 1 : 0).compareTo(
+                b.cavePlace.placeCodeIdentifier != null ? 1 : 0,
+              ),
+        );
       case CavePlaceSortField.definitionsCount:
-        sorted.sort((a, b) => dir *
-            (definitionCountByPlace[a.cavePlace.uuid] ?? 0)
-                .compareTo(definitionCountByPlace[b.cavePlace.uuid] ?? 0));
+        sorted.sort(
+          (a, b) =>
+              dir *
+              (definitionCountByPlace[a.cavePlace.uuid] ?? 0).compareTo(
+                definitionCountByPlace[b.cavePlace.uuid] ?? 0,
+              ),
+        );
     }
     return sorted;
   }
@@ -299,9 +329,13 @@ class RasterMapSortOption {
   /// Load the persisted sort option from settings.
   static Future<RasterMapSortOption> load() async {
     final fieldStr = await SettingsHelper.loadStringConfig(
-        rasterMapSortFieldKey, RasterMapSortField.orderIndex.name);
-    final ascStr =
-        await SettingsHelper.loadStringConfig(rasterMapSortAscKey, 'true');
+      rasterMapSortFieldKey,
+      RasterMapSortField.orderIndex.name,
+    );
+    final ascStr = await SettingsHelper.loadStringConfig(
+      rasterMapSortAscKey,
+      'true',
+    );
     final field = RasterMapSortField.values.firstWhere(
       (f) => f.name == fieldStr,
       orElse: () => RasterMapSortField.orderIndex,
@@ -313,7 +347,9 @@ class RasterMapSortOption {
   Future<void> save() async {
     await SettingsHelper.saveStringConfig(rasterMapSortFieldKey, field.name);
     await SettingsHelper.saveStringConfig(
-        rasterMapSortAscKey, ascending.toString());
+      rasterMapSortAscKey,
+      ascending.toString(),
+    );
   }
 
   /// Returns a sorted copy of [maps] using place-count data from [defs].
@@ -335,13 +371,15 @@ class RasterMapSortOption {
             counts[rmUuid] = (counts[rmUuid] ?? 0) + 1;
           }
         }
-        sorted.sort((a, b) =>
-            dir * (counts[a.uuid] ?? 0).compareTo(counts[b.uuid] ?? 0));
+        sorted.sort(
+          (a, b) => dir * (counts[a.uuid] ?? 0).compareTo(counts[b.uuid] ?? 0),
+        );
       case RasterMapSortField.title:
         sorted.sort((a, b) => dir * a.title.compareTo(b.title));
       case RasterMapSortField.fileSize:
-        sorted.sort((a, b) =>
-            dir * (a.fileSize ?? 0).compareTo(b.fileSize ?? 0));
+        sorted.sort(
+          (a, b) => dir * (a.fileSize ?? 0).compareTo(b.fileSize ?? 0),
+        );
     }
     return sorted;
   }
@@ -374,7 +412,6 @@ class TripOverlayData {
     this.numberFontSize = 12.0,
   });
 }
-
 
 /// A reusable widget that encapsulates PhotoView-based image display,
 /// tapping to select a point (image-space coordinates), zoom/pan controls
@@ -749,7 +786,8 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   final Color defaultLabelColor;
 
   final bool useSimpleViewerForTests;
-  final ImageProvider? imageProvider; // optional cached provider (MapViewerPage passes this)
+  final ImageProvider?
+  imageProvider; // optional cached provider (MapViewerPage passes this)
   final RasterMapPlacePointEditorController? controller;
   final void Function(double imageX, double imageY)? onImagePointChanged;
 
@@ -785,12 +823,19 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// parent can auto-save the current new-point selection. The callback
   /// receives (cavePlaceUuid, rasterMapUuid, imageX, imageY) of the pending
   /// point and returns whether the switch should proceed.
-  final Future<bool> Function(Uuid cavePlaceUuid, Uuid rasterMapUuid, double imageX, double imageY)? onAutoSaveRequested;
+  final Future<bool> Function(
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
+    double imageX,
+    double imageY,
+  )?
+  onAutoSaveRequested;
 
   /// Called when the user requests to remove the current cave place definition
   /// for the selected raster map. The callback receives (cavePlaceUuid, rasterMapUuid).
   /// Should return true if the definition was successfully removed.
-  final Future<bool> Function(Uuid cavePlaceUuid, Uuid rasterMapUuid)? onRemoveDefinitionRequested;
+  final Future<bool> Function(Uuid cavePlaceUuid, Uuid rasterMapUuid)?
+  onRemoveDefinitionRequested;
 
   /// Called after a new cave place has been created from the inline add-place
   /// popup. The parent should refresh its cave places list.
@@ -857,7 +902,8 @@ class RasterMapPlacePointEditor extends StatefulWidget {
 /// is anchored to.
 enum ToolbarSide { left, right }
 
-class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> with TickerProviderStateMixin {
+class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
+    with TickerProviderStateMixin {
   static final _log = AppLogger.of('RasterMapPlacePointEditor');
   // Selected image-space coordinates
   double? _imageSelectedX;
@@ -907,7 +953,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
   // Custom gesture state (replaces photo_view's internal gesture handling)
   double? _gestureStartScale;
-  Offset? _gestureFocalInImage; // image-space coords of focal point at gesture start
+  Offset?
+  _gestureFocalInImage; // image-space coords of focal point at gesture start
 
   // Nav bar visibility + tap mode
   late bool _showNavBar;
@@ -934,13 +981,15 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   bool _waitingForNewCavePlaceTap = false;
 
   // Key for the embedded nav bar (for programmatic scrolling)
-  final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
+  final GlobalKey<RasterMapNavBarState> _navBarKey =
+      GlobalKey<RasterMapNavBarState>();
 
   /// Returns the effective [RasterMapNavBarState] — the external nav bar
   /// provided via [widget.controller?.externalNavBarKey] when set, falling
   /// back to the editor's own embedded nav bar.
   RasterMapNavBarState? get _effectiveNavBarState =>
-      widget.controller?.externalNavBarKey?.currentState ?? _navBarKey.currentState;
+      widget.controller?.externalNavBarKey?.currentState ??
+      _navBarKey.currentState;
 
   /// Update the set of cave-place UUIDs currently visible after text filtering.
   /// Called by the controller when the parent page uses an external nav bar.
@@ -976,6 +1025,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// them while in full-screen.
   bool? _navBarShowMapsBeforeFS;
   bool? _navBarShowPlacesBeforeFS;
+
   /// Tracks whether the user explicitly toggled the nav-bar lists while in
   /// full-screen (so we don't restore the saved value for that list).
   bool _navBarShowMapsChangedInFS = false;
@@ -985,6 +1035,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// Whether the last known orientation was landscape-phone.  Used in
   /// [didChangeDependencies] to detect orientation-change transitions.
   bool _prevIsLandscapePhone = false;
+
   /// True when the current fullscreen state was triggered automatically by
   /// entering landscape-phone mode (so we can auto-exit on portrait).
   bool _fullScreenAutomatic = false;
@@ -997,11 +1048,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   static final Map<Uuid, RasterMapImageFilter> _filterPerMap = {};
 
   /// Returns the active filter for the current raster map.
-  RasterMapImageFilter get _activeFilter =>
-      widget.selectedRasterMapUuid != null
-          ? (_filterPerMap[widget.selectedRasterMapUuid!] ??
-              RasterMapImageFilter.normal)
-          : RasterMapImageFilter.normal;
+  RasterMapImageFilter get _activeFilter => widget.selectedRasterMapUuid != null
+      ? (_filterPerMap[widget.selectedRasterMapUuid!] ??
+            RasterMapImageFilter.normal)
+      : RasterMapImageFilter.normal;
 
   void _setFilter(RasterMapImageFilter f) {
     if (!mounted) return;
@@ -1018,26 +1068,36 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     final current = _activeFilter;
     if (v) {
       // Switch to invert preset while preserving brightness/contrast.
-      _setFilter(RasterMapImageFilter(
-        mode: RasterMapFilterMode.invert,
-        brightness: current.brightness,
-        contrast: current.contrast,
-      ));
+      _setFilter(
+        RasterMapImageFilter(
+          mode: RasterMapFilterMode.invert,
+          brightness: current.brightness,
+          contrast: current.contrast,
+        ),
+      );
     } else {
       // Return to normal only if the current mode is invert.
       if (current.mode == RasterMapFilterMode.invert ||
-          (current.mode == RasterMapFilterMode.custom && current.invertEnabled && !current.grayscaleEnabled && !current.sepiaEnabled && !current.highContrastEnabled && !current.nightRedEnabled)) {
-        _setFilter(RasterMapImageFilter(
-          brightness: current.brightness,
-          contrast: current.contrast,
-        ));
+          (current.mode == RasterMapFilterMode.custom &&
+              current.invertEnabled &&
+              !current.grayscaleEnabled &&
+              !current.sepiaEnabled &&
+              !current.highContrastEnabled &&
+              !current.nightRedEnabled)) {
+        _setFilter(
+          RasterMapImageFilter(
+            brightness: current.brightness,
+            contrast: current.contrast,
+          ),
+        );
       }
     }
   }
 
   bool get _colorInverted =>
       _activeFilter.mode == RasterMapFilterMode.invert ||
-      (_activeFilter.mode == RasterMapFilterMode.custom && _activeFilter.invertEnabled);
+      (_activeFilter.mode == RasterMapFilterMode.custom &&
+          _activeFilter.invertEnabled);
 
   void _toggleColorInversion() => _setColorInverted(!_colorInverted);
 
@@ -1086,11 +1146,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         widget.controller?.gestureZoomEnabled ?? widget.gestureZoomEnabled;
 
     // whether to sample image pixels for label text color (controller/widget)
-    _useImageTextColor = widget.controller?.useImageTextColor ?? widget.useImageTextColor;
+    _useImageTextColor =
+        widget.controller?.useImageTextColor ?? widget.useImageTextColor;
 
     // nav bar / tap-mode visibility
     _showNavBar = widget.controller?.showNavBar ?? widget.showNavBar;
-    _showTapModeCheckbox = widget.controller?.showTapModeCheckbox ?? widget.showTapModeCheckbox;
+    _showTapModeCheckbox =
+        widget.controller?.showTapModeCheckbox ?? widget.showTapModeCheckbox;
 
     // initial tap mode: controller overrides; default is select-place (false)
     _tapDefinesNewPoint = widget.controller?.initialTapDefinesNewPoint ?? false;
@@ -1113,26 +1175,28 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     });
 
     // pulse animation controller for marker-tap feedback
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: RasterMapEditorConstants.pulseAnimationDuration,
-    )..addListener(() {
-        if (mounted) setState(() {});
-      });
+    _pulseController =
+        AnimationController(
+          vsync: this,
+          duration: RasterMapEditorConstants.pulseAnimationDuration,
+        )..addListener(() {
+          if (mounted) setState(() {});
+        });
 
-    _panZoomController = AnimationController(
-      vsync: this,
-      duration: RasterMapEditorConstants.panZoomAnimationDuration,
-    )
-      ..addListener(() {
-        final t = _panZoomController.value;
-        final start = _panStart ?? _photoViewController.position;
-        final end = _panEnd ?? start;
-        final pos = Offset.lerp(start, end, t) ?? end;
-        final scale = _scaleTween?.transform(t) ?? (_photoViewController.scale ?? 1.0);
-        _photoViewController.position = pos;
-        _photoViewController.scale = scale;
-      });
+    _panZoomController =
+        AnimationController(
+          vsync: this,
+          duration: RasterMapEditorConstants.panZoomAnimationDuration,
+        )..addListener(() {
+          final t = _panZoomController.value;
+          final start = _panStart ?? _photoViewController.position;
+          final end = _panEnd ?? start;
+          final pos = Offset.lerp(start, end, t) ?? end;
+          final scale =
+              _scaleTween?.transform(t) ?? (_photoViewController.scale ?? 1.0);
+          _photoViewController.position = pos;
+          _photoViewController.scale = scale;
+        });
 
     // Decode image only when image-sampling for label color is enabled.
     // Otherwise ensure we do not hold or populate the decoded-image cache
@@ -1156,15 +1220,17 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         }
       } else {
         // use persistent cache to avoid re-decoding when switching maps
-        decodeImageToRawCached(widget.imageFile.path).then((raw) {
-          if (raw != null && mounted) {
-            setState(() {
-              _img = raw;
+        decodeImageToRawCached(widget.imageFile.path)
+            .then((raw) {
+              if (raw != null && mounted) {
+                setState(() {
+                  _img = raw;
+                });
+              }
+            })
+            .catchError((_) {
+              // ignore failures; _img stays null
             });
-          }
-        }).catchError((_) {
-          // ignore failures; _img stays null
-        });
       }
     } else {
       // sampling disabled: clear any existing decoded cache for this image
@@ -1202,36 +1268,49 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
             if (decoded != null) {
               final pixels = Uint8List.fromList(decoded.getBytes());
-              if (mounted) setState(() => _img = RawImageData(decoded.width, decoded.height, pixels));
+              if (mounted)
+                setState(
+                  () => _img = RawImageData(
+                    decoded.width,
+                    decoded.height,
+                    pixels,
+                  ),
+                );
             }
           } catch (e) {
             log.warning('Error decoding image', e);
           }
         } else {
-          decodeImageToRawCached(widget.imageFile.path).then((raw) {
-            if (raw != null && mounted) setState(() => _img = raw);
-          }).catchError((e) {
-            log.warning('Error decoding image async', e);
-          });
+          decodeImageToRawCached(widget.imageFile.path)
+              .then((raw) {
+                if (raw != null && mounted) setState(() => _img = raw);
+              })
+              .catchError((e) {
+                log.warning('Error decoding image async', e);
+              });
         }
       }
     }
 
     // prefer controller setting; otherwise fall back to widget prop
-    final newVal = widget.controller?.useImageTextColor ?? widget.useImageTextColor;
-    final oldVal = oldWidget.controller?.useImageTextColor ?? oldWidget.useImageTextColor;
+    final newVal =
+        widget.controller?.useImageTextColor ?? widget.useImageTextColor;
+    final oldVal =
+        oldWidget.controller?.useImageTextColor ?? oldWidget.useImageTextColor;
     if (newVal != oldVal) _setUseImageTextColor(newVal);
 
     // if controller instance changed, rebind state
     if (oldWidget.controller != widget.controller) {
-      if (oldWidget.controller?._state == this) oldWidget.controller?._state = null;
+      if (oldWidget.controller?._state == this)
+        oldWidget.controller?._state = null;
       widget.controller?._state = this;
     }
 
     // If the cave-places list was replaced (e.g. after async DB reload in the
     // parent), re-apply the controller's cavePlaceUuid so the blue selected-place
     // marker is built with the up-to-date coordinate data.
-    if (widget.cavePlacesWithDefinitions != oldWidget.cavePlacesWithDefinitions) {
+    if (widget.cavePlacesWithDefinitions !=
+        oldWidget.cavePlacesWithDefinitions) {
       _applyControllerCavePlaceId();
     }
   }
@@ -1322,7 +1401,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         if (!_navBarShowMapsChangedInFS && _navBarShowMapsBeforeFS != null) {
           _navBarShowMaps = _navBarShowMapsBeforeFS!;
         }
-        if (!_navBarShowPlacesChangedInFS && _navBarShowPlacesBeforeFS != null) {
+        if (!_navBarShowPlacesChangedInFS &&
+            _navBarShowPlacesBeforeFS != null) {
           _navBarShowPlaces = _navBarShowPlacesBeforeFS!;
         }
         _navBarShowMapsBeforeFS = null;
@@ -1347,7 +1427,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     final startIdx = currentUuid == null
         ? 0
         : (places.indexWhere((c) => c.cavePlace.uuid == currentUuid) + 1) %
-            places.length;
+              places.length;
     // Walk from startIdx, wrapping once, looking for an undefined place.
     for (var i = 0; i < places.length; i++) {
       final idx = (startIdx + i) % places.length;
@@ -1387,18 +1467,22 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
           if (decoded != null) {
             final pixels = Uint8List.fromList(decoded.getBytes());
-            setState(() => _img = RawImageData(decoded.width, decoded.height, pixels));
+            setState(
+              () => _img = RawImageData(decoded.width, decoded.height, pixels),
+            );
           }
         } catch (e, st) {
           _log.fine('setUseImageTextColor: simple decoder failed', e, st);
           setState(() => _img = null);
         }
       } else {
-        decodeImageToRawCached(widget.imageFile.path).then((raw) {
-          if (raw != null && mounted) setState(() => _img = raw);
-        }).catchError((_) {
-          // ignore
-        });
+        decodeImageToRawCached(widget.imageFile.path)
+            .then((raw) {
+              if (raw != null && mounted) setState(() => _img = raw);
+            })
+            .catchError((_) {
+              // ignore
+            });
       }
     } else {
       // disable sampling -> clear local decoded image and cache entry
@@ -1413,20 +1497,23 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   void _applyControllerCavePlaceId() {
     final id = widget.controller?.cavePlaceUuid;
     if (id == null) {
-      if (_initialControllerCavePlaceX != null || _initialControllerCavePlaceY != null) {
+      if (_initialControllerCavePlaceX != null ||
+          _initialControllerCavePlaceY != null) {
         if (mounted) {
           setState(() {
-          _initialControllerCavePlaceX = null;
-          _initialControllerCavePlaceY = null;
-          _initialControllerCavePlaceTitle = null;
-        });
+            _initialControllerCavePlaceX = null;
+            _initialControllerCavePlaceY = null;
+            _initialControllerCavePlaceTitle = null;
+          });
         }
       }
       return;
     }
 
     try {
-      final cpwd = widget.cavePlacesWithDefinitions.where((c) => c.cavePlace.uuid == id).firstOrNull;
+      final cpwd = widget.cavePlacesWithDefinitions
+          .where((c) => c.cavePlace.uuid == id)
+          .firstOrNull;
       if (cpwd == null) return;
       final def = cpwd.definition;
       if (def != null && def.xCoordinate != null && def.yCoordinate != null) {
@@ -1434,10 +1521,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         final y = def.yCoordinate!.toDouble();
         if (mounted) {
           setState(() {
-          _initialControllerCavePlaceX = x;
-          _initialControllerCavePlaceY = y;
-          _initialControllerCavePlaceTitle = cpwd.cavePlace.title;
-        });
+            _initialControllerCavePlaceX = x;
+            _initialControllerCavePlaceY = y;
+            _initialControllerCavePlaceTitle = cpwd.cavePlace.title;
+          });
         }
         return;
       }
@@ -1448,10 +1535,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
 
     if (mounted) {
       setState(() {
-      _initialControllerCavePlaceX = null;
-      _initialControllerCavePlaceY = null;
-      _initialControllerCavePlaceTitle = null;
-    });
+        _initialControllerCavePlaceX = null;
+        _initialControllerCavePlaceY = null;
+        _initialControllerCavePlaceTitle = null;
+      });
     }
   }
 
@@ -1520,16 +1607,28 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         builder: (ctx) => AddCavePlacePopup(caveUuid: widget.caveUuid!),
       );
       if (newId != null && mounted) {
-        if (widget.onAutoSaveRequested != null && widget.selectedRasterMapUuid != null) {
-          await widget.onAutoSaveRequested!(newId, widget.selectedRasterMapUuid!, cx, cy);
+        if (widget.onAutoSaveRequested != null &&
+            widget.selectedRasterMapUuid != null) {
+          await widget.onAutoSaveRequested!(
+            newId,
+            widget.selectedRasterMapUuid!,
+            cx,
+            cy,
+          );
         }
-        SnackBarService.showSuccess(LocServ.inst.t('cave_place_added'), duration: RasterMapEditorConstants.shortSnackbarDuration);
+        SnackBarService.showSuccess(
+          LocServ.inst.t('cave_place_added'),
+          duration: RasterMapEditorConstants.shortSnackbarDuration,
+        );
         widget.onCavePlaceAdded?.call();
         // Keep add-cave-place mode active so the user can immediately tap
         // the next place without having to re-enable it.
         if (mounted) {
           setState(() => _waitingForNewCavePlaceTap = true);
-          SnackBarService.showInfo(LocServ.inst.t('tap_on_map_to_define_place'), duration: RasterMapEditorConstants.longSnackbarDuration);
+          SnackBarService.showInfo(
+            LocServ.inst.t('tap_on_map_to_define_place'),
+            duration: RasterMapEditorConstants.longSnackbarDuration,
+          );
         }
       }
       return;
@@ -1544,7 +1643,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       double nearestDist = double.infinity;
       for (final cpwd in widget.cavePlacesWithDefinitions) {
         final def = cpwd.definition;
-        if (def == null || def.xCoordinate == null || def.yCoordinate == null) continue;
+        if (def == null || def.xCoordinate == null || def.yCoordinate == null)
+          continue;
         final vp = _imageToViewportCoordinates(
           def.xCoordinate!.toDouble(),
           def.yCoordinate!.toDouble(),
@@ -1570,8 +1670,12 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     final imgWidth = _img?.width.toDouble();
     final imgHeight = _img?.height.toDouble();
 
-    final maxX = (imgWidth != null && imgWidth > 0) ? (imgWidth - 1.0) : double.infinity;
-    final maxY = (imgHeight != null && imgHeight > 0) ? (imgHeight - 1.0) : double.infinity;
+    final maxX = (imgWidth != null && imgWidth > 0)
+        ? (imgWidth - 1.0)
+        : double.infinity;
+    final maxY = (imgHeight != null && imgHeight > 0)
+        ? (imgHeight - 1.0)
+        : double.infinity;
 
     final clampedX = rawX.clamp(0.0, maxX);
     final clampedY = rawY.clamp(0.0, maxY);
@@ -1588,9 +1692,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     widget.onImagePointChanged?.call(_imageSelectedX!, _imageSelectedY!);
   }
 
-  void zoomIn() => _zoomAtViewportCenter(clampZoom(_photoViewController.scale! * 1.2));
+  void zoomIn() =>
+      _zoomAtViewportCenter(clampZoom(_photoViewController.scale! * 1.2));
 
-  void zoomOut() => _zoomAtViewportCenter(clampZoom(_photoViewController.scale! / 1.2));
+  void zoomOut() =>
+      _zoomAtViewportCenter(clampZoom(_photoViewController.scale! / 1.2));
 
   /// Zoom to [newScale] while keeping the image point currently at the
   /// viewport centre fixed in place.
@@ -1623,7 +1729,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // With Alignment.topLeft: viewportPt = imagePt * scale + pos
     //   => imagePt = (viewportPt - pos) / scale
     if (_gestureStartScale != 0) {
-      _gestureFocalInImage = (details.localFocalPoint - pos) / _gestureStartScale!;
+      _gestureFocalInImage =
+          (details.localFocalPoint - pos) / _gestureStartScale!;
     } else {
       _gestureFocalInImage = Offset.zero;
     }
@@ -1635,7 +1742,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     final focalInImage = _gestureFocalInImage;
     if (startScale == null || focalInImage == null) return;
     // Apply zoom only when gesture zoom is enabled; otherwise treat as pan only.
-    final newScale = clampZoom(startScale * (_gestureZoomEnabled ? details.scale : 1.0));
+    final newScale = clampZoom(
+      startScale * (_gestureZoomEnabled ? details.scale : 1.0),
+    );
     // New position: keep the stored image-space focal point under the current
     // focal viewport point.
     // viewportPt = imagePt * newScale + newPos  =>  newPos = viewportPt - imagePt * newScale
@@ -1651,14 +1760,22 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     // Prefer the actual PhotoView viewport size; fall back to full screen if
     // not available (defensive).
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
-    _photoViewController.position =
-        offsetForPoint(imageX, imageY, zoomLevel, viewport);
+    _photoViewController.position = offsetForPoint(
+      imageX,
+      imageY,
+      zoomLevel,
+      viewport,
+    );
   }
 
   /// Zoom/pan to fit a bounding box of image-space points with padding.
   void _zoomToFitPoints(List<Offset> imagePoints, {double padding = 40.0}) {
     final viewport = _photoViewportSize ?? MediaQuery.of(context).size;
-    final transform = fitPointsTransform(imagePoints, viewport, padding: padding);
+    final transform = fitPointsTransform(
+      imagePoints,
+      viewport,
+      padding: padding,
+    );
     if (transform == null) return;
     _photoViewController.scale = transform.scale;
     _photoViewController.position = transform.offset;
@@ -1730,9 +1847,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             .firstOrNull;
         if (match != null) title = match.cavePlace.title;
         if (title.isNotEmpty) {
-          final dur = widget.controller?.autoSaveSnackbarNotificationDuration ??
+          final dur =
+              widget.controller?.autoSaveSnackbarNotificationDuration ??
               RasterMapEditorConstants.shortSnackbarDuration;
-          SnackBarService.showSuccess('${LocServ.inst.t('new_point_saved_for')} $title', duration: dur);
+          SnackBarService.showSuccess(
+            '${LocServ.inst.t('new_point_saved_for')} $title',
+            duration: dur,
+          );
         }
       }
     }
@@ -1825,7 +1946,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       _imageSelectedY ?? 0,
     );
     if (mounted) {
-      SnackBarService.showSuccess(LocServ.inst.t('point_reset'), duration: RasterMapEditorConstants.shortSnackbarDuration);
+      SnackBarService.showSuccess(
+        LocServ.inst.t('point_reset'),
+        duration: RasterMapEditorConstants.shortSnackbarDuration,
+      );
     }
   }
 
@@ -1855,7 +1979,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     );
     if (confirmed != true || !mounted) return;
 
-    final removed = await widget.onRemoveDefinitionRequested!(cavePlaceUuid, rasterMapUuid);
+    final removed = await widget.onRemoveDefinitionRequested!(
+      cavePlaceUuid,
+      rasterMapUuid,
+    );
     if (removed && mounted) {
       setState(() {
         _userHasSelectedNewPoint = false;
@@ -1865,7 +1992,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         _initialControllerCavePlaceY = null;
         _initialControllerCavePlaceTitle = null;
       });
-      SnackBarService.showSuccess(LocServ.inst.t('definition_removed'), duration: RasterMapEditorConstants.shortSnackbarDuration);
+      SnackBarService.showSuccess(
+        LocServ.inst.t('definition_removed'),
+        duration: RasterMapEditorConstants.shortSnackbarDuration,
+      );
     }
   }
 
@@ -1884,7 +2014,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     await _commitPendingPointIfNeeded();
     if (!mounted) return;
     setState(() => _waitingForNewCavePlaceTap = true);
-    SnackBarService.showInfo(LocServ.inst.t('tap_on_map_to_define_place'), duration: RasterMapEditorConstants.longSnackbarDuration);
+    SnackBarService.showInfo(
+      LocServ.inst.t('tap_on_map_to_define_place'),
+      duration: RasterMapEditorConstants.longSnackbarDuration,
+    );
   }
 
   /// Notify the parent to save the current point when the user has modified it.
@@ -1915,10 +2048,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CavePlacePage(
-          caveUuid: caveUuid!,
-          cavePlaceUuid: cavePlaceUuid,
-        ),
+        builder: (context) =>
+            CavePlacePage(caveUuid: caveUuid!, cavePlaceUuid: cavePlaceUuid),
       ),
     );
     // Reload data after returning
@@ -1944,7 +2075,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
   /// Show a toast message when a cave place point is long-tapped.
   void _showLongTapToast(String cavePlaceTitle) {
     if (!mounted) return;
-    SnackBarService.showInfo(LocServ.inst.t('long_tap_detected', {'cavePlaceTitle': cavePlaceTitle}), duration: RasterMapEditorConstants.mediumSnackbarDuration);
+    SnackBarService.showInfo(
+      LocServ.inst.t('long_tap_detected', {'cavePlaceTitle': cavePlaceTitle}),
+      duration: RasterMapEditorConstants.mediumSnackbarDuration,
+    );
   }
 
   // ── Image-processing helpers ──────────────────────────────────────────────
@@ -1959,22 +2093,46 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       IconData icon,
       String label,
       bool active,
-    ) =>
-        PopupMenuItem<String>(
-          value: value,
-          child: _MenuRow(icon, label, active: active),
-        );
+    ) => PopupMenuItem<String>(
+      value: value,
+      child: _MenuRow(icon, label, active: active),
+    );
 
     return [
       // Reset to normal
-      preset('normal',       Icons.image,                  t('img_mode_normal'),        current.isNormal),
+      preset('normal', Icons.image, t('img_mode_normal'), current.isNormal),
       const PopupMenuDivider(),
       // Single-mode presets
-      preset('invert',       Icons.invert_colors,          t('invert_colors'),          current.mode == RasterMapFilterMode.invert),
-      preset('grayscale',    Icons.filter_b_and_w,         t('img_filter_grayscale'),   current.mode == RasterMapFilterMode.grayscale),
-      preset('sepia',        Icons.photo_filter,           t('img_filter_sepia'),       current.mode == RasterMapFilterMode.sepia),
-      preset('high_contrast',Icons.contrast,               t('img_filter_high_contrast'),current.mode == RasterMapFilterMode.highContrast),
-      preset('night_red',    Icons.nights_stay_outlined,   t('img_filter_night_red'),   current.mode == RasterMapFilterMode.nightRed),
+      preset(
+        'invert',
+        Icons.invert_colors,
+        t('invert_colors'),
+        current.mode == RasterMapFilterMode.invert,
+      ),
+      preset(
+        'grayscale',
+        Icons.filter_b_and_w,
+        t('img_filter_grayscale'),
+        current.mode == RasterMapFilterMode.grayscale,
+      ),
+      preset(
+        'sepia',
+        Icons.photo_filter,
+        t('img_filter_sepia'),
+        current.mode == RasterMapFilterMode.sepia,
+      ),
+      preset(
+        'high_contrast',
+        Icons.contrast,
+        t('img_filter_high_contrast'),
+        current.mode == RasterMapFilterMode.highContrast,
+      ),
+      preset(
+        'night_red',
+        Icons.nights_stay_outlined,
+        t('img_filter_night_red'),
+        current.mode == RasterMapFilterMode.nightRed,
+      ),
       const PopupMenuDivider(),
       // Additive / advanced panel
       PopupMenuItem<String>(
@@ -1999,7 +2157,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       case 'sepia':
         _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.sepia));
       case 'high_contrast':
-        _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.highContrast));
+        _setFilter(
+          RasterMapImageFilter.preset(RasterMapFilterMode.highContrast),
+        );
       case 'night_red':
         _setFilter(RasterMapImageFilter.preset(RasterMapFilterMode.nightRed));
       case 'custom':
@@ -2030,11 +2190,17 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           await _commitPendingPointIfNeeded();
           if (mounted) setState(() => _showLegend = !_showLegend);
         },
-        icon: Icon(Icons.info_outline, size: 25, color: _showLegend ? Colors.blue : null),
+        icon: Icon(
+          Icons.info_outline,
+          size: 25,
+          color: _showLegend ? Colors.blue : null,
+        ),
         tooltip: LocServ.inst.t('toggle_legend'),
         padding: const EdgeInsets.all(2),
         constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        style: IconButton.styleFrom(
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
       ),
       // Action buttons (edit mode only)
       if (!widget.isReadonly) ...[
@@ -2058,7 +2224,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
                 : LocServ.inst.t('tap_mode_select_place'),
             padding: const EdgeInsets.all(2),
             constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         // Reset point
         IconButton(
@@ -2067,7 +2235,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           tooltip: LocServ.inst.t('reset_point'),
           padding: const EdgeInsets.all(2),
           constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
         ),
         // Remove definition
         if (widget.onRemoveDefinitionRequested != null)
@@ -2077,7 +2247,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             tooltip: LocServ.inst.t('remove_definition'),
             padding: const EdgeInsets.all(2),
             constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         // Add new cave place (tap-to-define)
         if (widget.caveUuid != null && widget.onCavePlaceAdded != null)
@@ -2101,15 +2273,21 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
             ),
           ),
         // Save / define place on map
-        if (SHOW_SAVE_CAVE_PLACE_BUTTON && widget.onSaveDefinitionRequested != null)
+        if (SHOW_SAVE_CAVE_PLACE_BUTTON &&
+            widget.onSaveDefinitionRequested != null)
           IconButton(
             onPressed: widget.onSaveDefinitionRequested,
-            icon: Icon(Icons.save_alt, size: 30,
-                color: Theme.of(context).colorScheme.primary),
+            icon: Icon(
+              Icons.save_alt,
+              size: 30,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             tooltip: LocServ.inst.t('define_place_on_map'),
             padding: const EdgeInsets.all(2),
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-            style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
       ],
       // View-mode actions (always available)
@@ -2120,7 +2298,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           tooltip: LocServ.inst.t('open_cave_place'),
           padding: const EdgeInsets.all(2),
           constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
         ),
       if (widget.controller?.cavePlaceUuid != null)
         IconButton(
@@ -2129,7 +2309,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           tooltip: LocServ.inst.t('documentation'),
           padding: const EdgeInsets.all(2),
           constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
         ),
     ];
   }
@@ -2161,10 +2343,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _buildActionBarButtons(context)
-                .expand((b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)])
-                .toList()
-                ..removeLast(),
+            children:
+                _buildActionBarButtons(context)
+                    .expand(
+                      (b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)],
+                    )
+                    .toList()
+                  ..removeLast(),
           ),
         ),
       ),
@@ -2219,10 +2404,12 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
     final surfaceColor = Theme.of(context).colorScheme.surface;
 
     final undefinedCount = widget.cavePlacesWithDefinitions
-        .where((c) =>
-            c.definition == null ||
-            c.definition!.xCoordinate == null ||
-            c.definition!.yCoordinate == null)
+        .where(
+          (c) =>
+              c.definition == null ||
+              c.definition!.xCoordinate == null ||
+              c.definition!.yCoordinate == null,
+        )
         .length;
 
     // ── Nav-bar view toggle menu items ───────────────────────────────────
@@ -2247,7 +2434,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       ),
       PopupMenuItem<String>(
         value: 'sort_cave_places',
-        child: _MenuRow(Icons.sort_by_alpha, LocServ.inst.t('sort_cave_places_navbar')),
+        child: _MenuRow(
+          Icons.sort_by_alpha,
+          LocServ.inst.t('sort_cave_places_navbar'),
+        ),
       ),
       PopupMenuItem<String>(
         value: 'sort_raster_maps',
@@ -2255,7 +2445,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       ),
       PopupMenuItem<String>(
         value: 'manage_raster_maps',
-        child: _MenuRow(Icons.map_outlined, LocServ.inst.t('manage_raster_maps')),
+        child: _MenuRow(
+          Icons.map_outlined,
+          LocServ.inst.t('manage_raster_maps'),
+        ),
       ),
     ];
 
@@ -2264,7 +2457,9 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       _OverlayIconButton(
         icon: Icons.location_searching,
         tooltip: undefinedCount > 0
-            ? LocServ.inst.t('next_undefined_place_count', {'count': undefinedCount.toString()})
+            ? LocServ.inst.t('next_undefined_place_count', {
+                'count': undefinedCount.toString(),
+              })
             : LocServ.inst.t('all_places_have_definitions'),
         active: false,
         enabled: undefinedCount > 0,
@@ -2324,14 +2519,18 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
       // Toggle full-screen (hides nav bar + parent AppBar, keeps bottom bar)
       _OverlayIconButton(
         icon: _fullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-        tooltip: LocServ.inst.t(_fullScreen ? 'exit_full_screen' : 'full_screen'),
+        tooltip: LocServ.inst.t(
+          _fullScreen ? 'exit_full_screen' : 'full_screen',
+        ),
         active: _fullScreen,
         onPressed: _toggleFullScreen,
       ),
       // Invert raster-map colours (quick toggle, also available in the processing menu)
       _OverlayIconButton(
         icon: Icons.invert_colors,
-        tooltip: LocServ.inst.t(_colorInverted ? 'invert_colors_restore' : 'invert_colors'),
+        tooltip: LocServ.inst.t(
+          _colorInverted ? 'invert_colors_restore' : 'invert_colors',
+        ),
         active: _colorInverted,
         onPressed: _toggleColorInversion,
       ),
@@ -2369,10 +2568,13 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: buttons
-              .expand((b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)])
-              .toList()
-              ..removeLast(),
+          children:
+              buttons
+                  .expand(
+                    (b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)],
+                  )
+                  .toList()
+                ..removeLast(),
         ),
       ),
     );
@@ -2388,358 +2590,408 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor> w
         if (!didPop && _fullScreen) _toggleFullScreen();
       },
       child: Column(
-      children: [
-        // Embedded nav bar (raster maps + cave places) when enabled
-        if (_showNavBar)
-          RasterMapNavBar(
-            key: _navBarKey,
-            rasterMaps: widget.rasterMaps,
-            cavePlacesWithDefinitions: widget.cavePlacesWithDefinitions,
-            selectedRasterMapUuid: widget.selectedRasterMapUuid,
-            selectedPlaceId: widget.controller?.cavePlaceUuid,
-            style: widget.navBarStyle,
-            showRasterMapsList: _navBarShowMaps,
-            showCavePlacesList: _navBarShowPlaces,
-            onRasterMapSelected: (rm) => _handleNavRasterMapSelected(rm),
-            onCavePlaceSelected: (cpwd) => _handleNavCavePlaceSelected(cpwd),
-            caveAreaTitles: widget.caveAreaTitles,
-            groupByCaveArea: widget.groupPlacesByCaveArea,
-            onVisiblePlaceUuidsChanged: (uuids) {
-              setState(() => _visiblePlaceUuids = uuids);
-            },
-          ),
+        children: [
+          // Embedded nav bar (raster maps + cave places) when enabled
+          if (_showNavBar)
+            RasterMapNavBar(
+              key: _navBarKey,
+              rasterMaps: widget.rasterMaps,
+              cavePlacesWithDefinitions: widget.cavePlacesWithDefinitions,
+              selectedRasterMapUuid: widget.selectedRasterMapUuid,
+              selectedPlaceId: widget.controller?.cavePlaceUuid,
+              style: widget.navBarStyle,
+              showRasterMapsList: _navBarShowMaps,
+              showCavePlacesList: _navBarShowPlaces,
+              onRasterMapSelected: (rm) => _handleNavRasterMapSelected(rm),
+              onCavePlaceSelected: (cpwd) => _handleNavCavePlaceSelected(cpwd),
+              caveAreaTitles: widget.caveAreaTitles,
+              groupByCaveArea: widget.groupPlacesByCaveArea,
+              onVisiblePlaceUuidsChanged: (uuids) {
+                setState(() => _visiblePlaceUuids = uuids);
+              },
+            ),
 
-        Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            // Tap: forward to the image-tap handler with current controller state.
-            // onTapUp (not onTapDown) is used so the handler fires only after the
-            // gesture arena resolves. When an overlay toolbar button is tapped, its
-            // InkWell wins the arena and this callback is never called, preventing
-            // the tap from also moving the map point.
-            onTapUp: (details) {
-              final cv = PhotoViewControllerValue(
-                scale: _photoViewController.scale,
-                position: _photoViewController.position,
-                rotation: _photoViewController.rotation,
-                rotationFocusPoint: _photoViewController.rotationFocusPoint,
-              );
-              _onImageTap(details, cv);
-            },
-            // Pan and pinch-zoom: correctly maintain the focal point.
-            onScaleStart: _handleGestureScaleStart,
-            onScaleUpdate: _handleGestureScaleUpdate,
-            child: ClipRect(
-              child: Stack(
-                children: [
-                  // Apply image-processing filter. The filter is computed from
-                  // RasterMapImageFilter.toColorFilter() which returns null when
-                  // no processing is needed (no shader overhead at rest).
-                  () {
-                    final photoView = PhotoView(
-                      controller: _photoViewController,
-                      scaleStateController: _scaleStateController,
-                      imageProvider: widget.imageProvider ?? FileImage(widget.imageFile),
-                      minScale: _gestureZoomEnabled
-                          ? PhotoViewComputedScale.contained * 0.5
-                          : PhotoViewComputedScale.contained,
-                      maxScale: _gestureZoomEnabled
-                          ? PhotoViewComputedScale.covered * 4.8
-                          : PhotoViewComputedScale.contained,
-                      initialScale: PhotoViewComputedScale.contained,
-                      enableRotation: false,
-                      basePosition: Alignment.topLeft,
-                      disableGestures: true,
-                      loadingBuilder: (context, event) =>
-                          const Center(child: CircularProgressIndicator()),
-                    );
-                    final cf = _activeFilter.toColorFilter();
-                    if (cf == null) return photoView;
-                    return ColorFiltered(colorFilter: cf, child: photoView);
-                  }(),
-                Positioned.fill(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      // store the current viewport size for use by zoomToPoint
-                      _photoViewportSize = constraints.biggest;
-
-                      final List<Widget> overlay = [];
-                      final controllerValue = PhotoViewControllerValue(
-                        scale: _photoViewController.scale,
-                        position: _photoViewController.position,
-                        rotation: _photoViewController.rotation,
-                        rotationFocusPoint: _photoViewController.rotationFocusPoint,
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              // Tap: forward to the image-tap handler with current controller state.
+              // onTapUp (not onTapDown) is used so the handler fires only after the
+              // gesture arena resolves. When an overlay toolbar button is tapped, its
+              // InkWell wins the arena and this callback is never called, preventing
+              // the tap from also moving the map point.
+              onTapUp: (details) {
+                final cv = PhotoViewControllerValue(
+                  scale: _photoViewController.scale,
+                  position: _photoViewController.position,
+                  rotation: _photoViewController.rotation,
+                  rotationFocusPoint: _photoViewController.rotationFocusPoint,
+                );
+                _onImageTap(details, cv);
+              },
+              // Pan and pinch-zoom: correctly maintain the focal point.
+              onScaleStart: _handleGestureScaleStart,
+              onScaleUpdate: _handleGestureScaleUpdate,
+              child: ClipRect(
+                child: Stack(
+                  children: [
+                    // Apply image-processing filter. The filter is computed from
+                    // RasterMapImageFilter.toColorFilter() which returns null when
+                    // no processing is needed (no shader overhead at rest).
+                    () {
+                      final photoView = PhotoView(
+                        controller: _photoViewController,
+                        scaleStateController: _scaleStateController,
+                        imageProvider:
+                            widget.imageProvider ?? FileImage(widget.imageFile),
+                        minScale: _gestureZoomEnabled
+                            ? PhotoViewComputedScale.contained * 0.5
+                            : PhotoViewComputedScale.contained,
+                        maxScale: _gestureZoomEnabled
+                            ? PhotoViewComputedScale.covered * 4.8
+                            : PhotoViewComputedScale.contained,
+                        initialScale: PhotoViewComputedScale.contained,
+                        enableRotation: false,
+                        basePosition: Alignment.topLeft,
+                        disableGestures: true,
+                        loadingBuilder: (context, event) =>
+                            const Center(child: CircularProgressIndicator()),
                       );
-                      final selectedCavePlaceTitle =
-                          _resolveSelectedCavePlaceTitle();
-                      String markerLabel(String qualifierKey) {
-                        final suffix = LocServ.inst.t(qualifierKey);
-                        if (selectedCavePlaceTitle.isEmpty) {
-                          return '($suffix)';
-                        }
-                        return '$selectedCavePlaceTitle ($suffix)';
-                      }
+                      final cf = _activeFilter.toColorFilter();
+                      if (cf == null) return photoView;
+                      return ColorFiltered(colorFilter: cf, child: photoView);
+                    }(),
+                    Positioned.fill(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // store the current viewport size for use by zoomToPoint
+                          _photoViewportSize = constraints.biggest;
 
-                      // Compute special point keys (to skip their red dots)
-                      final specialPointKeys = RasterMapMarkerBuilder.computeSpecialPointKeys(
-                        userHasSelectedNewPoint: _userHasSelectedNewPoint,
-                        selectedX: _imageSelectedX,
-                        selectedY: _imageSelectedY,
-                        initialX: widget.initialImageX,
-                        initialY: widget.initialImageY,
-                        controllerX: _initialControllerCavePlaceX,
-                        controllerY: _initialControllerCavePlaceY,
-                      );
-
-                      final outlineEnabled = widget.controller?.textOutlineEnabled ?? true;
-                      final outlineWidth = widget.controller?.textOutlineWidth ?? 2.0;
-                      final bgEnabled = widget.controller?.textBackgroundEnabled ?? false;
-
-                      // Existing definitions (red dots + labels)
-                      overlay.addAll(RasterMapMarkerBuilder.buildDefinitionMarkers(
-                        definitions: widget.cavePlacesWithDefinitions,
-                        controllerValue: controllerValue,
-                        specialPointKeys: specialPointKeys,
-                        visiblePlaceUuids: _visiblePlaceUuids,
-                        fadeFilteredMarkers: widget.controller?.fadeFilteredMarkers ?? widget.fadeFilteredMarkers,
-                        useImageTextColor: _useImageTextColor,
-                        img: _img,
-                        defaultLabelColor: widget.defaultLabelColor,
-                        outlineEnabled: outlineEnabled,
-                        outlineWidth: outlineWidth,
-                        bgEnabled: bgEnabled,
-                        onTap: (cpwd) async {
-                          final def = cpwd.definition!;
-                          _startPulseAtImagePoint(
-                            (def.xCoordinate ?? 0).toDouble(),
-                            (def.yCoordinate ?? 0).toDouble(),
+                          final List<Widget> overlay = [];
+                          final controllerValue = PhotoViewControllerValue(
+                            scale: _photoViewController.scale,
+                            position: _photoViewController.position,
+                            rotation: _photoViewController.rotation,
+                            rotationFocusPoint:
+                                _photoViewController.rotationFocusPoint,
                           );
-                          await _handleNavCavePlaceSelected(cpwd, notifyMarkerTap: true);
+                          final selectedCavePlaceTitle =
+                              _resolveSelectedCavePlaceTitle();
+                          String markerLabel(String qualifierKey) {
+                            final suffix = LocServ.inst.t(qualifierKey);
+                            if (selectedCavePlaceTitle.isEmpty) {
+                              return '($suffix)';
+                            }
+                            return '$selectedCavePlaceTitle ($suffix)';
+                          }
+
+                          // Compute special point keys (to skip their red dots)
+                          final specialPointKeys =
+                              RasterMapMarkerBuilder.computeSpecialPointKeys(
+                                userHasSelectedNewPoint:
+                                    _userHasSelectedNewPoint,
+                                selectedX: _imageSelectedX,
+                                selectedY: _imageSelectedY,
+                                initialX: widget.initialImageX,
+                                initialY: widget.initialImageY,
+                                controllerX: _initialControllerCavePlaceX,
+                                controllerY: _initialControllerCavePlaceY,
+                              );
+
+                          final outlineEnabled =
+                              widget.controller?.textOutlineEnabled ?? true;
+                          final outlineWidth =
+                              widget.controller?.textOutlineWidth ?? 2.0;
+                          final bgEnabled =
+                              widget.controller?.textBackgroundEnabled ?? false;
+
+                          // Existing definitions (red dots + labels)
+                          overlay.addAll(
+                            RasterMapMarkerBuilder.buildDefinitionMarkers(
+                              definitions: widget.cavePlacesWithDefinitions,
+                              controllerValue: controllerValue,
+                              specialPointKeys: specialPointKeys,
+                              visiblePlaceUuids: _visiblePlaceUuids,
+                              fadeFilteredMarkers:
+                                  widget.controller?.fadeFilteredMarkers ??
+                                  widget.fadeFilteredMarkers,
+                              useImageTextColor: _useImageTextColor,
+                              img: _img,
+                              defaultLabelColor: widget.defaultLabelColor,
+                              outlineEnabled: outlineEnabled,
+                              outlineWidth: outlineWidth,
+                              bgEnabled: bgEnabled,
+                              onTap: (cpwd) async {
+                                final def = cpwd.definition!;
+                                _startPulseAtImagePoint(
+                                  (def.xCoordinate ?? 0).toDouble(),
+                                  (def.yCoordinate ?? 0).toDouble(),
+                                );
+                                await _handleNavCavePlaceSelected(
+                                  cpwd,
+                                  notifyMarkerTap: true,
+                                );
+                              },
+                              onLongPress: _showLongTapToast,
+                            ),
+                          );
+
+                          // Selected / initial markers
+                          if (_userHasSelectedNewPoint &&
+                              _imageSelectedX != null &&
+                              _imageSelectedY != null) {
+                            overlay.addAll(
+                              RasterMapMarkerBuilder.buildNewPointMarkers(
+                                newX: _imageSelectedX!,
+                                newY: _imageSelectedY!,
+                                oldX: widget.initialImageX,
+                                oldY: widget.initialImageY,
+                                controllerValue: controllerValue,
+                                markerLabel: markerLabel,
+                                useImageTextColor: _useImageTextColor,
+                                img: _img,
+                                defaultLabelColor: widget.defaultLabelColor,
+                                outlineEnabled: outlineEnabled,
+                                outlineWidth: outlineWidth,
+                                bgEnabled: bgEnabled,
+                              ),
+                            );
+                          } else if (_initialControllerCavePlaceX != null &&
+                              _initialControllerCavePlaceY != null) {
+                            overlay.addAll(
+                              RasterMapMarkerBuilder.buildControllerPlaceMarker(
+                                imageX: _initialControllerCavePlaceX!,
+                                imageY: _initialControllerCavePlaceY!,
+                                controllerValue: controllerValue,
+                                definitions: widget.cavePlacesWithDefinitions,
+                                useImageTextColor: _useImageTextColor,
+                                img: _img,
+                                defaultLabelColor: widget.defaultLabelColor,
+                                outlineEnabled: outlineEnabled,
+                                outlineWidth: outlineWidth,
+                                bgEnabled: bgEnabled,
+                                onLongPress: _showLongTapToast,
+                              ),
+                            );
+                          } else if (widget.initialImageX != null &&
+                              widget.initialImageY != null &&
+                              !_userHasSelectedNewPoint) {
+                            overlay.addAll(
+                              RasterMapMarkerBuilder.buildLegacyOldPointMarker(
+                                imageX: widget.initialImageX!,
+                                imageY: widget.initialImageY!,
+                                controllerValue: controllerValue,
+                                markerLabel: markerLabel,
+                                useImageTextColor: _useImageTextColor,
+                                img: _img,
+                                defaultLabelColor: widget.defaultLabelColor,
+                                outlineEnabled: outlineEnabled,
+                                outlineWidth: outlineWidth,
+                                bgEnabled: bgEnabled,
+                              ),
+                            );
+                          }
+
+                          // Pulse animation overlay
+                          final pulseWidget =
+                              RasterMapMarkerBuilder.buildPulseOverlay(
+                                pulseImageX: _pulseImageX,
+                                pulseImageY: _pulseImageY,
+                                pulseValue: _pulseController.value,
+                                controllerValue: controllerValue,
+                                primaryColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                              );
+                          if (pulseWidget != null) overlay.add(pulseWidget);
+
+                          // Trip route overlay (lines, arrows, numbers)
+                          if (widget.tripOverlay != null) {
+                            overlay.addAll(
+                              RasterMapMarkerBuilder.buildTripOverlay(
+                                tripOverlay: widget.tripOverlay!,
+                                definitions: widget.cavePlacesWithDefinitions,
+                                controllerValue: controllerValue,
+                              ),
+                            );
+                          }
+
+                          return Stack(children: overlay);
                         },
-                        onLongPress: _showLongTapToast,
-                      ));
-
-                      // Selected / initial markers
-                      if (_userHasSelectedNewPoint && _imageSelectedX != null && _imageSelectedY != null) {
-                        overlay.addAll(RasterMapMarkerBuilder.buildNewPointMarkers(
-                          newX: _imageSelectedX!,
-                          newY: _imageSelectedY!,
-                          oldX: widget.initialImageX,
-                          oldY: widget.initialImageY,
-                          controllerValue: controllerValue,
-                          markerLabel: markerLabel,
-                          useImageTextColor: _useImageTextColor,
-                          img: _img,
-                          defaultLabelColor: widget.defaultLabelColor,
-                          outlineEnabled: outlineEnabled,
-                          outlineWidth: outlineWidth,
-                          bgEnabled: bgEnabled,
-                        ));
-                      } else if (_initialControllerCavePlaceX != null && _initialControllerCavePlaceY != null) {
-                        overlay.addAll(RasterMapMarkerBuilder.buildControllerPlaceMarker(
-                          imageX: _initialControllerCavePlaceX!,
-                          imageY: _initialControllerCavePlaceY!,
-                          controllerValue: controllerValue,
-                          definitions: widget.cavePlacesWithDefinitions,
-                          useImageTextColor: _useImageTextColor,
-                          img: _img,
-                          defaultLabelColor: widget.defaultLabelColor,
-                          outlineEnabled: outlineEnabled,
-                          outlineWidth: outlineWidth,
-                          bgEnabled: bgEnabled,
-                          onLongPress: _showLongTapToast,
-                        ));
-                      } else if (widget.initialImageX != null && widget.initialImageY != null && !_userHasSelectedNewPoint) {
-                        overlay.addAll(RasterMapMarkerBuilder.buildLegacyOldPointMarker(
-                          imageX: widget.initialImageX!,
-                          imageY: widget.initialImageY!,
-                          controllerValue: controllerValue,
-                          markerLabel: markerLabel,
-                          useImageTextColor: _useImageTextColor,
-                          img: _img,
-                          defaultLabelColor: widget.defaultLabelColor,
-                          outlineEnabled: outlineEnabled,
-                          outlineWidth: outlineWidth,
-                          bgEnabled: bgEnabled,
-                        ));
-                      }
-
-                      // Pulse animation overlay
-                      final pulseWidget = RasterMapMarkerBuilder.buildPulseOverlay(
-                        pulseImageX: _pulseImageX,
-                        pulseImageY: _pulseImageY,
-                        pulseValue: _pulseController.value,
-                        controllerValue: controllerValue,
-                        primaryColor: Theme.of(context).colorScheme.primary,
-                      );
-                      if (pulseWidget != null) overlay.add(pulseWidget);
-
-                      // Trip route overlay (lines, arrows, numbers)
-                      if (widget.tripOverlay != null) {
-                        overlay.addAll(RasterMapMarkerBuilder.buildTripOverlay(
-                          tripOverlay: widget.tripOverlay!,
-                          definitions: widget.cavePlacesWithDefinitions,
-                          controllerValue: controllerValue,
-                        ));
-                      }
-
-                      return Stack(children: overlay);
-                    },
-                  ),
-                ),
-                // Status message + Legend overlay (bottom-left corner)
-                Positioned(
-                  left: 8,
-                  bottom: 8,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!widget.isReadonly && _showTapModeCheckbox && _showStatusOverlay)
-                        Container(
-                          constraints: const BoxConstraints(maxWidth: 220),
-                          margin: const EdgeInsets.only(bottom: 4),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 5, horizontal: 8),
+                      ),
+                    ),
+                    // Status message + Legend overlay (bottom-left corner)
+                    Positioned(
+                      left: 8,
+                      bottom: 8,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!widget.isReadonly &&
+                              _showTapModeCheckbox &&
+                              _showStatusOverlay)
+                            Container(
+                              constraints: const BoxConstraints(maxWidth: 220),
+                              margin: const EdgeInsets.only(bottom: 4),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 5,
+                                horizontal: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.82),
+                                borderRadius: BorderRadius.circular(6),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _tapDefinesNewPoint
+                                          ? LocServ.inst.t(
+                                              'status_define_point',
+                                            )
+                                          : LocServ.inst.t(
+                                              'status_select_place',
+                                            ),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black87,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.white70,
+                                            blurRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    _tapDefinesNewPoint
+                                        ? Icons.edit_location_alt
+                                        : Icons.touch_app,
+                                    size: 14,
+                                    color: _tapDefinesNewPoint
+                                        ? Colors.blue
+                                        : Colors.orange,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (_showLegend) const RasterMapPointsLegend(),
+                        ],
+                      ),
+                    ),
+                    // Zoom controls overlay (bottom-right corner).
+                    // In landscape-phone mode shift left to avoid the right action bar.
+                    if (_showZoomControls)
+                      Positioned(
+                        right: _computeIsLandscapePhone(context) ? 56 : 8,
+                        bottom: 8,
+                        child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.82),
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: const [
-                              BoxShadow(
-                                  color: Colors.black26, blurRadius: 4)
-                            ],
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surface.withValues(alpha: 0.60),
+                            border: Border.all(color: Colors.grey, width: 1.5),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  _tapDefinesNewPoint
-                                      ? LocServ.inst.t('status_define_point')
-                                      : LocServ.inst.t('status_select_place'),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black87,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.white70,
-                                        blurRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              IconButton(
+                                onPressed: zoomOut,
+                                icon: const Icon(Icons.remove),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                _tapDefinesNewPoint ? Icons.edit_location_alt : Icons.touch_app,
-                                size: 14,
-                                color: _tapDefinesNewPoint ? Colors.blue : Colors.orange,
+                              IconButton(
+                                onPressed: resetZoom,
+                                icon: const Icon(Icons.refresh),
+                              ),
+                              IconButton(
+                                onPressed: zoomIn,
+                                icon: const Icon(Icons.add),
                               ),
                             ],
                           ),
                         ),
-                      if (_showLegend) const RasterMapPointsLegend(),
-                    ],
-                  ),
+                      ),
+
+                    // ── Side toolbar toggle button (top-left or top-right) ────────
+                    _buildToolbarToggleButton(context),
+
+                    // ── Side toolbar (left or right, shown when _toolbarVisible) ──
+                    if (_toolbarVisible) _buildSideToolbar(context),
+
+                    // ── Landscape-phone: right-side vertical action bar ───────────
+                    if (_computeIsLandscapePhone(context))
+                      _buildLandscapePhoneActionBar(context),
+                  ],
                 ),
-                // Zoom controls overlay (bottom-right corner).
-                // In landscape-phone mode shift left to avoid the right action bar.
-                if (_showZoomControls)
-                  Positioned(
-                    right: _computeIsLandscapePhone(context) ? 56 : 8,
-                    bottom: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.60),
-                        border: Border.all(color: Colors.grey, width: 1.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed: zoomOut,
-                            icon: const Icon(Icons.remove),
-                          ),
-                          IconButton(
-                            onPressed: resetZoom,
-                            icon: const Icon(Icons.refresh),
-                          ),
-                          IconButton(
-                            onPressed: zoomIn,
-                            icon: const Icon(Icons.add),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                // ── Side toolbar toggle button (top-left or top-right) ────────
-                _buildToolbarToggleButton(context),
-
-                // ── Side toolbar (left or right, shown when _toolbarVisible) ──
-                if (_toolbarVisible) _buildSideToolbar(context),
-
-                // ── Landscape-phone: right-side vertical action bar ───────────
-                if (_computeIsLandscapePhone(context))
-                  _buildLandscapePhoneActionBar(context),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
 
-        // Action bar: horizontal Row at bottom in portrait / landscape-tablet;
-        // moved to a right-side vertical overlay in landscape-phone mode
-        // (rendered inside the Stack above; see _buildLandscapePhoneActionBar).
-        if (!_computeIsLandscapePhone(context)) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: _buildActionBarButtons(context),
-          ),
-          const SizedBox(height: 4),
-        ],
+          // Action bar: horizontal Row at bottom in portrait / landscape-tablet;
+          // moved to a right-side vertical overlay in landscape-phone mode
+          // (rendered inside the Stack above; see _buildLandscapePhoneActionBar).
+          if (!_computeIsLandscapePhone(context)) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: _buildActionBarButtons(context),
+            ),
+            const SizedBox(height: 4),
+          ],
 
-        if (widget.debugUi) ...[
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: _imageSelectedX?.toInt().toString() ?? '',
-                  decoration: const InputDecoration(labelText: 'X Coordinate'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final x = double.tryParse(value);
-                    if (x != null) setState(() => _imageSelectedX = x);
-                    widget.onImagePointChanged?.call(
-                      _imageSelectedX ?? 0,
-                      _imageSelectedY ?? 0,
-                    );
-                  },
+          if (widget.debugUi) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: _imageSelectedX?.toInt().toString() ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'X Coordinate',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      final x = double.tryParse(value);
+                      if (x != null) setState(() => _imageSelectedX = x);
+                      widget.onImagePointChanged?.call(
+                        _imageSelectedX ?? 0,
+                        _imageSelectedY ?? 0,
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  initialValue: _imageSelectedY?.toInt().toString() ?? '',
-                  decoration: const InputDecoration(labelText: 'Y Coordinate'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final y = double.tryParse(value);
-                    if (y != null) setState(() => _imageSelectedY = y);
-                    widget.onImagePointChanged?.call(
-                      _imageSelectedX ?? 0,
-                      _imageSelectedY ?? 0,
-                    );
-                  },
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: _imageSelectedY?.toInt().toString() ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Y Coordinate',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      final y = double.tryParse(value);
+                      if (y != null) setState(() => _imageSelectedY = y);
+                      widget.onImagePointChanged?.call(
+                        _imageSelectedX ?? 0,
+                        _imageSelectedY ?? 0,
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
-      ],
-    ),  // Column
-  );    // PopScope
+      ), // Column
+    ); // PopScope
   }
 }
 
@@ -2751,10 +3003,10 @@ abstract final class _ToolbarStyle {
   // ── Sizes ───────────────────────────────────────────────────────────────────
 
   /// Button cell width & height.  Small size is 32 px.
-  static const double btnSize   = 40.0;
+  static const double btnSize = 40.0;
 
   /// Icon size inside each button cell.  Scaled proportionally from 18 px.
-  static const double iconSize  = 28.0;
+  static const double iconSize = 28.0;
 
   /// Padding inside the toggle-button wrapper container.
   static const double togglePad = 1.0;
@@ -2766,13 +3018,13 @@ abstract final class _ToolbarStyle {
   static const double toggleGap = 4.0;
 
   /// Inner padding of the toolbar panel container.
-  static const double panelPad  = 1.0;
+  static const double panelPad = 1.0;
 
   /// Vertical gap between buttons inside the toolbar panel.
-  static const double btnGap    = 2.0;
+  static const double btnGap = 2.0;
 
   /// Corner radius for the toolbar / toggle wrapper containers.
-  static const double radius    = 8.0;
+  static const double radius = 8.0;
 
   /// Corner radius for individual button ink-well cells.
   static const double btnRadius = 6.0;
@@ -2781,18 +3033,18 @@ abstract final class _ToolbarStyle {
   static const double borderWidth = 1.0;
 
   /// Drop-shadow blur radius.
-  static const double shadowBlur  = 4.0;
+  static const double shadowBlur = 4.0;
 
   // ── Transparency / colour ─────────────────────────────────────────────────
 
   /// Opacity of toolbar / toggle-wrapper background (semi-transparent).
-  static const double bgAlpha       = 0.55;
+  static const double bgAlpha = 0.55;
 
   /// Opacity of an active (highlighted) button background.
   static const double activeBgAlpha = 0.15;
 
   /// Opacity of normal (non-active, non-disabled) icons.
-  static const double iconAlpha     = 0.75;
+  static const double iconAlpha = 0.75;
 
   /// Border colour for toolbar containers.  Grey 400 ≈ #BDBDBD.
   static const Color borderColor = Color(0xFFBDBDBD);
@@ -2839,9 +3091,15 @@ class _OverlayIconButton extends StatelessWidget {
     final iconColor = !enabled
         ? Theme.of(context).disabledColor
         : active
-            ? primary
-            : Theme.of(context).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
-    Widget iconWidget = Icon(icon, size: _ToolbarStyle.iconSize, color: iconColor);
+        ? primary
+        : Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
+    Widget iconWidget = Icon(
+      icon,
+      size: _ToolbarStyle.iconSize,
+      color: iconColor,
+    );
     if (iconFlip) {
       iconWidget = Transform.scale(scaleX: -1, child: iconWidget);
     }
@@ -2889,7 +3147,9 @@ class _OverlayPopupButton extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final iconColor = active
         ? primary
-        : Theme.of(context).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
+        : Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
     return PopupMenuButton<String>(
       tooltip: tooltip,
       onSelected: onSelected,
@@ -2915,6 +3175,7 @@ class _MenuRow extends StatelessWidget {
   const _MenuRow(this.icon, this.label, {this.active = false});
   final IconData icon;
   final String label;
+
   /// When true a check icon is shown on the right, indicating active state.
   final bool active;
 
@@ -2922,13 +3183,22 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = active
         ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
+        : Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 18, color: color),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: active ? TextStyle(color: color, fontWeight: FontWeight.w600) : null)),
+        Expanded(
+          child: Text(
+            label,
+            style: active
+                ? TextStyle(color: color, fontWeight: FontWeight.w600)
+                : null,
+          ),
+        ),
         if (active) ...[
           const SizedBox(width: 8),
           Icon(Icons.check, size: 16, color: color),

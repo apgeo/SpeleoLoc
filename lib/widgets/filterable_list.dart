@@ -19,7 +19,10 @@ class FilterableListTheme {
     this.checkboxActiveColor,
     this.activeToggleColor,
     this.actionIconSize = 20,
-    this.rowPadding = const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
+    this.rowPadding = const EdgeInsets.symmetric(
+      vertical: 6.0,
+      horizontal: 4.0,
+    ),
     this.filterFieldDecoration,
   });
 
@@ -49,11 +52,12 @@ class FilterableListItemContext {
   final bool isSelected;
 }
 
-typedef FilterableListItemBuilder<T> = Widget Function(
-  BuildContext context,
-  T item,
-  FilterableListItemContext state,
-);
+typedef FilterableListItemBuilder<T> =
+    Widget Function(
+      BuildContext context,
+      T item,
+      FilterableListItemContext state,
+    );
 
 /// Predicate used to filter items against a (lower-cased, trimmed) query.
 typedef FilterableListPredicate<T> = bool Function(T item, String queryLower);
@@ -91,7 +95,8 @@ class FilterableListSortField<T> {
 
   /// Optional custom group-header renderer. Receives the string returned by
   /// [groupKeyOf]. When null a default grey label is shown.
-  final Widget Function(BuildContext context, String groupKey)? groupHeaderBuilder;
+  final Widget Function(BuildContext context, String groupKey)?
+  groupHeaderBuilder;
 }
 
 /// Resolved sort settings: which primary field, optional secondary field
@@ -137,11 +142,11 @@ class FilterableListSortSpec {
 
   @override
   int get hashCode => Object.hash(
-        primaryFieldId,
-        primaryAscending,
-        secondaryFieldId,
-        secondaryAscending,
-      );
+    primaryFieldId,
+    primaryAscending,
+    secondaryFieldId,
+    secondaryAscending,
+  );
 }
 
 const _unset = Object();
@@ -157,8 +162,7 @@ class FilterableListController<T> extends ChangeNotifier {
   }
 
   /// Items currently visible after filtering and sorting, in display order.
-  List<T> get filteredItems =>
-      _state?._filtered ?? const <Never>[].cast<T>();
+  List<T> get filteredItems => _state?._filtered ?? const <Never>[].cast<T>();
 
   /// Currently active sort specification (if any).
   FilterableListSortSpec? get currentSort => _state?._sort.value;
@@ -169,10 +173,10 @@ class FilterableListController<T> extends ChangeNotifier {
   /// Items the user has ticked. Always a subset of [filteredItems] view —
   /// items that are filtered-out stay selected internally but are not
   /// reachable for bulk actions until the filter changes.
-  List<T> get selectedItems => _state?._selectedItems() ?? const <Never>[].cast<T>();
+  List<T> get selectedItems =>
+      _state?._selectedItems() ?? const <Never>[].cast<T>();
 
-  Set<Object> get selectedKeys =>
-      _state?._selection.value ?? const <Object>{};
+  Set<Object> get selectedKeys => _state?._selection.value ?? const <Object>{};
 
   bool get selectionMode => _state?._selectionMode.value ?? false;
 
@@ -233,10 +237,16 @@ class FilterableList<T> extends StatefulWidget {
     this.initialSort,
     this.onSortChanged,
     this.persistKey,
-  })  : assert(filter != null || searchableText != null || enableFilter == false,
-            'Provide either `filter` or `searchableText` when filtering is enabled.'),
-        assert(enableBulkDelete == false || onBulkDelete != null || enableSelection == false,
-            'Provide `onBulkDelete` when `enableBulkDelete` is true.');
+  }) : assert(
+         filter != null || searchableText != null || enableFilter == false,
+         'Provide either `filter` or `searchableText` when filtering is enabled.',
+       ),
+       assert(
+         enableBulkDelete == false ||
+             onBulkDelete != null ||
+             enableSelection == false,
+         'Provide `onBulkDelete` when `enableBulkDelete` is true.',
+       );
 
   /// Source of truth for the list. Recomputed filter when this changes.
   final List<T> items;
@@ -310,13 +320,13 @@ class FilterableList<T> extends StatefulWidget {
   final String? bulkDeleteConfirmMessage;
 
   final void Function(Set<Object> selectedKeys, List<T> selectedItems)?
-      onSelectionChanged;
+  onSelectionChanged;
   final ValueChanged<bool>? onSelectionModeChanged;
 
   /// Optional decoration wrapper around each row (e.g. background color
   /// for "entrance" places). Receives the inner row widget.
   final Widget Function(BuildContext context, T item, Widget child)?
-      itemDecoration;
+  itemDecoration;
 
   /// Optional row separator. Defaults to a 1px grey divider.
   final IndexedWidgetBuilder? separatorBuilder;
@@ -351,8 +361,9 @@ final class _ListDataRow extends _ListDisplayItem {
 }
 
 class _FilterableListState<T> extends State<FilterableList<T>> {
-  late final ValueNotifier<Set<Object>> _selection =
-      ValueNotifier<Set<Object>>(<Object>{});
+  late final ValueNotifier<Set<Object>> _selection = ValueNotifier<Set<Object>>(
+    <Object>{},
+  );
   late final ValueNotifier<bool> _selectionMode = ValueNotifier<bool>(false);
   late final ValueNotifier<String> _query = ValueNotifier<String>('');
   late final ValueNotifier<bool> _filterVisible = ValueNotifier<bool>(false);
@@ -364,6 +375,7 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
   /// Cached filtered+sorted view; rebuilt only when items / query /
   /// predicate / sort change.
   List<T> _filtered = const [];
+
   /// Flat list of displayable items: group headers interleaved with data rows.
   List<_ListDisplayItem> _displayItems = const [];
   String _filteredQuery = '\u0000'; // sentinel
@@ -467,12 +479,15 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
       final qLower = q.toLowerCase();
       final pred = widget.filter;
       if (pred != null) {
-        _filtered = [for (final it in sorted) if (pred(it, qLower)) it];
+        _filtered = [
+          for (final it in sorted)
+            if (pred(it, qLower)) it,
+        ];
       } else {
         final getText = widget.searchableText!;
         _filtered = [
           for (final it in sorted)
-            if (getText(it).toLowerCase().contains(qLower)) it
+            if (getText(it).toLowerCase().contains(qLower)) it,
         ];
       }
     }
@@ -584,7 +599,10 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
   List<T> _selectedItems() {
     final sel = _selection.value;
     if (sel.isEmpty) return const [];
-    return [for (final it in widget.items) if (sel.contains(widget.keyOf(it))) it];
+    return [
+      for (final it in widget.items)
+        if (sel.contains(widget.keyOf(it))) it,
+    ];
   }
 
   void _emitSelectionChanged() {
@@ -672,7 +690,8 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
             controller: widget.scrollController,
             padding: widget.padding,
             itemCount: _displayItems.length,
-            itemBuilder: (ctx, i) => _buildDisplayItem(ctx, i, theme, dividerColor),
+            itemBuilder: (ctx, i) =>
+                _buildDisplayItem(ctx, i, theme, dividerColor),
           );
 
     return Column(
@@ -682,12 +701,14 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
         ValueListenableBuilder<bool>(
           valueListenable: _filterVisible,
           builder: (context, visible, _) {
-            if (!visible || !widget.enableFilter) return const SizedBox.shrink();
+            if (!visible || !widget.enableFilter)
+              return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: TextField(
                 controller: _filterController,
-                decoration: theme.filterFieldDecoration ??
+                decoration:
+                    theme.filterFieldDecoration ??
                     InputDecoration(
                       labelText:
                           widget.filterHintText ?? LocServ.inst.t('filter'),
@@ -703,7 +724,11 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
   }
 
   Widget _buildDisplayItem(
-      BuildContext context, int displayIdx, FilterableListTheme theme, Color? dividerColor) {
+    BuildContext context,
+    int displayIdx,
+    FilterableListTheme theme,
+    Color? dividerColor,
+  ) {
     final di = _displayItems[displayIdx];
     if (di is _ListGroupHeader) {
       return _buildGroupHeader(context, di.key);
@@ -745,10 +770,10 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
 
   Widget _buildHeader(FilterableListTheme theme) {
     final loc = LocServ.inst;
-    final labelStyle = theme.headerLabelStyle ??
+    final labelStyle =
+        theme.headerLabelStyle ??
         TextStyle(fontSize: 14, color: Colors.grey[600]);
-    final destructiveColor =
-        theme.bulkActionDestructiveColor ?? Colors.red;
+    final destructiveColor = theme.bulkActionDestructiveColor ?? Colors.red;
 
     // Item count suffix appended to the header label:
     //   no active filter  →  "(45)"
@@ -766,7 +791,8 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
           : Colors.grey[500],
     );
 
-    final Widget? baseLabel = widget.headerLabel ??
+    final Widget? baseLabel =
+        widget.headerLabel ??
         (widget.headerLabelText != null
             ? Text(widget.headerLabelText!, style: labelStyle)
             : null);
@@ -806,29 +832,34 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
               valueListenable: _selectionMode,
               builder: (context, mode, _) {
                 if (!mode) return const SizedBox.shrink();
-                return Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(
-                    icon: Icon(Icons.select_all, size: theme.actionIconSize),
-                    tooltip: loc.t('select_all'),
-                    onPressed: _selectAllVisible,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.flip, size: theme.actionIconSize),
-                    tooltip: loc.t('invert_selection'),
-                    onPressed: _invertVisible,
-                  ),
-                  if (widget.enableBulkDelete)
-                    ValueListenableBuilder<Set<Object>>(
-                      valueListenable: _selection,
-                      builder: (context, sel, _) => IconButton(
-                        icon: Icon(Icons.delete_sweep,
-                            size: theme.actionIconSize),
-                        tooltip: loc.t('delete_selected'),
-                        color: destructiveColor,
-                        onPressed: sel.isEmpty ? null : _confirmAndBulkDelete,
-                      ),
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.select_all, size: theme.actionIconSize),
+                      tooltip: loc.t('select_all'),
+                      onPressed: _selectAllVisible,
                     ),
-                ]);
+                    IconButton(
+                      icon: Icon(Icons.flip, size: theme.actionIconSize),
+                      tooltip: loc.t('invert_selection'),
+                      onPressed: _invertVisible,
+                    ),
+                    if (widget.enableBulkDelete)
+                      ValueListenableBuilder<Set<Object>>(
+                        valueListenable: _selection,
+                        builder: (context, sel, _) => IconButton(
+                          icon: Icon(
+                            Icons.delete_sweep,
+                            size: theme.actionIconSize,
+                          ),
+                          tooltip: loc.t('delete_selected'),
+                          color: destructiveColor,
+                          onPressed: sel.isEmpty ? null : _confirmAndBulkDelete,
+                        ),
+                      ),
+                  ],
+                );
               },
             ),
           if (widget.enableSelection)
@@ -841,7 +872,7 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
                   size: theme.actionIconSize,
                   color: mode
                       ? (theme.activeToggleColor ??
-                          Theme.of(context).colorScheme.primary)
+                            Theme.of(context).colorScheme.primary)
                       : null,
                 ),
                 tooltip: loc.t('select_mode'),
@@ -860,7 +891,7 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
                 tooltip: loc.t('sort_by'),
                 onPressed: _openSortPicker,
               ),
-            ),            
+            ),
           if (widget.enableFilter)
             ValueListenableBuilder<bool>(
               valueListenable: _filterVisible,
@@ -1031,10 +1062,7 @@ class _SelectableRowState<T> extends State<_SelectableRow<T>> {
           widget.onTapItem?.call(widget.item);
         }
       },
-      child: Padding(
-        padding: widget.theme.rowPadding,
-        child: content,
-      ),
+      child: Padding(padding: widget.theme.rowPadding, child: content),
     );
 
     if (_isSelected && widget.theme.selectedRowColor != null) {
@@ -1074,14 +1102,14 @@ class _ActiveIconButton extends StatelessWidget {
   final double size;
   final String tooltip;
   final VoidCallback? onPressed;
+
   /// Override the tint colour; falls back to the theme's primary colour.
   final Color? activeColor;
   final Key? buttonKey;
 
   @override
   Widget build(BuildContext context) {
-    final Color accent =
-        activeColor ?? Theme.of(context).colorScheme.primary;
+    final Color accent = activeColor ?? Theme.of(context).colorScheme.primary;
 
     return Tooltip(
       message: tooltip,
@@ -1107,11 +1135,7 @@ class _ActiveIconButton extends StatelessWidget {
                   color: Colors.transparent,
                   borderRadius: BorderRadius.zero,
                 ),
-          child: Icon(
-            icon,
-            size: size,
-            color: active ? accent : null,
-          ),
+          child: Icon(icon, size: size, color: active ? accent : null),
         ),
       ),
     );
@@ -1160,7 +1184,8 @@ class _SortPickerDialogState extends State<_SortPickerDialog> {
     if (init != null && ids.contains(init.primaryFieldId)) {
       _primary = init.primaryFieldId;
       _primaryAsc = init.primaryAscending;
-      if (init.secondaryFieldId != null && ids.contains(init.secondaryFieldId!)) {
+      if (init.secondaryFieldId != null &&
+          ids.contains(init.secondaryFieldId!)) {
         _secondary = init.secondaryFieldId;
         _secondaryAsc = init.secondaryAscending;
       }
@@ -1244,7 +1269,9 @@ class _SortPickerDialogState extends State<_SortPickerDialog> {
               onPressed: widget.initial == null
                   ? null
                   : () => Navigator.pop(
-                      context, const _SortPickerResult(spec: null, cleared: true)),
+                      context,
+                      const _SortPickerResult(spec: null, cleared: true),
+                    ),
               child: Text(loc.t('sort_clear')),
             ),
             const Spacer(),
@@ -1256,16 +1283,16 @@ class _SortPickerDialogState extends State<_SortPickerDialog> {
               onPressed: _primary == null
                   ? null
                   : () => Navigator.pop(
-                        context,
-                        _SortPickerResult(
-                          spec: FilterableListSortSpec(
-                            primaryFieldId: _primary!,
-                            primaryAscending: _primaryAsc,
-                            secondaryFieldId: _secondary,
-                            secondaryAscending: _secondaryAsc,
-                          ),
+                      context,
+                      _SortPickerResult(
+                        spec: FilterableListSortSpec(
+                          primaryFieldId: _primary!,
+                          primaryAscending: _primaryAsc,
+                          secondaryFieldId: _secondary,
+                          secondaryAscending: _secondaryAsc,
                         ),
                       ),
+                    ),
               child: Text(loc.t('ok')),
             ),
           ],

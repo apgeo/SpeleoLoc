@@ -19,16 +19,20 @@ class ConfigKey {
   // FTP sync (feat/sync-v2, Phase A).
   /// JSON array of [FtpProfile] — see `lib/services/sync/ftp/ftp_profile.dart`.
   static const String ftpProfiles = 'ftp_profiles';
+
   /// UUID of the profile selected as default for one-tap sync.
   static const String ftpDefaultProfileUuid = 'ftp_default_profile_uuid';
+
   /// JSON map `{ archiveFilename: iso8601Timestamp }` — filenames already
   /// imported from the remote (so future downloads skip them).
   static const String ftpSeenArchives = 'ftp_seen_archives';
+
   /// JSON map `{ profileUuid: timestampMs }` — the wall-clock time of the
   /// most recent successful upload to that profile. Used to decide whether
   /// a fresh upload is needed (local has unsynced changes when the latest
   /// `change_log.changed_at` is newer than this timestamp).
   static const String ftpLastUploadAt = 'ftp_last_upload_at';
+
   /// Active trip log generation method id (see [TripLogMethod]).
   static const String tripLogMethod = 'trip_log_method';
 
@@ -36,11 +40,14 @@ class ConfigKey {
   /// Selected PCI assignment strategy id (e.g. `global_hierarchical`,
   /// `per_cave_sequential`, `per_area_sequential`). Synced.
   static const String placeCodeStrategy = 'place_code_strategy';
+
   /// JSON-encoded strategy-specific configuration (width, separator, alphabet
   /// hint, etc.). Synced.
   static const String placeCodeStrategyConfig = 'place_code_strategy_config';
+
   /// QCRI mode (`plain` or `hash`). Synced.
   static const String qcriMode = 'qcri_mode';
+
   /// JSON-encoded QCRI hash configuration (length, retry settings). Synced.
   static const String qcriHashConfig = 'qcri_hash_config';
 
@@ -133,7 +140,8 @@ class CurrentUserService {
     final cur = currentUserUuid.value;
     if (cur != null) return cur;
     final existing = await _users.findByUsername('system');
-    final id = existing?.uuid ??
+    final id =
+        existing?.uuid ??
         await _users.addUser(
           username: 'system',
           firstName: 'System',

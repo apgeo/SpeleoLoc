@@ -57,9 +57,9 @@ class UserRepository implements IUserRepository {
 
   @override
   Stream<List<User>> watchUsers() {
-    return (_database.select(_database.users)
-          ..where((u) => u.deletedAt.isNull()))
-        .watch();
+    return (_database.select(
+      _database.users,
+    )..where((u) => u.deletedAt.isNull())).watch();
   }
 
   @override
@@ -91,7 +91,9 @@ class UserRepository implements IUserRepository {
       final newUuid = Uuid.v7();
       // Self-authored if authorUserUuid is null (first-ever user).
       final author = authorUserUuid ?? newUuid;
-      await _database.into(_database.users).insert(
+      await _database
+          .into(_database.users)
+          .insert(
             UsersCompanion.insert(
               uuid: newUuid,
               username: username,
@@ -130,16 +132,18 @@ class UserRepository implements IUserRepository {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       final old = await findByUuid(uuid);
-      await (_database.update(_database.users)
-            ..where((u) => u.uuid.equalsValue(uuid)))
-          .write(UsersCompanion(
-        username: Value(username),
-        firstName: Value(firstName),
-        lastName: Value(lastName),
-        details: Value(details),
-        updatedAt: Value(now),
-        lastModifiedByUserUuid: Value(authorUserUuid),
-      ));
+      await (_database.update(
+        _database.users,
+      )..where((u) => u.uuid.equalsValue(uuid))).write(
+        UsersCompanion(
+          username: Value(username),
+          firstName: Value(firstName),
+          lastName: Value(lastName),
+          details: Value(details),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(authorUserUuid),
+        ),
+      );
       if (old != null) {
         await _logger().logUpdate(
           'users',
@@ -165,17 +169,18 @@ class UserRepository implements IUserRepository {
   }
 
   @override
-  Future<void> softDeleteUser(Uuid uuid,
-      {required Uuid authorUserUuid}) async {
+  Future<void> softDeleteUser(Uuid uuid, {required Uuid authorUserUuid}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final old = await findByUuid(uuid);
-    await (_database.update(_database.users)
-          ..where((u) => u.uuid.equalsValue(uuid)))
-        .write(UsersCompanion(
-      deletedAt: Value(now),
-      updatedAt: Value(now),
-      lastModifiedByUserUuid: Value(authorUserUuid),
-    ));
+    await (_database.update(
+      _database.users,
+    )..where((u) => u.uuid.equalsValue(uuid))).write(
+      UsersCompanion(
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+        lastModifiedByUserUuid: Value(authorUserUuid),
+      ),
+    );
     if (old != null) {
       await _logger().logDelete(
         'users',

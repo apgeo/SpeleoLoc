@@ -14,8 +14,7 @@ class SettingsHelper {
   static Future<Map<String, dynamic>> loadJsonConfig(
     String configKey,
     Map<String, dynamic> Function() defaultConfig,
-  ) =>
-      configurationRepository.readJson(configKey, defaults: defaultConfig);
+  ) => configurationRepository.readJson(configKey, defaults: defaultConfig);
 
   /// Persist a JSON config map under the given [configKey] (upsert).
   ///
@@ -26,8 +25,7 @@ class SettingsHelper {
     String configKey,
     Map<String, dynamic> cfg, {
     bool isSynced = false,
-  }) =>
-      configurationRepository.writeJson(configKey, cfg, isSynced: isSynced);
+  }) => configurationRepository.writeJson(configKey, cfg, isSynced: isSynced);
 
   /// Load a plain string value for the given [configKey].
   /// Returns [defaultValue] when no row exists.

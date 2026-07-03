@@ -25,11 +25,7 @@ abstract class IConfigurationRepository {
   /// [isSynced] is honoured **only when inserting a new row**; on conflict
   /// the existing row's `is_synced` flag is preserved. This matches the
   /// historical behaviour of `CurrentUserService._writeConfig`.
-  Future<void> writeString(
-    String key,
-    String value, {
-    bool isSynced = false,
-  });
+  Future<void> writeString(String key, String value, {bool isSynced = false});
 
   /// Decodes the value stored under [key] as JSON.
   ///
@@ -71,9 +67,9 @@ class ConfigurationRepository implements IConfigurationRepository {
 
   @override
   Future<String?> readString(String key) async {
-    final row = await (_db.select(_db.configurations)
-          ..where((c) => c.title.equals(key)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.configurations,
+    )..where((c) => c.title.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
@@ -118,14 +114,13 @@ class ConfigurationRepository implements IConfigurationRepository {
     String key,
     Map<String, dynamic> value, {
     bool isSynced = false,
-  }) =>
-      writeString(key, jsonEncode(value), isSynced: isSynced);
+  }) => writeString(key, jsonEncode(value), isSynced: isSynced);
 
   @override
   Future<void> delete(String key) async {
-    await (_db.delete(_db.configurations)
-          ..where((c) => c.title.equals(key)))
-        .go();
+    await (_db.delete(
+      _db.configurations,
+    )..where((c) => c.title.equals(key))).go();
   }
 
   @override

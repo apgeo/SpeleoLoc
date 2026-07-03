@@ -20,7 +20,8 @@ class _ScriptedPrompts {
 
   _ScriptedPrompts(this.answers);
 
-  OverwritePromptCallback get callback => ({
+  OverwritePromptCallback get callback =>
+      ({
         required cavePlaceUuid,
         required field,
         required existing,
@@ -39,14 +40,15 @@ class _ScriptedPrompts {
       };
 }
 
-OverwritePromptCallback _failOnPrompt = ({
-  required cavePlaceUuid,
-  required field,
-  required existing,
-  required computed,
-}) async {
-  throw StateError('Unexpected prompt: $field $existing -> $computed');
-};
+OverwritePromptCallback _failOnPrompt =
+    ({
+      required cavePlaceUuid,
+      required field,
+      required existing,
+      required computed,
+    }) async {
+      throw StateError('Unexpected prompt: $field $existing -> $computed');
+    };
 
 void main() {
   late AppDatabase db;
@@ -76,7 +78,9 @@ void main() {
     bool isMain = false,
   }) async {
     final id = Uuid.v7();
-    await db.into(db.cavePlaces).insert(
+    await db
+        .into(db.cavePlaces)
+        .insert(
           CavePlacesCompanion.insert(
             uuid: id,
             title: title,
@@ -108,47 +112,53 @@ void main() {
     );
 
     caveUuid = Uuid.v7();
-    await db.into(db.caves).insert(
-          CavesCompanion.insert(uuid: caveUuid, title: 'C'),
-        );
+    await db
+        .into(db.caves)
+        .insert(CavesCompanion.insert(uuid: caveUuid, title: 'C'));
   });
 
   tearDown(() async => db.close());
 
-  Future<CavePlace> reload(Uuid id) async =>
-      (db.select(db.cavePlaces)..where((cp) => cp.uuid.equalsValue(id)))
-          .getSingle();
+  Future<CavePlace> reload(Uuid id) async => (db.select(
+    db.cavePlaces,
+  )..where((cp) => cp.uuid.equalsValue(id))).getSingle();
 
-  test('per-cave scope writes PCI and QCRI to empty places (no prompts)',
-      () async {
-    final p1 = await addPlace('a');
-    final p2 = await addPlace('b');
+  test(
+    'per-cave scope writes PCI and QCRI to empty places (no prompts)',
+    () async {
+      final p1 = await addPlace('a');
+      final p2 = await addPlace('b');
 
-    final summary = await runner.run(
-      scope: PerCaveScope(caveUuid),
-      onPrompt: _failOnPrompt,
-    );
+      final summary = await runner.run(
+        scope: PerCaveScope(caveUuid),
+        onPrompt: _failOnPrompt,
+      );
 
-    expect(summary.updated, 2);
-    expect(summary.skipped, isEmpty);
-    expect(summary.refused, isEmpty);
-    expect(summary.aborted, isEmpty);
-    expect(summary.cancelled, isFalse);
+      expect(summary.updated, 2);
+      expect(summary.skipped, isEmpty);
+      expect(summary.refused, isEmpty);
+      expect(summary.aborted, isEmpty);
+      expect(summary.cancelled, isFalse);
 
-    final r1 = await reload(p1);
-    final r2 = await reload(p2);
-    expect(r1.placeCodeIdentifier, isNotNull);
-    expect(r1.qrCodeResourceIdentifier, r1.placeCodeIdentifier); // mirror mode
-    expect(r2.placeCodeIdentifier, isNotNull);
-    expect(r2.placeCodeIdentifier, isNot(r1.placeCodeIdentifier));
-  });
+      final r1 = await reload(p1);
+      final r2 = await reload(p2);
+      expect(r1.placeCodeIdentifier, isNotNull);
+      expect(
+        r1.qrCodeResourceIdentifier,
+        r1.placeCodeIdentifier,
+      ); // mirror mode
+      expect(r2.placeCodeIdentifier, isNotNull);
+      expect(r2.placeCodeIdentifier, isNot(r1.placeCodeIdentifier));
+    },
+  );
 
   test('"keep" decision on existing PCI does not overwrite', () async {
     final p1 = await addPlace('a', pci: 'KEEP-ME', qcri: 'KEEP-ME');
 
-    final prompts = _ScriptedPrompts(
-      [OverwriteDecision.keep, OverwriteDecision.keep],
-    );
+    final prompts = _ScriptedPrompts([
+      OverwriteDecision.keep,
+      OverwriteDecision.keep,
+    ]);
     final summary = await runner.run(
       scope: PerCaveScope(caveUuid),
       onPrompt: prompts.callback,
@@ -164,59 +174,63 @@ void main() {
     expect(summary.updated, 0);
   });
 
-  test('"keepAll" decision applies to subsequent places of same field',
-      () async {
-    final p1 = await addPlace('a', pci: 'OLD1', qcri: 'OLD1');
-    final p2 = await addPlace('b', pci: 'OLD2', qcri: 'OLD2');
+  test(
+    '"keepAll" decision applies to subsequent places of same field',
+    () async {
+      final p1 = await addPlace('a', pci: 'OLD1', qcri: 'OLD1');
+      final p2 = await addPlace('b', pci: 'OLD2', qcri: 'OLD2');
 
-    final prompts = _ScriptedPrompts([
-      // First prompt: PCI on p1 → keepAll.
-      OverwriteDecision.keepAll,
-      // First prompt: QCRI on p1 → keepAll.
-      OverwriteDecision.keepAll,
-    ]);
-    final summary = await runner.run(
-      scope: PerCaveScope(caveUuid),
-      onPrompt: prompts.callback,
-    );
+      final prompts = _ScriptedPrompts([
+        // First prompt: PCI on p1 → keepAll.
+        OverwriteDecision.keepAll,
+        // First prompt: QCRI on p1 → keepAll.
+        OverwriteDecision.keepAll,
+      ]);
+      final summary = await runner.run(
+        scope: PerCaveScope(caveUuid),
+        onPrompt: prompts.callback,
+      );
 
-    // No further prompts for p2.
-    expect(prompts.seen.length, 2);
-    expect(summary.updated, 0);
-    final r1 = await reload(p1);
-    final r2 = await reload(p2);
-    expect(r1.placeCodeIdentifier, 'OLD1');
-    expect(r2.placeCodeIdentifier, 'OLD2');
-    expect(r1.qrCodeResourceIdentifier, 'OLD1');
-    expect(r2.qrCodeResourceIdentifier, 'OLD2');
-  });
+      // No further prompts for p2.
+      expect(prompts.seen.length, 2);
+      expect(summary.updated, 0);
+      final r1 = await reload(p1);
+      final r2 = await reload(p2);
+      expect(r1.placeCodeIdentifier, 'OLD1');
+      expect(r2.placeCodeIdentifier, 'OLD2');
+      expect(r1.qrCodeResourceIdentifier, 'OLD1');
+      expect(r2.qrCodeResourceIdentifier, 'OLD2');
+    },
+  );
 
-  test('"replaceAll" decision overwrites subsequent places without prompting',
-      () async {
-    final p1 = await addPlace('a', pci: 'OLD1', qcri: 'OLD1');
-    final p2 = await addPlace('b', pci: 'OLD2', qcri: 'OLD2');
+  test(
+    '"replaceAll" decision overwrites subsequent places without prompting',
+    () async {
+      final p1 = await addPlace('a', pci: 'OLD1', qcri: 'OLD1');
+      final p2 = await addPlace('b', pci: 'OLD2', qcri: 'OLD2');
 
-    final prompts = _ScriptedPrompts([
-      // PCI prompt on p1 → replaceAll
-      OverwriteDecision.replaceAll,
-      // QCRI prompt on p1 → replaceAll
-      OverwriteDecision.replaceAll,
-    ]);
-    final summary = await runner.run(
-      scope: PerCaveScope(caveUuid),
-      onPrompt: prompts.callback,
-    );
+      final prompts = _ScriptedPrompts([
+        // PCI prompt on p1 → replaceAll
+        OverwriteDecision.replaceAll,
+        // QCRI prompt on p1 → replaceAll
+        OverwriteDecision.replaceAll,
+      ]);
+      final summary = await runner.run(
+        scope: PerCaveScope(caveUuid),
+        onPrompt: prompts.callback,
+      );
 
-    expect(prompts.seen.length, 2);
-    expect(summary.updated, 2);
-    final r1 = await reload(p1);
-    final r2 = await reload(p2);
-    expect(r1.placeCodeIdentifier, isNot('OLD1'));
-    expect(r2.placeCodeIdentifier, isNot('OLD2'));
-    // Mirror mode → QCRI follows PCI.
-    expect(r1.qrCodeResourceIdentifier, r1.placeCodeIdentifier);
-    expect(r2.qrCodeResourceIdentifier, r2.placeCodeIdentifier);
-  });
+      expect(prompts.seen.length, 2);
+      expect(summary.updated, 2);
+      final r1 = await reload(p1);
+      final r2 = await reload(p2);
+      expect(r1.placeCodeIdentifier, isNot('OLD1'));
+      expect(r2.placeCodeIdentifier, isNot('OLD2'));
+      // Mirror mode → QCRI follows PCI.
+      expect(r1.qrCodeResourceIdentifier, r1.placeCodeIdentifier);
+      expect(r2.qrCodeResourceIdentifier, r2.placeCodeIdentifier);
+    },
+  );
 
   test('"cancelBatch" stops the run mid-way', () async {
     final p1 = await addPlace('a', pci: 'OLD1', qcri: 'OLD1');
@@ -237,18 +251,32 @@ void main() {
   test('PerAreaScope only iterates caves of the surface area', () async {
     final areaA = Uuid.v7();
     final areaB = Uuid.v7();
-    await db.into(db.surfaceAreas).insert(
-          SurfaceAreasCompanion.insert(uuid: areaA, title: 'A'),
-        );
-    await db.into(db.surfaceAreas).insert(
-          SurfaceAreasCompanion.insert(uuid: areaB, title: 'B'),
-        );
+    await db
+        .into(db.surfaceAreas)
+        .insert(SurfaceAreasCompanion.insert(uuid: areaA, title: 'A'));
+    await db
+        .into(db.surfaceAreas)
+        .insert(SurfaceAreasCompanion.insert(uuid: areaB, title: 'B'));
     final caveA = Uuid.v7();
     final caveB = Uuid.v7();
-    await db.into(db.caves).insert(CavesCompanion.insert(
-        uuid: caveA, title: 'CA', surfaceAreaUuid: Value(areaA)));
-    await db.into(db.caves).insert(CavesCompanion.insert(
-        uuid: caveB, title: 'CB', surfaceAreaUuid: Value(areaB)));
+    await db
+        .into(db.caves)
+        .insert(
+          CavesCompanion.insert(
+            uuid: caveA,
+            title: 'CA',
+            surfaceAreaUuid: Value(areaA),
+          ),
+        );
+    await db
+        .into(db.caves)
+        .insert(
+          CavesCompanion.insert(
+            uuid: caveB,
+            title: 'CB',
+            surfaceAreaUuid: Value(areaB),
+          ),
+        );
     final pA = await addPlace('pa', cave: caveA);
     final pB = await addPlace('pb', cave: caveB);
 
@@ -282,10 +310,7 @@ void main() {
   test('strategy skip is recorded in summary.skipped', () async {
     // Switch to per_area_sequential — cave has no surface area, so the
     // strategy returns Skipped(caveMissingSurfaceArea).
-    await writeConfig(
-      ConfigKey.placeCodeStrategy,
-      'per_area_sequential',
-    );
+    await writeConfig(ConfigKey.placeCodeStrategy, 'per_area_sequential');
     await addPlace('a');
 
     final summary = await runner.run(
@@ -299,22 +324,23 @@ void main() {
 
   test('writes update change_log for affected columns', () async {
     final p1 = await addPlace('a');
-    await runner.run(
-      scope: PerCaveScope(caveUuid),
-      onPrompt: _failOnPrompt,
-    );
-    final logs = await (db.select(db.changeLog)
-          ..where((c) => c.entityTable.equals('cave_places'))
-          ..where((c) => c.entityUuid.equalsValue(p1)))
-        .get();
+    await runner.run(scope: PerCaveScope(caveUuid), onPrompt: _failOnPrompt);
+    final logs =
+        await (db.select(db.changeLog)
+              ..where((c) => c.entityTable.equals('cave_places'))
+              ..where((c) => c.entityUuid.equalsValue(p1)))
+            .get();
     expect(logs, isNotEmpty);
-    final fields = await (db.select(db.changeLogField)
-          ..where((f) => f.changeUuid.isInValues(logs.map((l) => l.uuid))))
-        .get();
+    final fields = await (db.select(
+      db.changeLogField,
+    )..where((f) => f.changeUuid.isInValues(logs.map((l) => l.uuid)))).get();
     final names = fields.map((f) => f.fieldName).toSet();
     expect(
       names,
-      containsAll(<String>{'place_code_identifier', 'qr_code_resource_identifier'}),
+      containsAll(<String>{
+        'place_code_identifier',
+        'qr_code_resource_identifier',
+      }),
     );
   });
 }

@@ -53,7 +53,12 @@ class MapViewerPage extends StatefulWidget {
   State<MapViewerPage> createState() => _MapViewerPageState();
 }
 
-class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProviderStateMixin, AppBarMenuMixin<MapViewerPage>, ProductTourMixin<MapViewerPage>, RasterMapScreenMixin<MapViewerPage> {
+class _MapViewerPageState extends State<MapViewerPage>
+    with
+        SingleTickerProviderStateMixin,
+        AppBarMenuMixin<MapViewerPage>,
+        ProductTourMixin<MapViewerPage>,
+        RasterMapScreenMixin<MapViewerPage> {
   static final _log = AppLogger.of('MapViewerPage');
   @override
   String get tourId => 'map_viewer';
@@ -61,9 +66,21 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'map', titleLocKey: 'tour_map_viewer_map_title', bodyLocKey: 'tour_map_viewer_map_body'),
-    TourStepDef(keyId: 'navbar', titleLocKey: 'tour_map_viewer_navbar_title', bodyLocKey: 'tour_map_viewer_navbar_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_map_viewer_menu_title', bodyLocKey: 'tour_map_viewer_menu_body'),
+    TourStepDef(
+      keyId: 'map',
+      titleLocKey: 'tour_map_viewer_map_title',
+      bodyLocKey: 'tour_map_viewer_map_body',
+    ),
+    TourStepDef(
+      keyId: 'navbar',
+      titleLocKey: 'tour_map_viewer_navbar_title',
+      bodyLocKey: 'tour_map_viewer_navbar_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_map_viewer_menu_title',
+      bodyLocKey: 'tour_map_viewer_menu_body',
+    ),
   ];
 
   CavePlace? _cavePlace;
@@ -74,14 +91,15 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
 
   static const bool SHOW_CAVE_PLACE_ACTIONS_IN_APP_BAR = false;
 
-  final RasterMapPlacePointEditorController _editorController = RasterMapPlacePointEditorController(
-    showLegend: false,
-    showZoomControls: true,
-    gestureZoomEnabled: true,
-    keepZoomOnNavigation: true,
-    autoZoomToPoints: false,
-    initialZoomLevel: 1.0,
-  );
+  final RasterMapPlacePointEditorController _editorController =
+      RasterMapPlacePointEditorController(
+        showLegend: false,
+        showZoomControls: true,
+        gestureZoomEnabled: true,
+        keepZoomOnNavigation: true,
+        autoZoomToPoints: false,
+        initialZoomLevel: 1.0,
+      );
   final GlobalKey _childKey = GlobalKey();
 
   RawImageData? _decodedImage;
@@ -109,10 +127,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   bool _isFullScreen = false;
 
   // Key for the RasterMapNavBar so we can programmatically scroll items.
-  final GlobalKey<RasterMapNavBarState> _navBarKey = GlobalKey<RasterMapNavBarState>();
+  final GlobalKey<RasterMapNavBarState> _navBarKey =
+      GlobalKey<RasterMapNavBarState>();
 
-
-  
   @override
   void initState() {
     super.initState();
@@ -127,7 +144,10 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   }
 
   Future<void> _loadCompactNavState() async {
-    final val = await SettingsHelper.loadStringConfig(compactNavBarKey, 'false');
+    final val = await SettingsHelper.loadStringConfig(
+      compactNavBarKey,
+      'false',
+    );
     if (mounted) setState(() => _compactNavBar = val == 'true');
   }
 
@@ -154,7 +174,10 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
     }
     final Uuid caveUuid = _cavePlace!.caveUuid;
     _rasterMaps = await rasterMapRepository.getRasterMaps(caveUuid);
-    _rasterMaps = _editorController.sortOption.apply(_rasterMaps, _placesWithDefs);
+    _rasterMaps = _editorController.sortOption.apply(
+      _rasterMaps,
+      _placesWithDefs,
+    );
 
     // default selected place is the one passed in (must be set BEFORE
     // loading definitions so the editor controller is informed about which
@@ -178,7 +201,11 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   Future<void> _loadDefinitionsForSelected() async {
     if (_selectedRasterMap == null || _cavePlace == null) return;
     // get cave places with definitions for this cave and raster map
-    _placesWithDefs = await definitionRepository.getCavePlacesWithDefinitionsForRasterMap(_cavePlace!.caveUuid, _selectedRasterMap!.uuid);
+    _placesWithDefs = await definitionRepository
+        .getCavePlacesWithDefinitionsForRasterMap(
+          _cavePlace!.caveUuid,
+          _selectedRasterMap!.uuid,
+        );
 
     // inform persistent editor controller about the currently selected place
     // (so it can highlight the corresponding cave place marker without
@@ -317,7 +344,10 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
 
   Future<void> _showCavePlacesSortDialog() async {
     _editorController.ensurePlacesListVisible();
-    final option = await showCavePlacesSortDialog(context, _cavePlaceSortOption);
+    final option = await showCavePlacesSortDialog(
+      context,
+      _cavePlaceSortOption,
+    );
     if (option == null || !mounted) return;
     await option.save();
     setState(() {
@@ -329,10 +359,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
   Future<void> _openRasterMapsPage() async {
     final caveUuid = _cavePlace?.caveUuid ?? widget.caveUuid;
     if (caveUuid == null) return;
-    await openRasterMapsPage(
-      caveUuid: caveUuid,
-      onChanged: _loadAll,
-    );
+    await openRasterMapsPage(caveUuid: caveUuid, onChanged: _loadAll);
   }
 
   void _ensurePlaceItemVisible(Uuid cavePlaceUuid) {
@@ -355,8 +382,10 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         onSortCavePlacesRequested: _showCavePlacesSortDialog,
         onSortRasterMapsRequested: _showSortDialog,
         onManageRasterMapsRequested: _openRasterMapsPage,
-        onNavBarShowRasterMapsChanged: (v) => setState(() => _navBarShowMaps = v),
-        onNavBarShowCavePlacesChanged: (v) => setState(() => _navBarShowPlaces = v),
+        onNavBarShowRasterMapsChanged: (v) =>
+            setState(() => _navBarShowMaps = v),
+        onNavBarShowCavePlacesChanged: (v) =>
+            setState(() => _navBarShowPlaces = v),
         onFullScreenChanged: (isFullScreen) {
           setState(() => _isFullScreen = isFullScreen);
         },
@@ -383,7 +412,9 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       selectedPlaceId: _selectedPlaceId,
       imageProviderCache: _imageProviderCache,
       placesListAlignment: widget.placesListAlignment,
-      style: _compactNavBar ? const RasterMapNavBarStyle.compact() : const RasterMapNavBarStyle(),
+      style: _compactNavBar
+          ? const RasterMapNavBarStyle.compact()
+          : const RasterMapNavBarStyle(),
       showRasterMapsList: _navBarShowMaps,
       showCavePlacesList: _navBarShowPlaces,
       onVisiblePlaceUuidsChanged: (uuids) =>
@@ -402,7 +433,8 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
         await _loadDefinitionsForSelected();
       },
       onCavePlaceSelected: (cpwd) {
-        final hasDef = cpwd.definition != null &&
+        final hasDef =
+            cpwd.definition != null &&
             cpwd.definition!.xCoordinate != null &&
             cpwd.definition!.yCoordinate != null;
 
@@ -421,7 +453,7 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
             _editorController.panToPoint(x, y);
           });
         } else {
-            SnackBarService.showWarning(LocServ.inst.t('no_point_defined'));
+          SnackBarService.showWarning(LocServ.inst.t('no_point_defined'));
         }
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -437,67 +469,86 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       extendBody: true,
-      appBar: _isFullScreen ? null : AppBar(
-        titleSpacing: 0,
-        title: Text(
-          _cavePlace?.title ?? LocServ.inst.t('view_raster_maps'),
-          style: const TextStyle(fontSize: 16),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          // compact nav bar toggle
-          IconButton(
-            tooltip: LocServ.inst.t('compact_nav'),
-            icon: Icon(_compactNavBar ? Icons.view_compact : Icons.view_comfortable),
-            onPressed: () {
-              setState(() {
-                _compactNavBar = !_compactNavBar;
-              });
-              SettingsHelper.saveStringConfig(compactNavBarKey, _compactNavBar.toString());
-            },
-          ),
-          if (SHOW_CAVE_PLACE_ACTIONS_IN_APP_BAR) ...[
-            // open cave place documents
-            IconButton(
-              tooltip: LocServ.inst.t('open_documents'),
-              icon: const Icon(Icons.folder_open),
-              onPressed: () {
-                if (_cavePlace == null) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GeofeatureDocumentsPage(
-                      source: DocumentsSource.cavePlace(
-                        cavePlaceUuid: _selectedPlaceId ?? _cavePlace!.uuid,
-                        cavePlaceTitle: _cavePlace!.title,
-                      ),
-                    ),
+      appBar: _isFullScreen
+          ? null
+          : AppBar(
+              titleSpacing: 0,
+              title: Text(
+                _cavePlace?.title ?? LocServ.inst.t('view_raster_maps'),
+                style: const TextStyle(fontSize: 16),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                // compact nav bar toggle
+                IconButton(
+                  tooltip: LocServ.inst.t('compact_nav'),
+                  icon: Icon(
+                    _compactNavBar
+                        ? Icons.view_compact
+                        : Icons.view_comfortable,
                   ),
-                );
-              },
+                  onPressed: () {
+                    setState(() {
+                      _compactNavBar = !_compactNavBar;
+                    });
+                    SettingsHelper.saveStringConfig(
+                      compactNavBarKey,
+                      _compactNavBar.toString(),
+                    );
+                  },
+                ),
+                if (SHOW_CAVE_PLACE_ACTIONS_IN_APP_BAR) ...[
+                  // open cave place documents
+                  IconButton(
+                    tooltip: LocServ.inst.t('open_documents'),
+                    icon: const Icon(Icons.folder_open),
+                    onPressed: () {
+                      if (_cavePlace == null) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GeofeatureDocumentsPage(
+                            source: DocumentsSource.cavePlace(
+                              cavePlaceUuid:
+                                  _selectedPlaceId ?? _cavePlace!.uuid,
+                              cavePlaceTitle: _cavePlace!.title,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  // open cave place button
+                  IconButton(
+                    tooltip: LocServ.inst.t('open_cave_place'),
+                    icon: const Icon(Icons.open_in_new),
+                    onPressed: () {
+                      if (_cavePlace == null) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CavePlacePage(
+                            caveUuid: _cavePlace!.caveUuid,
+                            cavePlaceUuid: _selectedPlaceId ?? _cavePlace!.uuid,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                KeyedSubtree(
+                  key: tourKeys['menu'],
+                  child: buildAppBarMenuButton(),
+                ),
+              ],
             ),
-            // open cave place button
-            IconButton(
-              tooltip: LocServ.inst.t('open_cave_place'),
-              icon: const Icon(Icons.open_in_new),
-              onPressed: () {
-                if (_cavePlace == null) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => CavePlacePage(caveUuid: _cavePlace!.caveUuid, cavePlaceUuid: _selectedPlaceId ?? _cavePlace!.uuid)),
-                );
-              },
-            ),
-          ],
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _selectedRasterMap == null
-              ? Center(child: Text(LocServ.inst.t('no_raster_maps_for_cave')))
-              : Builder(builder: (context) {
+          ? Center(child: Text(LocServ.inst.t('no_raster_maps_for_cave')))
+          : Builder(
+              builder: (context) {
                 if (_imageFile == null) {
                   return Column(
                     children: [
@@ -515,26 +566,31 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
                 // Ensure _decodedImage is loaded; if not, trigger background decode
                 if (_decodedImage == null && !_isDecodingImage) {
                   _isDecodingImage = true;
-                  decodeImageToRawCached(imagePath).then((raw) {
-                    if (mounted) {
-                      setState(() {
-                        _decodedImage = raw;
-                        _isDecodingImage = false;
+                  decodeImageToRawCached(imagePath)
+                      .then((raw) {
+                        if (mounted) {
+                          setState(() {
+                            _decodedImage = raw;
+                            _isDecodingImage = false;
+                          });
+                        }
+                      })
+                      .catchError((_) {
+                        if (mounted) {
+                          setState(() {
+                            _decodedImage = null;
+                            _isDecodingImage = false;
+                          });
+                        }
                       });
-                    }
-                  }).catchError((_) {
-                    if (mounted) {
-                      setState(() {
-                        _decodedImage = null;
-                        _isDecodingImage = false;
-                      });
-                    }
-                  });
                 }
 
                 return Column(
                   children: [
-                    KeyedSubtree(key: tourKeys['navbar'], child: _buildNavBar(context)),
+                    KeyedSubtree(
+                      key: tourKeys['navbar'],
+                      child: _buildNavBar(context),
+                    ),
                     Expanded(
                       key: tourKeys['map'],
                       child: LayoutBuilder(
@@ -542,7 +598,8 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
                           Widget editor = _buildEditorWidget(file, imagePath);
                           // Clip the editor to its layout bounds unless the caller
                           // explicitly allows overflow via `widget.allowEditorOverflow`.
-                          if (!widget.allowEditorOverflow) editor = ClipRect(child: editor);
+                          if (!widget.allowEditorOverflow)
+                            editor = ClipRect(child: editor);
                           return SizedBox.expand(
                             key: _childKey,
                             child: Stack(children: [editor]),
@@ -552,7 +609,8 @@ class _MapViewerPageState extends State<MapViewerPage> with SingleTickerProvider
                     ),
                   ],
                 );
-              }),
+              },
+            ),
     );
   }
 }

@@ -37,8 +37,9 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
   }
 
   Future<void> _load() async {
-    final beacons =
-        await beaconRepository.getBeaconsForPlace(widget.cavePlaceUuid);
+    final beacons = await beaconRepository.getBeaconsForPlace(
+      widget.cavePlaceUuid,
+    );
     if (!mounted) return;
     setState(() {
       _beacons = beacons;
@@ -48,15 +49,18 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
 
   Future<void> _assign() async {
     // Disable identities already registered anywhere in this cave.
-    final caveBeacons =
-        await beaconRepository.getBeaconsForCave(widget.caveUuid);
+    final caveBeacons = await beaconRepository.getBeaconsForCave(
+      widget.caveUuid,
+    );
     if (!mounted) return;
     final registered = {
       for (final b in caveBeacons)
-        '${b.beacon.proximityUuid}/${b.beacon.major}/${b.beacon.minor}'
+        '${b.beacon.proximityUuid}/${b.beacon.major}/${b.beacon.minor}',
     };
-    final picked =
-        await BeaconPickerDialog.show(context, registeredIdentities: registered);
+    final picked = await BeaconPickerDialog.show(
+      context,
+      registeredIdentities: registered,
+    );
     if (picked == null || !mounted) return;
     try {
       await beaconRepository.registerBeacon(
@@ -79,9 +83,11 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('beacon_unassign_confirm', {
-          'identity': '${beacon.major}/${beacon.minor}',
-        })),
+        content: Text(
+          LocServ.inst.t('beacon_unassign_confirm', {
+            'identity': '${beacon.major}/${beacon.minor}',
+          }),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -132,8 +138,10 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
             dense: true,
             contentPadding: const EdgeInsets.only(left: 28),
             leading: const Icon(Icons.wifi_tethering, size: 20),
-            title: Text('major ${b.major} / minor ${b.minor}',
-                style: const TextStyle(fontSize: 13)),
+            title: Text(
+              'major ${b.major} / minor ${b.minor}',
+              style: const TextStyle(fontSize: 13),
+            ),
             subtitle: Text(
               '${b.proximityUuid}'
               '${b.macAddress != null ? '\n${b.macAddress}' : ''}'

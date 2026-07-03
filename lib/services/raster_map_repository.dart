@@ -14,7 +14,12 @@ class RasterMapRepository implements IRasterMapRepository {
   final Clock _clock;
   final _log = AppLogger.of('RasterMapRepository');
 
-  RasterMapRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
+  RasterMapRepository(
+    this._database,
+    this._currentUser,
+    this._logger, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock;
 
   @override
   Future<List<RasterMap>> getRasterMaps(Uuid caveUuid) async {
@@ -30,9 +35,16 @@ class RasterMapRepository implements IRasterMapRepository {
   }
 
   @override
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(Uuid caveUuid, Uuid rasterMapUuid) async {
+  Future<List<CavePlaceWithDefinition>>
+  getCavePlacesWithDefinitionsForRasterMap(
+    Uuid caveUuid,
+    Uuid rasterMapUuid,
+  ) async {
     try {
-      return await _database.getCavePlacesWithDefinitionsForRasterMap(caveUuid, rasterMapUuid);
+      return await _database.getCavePlacesWithDefinitionsForRasterMap(
+        caveUuid,
+        rasterMapUuid,
+      );
     } catch (e, st) {
       _log.severe('Failed to load definitions', e, st);
       throw DbException('Failed to load definitions', cause: e, stackTrace: st);
@@ -65,10 +77,11 @@ class RasterMapRepository implements IRasterMapRepository {
     try {
       final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
-      final old = await (_database.select(_database.rasterMaps)
-            ..where((rm) => rm.uuid.equalsValue(rasterMap.uuid))
-            ..limit(1))
-          .getSingleOrNull();
+      final old =
+          await (_database.select(_database.rasterMaps)
+                ..where((rm) => rm.uuid.equalsValue(rasterMap.uuid))
+                ..limit(1))
+              .getSingleOrNull();
       final updated = rasterMap.copyWith(
         updatedAt: Value(now),
         lastModifiedByUserUuid: Value(author),
@@ -100,7 +113,11 @@ class RasterMapRepository implements IRasterMapRepository {
       }
     } catch (e, st) {
       _log.severe('Failed to update raster map', e, st);
-      throw DbException('Failed to update raster map', cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to update raster map',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -108,11 +125,14 @@ class RasterMapRepository implements IRasterMapRepository {
   @override
   Future<void> deleteRasterMap(Uuid id) async {
     try {
-      final old = await (_database.select(_database.rasterMaps)
-            ..where((rm) => rm.uuid.equalsValue(id))
-            ..limit(1))
-          .getSingleOrNull();
-      await (_database.delete(_database.rasterMaps)..where((rm) => rm.uuid.equalsValue(id))).go();
+      final old =
+          await (_database.select(_database.rasterMaps)
+                ..where((rm) => rm.uuid.equalsValue(id))
+                ..limit(1))
+              .getSingleOrNull();
+      await (_database.delete(
+        _database.rasterMaps,
+      )..where((rm) => rm.uuid.equalsValue(id))).go();
       if (old != null) {
         await _logger.logDelete(
           'raster_maps',
@@ -127,7 +147,11 @@ class RasterMapRepository implements IRasterMapRepository {
       }
     } catch (e, st) {
       _log.severe('Failed to delete raster map', e, st);
-      throw DbException('Failed to delete raster map', cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to delete raster map',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -142,17 +166,20 @@ class RasterMapRepository implements IRasterMapRepository {
       final now = _clock.nowMs();
       await _database.transaction(() async {
         for (var i = 0; i < orderedIds.length; i++) {
-          await (_database.update(_database.rasterMaps)
-                ..where((rm) => rm.uuid.equalsValue(orderedIds[i])))
-              .write(RasterMapsCompanion(
-                orderIndex: Value(i),
-                updatedAt: Value(now),
-              ));
+          await (_database.update(
+            _database.rasterMaps,
+          )..where((rm) => rm.uuid.equalsValue(orderedIds[i]))).write(
+            RasterMapsCompanion(orderIndex: Value(i), updatedAt: Value(now)),
+          );
         }
       });
     } catch (e, st) {
       _log.severe('Failed to update raster map order', e, st);
-      throw DbException('Failed to update raster map order', cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to update raster map order',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -167,8 +194,11 @@ class RasterMapRepository implements IRasterMapRepository {
       return counts;
     } catch (e, st) {
       _log.severe('Failed to count raster maps by cave', e, st);
-      throw DbException('Failed to count raster maps by cave',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to count raster maps by cave',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -179,16 +209,16 @@ class RasterMapRepository implements IRasterMapRepository {
     required String mapType,
   }) async {
     try {
-      return await (_database.select(_database.rasterMaps)
-            ..where((rm) =>
+      return await (_database.select(_database.rasterMaps)..where(
+            (rm) =>
                 rm.caveUuid.equalsValue(caveUuid) &
                 rm.title.equals(title) &
-                rm.mapType.equals(mapType)))
+                rm.mapType.equals(mapType),
+          ))
           .get();
     } catch (e, st) {
       _log.severe('Failed to find raster maps by title/type', e, st);
-      throw DbException('Failed to find raster maps',
-          cause: e, stackTrace: st);
+      throw DbException('Failed to find raster maps', cause: e, stackTrace: st);
     }
   }
 
@@ -198,15 +228,18 @@ class RasterMapRepository implements IRasterMapRepository {
     required String hash,
   }) async {
     try {
-      return await (_database.select(_database.rasterMaps)
-            ..where((rm) =>
-                rm.caveUuid.equalsValue(caveUuid) &
-                rm.fileHash.equals(hash)))
+      return await (_database.select(_database.rasterMaps)..where(
+            (rm) =>
+                rm.caveUuid.equalsValue(caveUuid) & rm.fileHash.equals(hash),
+          ))
           .get();
     } catch (e, st) {
       _log.severe('Failed to find raster maps by hash', e, st);
-      throw DbException('Failed to find raster maps by hash',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to find raster maps by hash',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 

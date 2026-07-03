@@ -6,11 +6,11 @@ import 'package:speleoloc/utils/constants.dart';
 /// Each profile defines a max resolution (longest side in px) and a JPEG
 /// quality percentage.  "manual" lets the user set both values freely.
 enum ImageCompressionProfile {
-  low,      // gentle reduction
-  medium,   // moderate reduction
-  high,     // aggressive reduction
+  low, // gentle reduction
+  medium, // moderate reduction
+  high, // aggressive reduction
   veryHigh, // very aggressive reduction
-  manual,   // user-defined values
+  manual, // user-defined values
 }
 
 /// Settings that control whether and how imported images are compressed.
@@ -18,7 +18,7 @@ class ImageCompressionSettings {
   final bool enabled;
   final ImageCompressionProfile profile;
   final int maxResolution; // longest side in px
-  final int quality;       // JPEG quality 1-100
+  final int quality; // JPEG quality 1-100
 
   const ImageCompressionSettings({
     this.enabled = false,
@@ -29,10 +29,10 @@ class ImageCompressionSettings {
 
   /// Profile presets (maxResolution, quality).
   static const Map<ImageCompressionProfile, (int, int)> presets = {
-    ImageCompressionProfile.low:      (3840, 92),
-    ImageCompressionProfile.medium:   (1920, 80),
-    ImageCompressionProfile.high:     (1280, 65),
-    ImageCompressionProfile.veryHigh: (800,  45),
+    ImageCompressionProfile.low: (3840, 92),
+    ImageCompressionProfile.medium: (1920, 80),
+    ImageCompressionProfile.high: (1280, 65),
+    ImageCompressionProfile.veryHigh: (800, 45),
   };
 
   /// Returns settings with the selected profile's preset values applied.

@@ -9,8 +9,11 @@ void main() {
     final allowed = RegExp(r'^[0-9a-z]+$');
     for (final pci in inputs) {
       final q = hasher.hash(pci, length: 8);
-      expect(allowed.hasMatch(q), isTrue,
-          reason: 'QCRI "$q" for PCI "$pci" contains invalid characters');
+      expect(
+        allowed.hasMatch(q),
+        isTrue,
+        reason: 'QCRI "$q" for PCI "$pci" contains invalid characters',
+      );
     }
   });
 

@@ -39,9 +39,9 @@ class DatabaseMigrationMonitor {
       toVersion: toVersion,
       timestamp: DateTime.now(),
     );
-    AppLogger.of('DatabaseMigrationMonitor').info(
-      'Upgrade performed: v$fromVersion -> v$toVersion',
-    );
+    AppLogger.of(
+      'DatabaseMigrationMonitor',
+    ).info('Upgrade performed: v$fromVersion -> v$toVersion');
   }
 
   static DatabaseMigrationEvent? consumeLatest() {
@@ -96,23 +96,23 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-          if (details.hadUpgrade) {
-            DatabaseMigrationMonitor.record(
-              fromVersion: details.versionBefore ?? 0,
-              toVersion: details.versionNow,
-            );
-          }
-        },
-        onUpgrade: (migrator, from, to) async {
-          for (final m in schemaMigrations) {
-            if (m.shouldApply(from)) {
-              await m.apply(this, migrator);
-            }
-          }
-        },
-      );
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+      if (details.hadUpgrade) {
+        DatabaseMigrationMonitor.record(
+          fromVersion: details.versionBefore ?? 0,
+          toVersion: details.versionNow,
+        );
+      }
+    },
+    onUpgrade: (migrator, from, to) async {
+      for (final m in schemaMigrations) {
+        if (m.shouldApply(from)) {
+          await m.apply(this, migrator);
+        }
+      }
+    },
+  );
 
   Future<Uuid> insertCaveTrip({
     required Uuid caveUuid,
@@ -154,7 +154,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<CaveTrip?> getActiveTripForCave(Uuid caveUuid) async {
     return (select(caveTrips)
-          ..where((t) => t.caveUuid.equalsValue(caveUuid) & t.tripEndedAt.isNull())
+          ..where(
+            (t) => t.caveUuid.equalsValue(caveUuid) & t.tripEndedAt.isNull(),
+          )
           ..orderBy([(t) => OrderingTerm.desc(t.tripStartedAt)])
           ..limit(1))
         .getSingleOrNull();
@@ -207,14 +209,17 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<String>> getCaveTripTitles(Uuid caveUuid) async {
-    final trips = await (select(caveTrips)
-          ..where((t) => t.caveUuid.equalsValue(caveUuid)))
-        .get();
+    final trips = await (select(
+      caveTrips,
+    )..where((t) => t.caveUuid.equalsValue(caveUuid))).get();
     return trips.map((t) => t.title).toList();
   }
 
-  Future<void> linkDocumentToTrip(Uuid docUuid, Uuid tripUuid,
-      {required Uuid authorUuid}) async {
+  Future<void> linkDocumentToTrip(
+    Uuid docUuid,
+    Uuid tripUuid, {
+    required Uuid authorUuid,
+  }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await into(documentationFilesToCaveTrips).insertOnConflictUpdate(
       DocumentationFilesToCaveTripsCompanion.insert(
@@ -230,23 +235,26 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteCaveTrip(Uuid tripUuid) async {
     await transaction(() async {
-      await (delete(documentationFilesToCaveTrips)
-            ..where((t) => t.caveTripUuid.equalsValue(tripUuid)))
-          .go();
-      await (delete(caveTripPoints)
-            ..where((t) => t.caveTripUuid.equalsValue(tripUuid)))
-          .go();
-      await (delete(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).go();
+      await (delete(
+        documentationFilesToCaveTrips,
+      )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).go();
+      await (delete(
+        caveTripPoints,
+      )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).go();
+      await (delete(
+        caveTrips,
+      )..where((t) => t.uuid.equalsValue(tripUuid))).go();
     });
   }
 
   /// Reactivates a previously ended trip: clears [tripEndedAt], resets
   /// [tripStartedAt] to now, and records the author.
-  Future<void> restartCaveTrip(Uuid tripUuid,
-      {required Uuid authorUuid}) async {
+  Future<void> restartCaveTrip(
+    Uuid tripUuid, {
+    required Uuid authorUuid,
+  }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid)))
-        .write(
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
       CaveTripsCompanion(
         tripEndedAt: const Value(null),
         tripStartedAt: Value(now),
@@ -258,25 +266,24 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> renameCaveTrip(Uuid tripUuid, String newTitle) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid)))
-        .write(
-      CaveTripsCompanion(
-        title: Value(newTitle),
-        updatedAt: Value(now),
-      ),
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
+      CaveTripsCompanion(title: Value(newTitle), updatedAt: Value(now)),
     );
   }
 
   Future<void> appendToTripLog(Uuid tripUuid, String formattedLine) async {
     await transaction(() async {
-      final trip = await (select(caveTrips)
-            ..where((t) => t.uuid.equalsValue(tripUuid)))
-          .getSingleOrNull();
+      final trip = await (select(
+        caveTrips,
+      )..where((t) => t.uuid.equalsValue(tripUuid))).getSingleOrNull();
       if (trip == null) return;
       final current = trip.log ?? '';
-      final newLog =
-          current.isEmpty ? formattedLine : '$current\n$formattedLine';
-      await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
+      final newLog = current.isEmpty
+          ? formattedLine
+          : '$current\n$formattedLine';
+      await (update(
+        caveTrips,
+      )..where((t) => t.uuid.equalsValue(tripUuid))).write(
         CaveTripsCompanion(
           log: Value(newLog),
           updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
@@ -295,14 +302,15 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<TripReportTemplate>> getTripReportTemplates() async {
-    return (select(tripReportTemplates)
-          ..orderBy([(t) => OrderingTerm.asc(t.title)]))
-        .get();
+    return (select(
+      tripReportTemplates,
+    )..orderBy([(t) => OrderingTerm.asc(t.title)])).get();
   }
 
   Future<TripReportTemplate?> getTripReportTemplate(Uuid uuid) async {
-    return (select(tripReportTemplates)..where((t) => t.uuid.equalsValue(uuid)))
-        .getSingleOrNull();
+    return (select(
+      tripReportTemplates,
+    )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
   }
 
   Future<Uuid> insertTripReportTemplate({
@@ -326,36 +334,42 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteTripReportTemplate(Uuid uuid) async {
-    await (delete(tripReportTemplates)..where((t) => t.uuid.equalsValue(uuid))).go();
+    await (delete(
+      tripReportTemplates,
+    )..where((t) => t.uuid.equalsValue(uuid))).go();
   }
 
   Future<bool> _geofeatureExists(
-      GeofeatureType type, Uuid geofeatureUuid) async {
+    GeofeatureType type,
+    Uuid geofeatureUuid,
+  ) async {
     switch (type) {
       case GeofeatureType.cave:
-        final cave =
-            await (select(caves)..where((t) => t.uuid.equalsValue(geofeatureUuid)))
-                .getSingleOrNull();
+        final cave = await (select(
+          caves,
+        )..where((t) => t.uuid.equalsValue(geofeatureUuid))).getSingleOrNull();
         return cave != null;
       case GeofeatureType.cavePlace:
-        final cavePlace = await (select(cavePlaces)
-              ..where((t) => t.uuid.equalsValue(geofeatureUuid)))
-            .getSingleOrNull();
+        final cavePlace = await (select(
+          cavePlaces,
+        )..where((t) => t.uuid.equalsValue(geofeatureUuid))).getSingleOrNull();
         return cavePlace != null;
       case GeofeatureType.caveArea:
-        final caveArea = await (select(caveAreas)
-              ..where((t) => t.uuid.equalsValue(geofeatureUuid)))
-            .getSingleOrNull();
+        final caveArea = await (select(
+          caveAreas,
+        )..where((t) => t.uuid.equalsValue(geofeatureUuid))).getSingleOrNull();
         return caveArea != null;
     }
   }
 
   Future<void> _assertValidGeofeatureLink(
-      DocumentationGeofeatureLink link) async {
+    DocumentationGeofeatureLink link,
+  ) async {
     final exists = await _geofeatureExists(link.type, link.geofeatureUuid);
     if (!exists) {
       throw StateError(
-          'Invalid geofeature link: ${link.type.dbValue}(${link.geofeatureUuid}) does not exist.');
+        'Invalid geofeature link: ${link.type.dbValue}(${link.geofeatureUuid}) does not exist.',
+      );
     }
   }
 
@@ -364,24 +378,34 @@ class AppDatabase extends _$AppDatabase {
     Uuid? cavePlaceUuid,
     Uuid? caveAreaUuid,
   }) async {
-    final provided =
-        [caveUuid, cavePlaceUuid, caveAreaUuid].where((v) => v != null).length;
+    final provided = [
+      caveUuid,
+      cavePlaceUuid,
+      caveAreaUuid,
+    ].where((v) => v != null).length;
     if (provided == 0) return null;
     if (provided > 1) {
       throw ArgumentError(
-          'Only one of caveUuid, cavePlaceUuid, caveAreaUuid can be provided.');
+        'Only one of caveUuid, cavePlaceUuid, caveAreaUuid can be provided.',
+      );
     }
 
     if (caveUuid != null) {
       return DocumentationGeofeatureLink(
-          type: GeofeatureType.cave, geofeatureUuid: caveUuid);
+        type: GeofeatureType.cave,
+        geofeatureUuid: caveUuid,
+      );
     }
     if (cavePlaceUuid != null) {
       return DocumentationGeofeatureLink(
-          type: GeofeatureType.cavePlace, geofeatureUuid: cavePlaceUuid);
+        type: GeofeatureType.cavePlace,
+        geofeatureUuid: cavePlaceUuid,
+      );
     }
     return DocumentationGeofeatureLink(
-        type: GeofeatureType.caveArea, geofeatureUuid: caveAreaUuid!);
+      type: GeofeatureType.caveArea,
+      geofeatureUuid: caveAreaUuid!,
+    );
   }
 
   Future<void> insertDocumentationLink({
@@ -405,8 +429,9 @@ class AppDatabase extends _$AppDatabase {
     DocumentationGeofeatureLink? parentLink,
   }) async {
     return transaction(() async {
-      final uuidValue =
-          companion.uuid.present ? companion.uuid.value : Uuid.v7();
+      final uuidValue = companion.uuid.present
+          ? companion.uuid.value
+          : Uuid.v7();
       final effective = companion.copyWith(uuid: Value(uuidValue));
       await into(documentationFiles).insert(effective);
       if (parentLink != null) {
@@ -428,33 +453,36 @@ class AppDatabase extends _$AppDatabase {
 
     await _assertValidGeofeatureLink(parentLink);
 
-    final rows = await (select(documentationFilesToGeofeatures)
-          ..where(
-            (t) =>
-                t.geofeatureType.equals(parentLink.type.dbValue) &
-                t.geofeatureUuid.equalsValue(parentLink.geofeatureUuid),
-          ))
-        .get();
+    final rows =
+        await (select(documentationFilesToGeofeatures)..where(
+              (t) =>
+                  t.geofeatureType.equals(parentLink.type.dbValue) &
+                  t.geofeatureUuid.equalsValue(parentLink.geofeatureUuid),
+            ))
+            .get();
 
-    final documentUuids =
-        rows.map((r) => r.documentationFileUuid).toSet().toList();
+    final documentUuids = rows
+        .map((r) => r.documentationFileUuid)
+        .toSet()
+        .toList();
     if (documentUuids.isEmpty) return const <DocumentationFile>[];
 
-    return (select(documentationFiles)
-          ..where((t) => t.uuid.isInValues(documentUuids)))
-        .get();
+    return (select(
+      documentationFiles,
+    )..where((t) => t.uuid.isInValues(documentUuids))).get();
   }
 
   Future<void> deleteDocumentationFileByUuid(Uuid uuid) async {
     await transaction(() async {
-      await (delete(documentationFilesToGeofeatures)
-            ..where((t) => t.documentationFileUuid.equalsValue(uuid)))
-          .go();
-      await (delete(documentationFilesToCaveTrips)
-            ..where((t) => t.documentationFileUuid.equalsValue(uuid)))
-          .go();
-      await (delete(documentationFiles)..where((t) => t.uuid.equalsValue(uuid)))
-          .go();
+      await (delete(
+        documentationFilesToGeofeatures,
+      )..where((t) => t.documentationFileUuid.equalsValue(uuid))).go();
+      await (delete(
+        documentationFilesToCaveTrips,
+      )..where((t) => t.documentationFileUuid.equalsValue(uuid))).go();
+      await (delete(
+        documentationFiles,
+      )..where((t) => t.uuid.equalsValue(uuid))).go();
     });
   }
 
@@ -462,22 +490,27 @@ class AppDatabase extends _$AppDatabase {
     required Uuid uuid,
     required DocumentationFilesCompanion companion,
   }) async {
-    await (update(documentationFiles)..where((t) => t.uuid.equalsValue(uuid)))
-        .write(companion);
+    await (update(
+      documentationFiles,
+    )..where((t) => t.uuid.equalsValue(uuid))).write(companion);
   }
 
   Future<List<CavePlaceWithDefinition>>
-      getCavePlacesWithDefinitionsForRasterMap(
-          Uuid caveUuid, Uuid rasterMapUuid) async {
+  getCavePlacesWithDefinitionsForRasterMap(
+    Uuid caveUuid,
+    Uuid rasterMapUuid,
+  ) async {
     final query = select(cavePlaces).join([
       leftOuterJoin(
         cavePlaceToRasterMapDefinitions,
-        cavePlaceToRasterMapDefinitions.cavePlaceUuid
-                .equalsExp(cavePlaces.uuid) &
-            cavePlaceToRasterMapDefinitions.rasterMapUuid.equalsValue(rasterMapUuid),
+        cavePlaceToRasterMapDefinitions.cavePlaceUuid.equalsExp(
+              cavePlaces.uuid,
+            ) &
+            cavePlaceToRasterMapDefinitions.rasterMapUuid.equalsValue(
+              rasterMapUuid,
+            ),
       ),
-    ])
-      ..where(cavePlaces.caveUuid.equalsValue(caveUuid));
+    ])..where(cavePlaces.caveUuid.equalsValue(caveUuid));
 
     return query.map((row) {
       final cavePlace = row.readTable(cavePlaces);
@@ -487,11 +520,14 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<CavePlaceToRasterMapDefinition?> getDefinition(
-      Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
-    return (select(cavePlaceToRasterMapDefinitions)
-          ..where((d) =>
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
+  ) async {
+    return (select(cavePlaceToRasterMapDefinitions)..where(
+          (d) =>
               d.cavePlaceUuid.equalsValue(cavePlaceUuid) &
-              d.rasterMapUuid.equalsValue(rasterMapUuid)))
+              d.rasterMapUuid.equalsValue(rasterMapUuid),
+        ))
         .getSingleOrNull();
   }
 

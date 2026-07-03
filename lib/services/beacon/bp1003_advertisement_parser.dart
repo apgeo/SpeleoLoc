@@ -177,7 +177,8 @@ class Bp1003ServiceData {
   }
 
   @override
-  String toString() => 'Bp1003ServiceData(mac: $macAddress, '
+  String toString() =>
+      'Bp1003ServiceData(mac: $macAddress, '
       'battery: $batteryMv mV, interval: $broadcastIntervalMs ms, '
       'tx: $txPowerDbm dBm, flags: 0x${statusFlags.toRadixString(16)}, '
       'temp: $temperatureC °C, humidity: $humidityPct %)';

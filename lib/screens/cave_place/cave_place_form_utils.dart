@@ -30,8 +30,10 @@ double? parseDepthValue(String input) {
 
 /// Input formatter that constrains the depth field to an optionally-negative
 /// number with up to 4 integer digits and 1 decimal digit.
-final TextInputFormatter depthInputFormatter =
-    TextInputFormatter.withFunction((oldValue, newValue) {
+final TextInputFormatter depthInputFormatter = TextInputFormatter.withFunction((
+  oldValue,
+  newValue,
+) {
   final text = newValue.text;
   if (text.isEmpty || text == '-' || text == '.' || text == '-.') {
     return newValue;

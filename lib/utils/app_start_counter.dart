@@ -22,8 +22,9 @@ class AppStartCounter {
       try {
         current = int.parse((await file.readAsString()).trim());
       } catch (e, st) {
-        AppLogger.of('AppStartCounter')
-            .warning('start-count file corrupt; resetting to 0', e, st);
+        AppLogger.of(
+          'AppStartCounter',
+        ).warning('start-count file corrupt; resetting to 0', e, st);
         current = 0;
       }
     }

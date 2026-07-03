@@ -15,15 +15,25 @@ class SettingsImageCompressionPage extends StatefulWidget {
 
 class _SettingsImageCompressionPageState
     extends State<SettingsImageCompressionPage>
-    with AppBarMenuMixin<SettingsImageCompressionPage>, ProductTourMixin<SettingsImageCompressionPage> {
+    with
+        AppBarMenuMixin<SettingsImageCompressionPage>,
+        ProductTourMixin<SettingsImageCompressionPage> {
   @override
   String get tourId => 'settings_img_compress';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_img_compress_list_title', bodyLocKey: 'tour_settings_img_compress_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_img_compress_menu_title', bodyLocKey: 'tour_settings_img_compress_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_settings_img_compress_list_title',
+      bodyLocKey: 'tour_settings_img_compress_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_settings_img_compress_menu_title',
+      bodyLocKey: 'tour_settings_img_compress_menu_body',
+    ),
   ];
 
   ImageCompressionSettings? _settings;
@@ -92,7 +102,9 @@ class _SettingsImageCompressionPageState
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('image_compression')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: ListView(
         key: tourKeys['list'],
@@ -102,12 +114,14 @@ class _SettingsImageCompressionPageState
           SwitchListTile(
             title: Text(LocServ.inst.t('image_compression_enabled')),
             value: s.enabled,
-            onChanged: (v) => _save(ImageCompressionSettings(
-              enabled: v,
-              profile: s.profile,
-              maxResolution: s.maxResolution,
-              quality: s.quality,
-            )),
+            onChanged: (v) => _save(
+              ImageCompressionSettings(
+                enabled: v,
+                profile: s.profile,
+                maxResolution: s.maxResolution,
+                quality: s.quality,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -117,17 +131,18 @@ class _SettingsImageCompressionPageState
             trailing: DropdownButton<ImageCompressionProfile>(
               value: s.profile,
               items: ImageCompressionProfile.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(_profileLabel(p)),
-                      ))
+                  .map(
+                    (p) => DropdownMenuItem(
+                      value: p,
+                      child: Text(_profileLabel(p)),
+                    ),
+                  )
                   .toList(),
               onChanged: s.enabled
                   ? (p) {
                       if (p == null) return;
                       final updated = s.applyProfile(p);
-                      _resolutionCtrl.text =
-                          updated.maxResolution.toString();
+                      _resolutionCtrl.text = updated.maxResolution.toString();
                       _qualityCtrl.text = updated.quality.toString();
                       _save(updated);
                     }
@@ -148,12 +163,14 @@ class _SettingsImageCompressionPageState
             onChanged: (v) {
               final res = int.tryParse(v);
               if (res != null && res > 0) {
-                _save(ImageCompressionSettings(
-                  enabled: s.enabled,
-                  profile: ImageCompressionProfile.manual,
-                  maxResolution: res,
-                  quality: s.quality,
-                ));
+                _save(
+                  ImageCompressionSettings(
+                    enabled: s.enabled,
+                    profile: ImageCompressionProfile.manual,
+                    maxResolution: res,
+                    quality: s.quality,
+                  ),
+                );
               }
             },
           ),
@@ -171,12 +188,14 @@ class _SettingsImageCompressionPageState
             onChanged: (v) {
               final q = int.tryParse(v);
               if (q != null && q >= 1 && q <= 100) {
-                _save(ImageCompressionSettings(
-                  enabled: s.enabled,
-                  profile: ImageCompressionProfile.manual,
-                  maxResolution: s.maxResolution,
-                  quality: q,
-                ));
+                _save(
+                  ImageCompressionSettings(
+                    enabled: s.enabled,
+                    profile: ImageCompressionProfile.manual,
+                    maxResolution: s.maxResolution,
+                    quality: q,
+                  ),
+                );
               }
             },
           ),

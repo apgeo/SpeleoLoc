@@ -145,10 +145,13 @@ class TripReportExportService {
   /// Inserts a `<text:p>` paragraph before the closing `</office:text>` tag.
   String _insertOdtParagraph(String xml, String text) {
     // Split text by newlines and create separate paragraphs
-    final paragraphs = text.split('\n').map((line) {
-      final escaped = _escapeXml(line);
-      return '<text:p text:style-name="Standard">$escaped</text:p>';
-    }).join('\n');
+    final paragraphs = text
+        .split('\n')
+        .map((line) {
+          final escaped = _escapeXml(line);
+          return '<text:p text:style-name="Standard">$escaped</text:p>';
+        })
+        .join('\n');
 
     // Insert before closing </office:text>
     const closingTag = '</office:text>';
@@ -182,10 +185,13 @@ class TripReportExportService {
 
   /// Inserts `<w:p>` paragraphs before the closing `</w:body>` tag.
   String _insertDocxParagraph(String xml, String text) {
-    final paragraphs = text.split('\n').map((line) {
-      final escaped = _escapeXml(line);
-      return '<w:p><w:r><w:t>$escaped</w:t></w:r></w:p>';
-    }).join('\n');
+    final paragraphs = text
+        .split('\n')
+        .map((line) {
+          final escaped = _escapeXml(line);
+          return '<w:p><w:r><w:t>$escaped</w:t></w:r></w:p>';
+        })
+        .join('\n');
 
     const closingTag = '</w:body>';
     final idx = xml.lastIndexOf(closingTag);
@@ -213,9 +219,12 @@ class TripReportExportService {
       // For better Android support, consider adding open_filex package.
       await Process.run('am', [
         'start',
-        '-a', 'android.intent.action.VIEW',
-        '-d', Uri.file(filePath).toString(),
-        '-t', _mimeTypeForPath(filePath),
+        '-a',
+        'android.intent.action.VIEW',
+        '-d',
+        Uri.file(filePath).toString(),
+        '-t',
+        _mimeTypeForPath(filePath),
       ]);
     } else if (Platform.isIOS || Platform.isMacOS) {
       await Process.run('open', [filePath]);

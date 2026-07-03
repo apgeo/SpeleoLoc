@@ -28,7 +28,7 @@ class FtpProfileRepository {
   static const String _passwordKeyPrefix = 'ftp_password_';
 
   FtpProfileRepository(this._db, {FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   // ---- profile list ----
 
@@ -53,8 +53,7 @@ class FtpProfileRepository {
   /// the password — the existing password is preserved.
   Future<void> save(FtpProfile profile, {String? password}) async {
     final current = await list();
-    final idx =
-        current.indexWhere((p) => p.profileUuid == profile.profileUuid);
+    final idx = current.indexWhere((p) => p.profileUuid == profile.profileUuid);
     final updated = List<FtpProfile>.from(current);
     if (idx >= 0) {
       updated[idx] = profile;
@@ -79,8 +78,7 @@ class FtpProfileRepository {
 
   Future<void> delete(String profileUuid) async {
     final current = await list();
-    final updated =
-        current.where((p) => p.profileUuid != profileUuid).toList();
+    final updated = current.where((p) => p.profileUuid != profileUuid).toList();
     await _writeConfig(
       ConfigKey.ftpProfiles,
       jsonEncode(updated.map((p) => p.toJson()).toList()),
@@ -134,10 +132,12 @@ class FtpProfileRepository {
   String _passwordKey(String profileUuid) => '$_passwordKeyPrefix$profileUuid';
 
   Future<String?> _readConfig(String title) async {
-    final rows = await _db.customSelect(
-      'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-      variables: [Variable<String>(title)],
-    ).get();
+    final rows = await _db
+        .customSelect(
+          'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+          variables: [Variable<String>(title)],
+        )
+        .get();
     if (rows.isEmpty) return null;
     return rows.first.data['value'] as String?;
   }
@@ -154,9 +154,8 @@ class FtpProfileRepository {
   }
 
   Future<void> _deleteConfig(String title) async {
-    await _db.customStatement(
-      'DELETE FROM configurations WHERE title = ?',
-      [title],
-    );
+    await _db.customStatement('DELETE FROM configurations WHERE title = ?', [
+      title,
+    ]);
   }
 }

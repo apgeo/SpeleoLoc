@@ -52,31 +52,29 @@ class AppRoutes {
     BuildContext c, {
     required Uuid caveUuid,
     Uuid? cavePlaceUuid,
-  }) =>
-      Navigator.pushNamed<bool>(
-        c,
-        cavePlaceRoute,
-        arguments: CavePlaceRouteArgs(
-          caveUuid: caveUuid,
-          cavePlaceUuid: cavePlaceUuid,
-        ),
-      );
+  }) => Navigator.pushNamed<bool>(
+    c,
+    cavePlaceRoute,
+    arguments: CavePlaceRouteArgs(
+      caveUuid: caveUuid,
+      cavePlaceUuid: cavePlaceUuid,
+    ),
+  );
 
   static Future<void> pushCavePlaceView(
     BuildContext c, {
     required Uuid cavePlaceUuid,
     Uuid? caveUuid,
     Uuid? initialRasterMapUuid,
-  }) =>
-      Navigator.pushNamed<void>(
-        c,
-        cavePlaceViewRoute,
-        arguments: CavePlaceViewRouteArgs(
-          cavePlaceUuid: cavePlaceUuid,
-          caveUuid: caveUuid,
-          initialRasterMapUuid: initialRasterMapUuid,
-        ),
-      );
+  }) => Navigator.pushNamed<void>(
+    c,
+    cavePlaceViewRoute,
+    arguments: CavePlaceViewRouteArgs(
+      cavePlaceUuid: cavePlaceUuid,
+      caveUuid: caveUuid,
+      initialRasterMapUuid: initialRasterMapUuid,
+    ),
+  );
 
   static Future<bool?> pushRasterMaps(BuildContext c, Uuid caveUuid) =>
       Navigator.pushNamed<bool>(c, rasterMapsRoute, arguments: caveUuid);

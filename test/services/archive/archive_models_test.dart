@@ -78,13 +78,17 @@ void main() {
     // The persisted/contract surface of ConflictAction and ImportMode is
     // small but consumed by UI and tests; pin both the value set and order.
     test('ConflictAction values are exactly {skip, overwrite}', () {
-      expect(ConflictAction.values,
-          orderedEquals(const [ConflictAction.skip, ConflictAction.overwrite]));
+      expect(
+        ConflictAction.values,
+        orderedEquals(const [ConflictAction.skip, ConflictAction.overwrite]),
+      );
     });
 
     test('ImportMode values are exactly {replace, merge}', () {
-      expect(ImportMode.values,
-          orderedEquals(const [ImportMode.replace, ImportMode.merge]));
+      expect(
+        ImportMode.values,
+        orderedEquals(const [ImportMode.replace, ImportMode.merge]),
+      );
     });
   });
 }

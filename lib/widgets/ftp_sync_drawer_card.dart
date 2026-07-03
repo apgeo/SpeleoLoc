@@ -26,8 +26,7 @@ class FtpSyncDrawerCard extends ConsumerStatefulWidget {
   const FtpSyncDrawerCard({super.key});
 
   @override
-  ConsumerState<FtpSyncDrawerCard> createState() =>
-      _FtpSyncDrawerCardState();
+  ConsumerState<FtpSyncDrawerCard> createState() => _FtpSyncDrawerCardState();
 }
 
 class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
@@ -57,8 +56,7 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
     if (!_loadedProfile) {
       return const SizedBox.shrink();
     }
-    if (_defaultProfile == null &&
-        progress.phase == FtpSyncPhase.idle) {
+    if (_defaultProfile == null && progress.phase == FtpSyncPhase.idle) {
       return _buildConfigurePrompt(context);
     }
     return _buildSyncCard(context, controller, progress);
@@ -108,11 +106,10 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
     final isPaused = progress.isPaused;
     final phaseLabel =
         progress.phase == FtpSyncPhase.idle && _defaultProfile != null
-            ? LocServ.inst.t('ftp_sync_now')
-            : LocServ.inst.t('ftp_phase_${progress.phase.name}');
-    final profileName = progress.profileName ??
-        _defaultProfile?.displayName ??
-        '';
+        ? LocServ.inst.t('ftp_sync_now')
+        : LocServ.inst.t('ftp_phase_${progress.phase.name}');
+    final profileName =
+        progress.profileName ?? _defaultProfile?.displayName ?? '';
 
     Color? background;
     IconData leadingIcon;
@@ -286,8 +283,10 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
       pieces.add(p.currentFileName!);
     }
     if (p.totalBytes != null && p.bytesTransferred > 0) {
-      pieces.add('${_formatBytes(p.bytesTransferred)} / '
-          '${_formatBytes(p.totalBytes!)}');
+      pieces.add(
+        '${_formatBytes(p.bytesTransferred)} / '
+        '${_formatBytes(p.totalBytes!)}',
+      );
     }
     return pieces.join(' · ');
   }

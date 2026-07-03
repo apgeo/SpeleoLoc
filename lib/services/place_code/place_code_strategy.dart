@@ -15,15 +15,13 @@ sealed class PlaceCodeGenerationResult {
   /// The place/cave was deliberately skipped (e.g. missing area code,
   /// missing surface area). The batch runner should continue with the
   /// next place; UI should surface [reason].
-  const factory PlaceCodeGenerationResult.skipped(
-    PlaceCodeSkipReason reason,
-  ) = PlaceCodeGenerationSkipped;
+  const factory PlaceCodeGenerationResult.skipped(PlaceCodeSkipReason reason) =
+      PlaceCodeGenerationSkipped;
 
   /// The whole batch must abort (e.g. dataset-wide config missing).
   /// UI typically opens the settings page.
-  const factory PlaceCodeGenerationResult.aborted(
-    PlaceCodeAbortReason reason,
-  ) = PlaceCodeGenerationAborted;
+  const factory PlaceCodeGenerationResult.aborted(PlaceCodeAbortReason reason) =
+      PlaceCodeGenerationAborted;
 
   /// Code was generated with a placeholder area segment (zeros / nines).
   /// This is treated as a successful generation for write purposes but
@@ -147,7 +145,7 @@ class PlaceCodeStrategyRegistry {
   final Map<String, PlaceCodeStrategy> _byId;
 
   PlaceCodeStrategyRegistry(List<PlaceCodeStrategy> strategies)
-      : _byId = {for (final s in strategies) s.id: s};
+    : _byId = {for (final s in strategies) s.id: s};
 
   /// Returns the strategy for [id], or null if unknown.
   PlaceCodeStrategy? byId(String id) => _byId[id];

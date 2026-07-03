@@ -18,15 +18,12 @@ void main() async {
   // a DSN work normally without any changes here.
   const sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = sentryDsn;
-      // Only capture events in release builds to avoid noise during development.
-      options.environment = kReleaseMode ? 'production' : 'development';
-      options.tracesSampleRate = kReleaseMode ? 0.2 : 0.0;
-    },
-    appRunner: () => _runApp(),
-  );
+  await SentryFlutter.init((options) {
+    options.dsn = sentryDsn;
+    // Only capture events in release builds to avoid noise during development.
+    options.environment = kReleaseMode ? 'production' : 'development';
+    options.tracesSampleRate = kReleaseMode ? 0.2 : 0.0;
+  }, appRunner: () => _runApp());
 }
 
 Future<void> _runApp() async {
@@ -62,9 +59,10 @@ Future<void> _runApp() async {
   } catch (e, st) {
     // DB not ready yet — use default locale
     AppLogger.of('Main').warning(
-        'Saved language preference could not be loaded; using default locale',
-        e,
-        st);
+      'Saved language preference could not be loaded; using default locale',
+      e,
+      st,
+    );
   }
 
   // Load persisted menu mode preference (popup vs drawer).

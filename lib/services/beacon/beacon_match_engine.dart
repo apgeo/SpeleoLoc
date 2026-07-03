@@ -55,29 +55,28 @@ class BeaconDetectionConfig {
     bool? autoOpenPlace,
     bool? backgroundEnabled,
     int? backgroundScanIntervalSec,
-  }) =>
-      BeaconDetectionConfig(
-        enabled: enabled ?? this.enabled,
-        rssiThresholdDbm: rssiThresholdDbm ?? this.rssiThresholdDbm,
-        debounceCount: debounceCount ?? this.debounceCount,
-        debounceWindowSec: debounceWindowSec ?? this.debounceWindowSec,
-        cooldownSec: cooldownSec ?? this.cooldownSec,
-        autoOpenPlace: autoOpenPlace ?? this.autoOpenPlace,
-        backgroundEnabled: backgroundEnabled ?? this.backgroundEnabled,
-        backgroundScanIntervalSec:
-            backgroundScanIntervalSec ?? this.backgroundScanIntervalSec,
-      );
+  }) => BeaconDetectionConfig(
+    enabled: enabled ?? this.enabled,
+    rssiThresholdDbm: rssiThresholdDbm ?? this.rssiThresholdDbm,
+    debounceCount: debounceCount ?? this.debounceCount,
+    debounceWindowSec: debounceWindowSec ?? this.debounceWindowSec,
+    cooldownSec: cooldownSec ?? this.cooldownSec,
+    autoOpenPlace: autoOpenPlace ?? this.autoOpenPlace,
+    backgroundEnabled: backgroundEnabled ?? this.backgroundEnabled,
+    backgroundScanIntervalSec:
+        backgroundScanIntervalSec ?? this.backgroundScanIntervalSec,
+  );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'rssiThresholdDbm': rssiThresholdDbm,
-        'debounceCount': debounceCount,
-        'debounceWindowSec': debounceWindowSec,
-        'cooldownSec': cooldownSec,
-        'autoOpenPlace': autoOpenPlace,
-        'backgroundEnabled': backgroundEnabled,
-        'backgroundScanIntervalSec': backgroundScanIntervalSec,
-      };
+    'enabled': enabled,
+    'rssiThresholdDbm': rssiThresholdDbm,
+    'debounceCount': debounceCount,
+    'debounceWindowSec': debounceWindowSec,
+    'cooldownSec': cooldownSec,
+    'autoOpenPlace': autoOpenPlace,
+    'backgroundEnabled': backgroundEnabled,
+    'backgroundScanIntervalSec': backgroundScanIntervalSec,
+  };
 
   static BeaconDetectionConfig fromJson(Map<String, dynamic> j) {
     const d = BeaconDetectionConfig();
@@ -85,20 +84,20 @@ class BeaconDetectionConfig {
       enabled: j['enabled'] as bool? ?? d.enabled,
       rssiThresholdDbm: j['rssiThresholdDbm'] as int? ?? d.rssiThresholdDbm,
       debounceCount: j['debounceCount'] as int? ?? d.debounceCount,
-      debounceWindowSec:
-          j['debounceWindowSec'] as int? ?? d.debounceWindowSec,
+      debounceWindowSec: j['debounceWindowSec'] as int? ?? d.debounceWindowSec,
       cooldownSec: j['cooldownSec'] as int? ?? d.cooldownSec,
       autoOpenPlace: j['autoOpenPlace'] as bool? ?? d.autoOpenPlace,
-      backgroundEnabled:
-          j['backgroundEnabled'] as bool? ?? d.backgroundEnabled,
-      backgroundScanIntervalSec: j['backgroundScanIntervalSec'] as int? ??
-          d.backgroundScanIntervalSec,
+      backgroundEnabled: j['backgroundEnabled'] as bool? ?? d.backgroundEnabled,
+      backgroundScanIntervalSec:
+          j['backgroundScanIntervalSec'] as int? ?? d.backgroundScanIntervalSec,
     );
   }
 
   static Future<BeaconDetectionConfig> load() async {
     final j = await SettingsHelper.loadJsonConfig(
-        beaconDetectionConfigKey, () => const BeaconDetectionConfig().toJson());
+      beaconDetectionConfigKey,
+      () => const BeaconDetectionConfig().toJson(),
+    );
     return fromJson(j);
   }
 
@@ -150,8 +149,7 @@ class BeaconMatchEngine {
     if (recent.length < config.debounceCount) return false;
 
     _sightings.remove(identity);
-    _cooldownUntil[identity] =
-        now.add(Duration(seconds: config.cooldownSec));
+    _cooldownUntil[identity] = now.add(Duration(seconds: config.cooldownSec));
     return true;
   }
 

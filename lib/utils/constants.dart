@@ -65,8 +65,10 @@ const bool enableQrManualInput = true;
 /// it is treated as a relative asset path (e.g.
 /// `test_data/test_archive/test_archive.zip`) and loaded via `rootBundle`.
 /// An empty string disables the new flow.
-const String testArchiveUrl =
-    String.fromEnvironment('test_archive_url', defaultValue: '');
+const String testArchiveUrl = String.fromEnvironment(
+  'test_archive_url',
+  defaultValue: '',
+);
 
 // Configuration keys
 const String qrGenerationConfigKey = 'qr_code_generation';

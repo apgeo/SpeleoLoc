@@ -71,8 +71,7 @@ class DocumentationFileHelper {
   /// [SavedFileInfo] with everything needed for DB insertion.
   static Future<SavedFileInfo> saveExternalFile(File sourceFile) async {
     final folder = await getStorageFolder();
-    final baseName =
-        sourceFile.path.split(Platform.pathSeparator).last;
+    final baseName = sourceFile.path.split(Platform.pathSeparator).last;
     final outName = 'doc_${DateTime.now().millisecondsSinceEpoch}_$baseName';
     final outPath = '${folder.path}/$outName';
     await sourceFile.copy(outPath);
@@ -121,7 +120,10 @@ class DocumentationFileHelper {
     required String baseName,
     required String content,
   }) {
-    return saveBytes(baseName: baseName, bytes: Uint8List.fromList(utf8.encode(content)));
+    return saveBytes(
+      baseName: baseName,
+      bytes: Uint8List.fromList(utf8.encode(content)),
+    );
   }
 
   /// Overwrites the content of an **existing** file identified by its
@@ -177,29 +179,34 @@ class DocumentationFileHelper {
     DocumentationGeofeatureLink? parentLink,
     String? textContent,
   }) async {
-    final effectiveType =
-        fileType ?? detectFileType(savedFile.relativePath);
+    final effectiveType = fileType ?? detectFileType(savedFile.relativePath);
 
     AppLogger.of('DocumentationFileHelper').fine(
-        'Inserting record: title="$title", file="${savedFile.relativePath}", size=${savedFile.fileSize}, hash=${savedFile.fileHash}, type=$effectiveType, parentLink=${parentLink != null ? 'geofeatureUuid=${parentLink.geofeatureUuid}' : 'none'}');
-    final companion = DocumentationFilesCompanion.insert(
-      uuid: Uuid.v7(),
-      title: title,
-      fileName: savedFile.relativePath,
-      fileSize: savedFile.fileSize,
-      fileType: effectiveType,
-    ).copyWith(
-      description: drift.Value(description),
-      fileHash: drift.Value(savedFile.fileHash),
-      createdAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+      'Inserting record: title="$title", file="${savedFile.relativePath}", size=${savedFile.fileSize}, hash=${savedFile.fileHash}, type=$effectiveType, parentLink=${parentLink != null ? 'geofeatureUuid=${parentLink.geofeatureUuid}' : 'none'}',
     );
+    final companion =
+        DocumentationFilesCompanion.insert(
+          uuid: Uuid.v7(),
+          title: title,
+          fileName: savedFile.relativePath,
+          fileSize: savedFile.fileSize,
+          fileType: effectiveType,
+        ).copyWith(
+          description: drift.Value(description),
+          fileHash: drift.Value(savedFile.fileHash),
+          createdAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        );
 
     final docId = await documentationRepository.insertDocumentationFile(
       companion: companion,
       parentLink: parentLink,
     );
     await changeLogger.logInsert('documentation_files', docId);
-    caveTripService.linkDocument(docId, documentTitle: title, textContent: textContent);
+    caveTripService.linkDocument(
+      docId,
+      documentTitle: title,
+      textContent: textContent,
+    );
     return docId;
   }
 
@@ -229,7 +236,9 @@ class DocumentationFileHelper {
     );
 
     await documentationRepository.updateDocumentationFile(
-        uuid: id, companion: companion);
+      uuid: id,
+      companion: companion,
+    );
     if (old != null) {
       await changeLogger.logUpdate(
         'documentation_files',

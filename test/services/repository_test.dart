@@ -103,7 +103,9 @@ void main() {
   group('CaveRepository streams', () {
     test('watchCaves emits on addCave', () async {
       final emissions = <int>[];
-      final sub = caveRepo.watchCaves().listen((list) => emissions.add(list.length));
+      final sub = caveRepo.watchCaves().listen(
+        (list) => emissions.add(list.length),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 20));
       await caveRepo.addCave('A');
       await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -151,10 +153,13 @@ void main() {
   });
 
   group('DocumentationRepository', () {
-    test('hasAnyDocumentationFiles returns false when database has no files', () async {
-      final docRepo = DocumentationRepository(db);
-      expect(await docRepo.hasAnyDocumentationFiles(), isFalse);
-    });
+    test(
+      'hasAnyDocumentationFiles returns false when database has no files',
+      () async {
+        final docRepo = DocumentationRepository(db);
+        expect(await docRepo.hasAnyDocumentationFiles(), isFalse);
+      },
+    );
   });
 
   group('CavePlaceRepository finders', () {
@@ -165,8 +170,7 @@ void main() {
       final hit = await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Beta');
       expect(hit, isNotNull);
       expect(hit!.title, 'Beta');
-      final miss =
-          await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Gamma');
+      final miss = await cavePlaceRepo.findCavePlaceByTitle(caveUuid, 'Gamma');
       expect(miss, isNull);
     });
 
@@ -189,14 +193,20 @@ void main() {
       final caveUuid = await caveRepo.addCave('C');
       await cavePlaceRepo.addCavePlace(caveUuid, 'Plain');
       await cavePlaceRepo.addCavePlace(caveUuid, 'Side', isEntrance: true);
-      await cavePlaceRepo.addCavePlace(caveUuid, 'Main',
-          isEntrance: true, isMainEntrance: true);
+      await cavePlaceRepo.addCavePlace(
+        caveUuid,
+        'Main',
+        isEntrance: true,
+        isMainEntrance: true,
+      );
 
       final entrances = await cavePlaceRepo.findEntrances(caveUuid);
       expect(entrances.map((p) => p.title).toSet(), {'Side', 'Main'});
 
-      final mainOnly =
-          await cavePlaceRepo.findEntrances(caveUuid, mainOnly: true);
+      final mainOnly = await cavePlaceRepo.findEntrances(
+        caveUuid,
+        mainOnly: true,
+      );
       expect(mainOnly.single.title, 'Main');
     });
   });

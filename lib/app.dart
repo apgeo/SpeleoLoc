@@ -18,7 +18,8 @@ import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
+import 'package:flutter_quill/flutter_quill.dart'
+    show FlutterQuillLocalizations;
 
 class SpeleoLocApp extends StatefulWidget {
   const SpeleoLocApp({super.key});
@@ -67,12 +68,14 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
     final loaded = LocServ.inst.supportedLocales();
     final supported = loaded.isEmpty
         ? const <Locale>[Locale('en')]
-        : loaded.map((code) {
-            final parts = code.split('_');
-            return parts.length == 2
-                ? Locale(parts[0], parts[1])
-                : Locale(parts[0]);
-          }).toList(growable: false);
+        : loaded
+              .map((code) {
+                final parts = code.split('_');
+                return parts.length == 2
+                    ? Locale(parts[0], parts[1])
+                    : Locale(parts[0]);
+              })
+              .toList(growable: false);
     return MaterialApp(
       localizationsDelegates: const [
         FlutterQuillLocalizations.delegate,
@@ -165,7 +168,10 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
         return null;
       },
       builder: (context, child) => Stack(
-        children: [SizedBox.expand(child: child!), const AppToastHost()],
+        children: [
+          SizedBox.expand(child: child!),
+          const AppToastHost(),
+        ],
       ),
     );
   }

@@ -119,8 +119,10 @@ Future<LegacyV6Snapshot> snapshotLegacyV6(DatabaseConnectionUser db) async {
   final caveAreas = await _readAll(db, 'cave_areas');
   final cavePlaces = await _readAll(db, 'cave_places');
   final rasterMaps = await _readAll(db, 'raster_maps');
-  final cavePlaceDefs =
-      await _readAll(db, 'cave_place_to_raster_map_definitions');
+  final cavePlaceDefs = await _readAll(
+    db,
+    'cave_place_to_raster_map_definitions',
+  );
   final documentationFiles = await _readAll(db, 'documentation_files');
   final docToGeo = await _readAll(db, 'documentation_files_to_geofeatures');
   final caveTrips = await _readAll(db, 'cave_trips');
@@ -132,8 +134,8 @@ Future<LegacyV6Snapshot> snapshotLegacyV6(DatabaseConnectionUser db) async {
   final configurations = await _readAll(db, 'configurations');
 
   Map<int, Uuid> mk(List<Map<String, Object?>> rows) => {
-        for (final r in rows) (r['id'] as int): Uuid.v7(),
-      };
+    for (final r in rows) (r['id'] as int): Uuid.v7(),
+  };
 
   final snap = LegacyV6Snapshot._(
     surfaceAreas: surfaceAreas,
@@ -216,343 +218,348 @@ Future<void> reinsertLegacyData(
   // customInsert auto-commits, triggering one fsync per row — with ~11k
   // legacy rows on Windows this turns a ~1s migration into a 5–30 min hang.
   await db.transaction(() async {
-  // ---- surface_areas ----
-  for (final r in snap.surfaceAreas) {
-    await db.customInsert(
-      'INSERT INTO surface_areas '
-      '(uuid, title, description, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.surfaceAreaMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
-
-  // ---- caves ----
-  for (final r in snap.caves) {
-    await db.customInsert(
-      'INSERT INTO caves '
-      '(uuid, title, description, surface_area_uuid, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.caveMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<Uint8List>(_fkBytes(r['surface_area_id'], snap.surfaceAreaMap)),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
-
-  // ---- cave_areas ----
-  for (final r in snap.caveAreas) {
-    await db.customInsert(
-      'INSERT INTO cave_areas '
-      '(uuid, title, description, cave_uuid, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.caveAreaMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
-
-  // ---- cave_places ----
-  for (final r in snap.cavePlaces) {
-    // v6 → v11+: legacy integer QR codes are migrated into the new PCI
-    // (place_code_identifier) column as their string representation. The
-    // QCRI column stays NULL until the user runs a (re)generation pass.
-    final legacyQr = r['place_qr_code_identifier'] as int?;
-    await db.customInsert(
-      'INSERT INTO cave_places '
-      '(uuid, title, description, cave_uuid, place_code_identifier, '
-      'cave_area_uuid, latitude, longitude, depth_in_cave, is_entrance, '
-      'is_main_entrance, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.cavePlaceMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
-        Variable<String>(legacyQr?.toString()),
-        Variable<Uint8List>(_fkBytes(r['cave_area_id'], snap.caveAreaMap)),
-        Variable<double>(_asDouble(r['latitude'])),
-        Variable<double>(_asDouble(r['longitude'])),
-        Variable<double>(_asDouble(r['depth_in_cave'])),
-        Variable<int>((r['is_entrance'] as int?) ?? 0),
-        Variable<int>((r['is_main_entrance'] as int?) ?? 0),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
-
-  // ---- raster_maps ----
-  // v6 had no UNIQUE constraint on (file_name, map_type, cave_id) or
-  // (title, map_type, cave_id); v7 does. Disambiguate duplicates by
-  // appending the legacy int id so all rows survive the migration.
-  final rasterSeenFile = <String>{};
-  final rasterSeenTitle = <String>{};
-  for (final r in snap.rasterMaps) {
-    final legacyId = r['id'] as int;
-    final mapType = r['map_type'] as String;
-    final caveId = r['cave_id'];
-    var title = r['title'] as String;
-    var fileName = r['file_name'] as String;
-    final fileKey = '$fileName|$mapType|$caveId';
-    if (!rasterSeenFile.add(fileKey)) {
-      fileName = '$fileName.dup$legacyId';
+    // ---- surface_areas ----
+    for (final r in snap.surfaceAreas) {
+      await db.customInsert(
+        'INSERT INTO surface_areas '
+        '(uuid, title, description, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.surfaceAreaMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
     }
-    final titleKey = '$title|$mapType|$caveId';
-    if (!rasterSeenTitle.add(titleKey)) {
-      title = '$title (dup $legacyId)';
+
+    // ---- caves ----
+    for (final r in snap.caves) {
+      await db.customInsert(
+        'INSERT INTO caves '
+        '(uuid, title, description, surface_area_uuid, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.caveMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<Uint8List>(
+            _fkBytes(r['surface_area_id'], snap.surfaceAreaMap),
+          ),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
     }
-    await db.customInsert(
-      'INSERT INTO raster_maps '
-      '(uuid, title, map_type, file_name, cave_uuid, cave_area_uuid, '
-      'created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.rasterMapMap[legacyId]!.bytes),
-        Variable<String>(title),
-        Variable<String>(mapType),
-        Variable<String>(fileName),
-        Variable<Uint8List>(snap.caveMap[caveId]!.bytes),
-        Variable<Uint8List>(_fkBytes(r['cave_area_id'], snap.caveAreaMap)),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
 
-  // ---- cave_place_to_raster_map_definitions ----
-  for (final r in snap.cavePlaceDefs) {
-    await db.customInsert(
-      'INSERT INTO cave_place_to_raster_map_definitions '
-      '(uuid, x_coordinate, y_coordinate, cave_place_uuid, raster_map_uuid, '
-      'created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.cavePlaceDefMap[r['id']]!.bytes),
-        Variable<int>(r['x_coordinate'] as int?),
-        Variable<int>(r['y_coordinate'] as int?),
-        Variable<Uint8List>(snap.cavePlaceMap[r['cave_place_id']]!.bytes),
-        Variable<Uint8List>(snap.rasterMapMap[r['raster_map_id']]!.bytes),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- cave_areas ----
+    for (final r in snap.caveAreas) {
+      await db.customInsert(
+        'INSERT INTO cave_areas '
+        '(uuid, title, description, cave_uuid, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.caveAreaMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- documentation_files ----
-  for (final r in snap.documentationFiles) {
-    await db.customInsert(
-      'INSERT INTO documentation_files '
-      '(uuid, title, description, file_name, file_size, file_hash, file_type, '
-      'created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.documentationFileMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<String>(r['file_name'] as String),
-        Variable<int>(r['file_size'] as int),
-        Variable<String>(r['file_hash'] as String?),
-        Variable<String>(r['file_type'] as String),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- cave_places ----
+    for (final r in snap.cavePlaces) {
+      // v6 → v11+: legacy integer QR codes are migrated into the new PCI
+      // (place_code_identifier) column as their string representation. The
+      // QCRI column stays NULL until the user runs a (re)generation pass.
+      final legacyQr = r['place_qr_code_identifier'] as int?;
+      await db.customInsert(
+        'INSERT INTO cave_places '
+        '(uuid, title, description, cave_uuid, place_code_identifier, '
+        'cave_area_uuid, latitude, longitude, depth_in_cave, is_entrance, '
+        'is_main_entrance, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.cavePlaceMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
+          Variable<String>(legacyQr?.toString()),
+          Variable<Uint8List>(_fkBytes(r['cave_area_id'], snap.caveAreaMap)),
+          Variable<double>(_asDouble(r['latitude'])),
+          Variable<double>(_asDouble(r['longitude'])),
+          Variable<double>(_asDouble(r['depth_in_cave'])),
+          Variable<int>((r['is_entrance'] as int?) ?? 0),
+          Variable<int>((r['is_main_entrance'] as int?) ?? 0),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- documentation_files_to_geofeatures ----
-  // Pseudo-FK: geofeature_id resolves against the map matching geofeature_type.
-  for (final r in snap.docToGeo) {
-    final geoType = r['geofeature_type'] as String?;
-    final geoId = r['geofeature_id'] as int?;
-    Uint8List? geoUuidBytes;
-    if (geoId != null && geoType != null) {
-      switch (geoType) {
-        case 'cave':
-          geoUuidBytes = snap.caveMap[geoId]?.bytes;
-          break;
-        case 'cave_place':
-          geoUuidBytes = snap.cavePlaceMap[geoId]?.bytes;
-          break;
-        case 'cave_area':
-          geoUuidBytes = snap.caveAreaMap[geoId]?.bytes;
-          break;
+    // ---- raster_maps ----
+    // v6 had no UNIQUE constraint on (file_name, map_type, cave_id) or
+    // (title, map_type, cave_id); v7 does. Disambiguate duplicates by
+    // appending the legacy int id so all rows survive the migration.
+    final rasterSeenFile = <String>{};
+    final rasterSeenTitle = <String>{};
+    for (final r in snap.rasterMaps) {
+      final legacyId = r['id'] as int;
+      final mapType = r['map_type'] as String;
+      final caveId = r['cave_id'];
+      var title = r['title'] as String;
+      var fileName = r['file_name'] as String;
+      final fileKey = '$fileName|$mapType|$caveId';
+      if (!rasterSeenFile.add(fileKey)) {
+        fileName = '$fileName.dup$legacyId';
       }
+      final titleKey = '$title|$mapType|$caveId';
+      if (!rasterSeenTitle.add(titleKey)) {
+        title = '$title (dup $legacyId)';
+      }
+      await db.customInsert(
+        'INSERT INTO raster_maps '
+        '(uuid, title, map_type, file_name, cave_uuid, cave_area_uuid, '
+        'created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.rasterMapMap[legacyId]!.bytes),
+          Variable<String>(title),
+          Variable<String>(mapType),
+          Variable<String>(fileName),
+          Variable<Uint8List>(snap.caveMap[caveId]!.bytes),
+          Variable<Uint8List>(_fkBytes(r['cave_area_id'], snap.caveAreaMap)),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
     }
-    await db.customInsert(
-      'INSERT INTO documentation_files_to_geofeatures '
-      '(uuid, geofeature_uuid, geofeature_type, documentation_file_uuid, '
-      'updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.docToGeoMap[r['id']]!.bytes),
-        Variable<Uint8List>(geoUuidBytes),
-        Variable<String>(geoType ?? ''),
-        Variable<Uint8List>(
-            snap.documentationFileMap[r['documentation_file_id']]!.bytes),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
 
-  // ---- cave_trips ----
-  for (final r in snap.caveTrips) {
-    await db.customInsert(
-      'INSERT INTO cave_trips '
-      '(uuid, cave_uuid, title, description, trip_started_at, trip_ended_at, '
-      'log, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.caveTripMap[r['id']]!.bytes),
-        Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<int>(r['trip_started_at'] as int),
-        Variable<int>(r['trip_ended_at'] as int?),
-        Variable<String>(r['log'] as String?),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- cave_place_to_raster_map_definitions ----
+    for (final r in snap.cavePlaceDefs) {
+      await db.customInsert(
+        'INSERT INTO cave_place_to_raster_map_definitions '
+        '(uuid, x_coordinate, y_coordinate, cave_place_uuid, raster_map_uuid, '
+        'created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.cavePlaceDefMap[r['id']]!.bytes),
+          Variable<int>(r['x_coordinate'] as int?),
+          Variable<int>(r['y_coordinate'] as int?),
+          Variable<Uint8List>(snap.cavePlaceMap[r['cave_place_id']]!.bytes),
+          Variable<Uint8List>(snap.rasterMapMap[r['raster_map_id']]!.bytes),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- cave_trip_points ----
-  for (final r in snap.caveTripPoints) {
-    await db.customInsert(
-      'INSERT INTO cave_trip_points '
-      '(uuid, cave_trip_uuid, cave_place_uuid, scanned_at, notes, '
-      'created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.caveTripPointMap[r['id']]!.bytes),
-        Variable<Uint8List>(snap.caveTripMap[r['cave_trip_id']]!.bytes),
-        Variable<Uint8List>(_fkBytes(r['cave_place_id'], snap.cavePlaceMap)),
-        Variable<int>(r['scanned_at'] as int),
-        Variable<String>(r['notes'] as String?),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- documentation_files ----
+    for (final r in snap.documentationFiles) {
+      await db.customInsert(
+        'INSERT INTO documentation_files '
+        '(uuid, title, description, file_name, file_size, file_hash, file_type, '
+        'created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.documentationFileMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<String>(r['file_name'] as String),
+          Variable<int>(r['file_size'] as int),
+          Variable<String>(r['file_hash'] as String?),
+          Variable<String>(r['file_type'] as String),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- documentation_files_to_cave_trips ----
-  for (final r in snap.docToTrips) {
-    await db.customInsert(
-      'INSERT INTO documentation_files_to_cave_trips '
-      '(uuid, documentation_file_uuid, cave_trip_uuid, created_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.docToTripMap[r['id']]!.bytes),
-        Variable<Uint8List>(
-            snap.documentationFileMap[r['documentation_file_id']]!.bytes),
-        Variable<Uint8List>(snap.caveTripMap[r['cave_trip_id']]!.bytes),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- documentation_files_to_geofeatures ----
+    // Pseudo-FK: geofeature_id resolves against the map matching geofeature_type.
+    for (final r in snap.docToGeo) {
+      final geoType = r['geofeature_type'] as String?;
+      final geoId = r['geofeature_id'] as int?;
+      Uint8List? geoUuidBytes;
+      if (geoId != null && geoType != null) {
+        switch (geoType) {
+          case 'cave':
+            geoUuidBytes = snap.caveMap[geoId]?.bytes;
+            break;
+          case 'cave_place':
+            geoUuidBytes = snap.cavePlaceMap[geoId]?.bytes;
+            break;
+          case 'cave_area':
+            geoUuidBytes = snap.caveAreaMap[geoId]?.bytes;
+            break;
+        }
+      }
+      await db.customInsert(
+        'INSERT INTO documentation_files_to_geofeatures '
+        '(uuid, geofeature_uuid, geofeature_type, documentation_file_uuid, '
+        'updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.docToGeoMap[r['id']]!.bytes),
+          Variable<Uint8List>(geoUuidBytes),
+          Variable<String>(geoType ?? ''),
+          Variable<Uint8List>(
+            snap.documentationFileMap[r['documentation_file_id']]!.bytes,
+          ),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- trip_report_templates ----
-  for (final r in snap.tripReportTemplates) {
-    await db.customInsert(
-      'INSERT INTO trip_report_templates '
-      '(uuid, title, file_name, file_size, format, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.tripReportTemplateMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['file_name'] as String),
-        Variable<int>(r['file_size'] as int),
-        Variable<String>(r['format'] as String),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- cave_trips ----
+    for (final r in snap.caveTrips) {
+      await db.customInsert(
+        'INSERT INTO cave_trips '
+        '(uuid, cave_uuid, title, description, trip_started_at, trip_ended_at, '
+        'log, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.caveTripMap[r['id']]!.bytes),
+          Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<int>(r['trip_started_at'] as int),
+          Variable<int>(r['trip_ended_at'] as int?),
+          Variable<String>(r['log'] as String?),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- surface_places (not used, but preserve if present) ----
-  for (final r in snap.surfacePlaces) {
-    await db.customInsert(
-      'INSERT INTO surface_places '
-      '(uuid, title, description, type, surface_place_qr_code_identifier, '
-      'latitude, longitude, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.surfacePlaceMap[r['id']]!.bytes),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['description'] as String?),
-        Variable<String>(r['type'] as String?),
-        Variable<int>(r['surface_place_qr_code_identifier'] as int?),
-        Variable<double>(_asDouble(r['latitude'])),
-        Variable<double>(_asDouble(r['longitude'])),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- cave_trip_points ----
+    for (final r in snap.caveTripPoints) {
+      await db.customInsert(
+        'INSERT INTO cave_trip_points '
+        '(uuid, cave_trip_uuid, cave_place_uuid, scanned_at, notes, '
+        'created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.caveTripPointMap[r['id']]!.bytes),
+          Variable<Uint8List>(snap.caveTripMap[r['cave_trip_id']]!.bytes),
+          Variable<Uint8List>(_fkBytes(r['cave_place_id'], snap.cavePlaceMap)),
+          Variable<int>(r['scanned_at'] as int),
+          Variable<String>(r['notes'] as String?),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- cave_entrances (not used, but preserve if present) ----
-  for (final r in snap.caveEntrances) {
-    await db.customInsert(
-      'INSERT INTO cave_entrances '
-      '(uuid, cave_uuid, surface_place_uuid, is_main_entrance, title, '
-      'created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable<Uint8List>(snap.caveEntranceMap[r['id']]!.bytes),
-        Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
-        Variable<Uint8List>(
-            _fkBytes(r['surface_place_id'], snap.surfacePlaceMap)),
-        Variable<int>(r['is_main_entrance'] as int?),
-        Variable<String>(r['title'] as String?),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-        Variable<int>(r['deleted_at'] as int?),
-      ],
-    );
-  }
+    // ---- documentation_files_to_cave_trips ----
+    for (final r in snap.docToTrips) {
+      await db.customInsert(
+        'INSERT INTO documentation_files_to_cave_trips '
+        '(uuid, documentation_file_uuid, cave_trip_uuid, created_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.docToTripMap[r['id']]!.bytes),
+          Variable<Uint8List>(
+            snap.documentationFileMap[r['documentation_file_id']]!.bytes,
+          ),
+          Variable<Uint8List>(snap.caveTripMap[r['cave_trip_id']]!.bytes),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
 
-  // ---- configurations (keeps INTEGER PK) ----
-  for (final r in snap.configurations) {
-    await db.customInsert(
-      'INSERT INTO configurations '
-      '(id, title, value, created_at, updated_at) '
-      'VALUES (?, ?, ?, ?, ?)',
-      variables: [
-        Variable<int>(r['id'] as int),
-        Variable<String>(r['title'] as String),
-        Variable<String>(r['value'] as String?),
-        Variable<int>(r['created_at'] as int?),
-        Variable<int>(r['updated_at'] as int?),
-      ],
-    );
-  }
+    // ---- trip_report_templates ----
+    for (final r in snap.tripReportTemplates) {
+      await db.customInsert(
+        'INSERT INTO trip_report_templates '
+        '(uuid, title, file_name, file_size, format, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.tripReportTemplateMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['file_name'] as String),
+          Variable<int>(r['file_size'] as int),
+          Variable<String>(r['format'] as String),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
+
+    // ---- surface_places (not used, but preserve if present) ----
+    for (final r in snap.surfacePlaces) {
+      await db.customInsert(
+        'INSERT INTO surface_places '
+        '(uuid, title, description, type, surface_place_qr_code_identifier, '
+        'latitude, longitude, created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.surfacePlaceMap[r['id']]!.bytes),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['description'] as String?),
+          Variable<String>(r['type'] as String?),
+          Variable<int>(r['surface_place_qr_code_identifier'] as int?),
+          Variable<double>(_asDouble(r['latitude'])),
+          Variable<double>(_asDouble(r['longitude'])),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
+
+    // ---- cave_entrances (not used, but preserve if present) ----
+    for (final r in snap.caveEntrances) {
+      await db.customInsert(
+        'INSERT INTO cave_entrances '
+        '(uuid, cave_uuid, surface_place_uuid, is_main_entrance, title, '
+        'created_at, updated_at, deleted_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable<Uint8List>(snap.caveEntranceMap[r['id']]!.bytes),
+          Variable<Uint8List>(snap.caveMap[r['cave_id']]!.bytes),
+          Variable<Uint8List>(
+            _fkBytes(r['surface_place_id'], snap.surfacePlaceMap),
+          ),
+          Variable<int>(r['is_main_entrance'] as int?),
+          Variable<String>(r['title'] as String?),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+          Variable<int>(r['deleted_at'] as int?),
+        ],
+      );
+    }
+
+    // ---- configurations (keeps INTEGER PK) ----
+    for (final r in snap.configurations) {
+      await db.customInsert(
+        'INSERT INTO configurations '
+        '(id, title, value, created_at, updated_at) '
+        'VALUES (?, ?, ?, ?, ?)',
+        variables: [
+          Variable<int>(r['id'] as int),
+          Variable<String>(r['title'] as String),
+          Variable<String>(r['value'] as String?),
+          Variable<int>(r['created_at'] as int?),
+          Variable<int>(r['updated_at'] as int?),
+        ],
+      );
+    }
   }); // end transaction
 
   await db.customStatement('PRAGMA foreign_keys = ON');
@@ -569,10 +576,12 @@ Future<List<Map<String, Object?>>> _readAll(
 ) async {
   // If the table doesn't exist (e.g. old DB predates trip_report_templates),
   // return an empty list instead of throwing.
-  final exists = await db.customSelect(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
-    variables: [Variable<String>(table)],
-  ).get();
+  final exists = await db
+      .customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+        variables: [Variable<String>(table)],
+      )
+      .get();
   if (exists.isEmpty) return const [];
   final rows = await db.customSelect('SELECT * FROM $table').get();
   return rows.map((r) => r.data).toList();

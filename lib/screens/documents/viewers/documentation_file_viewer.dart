@@ -12,25 +12,40 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// Lightweight viewer that handles common file types inline (images, text)
 /// and embeds PDF rendering for `.pdf` files using `pdfx`.
 class DocumentationFileViewer extends StatefulWidget {
-  const DocumentationFileViewer({super.key, required this.file, required this.doc});
+  const DocumentationFileViewer({
+    super.key,
+    required this.file,
+    required this.doc,
+  });
 
   final File file;
   final DocumentationFile doc;
 
   @override
-  State<DocumentationFileViewer> createState() => _DocumentationFileViewerState();
+  State<DocumentationFileViewer> createState() =>
+      _DocumentationFileViewerState();
 }
 
 class _DocumentationFileViewerState extends State<DocumentationFileViewer>
-    with AppBarMenuMixin<DocumentationFileViewer>, ProductTourMixin<DocumentationFileViewer> {
+    with
+        AppBarMenuMixin<DocumentationFileViewer>,
+        ProductTourMixin<DocumentationFileViewer> {
   @override
   String get tourId => 'doc_file_viewer';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'content', titleLocKey: 'tour_doc_file_viewer_content_title', bodyLocKey: 'tour_doc_file_viewer_content_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_doc_file_viewer_menu_title', bodyLocKey: 'tour_doc_file_viewer_menu_body'),
+    TourStepDef(
+      keyId: 'content',
+      titleLocKey: 'tour_doc_file_viewer_content_title',
+      bodyLocKey: 'tour_doc_file_viewer_content_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_doc_file_viewer_menu_title',
+      bodyLocKey: 'tour_doc_file_viewer_menu_body',
+    ),
   ];
 
   PdfControllerPinch? _pdfController;
@@ -42,9 +57,13 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
     final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
     if (ext == 'pdf') {
       try {
-        _pdfController = PdfControllerPinch(document: PdfDocument.openFile(widget.file.path));
+        _pdfController = PdfControllerPinch(
+          document: PdfDocument.openFile(widget.file.path),
+        );
       } catch (e, st) {
-        AppLogger.of('DocFileViewer').warning('Failed to open PDF ${widget.file.path}', e, st);
+        AppLogger.of(
+          'DocFileViewer',
+        ).warning('Failed to open PDF ${widget.file.path}', e, st);
         _pdfController = null;
       }
     }
@@ -82,16 +101,25 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
       }
     } else {
       body = Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.insert_drive_file, size: 64),
-          const SizedBox(height: 12),
-          Text(ext.isEmpty ? LocServ.inst.t('none') : ext.toUpperCase()),
-          const SizedBox(height: 12),
-          ElevatedButton(onPressed: () async {
-            final tmp = await _writeTempFile(name, await widget.file.readAsBytes());
-            if (mounted) SnackBarService.showSuccess('Saved to: $tmp');
-          }, child: Text(LocServ.inst.t('save'))),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.insert_drive_file, size: 64),
+            const SizedBox(height: 12),
+            Text(ext.isEmpty ? LocServ.inst.t('none') : ext.toUpperCase()),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () async {
+                final tmp = await _writeTempFile(
+                  name,
+                  await widget.file.readAsBytes(),
+                );
+                if (mounted) SnackBarService.showSuccess('Saved to: $tmp');
+              },
+              child: Text(LocServ.inst.t('save')),
+            ),
+          ],
+        ),
       );
     }
 
@@ -100,7 +128,9 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(widget.doc.title),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: KeyedSubtree(key: tourKeys['content'], child: body),
     );

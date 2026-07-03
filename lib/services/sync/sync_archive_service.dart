@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -103,8 +103,7 @@ class SyncConflict {
 /// Callback that decides how a single [SyncConflict] should be resolved.
 ///
 /// Return `null` to fall back to the default last-writer-wins behaviour.
-typedef ConflictResolver =
-    Future<SyncConflictAction?> Function(SyncConflict);
+typedef ConflictResolver = Future<SyncConflictAction?> Function(SyncConflict);
 
 /// Thrown when the user (or a resolver) cancels an in-progress import.
 class SyncImportCancelledException implements Exception {
@@ -178,10 +177,10 @@ class SyncArchiveService {
     this._logger, {
     Future<Directory> Function()? assetsBaseDirResolver,
     Clock clock = const SystemClock(),
-  })  : _assetsBaseDirResolver =
-            assetsBaseDirResolver ?? getApplicationDocumentsDirectory,
-        _clock = clock,
-        _registry = SyncTableRegistry(_db);
+  }) : _assetsBaseDirResolver =
+           assetsBaseDirResolver ?? getApplicationDocumentsDirectory,
+       _clock = clock,
+       _registry = SyncTableRegistry(_db);
 
   final AppDatabase _db;
   final ChangeLogger _logger;
@@ -249,21 +248,27 @@ class SyncArchiveService {
     }
     if (baseDir != null) {
       if (includeDocumentationFiles) {
-        final paths = (await _db.customSelect(
-          'SELECT DISTINCT file_name FROM documentation_files '
-          'WHERE deleted_at IS NULL',
-        ).get())
-            .map((r) => r.read<String>('file_name'))
-            .toList();
+        final paths =
+            (await _db
+                    .customSelect(
+                      'SELECT DISTINCT file_name FROM documentation_files '
+                      'WHERE deleted_at IS NULL',
+                    )
+                    .get())
+                .map((r) => r.read<String>('file_name'))
+                .toList();
         assetCount += await _addAssetsToArchive(archive, baseDir.path, paths);
       }
       if (includeRasterMaps) {
-        final paths = (await _db.customSelect(
-          'SELECT DISTINCT file_name FROM raster_maps '
-          'WHERE deleted_at IS NULL',
-        ).get())
-            .map((r) => r.read<String>('file_name'))
-            .toList();
+        final paths =
+            (await _db
+                    .customSelect(
+                      'SELECT DISTINCT file_name FROM raster_maps '
+                      'WHERE deleted_at IS NULL',
+                    )
+                    .get())
+                .map((r) => r.read<String>('file_name'))
+                .toList();
         assetCount += await _addAssetsToArchive(archive, baseDir.path, paths);
       }
     }
@@ -302,10 +307,12 @@ class SyncArchiveService {
       await output.close();
     }
     final size = await out.length();
-    _log.info('Sync archive exported: ${out.path} '
-        '($size bytes, ${tables.length} tables, '
-        '${changeLogRows.length} change-log entries, '
-        '$assetCount asset files)');
+    _log.info(
+      'Sync archive exported: ${out.path} '
+      '($size bytes, ${tables.length} tables, '
+      '${changeLogRows.length} change-log entries, '
+      '$assetCount asset files)',
+    );
     return out;
   }
 
@@ -421,16 +428,19 @@ class SyncArchiveService {
         'See log for forensic details (EOCD offsets, head/tail bytes).',
       );
     }
-    final manifest = jsonDecode(
-      utf8.decode(manifestFile.content as List<int>),
-    ) as Map<String, dynamic>;
+    final manifest =
+        jsonDecode(utf8.decode(manifestFile.content as List<int>))
+            as Map<String, dynamic>;
     if (manifest['format'] != 'speleo_loc_sync') {
-      throw FormatException('Unrecognized archive format: ${manifest['format']}');
+      throw FormatException(
+        'Unrecognized archive format: ${manifest['format']}',
+      );
     }
     final archiveSchema = manifest['schema_version'];
     if (archiveSchema is! int) {
       throw const FormatException(
-          'Archive manifest is missing or has an invalid schema_version');
+        'Archive manifest is missing or has an invalid schema_version',
+      );
     }
     if (archiveSchema != kSyncArchiveDbSchemaVersion) {
       throw SyncArchiveSchemaMismatchException(
@@ -501,8 +511,9 @@ class SyncArchiveService {
 
     await Future.delayed(Duration.zero);
     final fieldEntry = archive.findFile('change_log_field.jsonl');
-    final fieldRows =
-        fieldEntry != null ? _readJsonl(fieldEntry) : <Map<String, dynamic>>[];
+    final fieldRows = fieldEntry != null
+        ? _readJsonl(fieldEntry)
+        : <Map<String, dynamic>>[];
 
     // ── Phase 2: DB transaction — pure async DB operations only ──────────
     await _logger.runSuspended(() async {
@@ -530,8 +541,7 @@ class SyncArchiveService {
         for (final row in logRows) {
           final uuidStr = row['uuid'] as String;
           if (existingLogUuids.contains(uuidStr)) continue;
-          final data =
-              ChangeLogData.fromJson(row, serializer: _serializer);
+          final data = ChangeLogData.fromJson(row, serializer: _serializer);
           await _db.into(_db.changeLog).insert(data);
           existingLogUuids.add(uuidStr);
           changeLogMerged++;
@@ -542,12 +552,13 @@ class SyncArchiveService {
 
         for (final row in fieldRows) {
           try {
-            final data =
-                ChangeLogFieldData.fromJson(row, serializer: _serializer);
-            await _db.into(_db.changeLogField).insert(
-                  data,
-                  mode: InsertMode.insertOrIgnore,
-                );
+            final data = ChangeLogFieldData.fromJson(
+              row,
+              serializer: _serializer,
+            );
+            await _db
+                .into(_db.changeLogField)
+                .insert(data, mode: InsertMode.insertOrIgnore);
           } catch (e) {
             warnings.add('change_log_field: $e');
           }
@@ -557,15 +568,18 @@ class SyncArchiveService {
         // remove the corresponding row from its table locally if the
         // delete was more recent than the local row's updated_at.
         if (deleteTargets.isNotEmpty) {
-          deletesApplied +=
-              await _applyDeletes(deleteTargets, warnings);
+          deletesApplied += await _applyDeletes(deleteTargets, warnings);
         }
       });
     });
 
     // Extract asset files outside the DB transaction (filesystem IO
     // shouldn't be tied to the transaction's lifetime).
-    final assetResult = await _extractAssets(archive, warnings, zipPath: zipPath);
+    final assetResult = await _extractAssets(
+      archive,
+      warnings,
+      zipPath: zipPath,
+    );
     filesCopied = assetResult.copied;
     filesSkipped = assetResult.skipped;
 
@@ -593,17 +607,11 @@ class SyncArchiveService {
     // that this is simpler than tracking entity_table per tombstone.
     // We rely on the caller holding a transaction.
     final tables = <(String, Future<int> Function(Uuid, int))>[
-      (
-        'users',
-        (u, ts) async => _deleteIfOlder(_db.users, u, ts),
-      ),
+      ('users', (u, ts) async => _deleteIfOlder(_db.users, u, ts)),
       (
         'cave_place_to_raster_map_definitions',
-        (u, ts) async => _deleteIfOlder(
-          _db.cavePlaceToRasterMapDefinitions,
-          u,
-          ts,
-        ),
+        (u, ts) async =>
+            _deleteIfOlder(_db.cavePlaceToRasterMapDefinitions, u, ts),
       ),
       (
         'documentation_files_to_geofeatures',
@@ -619,10 +627,7 @@ class SyncArchiveService {
         'cave_trip_points',
         (u, ts) async => _deleteIfOlder(_db.caveTripPoints, u, ts),
       ),
-      (
-        'cave_trips',
-        (u, ts) async => _deleteIfOlder(_db.caveTrips, u, ts),
-      ),
+      ('cave_trips', (u, ts) async => _deleteIfOlder(_db.caveTrips, u, ts)),
       (
         'documentation_files',
         (u, ts) async => _deleteIfOlder(_db.documentationFiles, u, ts),
@@ -631,22 +636,10 @@ class SyncArchiveService {
         'trip_report_templates',
         (u, ts) async => _deleteIfOlder(_db.tripReportTemplates, u, ts),
       ),
-      (
-        'raster_maps',
-        (u, ts) async => _deleteIfOlder(_db.rasterMaps, u, ts),
-      ),
-      (
-        'cave_places',
-        (u, ts) async => _deleteIfOlder(_db.cavePlaces, u, ts),
-      ),
-      (
-        'cave_areas',
-        (u, ts) async => _deleteIfOlder(_db.caveAreas, u, ts),
-      ),
-      (
-        'caves',
-        (u, ts) async => _deleteIfOlder(_db.caves, u, ts),
-      ),
+      ('raster_maps', (u, ts) async => _deleteIfOlder(_db.rasterMaps, u, ts)),
+      ('cave_places', (u, ts) async => _deleteIfOlder(_db.cavePlaces, u, ts)),
+      ('cave_areas', (u, ts) async => _deleteIfOlder(_db.caveAreas, u, ts)),
+      ('caves', (u, ts) async => _deleteIfOlder(_db.caves, u, ts)),
       (
         'surface_areas',
         (u, ts) async => _deleteIfOlder(_db.surfaceAreas, u, ts),
@@ -673,11 +666,13 @@ class SyncArchiveService {
     int tombstoneTs,
   ) async {
     // We can't read `updated_at` generically, so use a custom statement.
-    final countRows = await _db.customSelect(
-      'SELECT COALESCE(updated_at, created_at, 0) AS ts '
-      'FROM ${table.actualTableName} WHERE uuid = ?',
-      variables: [Variable<Uint8List>(entityUuid.bytes)],
-    ).get();
+    final countRows = await _db
+        .customSelect(
+          'SELECT COALESCE(updated_at, created_at, 0) AS ts '
+          'FROM ${table.actualTableName} WHERE uuid = ?',
+          variables: [Variable<Uint8List>(entityUuid.bytes)],
+        )
+        .get();
     if (countRows.isEmpty) return 0;
     final localTs = countRows.first.read<int>('ts');
     if (tombstoneTs < localTs) return 0; // local is newer
@@ -964,4 +959,3 @@ class _AssetResult {
   final int skipped;
   const _AssetResult({required this.copied, required this.skipped});
 }
-

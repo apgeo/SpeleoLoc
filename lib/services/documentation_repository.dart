@@ -37,9 +37,9 @@ class DocumentationRepository implements IDocumentationRepository {
 
   @override
   Future<DocumentationFile?> findById(Uuid uuid) async {
-    return (_database.select(_database.documentationFiles)
-          ..where((t) => t.uuid.equalsValue(uuid)))
-        .getSingleOrNull();
+    return (_database.select(
+      _database.documentationFiles,
+    )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
   }
 
   @override
@@ -47,9 +47,9 @@ class DocumentationRepository implements IDocumentationRepository {
     required int fileSize,
     required String fileHash,
   }) async {
-    return (_database.select(_database.documentationFiles)
-          ..where((t) =>
-              t.fileSize.equals(fileSize) & t.fileHash.equals(fileHash)))
+    return (_database.select(_database.documentationFiles)..where(
+          (t) => t.fileSize.equals(fileSize) & t.fileHash.equals(fileHash),
+        ))
         .get();
   }
 

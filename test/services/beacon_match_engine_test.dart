@@ -12,13 +12,15 @@ void main() {
     int windowSec = 5,
     int cooldownSec = 300,
   }) {
-    final e = BeaconMatchEngine(BeaconDetectionConfig(
-      enabled: true,
-      rssiThresholdDbm: threshold,
-      debounceCount: debounce,
-      debounceWindowSec: windowSec,
-      cooldownSec: cooldownSec,
-    ));
+    final e = BeaconMatchEngine(
+      BeaconDetectionConfig(
+        enabled: true,
+        rssiThresholdDbm: threshold,
+        debounceCount: debounce,
+        debounceWindowSec: windowSec,
+        cooldownSec: cooldownSec,
+      ),
+    );
     e.updateRegistrations({idA, idB});
     return e;
   }
@@ -70,8 +72,7 @@ void main() {
         expect(e.observe(idA, -20, t0.add(Duration(seconds: s))), isFalse);
       }
       // After cooldown a fresh debounce cycle triggers again.
-      expect(
-          e.observe(idA, -40, t0.add(const Duration(seconds: 301))), isTrue);
+      expect(e.observe(idA, -40, t0.add(const Duration(seconds: 301))), isTrue);
     });
 
     test('identities are tracked independently', () {

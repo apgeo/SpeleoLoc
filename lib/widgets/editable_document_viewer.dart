@@ -65,11 +65,13 @@ class EditableDocumentViewer extends StatelessWidget {
   void _openEditor(BuildContext context, DocumentFormatHandler handler) {
     final link = geofeatureLink;
     final editor = handler.buildEditor!(
-      cavePlaceUuid:
-          link?.type == GeofeatureType.cavePlace ? link!.geofeatureUuid : null,
+      cavePlaceUuid: link?.type == GeofeatureType.cavePlace
+          ? link!.geofeatureUuid
+          : null,
       caveUuid: link?.type == GeofeatureType.cave ? link!.geofeatureUuid : null,
-      caveAreaUuid:
-          link?.type == GeofeatureType.caveArea ? link!.geofeatureUuid : null,
+      caveAreaUuid: link?.type == GeofeatureType.caveArea
+          ? link!.geofeatureUuid
+          : null,
       existingDoc: doc,
     );
 

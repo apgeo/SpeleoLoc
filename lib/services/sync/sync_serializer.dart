@@ -42,6 +42,5 @@ class SyncValueSerializer extends ValueSerializer {
   }
 
   static bool _isUuidType<T>() => T == Uuid || <Uuid?>[] is List<T>;
-  static bool _isBytesType<T>() =>
-      T == Uint8List || <Uint8List?>[] is List<T>;
+  static bool _isBytesType<T>() => T == Uint8List || <Uint8List?>[] is List<T>;
 }

@@ -31,22 +31,29 @@ class BeaconRepository {
   final Clock _clock;
   final _log = AppLogger.of('BeaconRepository');
 
-  BeaconRepository(this._database, this._currentUser, this._logger,
-      {Clock clock = const SystemClock()})
-      : _clock = clock;
+  BeaconRepository(
+    this._database,
+    this._currentUser,
+    this._logger, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock;
 
   /// Active (non-deleted) registrations for one cave place.
   Future<List<CavePlaceBeacon>> getBeaconsForPlace(Uuid cavePlaceUuid) async {
     try {
-      return await (_database.select(_database.cavePlaceBeacons)
-            ..where((b) =>
+      return await (_database.select(_database.cavePlaceBeacons)..where(
+            (b) =>
                 b.cavePlaceUuid.equalsValue(cavePlaceUuid) &
-                b.deletedAt.isNull()))
+                b.deletedAt.isNull(),
+          ))
           .get();
     } catch (e, st) {
       _log.severe('Failed to load beacons for place', e, st);
-      throw DbException('Failed to load beacons for place',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to load beacons for place',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -54,15 +61,19 @@ class BeaconRepository {
   /// the maintenance list.
   Future<List<BeaconWithPlace>> getBeaconsForCave(Uuid caveUuid) async {
     try {
-      final beacons = await (_database.select(_database.cavePlaceBeacons)
-            ..where(
-                (b) => b.caveUuid.equalsValue(caveUuid) & b.deletedAt.isNull()))
-          .get();
+      final beacons =
+          await (_database.select(_database.cavePlaceBeacons)..where(
+                (b) => b.caveUuid.equalsValue(caveUuid) & b.deletedAt.isNull(),
+              ))
+              .get();
       return _joinPlaces(beacons);
     } catch (e, st) {
       _log.severe('Failed to load beacons for cave', e, st);
-      throw DbException('Failed to load beacons for cave',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to load beacons for cave',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -77,21 +88,25 @@ class BeaconRepository {
   }) async {
     try {
       final query = _database.select(_database.cavePlaceBeacons)
-        ..where((b) =>
-            b.proximityUuid.equals(proximityUuid.toUpperCase()) &
-            b.major.equals(major) &
-            b.minor.equals(minor) &
-            b.deletedAt.isNull());
+        ..where(
+          (b) =>
+              b.proximityUuid.equals(proximityUuid.toUpperCase()) &
+              b.major.equals(major) &
+              b.minor.equals(minor) &
+              b.deletedAt.isNull(),
+        );
       var beacons = await query.get();
       if (currentCaveId != null) {
-        beacons =
-            beacons.where((b) => b.caveUuid == currentCaveId).toList();
+        beacons = beacons.where((b) => b.caveUuid == currentCaveId).toList();
       }
       return _joinPlaces(beacons);
     } catch (e, st) {
       _log.severe('Failed to find beacon by identity', e, st);
-      throw DbException('Failed to find beacon by identity',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to find beacon by identity',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -113,7 +128,9 @@ class BeaconRepository {
       final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
       final newUuid = Uuid.v7();
-      await _database.into(_database.cavePlaceBeacons).insert(
+      await _database
+          .into(_database.cavePlaceBeacons)
+          .insert(
             CavePlaceBeaconsCompanion.insert(
               uuid: newUuid,
               cavePlaceUuid: cavePlaceUuid,
@@ -145,20 +162,23 @@ class BeaconRepository {
     try {
       final now = _clock.nowMs();
       final author = await _currentUser.currentOrSystem();
-      final old = await (_database.select(_database.cavePlaceBeacons)
-            ..where((b) => b.uuid.equalsValue(beaconUuid))
-            ..limit(1))
-          .getSingleOrNull();
+      final old =
+          await (_database.select(_database.cavePlaceBeacons)
+                ..where((b) => b.uuid.equalsValue(beaconUuid))
+                ..limit(1))
+              .getSingleOrNull();
       if (old == null) {
         throw DbException('Beacon $beaconUuid not found');
       }
-      await (_database.update(_database.cavePlaceBeacons)
-            ..where((b) => b.uuid.equalsValue(beaconUuid)))
-          .write(CavePlaceBeaconsCompanion(
-        deletedAt: Value(now),
-        updatedAt: Value(now),
-        lastModifiedByUserUuid: Value(author),
-      ));
+      await (_database.update(
+        _database.cavePlaceBeacons,
+      )..where((b) => b.uuid.equalsValue(beaconUuid))).write(
+        CavePlaceBeaconsCompanion(
+          deletedAt: Value(now),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
+        ),
+      );
       await _logger.logDelete(
         'cave_place_beacons',
         beaconUuid,
@@ -171,8 +191,11 @@ class BeaconRepository {
       );
     } catch (e, st) {
       _log.severe('Failed to unregister beacon', e, st);
-      throw DbException('Failed to unregister beacon',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to unregister beacon',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -185,17 +208,22 @@ class BeaconRepository {
     double? humidityPct,
   }) async {
     try {
-      await (_database.update(_database.cavePlaceBeacons)
-            ..where((b) => b.uuid.equalsValue(beaconUuid)))
-          .write(CavePlaceBeaconsCompanion(
-        lastSeenAt: Value(_clock.nowMs()),
-        lastBatteryMv:
-            batteryMv != null ? Value(batteryMv) : const Value.absent(),
-        lastTemperatureC:
-            temperatureC != null ? Value(temperatureC) : const Value.absent(),
-        lastHumidityPct:
-            humidityPct != null ? Value(humidityPct) : const Value.absent(),
-      ));
+      await (_database.update(
+        _database.cavePlaceBeacons,
+      )..where((b) => b.uuid.equalsValue(beaconUuid))).write(
+        CavePlaceBeaconsCompanion(
+          lastSeenAt: Value(_clock.nowMs()),
+          lastBatteryMv: batteryMv != null
+              ? Value(batteryMv)
+              : const Value.absent(),
+          lastTemperatureC: temperatureC != null
+              ? Value(temperatureC)
+              : const Value.absent(),
+          lastHumidityPct: humidityPct != null
+              ? Value(humidityPct)
+              : const Value.absent(),
+        ),
+      );
     } catch (e, st) {
       // Telemetry only — log and continue, never surface to the user.
       _log.warning('Failed to update beacon health', e, st);
@@ -203,17 +231,18 @@ class BeaconRepository {
   }
 
   Future<List<BeaconWithPlace>> _joinPlaces(
-      List<CavePlaceBeacon> beacons) async {
+    List<CavePlaceBeacon> beacons,
+  ) async {
     if (beacons.isEmpty) return [];
     final placeIds = beacons.map((b) => b.cavePlaceUuid).toSet();
-    final places = await (_database.select(_database.cavePlaces)
-          ..where((cp) => cp.uuid.isInValues(placeIds)))
-        .get();
+    final places = await (_database.select(
+      _database.cavePlaces,
+    )..where((cp) => cp.uuid.isInValues(placeIds))).get();
     final placeById = {for (final p in places) p.uuid: p};
     final caveIds = beacons.map((b) => b.caveUuid).toSet();
-    final caves = await (_database.select(_database.caves)
-          ..where((c) => c.uuid.isInValues(caveIds)))
-        .get();
+    final caves = await (_database.select(
+      _database.caves,
+    )..where((c) => c.uuid.isInValues(caveIds))).get();
     final caveTitles = {for (final c in caves) c.uuid: c.title};
     return [
       for (final b in beacons)

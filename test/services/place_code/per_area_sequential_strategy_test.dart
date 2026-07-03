@@ -16,15 +16,17 @@ void main() {
 
   Future<Uuid> addArea() async {
     final id = Uuid.v7();
-    await db.into(db.surfaceAreas).insert(
-          SurfaceAreasCompanion.insert(uuid: id, title: 'A-$id'),
-        );
+    await db
+        .into(db.surfaceAreas)
+        .insert(SurfaceAreasCompanion.insert(uuid: id, title: 'A-$id'));
     return id;
   }
 
   Future<Uuid> addCave({Uuid? surfaceAreaUuid, String title = 'C'}) async {
     final id = Uuid.v7();
-    await db.into(db.caves).insert(
+    await db
+        .into(db.caves)
+        .insert(
           CavesCompanion.insert(
             uuid: id,
             title: '$title-$id',
@@ -36,7 +38,9 @@ void main() {
 
   Future<Uuid> addPlace(Uuid caveUuid, {String? pci}) async {
     final id = Uuid.v7();
-    await db.into(db.cavePlaces).insert(
+    await db
+        .into(db.cavePlaces)
+        .insert(
           CavePlacesCompanion.insert(
             uuid: id,
             title: 'P-$id',
@@ -74,30 +78,34 @@ void main() {
       isMainEntrance: false,
     );
     expect(r, isA<PlaceCodeGenerationSkipped>());
-    expect((r as PlaceCodeGenerationSkipped).reason,
-        PlaceCodeSkipReason.caveMissingSurfaceArea);
-  });
-
-  test('validate detects duplicates across area but not across areas',
-      () async {
-    final area1 = await addArea();
-    final area2 = await addArea();
-    final c1 = await addCave(surfaceAreaUuid: area1);
-    final c2 = await addCave(surfaceAreaUuid: area1);
-    final c3 = await addCave(surfaceAreaUuid: area2);
-    await addPlace(c1, pci: '7');
-    final p2 = await addPlace(c2);
-    final p3 = await addPlace(c3);
-
-    final strat = PerAreaSequentialStrategy(db, const {});
     expect(
-      await strat.validate('7', cavePlaceUuid: p2, caveUuid: c2),
-      'place_code_error_duplicate_in_area',
-    );
-    // Same value in a different area is fine.
-    expect(
-      await strat.validate('7', cavePlaceUuid: p3, caveUuid: c3),
-      isNull,
+      (r as PlaceCodeGenerationSkipped).reason,
+      PlaceCodeSkipReason.caveMissingSurfaceArea,
     );
   });
+
+  test(
+    'validate detects duplicates across area but not across areas',
+    () async {
+      final area1 = await addArea();
+      final area2 = await addArea();
+      final c1 = await addCave(surfaceAreaUuid: area1);
+      final c2 = await addCave(surfaceAreaUuid: area1);
+      final c3 = await addCave(surfaceAreaUuid: area2);
+      await addPlace(c1, pci: '7');
+      final p2 = await addPlace(c2);
+      final p3 = await addPlace(c3);
+
+      final strat = PerAreaSequentialStrategy(db, const {});
+      expect(
+        await strat.validate('7', cavePlaceUuid: p2, caveUuid: c2),
+        'place_code_error_duplicate_in_area',
+      );
+      // Same value in a different area is fine.
+      expect(
+        await strat.validate('7', cavePlaceUuid: p3, caveUuid: c3),
+        isNull,
+      );
+    },
+  );
 }

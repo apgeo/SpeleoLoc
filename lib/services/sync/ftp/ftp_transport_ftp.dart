@@ -27,7 +27,8 @@ class FtpTransportFtp implements IFtpTransport {
   Future<void> connect({required String password}) async {
     if (profile.protocol == FtpProtocol.sftp) {
       throw const FtpTransportException(
-          'SFTP profiles must use FtpTransportSftp, not FtpTransportFtp');
+        'SFTP profiles must use FtpTransportSftp, not FtpTransportFtp',
+      );
     }
     final security = profile.protocol == FtpProtocol.ftps
         ? SecurityType.ftpes
@@ -82,14 +83,17 @@ class FtpTransportFtp implements IFtpTransport {
   @override
   Future<void> verifyReadWriteAccess() async {
     _requireConnected();
-    final probeName = 'speleo_loc_probe_'
+    final probeName =
+        'speleo_loc_probe_'
         '${DateTime.now().millisecondsSinceEpoch}.tmp';
     final tmpDir = Directory.systemTemp;
-    final localProbe =
-        File(p.join(tmpDir.path, probeName))..writeAsBytesSync(makeProbeBytes());
+    final localProbe = File(p.join(tmpDir.path, probeName))
+      ..writeAsBytesSync(makeProbeBytes());
     try {
-      final uploaded = await _client!
-          .uploadFile(localProbe, sRemoteName: probeName);
+      final uploaded = await _client!.uploadFile(
+        localProbe,
+        sRemoteName: probeName,
+      );
       if (!uploaded) {
         throw const FtpTransportException('Probe upload returned false');
       }
@@ -102,7 +106,11 @@ class FtpTransportFtp implements IFtpTransport {
       try {
         if (localProbe.existsSync()) localProbe.deleteSync();
       } catch (e, st) {
-        _log.fine('best-effort local probe delete failed: ${localProbe.path}', e, st);
+        _log.fine(
+          'best-effort local probe delete failed: ${localProbe.path}',
+          e,
+          st,
+        );
       }
     }
   }
@@ -114,11 +122,13 @@ class FtpTransportFtp implements IFtpTransport {
       final entries = await _client!.listDirectoryContent();
       return entries
           .where((e) => e.type != FTPEntryType.dir)
-          .map((e) => RemoteFileEntry(
-                name: e.name,
-                size: e.size ?? 0,
-                modifiedAt: e.modifyTime,
-              ))
+          .map(
+            (e) => RemoteFileEntry(
+              name: e.name,
+              size: e.size ?? 0,
+              modifiedAt: e.modifyTime,
+            ),
+          )
           .toList();
     } catch (e) {
       throw FtpTransportException('FTP list failed', e);

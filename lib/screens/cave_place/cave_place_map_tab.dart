@@ -106,7 +106,10 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
     _log.fine(
       'Opening place selector for cavePlaceUuid=$cavePlaceUuid rasterMapUuid=${rm.uuid}',
     );
-    final existing = await definitionRepository.findDefinition(cavePlaceUuid, rm.uuid);
+    final existing = await definitionRepository.findDefinition(
+      cavePlaceUuid,
+      rm.uuid,
+    );
     final cavePlacesWithDefs = await rasterMapRepository
         .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
 
@@ -200,10 +203,7 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
         Expanded(
           child: Stack(
             children: [
-              GestureDetector(
-                onTap: _definePlace,
-                child: _buildImage(),
-              ),
+              GestureDetector(onTap: _definePlace, child: _buildImage()),
               Positioned(
                 left: 4,
                 top: 4,

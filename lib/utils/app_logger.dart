@@ -35,8 +35,7 @@ class AppLogger {
       if (record.error != null) {
         buf.write(' | error: ${record.error}');
       }
-      if (record.stackTrace != null &&
-          record.level >= Level.SEVERE) {
+      if (record.stackTrace != null && record.level >= Level.SEVERE) {
         buf.write('\n${record.stackTrace}');
       }
       debugPrint(buf.toString());

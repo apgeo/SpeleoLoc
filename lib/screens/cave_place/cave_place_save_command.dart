@@ -96,8 +96,9 @@ class CavePlaceSaveCommand {
 
   Future<SaveOutcome> execute() async {
     final title = form.title.text;
-    final description =
-        form.description.text.isEmpty ? null : form.description.text;
+    final description = form.description.text.isEmpty
+        ? null
+        : form.description.text;
     final depth = parseDepthValue(form.depth.text);
     final qrText = form.qr.text.trim();
     final qr = qrText.isEmpty ? null : qrText;
@@ -121,8 +122,9 @@ class CavePlaceSaveCommand {
 
     // --- 2. Extreme-depth confirmation.
     if (depth != null && (depth < -1800 || depth > 1800)) {
-      final ok =
-          await confirmations.confirmExtremeDepth(formatDepthValue(depth));
+      final ok = await confirmations.confirmExtremeDepth(
+        formatDepthValue(depth),
+      );
       if (!ok) return const SaveCancelled();
     }
 
@@ -191,16 +193,17 @@ class CavePlaceSaveCommand {
     final qcri = qr == null
         ? null
         : qcriText.isNotEmpty
-            ? qcriText
-            : await placeCodeService.computeQcri(qr, cavePlaceUuid: uuid);
+        ? qcriText
+        : await placeCodeService.computeQcri(qr, cavePlaceUuid: uuid);
 
     if (currentCavePlaceId == null) {
       final companion = CavePlacesCompanion.insert(
         uuid: uuid,
         title: title,
         caveUuid: caveUuid,
-        description:
-            description == null ? const Value.absent() : Value(description),
+        description: description == null
+            ? const Value.absent()
+            : Value(description),
         depthInCave: Value(depth),
         placeCodeIdentifier: Value(qr),
         qrCodeResourceIdentifier: Value(qcri),
@@ -209,15 +212,17 @@ class CavePlaceSaveCommand {
         altitude: Value(alt),
         caveAreaUuid: Value(form.selectedCaveAreaId),
         isEntrance: Value(effectiveIsEntrance ? 1 : 0),
-        isMainEntrance:
-            Value(effectiveIsEntrance && effectiveIsMainEntrance ? 1 : 0),
+        isMainEntrance: Value(
+          effectiveIsEntrance && effectiveIsMainEntrance ? 1 : 0,
+        ),
       );
       await repository.addCavePlaceFromCompanion(companion);
     } else {
       final companion = CavePlacesCompanion(
         title: Value(title),
-        description:
-            description == null ? const Value.absent() : Value(description),
+        description: description == null
+            ? const Value.absent()
+            : Value(description),
         depthInCave: Value(depth),
         placeCodeIdentifier: Value(qr),
         qrCodeResourceIdentifier: Value(qcri),
@@ -226,8 +231,9 @@ class CavePlaceSaveCommand {
         altitude: Value(alt),
         caveAreaUuid: Value(form.selectedCaveAreaId),
         isEntrance: Value(effectiveIsEntrance ? 1 : 0),
-        isMainEntrance:
-            Value(effectiveIsEntrance && effectiveIsMainEntrance ? 1 : 0),
+        isMainEntrance: Value(
+          effectiveIsEntrance && effectiveIsMainEntrance ? 1 : 0,
+        ),
       );
       await repository.updateCavePlace(uuid, companion);
     }

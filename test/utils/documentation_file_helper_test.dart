@@ -6,7 +6,15 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 void main() {
   group('DocumentationFileHelper.detectFileType', () {
     test('recognises photo extensions case-insensitively', () {
-      for (final n in ['a.png', 'a.JPG', 'a.jpeg', 'a.gif', 'a.BMP', 'a.webp', 'a.heic']) {
+      for (final n in [
+        'a.png',
+        'a.JPG',
+        'a.jpeg',
+        'a.gif',
+        'a.BMP',
+        'a.webp',
+        'a.heic',
+      ]) {
         expect(DocumentationFileHelper.detectFileType(n), 'photo', reason: n);
       }
     });
@@ -24,7 +32,15 @@ void main() {
     });
 
     test('recognises text-document extensions', () {
-      for (final n in ['d.txt', 'd.rtf', 'd.doc', 'd.DOCX', 'd.odt', 'd.pdf', 'd.md']) {
+      for (final n in [
+        'd.txt',
+        'd.rtf',
+        'd.doc',
+        'd.DOCX',
+        'd.odt',
+        'd.pdf',
+        'd.md',
+      ]) {
         expect(
           DocumentationFileHelper.detectFileType(n),
           'text_document',
@@ -36,7 +52,10 @@ void main() {
     test('returns unknown for files without a usable extension', () {
       expect(DocumentationFileHelper.detectFileType('README'), 'unknown');
       expect(DocumentationFileHelper.detectFileType(''), 'unknown');
-      expect(DocumentationFileHelper.detectFileType('archive.tar.gz'), 'unknown');
+      expect(
+        DocumentationFileHelper.detectFileType('archive.tar.gz'),
+        'unknown',
+      );
     });
 
     test('uses only the final extension component', () {

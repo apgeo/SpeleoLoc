@@ -32,15 +32,15 @@ class CavePlacePciSection extends StatelessWidget {
       key: rowKey,
       children: [
         IconButton(
-          icon: Icon(
-            editable ? Icons.lock_open : Icons.lock_outline,
-          ),
+          icon: Icon(editable ? Icons.lock_open : Icons.lock_outline),
           tooltip: editable
               ? LocServ.inst.t('disable_qr_edit')
               : LocServ.inst.t('enable_qr_edit'),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: onEditableToggled,
         ),
         Expanded(
@@ -62,7 +62,9 @@ class CavePlacePciSection extends StatelessWidget {
           tooltip: LocServ.inst.t('auto_generate'),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: editable ? onAutoGenerate : null,
         ),
       ],

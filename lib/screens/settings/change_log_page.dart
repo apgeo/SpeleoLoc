@@ -31,24 +31,25 @@ class _ChangeLogPageState extends ConsumerState<ChangeLogPage>
 
   Future<List<_ChangeRow>> _loadRows() async {
     final db = ref.read(appDatabaseProvider);
-    final headers = await (db.select(db.changeLog)
-          ..orderBy([(c) => OrderingTerm(
-                expression: c.changedAt,
-                mode: OrderingMode.desc,
-              )])
-          ..limit(_pageSize))
-        .get();
+    final headers =
+        await (db.select(db.changeLog)
+              ..orderBy([
+                (c) => OrderingTerm(
+                  expression: c.changedAt,
+                  mode: OrderingMode.desc,
+                ),
+              ])
+              ..limit(_pageSize))
+            .get();
 
-    final users = {
-      for (final u in await db.select(db.users).get()) u.uuid: u,
-    };
+    final users = {for (final u in await db.select(db.users).get()) u.uuid: u};
 
     final fieldsByChange = <Uuid, List<ChangeLogFieldData>>{};
     if (headers.isNotEmpty) {
       final ids = headers.map((h) => h.uuid).toList();
-      final allFields = await (db.select(db.changeLogField)
-            ..where((f) => f.changeUuid.isInValues(ids)))
-          .get();
+      final allFields = await (db.select(
+        db.changeLogField,
+      )..where((f) => f.changeUuid.isInValues(ids))).get();
       for (final f in allFields) {
         fieldsByChange.putIfAbsent(f.changeUuid, () => []).add(f);
       }
@@ -61,8 +62,7 @@ class _ChangeLogPageState extends ConsumerState<ChangeLogPage>
     }
     final titles = <String, Map<Uuid, String>>{};
     for (final entry in byTable.entries) {
-      titles[entry.key] =
-          await _loadTitlesForTable(db, entry.key, entry.value);
+      titles[entry.key] = await _loadTitlesForTable(db, entry.key, entry.value);
     }
     // For deletes, recover the title from change_log_field old values
     // (the entity row no longer exists by definition).
@@ -106,62 +106,62 @@ class _ChangeLogPageState extends ConsumerState<ChangeLogPage>
     final ids = uuids.toList();
     switch (table) {
       case 'caves':
-        final rows = await (db.select(db.caves)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.caves,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'cave_areas':
-        final rows = await (db.select(db.caveAreas)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.caveAreas,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'surface_areas':
-        final rows = await (db.select(db.surfaceAreas)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.surfaceAreas,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'surface_places':
-        final rows = await (db.select(db.surfacePlaces)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.surfacePlaces,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'cave_entrances':
-        final rows = await (db.select(db.caveEntrances)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.caveEntrances,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {
           for (final r in rows)
             if (r.title != null) r.uuid: r.title!,
         };
       case 'cave_places':
-        final rows = await (db.select(db.cavePlaces)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.cavePlaces,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'raster_maps':
-        final rows = await (db.select(db.rasterMaps)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.rasterMaps,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'documentation_files':
-        final rows = await (db.select(db.documentationFiles)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.documentationFiles,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'cave_trips':
-        final rows = await (db.select(db.caveTrips)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.caveTrips,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'trip_report_templates':
-        final rows = await (db.select(db.tripReportTemplates)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.tripReportTemplates,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.title};
       case 'users':
-        final rows = await (db.select(db.users)
-              ..where((c) => c.uuid.isInValues(ids)))
-            .get();
+        final rows = await (db.select(
+          db.users,
+        )..where((c) => c.uuid.isInValues(ids))).get();
         return {for (final r in rows) r.uuid: r.username};
       default:
         return const {};
@@ -269,9 +269,10 @@ class _ChangeTile extends StatelessWidget {
   String _userLabel() {
     final u = row.user;
     if (u == null) return '—';
-    final name = [u.firstName ?? '', u.lastName ?? '']
-        .where((s) => s.isNotEmpty)
-        .join(' ');
+    final name = [
+      u.firstName ?? '',
+      u.lastName ?? '',
+    ].where((s) => s.isNotEmpty).join(' ');
     return name.isEmpty ? u.username : '${u.username} ($name)';
   }
 

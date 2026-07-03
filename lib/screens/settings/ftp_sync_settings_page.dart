@@ -53,10 +53,8 @@ class _FtpSyncSettingsPageState extends ConsumerState<FtpSyncSettingsPage>
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => _FtpProfileEditPage(
-          existing: existing,
-          repository: repo,
-        ),
+        builder: (_) =>
+            _FtpProfileEditPage(existing: existing, repository: repo),
       ),
     );
     if (result == true) {
@@ -83,16 +81,12 @@ class _FtpSyncSettingsPageState extends ConsumerState<FtpSyncSettingsPage>
       ),
     );
     if (confirm != true) return;
-    await ref
-        .read(ftpProfileRepositoryProvider)
-        .delete(p.profileUuid);
+    await ref.read(ftpProfileRepositoryProvider).delete(p.profileUuid);
     await _reload();
   }
 
   Future<void> _setDefault(FtpProfile p) async {
-    await ref
-        .read(ftpProfileRepositoryProvider)
-        .setDefaultUuid(p.profileUuid);
+    await ref.read(ftpProfileRepositoryProvider).setDefaultUuid(p.profileUuid);
     await _reload();
   }
 
@@ -113,70 +107,70 @@ class _FtpSyncSettingsPageState extends ConsumerState<FtpSyncSettingsPage>
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _profiles.isEmpty
-              ? _EmptyState(onAdd: () => _edit())
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _profiles.length,
-                  itemBuilder: (ctx, i) {
-                    final p = _profiles[i];
-                    final isDefault = p.profileUuid == _defaultUuid;
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      child: ListTile(
-                        leading: Icon(_iconFor(p.protocol)),
-                        title: Text(p.displayName),
-                        subtitle: Text(
-                          '${p.protocol.name.toUpperCase()} · '
-                          '${p.username}@${p.host}:${p.effectivePort}'
-                          '${p.remoteFolder}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+          ? _EmptyState(onAdd: () => _edit())
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _profiles.length,
+              itemBuilder: (ctx, i) {
+                final p = _profiles[i];
+                final isDefault = p.profileUuid == _defaultUuid;
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: ListTile(
+                    leading: Icon(_iconFor(p.protocol)),
+                    title: Text(p.displayName),
+                    subtitle: Text(
+                      '${p.protocol.name.toUpperCase()} · '
+                      '${p.username}@${p.host}:${p.effectivePort}'
+                      '${p.remoteFolder}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (v) {
+                        switch (v) {
+                          case 'default':
+                            _setDefault(p);
+                            break;
+                          case 'edit':
+                            _edit(existing: p);
+                            break;
+                          case 'delete':
+                            _delete(p);
+                            break;
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        if (!isDefault)
+                          PopupMenuItem(
+                            value: 'default',
+                            child: Text(LocServ.inst.t('ftp_use_this_profile')),
+                          ),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text(LocServ.inst.t('edit')),
                         ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (v) {
-                            switch (v) {
-                              case 'default':
-                                _setDefault(p);
-                                break;
-                              case 'edit':
-                                _edit(existing: p);
-                                break;
-                              case 'delete':
-                                _delete(p);
-                                break;
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            if (!isDefault)
-                              PopupMenuItem(
-                                value: 'default',
-                                child: Text(
-                                    LocServ.inst.t('ftp_use_this_profile')),
-                              ),
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Text(LocServ.inst.t('edit')),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Text(LocServ.inst.t('delete')),
-                            ),
-                          ],
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text(LocServ.inst.t('delete')),
                         ),
-                        onTap: () => _edit(existing: p),
-                        selected: isDefault,
-                        selectedTileColor: Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withValues(alpha: 0.3),
-                        subtitleTextStyle: isDefault
-                            ? const TextStyle(fontWeight: FontWeight.w500)
-                            : null,
-                      ),
-                    );
-                  },
-                ),
+                      ],
+                    ),
+                    onTap: () => _edit(existing: p),
+                    selected: isDefault,
+                    selectedTileColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    subtitleTextStyle: isDefault
+                        ? const TextStyle(fontWeight: FontWeight.w500)
+                        : null,
+                  ),
+                );
+              },
+            ),
     );
   }
 
@@ -238,10 +232,7 @@ class _FtpProfileEditPage extends StatefulWidget {
   final FtpProfile? existing;
   final FtpProfileRepository repository;
 
-  const _FtpProfileEditPage({
-    required this.existing,
-    required this.repository,
-  });
+  const _FtpProfileEditPage({required this.existing, required this.repository});
 
   @override
   State<_FtpProfileEditPage> createState() => _FtpProfileEditPageState();
@@ -263,8 +254,10 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   bool _showPassword = false;
   bool _testing = false;
   bool _saving = false;
+
   /// True while the password field shows the saved-password placeholder ("********").
   bool _hasPlaceholder = false;
+
   /// Prevents the password listener from treating programmatic text changes as
   /// user edits (e.g. when loading the real password for the view button).
   bool _suppressPasswordListener = false;
@@ -342,8 +335,9 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     if (_hasPlaceholder) {
       if (!_showPassword) {
         setState(() => _loadingPassword = true);
-        final realPw =
-            await widget.repository.readPassword(widget.existing!.profileUuid);
+        final realPw = await widget.repository.readPassword(
+          widget.existing!.profileUuid,
+        );
         if (!mounted) return;
         if (realPw != null && realPw.isNotEmpty) {
           _suppressPasswordListener = true;
@@ -403,7 +397,9 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
       try {
         await transport.disconnect();
       } catch (e, st) {
-        AppLogger.of('FtpSyncSettings').fine('disconnect after test failed', e, st);
+        AppLogger.of(
+          'FtpSyncSettings',
+        ).fine('disconnect after test failed', e, st);
       }
     }
     if (!mounted) return;
@@ -438,7 +434,10 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     if (isError) {
       SnackBarService.showError(message);
     } else {
-      SnackBarService.showSuccess(message, duration: const Duration(seconds: 4));
+      SnackBarService.showSuccess(
+        message,
+        duration: const Duration(seconds: 4),
+      );
     }
   }
 
@@ -446,9 +445,11 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(LocServ.inst.t(
-          widget.existing == null ? 'ftp_add_profile' : 'ftp_edit_profile',
-        )),
+        title: Text(
+          LocServ.inst.t(
+            widget.existing == null ? 'ftp_add_profile' : 'ftp_edit_profile',
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
@@ -480,12 +481,12 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                 border: const OutlineInputBorder(),
               ),
               items: FtpProtocol.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(
-                          LocServ.inst.t('ftp_protocol_${p.name}'),
-                        ),
-                      ))
+                  .map(
+                    (p) => DropdownMenuItem(
+                      value: p,
+                      child: Text(LocServ.inst.t('ftp_protocol_${p.name}')),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _protocol = v);
@@ -562,9 +563,11 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                         ),
                       )
                     : IconButton(
-                        icon: Icon(_showPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility),
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
                         onPressed: _toggleShowPassword,
                       ),
               ),
@@ -593,8 +596,7 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                 title: Text(LocServ.inst.t('ftp_allow_invalid_cert')),
                 subtitle: Text(LocServ.inst.t('ftp_allow_invalid_cert_desc')),
                 value: _allowInvalidCertificate,
-                onChanged: (v) =>
-                    setState(() => _allowInvalidCertificate = v),
+                onChanged: (v) => setState(() => _allowInvalidCertificate = v),
               ),
             const SizedBox(height: 24),
             OutlinedButton.icon(

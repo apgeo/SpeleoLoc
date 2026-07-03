@@ -28,12 +28,14 @@ const String _archiveSuffix = '.zip';
 /// transport-layer corruption (FTP libraries dropping bytes on certain
 /// platforms) and corruption-at-rest on the FTP server.
 const String _sha256Suffix = '.sha256';
+
 /// Strict archive filename: `speleo_loc_sync_<timestampMs>_<deviceUuidHex>.zip`.
 /// The device-uuid suffix is mandatory — every archive is the snapshot of a
 /// specific source device, and per-device dedup on listing requires that
 /// origin to be present in the filename.
-final RegExp _archiveNameRe =
-    RegExp(r'^speleo_loc_sync_(\d+)_([a-fA-F0-9]+)\.zip$');
+final RegExp _archiveNameRe = RegExp(
+  r'^speleo_loc_sync_(\d+)_([a-fA-F0-9]+)\.zip$',
+);
 
 /// Orchestrates one FTP sync pass and broadcasts live progress to the UI.
 ///
@@ -89,11 +91,11 @@ class FtpSyncController extends ChangeNotifier {
     required SyncArchiveService archiveService,
     required CurrentUserService currentUserService,
     FtpTransportBuilder? transportBuilder,
-  })  : _db = db,
-        _profileRepo = profileRepository,
-        _archiveService = archiveService,
-        _currentUser = currentUserService,
-        _transportBuilder = transportBuilder ?? defaultTransportBuilder;
+  }) : _db = db,
+       _profileRepo = profileRepository,
+       _archiveService = archiveService,
+       _currentUser = currentUserService,
+       _transportBuilder = transportBuilder ?? defaultTransportBuilder;
 
   /// Latest live progress snapshot. Listeners are notified via
   /// [ChangeNotifier.notifyListeners] on every change.
@@ -181,8 +183,7 @@ class FtpSyncController extends ChangeNotifier {
         FtpSyncLogEntry(
           timestamp: now,
           level: FtpSyncLogLevel.info,
-          message:
-              'Starting sync to ${profile.displayName} (${profile.host})',
+          message: 'Starting sync to ${profile.displayName} (${profile.host})',
         ),
       ];
       final mergedLog = [...previousLog, ...newEntries];
@@ -210,18 +211,21 @@ class FtpSyncController extends ChangeNotifier {
       token.throwIfCancelled();
       _appendLog(FtpSyncLogLevel.info, 'Connected');
 
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.listing,
-            statusMessage: 'ftp_phase_listing',
-            stepProgress: 0,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.listing,
+          statusMessage: 'ftp_phase_listing',
+          stepProgress: 0,
+        ),
+      );
       final remoteEntries = await transport.listFolder();
       token.throwIfCancelled();
 
       final seen = await _loadSeenArchives();
       final candidates = remoteEntries
-          .where((e) =>
-              _archiveNameRe.hasMatch(e.name) && !seen.contains(e.name))
+          .where(
+            (e) => _archiveNameRe.hasMatch(e.name) && !seen.contains(e.name),
+          )
           .toList();
 
       // Each archive is a FULL snapshot of its source device's view, so for
@@ -242,24 +246,30 @@ class FtpSyncController extends ChangeNotifier {
       final unseen = <RemoteFileEntry>[];
       for (final group in byDevice.values) {
         group.sort(
-            (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)));
+          (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
+        );
         unseen.add(group.last);
-        if (group.length > 1) superseded.addAll(group.sublist(0, group.length - 1));
+        if (group.length > 1)
+          superseded.addAll(group.sublist(0, group.length - 1));
       }
       // Oldest-first: sort ascending by embedded timestamp across devices.
       unseen.sort(
-          (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)));
+        (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
+      );
       if (superseded.isNotEmpty) {
         _appendLog(
-            FtpSyncLogLevel.info,
-            'Skipping ${superseded.length} superseded archive(s) '
-            '(older snapshots from same device)');
+          FtpSyncLogLevel.info,
+          'Skipping ${superseded.length} superseded archive(s) '
+          '(older snapshots from same device)',
+        );
         // Mark them as seen locally so we don't re-list them next run.
         seen.addAll(superseded.map((e) => e.name));
         await _saveSeenArchives(seen);
       }
-      _appendLog(FtpSyncLogLevel.info,
-          '${unseen.length} new archive(s) to import of ${remoteEntries.length} on server');
+      _appendLog(
+        FtpSyncLogLevel.info,
+        '${unseen.length} new archive(s) to import of ${remoteEntries.length} on server',
+      );
 
       // Decide whether the local DB has unsynced changes BEFORE we import
       // anything: importing remote archives modifies the DB but must not by
@@ -285,21 +295,22 @@ class FtpSyncController extends ChangeNotifier {
       }
       final referenceTs =
           serverNewestOwnTs ?? await _loadLastUploadAt(profile.profileUuid);
-      final localChanged =
-          await _hasLocalChangesSince(referenceTs, deviceUuid: myDeviceUuid);
+      final localChanged = await _hasLocalChangesSince(
+        referenceTs,
+        deviceUuid: myDeviceUuid,
+      );
       _appendLog(
         FtpSyncLogLevel.info,
         referenceTs == null
             ? 'No prior upload on server or locally — will upload'
             : 'Local changes since last upload: $localChanged '
-                '(reference: ${serverNewestOwnTs != null ? 'server archive' : 'local record'} '
-                'at ${DateTime.fromMillisecondsSinceEpoch(referenceTs).toLocal()})',
+                  '(reference: ${serverNewestOwnTs != null ? 'server archive' : 'local record'} '
+                  'at ${DateTime.fromMillisecondsSinceEpoch(referenceTs).toLocal()})',
       );
 
-      _emit((s) => s.copyWith(
-            archivesTotal: unseen.length,
-            archivesProcessed: 0,
-          ));
+      _emit(
+        (s) => s.copyWith(archivesTotal: unseen.length, archivesProcessed: 0),
+      );
 
       // Counts archives whose import phase failed; surfaced at the end
       // so a partial-success run terminates in `failed` instead of
@@ -313,16 +324,18 @@ class FtpSyncController extends ChangeNotifier {
         final localPath = p.join(tempDir.path, entry.name);
 
         _resetSpeedSamples();
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.downloading,
-              statusMessage: 'ftp_phase_downloading',
-              currentFileName: entry.name,
-              bytesTransferred: 0,
-              totalBytes: entry.size > 0 ? entry.size : null,
-              stepProgress: 0,
-              clearBytesPerSecond: true,
-              clearStepEta: true,
-            ));
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.downloading,
+            statusMessage: 'ftp_phase_downloading',
+            currentFileName: entry.name,
+            bytesTransferred: 0,
+            totalBytes: entry.size > 0 ? entry.size : null,
+            stepProgress: 0,
+            clearBytesPerSecond: true,
+            clearStepEta: true,
+          ),
+        );
         // Single download attempt by default; increase [maxDownloadAttempts]
         // to retry on size mismatch (e.g. if the transport layer is known
         // to be flaky on a particular platform).
@@ -340,15 +353,17 @@ class FtpSyncController extends ChangeNotifier {
               onProgress: (bytes, total) {
                 if (!isRunning) return;
                 final sample = _recordSample(bytes, total);
-                _emit((s) => s.copyWith(
-                      bytesTransferred: bytes,
-                      totalBytes: total,
-                      stepProgress: total == null || total == 0
-                          ? 0
-                          : (bytes / total).clamp(0.0, 1.0),
-                      bytesPerSecond: sample.bytesPerSecond,
-                      stepEta: sample.eta,
-                    ));
+                _emit(
+                  (s) => s.copyWith(
+                    bytesTransferred: bytes,
+                    totalBytes: total,
+                    stepProgress: total == null || total == 0
+                        ? 0
+                        : (bytes / total).clamp(0.0, 1.0),
+                    bytesPerSecond: sample.bytesPerSecond,
+                    stepEta: sample.eta,
+                  ),
+                );
               },
               cancelToken: token,
             );
@@ -362,12 +377,12 @@ class FtpSyncController extends ChangeNotifier {
             if (entry.size <= 0 || localSize == entry.size) break;
           }
           if (attempt >= maxDownloadAttempts) break;
-          final reason = downloadError ??
-              '$localSize of ${entry.size} bytes';
+          final reason = downloadError ?? '$localSize of ${entry.size} bytes';
           _appendLog(
-              FtpSyncLogLevel.warning,
-              'Download mismatch on attempt $attempt for '
-              '${entry.name} ($reason); retrying…');
+            FtpSyncLogLevel.warning,
+            'Download mismatch on attempt $attempt for '
+            '${entry.name} ($reason); retrying…',
+          );
           try {
             await File(localPath).delete();
           } catch (e, st) {
@@ -375,33 +390,35 @@ class FtpSyncController extends ChangeNotifier {
           }
           _resetSpeedSamples();
         }
-        final downloadFailed = downloadError != null ||
+        final downloadFailed =
+            downloadError != null ||
             (entry.size > 0 && localSize != entry.size);
         if (downloadFailed) {
-          final reason = downloadError ??
+          final reason =
+              downloadError ??
               'size mismatch ($localSize of ${entry.size} bytes after '
-              '$maxDownloadAttempts attempts)';
+                  '$maxDownloadAttempts attempts)';
           importErrors++;
           firstImportError ??= '${entry.name}: $reason';
           _appendLog(
-              FtpSyncLogLevel.error,
-              'Skipping ${entry.name}: $reason. '
-              'Will retry on next sync.');
+            FtpSyncLogLevel.error,
+            'Skipping ${entry.name}: $reason. '
+            'Will retry on next sync.',
+          );
           // Do NOT mark as seen so the next sync attempt re-downloads it.
           try {
             await File(localPath).delete();
           } catch (e, st) {
             _log.fine('best-effort delete failed: $localPath', e, st);
           }
-          _emit((s) => s.copyWith(
-                archivesProcessed: i + 1,
-                stepProgress: 1.0,
-              ));
+          _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
           continue;
         }
-        _appendLog(FtpSyncLogLevel.info,
-            'Downloaded ${entry.name} ($localSize bytes, '
-            '${_formatBytes(localSize)})');
+        _appendLog(
+          FtpSyncLogLevel.info,
+          'Downloaded ${entry.name} ($localSize bytes, '
+          '${_formatBytes(localSize)})',
+        );
 
         // SHA-256 verification: if the producer published a sidecar, the
         // archive must hash to the value in it. This catches transport
@@ -422,15 +439,16 @@ class FtpSyncController extends ChangeNotifier {
               File(sidecarPath),
               cancelToken: token,
             );
-            final expected = (await File(sidecarPath).readAsString())
-                .trim()
-                .toLowerCase();
+            final expected = (await File(
+              sidecarPath,
+            ).readAsString()).trim().toLowerCase();
             final actual = await _sha256OfFile(File(localPath));
             if (expected.isEmpty || expected.length != 64) {
               _appendLog(
-                  FtpSyncLogLevel.warning,
-                  'Ignoring malformed sidecar for ${entry.name} '
-                  '(unexpected content) — proceeding without hash check');
+                FtpSyncLogLevel.warning,
+                'Ignoring malformed sidecar for ${entry.name} '
+                '(unexpected content) — proceeding without hash check',
+              );
             } else if (expected != actual) {
               importErrors++;
               firstImportError ??=
@@ -438,11 +456,12 @@ class FtpSyncController extends ChangeNotifier {
                   '${expected.substring(0, 12)}…, got '
                   '${actual.substring(0, 12)}…)';
               _appendLog(
-                  FtpSyncLogLevel.error,
-                  'Skipping ${entry.name}: SHA-256 mismatch — the file '
-                  'is corrupt on the server or was damaged in transit. '
-                  'Re-export from the source device. Will retry on '
-                  'next sync.');
+                FtpSyncLogLevel.error,
+                'Skipping ${entry.name}: SHA-256 mismatch — the file '
+                'is corrupt on the server or was damaged in transit. '
+                'Re-export from the source device. Will retry on '
+                'next sync.',
+              );
               try {
                 await File(localPath).delete();
               } catch (e, st) {
@@ -453,14 +472,15 @@ class FtpSyncController extends ChangeNotifier {
               } catch (e, st) {
                 _log.fine('best-effort delete failed: $sidecarPath', e, st);
               }
-              _emit((s) => s.copyWith(
-                    archivesProcessed: i + 1,
-                    stepProgress: 1.0,
-                  ));
+              _emit(
+                (s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0),
+              );
               continue;
             } else {
-              _appendLog(FtpSyncLogLevel.info,
-                  'Verified ${entry.name} SHA-256 OK');
+              _appendLog(
+                FtpSyncLogLevel.info,
+                'Verified ${entry.name} SHA-256 OK',
+              );
             }
             try {
               await File(sidecarPath).delete();
@@ -469,49 +489,52 @@ class FtpSyncController extends ChangeNotifier {
             }
           } catch (e) {
             _appendLog(
-                FtpSyncLogLevel.warning,
-                'Could not download sidecar for ${entry.name}: $e — '
-                'proceeding without hash check');
+              FtpSyncLogLevel.warning,
+              'Could not download sidecar for ${entry.name}: $e — '
+              'proceeding without hash check',
+            );
           }
         }
 
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.importing,
-              statusMessage: 'ftp_phase_importing',
-              stepProgress: 0,
-            ));
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.importing,
+            statusMessage: 'ftp_phase_importing',
+            stepProgress: 0,
+          ),
+        );
         try {
           final report = await _archiveService.importFromZip(localPath);
-          _appendLog(FtpSyncLogLevel.info,
-              'Imported ${entry.name}: +${report.rowsInserted} / '
-              '~${report.rowsUpdated} / =${report.rowsSkipped}');
+          _appendLog(
+            FtpSyncLogLevel.info,
+            'Imported ${entry.name}: +${report.rowsInserted} / '
+            '~${report.rowsUpdated} / =${report.rowsSkipped}',
+          );
         } on SyncArchiveSchemaMismatchException catch (e) {
           // Make the message actionable: tell the user the minimum app
           // version they need to update to. We deliberately *do not* mark
           // the archive as seen so a later app upgrade can re-import it.
           _appendLog(
-              e.tooNew ? FtpSyncLogLevel.error : FtpSyncLogLevel.warning,
-              e.tooNew
-                  ? 'Cannot import ${entry.name}: archive was produced by a '
+            e.tooNew ? FtpSyncLogLevel.error : FtpSyncLogLevel.warning,
+            e.tooNew
+                ? 'Cannot import ${entry.name}: archive was produced by a '
                       'newer version of the app '
                       '(v${e.archiveAppVersion ?? '?'}'
                       '${e.archiveAppBuildNumber == null ? '' : '+${e.archiveAppBuildNumber}'}'
                       ', schema ${e.archiveSchemaVersion}). Update the app '
                       'to v${e.archiveAppVersion ?? '?'} or newer to '
                       'continue.'
-                  : 'Skipping ${entry.name}: archive schema '
+                : 'Skipping ${entry.name}: archive schema '
                       '${e.archiveSchemaVersion} is older than local schema '
                       '${e.localSchemaVersion}; re-export from the source '
-                      'device.');
+                      'device.',
+          );
           // Older archives won't ever import — mark as seen so we stop
           // re-listing them. Newer archives are intentionally left unseen
           // so a future app upgrade can import them.
           if (!e.tooNew) seen.add(entry.name);
           // Skip the trailing seen.add for too-new archives.
-          _emit((s) => s.copyWith(
-                archivesProcessed: i + 1,
-                stepProgress: 1.0,
-              ));
+          _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
           try {
             await File(localPath).delete();
           } catch (e, st) {
@@ -521,14 +544,13 @@ class FtpSyncController extends ChangeNotifier {
         } catch (e) {
           importErrors++;
           firstImportError ??= '${entry.name}: $e';
-          _appendLog(FtpSyncLogLevel.error,
-              'Import failed for ${entry.name}: $e — continuing with next');
+          _appendLog(
+            FtpSyncLogLevel.error,
+            'Import failed for ${entry.name}: $e — continuing with next',
+          );
         }
         seen.add(entry.name);
-        _emit((s) => s.copyWith(
-              archivesProcessed: i + 1,
-              stepProgress: 1.0,
-            ));
+        _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
         // Best-effort cleanup of the local copy.
         try {
           await File(localPath).delete();
@@ -543,19 +565,27 @@ class FtpSyncController extends ChangeNotifier {
       // *before* the import phase. Pure import-only runs leave the server
       // untouched (matching the 4-quadrant decision matrix).
       if (!localChanged) {
-        _appendLog(FtpSyncLogLevel.info,
-            'No local changes — skipping archive generation and upload');
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.finalizing,
-              statusMessage: 'ftp_phase_finalizing',
-              stepProgress: 0,
-              clearCurrentFileName: true,
-            ));
+        _appendLog(
+          FtpSyncLogLevel.info,
+          'No local changes — skipping archive generation and upload',
+        );
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.finalizing,
+            statusMessage: 'ftp_phase_finalizing',
+            stepProgress: 0,
+            clearCurrentFileName: true,
+          ),
+        );
         await _saveSeenArchives(seen);
         try {
           await tempDir.delete(recursive: true);
         } catch (e, st) {
-          _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
+          _log.fine(
+            'best-effort tempDir delete failed: ${tempDir.path}',
+            e,
+            st,
+          );
         }
 
         if (importErrors > 0) {
@@ -563,22 +593,26 @@ class FtpSyncController extends ChangeNotifier {
               'Sync finished with $importErrors import error(s); '
               'first: ${firstImportError ?? '<unknown>'}';
           _appendLog(FtpSyncLogLevel.error, summary);
-          _emit((s) => s.copyWith(
-                phase: FtpSyncPhase.failed,
-                statusMessage: 'ftp_sync_failed',
-                errorMessage: summary,
-                stepProgress: 1.0,
-              ));
+          _emit(
+            (s) => s.copyWith(
+              phase: FtpSyncPhase.failed,
+              statusMessage: 'ftp_sync_failed',
+              errorMessage: summary,
+              stepProgress: 1.0,
+            ),
+          );
           return;
         }
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.completed,
-              statusMessage: unseen.isEmpty
-                  ? 'ftp_phase_completed_nothing'
-                  : 'ftp_phase_completed_download_only',
-              stepProgress: 1.0,
-              clearErrorMessage: true,
-            ));
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.completed,
+            statusMessage: unseen.isEmpty
+                ? 'ftp_phase_completed_nothing'
+                : 'ftp_phase_completed_download_only',
+            stepProgress: 1.0,
+            clearErrorMessage: true,
+          ),
+        );
         _appendLog(
           FtpSyncLogLevel.info,
           unseen.isEmpty
@@ -589,15 +623,17 @@ class FtpSyncController extends ChangeNotifier {
       }
 
       // Generate our own archive reflecting the merged state.
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.generatingArchive,
-            statusMessage: 'ftp_phase_generating',
-            currentFileName: null,
-            bytesTransferred: 0,
-            clearTotalBytes: true,
-            clearCurrentFileName: true,
-            stepProgress: 0,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.generatingArchive,
+          statusMessage: 'ftp_phase_generating',
+          currentFileName: null,
+          bytesTransferred: 0,
+          clearTotalBytes: true,
+          clearCurrentFileName: true,
+          stepProgress: 0,
+        ),
+      );
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       // myDeviceUuid / myDevicePrefix were resolved before the import loop.
       if (myDeviceUuid == null || myDevicePrefix == null) {
@@ -615,38 +651,44 @@ class FtpSyncController extends ChangeNotifier {
         tempDir.path,
         filenameHint: archiveName,
       );
-      _appendLog(FtpSyncLogLevel.info,
-          'Generated ${archiveFile.uri.pathSegments.last} (${_formatBytes(await archiveFile.length())})');
+      _appendLog(
+        FtpSyncLogLevel.info,
+        'Generated ${archiveFile.uri.pathSegments.last} (${_formatBytes(await archiveFile.length())})',
+      );
 
       token.throwIfCancelled();
 
       final archiveSize = await archiveFile.length();
       _resetSpeedSamples();
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.uploading,
-            statusMessage: 'ftp_phase_uploading',
-            currentFileName: archiveName,
-            bytesTransferred: 0,
-            totalBytes: archiveSize,
-            stepProgress: 0,
-            clearBytesPerSecond: true,
-            clearStepEta: true,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.uploading,
+          statusMessage: 'ftp_phase_uploading',
+          currentFileName: archiveName,
+          bytesTransferred: 0,
+          totalBytes: archiveSize,
+          stepProgress: 0,
+          clearBytesPerSecond: true,
+          clearStepEta: true,
+        ),
+      );
       await transport.uploadFile(
         archiveFile,
         archiveName,
         onProgress: (bytes, total) {
           if (!isRunning) return;
           final sample = _recordSample(bytes, total);
-          _emit((s) => s.copyWith(
-                bytesTransferred: bytes,
-                totalBytes: total,
-                stepProgress: total == null || total == 0
-                    ? 0
-                    : (bytes / total).clamp(0.0, 1.0),
-                bytesPerSecond: sample.bytesPerSecond,
-                stepEta: sample.eta,
-              ));
+          _emit(
+            (s) => s.copyWith(
+              bytesTransferred: bytes,
+              totalBytes: total,
+              stepProgress: total == null || total == 0
+                  ? 0
+                  : (bytes / total).clamp(0.0, 1.0),
+              bytesPerSecond: sample.bytesPerSecond,
+              stepEta: sample.eta,
+            ),
+          );
         },
         cancelToken: token,
       );
@@ -668,32 +710,48 @@ class FtpSyncController extends ChangeNotifier {
           cancelToken: token,
         );
         seen.add(sidecarName);
-        _appendLog(FtpSyncLogLevel.info,
-            'Uploaded $sidecarName (${hash.substring(0, 12)}…)');
+        _appendLog(
+          FtpSyncLogLevel.info,
+          'Uploaded $sidecarName (${hash.substring(0, 12)}…)',
+        );
         try {
           await sidecarFile.delete();
         } catch (e, st) {
-          _log.fine('best-effort sidecar delete failed: ${sidecarFile.path}', e, st);
+          _log.fine(
+            'best-effort sidecar delete failed: ${sidecarFile.path}',
+            e,
+            st,
+          );
         }
       } catch (e) {
-        _appendLog(FtpSyncLogLevel.warning,
-            'Sidecar upload failed for $archiveName: $e — '
-            'archive is published without integrity hash');
+        _appendLog(
+          FtpSyncLogLevel.warning,
+          'Sidecar upload failed for $archiveName: $e — '
+          'archive is published without integrity hash',
+        );
       }
 
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.finalizing,
-            statusMessage: 'ftp_phase_finalizing',
-            stepProgress: 0,
-            clearCurrentFileName: true,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.finalizing,
+          statusMessage: 'ftp_phase_finalizing',
+          stepProgress: 0,
+          clearCurrentFileName: true,
+        ),
+      );
       await _saveSeenArchives(seen);
       await _saveLastUploadAt(
-          profile.profileUuid, DateTime.now().millisecondsSinceEpoch);
+        profile.profileUuid,
+        DateTime.now().millisecondsSinceEpoch,
+      );
       try {
         await archiveFile.delete();
       } catch (e, st) {
-        _log.fine('best-effort archive delete failed: ${archiveFile.path}', e, st);
+        _log.fine(
+          'best-effort archive delete failed: ${archiveFile.path}',
+          e,
+          st,
+        );
       }
       try {
         await tempDir.delete(recursive: true);
@@ -706,62 +764,76 @@ class FtpSyncController extends ChangeNotifier {
             'Sync finished with $importErrors import error(s); '
             'first: ${firstImportError ?? '<unknown>'}';
         _appendLog(FtpSyncLogLevel.error, summary);
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.failed,
-              statusMessage: 'ftp_sync_failed',
-              errorMessage: summary,
-              stepProgress: 1.0,
-            ));
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.failed,
+            statusMessage: 'ftp_sync_failed',
+            errorMessage: summary,
+            stepProgress: 1.0,
+          ),
+        );
         return;
       }
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.completed,
-            statusMessage: 'ftp_phase_completed',
-            stepProgress: 1.0,
-            clearErrorMessage: true,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.completed,
+          statusMessage: 'ftp_phase_completed',
+          stepProgress: 1.0,
+          clearErrorMessage: true,
+        ),
+      );
       _appendLog(FtpSyncLogLevel.info, 'Sync complete');
     } on TransferCancelledException {
       if (_pauseRequested) {
         _pauseRequested = false;
         _appendLog(FtpSyncLogLevel.info, 'Sync paused');
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.paused,
-              statusMessage: 'ftp_phase_paused',
-              clearBytesPerSecond: true,
-              clearStepEta: true,
-            ));
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.paused,
+            statusMessage: 'ftp_phase_paused',
+            clearBytesPerSecond: true,
+            clearStepEta: true,
+          ),
+        );
       } else {
         _appendLog(FtpSyncLogLevel.warning, 'Sync cancelled');
-        _emit((s) => s.copyWith(
-              phase: FtpSyncPhase.cancelled,
-              statusMessage: 'ftp_phase_cancelled',
-              clearBytesPerSecond: true,
-              clearStepEta: true,
-            ));
+        _emit(
+          (s) => s.copyWith(
+            phase: FtpSyncPhase.cancelled,
+            statusMessage: 'ftp_phase_cancelled',
+            clearBytesPerSecond: true,
+            clearStepEta: true,
+          ),
+        );
       }
     } on FtpAuthException catch (e) {
       _appendLog(FtpSyncLogLevel.error, 'Auth failed: ${e.message}');
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.failed,
-            statusMessage: 'ftp_auth_failed',
-            errorMessage: e.message,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.failed,
+          statusMessage: 'ftp_auth_failed',
+          errorMessage: e.message,
+        ),
+      );
     } on FtpTransportException catch (e) {
       _appendLog(FtpSyncLogLevel.error, 'Transport error: ${e.message}');
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.failed,
-            statusMessage: 'ftp_connection_failed',
-            errorMessage: e.message,
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.failed,
+          statusMessage: 'ftp_connection_failed',
+          errorMessage: e.message,
+        ),
+      );
     } catch (e, st) {
       _log.warning('Unexpected sync failure: $e\n$st');
       _appendLog(FtpSyncLogLevel.error, 'Unexpected error: $e');
-      _emit((s) => s.copyWith(
-            phase: FtpSyncPhase.failed,
-            statusMessage: 'ftp_sync_failed',
-            errorMessage: e.toString(),
-          ));
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.failed,
+          statusMessage: 'ftp_sync_failed',
+          errorMessage: e.toString(),
+        ),
+      );
     } finally {
       try {
         await transport.disconnect();
@@ -842,14 +914,15 @@ class FtpSyncController extends ChangeNotifier {
   /// When [deviceUuid] is provided the query is restricted to rows that
   /// originated on this device, preventing change_log entries imported from
   /// peer archives from causing false-positive "something changed" results.
-  Future<bool> _hasLocalChangesSince(int? lastUploadAt,
-      {Uuid? deviceUuid}) async {
+  Future<bool> _hasLocalChangesSince(
+    int? lastUploadAt, {
+    Uuid? deviceUuid,
+  }) async {
     if (lastUploadAt == null) return true;
     final List<Variable<Object>> vars;
     final String sql;
     if (deviceUuid != null) {
-      sql =
-          'SELECT MAX(changed_at) AS m FROM change_log WHERE device_uuid = ?';
+      sql = 'SELECT MAX(changed_at) AS m FROM change_log WHERE device_uuid = ?';
       vars = [Variable<Uint8List>(deviceUuid.bytes)];
     } else {
       sql = 'SELECT MAX(changed_at) AS m FROM change_log';
@@ -863,10 +936,12 @@ class FtpSyncController extends ChangeNotifier {
   }
 
   Future<String?> _readConfig(String key) async {
-    final rows = await _db.customSelect(
-      'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-      variables: [Variable<String>(key)],
-    ).get();
+    final rows = await _db
+        .customSelect(
+          'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+          variables: [Variable<String>(key)],
+        )
+        .get();
     if (rows.isEmpty) return null;
     return rows.first.data['value'] as String?;
   }
@@ -905,8 +980,12 @@ class FtpSyncController extends ChangeNotifier {
 
   Future<Directory> _syncWorkspace() async {
     final base = await getTemporaryDirectory();
-    final dir = Directory(p.join(base.path,
-        'speleo_loc_ftp_sync_${DateTime.now().millisecondsSinceEpoch}'));
+    final dir = Directory(
+      p.join(
+        base.path,
+        'speleo_loc_ftp_sync_${DateTime.now().millisecondsSinceEpoch}',
+      ),
+    );
     await dir.create(recursive: true);
     return dir;
   }
@@ -931,13 +1010,15 @@ class FtpSyncController extends ChangeNotifier {
   }
 
   void _fail(String messageKey) {
-    _emit((s) => s.copyWith(
-          phase: FtpSyncPhase.failed,
-          statusMessage: messageKey,
-          errorMessage: messageKey,
-          startedAt: DateTime.now(),
-          profileName: null,
-        ));
+    _emit(
+      (s) => s.copyWith(
+        phase: FtpSyncPhase.failed,
+        statusMessage: messageKey,
+        errorMessage: messageKey,
+        startedAt: DateTime.now(),
+        profileName: null,
+      ),
+    );
   }
 
   static String _formatBytes(int bytes) {
@@ -977,8 +1058,9 @@ class FtpSyncController extends ChangeNotifier {
     if (_speedSamples.length >= 2) {
       final first = _speedSamples.first;
       final last = _speedSamples.last;
-      final elapsedMs =
-          last.timestamp.difference(first.timestamp).inMilliseconds;
+      final elapsedMs = last.timestamp
+          .difference(first.timestamp)
+          .inMilliseconds;
       if (elapsedMs > 0) {
         bps = (last.bytes - first.bytes) * 1000 / elapsedMs;
         if (total != null && total > 0 && bps > 0) {

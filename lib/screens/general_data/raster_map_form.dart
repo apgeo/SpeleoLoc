@@ -35,16 +35,35 @@ class _RasterMapFormState extends State<RasterMapForm>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_raster_map_form_title_field_title', bodyLocKey: 'tour_raster_map_form_title_field_body'),
-    TourStepDef(keyId: 'type_dropdown', titleLocKey: 'tour_raster_map_form_type_dropdown_title', bodyLocKey: 'tour_raster_map_form_type_dropdown_body'),
-    TourStepDef(keyId: 'image_picker', titleLocKey: 'tour_raster_map_form_image_picker_title', bodyLocKey: 'tour_raster_map_form_image_picker_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_raster_map_form_menu_title', bodyLocKey: 'tour_raster_map_form_menu_body'),
+    TourStepDef(
+      keyId: 'title_field',
+      titleLocKey: 'tour_raster_map_form_title_field_title',
+      bodyLocKey: 'tour_raster_map_form_title_field_body',
+    ),
+    TourStepDef(
+      keyId: 'type_dropdown',
+      titleLocKey: 'tour_raster_map_form_type_dropdown_title',
+      bodyLocKey: 'tour_raster_map_form_type_dropdown_body',
+    ),
+    TourStepDef(
+      keyId: 'image_picker',
+      titleLocKey: 'tour_raster_map_form_image_picker_title',
+      bodyLocKey: 'tour_raster_map_form_image_picker_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_raster_map_form_menu_title',
+      bodyLocKey: 'tour_raster_map_form_menu_body',
+    ),
   ];
 
   String? _selectedMapType;
-  String? _imagePath;  String? _fullImagePath;  final _titleController = TextEditingController();
-  String? _pendingFileHash; // hash of the newly-picked image file (null when not changed)
-  int? _pendingFileSize;   // size in bytes of the newly-picked image file
+  String? _imagePath;
+  String? _fullImagePath;
+  final _titleController = TextEditingController();
+  String?
+  _pendingFileHash; // hash of the newly-picked image file (null when not changed)
+  int? _pendingFileSize; // size in bytes of the newly-picked image file
 
   @override
   void initState() {
@@ -74,7 +93,9 @@ class _RasterMapFormState extends State<RasterMapForm>
       if (!await file.exists()) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            SnackBarService.showWarning(LocServ.inst.t('image_file_not_found_warning'));
+            SnackBarService.showWarning(
+              LocServ.inst.t('image_file_not_found_warning'),
+            );
           }
         });
       }
@@ -93,7 +114,9 @@ class _RasterMapFormState extends State<RasterMapForm>
         await subfolder.create(recursive: true);
       }
       final fileName = 'raster_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedFile = await File(pickedFile.path).copy('${subfolder.path}/$fileName');
+      final savedFile = await File(
+        pickedFile.path,
+      ).copy('${subfolder.path}/$fileName');
 
       // Apply image compression if enabled by constant and settings.
       if (kCompressRasterMapImages) {
@@ -117,7 +140,9 @@ class _RasterMapFormState extends State<RasterMapForm>
 
   void _save() async {
     if (_imagePath == null || _selectedMapType == null) {
-      SnackBarService.showWarning(LocServ.inst.t('please_select_image_and_map_type'));
+      SnackBarService.showWarning(
+        LocServ.inst.t('please_select_image_and_map_type'),
+      );
       return;
     }
 
@@ -164,10 +189,9 @@ class _RasterMapFormState extends State<RasterMapForm>
           builder: (ctx) => AlertDialog(
             title: Text(LocServ.inst.t('raster_map_image_duplicate_title')),
             content: Text(
-              LocServ.inst.t('raster_map_image_duplicate_body').replaceFirst(
-                '{title}',
-                hashDuplicate?.title ?? '',
-              ),
+              LocServ.inst
+                  .t('raster_map_image_duplicate_body')
+                  .replaceFirst('{title}', hashDuplicate?.title ?? ''),
             ),
             actions: [
               TextButton(
@@ -200,7 +224,7 @@ class _RasterMapFormState extends State<RasterMapForm>
         fileSize: fileSize,
         caveUuid: widget.caveUuid,
         caveAreaUuid: widget.rasterMap!.caveAreaUuid,
-        orderIndex: widget.rasterMap!.orderIndex
+        orderIndex: widget.rasterMap!.orderIndex,
       );
       await rasterMapRepository.updateRasterMap(updated);
     } else {
@@ -224,8 +248,14 @@ class _RasterMapFormState extends State<RasterMapForm>
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
-        title: Text(widget.rasterMap != null ? LocServ.inst.t('edit_raster_map') : LocServ.inst.t('add_raster_map')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        title: Text(
+          widget.rasterMap != null
+              ? LocServ.inst.t('edit_raster_map')
+              : LocServ.inst.t('add_raster_map'),
+        ),
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -234,7 +264,9 @@ class _RasterMapFormState extends State<RasterMapForm>
             TextFormField(
               key: tourKeys['title_field'],
               controller: _titleController,
-              decoration: InputDecoration(labelText: '${LocServ.inst.t('title')}'),
+              decoration: InputDecoration(
+                labelText: '${LocServ.inst.t('title')}',
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -271,10 +303,22 @@ class _RasterMapFormState extends State<RasterMapForm>
               value: _selectedMapType,
               hint: Text(LocServ.inst.t('map_type')),
               items: [
-                DropdownMenuItem(value: 'plane view', child: Text(LocServ.inst.t('plane_view'))),
-                DropdownMenuItem(value: 'projected profile', child: Text(LocServ.inst.t('projected_profile'))),
-                DropdownMenuItem(value: 'extended profile', child: Text(LocServ.inst.t('extended_profile'))),
-                DropdownMenuItem(value: 'other', child: Text(LocServ.inst.t('other'))),
+                DropdownMenuItem(
+                  value: 'plane view',
+                  child: Text(LocServ.inst.t('plane_view')),
+                ),
+                DropdownMenuItem(
+                  value: 'projected profile',
+                  child: Text(LocServ.inst.t('projected_profile')),
+                ),
+                DropdownMenuItem(
+                  value: 'extended profile',
+                  child: Text(LocServ.inst.t('extended_profile')),
+                ),
+                DropdownMenuItem(
+                  value: 'other',
+                  child: Text(LocServ.inst.t('other')),
+                ),
               ],
               onChanged: (value) => setState(() => _selectedMapType = value),
             ),

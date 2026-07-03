@@ -37,8 +37,7 @@ void main() {
       expect(frame.major, 0x2A40); // 10816
       expect(frame.minor, 1);
       expect(frame.measuredPower, -61);
-      expect(frame.identity,
-          'FDA50693-A4E2-4FB1-AFCF-C6EB07647825/10816/1');
+      expect(frame.identity, 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825/10816/1');
     });
 
     test('rejects non-iBeacon manufacturer payloads', () {
@@ -54,8 +53,10 @@ void main() {
         iBeaconCompanyId: iBeaconPayload,
       });
       expect(frame?.major, 0x2A40);
-      expect(IBeaconFrame.fromManufacturerData({0x0059: iBeaconPayload}),
-          isNull);
+      expect(
+        IBeaconFrame.fromManufacturerData({0x0059: iBeaconPayload}),
+        isNull,
+      );
     });
   });
 
@@ -90,23 +91,25 @@ void main() {
 
       // Same payload with bits 1+0 set → 28.93 °C / 38 %.
       final withSensor = Bp1003ServiceData.parse(
-          [...serviceDataPayload]..[10] = 0xA7)!;
+        [...serviceDataPayload]..[10] = 0xA7,
+      )!;
       expect(withSensor.temperatureC, closeTo(28.93, 0.001));
       expect(withSensor.humidityPct, 38);
     });
 
     test('negative temperatures extend away from zero', () {
       final payload = [...serviceDataPayload]
-        ..[10] = 0x03 // sensor present + enabled
-        ..[12] = 0xFB // -5
+        ..[10] =
+            0x03 // sensor present + enabled
+        ..[12] =
+            0xFB // -5
         ..[13] = 50;
       final sd = Bp1003ServiceData.parse(payload)!;
       expect(sd.temperatureC, closeTo(-5.50, 0.001));
     });
 
     test('accepts a value with the 4C4B UUID prefix still present', () {
-      final sd =
-          Bp1003ServiceData.parse([0x4C, 0x4B, ...serviceDataPayload]);
+      final sd = Bp1003ServiceData.parse([0x4C, 0x4B, ...serviceDataPayload]);
       expect(sd?.batteryMv, 3287);
       expect(sd?.macAddress, 'F0:C8:90:02:10:9B');
     });
@@ -115,22 +118,31 @@ void main() {
       expect(Bp1003ServiceData.parse(null), isNull);
       expect(Bp1003ServiceData.parse([]), isNull);
       expect(
-          Bp1003ServiceData.parse(serviceDataPayload.sublist(0, 14)), isNull);
+        Bp1003ServiceData.parse(serviceDataPayload.sublist(0, 14)),
+        isNull,
+      );
       expect(Bp1003ServiceData.parse([...serviceDataPayload, 0x00]), isNull);
     });
 
     test('fromServiceData matches short and 128-bit expanded keys', () {
       expect(
-          Bp1003ServiceData.fromServiceData({'4b4c': serviceDataPayload})
-              ?.batteryMv,
-          3287);
+        Bp1003ServiceData.fromServiceData({
+          '4b4c': serviceDataPayload,
+        })?.batteryMv,
+        3287,
+      );
       expect(
-          Bp1003ServiceData.fromServiceData({
-            '00004b4c-0000-1000-8000-00805f9b34fb': serviceDataPayload
-          })?.batteryMv,
-          3287);
+        Bp1003ServiceData.fromServiceData({
+          '00004b4c-0000-1000-8000-00805f9b34fb': serviceDataPayload,
+        })?.batteryMv,
+        3287,
+      );
       expect(
-          Bp1003ServiceData.fromServiceData({'180f': [42]}), isNull);
+        Bp1003ServiceData.fromServiceData({
+          '180f': [42],
+        }),
+        isNull,
+      );
     });
   });
 

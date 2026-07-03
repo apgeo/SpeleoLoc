@@ -24,19 +24,30 @@ class DataExportImportPage extends ConsumerStatefulWidget {
   const DataExportImportPage({super.key});
 
   @override
-  ConsumerState<DataExportImportPage> createState() => _DataExportImportPageState();
+  ConsumerState<DataExportImportPage> createState() =>
+      _DataExportImportPageState();
 }
 
 class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
-    with AppBarMenuMixin<DataExportImportPage>, ProductTourMixin<DataExportImportPage> {
+    with
+        AppBarMenuMixin<DataExportImportPage>,
+        ProductTourMixin<DataExportImportPage> {
   @override
   String get tourId => 'data_export';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_data_export_list_title', bodyLocKey: 'tour_data_export_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_data_export_menu_title', bodyLocKey: 'tour_data_export_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_data_export_list_title',
+      bodyLocKey: 'tour_data_export_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_data_export_menu_title',
+      bodyLocKey: 'tour_data_export_menu_body',
+    ),
   ];
 
   bool _includeDocFiles = true;
@@ -51,7 +62,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('data_export_import')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: ListView(
         key: tourKeys['list'],
@@ -123,7 +136,8 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
               icon: const Icon(Icons.download_outlined),
               label: Text(LocServ.inst.t('load_test_data_from_url')),
               onPressed: () => _importTestArchive(context),
-            ),          ] else ...[
+            ),
+          ] else ...[
             const Divider(height: 32),
             Text(
               LocServ.inst.t('test_data_section'),
@@ -141,7 +155,8 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
                   ),
                 ),
               ],
-            ),          ],
+            ),
+          ],
         ],
       ),
     );
@@ -168,8 +183,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     );
 
     try {
-      final service =
-          DataArchiveService(DataExportImportRepository(ref.read(appDatabaseProvider)));
+      final service = DataArchiveService(
+        DataExportImportRepository(ref.read(appDatabaseProvider)),
+      );
       // Belt-and-suspenders: even if [_includeFtpPasswords] were somehow
       // set to true (e.g. via tooling outside the UI gate), the
       // build-time [exportFtpPasswordsEnabled] flag still hard-disables
@@ -185,13 +201,16 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
         ),
         outputDir: dir,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
-        profileRepository:
-            includePasswords ? FtpProfileRepository(ref.read(appDatabaseProvider)) : null,
+        profileRepository: includePasswords
+            ? FtpProfileRepository(ref.read(appDatabaseProvider))
+            : null,
       );
 
       if (context.mounted) {
         Navigator.pop(context); // close progress
-        SnackBarService.showSuccess('${LocServ.inst.t('export_success')}: $outputPath');
+        SnackBarService.showSuccess(
+          '${LocServ.inst.t('export_success')}: $outputPath',
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -282,8 +301,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     );
 
     try {
-      final service =
-          DataArchiveService(DataExportImportRepository(ref.read(appDatabaseProvider)));
+      final service = DataArchiveService(
+        DataExportImportRepository(ref.read(appDatabaseProvider)),
+      );
       await service.importArchiveReplace(
         zipPath: zipPath,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
@@ -339,8 +359,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     }
 
     try {
-      final service =
-          DataArchiveService(DataExportImportRepository(ref.read(appDatabaseProvider)));
+      final service = DataArchiveService(
+        DataExportImportRepository(ref.read(appDatabaseProvider)),
+      );
       final importResult = await service.importArchiveMerge(
         zipPath: zipPath,
         conflictResolver: resolver,
@@ -356,7 +377,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
         Navigator.pop(context);
         if (batchState.cancelled) {
           SnackBarService.showWarning(LocServ.inst.t('import_cancelled'));
-          } else {
+        } else {
           SnackBarService.showError('${LocServ.inst.t('import_failed')}: $e');
         }
       }
@@ -414,7 +435,8 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       if (context.mounted) {
         Navigator.pop(context);
         SnackBarService.showError(
-            '${LocServ.inst.t('error_downloading_test_archive')}: $e');
+          '${LocServ.inst.t('error_downloading_test_archive')}: $e',
+        );
       }
     } finally {
       messageNotifier.dispose();
@@ -424,11 +446,13 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
   /// `true` when there are any caves, raster maps, or documentation files.
   Future<bool> _hasAnyData() async {
     try {
-      return await DataExportImportRepository(ref.read(appDatabaseProvider))
-          .hasAnyData();
+      return await DataExportImportRepository(
+        ref.read(appDatabaseProvider),
+      ).hasAnyData();
     } catch (e, st) {
-      AppLogger.of('DataExportImportPage')
-          .warning('hasAnyData count query failed', e, st);
+      AppLogger.of(
+        'DataExportImportPage',
+      ).warning('hasAnyData count query failed', e, st);
     }
     return false;
   }
@@ -447,29 +471,48 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _resultRow(LocServ.inst.t('import_records_imported'),
-                  result.recordsImported),
-              _resultRow(LocServ.inst.t('import_records_skipped'),
-                  result.recordsSkipped),
-              _resultRow(LocServ.inst.t('import_records_overwritten'),
-                  result.recordsOverwritten),
               _resultRow(
-                  LocServ.inst.t('import_files_copied'), result.filesCopied),
+                LocServ.inst.t('import_records_imported'),
+                result.recordsImported,
+              ),
+              _resultRow(
+                LocServ.inst.t('import_records_skipped'),
+                result.recordsSkipped,
+              ),
+              _resultRow(
+                LocServ.inst.t('import_records_overwritten'),
+                result.recordsOverwritten,
+              ),
+              _resultRow(
+                LocServ.inst.t('import_files_copied'),
+                result.filesCopied,
+              ),
               if (result.warnings.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text(LocServ.inst.t('import_warnings'),
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  LocServ.inst.t('import_warnings'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 4),
-                ...result.warnings.take(10).map((w) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text(w,
+                ...result.warnings
+                    .take(10)
+                    .map(
+                      (w) => Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          w,
                           style: const TextStyle(
-                              fontSize: 11, color: Colors.orange)),
-                    )),
+                            fontSize: 11,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ),
                 if (result.warnings.length > 10)
                   Text(
-                      '... ${LocServ.inst.t('and')} ${result.warnings.length - 10} ${LocServ.inst.t('more')}',
-                      style: const TextStyle(fontSize: 11)),
+                    '... ${LocServ.inst.t('and')} ${result.warnings.length - 10} ${LocServ.inst.t('more')}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
               ],
             ],
           ),
@@ -541,15 +584,13 @@ class _ConflictDialogResult {
   final bool applyToAll;
   final bool cancelled;
 
-  _ConflictDialogResult({
-    required this.action,
-    this.applyToAll = false,
-  }) : cancelled = false;
+  _ConflictDialogResult({required this.action, this.applyToAll = false})
+    : cancelled = false;
 
   _ConflictDialogResult.cancel()
-      : action = ConflictAction.skip,
-        applyToAll = false,
-        cancelled = true;
+    : action = ConflictAction.skip,
+      applyToAll = false,
+      cancelled = true;
 }
 
 class _ConflictResolutionDialog extends StatelessWidget {
@@ -560,8 +601,9 @@ class _ConflictResolutionDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(LocServ.inst
-          .t('conflict_in', {'table': conflict.humanTableName})),
+      title: Text(
+        LocServ.inst.t('conflict_in', {'table': conflict.humanTableName}),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
@@ -574,12 +616,16 @@ class _ConflictResolutionDialog extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Text(LocServ.inst.t('conflict_existing'),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                LocServ.inst.t('conflict_existing'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               _RecordCard(record: conflict.existingRecord),
               const SizedBox(height: 8),
-              Text(LocServ.inst.t('conflict_imported'),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                LocServ.inst.t('conflict_imported'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               _RecordCard(record: conflict.importedRecord),
             ],
           ),
@@ -589,26 +635,36 @@ class _ConflictResolutionDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(
-              context, _ConflictDialogResult(action: ConflictAction.skip)),
+            context,
+            _ConflictDialogResult(action: ConflictAction.skip),
+          ),
           child: Text(LocServ.inst.t('skip')),
         ),
         TextButton(
-          onPressed: () => Navigator.pop(context,
-              _ConflictDialogResult(action: ConflictAction.overwrite)),
+          onPressed: () => Navigator.pop(
+            context,
+            _ConflictDialogResult(action: ConflictAction.overwrite),
+          ),
           child: Text(LocServ.inst.t('overwrite')),
         ),
         TextButton(
           onPressed: () => Navigator.pop(
-              context,
-              _ConflictDialogResult(
-                  action: ConflictAction.skip, applyToAll: true)),
+            context,
+            _ConflictDialogResult(
+              action: ConflictAction.skip,
+              applyToAll: true,
+            ),
+          ),
           child: Text(LocServ.inst.t('skip_all')),
         ),
         TextButton(
           onPressed: () => Navigator.pop(
-              context,
-              _ConflictDialogResult(
-                  action: ConflictAction.overwrite, applyToAll: true)),
+            context,
+            _ConflictDialogResult(
+              action: ConflictAction.overwrite,
+              applyToAll: true,
+            ),
+          ),
           child: Text(LocServ.inst.t('overwrite_all')),
         ),
         TextButton(
@@ -633,12 +689,14 @@ class _RecordCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Show key fields compactly, skipping metadata.
     final entries = record.entries
-        .where((e) =>
-            e.key != 'id' &&
-            e.key != 'created_at' &&
-            e.key != 'updated_at' &&
-            e.key != 'deleted_at' &&
-            e.value != null)
+        .where(
+          (e) =>
+              e.key != 'id' &&
+              e.key != 'created_at' &&
+              e.key != 'updated_at' &&
+              e.key != 'deleted_at' &&
+              e.value != null,
+        )
         .take(8)
         .toList();
 
@@ -648,8 +706,12 @@ class _RecordCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: entries
-              .map((e) => Text('${e.key}: ${e.value}',
-                  style: const TextStyle(fontSize: 12)))
+              .map(
+                (e) => Text(
+                  '${e.key}: ${e.value}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              )
               .toList(),
         ),
       ),

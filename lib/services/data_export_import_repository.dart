@@ -1,4 +1,4 @@
-﻿import 'package:drift/drift.dart';
+import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -11,7 +11,8 @@ class DataExportImportRepository {
   final AppDatabase _db;
   final Clock _clock;
 
-  DataExportImportRepository(this._db, {Clock clock = const SystemClock()}) : _clock = clock;
+  DataExportImportRepository(this._db, {Clock clock = const SystemClock()})
+    : _clock = clock;
 
   // ---------------------------------------------------------------------------
   //  Export queries
@@ -111,9 +112,11 @@ class DataExportImportRepository {
 
   /// Read every row from [tableName] in the attached *imported* database.
   Future<List<Map<String, dynamic>>> getImportedTableRows(
-      String tableName) async {
-    final rows =
-        await _db.customSelect('SELECT * FROM imported.$tableName').get();
+    String tableName,
+  ) async {
+    final rows = await _db
+        .customSelect('SELECT * FROM imported.$tableName')
+        .get();
     return rows.map((r) => r.data).toList();
   }
 
@@ -180,8 +183,9 @@ class DataExportImportRepository {
       args,
     );
 
-    final result =
-        await _db.customSelect('SELECT last_insert_rowid() AS id').getSingle();
+    final result = await _db
+        .customSelect('SELECT last_insert_rowid() AS id')
+        .getSingle();
     return result.read<int>('id');
   }
 
@@ -212,8 +216,9 @@ class DataExportImportRepository {
 
   /// Whether the local database already contains meaningful data.
   Future<bool> hasData() async {
-    final row =
-        await _db.customSelect('SELECT COUNT(*) AS cnt FROM caves').getSingle();
+    final row = await _db
+        .customSelect('SELECT COUNT(*) AS cnt FROM caves')
+        .getSingle();
     return row.read<int>('cnt') > 0;
   }
 

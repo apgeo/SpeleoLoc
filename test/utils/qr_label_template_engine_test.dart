@@ -8,18 +8,17 @@ CavePlace _place({
   String? pci,
   String? qcri,
   double? depth,
-}) =>
-    CavePlace(
-      uuid: Uuid.zero,
-      title: title,
-      description: description,
-      caveUuid: Uuid.zero,
-      placeCodeIdentifier: pci,
-      qrCodeResourceIdentifier: qcri,
-      depthInCave: depth,
-      isEntrance: 0,
-      isMainEntrance: 0,
-    );
+}) => CavePlace(
+  uuid: Uuid.zero,
+  title: title,
+  description: description,
+  caveUuid: Uuid.zero,
+  placeCodeIdentifier: pci,
+  qrCodeResourceIdentifier: qcri,
+  depthInCave: depth,
+  isEntrance: 0,
+  isMainEntrance: 0,
+);
 
 void main() {
   group('QrLabelTemplateEngine.resolve', () {
@@ -43,12 +42,16 @@ void main() {
     test('formats depth with explicit sign and one decimal', () {
       expect(
         QrLabelTemplateEngine.resolve(
-            template: '@depth', place: _place(depth: 0)),
+          template: '@depth',
+          place: _place(depth: 0),
+        ),
         '+0.0',
       );
       expect(
         QrLabelTemplateEngine.resolve(
-            template: '@depth', place: _place(depth: 7)),
+          template: '@depth',
+          place: _place(depth: 7),
+        ),
         '+7.0',
       );
       // Wrap negative depth in a context word: `_cleanupResolved` strips
@@ -56,7 +59,9 @@ void main() {
       // there is non-separator text before `@depth` (the realistic case).
       expect(
         QrLabelTemplateEngine.resolve(
-            template: 'd @depth', place: _place(depth: -3.27)),
+          template: 'd @depth',
+          place: _place(depth: -3.27),
+        ),
         'd -3.3',
       );
       expect(
@@ -116,14 +121,16 @@ void main() {
       expect(tagged.fontColor, 'FF0000');
     });
 
-    test('never returns an empty list, even for an empty resolved template',
-        () {
-      final segs = QrLabelTemplateEngine.parseSegments(
-        template: '',
-        place: _place(),
-      );
-      expect(segs, hasLength(1));
-      expect(segs.single.text, '');
-    });
+    test(
+      'never returns an empty list, even for an empty resolved template',
+      () {
+        final segs = QrLabelTemplateEngine.parseSegments(
+          template: '',
+          place: _place(),
+        );
+        expect(segs, hasLength(1));
+        expect(segs.single.text, '');
+      },
+    );
   });
 }

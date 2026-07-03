@@ -15,15 +15,25 @@ class SettingsGeneralPage extends StatefulWidget {
 }
 
 class _SettingsGeneralPageState extends State<SettingsGeneralPage>
-    with AppBarMenuMixin<SettingsGeneralPage>, ProductTourMixin<SettingsGeneralPage> {
+    with
+        AppBarMenuMixin<SettingsGeneralPage>,
+        ProductTourMixin<SettingsGeneralPage> {
   @override
   String get tourId => 'settings_general';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_general_list_title', bodyLocKey: 'tour_settings_general_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_general_menu_title', bodyLocKey: 'tour_settings_general_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_settings_general_list_title',
+      bodyLocKey: 'tour_settings_general_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_settings_general_menu_title',
+      bodyLocKey: 'tour_settings_general_menu_body',
+    ),
   ];
 
   String? _appLanguage;
@@ -95,7 +105,9 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context, _needsReload),
           ),
-          actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+          actions: [
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
         ),
         body: ListView(
           key: tourKeys['list'],
@@ -108,8 +120,10 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
                 value: _appLanguage,
                 items: LocServ.inst
                     .supportedLocales()
-                    .map((code) =>
-                        DropdownMenuItem(value: code, child: Text(code)))
+                    .map(
+                      (code) =>
+                          DropdownMenuItem(value: code, child: Text(code)),
+                    )
                     .toList(),
                 onChanged: (v) async {
                   if (v == null) return;
@@ -159,28 +173,28 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
             const Divider(),
             SwitchListTile(
               title: Text(LocServ.inst.t('allow_main_object_bulk_deletes')),
-              subtitle: Text(LocServ.inst.t('allow_main_object_bulk_deletes_desc')),
+              subtitle: Text(
+                LocServ.inst.t('allow_main_object_bulk_deletes_desc'),
+              ),
               value: _allowMainObjectBulkDeletes,
               onChanged: (value) async {
                 await SettingsHelper.saveStringConfig(
                   allowMainObjectBulkDeletesKey,
                   value ? 'true' : 'false',
                 );
-                if (mounted) setState(() => _allowMainObjectBulkDeletes = value);
+                if (mounted)
+                  setState(() => _allowMainObjectBulkDeletes = value);
               },
             ),
             const Divider(),
             SwitchListTile(
               title: Text(LocServ.inst.t('qr_scan_ask_on_ambiguity')),
-              subtitle:
-                  Text(LocServ.inst.t('qr_scan_ask_on_ambiguity_desc')),
+              subtitle: Text(LocServ.inst.t('qr_scan_ask_on_ambiguity_desc')),
               value: _qrScanAskOnAmbiguity,
               onChanged: (value) async {
                 await SettingsHelper.saveStringConfig(
                   qrScanAmbiguityPolicyKey,
-                  value
-                      ? ambiguityPolicyDialog
-                      : ambiguityPolicyPreferLastCave,
+                  value ? ambiguityPolicyDialog : ambiguityPolicyPreferLastCave,
                 );
                 if (mounted) setState(() => _qrScanAskOnAmbiguity = value);
               },
@@ -188,15 +202,12 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
             const Divider(),
             SwitchListTile(
               title: Text(LocServ.inst.t('deep_link_ask_on_ambiguity')),
-              subtitle:
-                  Text(LocServ.inst.t('deep_link_ask_on_ambiguity_desc')),
+              subtitle: Text(LocServ.inst.t('deep_link_ask_on_ambiguity_desc')),
               value: _deepLinkAskOnAmbiguity,
               onChanged: (value) async {
                 await SettingsHelper.saveStringConfig(
                   deepLinkAmbiguityPolicyKey,
-                  value
-                      ? ambiguityPolicyDialog
-                      : ambiguityPolicyPreferLastCave,
+                  value ? ambiguityPolicyDialog : ambiguityPolicyPreferLastCave,
                 );
                 if (mounted) setState(() => _deepLinkAskOnAmbiguity = value);
               },
@@ -209,7 +220,9 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
               onTap: () async {
                 await resetAllTours(allTourIds);
                 if (mounted) {
-                  SnackBarService.showSuccess(LocServ.inst.t('tours_reset_done'));
+                  SnackBarService.showSuccess(
+                    LocServ.inst.t('tours_reset_done'),
+                  );
                 }
               },
             ),

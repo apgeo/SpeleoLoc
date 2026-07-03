@@ -141,10 +141,8 @@ abstract class ICavePlaceRepository {
 /// Abstract contract for the raster-map repository.
 abstract class IRasterMapRepository {
   Future<List<RasterMap>> getRasterMaps(Uuid caveUuid);
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(
-    Uuid caveUuid,
-    Uuid rasterMapUuid,
-  );
+  Future<List<CavePlaceWithDefinition>>
+  getCavePlacesWithDefinitionsForRasterMap(Uuid caveUuid, Uuid rasterMapUuid);
   Future<void> addRasterMap(RasterMapsCompanion companion);
   Future<void> updateRasterMap(RasterMap rasterMap);
   Future<void> deleteRasterMap(Uuid uuid);
@@ -179,10 +177,8 @@ abstract class IDefinitionRepository {
     Uuid cavePlaceUuid,
     Uuid rasterMapUuid,
   );
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(
-    Uuid caveUuid,
-    Uuid rasterMapUuid,
-  );
+  Future<List<CavePlaceWithDefinition>>
+  getCavePlacesWithDefinitionsForRasterMap(Uuid caveUuid, Uuid rasterMapUuid);
   Future<CavePlaceToRasterMapDefinition> saveDefinition(
     Uuid cavePlaceUuid,
     Uuid rasterMapUuid,
@@ -298,4 +294,3 @@ abstract class IDocumentationRepository {
   /// soft-deleted).
   Future<bool> hasAnyDocumentationFiles();
 }
-

@@ -14,15 +14,25 @@ class CaveTripLogPage extends StatefulWidget {
   State<CaveTripLogPage> createState() => _CaveTripLogPageState();
 }
 
-class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin<CaveTripLogPage> {
+class _CaveTripLogPageState extends State<CaveTripLogPage>
+    with ProductTourMixin<CaveTripLogPage> {
   @override
   String get tourId => 'cave_trip_log';
   @override
   final tourKeys = TourKeySet(['editor', 'save']);
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'editor', titleLocKey: 'tour_cave_trip_log_editor_title', bodyLocKey: 'tour_cave_trip_log_editor_body', align: ContentAlign.top),
-    TourStepDef(keyId: 'save', titleLocKey: 'tour_cave_trip_log_save_title', bodyLocKey: 'tour_cave_trip_log_save_body'),
+    TourStepDef(
+      keyId: 'editor',
+      titleLocKey: 'tour_cave_trip_log_editor_title',
+      bodyLocKey: 'tour_cave_trip_log_editor_body',
+      align: ContentAlign.top,
+    ),
+    TourStepDef(
+      keyId: 'save',
+      titleLocKey: 'tour_cave_trip_log_save_title',
+      bodyLocKey: 'tour_cave_trip_log_save_body',
+    ),
   ];
   final TextEditingController _controller = TextEditingController();
   bool _loading = true;
@@ -134,7 +144,13 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
           if (_saving)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
             )
           else
             IconButton(
@@ -162,7 +178,9 @@ class _CaveTripLogPageState extends State<CaveTripLogPage> with ProductTourMixin
                         hintText: LocServ.inst.t('trip_log_title'),
                       ),
                       style: const TextStyle(
-                          fontFamily: 'monospace', fontSize: 13),
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),

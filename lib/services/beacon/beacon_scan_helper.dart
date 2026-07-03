@@ -31,8 +31,10 @@ class BeaconScanHelper {
     ].request();
     final denied = statuses.entries.where((e) => !e.value.isGranted).toList();
     if (denied.isEmpty) return true;
-    _log.warning('BLE permissions denied: '
-        '${denied.map((e) => e.key.toString()).join(', ')}');
+    _log.warning(
+      'BLE permissions denied: '
+      '${denied.map((e) => e.key.toString()).join(', ')}',
+    );
     if (denied.any((e) => e.value.isPermanentlyDenied)) {
       await openAppSettings();
     }
@@ -60,7 +62,7 @@ class BeaconScanHelper {
   static List<Region> buildRegions(List<String> uuids) => Platform.isIOS
       ? [
           for (final uuid in uuids)
-            Region(identifier: 'speleoloc-$uuid', proximityUUID: uuid)
+            Region(identifier: 'speleoloc-$uuid', proximityUUID: uuid),
         ]
       : [Region(identifier: 'speleoloc-all')];
 }

@@ -16,10 +16,18 @@ class DefinitionRepository implements IDefinitionRepository {
   final Clock _clock;
   final _log = AppLogger.of('DefinitionRepository');
 
-  DefinitionRepository(this._database, this._currentUser, this._logger, {Clock clock = const SystemClock()}) : _clock = clock;
+  DefinitionRepository(
+    this._database,
+    this._currentUser,
+    this._logger, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock;
 
   @override
-  Future<CavePlaceToRasterMapDefinition?> findDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
+  Future<CavePlaceToRasterMapDefinition?> findDefinition(
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
+  ) async {
     try {
       return await _database.getDefinition(cavePlaceUuid, rasterMapUuid);
     } catch (e, st) {
@@ -29,9 +37,16 @@ class DefinitionRepository implements IDefinitionRepository {
   }
 
   @override
-  Future<List<CavePlaceWithDefinition>> getCavePlacesWithDefinitionsForRasterMap(Uuid caveUuid, Uuid rasterMapUuid) async {
+  Future<List<CavePlaceWithDefinition>>
+  getCavePlacesWithDefinitionsForRasterMap(
+    Uuid caveUuid,
+    Uuid rasterMapUuid,
+  ) async {
     try {
-      return await _database.getCavePlacesWithDefinitionsForRasterMap(caveUuid, rasterMapUuid);
+      return await _database.getCavePlacesWithDefinitionsForRasterMap(
+        caveUuid,
+        rasterMapUuid,
+      );
     } catch (e, st) {
       _log.severe('getCavePlacesWithDefinitionsForRasterMap error', e, st);
       throw DbException(
@@ -59,14 +74,16 @@ class DefinitionRepository implements IDefinitionRepository {
         final author = await _currentUser.currentOrSystem();
         final existing = await findDefinition(cavePlaceUuid, rasterMapUuid);
         if (existing != null) {
-          await (_database.update(_database.cavePlaceToRasterMapDefinitions)
-                ..where((d) => d.uuid.equalsValue(existing.uuid)))
-              .write(CavePlaceToRasterMapDefinitionsCompanion(
-            xCoordinate: Value(imageX.toInt()),
-            yCoordinate: Value(imageY.toInt()),
-            updatedAt: Value(now),
-            lastModifiedByUserUuid: Value(author),
-          ));
+          await (_database.update(
+            _database.cavePlaceToRasterMapDefinitions,
+          )..where((d) => d.uuid.equalsValue(existing.uuid))).write(
+            CavePlaceToRasterMapDefinitionsCompanion(
+              xCoordinate: Value(imageX.toInt()),
+              yCoordinate: Value(imageY.toInt()),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
           await _logger.logUpdate(
             'cave_place_to_raster_map_definitions',
             existing.uuid,
@@ -97,7 +114,9 @@ class DefinitionRepository implements IDefinitionRepository {
               .into(_database.cavePlaceToRasterMapDefinitions)
               .insert(companion);
           await _logger.logInsert(
-              'cave_place_to_raster_map_definitions', newUuid);
+            'cave_place_to_raster_map_definitions',
+            newUuid,
+          );
           return (await findDefinition(cavePlaceUuid, rasterMapUuid))!;
         }
       });
@@ -112,15 +131,23 @@ class DefinitionRepository implements IDefinitionRepository {
   @override
   Future<bool> deleteDefinition(Uuid cavePlaceUuid, Uuid rasterMapUuid) async {
     try {
-      final old = await (_database.select(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) =>
-                d.cavePlaceUuid.equalsValue(cavePlaceUuid) &
-                d.rasterMapUuid.equalsValue(rasterMapUuid))
-            ..limit(1))
-          .getSingleOrNull();
-      final rows = await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) => d.cavePlaceUuid.equalsValue(cavePlaceUuid) & d.rasterMapUuid.equalsValue(rasterMapUuid)))
-          .go();
+      final old =
+          await (_database.select(_database.cavePlaceToRasterMapDefinitions)
+                ..where(
+                  (d) =>
+                      d.cavePlaceUuid.equalsValue(cavePlaceUuid) &
+                      d.rasterMapUuid.equalsValue(rasterMapUuid),
+                )
+                ..limit(1))
+              .getSingleOrNull();
+      final rows =
+          await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
+                ..where(
+                  (d) =>
+                      d.cavePlaceUuid.equalsValue(cavePlaceUuid) &
+                      d.rasterMapUuid.equalsValue(rasterMapUuid),
+                ))
+              .go();
       if (rows > 0 && old != null) {
         await _logger.logDelete(
           'cave_place_to_raster_map_definitions',
@@ -136,32 +163,40 @@ class DefinitionRepository implements IDefinitionRepository {
       return rows > 0;
     } catch (e, st) {
       _log.severe('deleteDefinition error', e, st);
-      throw DbException('Failed to delete definition', cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to delete definition',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
   @override
   Future<int> countDefinitionsForRasterMap(Uuid rasterMapUuid) async {
     try {
-      final rows = await (_database.select(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid)))
-          .get();
+      final rows = await (_database.select(
+        _database.cavePlaceToRasterMapDefinitions,
+      )..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid))).get();
       return rows.length;
     } catch (e, st) {
       _log.severe('countDefinitionsForRasterMap error', e, st);
-      throw DbException('Failed to count definitions', cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to count definitions',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
   @override
   Future<int> deleteAllDefinitionsForRasterMap(Uuid rasterMapUuid) async {
     try {
-      final all = await (_database.select(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid)))
-          .get();
-      final count = await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid)))
-          .go();
+      final all = await (_database.select(
+        _database.cavePlaceToRasterMapDefinitions,
+      )..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid))).get();
+      final count = await (_database.delete(
+        _database.cavePlaceToRasterMapDefinitions,
+      )..where((d) => d.rasterMapUuid.equalsValue(rasterMapUuid))).go();
       for (final row in all) {
         await _logger.logDelete(
           'cave_place_to_raster_map_definitions',
@@ -177,7 +212,11 @@ class DefinitionRepository implements IDefinitionRepository {
       return count;
     } catch (e, st) {
       _log.severe('deleteAllDefinitionsForRasterMap error', e, st);
-      throw DbException('Failed to delete all definitions for raster map', cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to delete all definitions for raster map',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -188,13 +227,16 @@ class DefinitionRepository implements IDefinitionRepository {
     final ids = rasterMapUuids.toList(growable: false);
     if (ids.isEmpty) return const <CavePlaceToRasterMapDefinition>[];
     try {
-      return await (_database.select(_database.cavePlaceToRasterMapDefinitions)
-            ..where((d) => d.rasterMapUuid.isInValues(ids)))
-          .get();
+      return await (_database.select(
+        _database.cavePlaceToRasterMapDefinitions,
+      )..where((d) => d.rasterMapUuid.isInValues(ids))).get();
     } catch (e, st) {
       _log.severe('getDefinitionsForRasterMaps error', e, st);
-      throw DbException('Failed to load definitions for raster maps',
-          cause: e, stackTrace: st);
+      throw DbException(
+        'Failed to load definitions for raster maps',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 }

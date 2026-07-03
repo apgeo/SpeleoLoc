@@ -70,8 +70,7 @@ class PlaceCodeBatchUi {
         content: Text(body),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(ctx, OverwriteDecision.cancelBatch),
+            onPressed: () => Navigator.pop(ctx, OverwriteDecision.cancelBatch),
             child: Text(LocServ.inst.t('cancel_batch')),
           ),
           TextButton(
@@ -83,8 +82,7 @@ class PlaceCodeBatchUi {
             child: Text(LocServ.inst.t('keep')),
           ),
           TextButton(
-            onPressed: () =>
-                Navigator.pop(ctx, OverwriteDecision.replaceAll),
+            onPressed: () => Navigator.pop(ctx, OverwriteDecision.replaceAll),
             child: Text(LocServ.inst.t('replace_all')),
           ),
           ElevatedButton(
@@ -142,21 +140,38 @@ class PlaceCodeBatchUi {
               ],
 
               // -- Core stats --
-              Text(t('batch_summary_caves_updated')
-                  .replaceAll('{n}', summary.cavesUpdated.toString())),
-              Text(t('batch_summary_updated')
-                  .replaceAll('{n}', summary.updated.toString())),
-              Text(t('batch_summary_overwritten')
-                  .replaceAll('{n}', summary.overwritten.toString())),
-              Text(t('batch_summary_duration')
-                  .replaceAll('{s}', durationSec)),
+              Text(
+                t(
+                  'batch_summary_caves_updated',
+                ).replaceAll('{n}', summary.cavesUpdated.toString()),
+              ),
+              Text(
+                t(
+                  'batch_summary_updated',
+                ).replaceAll('{n}', summary.updated.toString()),
+              ),
+              Text(
+                t(
+                  'batch_summary_overwritten',
+                ).replaceAll('{n}', summary.overwritten.toString()),
+              ),
+              Text(t('batch_summary_duration').replaceAll('{s}', durationSec)),
               const Divider(height: 16),
-              Text(t('batch_summary_skipped')
-                  .replaceAll('{n}', summary.skipped.length.toString())),
-              Text(t('batch_summary_refused')
-                  .replaceAll('{n}', summary.refused.length.toString())),
-              Text(t('batch_summary_aborted')
-                  .replaceAll('{n}', summary.aborted.length.toString())),
+              Text(
+                t(
+                  'batch_summary_skipped',
+                ).replaceAll('{n}', summary.skipped.length.toString()),
+              ),
+              Text(
+                t(
+                  'batch_summary_refused',
+                ).replaceAll('{n}', summary.refused.length.toString()),
+              ),
+              Text(
+                t(
+                  'batch_summary_aborted',
+                ).replaceAll('{n}', summary.aborted.length.toString()),
+              ),
               if (summary.cancelled) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -169,15 +184,17 @@ class PlaceCodeBatchUi {
               if (summary.noSurfaceAreaFallbacks.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _FallbackSection(
-                  title: t('batch_summary_no_surface_area_title').replaceAll(
-                    '{caves}',
-                    summary.noSurfaceAreaFallbacks.length.toString(),
-                  ).replaceAll(
-                    '{places}',
-                    summary.noSurfaceAreaFallbacks
-                        .fold(0, (s, e) => s + e.placeCount)
-                        .toString(),
-                  ),
+                  title: t('batch_summary_no_surface_area_title')
+                      .replaceAll(
+                        '{caves}',
+                        summary.noSurfaceAreaFallbacks.length.toString(),
+                      )
+                      .replaceAll(
+                        '{places}',
+                        summary.noSurfaceAreaFallbacks
+                            .fold(0, (s, e) => s + e.placeCount)
+                            .toString(),
+                      ),
                   subtitle: t('batch_summary_no_surface_area_hint'),
                   infos: summary.noSurfaceAreaFallbacks,
                 ),
@@ -185,15 +202,17 @@ class PlaceCodeBatchUi {
               if (summary.noIdentifierFallbacks.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 _FallbackSection(
-                  title: t('batch_summary_no_identifier_title').replaceAll(
-                    '{caves}',
-                    summary.noIdentifierFallbacks.length.toString(),
-                  ).replaceAll(
-                    '{places}',
-                    summary.noIdentifierFallbacks
-                        .fold(0, (s, e) => s + e.placeCount)
-                        .toString(),
-                  ),
+                  title: t('batch_summary_no_identifier_title')
+                      .replaceAll(
+                        '{caves}',
+                        summary.noIdentifierFallbacks.length.toString(),
+                      )
+                      .replaceAll(
+                        '{places}',
+                        summary.noIdentifierFallbacks
+                            .fold(0, (s, e) => s + e.placeCount)
+                            .toString(),
+                      ),
                   subtitle: t('batch_summary_no_identifier_hint'),
                   infos: summary.noIdentifierFallbacks,
                 ),
@@ -202,10 +221,7 @@ class PlaceCodeBatchUi {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(t('ok')),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('ok'))),
         ],
       ),
     );
@@ -239,40 +255,42 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
   }
 
   void _startBatch() {
-    placeCodeBatchRunner.run(
-      scope: widget.scope,
-      cancellationToken: _token,
-      onProgress: (c, t) {
-        if (mounted) {
-          setState(() {
-            _current = c;
-            _total = t;
-          });
-        }
-      },
-      onPrompt: ({
-        required cavePlaceUuid,
-        required field,
-        required existing,
-        required computed,
-      }) async {
-        if (!mounted) return OverwriteDecision.cancelBatch;
-        return PlaceCodeBatchUi.promptOverwrite(
-          context,
-          field: field,
-          existing: existing,
-          computed: computed,
-        );
-      },
-    ).then((summary) {
-      if (mounted) Navigator.pop(context, summary);
-    });
+    placeCodeBatchRunner
+        .run(
+          scope: widget.scope,
+          cancellationToken: _token,
+          onProgress: (c, t) {
+            if (mounted) {
+              setState(() {
+                _current = c;
+                _total = t;
+              });
+            }
+          },
+          onPrompt:
+              ({
+                required cavePlaceUuid,
+                required field,
+                required existing,
+                required computed,
+              }) async {
+                if (!mounted) return OverwriteDecision.cancelBatch;
+                return PlaceCodeBatchUi.promptOverwrite(
+                  context,
+                  field: field,
+                  existing: existing,
+                  computed: computed,
+                );
+              },
+        )
+        .then((summary) {
+          if (mounted) Navigator.pop(context, summary);
+        });
   }
 
   String _formatEta() {
     if (_current == 0 || _total == 0) return '';
-    final elapsedMs =
-        DateTime.now().difference(_startTime).inMilliseconds;
+    final elapsedMs = DateTime.now().difference(_startTime).inMilliseconds;
     final msPerItem = elapsedMs / _current;
     final remainingMs = (_total - _current) * msPerItem;
     final secs = (remainingMs / 1000).round();
@@ -285,8 +303,7 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
   @override
   Widget build(BuildContext context) {
     final t = LocServ.inst.t;
-    final pct =
-        _total > 0 ? (_current / _total * 100).toStringAsFixed(0) : '0';
+    final pct = _total > 0 ? (_current / _total * 100).toStringAsFixed(0) : '0';
     final progressValue = _total > 0 ? _current / _total : null;
     final eta = _formatEta();
 
@@ -300,10 +317,12 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
           children: [
             LinearProgressIndicator(value: progressValue),
             const SizedBox(height: 12),
-            Text(t('batch_progress_count')
-                .replaceAll('{current}', _current.toString())
-                .replaceAll('{total}', _total.toString())
-                .replaceAll('{pct}', pct)),
+            Text(
+              t('batch_progress_count')
+                  .replaceAll('{current}', _current.toString())
+                  .replaceAll('{total}', _total.toString())
+                  .replaceAll('{pct}', pct),
+            ),
             if (eta.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(t('batch_progress_eta').replaceAll('{eta}', eta)),
@@ -311,10 +330,7 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => _token.cancel(),
-            child: Text(t('stop')),
-          ),
+          TextButton(onPressed: () => _token.cancel(), child: Text(t('stop'))),
         ],
       ),
     );
@@ -340,9 +356,11 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline,
-              size: 18,
-              color: Theme.of(context).colorScheme.onErrorContainer),
+          Icon(
+            Icons.error_outline,
+            size: 18,
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -378,17 +396,16 @@ class _FallbackSection extends StatelessWidget {
       tilePadding: EdgeInsets.zero,
       childrenPadding: EdgeInsets.zero,
       title: Text(title, style: textTheme.bodyMedium),
-      subtitle: Text(subtitle,
-          style: textTheme.bodySmall
-              ?.copyWith(fontStyle: FontStyle.italic)),
+      subtitle: Text(
+        subtitle,
+        style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+      ),
       children: infos.map((info) {
         return ListTile(
           dense: true,
           contentPadding: const EdgeInsets.only(left: 16),
-          title: Text(info.caveName,
-              style: textTheme.bodySmall),
-          trailing: Text('×${info.placeCount}',
-              style: textTheme.bodySmall),
+          title: Text(info.caveName, style: textTheme.bodySmall),
+          trailing: Text('×${info.placeCount}', style: textTheme.bodySmall),
         );
       }).toList(),
     );

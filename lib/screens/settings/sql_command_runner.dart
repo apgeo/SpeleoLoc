@@ -20,9 +20,21 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'input', titleLocKey: 'tour_sql_runner_input_title', bodyLocKey: 'tour_sql_runner_input_body'),
-    TourStepDef(keyId: 'output', titleLocKey: 'tour_sql_runner_output_title', bodyLocKey: 'tour_sql_runner_output_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_sql_runner_menu_title', bodyLocKey: 'tour_sql_runner_menu_body'),
+    TourStepDef(
+      keyId: 'input',
+      titleLocKey: 'tour_sql_runner_input_title',
+      bodyLocKey: 'tour_sql_runner_input_body',
+    ),
+    TourStepDef(
+      keyId: 'output',
+      titleLocKey: 'tour_sql_runner_output_title',
+      bodyLocKey: 'tour_sql_runner_output_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_sql_runner_menu_title',
+      bodyLocKey: 'tour_sql_runner_menu_body',
+    ),
   ];
 
   final TextEditingController _sqlController = TextEditingController();
@@ -50,7 +62,8 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
 
     try {
       final normalized = sql.toLowerCase();
-      final isQuery = normalized.startsWith('select') ||
+      final isQuery =
+          normalized.startsWith('select') ||
           normalized.startsWith('pragma') ||
           normalized.startsWith('with') ||
           normalized.startsWith('explain');
@@ -102,7 +115,9 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('sql_command_runner')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

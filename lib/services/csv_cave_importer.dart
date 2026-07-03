@@ -65,10 +65,17 @@ class CSVCaveImporter {
   final CurrentUserService _currentUser;
   final Clock _clock;
 
-  CSVCaveImporter(this._database, this._currentUser, {Clock clock = const SystemClock()}) : _clock = clock;
+  CSVCaveImporter(
+    this._database,
+    this._currentUser, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock;
 
   /// Parse CSV rows according to the given config, skipping the header row.
-  List<CSVCaveImportRow> parseRows(List<List<dynamic>> csvData, CSVCavesImportConfig config) {
+  List<CSVCaveImportRow> parseRows(
+    List<List<dynamic>> csvData,
+    CSVCavesImportConfig config,
+  ) {
     if (csvData.length < 2) return [];
 
     final rows = <CSVCaveImportRow>[];
@@ -80,17 +87,20 @@ class CSVCaveImporter {
       String? description;
       String? surfaceArea;
 
-      if (config.caveNameColumn != null && config.caveNameColumn! < row.length) {
+      if (config.caveNameColumn != null &&
+          config.caveNameColumn! < row.length) {
         final val = row[config.caveNameColumn!].toString().trim();
         if (val.isNotEmpty) caveName = val;
       }
 
-      if (config.descriptionColumn != null && config.descriptionColumn! < row.length) {
+      if (config.descriptionColumn != null &&
+          config.descriptionColumn! < row.length) {
         final val = row[config.descriptionColumn!].toString().trim();
         if (val.isNotEmpty) description = val;
       }
 
-      if (config.surfaceAreaColumn != null && config.surfaceAreaColumn! < row.length) {
+      if (config.surfaceAreaColumn != null &&
+          config.surfaceAreaColumn! < row.length) {
         final val = row[config.surfaceAreaColumn!].toString().trim();
         if (val.isNotEmpty) surfaceArea = val;
       }
@@ -98,11 +108,13 @@ class CSVCaveImporter {
       // Skip rows with no cave name
       if (caveName == null || caveName.isEmpty) continue;
 
-      rows.add(CSVCaveImportRow(
-        caveName: caveName,
-        description: description,
-        surfaceArea: surfaceArea,
-      ));
+      rows.add(
+        CSVCaveImportRow(
+          caveName: caveName,
+          description: description,
+          surfaceArea: surfaceArea,
+        ),
+      );
     }
     return rows;
   }
@@ -134,10 +146,12 @@ class CSVCaveImporter {
       final saKey = row.surfaceArea?.toLowerCase() ?? '';
       final key = '${row.caveName!.toLowerCase()}|$saKey';
       if (caveSet.contains(key)) {
-        allMatches.add(CaveExistingMatch(
-          caveName: row.caveName!,
-          surfaceArea: row.surfaceArea,
-        ));
+        allMatches.add(
+          CaveExistingMatch(
+            caveName: row.caveName!,
+            surfaceArea: row.surfaceArea,
+          ),
+        );
       }
     }
 
@@ -182,7 +196,9 @@ class CSVCaveImporter {
             surfaceAreaUuid = surfaceAreaCache[saKey]!;
           } else {
             final newUuid = Uuid.v7();
-            await _database.into(_database.surfaceAreas).insert(
+            await _database
+                .into(_database.surfaceAreas)
+                .insert(
                   SurfaceAreasCompanion.insert(
                     uuid: newUuid,
                     title: row.surfaceArea!,
@@ -199,17 +215,20 @@ class CSVCaveImporter {
         }
 
         // Check if cave already exists (title + surface_area_uuid is unique)
-        final caveKey = '${row.caveName!.toLowerCase()}|${surfaceAreaUuid ?? ''}';
+        final caveKey =
+            '${row.caveName!.toLowerCase()}|${surfaceAreaUuid ?? ''}';
         if (caveCache.containsKey(caveKey)) {
           // Update description if provided and cave exists
           if (row.description != null && row.description!.isNotEmpty) {
-            await (_database.update(_database.caves)
-                  ..where((c) => c.uuid.equalsValue(caveCache[caveKey]!)))
-                .write(CavesCompanion(
-              description: Value(row.description),
-              updatedAt: Value(now),
-              lastModifiedByUserUuid: Value(author),
-            ));
+            await (_database.update(
+              _database.caves,
+            )..where((c) => c.uuid.equalsValue(caveCache[caveKey]!))).write(
+              CavesCompanion(
+                description: Value(row.description),
+                updatedAt: Value(now),
+                lastModifiedByUserUuid: Value(author),
+              ),
+            );
           }
           skippedDuplicates++;
           continue;
@@ -217,7 +236,9 @@ class CSVCaveImporter {
 
         // Create new cave
         final newUuid = Uuid.v7();
-        await _database.into(_database.caves).insert(
+        await _database
+            .into(_database.caves)
+            .insert(
               CavesCompanion.insert(
                 uuid: newUuid,
                 title: row.caveName!,

@@ -31,7 +31,8 @@ class DataArchiveService {
   final Clock _clock;
   final _log = AppLogger.of('DataArchiveService');
 
-  DataArchiveService(this._repo, {Clock clock = const SystemClock()}) : _clock = clock;
+  DataArchiveService(this._repo, {Clock clock = const SystemClock()})
+    : _clock = clock;
 
   // ---------------------------------------------------------------------------
   //  EXPORT
@@ -93,14 +94,15 @@ class DataArchiveService {
       final profiles = await profileRepository.list();
       final credentials = <Map<String, dynamic>>[];
       for (final profile in profiles) {
-        final password = await profileRepository.readPassword(profile.profileUuid);
-        credentials.add({
-          ...profile.toJson(),
-          'password': password ?? '',
-        });
+        final password = await profileRepository.readPassword(
+          profile.profileUuid,
+        );
+        credentials.add({...profile.toJson(), 'password': password ?? ''});
       }
       final credBytes = utf8.encode(jsonEncode(credentials));
-      archive.addFile(ArchiveFile('ftp_credentials.json', credBytes.length, credBytes));
+      archive.addFile(
+        ArchiveFile('ftp_credentials.json', credBytes.length, credBytes),
+      );
     }
 
     // 5. Manifest.
@@ -115,14 +117,16 @@ class DataArchiveService {
     };
     final manifestBytes = utf8.encode(jsonEncode(manifest));
     archive.addFile(
-        ArchiveFile('manifest.json', manifestBytes.length, manifestBytes));
+      ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+    );
 
     // 5. Encode & write.
     onProgress?.call('Creating archive...');
     final zipData = ZipEncoder().encode(archive);
 
     final now = _clock.now();
-    final ts = '${now.year}-${_pad(now.month)}-${_pad(now.day)}'
+    final ts =
+        '${now.year}-${_pad(now.month)}-${_pad(now.day)}'
         '_${_pad(now.hour)}-${_pad(now.minute)}-${_pad(now.second)}';
     final suffix = settings.diffOnly ? '_diff' : '';
     final fileName = 'speleo_loc_$ts$suffix.zip';
@@ -132,8 +136,7 @@ class DataArchiveService {
 
     // 6. Record export timestamp (full exports only).
     if (!settings.diffOnly) {
-      await _repo
-          .setLastExportTimestamp(_clock.nowMs());
+      await _repo.setLastExportTimestamp(_clock.nowMs());
     }
 
     return outputPath;
@@ -164,8 +167,9 @@ class DataArchiveService {
       // This behaviour can be disabled via the archive import/export config
       // flag `copy_device_uuid_from_archive_on_import`.
       final savedDeviceUuid = await _readConfigValue('device_uuid');
-      final importExportCfgRaw =
-          await _readConfigValue('archive_sync_import_export_config');
+      final importExportCfgRaw = await _readConfigValue(
+        'archive_sync_import_export_config',
+      );
       final copyUuidFromArchive = _parseCopyDeviceUuidFlag(importExportCfgRaw);
 
       // Close current database.
@@ -302,7 +306,8 @@ class DataArchiveService {
               final newFkId = idMappings[fk.value]?[oldFkId];
               if (newFkId == null) {
                 warnings.add(
-                    '${cfg.humanName}: could not remap ${fk.key}=$oldFkId');
+                  '${cfg.humanName}: could not remap ${fk.key}=$oldFkId',
+                );
               }
               remapped[fk.key] = newFkId;
             }
@@ -334,8 +339,11 @@ class DataArchiveService {
               humanTableName: cfg.humanName,
               existingRecord: existing,
               importedRecord: remapped,
-              conflictingColumns:
-                  _conflictCols(cfg.uniqueConstraints, remapped, existing),
+              conflictingColumns: _conflictCols(
+                cfg.uniqueConstraints,
+                remapped,
+                existing,
+              ),
             );
 
             final action = await conflictResolver(conflict);
@@ -349,14 +357,21 @@ class DataArchiveService {
               skipped++;
             } else {
               await _repo.updateRow(
-                  cfg.name, existingId, cfg.columns, remapped);
+                cfg.name,
+                existingId,
+                cfg.columns,
+                remapped,
+              );
               idMappings[cfg.name]![oldId] = existingId;
               overwritten++;
             }
           } else {
             try {
-              final newId =
-                  await _repo.insertRow(cfg.name, cfg.columns, remapped);
+              final newId = await _repo.insertRow(
+                cfg.name,
+                cfg.columns,
+                remapped,
+              );
               idMappings[cfg.name]![oldId] = newId;
               imported++;
             } catch (e) {
@@ -411,8 +426,7 @@ class DataArchiveService {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
 
-    final tempDir =
-        await Directory.systemTemp.createTemp('speleo_loc_import_');
+    final tempDir = await Directory.systemTemp.createTemp('speleo_loc_import_');
 
     for (final file in archive) {
       final name = file.name.replaceAll('\\', '/');
@@ -431,13 +445,16 @@ class DataArchiveService {
   /// Copy all extracted files (except DB & manifest) into [docsDir],
   /// overwriting existing files.
   Future<void> _copyAllExtractedFiles(
-      Directory extractDir, Directory docsDir) async {
+    Directory extractDir,
+    Directory docsDir,
+  ) async {
     await for (final entity in extractDir.list(recursive: true)) {
       if (entity is File) {
         final relPath = entity.path
             .substring(extractDir.path.length + 1)
             .replaceAll('\\', '/');
-        if (relPath == 'speleo_loc.sqlite' || relPath == 'manifest.json' ||
+        if (relPath == 'speleo_loc.sqlite' ||
+            relPath == 'manifest.json' ||
             relPath == 'ftp_credentials.json') {
           continue;
         }
@@ -459,7 +476,8 @@ class DataArchiveService {
         final relPath = entity.path
             .substring(extractDir.length + 1)
             .replaceAll('\\', '/');
-        if (relPath == 'speleo_loc.sqlite' || relPath == 'manifest.json' ||
+        if (relPath == 'speleo_loc.sqlite' ||
+            relPath == 'manifest.json' ||
             relPath == 'ftp_credentials.json') {
           continue;
         }
@@ -501,7 +519,11 @@ class DataArchiveService {
     try {
       list = jsonDecode(await credFile.readAsString()) as List<dynamic>;
     } catch (e, st) {
-      _log.warning('ftp_credentials.json is malformed — skipping restore', e, st);
+      _log.warning(
+        'ftp_credentials.json is malformed — skipping restore',
+        e,
+        st,
+      );
       return;
     }
 
@@ -526,10 +548,12 @@ class DataArchiveService {
 
   /// Reads a single value from `configurations` by [key] using the open DB.
   Future<String?> _readConfigValue(String key) async {
-    final rows = await appDatabase.customSelect(
-      'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-      variables: [Variable<String>(key)],
-    ).get();
+    final rows = await appDatabase
+        .customSelect(
+          'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+          variables: [Variable<String>(key)],
+        )
+        .get();
     if (rows.isEmpty) return null;
     return rows.first.data['value'] as String?;
   }
@@ -561,9 +585,10 @@ class DataArchiveService {
       return map['copy_device_uuid_from_archive_on_import'] == true;
     } catch (e, st) {
       AppLogger.of('DataArchiveService').fine(
-          'Malformed archive sync config JSON — treating copyDeviceUuid as false',
-          e,
-          st);
+        'Malformed archive sync config JSON — treating copyDeviceUuid as false',
+        e,
+        st,
+      );
       return false;
     }
   }
@@ -603,4 +628,3 @@ class _ImportCancelledException implements Exception {
   @override
   String toString() => 'Import cancelled by user';
 }
-

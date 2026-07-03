@@ -28,25 +28,27 @@ void main() {
       expect(decoded.allowInvalidCertificate, profile.allowInvalidCertificate);
     });
 
-    test('effectivePort falls back to the protocol default when port is null',
-        () {
-      final ftp = const FtpProfile(
-        profileUuid: '1',
-        displayName: 'a',
-        protocol: FtpProtocol.ftp,
-        host: 'h',
-        port: null,
-        username: 'u',
-        remoteFolder: '/',
-      );
-      expect(ftp.effectivePort, 21);
+    test(
+      'effectivePort falls back to the protocol default when port is null',
+      () {
+        final ftp = const FtpProfile(
+          profileUuid: '1',
+          displayName: 'a',
+          protocol: FtpProtocol.ftp,
+          host: 'h',
+          port: null,
+          username: 'u',
+          remoteFolder: '/',
+        );
+        expect(ftp.effectivePort, 21);
 
-      final ftps = ftp.copyWith(protocol: FtpProtocol.ftps);
-      expect(ftps.effectivePort, 21);
+        final ftps = ftp.copyWith(protocol: FtpProtocol.ftps);
+        expect(ftps.effectivePort, 21);
 
-      final sftp = ftp.copyWith(protocol: FtpProtocol.sftp);
-      expect(sftp.effectivePort, 22);
-    });
+        final sftp = ftp.copyWith(protocol: FtpProtocol.sftp);
+        expect(sftp.effectivePort, 22);
+      },
+    );
 
     test('copyWith(clearPort: true) resets the port to null', () {
       final p = const FtpProfile(

@@ -32,8 +32,10 @@ enum TripLogMethod {
   /// Parses a stored id into a [TripLogMethod]. Returns [fallback] (which
   /// itself defaults to [TripLogMethod.classic]) when [id] is null or
   /// unrecognized.
-  static TripLogMethod fromId(String? id,
-      {TripLogMethod fallback = TripLogMethod.classic}) {
+  static TripLogMethod fromId(
+    String? id, {
+    TripLogMethod fallback = TripLogMethod.classic,
+  }) {
     if (id == null) return fallback;
     for (final m in TripLogMethod.values) {
       if (m.id == id) return m;

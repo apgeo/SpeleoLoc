@@ -31,33 +31,49 @@ const List<TableCfg> tableConfigs = [
     name: 'surface_areas',
     humanName: 'Surface Areas',
     columns: [
-      'title', 'description', 'general_area_identifier',
-      'created_at', 'updated_at', 'deleted_at'
+      'title',
+      'description',
+      'general_area_identifier',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['title']
+      ['title'],
     ],
   ),
   TableCfg(
     name: 'surface_places',
     humanName: 'Surface Places',
     columns: [
-      'title', 'description', 'type', 'surface_place_qr_code_identifier',
-      'latitude', 'longitude', 'created_at', 'updated_at', 'deleted_at'
+      'title',
+      'description',
+      'type',
+      'surface_place_qr_code_identifier',
+      'latitude',
+      'longitude',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['title'] // best-effort match by title
+      ['title'], // best-effort match by title
     ],
   ),
   TableCfg(
     name: 'caves',
     humanName: 'Caves',
     columns: [
-      'title', 'description', 'surface_area_id', 'cave_local_index',
-      'created_at', 'updated_at', 'deleted_at'
+      'title',
+      'description',
+      'surface_area_id',
+      'cave_local_index',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['title', 'surface_area_id']
+      ['title', 'surface_area_id'],
     ],
     foreignKeys: {'surface_area_id': 'surface_areas'},
   ),
@@ -65,11 +81,15 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_areas',
     humanName: 'Cave Areas',
     columns: [
-      'title', 'description', 'cave_id', 'created_at', 'updated_at',
-      'deleted_at'
+      'title',
+      'description',
+      'cave_id',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['title', 'cave_id']
+      ['title', 'cave_id'],
     ],
     foreignKeys: {'cave_id': 'caves'},
   ),
@@ -77,11 +97,16 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_entrances',
     humanName: 'Cave Entrances',
     columns: [
-      'cave_id', 'surface_place_id', 'is_main_entrance', 'title',
-      'created_at', 'updated_at', 'deleted_at'
+      'cave_id',
+      'surface_place_id',
+      'is_main_entrance',
+      'title',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['cave_id', 'title']
+      ['cave_id', 'title'],
     ],
     foreignKeys: {'cave_id': 'caves', 'surface_place_id': 'surface_places'},
   ),
@@ -89,13 +114,22 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_places',
     humanName: 'Cave Places',
     columns: [
-      'title', 'description', 'cave_id',
-      'place_code_identifier', 'qr_code_resource_identifier',
-      'cave_area_id', 'latitude', 'longitude', 'altitude', 'depth_in_cave',
-      'created_at', 'updated_at', 'deleted_at'
+      'title',
+      'description',
+      'cave_id',
+      'place_code_identifier',
+      'qr_code_resource_identifier',
+      'cave_area_id',
+      'latitude',
+      'longitude',
+      'altitude',
+      'depth_in_cave',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['title', 'cave_id', 'cave_area_id']
+      ['title', 'cave_id', 'cave_area_id'],
     ],
     foreignKeys: {'cave_id': 'caves', 'cave_area_id': 'cave_areas'},
   ),
@@ -103,8 +137,14 @@ const List<TableCfg> tableConfigs = [
     name: 'raster_maps',
     humanName: 'Raster Maps',
     columns: [
-      'title', 'map_type', 'file_name', 'cave_id', 'cave_area_id',
-      'created_at', 'updated_at', 'deleted_at'
+      'title',
+      'map_type',
+      'file_name',
+      'cave_id',
+      'cave_area_id',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
       ['title', 'map_type', 'cave_id'],
@@ -116,11 +156,16 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_place_to_raster_map_definitions',
     humanName: 'Map Point Definitions',
     columns: [
-      'x_coordinate', 'y_coordinate', 'cave_place_id', 'raster_map_id',
-      'created_at', 'updated_at', 'deleted_at'
+      'x_coordinate',
+      'y_coordinate',
+      'cave_place_id',
+      'raster_map_id',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['cave_place_id', 'raster_map_id']
+      ['cave_place_id', 'raster_map_id'],
     ],
     foreignKeys: {
       'cave_place_id': 'cave_places',
@@ -131,22 +176,32 @@ const List<TableCfg> tableConfigs = [
     name: 'documentation_files',
     humanName: 'Documentation Files',
     columns: [
-      'title', 'description', 'file_name', 'file_size', 'file_hash',
-      'file_type', 'created_at', 'updated_at', 'deleted_at'
+      'title',
+      'description',
+      'file_name',
+      'file_size',
+      'file_hash',
+      'file_type',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['title', 'file_name', 'file_size', 'file_hash']
+      ['title', 'file_name', 'file_size', 'file_hash'],
     ],
   ),
   TableCfg(
     name: 'documentation_files_to_geofeatures',
     humanName: 'Document Links',
     columns: [
-      'geofeature_id', 'geofeature_type', 'documentation_file_id',
-      'updated_at', 'deleted_at'
+      'geofeature_id',
+      'geofeature_type',
+      'documentation_file_id',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['geofeature_id', 'geofeature_type', 'documentation_file_id']
+      ['geofeature_id', 'geofeature_type', 'documentation_file_id'],
     ],
     foreignKeys: {'documentation_file_id': 'documentation_files'},
     // geofeature_id FK depends on geofeature_type – handled specially.
@@ -156,7 +211,7 @@ const List<TableCfg> tableConfigs = [
     humanName: 'Configurations',
     columns: ['title', 'value', 'is_synced', 'created_at', 'updated_at'],
     uniqueConstraints: [
-      ['title']
+      ['title'],
     ],
     // Only rows with is_synced=1 participate in archive/FTP sync; the
     // sync engine filters on this column when exporting.
@@ -165,8 +220,14 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_trips',
     humanName: 'Cave Trips',
     columns: [
-      'cave_id', 'title', 'description', 'trip_started_at', 'trip_ended_at',
-      'created_at', 'updated_at', 'deleted_at'
+      'cave_id',
+      'title',
+      'description',
+      'trip_started_at',
+      'trip_ended_at',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [],
     foreignKeys: {'cave_id': 'caves'},
@@ -175,11 +236,16 @@ const List<TableCfg> tableConfigs = [
     name: 'cave_trip_points',
     humanName: 'Cave Trip Points',
     columns: [
-      'cave_trip_id', 'cave_place_id', 'scanned_at', 'notes',
-      'created_at', 'updated_at', 'deleted_at'
+      'cave_trip_id',
+      'cave_place_id',
+      'scanned_at',
+      'notes',
+      'created_at',
+      'updated_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['cave_trip_id', 'cave_place_id', 'scanned_at']
+      ['cave_trip_id', 'cave_place_id', 'scanned_at'],
     ],
     foreignKeys: {'cave_trip_id': 'cave_trips', 'cave_place_id': 'cave_places'},
   ),
@@ -187,10 +253,13 @@ const List<TableCfg> tableConfigs = [
     name: 'documentation_files_to_cave_trips',
     humanName: 'Document-Trip Links',
     columns: [
-      'documentation_file_id', 'cave_trip_id', 'created_at', 'deleted_at'
+      'documentation_file_id',
+      'cave_trip_id',
+      'created_at',
+      'deleted_at',
     ],
     uniqueConstraints: [
-      ['documentation_file_id', 'cave_trip_id']
+      ['documentation_file_id', 'cave_trip_id'],
     ],
     foreignKeys: {
       'documentation_file_id': 'documentation_files',

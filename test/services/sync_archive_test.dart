@@ -32,14 +32,19 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
     final userRepo = UserRepository(db, () => loggerRef);
-    final currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
+    final currentUser = CurrentUserService(
+      db,
+      userRepo,
+      ConfigurationRepository(db),
+    );
     await currentUser.initialize();
     loggerRef = ChangeLogger(db, currentUser);
     final caveRepo = CaveRepository(db, currentUser, loggerRef);
     // Each harness gets its own sandboxed assets directory so tests can
     // round-trip binary payloads without touching the real documents dir.
-    final assetsDir =
-        await Directory.systemTemp.createTemp('speleoloc_sync_assets_');
+    final assetsDir = await Directory.systemTemp.createTemp(
+      'speleoloc_sync_assets_',
+    );
     final sync = SyncArchiveService(
       db,
       loggerRef,
@@ -79,8 +84,10 @@ void main() {
 
     // Step 1: A creates a cave.
     final id = await a.caveRepo.addCave('v1');
-    final firstZip =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
+    final firstZip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'a1.zip',
+    );
     await b.sync.importFromZip(firstZip.path);
 
     // Step 2: B edits the cave (newer updated_at).
@@ -88,15 +95,19 @@ void main() {
     await b.caveRepo.updateCave(id, 'v2-on-B');
 
     // Step 3: A exports again (still v1 locally) and B imports.
-    final secondZip =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    final secondZip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'a2.zip',
+    );
     final r = await b.sync.importFromZip(secondZip.path);
 
-    expect(r.rowsSkipped, greaterThan(0),
-        reason: 'B has newer row, incoming older should be skipped');
+    expect(
+      r.rowsSkipped,
+      greaterThan(0),
+      reason: 'B has newer row, incoming older should be skipped',
+    );
     final bRow = (await b.caveRepo.getCaves()).single;
-    expect(bRow.title, 'v2-on-B',
-        reason: 'B keeps its newer edit');
+    expect(bRow.title, 'v2-on-B', reason: 'B keeps its newer edit');
 
     await a.db.close();
     await b.db.close();
@@ -107,31 +118,27 @@ void main() {
     final b = await buildHarness();
 
     final id = await a.caveRepo.addCave('ToDelete');
-    final zip1 =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
+    final zip1 = await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
     await b.sync.importFromZip(zip1.path);
     expect((await b.caveRepo.getCaves()), hasLength(1));
 
     // Log a delete on A (without going through deleteCave — which does
     // not yet log). Simulate what the upcoming repo change will do.
     await Future<void>.delayed(const Duration(milliseconds: 5));
-    await a.logger.logDelete(
-      'caves',
-      id,
-      oldValues: {'title': 'ToDelete'},
-    );
+    await a.logger.logDelete('caves', id, oldValues: {'title': 'ToDelete'});
     // Physically delete on A after the log (order matters: log captures
     // the pre-image).
-    await (a.db.delete(a.db.caves)..where((c) => c.uuid.equalsValue(id)))
-        .go();
+    await (a.db.delete(a.db.caves)..where((c) => c.uuid.equalsValue(id))).go();
 
-    final zip2 =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    final zip2 = await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
     final report = await b.sync.importFromZip(zip2.path);
 
     expect(report.deletesApplied, greaterThan(0));
-    expect((await b.caveRepo.getCaves()), isEmpty,
-        reason: 'B should have deleted the cave based on tombstone');
+    expect(
+      (await b.caveRepo.getCaves()),
+      isEmpty,
+      reason: 'B should have deleted the cave based on tombstone',
+    );
 
     await a.db.close();
     await b.db.close();
@@ -169,7 +176,9 @@ void main() {
     await src.writeAsBytes(payload);
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    await a.db.into(a.db.documentationFiles).insert(
+    await a.db
+        .into(a.db.documentationFiles)
+        .insert(
           DocumentationFilesCompanion.insert(
             uuid: docUuid,
             title: 'Doc 1',
@@ -182,20 +191,27 @@ void main() {
         );
 
     // Export from A, import into B.
-    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'assets.zip');
+    final zip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'assets.zip',
+    );
     final report = await b.sync.importFromZip(zip.path);
 
-    expect(report.filesCopied, 1,
-        reason: 'B had no local copy so the asset should be copied');
+    expect(
+      report.filesCopied,
+      1,
+      reason: 'B had no local copy so the asset should be copied',
+    );
     expect(report.warnings, isEmpty);
 
-    final docOnB = await (b.db.select(b.db.documentationFiles)
-          ..where((d) => d.uuid.equalsValue(docUuid)))
-        .getSingle();
+    final docOnB = await (b.db.select(
+      b.db.documentationFiles,
+    )..where((d) => d.uuid.equalsValue(docUuid))).getSingle();
     expect(docOnB.fileName, relPath);
 
-    final destOnB =
-        File('${b.assetsDir.path}${Platform.pathSeparator}$relPath');
+    final destOnB = File(
+      '${b.assetsDir.path}${Platform.pathSeparator}$relPath',
+    );
     expect(await destOnB.exists(), isTrue);
     expect(await destOnB.readAsBytes(), payload);
 
@@ -209,8 +225,7 @@ void main() {
 
     // A creates + shares cave; B imports.
     final id = await a.caveRepo.addCave('Original');
-    final zip1 =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
+    final zip1 = await a.sync.exportToZip(tempDir.path, filenameHint: 'a1.zip');
     await b.sync.importFromZip(zip1.path);
 
     // A edits the cave so A has the newer timestamp (default LWW would
@@ -218,8 +233,7 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await a.caveRepo.updateCave(id, 'A-Edit');
 
-    final zip2 =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    final zip2 = await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
 
     final seen = <String>[];
     await b.sync.importFromZip(
@@ -230,11 +244,17 @@ void main() {
       },
     );
 
-    expect(seen, contains('caves'),
-        reason: 'caves row should have been routed through resolver');
+    expect(
+      seen,
+      contains('caves'),
+      reason: 'caves row should have been routed through resolver',
+    );
     final bRow = (await b.caveRepo.getCaves()).single;
-    expect(bRow.title, 'Original',
-        reason: 'resolver told us to keep local despite newer incoming ts');
+    expect(
+      bRow.title,
+      'Original',
+      reason: 'resolver told us to keep local despite newer incoming ts',
+    );
 
     await a.db.close();
     await b.db.close();
@@ -245,8 +265,7 @@ void main() {
     final b = await buildHarness();
 
     await a.caveRepo.addCave('ShouldNotLand');
-    final zip =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
 
     // B has no local row → no conflict would fire; seed B with a local
     // cave that conflicts with the incoming archive.
@@ -254,15 +273,13 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 10));
     // Re-export with two caves; one of them will conflict once we
     // pre-seed B with a different title for the same uuid.
-    final zip2 =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
+    final zip2 = await a.sync.exportToZip(tempDir.path, filenameHint: 'a2.zip');
     await b.sync.importFromZip(zip2.path);
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await b.caveRepo.updateCave(id, 'B-Edit');
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await a.caveRepo.updateCave(id, 'A-Edit');
-    final zip3 =
-        await a.sync.exportToZip(tempDir.path, filenameHint: 'a3.zip');
+    final zip3 = await a.sync.exportToZip(tempDir.path, filenameHint: 'a3.zip');
 
     final bTitlesBefore = (await b.caveRepo.getCaves())
         .map((c) => c.title)

@@ -134,14 +134,14 @@ class CavePlaceFormController {
       case _FormField.title:
         _titleModified = title.text != (original?.title ?? '');
       case _FormField.description:
-        _descriptionModified = description.text != (original?.description ?? '');
+        _descriptionModified =
+            description.text != (original?.description ?? '');
       case _FormField.depth:
         _depthModified = depth.text != formatDepthValue(original?.depthInCave);
       case _FormField.qr:
         _qrModified = qr.text != (original?.placeCodeIdentifier ?? '');
       case _FormField.qcri:
-        _qcriModified =
-            qcri.text != (original?.qrCodeResourceIdentifier ?? '');
+        _qcriModified = qcri.text != (original?.qrCodeResourceIdentifier ?? '');
       case _FormField.lat:
         _latModified = lat.text != (original?.latitude?.toString() ?? '');
       case _FormField.long:
@@ -250,13 +250,4 @@ class CavePlaceFormController {
   }
 }
 
-enum _FormField {
-  title,
-  description,
-  depth,
-  qr,
-  qcri,
-  lat,
-  long,
-  alt,
-}
+enum _FormField { title, description, depth, qr, qcri, lat, long, alt }

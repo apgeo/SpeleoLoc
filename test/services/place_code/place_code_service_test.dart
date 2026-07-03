@@ -39,14 +39,18 @@ void main() {
 
   test('switches strategy from configuration', () async {
     await writeConfig(
-        ConfigKey.placeCodeStrategy, PerCaveSequentialStrategy.strategyId);
+      ConfigKey.placeCodeStrategy,
+      PerCaveSequentialStrategy.strategyId,
+    );
     final s = await service.activeStrategy();
     expect(s, isA<PerCaveSequentialStrategy>());
   });
 
   test('reads per-strategy config blob keyed by strategy id', () async {
     await writeConfig(
-        ConfigKey.placeCodeStrategy, PerCaveSequentialStrategy.strategyId);
+      ConfigKey.placeCodeStrategy,
+      PerCaveSequentialStrategy.strategyId,
+    );
     await writeConfig(
       ConfigKey.placeCodeStrategyConfig,
       jsonEncode({
@@ -57,11 +61,13 @@ void main() {
     );
     // Set up a cave + place to exercise the strategy.
     final caveUuid = Uuid.v7();
-    await db.into(db.caves).insert(
-          CavesCompanion.insert(uuid: caveUuid, title: 'C'),
-        );
+    await db
+        .into(db.caves)
+        .insert(CavesCompanion.insert(uuid: caveUuid, title: 'C'));
     final placeUuid = Uuid.v7();
-    await db.into(db.cavePlaces).insert(
+    await db
+        .into(db.cavePlaces)
+        .insert(
           CavePlacesCompanion.insert(
             uuid: placeUuid,
             title: 'P',
@@ -84,10 +90,7 @@ void main() {
 
   test('hash mode QCRI is a base36 string of configured length', () async {
     await writeConfig(ConfigKey.qcriMode, 'hash');
-    await writeConfig(
-      ConfigKey.qcriHashConfig,
-      jsonEncode({'length': 8}),
-    );
+    await writeConfig(ConfigKey.qcriHashConfig, jsonEncode({'length': 8}));
     final q = await service.computeQcri('foo', cavePlaceUuid: Uuid.v7());
     expect(q.length, 8);
     expect(RegExp(r'^[0-9a-z]+$').hasMatch(q), isTrue);
@@ -102,11 +105,13 @@ void main() {
     // Pre-occupy the 8-char hash of 'collide' on a different cave place.
     final occupied = const QcriHasher().hash('collide', length: 8);
     final caveUuid = Uuid.v7();
-    await db.into(db.caves).insert(
-          CavesCompanion.insert(uuid: caveUuid, title: 'C'),
-        );
+    await db
+        .into(db.caves)
+        .insert(CavesCompanion.insert(uuid: caveUuid, title: 'C'));
     final occupier = Uuid.v7();
-    await db.into(db.cavePlaces).insert(
+    await db
+        .into(db.cavePlaces)
+        .insert(
           CavePlacesCompanion.insert(
             uuid: occupier,
             title: 'occupier',
@@ -127,30 +132,38 @@ void main() {
   group('applyPciToCompanion', () {
     test('passes companion through unchanged when PCI is absent', () async {
       const c = CavePlacesCompanion(title: Value('t'));
-      final out =
-          await service.applyPciToCompanion(c, cavePlaceUuid: Uuid.v7());
+      final out = await service.applyPciToCompanion(
+        c,
+        cavePlaceUuid: Uuid.v7(),
+      );
       expect(out.qrCodeResourceIdentifier.present, isFalse);
       expect(out.title.value, 't');
     });
 
     test('clears QCRI to null when PCI is explicitly null/empty', () async {
       const c1 = CavePlacesCompanion(placeCodeIdentifier: Value(null));
-      final out1 =
-          await service.applyPciToCompanion(c1, cavePlaceUuid: Uuid.v7());
+      final out1 = await service.applyPciToCompanion(
+        c1,
+        cavePlaceUuid: Uuid.v7(),
+      );
       expect(out1.qrCodeResourceIdentifier.present, isTrue);
       expect(out1.qrCodeResourceIdentifier.value, isNull);
 
       const c2 = CavePlacesCompanion(placeCodeIdentifier: Value(''));
-      final out2 =
-          await service.applyPciToCompanion(c2, cavePlaceUuid: Uuid.v7());
+      final out2 = await service.applyPciToCompanion(
+        c2,
+        cavePlaceUuid: Uuid.v7(),
+      );
       expect(out2.qrCodeResourceIdentifier.present, isTrue);
       expect(out2.qrCodeResourceIdentifier.value, isNull);
     });
 
     test('fills QCRI in mirror mode (default)', () async {
       const c = CavePlacesCompanion(placeCodeIdentifier: Value('ABC123'));
-      final out =
-          await service.applyPciToCompanion(c, cavePlaceUuid: Uuid.v7());
+      final out = await service.applyPciToCompanion(
+        c,
+        cavePlaceUuid: Uuid.v7(),
+      );
       expect(out.placeCodeIdentifier.value, 'ABC123');
       expect(out.qrCodeResourceIdentifier.value, 'ABC123');
     });
@@ -159,8 +172,10 @@ void main() {
       await writeConfig(ConfigKey.qcriMode, 'hash');
       await writeConfig(ConfigKey.qcriHashConfig, jsonEncode({'length': 8}));
       const c = CavePlacesCompanion(placeCodeIdentifier: Value('foo'));
-      final out =
-          await service.applyPciToCompanion(c, cavePlaceUuid: Uuid.v7());
+      final out = await service.applyPciToCompanion(
+        c,
+        cavePlaceUuid: Uuid.v7(),
+      );
       expect(out.qrCodeResourceIdentifier.value!.length, 8);
       expect(
         out.qrCodeResourceIdentifier.value,

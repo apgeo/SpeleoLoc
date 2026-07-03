@@ -13,14 +13,22 @@ const String _defaultTestMapsDir = 'test_data/maps';
 const String _defaultTestDocsDir = 'test_data/pictures';
 const String _defaultTestReportTemplatesDir = 'test_data/report_templates';
 
-const String testDbPath =
-    String.fromEnvironment('test_db_path', defaultValue: _defaultTestDbPath);
-const String testMapsDir =
-    String.fromEnvironment('test_maps_dir', defaultValue: _defaultTestMapsDir);
-const String testDocsDir =
-  String.fromEnvironment('test_docs_dir', defaultValue: _defaultTestDocsDir);
-const String testReportTemplatesDir =
-    String.fromEnvironment('test_report_templates_dir', defaultValue: _defaultTestReportTemplatesDir);
+const String testDbPath = String.fromEnvironment(
+  'test_db_path',
+  defaultValue: _defaultTestDbPath,
+);
+const String testMapsDir = String.fromEnvironment(
+  'test_maps_dir',
+  defaultValue: _defaultTestMapsDir,
+);
+const String testDocsDir = String.fromEnvironment(
+  'test_docs_dir',
+  defaultValue: _defaultTestDocsDir,
+);
+const String testReportTemplatesDir = String.fromEnvironment(
+  'test_report_templates_dir',
+  defaultValue: _defaultTestReportTemplatesDir,
+);
 
 /// Loads a pre-built SQLite database binary and copies referenced resource
 /// files (raster map images, documentation files) into the app documents
@@ -53,11 +61,14 @@ class TestDatabaseLoader {
     final dbBytes = await _loadBinaryAsset(testDbPath);
     if (dbBytes == null) {
       throw Exception(
-          '[TestDatabaseLoader] Could not load test database from "$testDbPath"');
+        '[TestDatabaseLoader] Could not load test database from "$testDbPath"',
+      );
     }
     final dbFile = File(dbTargetPath);
     await dbFile.writeAsBytes(dbBytes, flush: true);
-    _log.info('Database binary copied (${dbBytes.length} bytes) → $dbTargetPath');
+    _log.info(
+      'Database binary copied (${dbBytes.length} bytes) → $dbTargetPath',
+    );
 
     // ---- 2. Open the database ----
     final db = AppDatabase();
@@ -82,10 +93,13 @@ class TestDatabaseLoader {
       )).whereType<String>().toList();
       if (suppressMissingResourceLogs && missingRasterMaps.isNotEmpty) {
         _log.warning(
-            '${missingRasterMaps.length} raster map source(s) not found: '
-            '${missingRasterMaps.join(', ')}');
+          '${missingRasterMaps.length} raster map source(s) not found: '
+          '${missingRasterMaps.join(', ')}',
+        );
       }
-      _log.info('Step 3 (raster maps) completed in ${sw3.elapsedMilliseconds} ms');
+      _log.info(
+        'Step 3 (raster maps) completed in ${sw3.elapsedMilliseconds} ms',
+      );
     } catch (e) {
       _log.warning('could not load raster map files: $e');
     }
@@ -109,7 +123,9 @@ class TestDatabaseLoader {
           if (!found && skipMissingTestDocuments) {
             await db.deleteDocumentationFileByUuid(df.uuid);
             if (!suppressMissingResourceLogs) {
-              _log.info('Removed missing test doc record: "${df.title}" (${df.uuid})');
+              _log.info(
+                'Removed missing test doc record: "${df.title}" (${df.uuid})',
+              );
             } else {
               return '"${df.title}" (${df.fileName})';
             }
@@ -119,8 +135,9 @@ class TestDatabaseLoader {
       )).whereType<String>().toList();
       if (suppressMissingResourceLogs && missingDocEntries.isNotEmpty) {
         _log.info(
-            '${missingDocEntries.length} missing test doc record(s) removed: '
-            '${missingDocEntries.join(', ')}');
+          '${missingDocEntries.length} missing test doc record(s) removed: '
+          '${missingDocEntries.join(', ')}',
+        );
       }
       _log.info(
         'Step 4 benchmark — '
@@ -131,7 +148,9 @@ class TestDatabaseLoader {
         'S3:${bench4.strategy3Ms}ms(${bench4.strategy3Hits}hits) | '
         'write:${bench4.writeMs}ms',
       );
-      _log.info('Step 4 (documentation files) completed in ${sw4.elapsedMilliseconds} ms');
+      _log.info(
+        'Step 4 (documentation files) completed in ${sw4.elapsedMilliseconds} ms',
+      );
     } catch (e) {
       _log.warning('could not load documentation files: $e');
     }
@@ -142,20 +161,26 @@ class TestDatabaseLoader {
       final templateFiles = await db.select(db.tripReportTemplates).get();
       _log.info('Found ${templateFiles.length} template file records');
       await Future.wait(
-        templateFiles.map((tf) => _copyResourceFile(
-          sourceDirs: [testReportTemplatesDir],
-          storedFileName: tf.fileName,
-          title: tf.title,
-          documentsDir: documentsDir,
-        )),
+        templateFiles.map(
+          (tf) => _copyResourceFile(
+            sourceDirs: [testReportTemplatesDir],
+            storedFileName: tf.fileName,
+            title: tf.title,
+            documentsDir: documentsDir,
+          ),
+        ),
       );
-      _log.info('Step 5 (templates) completed in ${sw5.elapsedMilliseconds} ms');
+      _log.info(
+        'Step 5 (templates) completed in ${sw5.elapsedMilliseconds} ms',
+      );
     } catch (e) {
       _log.warning('could not load template files: $e');
     }
 
     stopwatch.stop();
-    _log.info('loadTestDatabase completed in ${stopwatch.elapsedMilliseconds} ms');
+    _log.info(
+      'loadTestDatabase completed in ${stopwatch.elapsedMilliseconds} ms',
+    );
     return db;
   }
 
@@ -209,7 +234,8 @@ class TestDatabaseLoader {
 
     // Ensure target directory exists
     final targetDir = targetFile.parent;
-    sw.reset(); sw.start();
+    sw.reset();
+    sw.start();
     if (!await targetDir.exists()) {
       await targetDir.create(recursive: true);
     }
@@ -218,7 +244,8 @@ class TestDatabaseLoader {
     final basename = p.basename(storedFileName);
 
     // Strategy 1: Try loading stored basename directly from candidate sources.
-    sw.reset(); sw.start();
+    sw.reset();
+    sw.start();
     List<int>? bytes;
     for (final sourceDir in sourceDirs) {
       bytes = await _tryLoadSource(sourceDir, basename);
@@ -233,7 +260,8 @@ class TestDatabaseLoader {
     // TestDataHelper stores
     // original asset name in title)
     if (bytes == null && title != null && title != basename) {
-      sw.reset(); sw.start();
+      sw.reset();
+      sw.start();
       for (final sourceDir in sourceDirs) {
         bytes = await _tryLoadSource(sourceDir, title);
         if (bytes != null) {
@@ -246,14 +274,16 @@ class TestDatabaseLoader {
 
     // Strategy 3: Try the storedFileName as a full asset path
     if (bytes == null) {
-      sw.reset(); sw.start();
+      sw.reset();
+      sw.start();
       bytes = await _loadBinaryAsset(storedFileName);
       bench?.strategy3Ms += sw.elapsedMilliseconds;
       if (bytes != null) bench?.strategy3Hits++;
     }
 
     if (bytes != null) {
-      sw.reset(); sw.start();
+      sw.reset();
+      sw.start();
       await targetFile.writeAsBytes(bytes, flush: true);
       bench?.writeMs += sw.elapsedMilliseconds;
       _log.info('Copied resource → $storedFileName');
@@ -261,15 +291,16 @@ class TestDatabaseLoader {
     } else {
       bench?.misses++;
       if (!suppressMissingResourceLogs) {
-        _log.warning('source not found for "$storedFileName" (title: "$title")');
+        _log.warning(
+          'source not found for "$storedFileName" (title: "$title")',
+        );
       }
       return false;
     }
   }
 
   /// Try loading a file from [dir]/[fileName] via rootBundle or filesystem.
-  static Future<List<int>?> _tryLoadSource(
-      String dir, String fileName) async {
+  static Future<List<int>?> _tryLoadSource(String dir, String fileName) async {
     // Asset bundle
     try {
       final assetPath = '$dir/$fileName';

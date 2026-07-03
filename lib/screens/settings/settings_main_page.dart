@@ -32,8 +32,16 @@ class _SettingsMainPageState extends State<SettingsMainPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_main_list_title', bodyLocKey: 'tour_settings_main_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_main_menu_title', bodyLocKey: 'tour_settings_main_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_settings_main_list_title',
+      bodyLocKey: 'tour_settings_main_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_settings_main_menu_title',
+      bodyLocKey: 'tour_settings_main_menu_body',
+    ),
   ];
 
   bool shouldReloadUI = false;
@@ -52,7 +60,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
         endDrawer: buildAppMenuEndDrawer(),
         appBar: AppBar(
           title: Text(LocServ.inst.t('settings')),
-          actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+          actions: [
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
         ),
         body: ListView(
           key: tourKeys['list'],
@@ -64,7 +74,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () async {
                 final result = await Navigator.push<bool>(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsGeneralPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsGeneralPage(),
+                  ),
                 );
                 if (result == true) {
                   shouldReloadUI = true;
@@ -80,7 +92,8 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const SettingsImageCompressionPage()),
+                    builder: (_) => const SettingsImageCompressionPage(),
+                  ),
                 );
               },
             ),
@@ -91,7 +104,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsQrGenerationPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsQrGenerationPage(),
+                  ),
                 );
               },
             ),
@@ -103,7 +118,8 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const SettingsPlaceCodesPage()),
+                    builder: (_) => const SettingsPlaceCodesPage(),
+                  ),
                 );
               },
             ),
@@ -114,7 +130,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsPdfOutputPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsPdfOutputPage(),
+                  ),
                 );
               },
             ),
@@ -125,7 +143,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsDatabasePage()),
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsDatabasePage(),
+                  ),
                 );
               },
             ),
@@ -147,8 +167,7 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const SyncDashboardPage()),
+                  MaterialPageRoute(builder: (_) => const SyncDashboardPage()),
                 );
               },
             ),
@@ -160,7 +179,8 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const FtpSyncSettingsPage()),
+                    builder: (_) => const FtpSyncSettingsPage(),
+                  ),
                 );
               },
             ),
@@ -171,7 +191,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const DataExportImportPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const DataExportImportPage(),
+                  ),
                 );
               },
             ),
@@ -182,7 +204,9 @@ class _SettingsMainPageState extends State<SettingsMainPage>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsBeaconsPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsBeaconsPage(),
+                  ),
                 );
               },
             ),

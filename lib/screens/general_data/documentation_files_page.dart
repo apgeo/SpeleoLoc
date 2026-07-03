@@ -14,7 +14,12 @@ import 'package:speleoloc/utils/localization.dart';
 /// Internally this builds a [GeofeatureDocumentsPage] so all display logic
 /// is shared.
 class DocumentationFilesPage extends StatefulWidget {
-  const DocumentationFilesPage({super.key, this.cavePlaceUuid, this.caveUuid, this.caveAreaUuid});
+  const DocumentationFilesPage({
+    super.key,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
+  });
 
   final Uuid? cavePlaceUuid;
   final Uuid? caveUuid;
@@ -35,7 +40,8 @@ class _DocumentationFilesPageState extends State<DocumentationFilesPage> {
   }
 
   Future<void> _resolveSource() async {
-    final hasFilter = widget.cavePlaceUuid != null ||
+    final hasFilter =
+        widget.cavePlaceUuid != null ||
         widget.caveUuid != null ||
         widget.caveAreaUuid != null;
 

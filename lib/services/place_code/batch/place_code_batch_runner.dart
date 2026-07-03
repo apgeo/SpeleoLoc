@@ -35,12 +35,13 @@ class PerCaveScope extends PlaceCodeBatchScope {
 ///
 /// The UI layer typically displays a dialog and returns one of
 /// [OverwriteDecision]. Tests inject a stub.
-typedef OverwritePromptCallback = Future<OverwriteDecision> Function({
-  required Uuid cavePlaceUuid,
-  required OverwriteField field,
-  required String? existing,
-  required String computed,
-});
+typedef OverwritePromptCallback =
+    Future<OverwriteDecision> Function({
+      required Uuid cavePlaceUuid,
+      required OverwriteField field,
+      required String? existing,
+      required String computed,
+    });
 
 /// Progress callback called after each place is processed.
 /// [current] is the 1-based index of the processed place;
@@ -154,7 +155,12 @@ class PlaceCodeBatchRunner {
   final ICavePlaceRepository _repository;
   final Clock _clock;
 
-  PlaceCodeBatchRunner(this._db, this._service, this._repository, {Clock clock = const SystemClock()}) : _clock = clock;
+  PlaceCodeBatchRunner(
+    this._db,
+    this._service,
+    this._repository, {
+    Clock clock = const SystemClock(),
+  }) : _clock = clock;
 
   Future<PlaceCodeBatchSummary> run({
     required PlaceCodeBatchScope scope,
@@ -209,10 +215,8 @@ class PlaceCodeBatchRunner {
             refused: refused,
             cancelled: true,
             aborted: aborted,
-            noSurfaceAreaFallbacks:
-                await _buildFallbackList(noSurfaceAreaMap),
-            noIdentifierFallbacks:
-                await _buildFallbackList(noIdentifierMap),
+            noSurfaceAreaFallbacks: await _buildFallbackList(noSurfaceAreaMap),
+            noIdentifierFallbacks: await _buildFallbackList(noIdentifierMap),
           );
         case PlaceCodeGenerationOk(:final pci):
           resultPci = pci;
@@ -220,11 +224,9 @@ class PlaceCodeBatchRunner {
           resultPci = pci;
           final caveUuid = place.caveUuid;
           if (fallback == FallbackReason.noSurfaceArea) {
-            noSurfaceAreaMap[caveUuid] =
-                (noSurfaceAreaMap[caveUuid] ?? 0) + 1;
+            noSurfaceAreaMap[caveUuid] = (noSurfaceAreaMap[caveUuid] ?? 0) + 1;
           } else {
-            noIdentifierMap[caveUuid] =
-                (noIdentifierMap[caveUuid] ?? 0) + 1;
+            noIdentifierMap[caveUuid] = (noIdentifierMap[caveUuid] ?? 0) + 1;
           }
       }
 
@@ -328,9 +330,7 @@ class PlaceCodeBatchRunner {
       }
 
       // Single update carrying both fields when needed.
-      var patch = CavePlacesCompanion(
-        updatedAt: Value(_clock.nowMs()),
-      );
+      var patch = CavePlacesCompanion(updatedAt: Value(_clock.nowMs()));
       if (writePci) {
         patch = patch.copyWith(placeCodeIdentifier: Value(resolvedPci));
       }
@@ -361,21 +361,22 @@ class PlaceCodeBatchRunner {
 
   /// Converts a caveUuid→placeCount map into a list of [FallbackCaveInfo],
   /// looking up cave names from the database.
-  Future<List<FallbackCaveInfo>> _buildFallbackList(
-    Map<Uuid, int> map,
-  ) async {
+  Future<List<FallbackCaveInfo>> _buildFallbackList(Map<Uuid, int> map) async {
     if (map.isEmpty) return const [];
     final result = <FallbackCaveInfo>[];
     for (final entry in map.entries) {
-      final cave = await (_db.select(_db.caves)
-            ..where((c) => c.uuid.equalsValue(entry.key))
-            ..limit(1))
-          .getSingleOrNull();
-      result.add(FallbackCaveInfo(
-        caveUuid: entry.key,
+      final cave =
+          await (_db.select(_db.caves)
+                ..where((c) => c.uuid.equalsValue(entry.key))
+                ..limit(1))
+              .getSingleOrNull();
+      result.add(
+        FallbackCaveInfo(
+          caveUuid: entry.key,
           caveName: cave?.title ?? entry.key.toString(),
-        placeCount: entry.value,
-      ));
+          placeCount: entry.value,
+        ),
+      );
     }
     return result;
   }
@@ -385,19 +386,19 @@ class PlaceCodeBatchRunner {
       case GlobalScope():
         return _db.select(_db.cavePlaces).get();
       case PerCaveScope(:final caveUuid):
-        return (_db.select(_db.cavePlaces)
-              ..where((cp) => cp.caveUuid.equalsValue(caveUuid)))
-            .get();
+        return (_db.select(
+          _db.cavePlaces,
+        )..where((cp) => cp.caveUuid.equalsValue(caveUuid))).get();
       case PerAreaScope(:final surfaceAreaUuid):
         // Cave places whose cave's surface_area_uuid matches.
-        final caves = await (_db.select(_db.caves)
-              ..where((c) => c.surfaceAreaUuid.equalsValue(surfaceAreaUuid)))
-            .get();
+        final caves = await (_db.select(
+          _db.caves,
+        )..where((c) => c.surfaceAreaUuid.equalsValue(surfaceAreaUuid))).get();
         if (caves.isEmpty) return const [];
         final ids = caves.map((c) => c.uuid).toList();
-        return (_db.select(_db.cavePlaces)
-              ..where((cp) => cp.caveUuid.isInValues(ids)))
-            .get();
+        return (_db.select(
+          _db.cavePlaces,
+        )..where((cp) => cp.caveUuid.isInValues(ids))).get();
     }
   }
 }

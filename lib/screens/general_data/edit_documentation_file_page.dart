@@ -13,7 +13,13 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
 class EditDocumentationFilePage extends StatefulWidget {
-  const EditDocumentationFilePage({super.key, this.documentationFile, this.cavePlaceUuid, this.caveUuid, this.caveAreaUuid});
+  const EditDocumentationFilePage({
+    super.key,
+    this.documentationFile,
+    this.cavePlaceUuid,
+    this.caveUuid,
+    this.caveAreaUuid,
+  });
 
   final DocumentationFile? documentationFile;
   final Uuid? cavePlaceUuid;
@@ -21,20 +27,35 @@ class EditDocumentationFilePage extends StatefulWidget {
   final Uuid? caveAreaUuid;
 
   @override
-  State<EditDocumentationFilePage> createState() => _EditDocumentationFilePageState();
+  State<EditDocumentationFilePage> createState() =>
+      _EditDocumentationFilePageState();
 }
 
 class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
-    with AppBarMenuMixin<EditDocumentationFilePage>, ProductTourMixin<EditDocumentationFilePage> {
+    with
+        AppBarMenuMixin<EditDocumentationFilePage>,
+        ProductTourMixin<EditDocumentationFilePage> {
   @override
   String get tourId => 'edit_doc_file';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_edit_doc_file_title_field_title', bodyLocKey: 'tour_edit_doc_file_title_field_body'),
-    TourStepDef(keyId: 'file_picker', titleLocKey: 'tour_edit_doc_file_file_picker_title', bodyLocKey: 'tour_edit_doc_file_file_picker_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_edit_doc_file_menu_title', bodyLocKey: 'tour_edit_doc_file_menu_body'),
+    TourStepDef(
+      keyId: 'title_field',
+      titleLocKey: 'tour_edit_doc_file_title_field_title',
+      bodyLocKey: 'tour_edit_doc_file_title_field_body',
+    ),
+    TourStepDef(
+      keyId: 'file_picker',
+      titleLocKey: 'tour_edit_doc_file_file_picker_title',
+      bodyLocKey: 'tour_edit_doc_file_file_picker_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_edit_doc_file_menu_title',
+      bodyLocKey: 'tour_edit_doc_file_menu_body',
+    ),
   ];
 
   final _titleCtrl = TextEditingController();
@@ -81,7 +102,14 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
         fileHash: _fileHash!,
       );
       if (matches.isNotEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Similar file(s) already present (size+hash match).')));
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Similar file(s) already present (size+hash match).',
+              ),
+            ),
+          );
       }
     }
   }
@@ -93,8 +121,9 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
     String? fileNameToStore = _storedFileName;
     if (_pickedFile != null) {
       // Compress images before saving if compression is enabled.
-      final detectedType =
-          DocumentationFileHelper.detectFileType(_pickedFile!.path);
+      final detectedType = DocumentationFileHelper.detectFileType(
+        _pickedFile!.path,
+      );
       if (detectedType == 'photo') {
         final cs = await ImageCompressionSettings.load();
         await ImageCompressor.compressFile(_pickedFile!, cs);
@@ -143,7 +172,10 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
 
     // Validation: require a file name for new records
     if (fileNameToStore == null || fileNameToStore.isEmpty) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(LocServ.inst.t('please_select_file'))));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LocServ.inst.t('please_select_file'))),
+        );
       return;
     }
 
@@ -179,9 +211,9 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -193,29 +225,64 @@ class _EditDocumentationFilePageState extends State<EditDocumentationFilePage>
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
-        title: Text(editing ? LocServ.inst.t('edit') : '${LocServ.inst.t('add')} ${LocServ.inst.t('documentation_files')}'),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        title: Text(
+          editing
+              ? LocServ.inst.t('edit')
+              : '${LocServ.inst.t('add')} ${LocServ.inst.t('documentation_files')}',
+        ),
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            TextFormField(key: tourKeys['title_field'], controller: _titleCtrl, decoration: InputDecoration(labelText: LocServ.inst.t('title'))),
+            TextFormField(
+              key: tourKeys['title_field'],
+              controller: _titleCtrl,
+              decoration: InputDecoration(labelText: LocServ.inst.t('title')),
+            ),
             const SizedBox(height: 8),
-            TextFormField(controller: _descCtrl, decoration: InputDecoration(labelText: LocServ.inst.t('description'))),
+            TextFormField(
+              controller: _descCtrl,
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('description'),
+              ),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
-                ElevatedButton.icon(key: tourKeys['file_picker'], onPressed: _pick, icon: const Icon(Icons.attach_file), label: Text(LocServ.inst.t('select_file'))),
+                ElevatedButton.icon(
+                  key: tourKeys['file_picker'],
+                  onPressed: _pick,
+                  icon: const Icon(Icons.attach_file),
+                  label: Text(LocServ.inst.t('select_file')),
+                ),
                 const SizedBox(width: 12),
-                if (_pickedFile != null) Flexible(child: Text(_pickedFile!.path.split(Platform.pathSeparator).last)),
-                if (_pickedFile == null && _storedFileName != null) Flexible(child: Text(_storedFileName!)),
+                if (_pickedFile != null)
+                  Flexible(
+                    child: Text(
+                      _pickedFile!.path.split(Platform.pathSeparator).last,
+                    ),
+                  ),
+                if (_pickedFile == null && _storedFileName != null)
+                  Flexible(child: Text(_storedFileName!)),
               ],
             ),
             const SizedBox(height: 12),
-            Row(children: [Text('${LocServ.inst.t('file_size')}: ${_fileSize ?? '-'}'), const SizedBox(width: 16), Text('hash: ${_fileHash ?? '-'}')]),
+            Row(
+              children: [
+                Text('${LocServ.inst.t('file_size')}: ${_fileSize ?? '-'}'),
+                const SizedBox(width: 16),
+                Text('hash: ${_fileHash ?? '-'}'),
+              ],
+            ),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: _save, child: Text(LocServ.inst.t('save'))),
+            ElevatedButton(
+              onPressed: _save,
+              child: Text(LocServ.inst.t('save')),
+            ),
           ],
         ),
       ),

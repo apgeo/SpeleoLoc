@@ -85,4 +85,5 @@ IConfigurationRepository get configurationRepository {
   if (c == null) return ConfigurationRepository(appDatabase);
   return c.read(configurationRepositoryProvider);
 }
+
 ChangeLogger get changeLogger => rootContainer.read(changeLoggerProvider);

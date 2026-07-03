@@ -36,16 +36,16 @@ class CavePlaceQrController {
     required void Function(void Function()) rebuild,
     required void Function(bool) setQrEditable,
     required void Function(bool) setQcriEditable,
-  })  : _state = state,
-        _form = form,
-        _cavePlaceRepository = cavePlaceRepository,
-        _placeCodeService = placeCodeService,
-        _caveUuid = caveUuid,
-        _cavePlaceId = cavePlaceId,
-        _cavePlace = cavePlace,
-        _rebuild = rebuild,
-        _setQrEditable = setQrEditable,
-        _setQcriEditable = setQcriEditable;
+  }) : _state = state,
+       _form = form,
+       _cavePlaceRepository = cavePlaceRepository,
+       _placeCodeService = placeCodeService,
+       _caveUuid = caveUuid,
+       _cavePlaceId = cavePlaceId,
+       _cavePlace = cavePlace,
+       _rebuild = rebuild,
+       _setQrEditable = setQrEditable,
+       _setQcriEditable = setQcriEditable;
 
   final State<StatefulWidget> _state;
   final CavePlaceFormController _form;
@@ -122,7 +122,8 @@ class CavePlaceQrController {
             onPressed: () =>
                 Navigator.pop(ctx, manualInputController.text.trim()),
             child: Text(
-                LocServ.inst.t('search_place_by_qr_code_by_identifier')),
+              LocServ.inst.t('search_place_by_qr_code_by_identifier'),
+            ),
           ),
         ],
       ),
@@ -246,7 +247,8 @@ class CavePlaceQrController {
         _ => null,
       };
       if (pci == null) {
-        final isMissingConfig = result is PlaceCodeGenerationAborted &&
+        final isMissingConfig =
+            result is PlaceCodeGenerationAborted &&
             result.reason == PlaceCodeAbortReason.missingDatasetConfig;
         SnackBarService.showWarning(
           isMissingConfig
@@ -260,8 +262,9 @@ class CavePlaceQrController {
         _form.markPciTouched();
       });
     } catch (e, st) {
-      AppLogger.of('CavePlaceQrController')
-          .severe('PCI auto-generate failed', e, st);
+      AppLogger.of(
+        'CavePlaceQrController',
+      ).severe('PCI auto-generate failed', e, st);
       if (!_mounted) return;
       SnackBarService.showError(e.toString());
     }
@@ -271,7 +274,8 @@ class CavePlaceQrController {
     final pci = _form.qr.text.trim();
     if (pci.isEmpty) {
       SnackBarService.showWarning(
-          LocServ.inst.t('place_code_identifier_required'));
+        LocServ.inst.t('place_code_identifier_required'),
+      );
       return;
     }
     final effectiveUuid = _cavePlaceId() ?? Uuid.v7();
@@ -287,8 +291,9 @@ class CavePlaceQrController {
         _form.markQcriTouched();
       });
     } catch (e, st) {
-      AppLogger.of('CavePlaceQrController')
-          .severe('QCRI auto-generate failed', e, st);
+      AppLogger.of(
+        'CavePlaceQrController',
+      ).severe('QCRI auto-generate failed', e, st);
       if (!_mounted) return;
       SnackBarService.showError(e.toString());
     }

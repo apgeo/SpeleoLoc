@@ -63,42 +63,47 @@ class _RasterMapFilterPanelState extends State<RasterMapFilterPanel> {
     // the incoming filter was.
     final f = widget.initial;
     if (f.mode == RasterMapFilterMode.custom) {
-      _invert       = f.invertEnabled;
-      _grayscale    = f.grayscaleEnabled;
-      _sepia        = f.sepiaEnabled;
+      _invert = f.invertEnabled;
+      _grayscale = f.grayscaleEnabled;
+      _sepia = f.sepiaEnabled;
       _highContrast = f.highContrastEnabled;
-      _nightRed     = f.nightRedEnabled;
+      _nightRed = f.nightRedEnabled;
     } else {
       // Map a single-preset to its equivalent additive flags.
-      _invert       = f.mode == RasterMapFilterMode.invert;
-      _grayscale    = f.mode == RasterMapFilterMode.grayscale;
-      _sepia        = f.mode == RasterMapFilterMode.sepia;
+      _invert = f.mode == RasterMapFilterMode.invert;
+      _grayscale = f.mode == RasterMapFilterMode.grayscale;
+      _sepia = f.mode == RasterMapFilterMode.sepia;
       _highContrast = f.mode == RasterMapFilterMode.highContrast;
-      _nightRed     = f.mode == RasterMapFilterMode.nightRed;
+      _nightRed = f.mode == RasterMapFilterMode.nightRed;
     }
     _brightness = f.brightness;
-    _contrast   = f.contrast;
+    _contrast = f.contrast;
   }
 
   RasterMapImageFilter get _current => RasterMapImageFilter(
     mode: RasterMapFilterMode.custom,
-    invertEnabled:       _invert,
-    grayscaleEnabled:    _grayscale,
-    sepiaEnabled:        _sepia,
+    invertEnabled: _invert,
+    grayscaleEnabled: _grayscale,
+    sepiaEnabled: _sepia,
     highContrastEnabled: _highContrast,
-    nightRedEnabled:     _nightRed,
-    brightness:          _brightness,
-    contrast:            _contrast,
+    nightRedEnabled: _nightRed,
+    brightness: _brightness,
+    contrast: _contrast,
   );
 
   bool get _anyEnabled =>
-      _invert || _grayscale || _sepia || _highContrast || _nightRed ||
-      _brightness != 0.0 || _contrast != 1.0;
+      _invert ||
+      _grayscale ||
+      _sepia ||
+      _highContrast ||
+      _nightRed ||
+      _brightness != 0.0 ||
+      _contrast != 1.0;
 
   void _reset() => setState(() {
     _invert = _grayscale = _sepia = _highContrast = _nightRed = false;
     _brightness = 0.0;
-    _contrast   = 1.0;
+    _contrast = 1.0;
   });
 
   Widget _filterCheckbox({
@@ -129,7 +134,10 @@ class _RasterMapFilterPanelState extends State<RasterMapFilterPanel> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       child: Row(
         children: [
-          SizedBox(width: 100, child: Text(label, style: const TextStyle(fontSize: 14))),
+          SizedBox(
+            width: 100,
+            child: Text(label, style: const TextStyle(fontSize: 14)),
+          ),
           Expanded(
             child: Slider(
               value: value,
@@ -156,7 +164,9 @@ class _RasterMapFilterPanelState extends State<RasterMapFilterPanel> {
   Widget build(BuildContext context) {
     final t = LocServ.inst.t;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -171,7 +181,10 @@ class _RasterMapFilterPanelState extends State<RasterMapFilterPanel> {
                 Expanded(
                   child: Text(
                     t('img_filter_panel_title'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 // Reset button
@@ -179,7 +192,9 @@ class _RasterMapFilterPanelState extends State<RasterMapFilterPanel> {
                   onPressed: _anyEnabled ? _reset : null,
                   icon: const Icon(Icons.refresh, size: 18),
                   label: Text(t('img_filter_reset')),
-                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ],
             ),

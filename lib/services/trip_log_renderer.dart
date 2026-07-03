@@ -5,13 +5,7 @@ import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Kind of a single event in the rendered trip log.
-enum TripLogEventKind {
-  start,
-  restart,
-  point,
-  documentAdded,
-  end,
-}
+enum TripLogEventKind { start, restart, point, documentAdded, end }
 
 /// One event consumed by [TripLogRenderer]. Loaded from structured DB
 /// records (cave_trips, cave_trip_points, document links). Plain data
@@ -65,22 +59,24 @@ class TripLogRenderer {
   /// earliest event time, then the events of the previous run, then a
   /// [restart] at `trip.tripStartedAt`, then the rest.
   Future<List<TripLogEvent>> loadEvents(Uuid tripUuid) async {
-    final trip = await (_db.select(_db.caveTrips)
-          ..where((t) => t.uuid.equalsValue(tripUuid)))
-        .getSingleOrNull();
+    final trip = await (_db.select(
+      _db.caveTrips,
+    )..where((t) => t.uuid.equalsValue(tripUuid))).getSingleOrNull();
     if (trip == null) return const [];
 
     final points = await _db.getTripPoints(tripUuid);
 
     // Document links (created_at + doc title).
-    final docRows = await _db.customSelect(
-      'SELECT df.title AS title, dl.created_at AS created_at '
-      'FROM documentation_files_to_cave_trips dl '
-      'JOIN documentation_files df ON df.uuid = dl.documentation_file_uuid '
-      'WHERE dl.cave_trip_uuid = ? AND dl.deleted_at IS NULL '
-      'ORDER BY dl.created_at',
-      variables: [Variable<Uint8List>(tripUuid.bytes)],
-    ).get();
+    final docRows = await _db
+        .customSelect(
+          'SELECT df.title AS title, dl.created_at AS created_at '
+          'FROM documentation_files_to_cave_trips dl '
+          'JOIN documentation_files df ON df.uuid = dl.documentation_file_uuid '
+          'WHERE dl.cave_trip_uuid = ? AND dl.deleted_at IS NULL '
+          'ORDER BY dl.created_at',
+          variables: [Variable<Uint8List>(tripUuid.bytes)],
+        )
+        .get();
 
     // Place title cache for points.
     final placeUuids = points
@@ -90,10 +86,11 @@ class TripLogRenderer {
         .toList();
     final placeTitles = <String, String>{};
     if (placeUuids.isNotEmpty) {
-      final places = await (_db.select(_db.cavePlaces)
-            ..where((c) => c.uuid.isIn(
-                placeUuids.map((u) => u.bytes).toList())))
-          .get();
+      final places =
+          await (_db.select(_db.cavePlaces)..where(
+                (c) => c.uuid.isIn(placeUuids.map((u) => u.bytes).toList()),
+              ))
+              .get();
       for (final p in places) {
         placeTitles[p.uuid.toString()] = p.title;
       }
@@ -107,57 +104,68 @@ class TripLogRenderer {
       final title = p.cavePlaceUuid != null
           ? placeTitles[p.cavePlaceUuid!.toString()]
           : null;
-      events.add(TripLogEvent(
-        kind: TripLogEventKind.point,
-        at: ms(p.scannedAt),
-        label: title ?? '?',
-        notes: (p.notes != null && p.notes!.trim().isNotEmpty)
-            ? p.notes!.trim()
-            : null,
-      ));
+      events.add(
+        TripLogEvent(
+          kind: TripLogEventKind.point,
+          at: ms(p.scannedAt),
+          label: title ?? '?',
+          notes: (p.notes != null && p.notes!.trim().isNotEmpty)
+              ? p.notes!.trim()
+              : null,
+        ),
+      );
     }
     for (final r in docRows) {
       final createdAt = r.data['created_at'] as int?;
       if (createdAt == null) continue;
-      events.add(TripLogEvent(
-        kind: TripLogEventKind.documentAdded,
-        at: ms(createdAt),
-        label: (r.data['title'] as String?) ?? '?',
-      ));
+      events.add(
+        TripLogEvent(
+          kind: TripLogEventKind.documentAdded,
+          at: ms(createdAt),
+          label: (r.data['title'] as String?) ?? '?',
+        ),
+      );
     }
 
     events.sort((a, b) => a.at.compareTo(b.at));
 
     final tripStart = ms(trip.tripStartedAt);
-    final earlierEvents = events.where((e) => e.at.isBefore(tripStart)).toList();
+    final earlierEvents = events
+        .where((e) => e.at.isBefore(tripStart))
+        .toList();
     final result = <TripLogEvent>[];
     if (earlierEvents.isEmpty) {
-      result.add(TripLogEvent(
-        kind: TripLogEventKind.start,
-        at: tripStart,
-        title: trip.title,
-      ));
+      result.add(
+        TripLogEvent(
+          kind: TripLogEventKind.start,
+          at: tripStart,
+          title: trip.title,
+        ),
+      );
       result.addAll(events);
     } else {
       // Restart scenario: events occurred before the current trip_started_at.
-      result.add(TripLogEvent(
-        kind: TripLogEventKind.start,
-        at: earlierEvents.first.at,
-        title: trip.title,
-      ));
+      result.add(
+        TripLogEvent(
+          kind: TripLogEventKind.start,
+          at: earlierEvents.first.at,
+          title: trip.title,
+        ),
+      );
       result.addAll(earlierEvents);
-      result.add(TripLogEvent(
-        kind: TripLogEventKind.restart,
-        at: tripStart,
-        title: trip.title,
-      ));
+      result.add(
+        TripLogEvent(
+          kind: TripLogEventKind.restart,
+          at: tripStart,
+          title: trip.title,
+        ),
+      );
       result.addAll(events.where((e) => !e.at.isBefore(tripStart)));
     }
     if (trip.tripEndedAt != null) {
-      result.add(TripLogEvent(
-        kind: TripLogEventKind.end,
-        at: ms(trip.tripEndedAt!),
-      ));
+      result.add(
+        TripLogEvent(kind: TripLogEventKind.end, at: ms(trip.tripEndedAt!)),
+      );
     }
     return result;
   }
@@ -251,8 +259,9 @@ class TripLogRenderer {
       case TripLogEventKind.end:
         return '$ts ${LocServ.inst.t('trip_log_classic_ended')}';
       case TripLogEventKind.point:
-        var line = LocServ.inst
-            .t('trip_log_classic_arrived', {'label': e.label ?? ''});
+        var line = LocServ.inst.t('trip_log_classic_arrived', {
+          'label': e.label ?? '',
+        });
         if (e.notes != null) line = '$line (${e.notes})';
         return '$ts $line';
       case TripLogEventKind.documentAdded:
@@ -286,7 +295,10 @@ class TripLogRenderer {
   /// trip start) that occurred BEFORE [e]; the point line numbering is
   /// `pointCountBefore + 1` for the first stop, etc.
   String _renderJournalLine(
-      TripLogEvent e, DateTime tripStart, int pointCountBefore) {
+    TripLogEvent e,
+    DateTime tripStart,
+    int pointCountBefore,
+  ) {
     final clock = _shortTimeFmt.format(e.at);
     final elapsed = _formatElapsed(e.at.difference(tripStart));
     final prefix = e.kind == TripLogEventKind.start
@@ -326,11 +338,13 @@ class TripLogRenderer {
     // Opening
     final startEv = events.first;
     if (startEv.kind == TripLogEventKind.start) {
-      paragraphs.add(LocServ.inst.t('trip_log_narrative_opening', {
-        'title': startEv.title ?? '',
-        'date': _dateLongFmt.format(startEv.at),
-        'time': _shortTimeFmt.format(startEv.at),
-      }));
+      paragraphs.add(
+        LocServ.inst.t('trip_log_narrative_opening', {
+          'title': startEv.title ?? '',
+          'date': _dateLongFmt.format(startEv.at),
+          'time': _shortTimeFmt.format(startEv.at),
+        }),
+      );
     }
 
     // Walk events grouping consecutive points.
@@ -348,10 +362,12 @@ class TripLogRenderer {
         // Append per-point note sentences (one per point with a note).
         for (final p in group) {
           if (p.notes != null) {
-            paragraphs.add(LocServ.inst.t('trip_log_narrative_point_note', {
-              'label': label(p),
-              'note': p.notes!,
-            }));
+            paragraphs.add(
+              LocServ.inst.t('trip_log_narrative_point_note', {
+                'label': label(p),
+                'note': p.notes!,
+              }),
+            );
           }
         }
         cursor = group.last.at;
@@ -359,26 +375,32 @@ class TripLogRenderer {
       }
       switch (e.kind) {
         case TripLogEventKind.documentAdded:
-          paragraphs.add(LocServ.inst.t('trip_log_narrative_document', {
-            'label': quoted(label(e)),
-            'time': _shortTimeFmt.format(e.at),
-          }));
+          paragraphs.add(
+            LocServ.inst.t('trip_log_narrative_document', {
+              'label': quoted(label(e)),
+              'time': _shortTimeFmt.format(e.at),
+            }),
+          );
           cursor = e.at;
           i++;
           break;
         case TripLogEventKind.restart:
-          paragraphs.add(LocServ.inst.t('trip_log_narrative_restart', {
-            'time': _shortTimeFmt.format(e.at),
-          }));
+          paragraphs.add(
+            LocServ.inst.t('trip_log_narrative_restart', {
+              'time': _shortTimeFmt.format(e.at),
+            }),
+          );
           cursor = e.at;
           i++;
           break;
         case TripLogEventKind.end:
           final total = e.at.difference(tripStart);
-          paragraphs.add(LocServ.inst.t('trip_log_narrative_closing', {
-            'time': _shortTimeFmt.format(e.at),
-            'duration': _formatHoursMinutes(total),
-          }));
+          paragraphs.add(
+            LocServ.inst.t('trip_log_narrative_closing', {
+              'time': _shortTimeFmt.format(e.at),
+              'duration': _formatHoursMinutes(total),
+            }),
+          );
           i++;
           break;
         case TripLogEventKind.start:
@@ -392,9 +414,12 @@ class TripLogRenderer {
   }
 
   String _narrativeMovementParagraph(
-      List<TripLogEvent> group, DateTime cursor) {
+    List<TripLogEvent> group,
+    DateTime cursor,
+  ) {
     final firstDelta = _formatMinutes(
-        group.first.at.difference(cursor).inMinutes.clamp(0, 1 << 30));
+      group.first.at.difference(cursor).inMinutes.clamp(0, 1 << 30),
+    );
     if (group.length == 1) {
       return LocServ.inst.t('trip_log_narrative_single_stop', {
         'delta': firstDelta,
@@ -403,21 +428,23 @@ class TripLogRenderer {
     }
     // First stop sentence + chained "then continued to X (5 min later)".
     final buf = StringBuffer();
-    buf.write(LocServ.inst.t('trip_log_narrative_first_in_group', {
-      'delta': firstDelta,
-      'label': '"${group.first.label}"',
-    }));
+    buf.write(
+      LocServ.inst.t('trip_log_narrative_first_in_group', {
+        'delta': firstDelta,
+        'label': '"${group.first.label}"',
+      }),
+    );
     for (int j = 1; j < group.length; j++) {
       final delta = _formatMinutes(
-          group[j].at.difference(group[j - 1].at).inMinutes.clamp(0, 1 << 30));
+        group[j].at.difference(group[j - 1].at).inMinutes.clamp(0, 1 << 30),
+      );
       final isLast = j == group.length - 1;
       final key = isLast
           ? 'trip_log_narrative_then_last'
           : 'trip_log_narrative_then_more';
-      buf.write(LocServ.inst.t(key, {
-        'delta': delta,
-        'label': '"${group[j].label}"',
-      }));
+      buf.write(
+        LocServ.inst.t(key, {'delta': delta, 'label': '"${group[j].label}"'}),
+      );
     }
     return buf.toString();
   }

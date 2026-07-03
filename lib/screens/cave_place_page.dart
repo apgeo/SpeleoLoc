@@ -38,19 +38,54 @@ class CavePlacePage extends StatefulWidget {
 }
 
 class _CavePlacePageState extends State<CavePlacePage>
-    with TickerProviderStateMixin, AppBarMenuMixin<CavePlacePage>, ProductTourMixin<CavePlacePage> {
+    with
+        TickerProviderStateMixin,
+        AppBarMenuMixin<CavePlacePage>,
+        ProductTourMixin<CavePlacePage> {
   @override
   String get tourId => 'cave_place';
   @override
-  final tourKeys = TourKeySet(['title_field', 'desc_field', 'depth_field', 'qr_field', 'tabs', 'menu']);
+  final tourKeys = TourKeySet([
+    'title_field',
+    'desc_field',
+    'depth_field',
+    'qr_field',
+    'tabs',
+    'menu',
+  ]);
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'title_field', titleLocKey: 'tour_cave_place_title_field_title', bodyLocKey: 'tour_cave_place_title_field_body'),
-    TourStepDef(keyId: 'desc_field', titleLocKey: 'tour_cave_place_desc_field_title', bodyLocKey: 'tour_cave_place_desc_field_body'),
-    TourStepDef(keyId: 'depth_field', titleLocKey: 'tour_cave_place_depth_field_title', bodyLocKey: 'tour_cave_place_depth_field_body'),
-    TourStepDef(keyId: 'qr_field', titleLocKey: 'tour_cave_place_qr_field_title', bodyLocKey: 'tour_cave_place_qr_field_body'),
-    TourStepDef(keyId: 'tabs', titleLocKey: 'tour_cave_place_tabs_title', bodyLocKey: 'tour_cave_place_tabs_body', align: ContentAlign.top),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_cave_place_menu_title', bodyLocKey: 'tour_cave_place_menu_body'),
+    TourStepDef(
+      keyId: 'title_field',
+      titleLocKey: 'tour_cave_place_title_field_title',
+      bodyLocKey: 'tour_cave_place_title_field_body',
+    ),
+    TourStepDef(
+      keyId: 'desc_field',
+      titleLocKey: 'tour_cave_place_desc_field_title',
+      bodyLocKey: 'tour_cave_place_desc_field_body',
+    ),
+    TourStepDef(
+      keyId: 'depth_field',
+      titleLocKey: 'tour_cave_place_depth_field_title',
+      bodyLocKey: 'tour_cave_place_depth_field_body',
+    ),
+    TourStepDef(
+      keyId: 'qr_field',
+      titleLocKey: 'tour_cave_place_qr_field_title',
+      bodyLocKey: 'tour_cave_place_qr_field_body',
+    ),
+    TourStepDef(
+      keyId: 'tabs',
+      titleLocKey: 'tour_cave_place_tabs_title',
+      bodyLocKey: 'tour_cave_place_tabs_body',
+      align: ContentAlign.top,
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_cave_place_menu_title',
+      bodyLocKey: 'tour_cave_place_menu_body',
+    ),
   ];
   @override
   List<AppMenuItem> get screenMenuItems => [
@@ -179,16 +214,17 @@ class _CavePlacePageState extends State<CavePlacePage>
     final loadedAreas = await caveAreasFuture;
     // Deduplicate by UUID to prevent DropdownButtonFormField assertion errors
     final seenUuids = <dynamic>{};
-    final deduplicatedAreas =
-        loadedAreas.where((a) => seenUuids.add(a.uuid)).toList();
+    final deduplicatedAreas = loadedAreas
+        .where((a) => seenUuids.add(a.uuid))
+        .toList();
     // Determine the selected area: use the value from the loaded place only if
     // it exists in the areas list; otherwise fall back to null.
     final initialAreaId = _cavePlace?.caveAreaUuid;
     final resolvedAreaId =
         (initialAreaId != null &&
-                deduplicatedAreas.any((a) => a.uuid == initialAreaId))
-            ? initialAreaId
-            : null;
+            deduplicatedAreas.any((a) => a.uuid == initialAreaId))
+        ? initialAreaId
+        : null;
 
     if (!mounted) return;
     setState(() {
@@ -430,8 +466,9 @@ class _CavePlacePageState extends State<CavePlacePage>
                       ),
                     );
                     // Reload areas after returning from CaveAreasPage.
-                    final reloadedAreas =
-                        await caveRepository.getCaveAreas(widget.caveUuid);
+                    final reloadedAreas = await caveRepository.getCaveAreas(
+                      widget.caveUuid,
+                    );
                     // Deduplicate by UUID to prevent DropdownButtonFormField
                     // assertion errors.
                     final seen = <dynamic>{};
@@ -442,8 +479,9 @@ class _CavePlacePageState extends State<CavePlacePage>
                       _caveAreas = deduped;
                       // Clear selected area if it was deleted.
                       if (_form.selectedCaveAreaId != null &&
-                          !_caveAreas
-                              .any((a) => a.uuid == _form.selectedCaveAreaId)) {
+                          !_caveAreas.any(
+                            (a) => a.uuid == _form.selectedCaveAreaId,
+                          )) {
                         _form.selectedCaveAreaId = null;
                       }
                     });
@@ -459,7 +497,8 @@ class _CavePlacePageState extends State<CavePlacePage>
                   visible: !_pciRowHidden,
                   form: _form,
                   editable: _qrEditable,
-                  onEditableToggled: () => setState(() => _qrEditable = !_qrEditable),
+                  onEditableToggled: () =>
+                      setState(() => _qrEditable = !_qrEditable),
                   onAutoGenerate: _qrController.autoGeneratePci,
                   rowKey: tourKeys['qr_field'],
                 ),
@@ -468,7 +507,8 @@ class _CavePlacePageState extends State<CavePlacePage>
                 CavePlaceQcriSection(
                   form: _form,
                   editable: _qcriEditable,
-                  onEditableToggled: () => setState(() => _qcriEditable = !_qcriEditable),
+                  onEditableToggled: () =>
+                      setState(() => _qcriEditable = !_qcriEditable),
                   onAutoGenerate: _qrController.autoGenerateQcri,
                   onOpenScanner: _qrController.openScanner,
                   onScanLongPressStart: _qrController.startLongPress,
@@ -518,4 +558,3 @@ class _CavePlacePageState extends State<CavePlacePage>
     );
   }
 }
-

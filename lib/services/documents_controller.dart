@@ -41,10 +41,9 @@ class DocumentsSource {
   bool get isAll => geofeatureLink == null;
 
   /// All documents across every geofeature.
-  const DocumentsSource.all({
-    required this.geofeatureTitle,
-  })  : geofeatureLink = null,
-        parentTitle = null;
+  const DocumentsSource.all({required this.geofeatureTitle})
+    : geofeatureLink = null,
+      parentTitle = null;
 
   // Typed constructors for the three supported sources -----------------------
 

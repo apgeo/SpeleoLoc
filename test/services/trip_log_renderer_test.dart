@@ -15,8 +15,13 @@ void main() {
   });
   final r = TripLogRenderer.instance;
 
-  TripLogEvent ev(TripLogEventKind k, DateTime at,
-      {String? title, String? label, String? notes}) {
+  TripLogEvent ev(
+    TripLogEventKind k,
+    DateTime at, {
+    String? title,
+    String? label,
+    String? notes,
+  }) {
     return TripLogEvent(
       kind: k,
       at: at,
@@ -119,25 +124,29 @@ void main() {
       expect(out.split('\n\n'), hasLength(2));
     });
 
-    test('summarizes consecutive points and document into separate paragraphs', () {
-      final out = r.render(sample(), TripLogMethod.narrative);
-      // Opening + grouped-points paragraph + (optional notes) + document + closing.
-      expect(out.split('\n\n').length, greaterThanOrEqualTo(4));
-    });
+    test(
+      'summarizes consecutive points and document into separate paragraphs',
+      () {
+        final out = r.render(sample(), TripLogMethod.narrative);
+        // Opening + grouped-points paragraph + (optional notes) + document + closing.
+        expect(out.split('\n\n').length, greaterThanOrEqualTo(4));
+      },
+    );
 
     test('ongoing trip omits closing paragraph', () {
-      final out =
-          r.render(sample(withEnd: false), TripLogMethod.narrative);
+      final out = r.render(sample(withEnd: false), TripLogMethod.narrative);
       expect(out, isNot(contains('concluded at')));
     });
 
-    test('emits restart paragraph between previous-run and current events',
-        () {
+    test('emits restart paragraph between previous-run and current events', () {
       final earlyPoint = start.subtract(const Duration(hours: 1));
       final events = [
         ev(TripLogEventKind.start, earlyPoint, title: 'T'),
-        ev(TripLogEventKind.point, earlyPoint.add(const Duration(minutes: 5)),
-            label: 'Old'),
+        ev(
+          TripLogEventKind.point,
+          earlyPoint.add(const Duration(minutes: 5)),
+          label: 'Old',
+        ),
         ev(TripLogEventKind.restart, start, title: 'T'),
         ev(TripLogEventKind.point, p1, label: 'A'),
       ];
@@ -161,8 +170,11 @@ void main() {
         var built = r.renderTailDelta([all.first], method)!;
         for (int i = 2; i <= all.length; i++) {
           final delta = r.renderTailDelta(all.sublist(0, i), method);
-          expect(delta, isNotNull,
-              reason: 'method=$method should support incremental rendering');
+          expect(
+            delta,
+            isNotNull,
+            reason: 'method=$method should support incremental rendering',
+          );
           built = '$built\n$delta';
         }
         expect(built, equals(r.render(all, method)));
@@ -170,10 +182,7 @@ void main() {
     }
 
     test('narrative: returns null (incremental unsupported)', () {
-      expect(
-        r.renderTailDelta(sample(), TripLogMethod.narrative),
-        isNull,
-      );
+      expect(r.renderTailDelta(sample(), TripLogMethod.narrative), isNull);
     });
 
     test('journal: restart resets the point counter', () {
@@ -181,18 +190,27 @@ void main() {
         ev(TripLogEventKind.start, start, title: 'T'),
         ev(TripLogEventKind.point, p1, label: 'A'),
         ev(TripLogEventKind.point, p2, label: 'B'),
-        ev(TripLogEventKind.restart, p2.add(const Duration(minutes: 1)),
-            title: 'T'),
-        ev(TripLogEventKind.point,
-            p2.add(const Duration(minutes: 2)), label: 'C'),
+        ev(
+          TripLogEventKind.restart,
+          p2.add(const Duration(minutes: 1)),
+          title: 'T',
+        ),
+        ev(
+          TripLogEventKind.point,
+          p2.add(const Duration(minutes: 2)),
+          label: 'C',
+        ),
       ];
       final delta = r.renderTailDelta(events, TripLogMethod.journal)!;
       // Last event is the first point after restart → renderer must
       // treat it as the first stop. We assert by comparing to the
       // suffix of a full render.
       final full = r.render(events, TripLogMethod.journal);
-      expect(full.endsWith(delta), isTrue,
-          reason: 'incremental delta must match the tail of full render');
+      expect(
+        full.endsWith(delta),
+        isTrue,
+        reason: 'incremental delta must match the tail of full render',
+      );
     });
   });
 }

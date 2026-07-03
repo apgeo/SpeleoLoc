@@ -96,10 +96,26 @@ class _CSVImportPageState extends State<CSVImportPage>
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'file_picker', titleLocKey: 'tour_csv_import_file_picker_title', bodyLocKey: 'tour_csv_import_file_picker_body'),
-    TourStepDef(keyId: 'column_mapping', titleLocKey: 'tour_csv_import_column_mapping_title', bodyLocKey: 'tour_csv_import_column_mapping_body'),
-    TourStepDef(keyId: 'preview', titleLocKey: 'tour_csv_import_preview_title', bodyLocKey: 'tour_csv_import_preview_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_csv_import_menu_title', bodyLocKey: 'tour_csv_import_menu_body'),
+    TourStepDef(
+      keyId: 'file_picker',
+      titleLocKey: 'tour_csv_import_file_picker_title',
+      bodyLocKey: 'tour_csv_import_file_picker_body',
+    ),
+    TourStepDef(
+      keyId: 'column_mapping',
+      titleLocKey: 'tour_csv_import_column_mapping_title',
+      bodyLocKey: 'tour_csv_import_column_mapping_body',
+    ),
+    TourStepDef(
+      keyId: 'preview',
+      titleLocKey: 'tour_csv_import_preview_title',
+      bodyLocKey: 'tour_csv_import_preview_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_csv_import_menu_title',
+      bodyLocKey: 'tour_csv_import_menu_body',
+    ),
   ];
 
   // CSV data
@@ -160,8 +176,13 @@ class _CSVImportPageState extends State<CSVImportPage>
   }
 
   List<List<dynamic>> _parseCSV(String csvContent) {
-    final converter = const CsvToListConverter(eol: '\n', shouldParseNumbers: false);
-    final normalized = csvContent.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final converter = const CsvToListConverter(
+      eol: '\n',
+      shouldParseNumbers: false,
+    );
+    final normalized = csvContent
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
     return converter.convert(normalized);
   }
 
@@ -197,16 +218,10 @@ class _CSVImportPageState extends State<CSVImportPage>
 
   List<DropdownMenuItem<int?>> _buildColumnDropdownItems() {
     return [
-      DropdownMenuItem<int?>(
-        value: null,
-        child: Text(LocServ.inst.t('none')),
-      ),
+      DropdownMenuItem<int?>(value: null, child: Text(LocServ.inst.t('none'))),
       ..._headers.asMap().entries.map(
-            (e) => DropdownMenuItem<int?>(
-              value: e.key,
-              child: Text(e.value),
-            ),
-          ),
+        (e) => DropdownMenuItem<int?>(value: e.key, child: Text(e.value)),
+      ),
     ];
   }
 
@@ -230,8 +245,13 @@ class _CSVImportPageState extends State<CSVImportPage>
               onChanged: (v) => setState(() => _columnMappings[def.key] = v),
               decoration: InputDecoration(
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
@@ -250,15 +270,25 @@ class _CSVImportPageState extends State<CSVImportPage>
         columnSpacing: 16,
         headingRowColor: WidgetStateProperty.all(Colors.grey[200]),
         columns: _headers
-            .map((h) => DataColumn(
-                  label: Text(h, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ))
+            .map(
+              (h) => DataColumn(
+                label: Text(
+                  h,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            )
             .toList(),
         rows: previewRows.skip(1).map((row) {
           return DataRow(
             cells: List.generate(_headers.length, (i) {
               final value = i < row.length ? row[i].toString() : '';
-              return DataCell(Text(value, style: const TextStyle(fontSize: 12)));
+              return DataCell(
+                Text(value, style: const TextStyle(fontSize: 12)),
+              );
             }),
           );
         }).toList(),
@@ -274,7 +304,9 @@ class _CSVImportPageState extends State<CSVImportPage>
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -326,7 +358,10 @@ class _CSVImportPageState extends State<CSVImportPage>
                     Text(
                       LocServ.inst.t('csv_column_mappings'),
                       key: tourKeys['column_mapping'],
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       '${LocServ.inst.t('csv_rows_found')}: ${_csvData!.length - 1}',
@@ -348,7 +383,10 @@ class _CSVImportPageState extends State<CSVImportPage>
                         icon: const Icon(Icons.download),
                         label: Text(LocServ.inst.t('csv_start_import')),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -360,7 +398,10 @@ class _CSVImportPageState extends State<CSVImportPage>
                     Text(
                       LocServ.inst.t('csv_data_preview'),
                       key: tourKeys['preview'],
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     _buildDataPreview(),

@@ -50,10 +50,7 @@ enum DocSortField { title, type, size, date }
 /// The source of documents is described by [DocumentsSource], making this
 /// page generic and reusable across different geofeature types.
 class GeofeatureDocumentsPage extends StatefulWidget {
-  const GeofeatureDocumentsPage({
-    super.key,
-    required this.source,
-  });
+  const GeofeatureDocumentsPage({super.key, required this.source});
 
   final DocumentsSource source;
 
@@ -63,17 +60,35 @@ class GeofeatureDocumentsPage extends StatefulWidget {
 }
 
 class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
-    with AppBarMenuMixin<GeofeatureDocumentsPage>, ProductTourMixin<GeofeatureDocumentsPage> {
+    with
+        AppBarMenuMixin<GeofeatureDocumentsPage>,
+        ProductTourMixin<GeofeatureDocumentsPage> {
   @override
   String get tourId => 'geofeature_documents';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'toolbar', titleLocKey: 'tour_geofeature_docs_toolbar_title', bodyLocKey: 'tour_geofeature_docs_toolbar_body'),
-    TourStepDef(keyId: 'search', titleLocKey: 'tour_geofeature_docs_search_title', bodyLocKey: 'tour_geofeature_docs_search_body'),
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_geofeature_docs_list_title', bodyLocKey: 'tour_geofeature_docs_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_geofeature_docs_menu_title', bodyLocKey: 'tour_geofeature_docs_menu_body'),
+    TourStepDef(
+      keyId: 'toolbar',
+      titleLocKey: 'tour_geofeature_docs_toolbar_title',
+      bodyLocKey: 'tour_geofeature_docs_toolbar_body',
+    ),
+    TourStepDef(
+      keyId: 'search',
+      titleLocKey: 'tour_geofeature_docs_search_title',
+      bodyLocKey: 'tour_geofeature_docs_search_body',
+    ),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_geofeature_docs_list_title',
+      bodyLocKey: 'tour_geofeature_docs_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_geofeature_docs_menu_title',
+      bodyLocKey: 'tour_geofeature_docs_menu_body',
+    ),
   ];
 
   // Data
@@ -89,11 +104,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   List<AppMenuItem> get screenMenuItems => [
     if (widget.source.geofeatureLink != null)
       AppMenuItem(
-        icon: _showDocumentToolbar
-            ? Icons.view_day_outlined
-            : Icons.view_day,
+        icon: _showDocumentToolbar ? Icons.view_day_outlined : Icons.view_day,
         label: LocServ.inst.t(
-            _showDocumentToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar'),
+          _showDocumentToolbar ? 'hide_docs_toolbar' : 'show_docs_toolbar',
+        ),
         onTap: _toggleDocumentToolbar,
       ),
   ];
@@ -126,8 +140,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   Future<void> _init() async {
     final dir = await getApplicationDocumentsDirectory();
     _docsDir = dir.path;
-    final showToolbar =
-        await SettingsHelper.loadStringConfig(showDocumentToolbarKey, 'true');
+    final showToolbar = await SettingsHelper.loadStringConfig(
+      showDocumentToolbarKey,
+      'true',
+    );
     if (mounted) setState(() => _showDocumentToolbar = showToolbar == 'true');
     await _loadDocuments();
   }
@@ -136,7 +152,9 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     final newValue = !_showDocumentToolbar;
     setState(() => _showDocumentToolbar = newValue);
     await SettingsHelper.saveStringConfig(
-        showDocumentToolbarKey, newValue.toString());
+      showDocumentToolbarKey,
+      newValue.toString(),
+    );
   }
 
   @override
@@ -169,17 +187,20 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     var docs = query.isEmpty
         ? List<DocumentationFile>.from(allDocs)
         : allDocs
-            .where((d) =>
-                d.title.toLowerCase().contains(query) ||
-                d.fileName.toLowerCase().contains(query) ||
-                (d.description?.toLowerCase().contains(query) ?? false))
-            .toList();
+              .where(
+                (d) =>
+                    d.title.toLowerCase().contains(query) ||
+                    d.fileName.toLowerCase().contains(query) ||
+                    (d.description?.toLowerCase().contains(query) ?? false),
+              )
+              .toList();
 
     // Sort
     docs.sort((a, b) {
       final int cmp = switch (_sortField) {
-        DocSortField.title =>
-          a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        DocSortField.title => a.title.toLowerCase().compareTo(
+          b.title.toLowerCase(),
+        ),
         DocSortField.type => a.fileType.compareTo(b.fileType),
         DocSortField.size => a.fileSize.compareTo(b.fileSize),
         DocSortField.date => (a.createdAt ?? 0).compareTo(b.createdAt ?? 0),
@@ -213,22 +234,22 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   }
 
   String _categoryLabel(String fileType) => switch (fileType) {
-        'photo' => LocServ.inst.t('doc_type_photo'),
-        'video' => LocServ.inst.t('doc_type_video'),
-        'audio' => LocServ.inst.t('doc_type_audio'),
-        'text_document' => LocServ.inst.t('doc_type_text'),
-        'web_link' => LocServ.inst.t('doc_type_web_link'),
-        _ => LocServ.inst.t('doc_type_other'),
-      };
+    'photo' => LocServ.inst.t('doc_type_photo'),
+    'video' => LocServ.inst.t('doc_type_video'),
+    'audio' => LocServ.inst.t('doc_type_audio'),
+    'text_document' => LocServ.inst.t('doc_type_text'),
+    'web_link' => LocServ.inst.t('doc_type_web_link'),
+    _ => LocServ.inst.t('doc_type_other'),
+  };
 
   static IconData _categoryIcon(String fileType) => switch (fileType) {
-        'photo' => Icons.photo,
-        'video' => Icons.videocam,
-        'audio' => Icons.audiotrack,
-        'text_document' => Icons.description,
-        'web_link' => Icons.link,
-        _ => Icons.insert_drive_file,
-      };
+    'photo' => Icons.photo,
+    'video' => Icons.videocam,
+    'audio' => Icons.audiotrack,
+    'text_document' => Icons.description,
+    'web_link' => Icons.link,
+    _ => Icons.insert_drive_file,
+  };
 
   static String _formatSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -330,25 +351,25 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _openDocument(doc),
-        onLongPress: () {},  // handled by GestureDetector below
+        onLongPress: () {}, // handled by GestureDetector below
         child: GestureDetector(
           onLongPressStart: (details) =>
               _showDocumentContextMenu(context, details.globalPosition, doc),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _buildLargeThumbnail(doc)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: Text(
-                doc.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildLargeThumbnail(doc)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Text(
+                  doc.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -360,11 +381,7 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
 
   Widget _menuItem(IconData icon, String label) {
     return Row(
-      children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 10),
-        Text(label),
-      ],
+      children: [Icon(icon, size: 20), const SizedBox(width: 10), Text(label)],
     );
   }
 
@@ -402,7 +419,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'text',
-                child: _menuItem(Icons.text_snippet, LocServ.inst.t('doc_type_text')),
+                child: _menuItem(
+                  Icons.text_snippet,
+                  LocServ.inst.t('doc_type_text'),
+                ),
               ),
               PopupMenuItem(
                 value: 'image',
@@ -410,7 +430,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
               ),
               PopupMenuItem(
                 value: 'audio',
-                child: _menuItem(Icons.audiotrack, LocServ.inst.t('doc_type_audio')),
+                child: _menuItem(
+                  Icons.audiotrack,
+                  LocServ.inst.t('doc_type_audio'),
+                ),
               ),
             ],
           ),
@@ -423,9 +446,15 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   void _onCreateNew(String type) {
     final link = widget.source.geofeatureLink;
     if (link == null) return;
-    final cavePlaceUuid = link.type == GeofeatureType.cavePlace ? link.geofeatureUuid : null;
-    final caveUuid = link.type == GeofeatureType.cave ? link.geofeatureUuid : null;
-    final caveAreaUuid = link.type == GeofeatureType.caveArea ? link.geofeatureUuid : null;
+    final cavePlaceUuid = link.type == GeofeatureType.cavePlace
+        ? link.geofeatureUuid
+        : null;
+    final caveUuid = link.type == GeofeatureType.cave
+        ? link.geofeatureUuid
+        : null;
+    final caveAreaUuid = link.type == GeofeatureType.caveArea
+        ? link.geofeatureUuid
+        : null;
 
     switch (type) {
       case 'text':
@@ -482,9 +511,13 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     if (link == null) return;
     _navigateAndRefresh(
       EditDocumentationFilePage(
-        cavePlaceUuid: link.type == GeofeatureType.cavePlace ? link.geofeatureUuid : null,
+        cavePlaceUuid: link.type == GeofeatureType.cavePlace
+            ? link.geofeatureUuid
+            : null,
         caveUuid: link.type == GeofeatureType.cave ? link.geofeatureUuid : null,
-        caveAreaUuid: link.type == GeofeatureType.caveArea ? link.geofeatureUuid : null,
+        caveAreaUuid: link.type == GeofeatureType.caveArea
+            ? link.geofeatureUuid
+            : null,
       ),
     );
   }
@@ -496,7 +529,8 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     if (file == null || !mounted) return;
 
     final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
-    final page = handler?.buildEditableViewer(
+    final page =
+        handler?.buildEditableViewer(
           file: file,
           doc: doc,
           geofeatureLink: widget.source.geofeatureLink,
@@ -519,7 +553,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
 
   /// Shows a context menu for the given document with View / Edit options.
   void _showDocumentContextMenu(
-      BuildContext context, Offset position, DocumentationFile doc) {
+    BuildContext context,
+    Offset position,
+    DocumentationFile doc,
+  ) {
     final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
     final hasViewer = handler?.hasViewer ?? false;
     final hasEditor = handler?.hasEditor ?? false;
@@ -534,27 +571,35 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
       if (hasViewer)
         PopupMenuItem(
           value: 'view',
-          child: Row(children: [
-            const Icon(Icons.visibility, size: 20),
-            const SizedBox(width: 10),
-            Text(LocServ.inst.t('open_viewer')),
-          ]),
+          child: Row(
+            children: [
+              const Icon(Icons.visibility, size: 20),
+              const SizedBox(width: 10),
+              Text(LocServ.inst.t('open_viewer')),
+            ],
+          ),
         ),
       if (hasEditor)
         PopupMenuItem(
           value: 'edit',
-          child: Row(children: [
-            const Icon(Icons.edit, size: 20),
-            const SizedBox(width: 10),
-            Text(LocServ.inst.t('edit')),
-          ]),
+          child: Row(
+            children: [
+              const Icon(Icons.edit, size: 20),
+              const SizedBox(width: 10),
+              Text(LocServ.inst.t('edit')),
+            ],
+          ),
         ),
     ];
 
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
-          position.dx, position.dy, position.dx, position.dy),
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
       items: items,
     ).then((value) {
       if (value == 'view') {
@@ -593,11 +638,11 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
     }
 
     return switch (_viewMode) {
-      DocViewMode.list            => [_buildListSliver()],
-      DocViewMode.listByCategory  => _buildListByCategorySlivers(),
-      DocViewMode.grid            => [_buildGridSliver()],
-      DocViewMode.gridByCategory  => _buildGridByCategorySlivers(),
-      DocViewMode.gridHorizontal  => _buildHorizontalGridSlivers(),
+      DocViewMode.list => [_buildListSliver()],
+      DocViewMode.listByCategory => _buildListByCategorySlivers(),
+      DocViewMode.grid => [_buildGridSliver()],
+      DocViewMode.gridByCategory => _buildGridByCategorySlivers(),
+      DocViewMode.gridHorizontal => _buildHorizontalGridSlivers(),
     };
   }
 
@@ -611,25 +656,29 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
       final collapsed = _collapsedCategories.contains(category);
 
       // --- category header ---
-      slivers.add(SliverToBoxAdapter(
-        child: _CategoryHeader(
-          icon: _categoryIcon(category),
-          label: '${_categoryLabel(category)} (${docs.length})',
-          collapsed: collapsed,
-          onTap: () => setState(() {
-            collapsed
-                ? _collapsedCategories.remove(category)
-                : _collapsedCategories.add(category);
-          }),
+      slivers.add(
+        SliverToBoxAdapter(
+          child: _CategoryHeader(
+            icon: _categoryIcon(category),
+            label: '${_categoryLabel(category)} (${docs.length})',
+            collapsed: collapsed,
+            onTap: () => setState(() {
+              collapsed
+                  ? _collapsedCategories.remove(category)
+                  : _collapsedCategories.add(category);
+            }),
+          ),
         ),
-      ));
+      );
 
       // --- items (visible only when expanded) ---
       if (!collapsed) {
-        slivers.add(SliverList.builder(
-          itemCount: docs.length,
-          itemBuilder: (_, i) => _buildListItem(docs[i]),
-        ));
+        slivers.add(
+          SliverList.builder(
+            itemCount: docs.length,
+            itemBuilder: (_, i) => _buildListItem(docs[i]),
+          ),
+        );
       }
     }
 
@@ -671,33 +720,37 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
       final docs = entry.value;
       final collapsed = _collapsedCategories.contains(category);
 
-      slivers.add(SliverToBoxAdapter(
-        child: _CategoryHeader(
-          icon: _categoryIcon(category),
-          label: '${_categoryLabel(category)} (${docs.length})',
-          collapsed: collapsed,
-          onTap: () => setState(() {
-            collapsed
-                ? _collapsedCategories.remove(category)
-                : _collapsedCategories.add(category);
-          }),
+      slivers.add(
+        SliverToBoxAdapter(
+          child: _CategoryHeader(
+            icon: _categoryIcon(category),
+            label: '${_categoryLabel(category)} (${docs.length})',
+            collapsed: collapsed,
+            onTap: () => setState(() {
+              collapsed
+                  ? _collapsedCategories.remove(category)
+                  : _collapsedCategories.add(category);
+            }),
+          ),
         ),
-      ));
+      );
 
       if (!collapsed) {
-        slivers.add(SliverPadding(
-          padding: const EdgeInsets.all(8),
-          sliver: SliverGrid.builder(
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 160,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.8,
+        slivers.add(
+          SliverPadding(
+            padding: const EdgeInsets.all(8),
+            sliver: SliverGrid.builder(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 160,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: docs.length,
+              itemBuilder: (_, i) => _buildGridItem(docs[i]),
             ),
-            itemCount: docs.length,
-            itemBuilder: (_, i) => _buildGridItem(docs[i]),
           ),
-        ));
+        );
       }
     }
 
@@ -724,37 +777,41 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
       final docs = entry.value;
       final collapsed = _collapsedCategories.contains(category);
 
-      slivers.add(SliverToBoxAdapter(
-        child: _CategoryHeader(
-          icon: _categoryIcon(category),
-          label: '${_categoryLabel(category)} (${docs.length})',
-          collapsed: collapsed,
-          onTap: () => setState(() {
-            collapsed
-                ? _collapsedCategories.remove(category)
-                : _collapsedCategories.add(category);
-          }),
+      slivers.add(
+        SliverToBoxAdapter(
+          child: _CategoryHeader(
+            icon: _categoryIcon(category),
+            label: '${_categoryLabel(category)} (${docs.length})',
+            collapsed: collapsed,
+            onTap: () => setState(() {
+              collapsed
+                  ? _collapsedCategories.remove(category)
+                  : _collapsedCategories.add(category);
+            }),
+          ),
         ),
-      ));
+      );
 
       if (!collapsed) {
-        slivers.add(SliverToBoxAdapter(
-          child: SizedBox(
-            height: totalHeight,
-            child: GridView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.all(8),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: _horizontalGridRows,
-                mainAxisSpacing: itemSpacing,
-                crossAxisSpacing: itemSpacing,
-                childAspectRatio: 0.8,
+        slivers.add(
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: totalHeight,
+              child: GridView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.all(8),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _horizontalGridRows,
+                  mainAxisSpacing: itemSpacing,
+                  crossAxisSpacing: itemSpacing,
+                  childAspectRatio: 0.8,
+                ),
+                itemCount: docs.length,
+                itemBuilder: (_, i) => _buildGridItem(docs[i]),
               ),
-              itemCount: docs.length,
-              itemBuilder: (_, i) => _buildGridItem(docs[i]),
             ),
           ),
-        ));
+        );
       }
     }
 
@@ -784,55 +841,77 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
           ],
         ),
         actions: [
-          if (widget.source.geofeatureLink != null && !_showDocumentToolbar) ...[
-          // ---- Create New dropdown ----
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.add),
-            tooltip: LocServ.inst.t('create_new'),
-            onSelected: _onCreateNew,
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'text',
-                child: _menuItem(Icons.text_snippet, LocServ.inst.t('new_text_document')),
-              ),
-              PopupMenuItem(
-                value: 'rich_text',
-                child: _menuItem(Icons.text_format, LocServ.inst.t('new_rich_text')),
-              ),
-              // PopupMenuItem(
-              //   value: 'image_edit',
-              //   child: _menuItem(Icons.image, LocServ.inst.t('new_image_edit')),
-              // ),
-              PopupMenuItem(
-                value: 'camera',
-                child: _menuItem(Icons.camera_alt, LocServ.inst.t('new_photo')),
-              ),
-              PopupMenuItem(
-                value: 'audio',
-                child: _menuItem(Icons.mic, LocServ.inst.t('new_audio_recording')),
-              ),
-            ],
-          ),
-          // ---- Add from existing file dropdown ----
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.attach_file),
-            tooltip: LocServ.inst.t('add_from_file'),
-            onSelected: _onAddFromFile,
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'text',
-                child: _menuItem(Icons.text_snippet, LocServ.inst.t('doc_type_text')),
-              ),
-              PopupMenuItem(
-                value: 'image',
-                child: _menuItem(Icons.image, LocServ.inst.t('doc_type_photo')),
-              ),
-              PopupMenuItem(
-                value: 'audio',
-                child: _menuItem(Icons.audiotrack, LocServ.inst.t('doc_type_audio')),
-              ),
-            ],
-          ),
+          if (widget.source.geofeatureLink != null &&
+              !_showDocumentToolbar) ...[
+            // ---- Create New dropdown ----
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.add),
+              tooltip: LocServ.inst.t('create_new'),
+              onSelected: _onCreateNew,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'text',
+                  child: _menuItem(
+                    Icons.text_snippet,
+                    LocServ.inst.t('new_text_document'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'rich_text',
+                  child: _menuItem(
+                    Icons.text_format,
+                    LocServ.inst.t('new_rich_text'),
+                  ),
+                ),
+                // PopupMenuItem(
+                //   value: 'image_edit',
+                //   child: _menuItem(Icons.image, LocServ.inst.t('new_image_edit')),
+                // ),
+                PopupMenuItem(
+                  value: 'camera',
+                  child: _menuItem(
+                    Icons.camera_alt,
+                    LocServ.inst.t('new_photo'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'audio',
+                  child: _menuItem(
+                    Icons.mic,
+                    LocServ.inst.t('new_audio_recording'),
+                  ),
+                ),
+              ],
+            ),
+            // ---- Add from existing file dropdown ----
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.attach_file),
+              tooltip: LocServ.inst.t('add_from_file'),
+              onSelected: _onAddFromFile,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'text',
+                  child: _menuItem(
+                    Icons.text_snippet,
+                    LocServ.inst.t('doc_type_text'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'image',
+                  child: _menuItem(
+                    Icons.image,
+                    LocServ.inst.t('doc_type_photo'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'audio',
+                  child: _menuItem(
+                    Icons.audiotrack,
+                    LocServ.inst.t('doc_type_audio'),
+                  ),
+                ),
+              ],
+            ),
           ],
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
@@ -841,34 +920,35 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                if (_showDocumentToolbar && widget.source.geofeatureLink != null)
+                if (_showDocumentToolbar &&
+                    widget.source.geofeatureLink != null)
                   _buildDocumentToolbar(),
                 Expanded(
                   child: CustomScrollView(
-              key: PageStorageKey<DocViewMode>(_viewMode),
-              slivers: [
-                SliverPersistentHeader(
-                  key: tourKeys['toolbar'],
-                  pinned: true,
-                  delegate: _ControlsHeaderDelegate(
-                    viewMode: _viewMode,
-                    sortField: _sortField,
-                    sortAscending: _sortAscending,
-                    horizontalGridRows: _horizontalGridRows,
-                    searchController: _searchCtrl,
-                    onViewModeChanged: (m) =>
-                        setState(() => _viewMode = m),
-                    onSortChanged: (f, asc) {
-                      _sortField = f;
-                      _sortAscending = asc;
-                      _applyFilter();
-                    },
-                    onHorizontalGridRowsChanged: (rows) =>
-                        setState(() => _horizontalGridRows = rows),
-                  ),
-                ),
-                ..._buildContentSlivers(),
-              ],
+                    key: PageStorageKey<DocViewMode>(_viewMode),
+                    slivers: [
+                      SliverPersistentHeader(
+                        key: tourKeys['toolbar'],
+                        pinned: true,
+                        delegate: _ControlsHeaderDelegate(
+                          viewMode: _viewMode,
+                          sortField: _sortField,
+                          sortAscending: _sortAscending,
+                          horizontalGridRows: _horizontalGridRows,
+                          searchController: _searchCtrl,
+                          onViewModeChanged: (m) =>
+                              setState(() => _viewMode = m),
+                          onSortChanged: (f, asc) {
+                            _sortField = f;
+                            _sortAscending = asc;
+                            _applyFilter();
+                          },
+                          onHorizontalGridRowsChanged: (rows) =>
+                              setState(() => _horizontalGridRows = rows),
+                        ),
+                      ),
+                      ..._buildContentSlivers(),
+                    ],
                   ),
                 ),
               ],
@@ -908,16 +988,12 @@ class _CategoryHeader extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
-            Icon(
-              collapsed ? Icons.expand_more : Icons.expand_less,
-              size: 20,
-            ),
+            Icon(collapsed ? Icons.expand_more : Icons.expand_less, size: 20),
           ],
         ),
       ),
@@ -970,7 +1046,10 @@ class _ControlsHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Material(
       elevation: overlapsContent || shrinkOffset > 0 ? 2 : 0,
       color: Theme.of(context).colorScheme.surface,
@@ -981,85 +1060,88 @@ class _ControlsHeaderDelegate extends SliverPersistentHeaderDelegate {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            // --- Row 1: view-mode selector + sort button ---
-            Row(
-              children: [
-                Expanded(
-                  child: SegmentedButton<DocViewMode>(
-                    showSelectedIcon: false,
-                    segments: [
-                      ButtonSegment(
-                        value: DocViewMode.list,
-                        icon: const Icon(Icons.list, size: 18),
-                        tooltip: LocServ.inst.t('view_list'),
-                      ),
-                      ButtonSegment(
-                        value: DocViewMode.listByCategory,
-                        icon: const Icon(Icons.format_list_bulleted, size: 18),
-                        tooltip: LocServ.inst.t('view_list_by_category'),
-                      ),
-                      ButtonSegment(
-                        value: DocViewMode.grid,
-                        icon: const Icon(Icons.grid_view, size: 18),
-                        tooltip: LocServ.inst.t('view_grid'),
-                      ),
-                      ButtonSegment(
-                        value: DocViewMode.gridByCategory,
-                        icon: const Icon(Icons.dashboard, size: 18),
-                        tooltip: LocServ.inst.t('view_grid_by_category'),
-                      ),
-                      ButtonSegment(
-                        value: DocViewMode.gridHorizontal,
-                        icon: const Icon(Icons.view_carousel, size: 18),
-                        tooltip: LocServ.inst.t('view_grid_horizontal'),
-                      ),
-                    ],
-                    selected: {viewMode},
-                    onSelectionChanged: (s) {
-                      if (s.isEmpty) return;
-                      onViewModeChanged(s.first);
-                    },
+              // --- Row 1: view-mode selector + sort button ---
+              Row(
+                children: [
+                  Expanded(
+                    child: SegmentedButton<DocViewMode>(
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment(
+                          value: DocViewMode.list,
+                          icon: const Icon(Icons.list, size: 18),
+                          tooltip: LocServ.inst.t('view_list'),
+                        ),
+                        ButtonSegment(
+                          value: DocViewMode.listByCategory,
+                          icon: const Icon(
+                            Icons.format_list_bulleted,
+                            size: 18,
+                          ),
+                          tooltip: LocServ.inst.t('view_list_by_category'),
+                        ),
+                        ButtonSegment(
+                          value: DocViewMode.grid,
+                          icon: const Icon(Icons.grid_view, size: 18),
+                          tooltip: LocServ.inst.t('view_grid'),
+                        ),
+                        ButtonSegment(
+                          value: DocViewMode.gridByCategory,
+                          icon: const Icon(Icons.dashboard, size: 18),
+                          tooltip: LocServ.inst.t('view_grid_by_category'),
+                        ),
+                        ButtonSegment(
+                          value: DocViewMode.gridHorizontal,
+                          icon: const Icon(Icons.view_carousel, size: 18),
+                          tooltip: LocServ.inst.t('view_grid_horizontal'),
+                        ),
+                      ],
+                      selected: {viewMode},
+                      onSelectionChanged: (s) {
+                        if (s.isEmpty) return;
+                        onViewModeChanged(s.first);
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                PopupMenuButton<DocSortField>(
-                  icon: const Icon(Icons.sort, size: 22),
-                  tooltip: LocServ.inst.t('sort_by'),
-                  onSelected: (field) {
-                    onSortChanged(
-                      field,
-                      field == sortField ? !sortAscending : true,
-                    );
-                  },
-                  itemBuilder: (_) => DocSortField.values.map((f) {
-                    final label = switch (f) {
-                      DocSortField.title => LocServ.inst.t('title'),
-                      DocSortField.type => LocServ.inst.t('doc_sort_type'),
-                      DocSortField.size => LocServ.inst.t('file_size'),
-                      DocSortField.date => LocServ.inst.t('doc_sort_date'),
-                    };
-                    return PopupMenuItem(
-                      value: f,
-                      child: Row(
-                        children: [
-                          if (f == sortField)
-                            Icon(
-                              sortAscending
-                                  ? Icons.arrow_upward
-                                  : Icons.arrow_downward,
-                              size: 16,
-                            )
-                          else
-                            const SizedBox(width: 16),
-                          const SizedBox(width: 8),
-                          Text(label),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 4),
+                  PopupMenuButton<DocSortField>(
+                    icon: const Icon(Icons.sort, size: 22),
+                    tooltip: LocServ.inst.t('sort_by'),
+                    onSelected: (field) {
+                      onSortChanged(
+                        field,
+                        field == sortField ? !sortAscending : true,
+                      );
+                    },
+                    itemBuilder: (_) => DocSortField.values.map((f) {
+                      final label = switch (f) {
+                        DocSortField.title => LocServ.inst.t('title'),
+                        DocSortField.type => LocServ.inst.t('doc_sort_type'),
+                        DocSortField.size => LocServ.inst.t('file_size'),
+                        DocSortField.date => LocServ.inst.t('doc_sort_date'),
+                      };
+                      return PopupMenuItem(
+                        value: f,
+                        child: Row(
+                          children: [
+                            if (f == sortField)
+                              Icon(
+                                sortAscending
+                                    ? Icons.arrow_upward
+                                    : Icons.arrow_downward,
+                                size: 16,
+                              )
+                            else
+                              const SizedBox(width: 16),
+                            const SizedBox(width: 8),
+                            Text(label),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
               const SizedBox(height: 6),
               // --- Row 2: search field ---
               SizedBox(
@@ -1077,8 +1159,10 @@ class _ControlsHeaderDelegate extends SliverPersistentHeaderDelegate {
                           )
                         : null,
                     isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -1103,13 +1187,25 @@ class _ControlsHeaderDelegate extends SliverPersistentHeaderDelegate {
                         visualDensity: VisualDensity.compact,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         padding: WidgetStatePropertyAll(
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                          const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 0,
+                          ),
                         ),
                       ),
                       segments: const [
-                        ButtonSegment(value: 1, label: Text('1', style: TextStyle(fontSize: 12))),
-                        ButtonSegment(value: 2, label: Text('2', style: TextStyle(fontSize: 12))),
-                        ButtonSegment(value: 3, label: Text('3', style: TextStyle(fontSize: 12))),
+                        ButtonSegment(
+                          value: 1,
+                          label: Text('1', style: TextStyle(fontSize: 12)),
+                        ),
+                        ButtonSegment(
+                          value: 2,
+                          label: Text('2', style: TextStyle(fontSize: 12)),
+                        ),
+                        ButtonSegment(
+                          value: 3,
+                          label: Text('3', style: TextStyle(fontSize: 12)),
+                        ),
                       ],
                       selected: {horizontalGridRows},
                       onSelectionChanged: (s) {

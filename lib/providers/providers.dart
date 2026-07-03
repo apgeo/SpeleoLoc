@@ -56,9 +56,9 @@ final caveRepositoryProvider = Provider<ICaveRepository>(
 final userRepositoryProvider = Provider<IUserRepository>(_buildUserRepository);
 
 IUserRepository _buildUserRepository(Ref ref) => UserRepository(
-      ref.watch(appDatabaseProvider),
-      () => ref.read(changeLoggerProvider),
-    );
+  ref.watch(appDatabaseProvider),
+  () => ref.read(changeLoggerProvider),
+);
 
 final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
   final svc = CurrentUserService(
@@ -163,7 +163,10 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
 );
 
 final caveTripServiceProvider = Provider<CaveTripService>(
-  (ref) => CaveTripService(ref.watch(appDatabaseProvider), clock: ref.watch(clockProvider)),
+  (ref) => CaveTripService(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
 );
 
 /// Read/mutation surface for `cave_trips`, `cave_trip_points`, and
@@ -196,7 +199,9 @@ class SessionPrefs {
   }
 }
 
-final sessionPrefsProvider = Provider<SessionPrefs>((ref) => SessionPrefs.instance);
+final sessionPrefsProvider = Provider<SessionPrefs>(
+  (ref) => SessionPrefs.instance,
+);
 
 // -----------------------------------------------------------------------------
 // Stream providers — reactive list of rows backed by Drift `.watch()`.
@@ -208,8 +213,10 @@ final cavesStreamProvider = StreamProvider<List<Cave>>((ref) {
 });
 
 /// Live stream of cave places filtered by cave id.
-final cavePlacesStreamProvider =
-    StreamProvider.family<List<CavePlace>, Uuid>((ref, caveUuid) {
+final cavePlacesStreamProvider = StreamProvider.family<List<CavePlace>, Uuid>((
+  ref,
+  caveUuid,
+) {
   return ref.watch(cavePlaceRepositoryProvider).watchCavePlaces(caveUuid);
 });
 

@@ -123,9 +123,12 @@ class _OrderTrackingTransport implements IFtpTransport {
     String remoteName, {
     TransferProgressCallback? onProgress,
     CancelToken? cancelToken,
-  }) =>
-      _inner.uploadFile(localFile, remoteName,
-          onProgress: onProgress, cancelToken: cancelToken);
+  }) => _inner.uploadFile(
+    localFile,
+    remoteName,
+    onProgress: onProgress,
+    cancelToken: cancelToken,
+  );
 
   @override
   Future<void> downloadFile(
@@ -135,8 +138,12 @@ class _OrderTrackingTransport implements IFtpTransport {
     CancelToken? cancelToken,
   }) async {
     _downloadOrder.add(remoteName);
-    await _inner.downloadFile(remoteName, localFile,
-        onProgress: onProgress, cancelToken: cancelToken);
+    await _inner.downloadFile(
+      remoteName,
+      localFile,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
   }
 }
 
@@ -174,9 +181,12 @@ class _BlockingTransport implements IFtpTransport {
     String remoteName, {
     TransferProgressCallback? onProgress,
     CancelToken? cancelToken,
-  }) =>
-      _inner.uploadFile(localFile, remoteName,
-          onProgress: onProgress, cancelToken: cancelToken);
+  }) => _inner.uploadFile(
+    localFile,
+    remoteName,
+    onProgress: onProgress,
+    cancelToken: cancelToken,
+  );
 
   @override
   Future<void> downloadFile(
@@ -193,14 +203,24 @@ class _BlockingTransport implements IFtpTransport {
       }
       await Future<void>.delayed(const Duration(milliseconds: 5));
     }
-    await _inner.downloadFile(remoteName, localFile,
-        onProgress: onProgress, cancelToken: cancelToken);
+    await _inner.downloadFile(
+      remoteName,
+      localFile,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
   }
 }
 
 class _Harness {
-  _Harness(this.db, this.caveRepo, this.logger, this.sync, this.currentUser,
-      this.assetsDir);
+  _Harness(
+    this.db,
+    this.caveRepo,
+    this.logger,
+    this.sync,
+    this.currentUser,
+    this.assetsDir,
+  );
   final AppDatabase db;
   final CaveRepository caveRepo;
   final ChangeLogger logger;
@@ -213,12 +233,17 @@ Future<_Harness> _buildHarness() async {
   final db = AppDatabase.forTesting(NativeDatabase.memory());
   late ChangeLogger loggerRef;
   final userRepo = UserRepository(db, () => loggerRef);
-  final currentUser = CurrentUserService(db, userRepo, ConfigurationRepository(db));
+  final currentUser = CurrentUserService(
+    db,
+    userRepo,
+    ConfigurationRepository(db),
+  );
   await currentUser.initialize();
   loggerRef = ChangeLogger(db, currentUser);
   final caveRepo = CaveRepository(db, currentUser, loggerRef);
-  final assetsDir =
-      await Directory.systemTemp.createTemp('speleoloc_ftp_ctrl_assets_');
+  final assetsDir = await Directory.systemTemp.createTemp(
+    'speleoloc_ftp_ctrl_assets_',
+  );
   final sync = SyncArchiveService(
     db,
     loggerRef,
@@ -230,8 +255,7 @@ Future<_Harness> _buildHarness() async {
 /// Drives the controller through [FtpSyncController.progress] and returns the
 /// final progress once it reaches a terminal phase.
 Future<FtpSyncProgress> _waitForTerminal(FtpSyncController c) async {
-  while (c.progress.isRunning ||
-      c.progress.phase == FtpSyncPhase.idle) {
+  while (c.progress.isRunning || c.progress.phase == FtpSyncPhase.idle) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
   return c.progress;
@@ -241,8 +265,7 @@ void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir =
-        await Directory.systemTemp.createTemp('speleoloc_ftp_ctrl_test_');
+    tempDir = await Directory.systemTemp.createTemp('speleoloc_ftp_ctrl_test_');
   });
 
   tearDown(() async {
@@ -255,48 +278,48 @@ void main() {
   // profile-password read/write calls work in unit tests.
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
-    const channel =
-        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    const channel = MethodChannel(
+      'plugins.it_nomads.com/flutter_secure_storage',
+    );
     final store = <String, String>{};
-    TestDefaultBinaryMessengerBinding
-        .instance.defaultBinaryMessenger
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      final args = Map<String, dynamic>.from(call.arguments as Map);
-      switch (call.method) {
-        case 'write':
-          store[args['key'] as String] = args['value'] as String;
+          final args = Map<String, dynamic>.from(call.arguments as Map);
+          switch (call.method) {
+            case 'write':
+              store[args['key'] as String] = args['value'] as String;
+              return null;
+            case 'read':
+              return store[args['key'] as String];
+            case 'delete':
+              store.remove(args['key'] as String);
+              return null;
+            case 'readAll':
+              return Map<String, String>.from(store);
+            case 'deleteAll':
+              store.clear();
+              return null;
+            case 'containsKey':
+              return store.containsKey(args['key'] as String);
+          }
           return null;
-        case 'read':
-          return store[args['key'] as String];
-        case 'delete':
-          store.remove(args['key'] as String);
-          return null;
-        case 'readAll':
-          return Map<String, String>.from(store);
-        case 'deleteAll':
-          store.clear();
-          return null;
-        case 'containsKey':
-          return store.containsKey(args['key'] as String);
-      }
-      return null;
-    });
+        });
 
     // Also mock path_provider so the controller's call to
     // getTemporaryDirectory() returns a sandboxed directory.
     const pathChannel = MethodChannel('plugins.flutter.io/path_provider');
-    TestDefaultBinaryMessengerBinding
-        .instance.defaultBinaryMessenger
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(pathChannel, (call) async {
-      if (call.method == 'getTemporaryDirectory' ||
-          call.method == 'getApplicationDocumentsDirectory' ||
-          call.method == 'getApplicationSupportDirectory') {
-        final d = await Directory.systemTemp
-            .createTemp('speleoloc_ftp_ctrl_pp_');
-        return d.path;
-      }
-      return null;
-    });
+          if (call.method == 'getTemporaryDirectory' ||
+              call.method == 'getApplicationDocumentsDirectory' ||
+              call.method == 'getApplicationSupportDirectory') {
+            final d = await Directory.systemTemp.createTemp(
+              'speleoloc_ftp_ctrl_pp_',
+            );
+            return d.path;
+          }
+          return null;
+        });
   });
 
   // Convenience: build a controller wired to the given harness + transport.
@@ -356,8 +379,9 @@ void main() {
 
     expect(controller.progress.phase, FtpSyncPhase.completed);
     // Exactly one archive should be on the remote — the one we just uploaded.
-    final archives =
-        fake.store.keys.where((k) => k.startsWith('speleo_loc_sync_')).toList();
+    final archives = fake.store.keys
+        .where((k) => k.startsWith('speleo_loc_sync_'))
+        .toList();
     expect(archives, hasLength(1));
   });
 
@@ -384,18 +408,26 @@ void main() {
     await controller.startDefault();
     await _waitForTerminal(controller);
 
-    expect(controller.progress.phase, FtpSyncPhase.completed,
-        reason: controller.progress.log.map((e) => e.message).join('\n'));
+    expect(
+      controller.progress.phase,
+      FtpSyncPhase.completed,
+      reason: controller.progress.log.map((e) => e.message).join('\n'),
+    );
     // Both peer caves should now exist locally on B.
     final caves = await b.db.select(b.db.caves).get();
     final names = caves.map((c) => c.title).toList();
-    expect(names, containsAll(<String>['FromPeerA1', 'FromPeerA2']),
-        reason: controller.progress.log.map((e) => e.message).join('\n'));
+    expect(
+      names,
+      containsAll(<String>['FromPeerA1', 'FromPeerA2']),
+      reason: controller.progress.log.map((e) => e.message).join('\n'),
+    );
     // B must have uploaded its own archive too, and the non-archive file must
     // still be on the server untouched.
     final bArchives = fake.store.keys
-        .where((k) =>
-            RegExp(r'^speleo_loc_sync_\d+(?:_[a-f0-9]+)?\.zip$').hasMatch(k))
+        .where(
+          (k) =>
+              RegExp(r'^speleo_loc_sync_\d+(?:_[a-f0-9]+)?\.zip$').hasMatch(k),
+        )
         .toList();
     expect(bArchives.length, greaterThanOrEqualTo(2));
     expect(fake.store.containsKey('unrelated.txt'), isTrue);
@@ -446,118 +478,130 @@ void main() {
     await _waitForTerminal(controller);
 
     expect(controller.progress.phase, FtpSyncPhase.completed);
-    expect(downloadOrder,
-        ['speleo_loc_sync_1000.zip', 'speleo_loc_sync_2000.zip']);
+    expect(downloadOrder, [
+      'speleo_loc_sync_1000.zip',
+      'speleo_loc_sync_2000.zip',
+    ]);
   });
 
-  test('skips archives previously seen so repeat syncs are idempotent',
-      () async {
-    final a = await _buildHarness();
-    await a.caveRepo.addCave('FromPeer');
-    final zip = await a.sync.exportToZip(
-      tempDir.path,
-      filenameHint: 'speleo_loc_sync_5000.zip',
-    );
+  test(
+    'skips archives previously seen so repeat syncs are idempotent',
+    () async {
+      final a = await _buildHarness();
+      await a.caveRepo.addCave('FromPeer');
+      final zip = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'speleo_loc_sync_5000.zip',
+      );
 
-    final b = await _buildHarness();
-    final (c1, fake) = await makeController(
-      b,
-      seedFromHarnessExports: {
-        'speleo_loc_sync_5000.zip': await zip.readAsBytes(),
-      },
-    );
-    await c1.startDefault();
-    await _waitForTerminal(c1);
-    expect(c1.progress.phase, FtpSyncPhase.completed);
+      final b = await _buildHarness();
+      final (c1, fake) = await makeController(
+        b,
+        seedFromHarnessExports: {
+          'speleo_loc_sync_5000.zip': await zip.readAsBytes(),
+        },
+      );
+      await c1.startDefault();
+      await _waitForTerminal(c1);
+      expect(c1.progress.phase, FtpSyncPhase.completed);
 
-    // Second pass: same remote, but the archive is now in "seen".
-    final beforeCaveCount = (await b.db.select(b.db.caves).get()).length;
-    // Spin up a second controller sharing the same DB (and therefore the
-    // persisted seen set) but a fresh fake that still has the archive.
-    final profileRepo = FtpProfileRepository(b.db);
-    final c2 = FtpSyncController(
-      db: b.db,
-      profileRepository: profileRepo,
-      archiveService: b.sync,
-      currentUserService: b.currentUser,
-      transportBuilder: (_) => fake,
-    );
-    await c2.startDefault();
-    await _waitForTerminal(c2);
-    expect(c2.progress.phase, FtpSyncPhase.completed);
-    // No rows should have been re-imported.
-    final afterCaveCount = (await b.db.select(b.db.caves).get()).length;
-    expect(afterCaveCount, beforeCaveCount);
-  });
+      // Second pass: same remote, but the archive is now in "seen".
+      final beforeCaveCount = (await b.db.select(b.db.caves).get()).length;
+      // Spin up a second controller sharing the same DB (and therefore the
+      // persisted seen set) but a fresh fake that still has the archive.
+      final profileRepo = FtpProfileRepository(b.db);
+      final c2 = FtpSyncController(
+        db: b.db,
+        profileRepository: profileRepo,
+        archiveService: b.sync,
+        currentUserService: b.currentUser,
+        transportBuilder: (_) => fake,
+      );
+      await c2.startDefault();
+      await _waitForTerminal(c2);
+      expect(c2.progress.phase, FtpSyncPhase.completed);
+      // No rows should have been re-imported.
+      final afterCaveCount = (await b.db.select(b.db.caves).get()).length;
+      expect(afterCaveCount, beforeCaveCount);
+    },
+  );
 
-  test('pause leaves the run in paused phase; resume reruns to completion',
-      () async {
-    final a = await _buildHarness();
-    await a.caveRepo.addCave('Peer');
-    final zip = await a.sync.exportToZip(
-      tempDir.path,
-      filenameHint: 'speleo_loc_sync_7000.zip',
-    );
+  test(
+    'pause leaves the run in paused phase; resume reruns to completion',
+    () async {
+      final a = await _buildHarness();
+      await a.caveRepo.addCave('Peer');
+      final zip = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'speleo_loc_sync_7000.zip',
+      );
 
-    final b = await _buildHarness();
-    final profileRepo = FtpProfileRepository(b.db);
-    const profile = FtpProfile(
-      profileUuid: 'test-uuid',
-      displayName: 'Test',
-      protocol: FtpProtocol.ftp,
-      host: 'example.com',
-      port: 21,
-      username: 'u',
-      remoteFolder: '/',
-    );
-    await profileRepo.save(profile, password: 'pw');
-    await profileRepo.setDefaultUuid(profile.profileUuid);
+      final b = await _buildHarness();
+      final profileRepo = FtpProfileRepository(b.db);
+      const profile = FtpProfile(
+        profileUuid: 'test-uuid',
+        displayName: 'Test',
+        protocol: FtpProtocol.ftp,
+        host: 'example.com',
+        port: 21,
+        username: 'u',
+        remoteFolder: '/',
+      );
+      await profileRepo.save(profile, password: 'pw');
+      await profileRepo.setDefaultUuid(profile.profileUuid);
 
-    final inner = _FakeTransport(profile);
-    inner.store['speleo_loc_sync_7000.zip'] = await zip.readAsBytes();
+      final inner = _FakeTransport(profile);
+      inner.store['speleo_loc_sync_7000.zip'] = await zip.readAsBytes();
 
-    // First run: blocking transport that waits inside downloadFile until we
-    // release it. We pause while the transport is stuck → controller should
-    // surface phase=paused and the blocking download should abort.
-    _BlockingTransport? currentBlocking;
-    var blockingBuilt = 0;
-    late final FtpSyncController controller;
-    controller = FtpSyncController(
-      db: b.db,
-      profileRepository: profileRepo,
-      archiveService: b.sync,
-      currentUserService: b.currentUser,
-      transportBuilder: (_) {
-        blockingBuilt++;
-        if (blockingBuilt == 1) {
-          currentBlocking = _BlockingTransport(inner);
-          return currentBlocking!;
-        }
-        // Second call (resume) uses the plain fake so the run can finish.
-        return inner;
-      },
-    );
+      // First run: blocking transport that waits inside downloadFile until we
+      // release it. We pause while the transport is stuck → controller should
+      // surface phase=paused and the blocking download should abort.
+      _BlockingTransport? currentBlocking;
+      var blockingBuilt = 0;
+      late final FtpSyncController controller;
+      controller = FtpSyncController(
+        db: b.db,
+        profileRepository: profileRepo,
+        archiveService: b.sync,
+        currentUserService: b.currentUser,
+        transportBuilder: (_) {
+          blockingBuilt++;
+          if (blockingBuilt == 1) {
+            currentBlocking = _BlockingTransport(inner);
+            return currentBlocking!;
+          }
+          // Second call (resume) uses the plain fake so the run can finish.
+          return inner;
+        },
+      );
 
-    // Kick off the run and wait until the blocking transport is actually
-    // sitting inside downloadFile.
-    final runFuture = controller.startDefault();
-    while (controller.progress.phase != FtpSyncPhase.downloading) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    }
+      // Kick off the run and wait until the blocking transport is actually
+      // sitting inside downloadFile.
+      final runFuture = controller.startDefault();
+      while (controller.progress.phase != FtpSyncPhase.downloading) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
 
-    controller.pause();
-    await runFuture;
-    expect(controller.progress.phase, FtpSyncPhase.paused,
-        reason: controller.progress.log.map((e) => e.message).join('\n'));
+      controller.pause();
+      await runFuture;
+      expect(
+        controller.progress.phase,
+        FtpSyncPhase.paused,
+        reason: controller.progress.log.map((e) => e.message).join('\n'),
+      );
 
-    // Resume: second run uses the non-blocking fake and completes normally.
-    await controller.resume();
-    await _waitForTerminal(controller);
-    expect(controller.progress.phase, FtpSyncPhase.completed,
-        reason: controller.progress.log.map((e) => e.message).join('\n'));
-    final caves = await b.db.select(b.db.caves).get();
-    expect(caves.map((c) => c.title), contains('Peer'));
-  });
+      // Resume: second run uses the non-blocking fake and completes normally.
+      await controller.resume();
+      await _waitForTerminal(controller);
+      expect(
+        controller.progress.phase,
+        FtpSyncPhase.completed,
+        reason: controller.progress.log.map((e) => e.message).join('\n'),
+      );
+      final caves = await b.db.select(b.db.caves).get();
+      expect(caves.map((c) => c.title), contains('Peer'));
+    },
+  );
 
   // -------------------------------------------------------------------
   // Decision matrix: upload only when local has unsynced changes,
@@ -565,8 +609,7 @@ void main() {
   // neither side has changes.
   // -------------------------------------------------------------------
 
-  test('skips upload when local has no changes since last upload',
-      () async {
+  test('skips upload when local has no changes since last upload', () async {
     final h = await _buildHarness();
     await h.caveRepo.addCave('Alpha');
     final (controller, fake) = await makeController(h);
@@ -583,9 +626,12 @@ void main() {
     await controller.startDefault();
     await _waitForTerminal(controller);
     expect(controller.progress.phase, FtpSyncPhase.completed);
-    expect(fake.uploadedNames, isEmpty,
-        reason:
-            'Second sync without local changes must not produce a new archive');
+    expect(
+      fake.uploadedNames,
+      isEmpty,
+      reason:
+          'Second sync without local changes must not produce a new archive',
+    );
     expect(controller.progress.statusMessage, 'ftp_phase_completed_nothing');
   });
 
@@ -608,8 +654,11 @@ void main() {
     await controller.startDefault();
     await _waitForTerminal(controller);
     expect(controller.progress.phase, FtpSyncPhase.completed);
-    expect(fake.uploadedNames, hasLength(1),
-        reason: 'A local change after lastUploadAt must trigger an upload');
+    expect(
+      fake.uploadedNames,
+      hasLength(1),
+      reason: 'A local change after lastUploadAt must trigger an upload',
+    );
   });
 
   test('downloads only — no re-upload when local is unchanged but remote has '
@@ -641,10 +690,15 @@ void main() {
     await controller.startDefault();
     await _waitForTerminal(controller);
     expect(controller.progress.phase, FtpSyncPhase.completed);
-    expect(controller.progress.statusMessage,
-        'ftp_phase_completed_download_only');
-    expect(fake.uploadedNames, isEmpty,
-        reason: 'Pure import-only run must not upload');
+    expect(
+      controller.progress.statusMessage,
+      'ftp_phase_completed_download_only',
+    );
+    expect(
+      fake.uploadedNames,
+      isEmpty,
+      reason: 'Pure import-only run must not upload',
+    );
     final caves = await me.db.select(me.db.caves).get();
     expect(caves.map((c) => c.title), contains('FromPeer'));
   });

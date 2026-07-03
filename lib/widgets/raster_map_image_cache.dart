@@ -32,41 +32,43 @@ Future<RawImageData?> decodeImageToRawCached(String path) {
   final existing = decodedImageCache[path];
   if (existing != null) return existing;
 
-  final future = compute(decodeImageToRawSync, path).then((result) {
-    if (result == null) return null;
-    final rawPixels = (result['pixels'] as List).cast<int>();
-    final w = result['w'] as int;
-    final h = result['h'] as int;
-    final pixels = Uint8List.fromList(rawPixels);
+  final future = compute(decodeImageToRawSync, path)
+      .then((result) {
+        if (result == null) return null;
+        final rawPixels = (result['pixels'] as List).cast<int>();
+        final w = result['w'] as int;
+        final h = result['h'] as int;
+        final pixels = Uint8List.fromList(rawPixels);
 
-    final expectedRGBA = w * h * 4;
+        final expectedRGBA = w * h * 4;
 
-    // If the decoder returned RGB (3 bytes/pixel), convert to RGBA.
-    if (pixels.length == w * h * 3) {
-      final rgba = Uint8List(expectedRGBA);
-      for (int src = 0, dst = 0; src < pixels.length; src += 3, dst += 4) {
-        rgba[dst] = pixels[src];
-        rgba[dst + 1] = pixels[src + 1];
-        rgba[dst + 2] = pixels[src + 2];
-        rgba[dst + 3] = 255;
-      }
-      return RawImageData(w, h, rgba);
-    }
+        // If the decoder returned RGB (3 bytes/pixel), convert to RGBA.
+        if (pixels.length == w * h * 3) {
+          final rgba = Uint8List(expectedRGBA);
+          for (int src = 0, dst = 0; src < pixels.length; src += 3, dst += 4) {
+            rgba[dst] = pixels[src];
+            rgba[dst + 1] = pixels[src + 1];
+            rgba[dst + 2] = pixels[src + 2];
+            rgba[dst + 3] = 255;
+          }
+          return RawImageData(w, h, rgba);
+        }
 
-    if (pixels.length == expectedRGBA) {
-      return RawImageData(w, h, pixels);
-    }
+        if (pixels.length == expectedRGBA) {
+          return RawImageData(w, h, pixels);
+        }
 
-    // Fallback: trim or pad the buffer to avoid later range errors.
-    if (pixels.length > expectedRGBA) {
-      final trimmed = pixels.sublist(0, expectedRGBA);
-      return RawImageData(w, h, Uint8List.fromList(trimmed));
-    } else {
-      final padded = Uint8List(expectedRGBA);
-      padded.setRange(0, pixels.length, pixels);
-      return RawImageData(w, h, padded);
-    }
-  }).catchError((_) => null);
+        // Fallback: trim or pad the buffer to avoid later range errors.
+        if (pixels.length > expectedRGBA) {
+          final trimmed = pixels.sublist(0, expectedRGBA);
+          return RawImageData(w, h, Uint8List.fromList(trimmed));
+        } else {
+          final padded = Uint8List(expectedRGBA);
+          padded.setRange(0, pixels.length, pixels);
+          return RawImageData(w, h, padded);
+        }
+      })
+      .catchError((_) => null);
 
   decodedImageCache[path] = future;
   _cacheInsertionOrder.remove(path);

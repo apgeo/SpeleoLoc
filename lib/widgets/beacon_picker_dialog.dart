@@ -79,21 +79,23 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
       return;
     }
     final uuids = await BeaconScanHelper.loadRegionUuids();
-    _sub = flutterBeacon.ranging(BeaconScanHelper.buildRegions(uuids)).listen(
-      (result) {
-        final now = DateTime.now();
-        for (final b in result.beacons) {
-          final key =
-              '${b.proximityUUID.toUpperCase()}/${b.major}/${b.minor}';
-          _seen[key] = _Seen(beacon: b, lastSeen: now);
-        }
-        if (mounted && result.beacons.isNotEmpty) setState(() {});
-      },
-      onError: (Object e, StackTrace st) {
-        _log.warning('Beacon picker ranging error', e, st);
-        if (mounted) setState(() => _error = e.toString());
-      },
-    );
+    _sub = flutterBeacon
+        .ranging(BeaconScanHelper.buildRegions(uuids))
+        .listen(
+          (result) {
+            final now = DateTime.now();
+            for (final b in result.beacons) {
+              final key =
+                  '${b.proximityUUID.toUpperCase()}/${b.major}/${b.minor}';
+              _seen[key] = _Seen(beacon: b, lastSeen: now);
+            }
+            if (mounted && result.beacons.isNotEmpty) setState(() {});
+          },
+          onError: (Object e, StackTrace st) {
+            _log.warning('Beacon picker ranging error', e, st);
+            if (mounted) setState(() => _error = e.toString());
+          },
+        );
   }
 
   @override
@@ -115,57 +117,55 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
         width: double.maxFinite,
         height: 340,
         child: _error != null
-            ? Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error))
+            ? Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              )
             : entries.isEmpty
-                ? Center(
-                    child: Text(LocServ.inst.t('beacon_picker_searching')))
-                : ListView.separated(
-                    itemCount: entries.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final key = entries[i].key;
-                      final b = entries[i].value.beacon;
-                      final registered =
-                          widget.registeredIdentities.contains(key);
-                      return ListTile(
-                        dense: true,
-                        enabled: !registered,
-                        leading: Icon(
-                          registered
-                              ? Icons.check_circle
-                              : Icons.bluetooth_searching,
-                          color: registered ? Colors.green : null,
-                        ),
-                        title: Text(
-                          'major ${b.major} / minor ${b.minor}'
-                          '${registered ? ' — ${LocServ.inst.t('beacon_already_registered')}' : ''}',
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          '${b.proximityUUID.toUpperCase()}\n'
-                          '${b.rssi} dBm'
-                          '${b.macAddress != null ? ' · ${b.macAddress}' : ''}',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                        isThreeLine: true,
-                        onTap: registered
-                            ? null
-                            : () => Navigator.pop(
-                                  context,
-                                  PickedBeacon(
-                                    proximityUuid:
-                                        b.proximityUUID.toUpperCase(),
-                                    major: b.major,
-                                    minor: b.minor,
-                                    macAddress: b.macAddress,
-                                    rssi: b.rssi,
-                                  ),
-                                ),
-                      );
-                    },
-                  ),
+            ? Center(child: Text(LocServ.inst.t('beacon_picker_searching')))
+            : ListView.separated(
+                itemCount: entries.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (_, i) {
+                  final key = entries[i].key;
+                  final b = entries[i].value.beacon;
+                  final registered = widget.registeredIdentities.contains(key);
+                  return ListTile(
+                    dense: true,
+                    enabled: !registered,
+                    leading: Icon(
+                      registered
+                          ? Icons.check_circle
+                          : Icons.bluetooth_searching,
+                      color: registered ? Colors.green : null,
+                    ),
+                    title: Text(
+                      'major ${b.major} / minor ${b.minor}'
+                      '${registered ? ' — ${LocServ.inst.t('beacon_already_registered')}' : ''}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      '${b.proximityUUID.toUpperCase()}\n'
+                      '${b.rssi} dBm'
+                      '${b.macAddress != null ? ' · ${b.macAddress}' : ''}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    isThreeLine: true,
+                    onTap: registered
+                        ? null
+                        : () => Navigator.pop(
+                            context,
+                            PickedBeacon(
+                              proximityUuid: b.proximityUUID.toUpperCase(),
+                              major: b.major,
+                              minor: b.minor,
+                              macAddress: b.macAddress,
+                              rssi: b.rssi,
+                            ),
+                          ),
+                  );
+                },
+              ),
       ),
       actions: [
         TextButton(

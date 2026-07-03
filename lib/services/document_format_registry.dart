@@ -12,12 +12,13 @@ import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.da
 import 'package:speleoloc/screens/documents/viewers/sound_file_viewer.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 
-typedef DocumentThumbnailBuilder = Widget Function({
-  required BuildContext context,
-  required DocumentationFile doc,
-  required File? resolvedFile,
-  required DocumentThumbnailSize size,
-});
+typedef DocumentThumbnailBuilder =
+    Widget Function({
+      required BuildContext context,
+      required DocumentationFile doc,
+      required File? resolvedFile,
+      required DocumentThumbnailSize size,
+    });
 
 // ---------------------------------------------------------------------------
 //  DocumentFormatHandler — descriptor for one format group
@@ -63,14 +64,13 @@ class DocumentFormatHandler {
     Uuid? caveUuid,
     Uuid? caveAreaUuid,
     DocumentationFile? existingDoc,
-  })? buildEditor;
+  })?
+  buildEditor;
 
   /// Factory that returns a viewer widget. Receives the resolved [File] on
   /// disk and the DB record.
-  final Widget Function({
-    required File file,
-    required DocumentationFile doc,
-  })? buildViewer;
+  final Widget Function({required File file, required DocumentationFile doc})?
+  buildViewer;
 
   /// Strategy for rendering thumbnails in list/grid modes.
   ///
@@ -88,12 +88,15 @@ class DocumentFormatHandler {
     DocumentationFile? existingDoc,
   }) {
     if (buildEditor == null) return null;
-    final cavePlaceUuid =
-        link?.type == GeofeatureType.cavePlace ? link!.geofeatureUuid : null;
-    final caveUuid =
-        link?.type == GeofeatureType.cave ? link!.geofeatureUuid : null;
-    final caveAreaUuid =
-        link?.type == GeofeatureType.caveArea ? link!.geofeatureUuid : null;
+    final cavePlaceUuid = link?.type == GeofeatureType.cavePlace
+        ? link!.geofeatureUuid
+        : null;
+    final caveUuid = link?.type == GeofeatureType.cave
+        ? link!.geofeatureUuid
+        : null;
+    final caveAreaUuid = link?.type == GeofeatureType.caveArea
+        ? link!.geofeatureUuid
+        : null;
     return buildEditor!(
       cavePlaceUuid: cavePlaceUuid,
       caveUuid: caveUuid,
@@ -139,8 +142,7 @@ class DocumentFormatRegistry {
   final List<DocumentFormatHandler> _handlers = [];
 
   /// All registered handlers (read-only).
-  List<DocumentFormatHandler> get handlers =>
-      List.unmodifiable(_handlers);
+  List<DocumentFormatHandler> get handlers => List.unmodifiable(_handlers);
 
   /// Register a new format handler.
   void register(DocumentFormatHandler handler) {
@@ -252,10 +254,7 @@ Widget _imageThumb({
   );
 }
 
-DocumentThumbnailBuilder _iconThumb(
-  IconData icon, {
-  Color? tint,
-}) {
+DocumentThumbnailBuilder _iconThumb(IconData icon, {Color? tint}) {
   return ({
     required BuildContext context,
     required DocumentationFile doc,
@@ -284,119 +283,135 @@ void registerBuiltInDocumentFormats() {
   final reg = DocumentFormatRegistry.instance;
 
   // ---- Plain text ---- (editor + viewer)
-  reg.register(DocumentFormatHandler(
-    formatId: 'text',
-    label: 'Text document',
-    icon: Icons.text_snippet,
-    extensions: {'txt', 'md', 'csv', 'rtf'},
-    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
-        TextDocumentEditorPage(
-      cavePlaceUuid: cavePlaceUuid,
-      caveUuid: caveUuid,
-      caveAreaUuid: caveAreaUuid,
-      existingDoc: existingDoc,
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'text',
+      label: 'Text document',
+      icon: Icons.text_snippet,
+      extensions: {'txt', 'md', 'csv', 'rtf'},
+      buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
+          TextDocumentEditorPage(
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
+            existingDoc: existingDoc,
+          ),
+      buildViewer: ({required file, required doc}) =>
+          DocumentationFileViewer(file: file, doc: doc),
+      buildThumbnail: _textThumb,
     ),
-    buildViewer: ({required file, required doc}) =>
-        DocumentationFileViewer(file: file, doc: doc),
-    buildThumbnail: _textThumb,
-  ));
+  );
 
   // ---- Image ---- (editor via pro_image_editor + viewer)
-  reg.register(DocumentFormatHandler(
-    formatId: 'image',
-    label: 'Image',
-    icon: Icons.image,
-    extensions: {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'heic'},
-    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
-        ImageEditorPage(
-      cavePlaceUuid: cavePlaceUuid,
-      caveUuid: caveUuid,
-      caveAreaUuid: caveAreaUuid,
-      existingDoc: existingDoc,
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'image',
+      label: 'Image',
+      icon: Icons.image,
+      extensions: {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'heic'},
+      buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
+          ImageEditorPage(
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
+            existingDoc: existingDoc,
+          ),
+      buildViewer: ({required file, required doc}) =>
+          DocumentationFileViewer(file: file, doc: doc),
+      buildThumbnail: _imageThumb,
     ),
-    buildViewer: ({required file, required doc}) =>
-        DocumentationFileViewer(file: file, doc: doc),
-    buildThumbnail: _imageThumb,
-  ));
+  );
 
   // ---- Camera capture ---- (create-only via image_picker)
-  reg.register(DocumentFormatHandler(
-    formatId: 'camera',
-    label: 'Take photo',
-    icon: Icons.camera_alt,
-    extensions: {},  // no file-extension mapping; creation-only
-    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
-        CameraCapturePage(
-      cavePlaceUuid: cavePlaceUuid,
-      caveUuid: caveUuid,
-      caveAreaUuid: caveAreaUuid,
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'camera',
+      label: 'Take photo',
+      icon: Icons.camera_alt,
+      extensions: {}, // no file-extension mapping; creation-only
+      buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
+          CameraCapturePage(
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
+          ),
     ),
-  ));
+  );
 
   // ---- Rich text ---- (editor via flutter_quill + viewer)
-  reg.register(DocumentFormatHandler(
-    formatId: 'rich_text',
-    label: 'Rich text',
-    icon: Icons.text_format,
-    extensions: {'qldoc'},
-    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
-        RichTextEditorPage(
-      cavePlaceUuid: cavePlaceUuid,
-      caveUuid: caveUuid,
-      caveAreaUuid: caveAreaUuid,
-      existingDoc: existingDoc,
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'rich_text',
+      label: 'Rich text',
+      icon: Icons.text_format,
+      extensions: {'qldoc'},
+      buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
+          RichTextEditorPage(
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
+            existingDoc: existingDoc,
+          ),
+      buildViewer: ({required file, required doc}) =>
+          DocumentationFileViewer(file: file, doc: doc),
+      buildThumbnail: _textThumb,
     ),
-    buildViewer: ({required file, required doc}) =>
-        DocumentationFileViewer(file: file, doc: doc),
-    buildThumbnail: _textThumb,
-  ));
+  );
 
   // ---- PDF ---- (viewer only)
-  reg.register(DocumentFormatHandler(
-    formatId: 'pdf',
-    label: 'PDF',
-    icon: Icons.picture_as_pdf,
-    extensions: {'pdf'},
-    buildViewer: ({required file, required doc}) =>
-        DocumentationFileViewer(file: file, doc: doc),
-    buildThumbnail: _iconThumb(Icons.picture_as_pdf, tint: Colors.red),
-  ));
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'pdf',
+      label: 'PDF',
+      icon: Icons.picture_as_pdf,
+      extensions: {'pdf'},
+      buildViewer: ({required file, required doc}) =>
+          DocumentationFileViewer(file: file, doc: doc),
+      buildThumbnail: _iconThumb(Icons.picture_as_pdf, tint: Colors.red),
+    ),
+  );
 
   // ---- Audio ---- (editor via flutter_sound + audio_waveforms)
-  reg.register(DocumentFormatHandler(
-    formatId: 'audio',
-    label: 'Audio',
-    icon: Icons.audiotrack,
-    extensions: {'mp3', 'wav', 'ogg', 'm4a', 'flac'},
-    buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
-        SoundRecorderPage(
-      cavePlaceUuid: cavePlaceUuid,
-      caveUuid: caveUuid,
-      caveAreaUuid: caveAreaUuid,
-      existingDoc: existingDoc,
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'audio',
+      label: 'Audio',
+      icon: Icons.audiotrack,
+      extensions: {'mp3', 'wav', 'ogg', 'm4a', 'flac'},
+      buildEditor: ({cavePlaceUuid, caveUuid, caveAreaUuid, existingDoc}) =>
+          SoundRecorderPage(
+            cavePlaceUuid: cavePlaceUuid,
+            caveUuid: caveUuid,
+            caveAreaUuid: caveAreaUuid,
+            existingDoc: existingDoc,
+          ),
+      buildViewer: ({required file, required doc}) =>
+          SoundFileViewer(file: file, doc: doc),
+      buildThumbnail: _iconThumb(Icons.audiotrack, tint: Colors.teal),
     ),
-    buildViewer: ({required file, required doc}) =>
-        SoundFileViewer(file: file, doc: doc),
-    buildThumbnail: _iconThumb(Icons.audiotrack, tint: Colors.teal),
-  ));
+  );
 
   // ---- Video ---- (no editor or viewer yet)
-  reg.register(DocumentFormatHandler(
-    formatId: 'video',
-    label: 'Video',
-    icon: Icons.videocam,
-    extensions: {'mp4', 'mov', 'avi', 'mkv', 'webm'},
-    buildThumbnail: _iconThumb(Icons.videocam, tint: Colors.deepOrange),
-  ));
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'video',
+      label: 'Video',
+      icon: Icons.videocam,
+      extensions: {'mp4', 'mov', 'avi', 'mkv', 'webm'},
+      buildThumbnail: _iconThumb(Icons.videocam, tint: Colors.deepOrange),
+    ),
+  );
 
   // ---- Office docs (doc/docx/odt) ---- (viewer = generic fallback)
-  reg.register(DocumentFormatHandler(
-    formatId: 'office',
-    label: 'Office document',
-    icon: Icons.description,
-    extensions: {'doc', 'docx', 'odt'},
-    buildViewer: ({required file, required doc}) =>
-        DocumentationFileViewer(file: file, doc: doc),
-    buildThumbnail: _iconThumb(Icons.description, tint: Colors.indigo),
-  ));
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'office',
+      label: 'Office document',
+      icon: Icons.description,
+      extensions: {'doc', 'docx', 'odt'},
+      buildViewer: ({required file, required doc}) =>
+          DocumentationFileViewer(file: file, doc: doc),
+      buildThumbnail: _iconThumb(Icons.description, tint: Colors.indigo),
+    ),
+  );
 }

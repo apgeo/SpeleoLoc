@@ -144,8 +144,7 @@ class _DebugInfoPageState extends State<DebugInfoPage> {
     await configurationRepository.insertRow(
       ConfigurationsCompanion.insert(
         title: titleCtrl.text.trim(),
-        value: drift.Value(
-            valueCtrl.text.isEmpty ? null : valueCtrl.text),
+        value: drift.Value(valueCtrl.text.isEmpty ? null : valueCtrl.text),
       ),
     );
     await _reload();
@@ -291,8 +290,8 @@ class _InfoCard extends StatelessWidget {
                   child: Text(
                     label,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -307,10 +306,7 @@ class _InfoCard extends StatelessWidget {
               value,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
             ),
-            if (extra != null) ...[
-              const SizedBox(height: 4),
-              extra!,
-            ],
+            if (extra != null) ...[const SizedBox(height: 4), extra!],
           ],
         ),
       ),

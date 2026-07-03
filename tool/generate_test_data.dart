@@ -14,7 +14,8 @@ import 'dart:math';
 //  PATHS
 // ---------------------------------------------------------------------------
 
-const String kSqlite3Cmd = 'D:\\dev\\Android\\Sdk\\platform-tools\\sqlite3.exe'; // Adjust if sqlite3 is not on PATH
+const String kSqlite3Cmd =
+    'D:\\dev\\Android\\Sdk\\platform-tools\\sqlite3.exe'; // Adjust if sqlite3 is not on PATH
 const String kSourceDbPath =
     'test_data/db/binaries/speleo_loc_export_20260301_tel2.sqlite';
 const List<String> kSourceDbFallbackPaths = [
@@ -30,7 +31,8 @@ const String kDataOnlyFile = '$kOutputDir/data_only.sql';
 const String kSchemaAndDataFile = '$kOutputDir/schema_and_data.sql';
 const String kExtraDataFile = '$kOutputDir/extra_test_data.sql';
 const String kFullDataFile = '$kOutputDir/data_with_extra.sql';
-const String kSchemaAndFullDataFile = '$kOutputDir/schema_and_data_with_extra.sql';
+const String kSchemaAndFullDataFile =
+    '$kOutputDir/schema_and_data_with_extra.sql';
 const String kGeneratedDbFile = '$kOutputDir/generated_test_data.sqlite';
 
 // ---------------------------------------------------------------------------
@@ -520,7 +522,7 @@ const List<String> kDocumentTextTemplates = [
       'Am realizat {N} sectiuni subtiri din probe. '
       'Studiul va fi publicat in volumul {N} al buletinului. '
       'Am colaborat cu {N} geologi specialisti.',
-      
+
   // Template 20
   'Studiu speleogenetic - sectorul {N}. '
       'Am analizat {N} probe de calcar sub microscop. '
@@ -689,16 +691,26 @@ void main() async {
   _runSqlite3(sourceDbPath, '.dump', kSchemaAndDataFile);
   print('  Schema+Data  -> $kSchemaAndDataFile');
 
-    final hasDocFileType =
-      _tableHasColumn(sourceDbPath, 'documentation_files', 'file_type');
-    final hasDocGeoTable =
-      _tableExists(sourceDbPath, 'documentation_files_to_geofeatures');
-      final hasDocCaveId =
-      _tableHasColumn(sourceDbPath, 'documentation_files', 'cave_id');
+  final hasDocFileType = _tableHasColumn(
+    sourceDbPath,
+    'documentation_files',
+    'file_type',
+  );
+  final hasDocGeoTable = _tableExists(
+    sourceDbPath,
+    'documentation_files_to_geofeatures',
+  );
+  final hasDocCaveId = _tableHasColumn(
+    sourceDbPath,
+    'documentation_files',
+    'cave_id',
+  );
   final hasTripsTable = _tableExists(sourceDbPath, 'cave_trips');
   final hasTripPointsTable = _tableExists(sourceDbPath, 'cave_trip_points');
-    final hasDocToTripTable =
-      _tableExists(sourceDbPath, 'documentation_files_to_cave_trips');
+  final hasDocToTripTable = _tableExists(
+    sourceDbPath,
+    'documentation_files_to_cave_trips',
+  );
 
   // ------------------------------------------------------------------
   //  Step 2: Determine max existing IDs from data export
@@ -710,21 +722,23 @@ void main() async {
   int nextCaveAreaId = _maxId(existingData, 'cave_areas') + 1;
   int nextCavePlaceId = _maxId(existingData, 'cave_places') + 1;
   int nextDocFileId = _maxId(existingData, 'documentation_files') + 1;
-    int nextDocGeoId =
+  int nextDocGeoId =
       _maxId(existingData, 'documentation_files_to_geofeatures') + 1;
-    int nextRasterMapId = _maxId(existingData, 'raster_maps') + 1;
-    int nextRasterPointId =
+  int nextRasterMapId = _maxId(existingData, 'raster_maps') + 1;
+  int nextRasterPointId =
       _maxId(existingData, 'cave_place_to_raster_map_definitions') + 1;
-    int nextTripId = _maxId(existingData, 'cave_trips') + 1;
-    int nextTripPointId = _maxId(existingData, 'cave_trip_points') + 1;
-    int nextDocToTripId =
+  int nextTripId = _maxId(existingData, 'cave_trips') + 1;
+  int nextTripPointId = _maxId(existingData, 'cave_trip_points') + 1;
+  int nextDocToTripId =
       _maxId(existingData, 'documentation_files_to_cave_trips') + 1;
 
-  print('  Next IDs: surfaceArea=$nextSurfaceAreaId cave=$nextCaveId '
-      'caveArea=$nextCaveAreaId cavePlace=$nextCavePlaceId '
-      'docFile=$nextDocFileId docGeo=$nextDocGeoId '
-      'raster=$nextRasterMapId rasterPoint=$nextRasterPointId '
-      'trip=$nextTripId tripPoint=$nextTripPointId docTrip=$nextDocToTripId');
+  print(
+    '  Next IDs: surfaceArea=$nextSurfaceAreaId cave=$nextCaveId '
+    'caveArea=$nextCaveAreaId cavePlace=$nextCavePlaceId '
+    'docFile=$nextDocFileId docGeo=$nextDocGeoId '
+    'raster=$nextRasterMapId rasterPoint=$nextRasterPointId '
+    'trip=$nextTripId tripPoint=$nextTripPointId docTrip=$nextDocToTripId',
+  );
 
   // ------------------------------------------------------------------
   //  Step 3: Generate extra test data
@@ -766,10 +780,15 @@ void main() async {
       final id = nextSurfaceAreaId++;
       generatedSurfaceAreas[id] = name;
       final desc = _fillTemplate(
-          rng, kCaveDescriptionTemplates[rng.nextInt(kCaveDescriptionTemplates.length)]);
+        rng,
+        kCaveDescriptionTemplates[rng.nextInt(
+          kCaveDescriptionTemplates.length,
+        )],
+      );
       buf.writeln(
-          "INSERT INTO surface_areas (id, title, description, created_at) "
-          "VALUES ($id, ${_esc(name)}, ${_esc(desc)}, ${_nowEpoch()});");
+        "INSERT INTO surface_areas (id, title, description, created_at) "
+        "VALUES ($id, ${_esc(name)}, ${_esc(desc)}, ${_nowEpoch()});",
+      );
     }
     buf.writeln();
   }
@@ -787,9 +806,15 @@ void main() async {
       generatedCaves[id] = name;
       final saId = saIds.isNotEmpty ? saIds[rng.nextInt(saIds.length)] : null;
       final desc = _fillTemplate(
-          rng, kCaveDescriptionTemplates[rng.nextInt(kCaveDescriptionTemplates.length)]);
-      buf.writeln("INSERT INTO caves (id, title, description, surface_area_id, created_at) "
-          "VALUES ($id, ${_esc(name)}, ${_esc(desc)}, ${saId ?? 'NULL'}, ${_nowEpoch()});");
+        rng,
+        kCaveDescriptionTemplates[rng.nextInt(
+          kCaveDescriptionTemplates.length,
+        )],
+      );
+      buf.writeln(
+        "INSERT INTO caves (id, title, description, surface_area_id, created_at) "
+        "VALUES ($id, ${_esc(name)}, ${_esc(desc)}, ${saId ?? 'NULL'}, ${_nowEpoch()});",
+      );
     }
     buf.writeln();
   }
@@ -798,8 +823,11 @@ void main() async {
   if (kGenerateCaveAreas) {
     int totalAreas = 0;
     for (final caveId in generatedCaves.keys) {
-      final count =
-          _randBetween(rng, kCaveAreasPerCaveMin, kCaveAreasPerCaveMax);
+      final count = _randBetween(
+        rng,
+        kCaveAreasPerCaveMin,
+        kCaveAreasPerCaveMax,
+      );
       final usedNames = <String>{};
       caveToAreaIds[caveId] = [];
       for (int i = 0; i < count; i++) {
@@ -809,8 +837,9 @@ void main() async {
         generatedCaveAreas[id] = (caveId: caveId, title: name);
         caveToAreaIds[caveId]!.add(id);
         buf.writeln(
-            "INSERT INTO cave_areas (id, title, cave_id, created_at) "
-            "VALUES ($id, ${_esc(name)}, $caveId, ${_nowEpoch()});");
+          "INSERT INTO cave_areas (id, title, cave_id, created_at) "
+          "VALUES ($id, ${_esc(name)}, $caveId, ${_nowEpoch()});",
+        );
         totalAreas++;
       }
     }
@@ -823,8 +852,11 @@ void main() async {
     int totalPlaces = 0;
     int qrCounter = _maxQrCode(existingData) + 1;
     for (final caveId in generatedCaves.keys) {
-      final count =
-          _randBetween(rng, kCavePlacesPerCaveMin, kCavePlacesPerCaveMax);
+      final count = _randBetween(
+        rng,
+        kCavePlacesPerCaveMin,
+        kCavePlacesPerCaveMax,
+      );
       final areaIds = caveToAreaIds[caveId] ?? [];
       final usedNames = <String>{};
       caveToPlaceIds[caveId] = [];
@@ -844,12 +876,15 @@ void main() async {
           qr = qrCounter++;
         }
         final desc = _fillTemplate(
-            rng,
-            kCavePlaceDescriptionTemplates[
-                rng.nextInt(kCavePlaceDescriptionTemplates.length)]);
+          rng,
+          kCavePlaceDescriptionTemplates[rng.nextInt(
+            kCavePlaceDescriptionTemplates.length,
+          )],
+        );
         buf.writeln(
-            "INSERT INTO cave_places (id, title, description, cave_id, place_qr_code_identifier, cave_area_id, created_at) "
-            "VALUES ($id, ${_esc(name)}, ${_esc(desc)}, $caveId, ${qr ?? 'NULL'}, ${areaId ?? 'NULL'}, ${_nowEpoch()});");
+          "INSERT INTO cave_places (id, title, description, cave_id, place_qr_code_identifier, cave_area_id, created_at) "
+          "VALUES ($id, ${_esc(name)}, ${_esc(desc)}, $caveId, ${qr ?? 'NULL'}, ${areaId ?? 'NULL'}, ${_nowEpoch()});",
+        );
         totalPlaces++;
       }
     }
@@ -883,8 +918,9 @@ void main() async {
         final fileSize = text.length;
 
         buf.writeln(
-            "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) "
-            "VALUES ($fileId, ${_esc(title)}, ${_esc(text)}, ${_esc(fileName)}, $fileSize, NULL, 'text_document', ${_nowEpoch()});");
+          "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) "
+          "VALUES ($fileId, ${_esc(title)}, ${_esc(text)}, ${_esc(fileName)}, $fileSize, NULL, 'text_document', ${_nowEpoch()});",
+        );
         caveToDocIds[caveId]!.add(fileId);
 
         if (kGenerateGeofeatureLinks) {
@@ -912,11 +948,13 @@ void main() async {
     final pictureFiles = pictureDir
         .listSync()
         .whereType<File>()
-        .where((f) =>
-            f.path.toLowerCase().endsWith('.jpg') ||
-            f.path.toLowerCase().endsWith('.jpeg') ||
-            f.path.toLowerCase().endsWith('.png') ||
-            f.path.toLowerCase().endsWith('.webp'))
+        .where(
+          (f) =>
+              f.path.toLowerCase().endsWith('.jpg') ||
+              f.path.toLowerCase().endsWith('.jpeg') ||
+              f.path.toLowerCase().endsWith('.png') ||
+              f.path.toLowerCase().endsWith('.webp'),
+        )
         .toList();
 
     int totalPictures = 0;
@@ -925,8 +963,7 @@ void main() async {
       if (pictureFiles.isEmpty) {
         break;
       }
-      final count =
-          _randBetween(rng, kPicturesPerCaveMin, kPicturesPerCaveMax);
+      final count = _randBetween(rng, kPicturesPerCaveMin, kPicturesPerCaveMax);
       for (int i = 0; i < count; i++) {
         final pic = pictureFiles[rng.nextInt(pictureFiles.length)];
         final fileId = nextDocFileId++;
@@ -938,8 +975,9 @@ void main() async {
         final fileSize = pic.lengthSync();
 
         buf.writeln(
-            "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) "
-            "VALUES ($fileId, ${_esc(title)}, ${_esc(desc)}, ${_esc(fileName)}, $fileSize, NULL, 'photo', ${_nowEpoch()});");
+          "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) "
+          "VALUES ($fileId, ${_esc(title)}, ${_esc(desc)}, ${_esc(fileName)}, $fileSize, NULL, 'photo', ${_nowEpoch()});",
+        );
         caveToDocIds[caveId]!.add(fileId);
 
         if (kGenerateGeofeatureLinks) {
@@ -991,10 +1029,20 @@ void main() async {
       final caveTitle = caveTitles[caveId] ?? 'Pestera #$caveId';
       enrichedCaveIds.add(caveId);
 
-      caveToAreaIds.putIfAbsent(caveId, () =>
-          _queryIntList(sourceDbPath, 'SELECT id FROM cave_areas WHERE cave_id = $caveId;'));
-      caveToPlaceIds.putIfAbsent(caveId, () =>
-          _queryIntList(sourceDbPath, 'SELECT id FROM cave_places WHERE cave_id = $caveId;'));
+      caveToAreaIds.putIfAbsent(
+        caveId,
+        () => _queryIntList(
+          sourceDbPath,
+          'SELECT id FROM cave_areas WHERE cave_id = $caveId;',
+        ),
+      );
+      caveToPlaceIds.putIfAbsent(
+        caveId,
+        () => _queryIntList(
+          sourceDbPath,
+          'SELECT id FROM cave_places WHERE cave_id = $caveId;',
+        ),
+      );
       caveToDocIds.putIfAbsent(caveId, () => []);
 
       if (state.needsAreas) {
@@ -1010,13 +1058,18 @@ void main() async {
           final areaId = nextCaveAreaId++;
           caveToAreaIds[caveId]!.add(areaId);
           buf.writeln(
-              "INSERT INTO cave_areas (id, title, cave_id, created_at) VALUES ($areaId, ${_esc(name)}, $caveId, ${_nowEpoch()});");
+            "INSERT INTO cave_areas (id, title, cave_id, created_at) VALUES ($areaId, ${_esc(name)}, $caveId, ${_nowEpoch()});",
+          );
           addedAreas++;
         }
       }
 
       if (state.needsPlaces) {
-        final count = _randBetween(rng, kCavePlacesPerCaveMin, kCavePlacesPerCaveMax);
+        final count = _randBetween(
+          rng,
+          kCavePlacesPerCaveMin,
+          kCavePlacesPerCaveMax,
+        );
         final usedNames = <String>{};
         int qrCounter = _maxQrCode(existingData) + 100000 + caveId;
         for (int i = 0; i < count; i++) {
@@ -1030,11 +1083,13 @@ void main() async {
           }
           final desc = _fillTemplate(
             rng,
-            kCavePlaceDescriptionTemplates[
-                rng.nextInt(kCavePlaceDescriptionTemplates.length)],
+            kCavePlaceDescriptionTemplates[rng.nextInt(
+              kCavePlaceDescriptionTemplates.length,
+            )],
           );
           buf.writeln(
-              "INSERT INTO cave_places (id, title, description, cave_id, place_qr_code_identifier, cave_area_id, created_at) VALUES ($placeId, ${_esc(name)}, ${_esc(desc)}, $caveId, $qrCounter, ${areaId ?? 'NULL'}, ${_nowEpoch()});");
+            "INSERT INTO cave_places (id, title, description, cave_id, place_qr_code_identifier, cave_area_id, created_at) VALUES ($placeId, ${_esc(name)}, ${_esc(desc)}, $caveId, $qrCounter, ${areaId ?? 'NULL'}, ${_nowEpoch()});",
+          );
           caveToPlaceIds[caveId]!.add(placeId);
           qrCounter++;
           addedPlaces++;
@@ -1054,7 +1109,8 @@ void main() async {
           final title = 'Document $caveTitle #${i + 1}';
           final fileName = 'doc_existing_c${caveId}_${i + 1}.txt';
           buf.writeln(
-              "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) VALUES ($fileId, ${_esc(title)}, ${_esc(text)}, ${_esc(fileName)}, ${text.length}, NULL, 'text_document', ${_nowEpoch()});");
+            "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) VALUES ($fileId, ${_esc(title)}, ${_esc(text)}, ${_esc(fileName)}, ${text.length}, NULL, 'text_document', ${_nowEpoch()});",
+          );
           caveToDocIds[caveId]!.add(fileId);
           if (kGenerateGeofeatureLinks) {
             nextDocGeoId = _addGeofeatureLinksForDoc(
@@ -1086,7 +1142,8 @@ void main() async {
           final title = 'Foto $caveTitle #${i + 1}';
           final desc = 'Fotografie de pestera pentru arhiva tehnica.';
           buf.writeln(
-              "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) VALUES ($fileId, ${_esc(title)}, ${_esc(desc)}, ${_esc(fileName)}, ${pic.lengthSync()}, NULL, 'photo', ${_nowEpoch()});");
+            "INSERT INTO documentation_files (id, title, description, file_name, file_size, file_hash, file_type, created_at) VALUES ($fileId, ${_esc(title)}, ${_esc(desc)}, ${_esc(fileName)}, ${pic.lengthSync()}, NULL, 'photo', ${_nowEpoch()});",
+          );
           caveToDocIds[caveId]!.add(fileId);
           if (kGenerateGeofeatureLinks) {
             nextDocGeoId = _addGeofeatureLinksForDoc(
@@ -1139,12 +1196,16 @@ void main() async {
       caveToPlaceIds.putIfAbsent(
         caveId,
         () => _queryIntList(
-          sourceDbPath, 'SELECT id FROM cave_places WHERE cave_id = $caveId;'),
+          sourceDbPath,
+          'SELECT id FROM cave_places WHERE cave_id = $caveId;',
+        ),
       );
       caveToAreaIds.putIfAbsent(
         caveId,
         () => _queryIntList(
-          sourceDbPath, 'SELECT id FROM cave_areas WHERE cave_id = $caveId;'),
+          sourceDbPath,
+          'SELECT id FROM cave_areas WHERE cave_id = $caveId;',
+        ),
       );
 
       final placeIds = caveToPlaceIds[caveId] ?? const <int>[];
@@ -1153,7 +1214,11 @@ void main() async {
       }
 
       final areaIds = caveToAreaIds[caveId] ?? const <int>[];
-      final mapCount = _randBetween(rng, kRasterMapsPerCaveMin, kRasterMapsPerCaveMax);
+      final mapCount = _randBetween(
+        rng,
+        kRasterMapsPerCaveMin,
+        kRasterMapsPerCaveMax,
+      );
       for (int m = 0; m < mapCount; m++) {
         final template = templates[rng.nextInt(templates.length)];
         final mapId = nextRasterMapId++;
@@ -1163,11 +1228,15 @@ void main() async {
           caveAreaId = areaIds[rng.nextInt(areaIds.length)];
         }
         buf.writeln(
-            "INSERT INTO raster_maps (id, title, map_type, file_name, cave_id, cave_area_id, created_at) VALUES ($mapId, ${_esc(title)}, ${_esc(template.mapType)}, ${_esc(template.fileName)}, $caveId, ${caveAreaId ?? 'NULL'}, ${_nowEpoch()});");
+          "INSERT INTO raster_maps (id, title, map_type, file_name, cave_id, cave_area_id, created_at) VALUES ($mapId, ${_esc(title)}, ${_esc(template.mapType)}, ${_esc(template.fileName)}, $caveId, ${caveAreaId ?? 'NULL'}, ${_nowEpoch()});",
+        );
         totalMaps++;
 
-        final pointCountTarget =
-            _randBetween(rng, kRasterMapPointsPerMapMin, kRasterMapPointsPerMapMax);
+        final pointCountTarget = _randBetween(
+          rng,
+          kRasterMapPointsPerMapMin,
+          kRasterMapPointsPerMapMax,
+        );
         final pointCount = min(pointCountTarget, placeIds.length);
         final localPlaces = [...placeIds]..shuffle(rng);
         for (int i = 0; i < pointCount; i++) {
@@ -1176,7 +1245,8 @@ void main() async {
           final x = rng.nextInt(kRasterPointMaxX + 1);
           final y = rng.nextInt(kRasterPointMaxY + 1);
           buf.writeln(
-              "INSERT INTO cave_place_to_raster_map_definitions (id, x_coordinate, y_coordinate, cave_place_id, raster_map_id, created_at) VALUES ($mapPointId, $x, $y, $placeId, $mapId, ${_nowEpoch()});");
+            "INSERT INTO cave_place_to_raster_map_definitions (id, x_coordinate, y_coordinate, cave_place_id, raster_map_id, created_at) VALUES ($mapPointId, $x, $y, $placeId, $mapId, ${_nowEpoch()});",
+          );
           totalMapPoints++;
         }
       }
@@ -1199,50 +1269,62 @@ void main() async {
     for (final caveId in generatedCaves.keys) {
       final hasLowCount = rng.nextDouble() < kCaveTripsLowRangeProbability;
       final tripCount = hasLowCount
-          ? _randBetween(
-              rng, kCaveTripsPerCaveLowMin, kCaveTripsPerCaveLowMax)
+          ? _randBetween(rng, kCaveTripsPerCaveLowMin, kCaveTripsPerCaveLowMax)
           : _randBetween(
-              rng, kCaveTripsPerCaveHighMin, kCaveTripsPerCaveHighMax);
+              rng,
+              kCaveTripsPerCaveHighMin,
+              kCaveTripsPerCaveHighMax,
+            );
 
       final cavePlaceIds = caveToPlaceIds[caveId] ?? const <int>[];
       final caveDocIds = caveToDocIds[caveId] ?? const <int>[];
 
       for (int t = 0; t < tripCount; t++) {
         final tripId = nextTripId++;
-        final startedAt = _nowEpoch() - _randBetween(rng, 3600, 3600 * 24 * 120);
+        final startedAt =
+            _nowEpoch() - _randBetween(rng, 3600, 3600 * 24 * 120);
         final endedAt = startedAt + _randBetween(rng, 1800, 3600 * 10);
         final title = 'Tura ${generatedCaves[caveId]} #${t + 1}';
         final desc = _fillTemplate(
-            rng,
-            kCavePlaceDescriptionTemplates[
-                rng.nextInt(kCavePlaceDescriptionTemplates.length)]);
+          rng,
+          kCavePlaceDescriptionTemplates[rng.nextInt(
+            kCavePlaceDescriptionTemplates.length,
+          )],
+        );
 
         buf.writeln(
-            "INSERT INTO cave_trips (id, cave_id, title, description, trip_started_at, trip_ended_at, created_at) "
-            "VALUES ($tripId, $caveId, ${_esc(title)}, ${_esc(desc)}, $startedAt, $endedAt, ${_nowEpoch()});");
+          "INSERT INTO cave_trips (id, cave_id, title, description, trip_started_at, trip_ended_at, created_at) "
+          "VALUES ($tripId, $caveId, ${_esc(title)}, ${_esc(desc)}, $startedAt, $endedAt, ${_nowEpoch()});",
+        );
         totalTrips++;
 
         // Add cave_trip_points.
-        final pointCount =
-            _randBetween(rng, kTripPointsPerTripMin, kTripPointsPerTripMax);
+        final pointCount = _randBetween(
+          rng,
+          kTripPointsPerTripMin,
+          kTripPointsPerTripMax,
+        );
         for (int p = 0; p < pointCount; p++) {
           if (cavePlaceIds.isEmpty) {
             break;
           }
           final placeId = cavePlaceIds[rng.nextInt(cavePlaceIds.length)];
           final scannedAt = startedAt + _randBetween(rng, 60, 3600 * 8) + p;
-          final notes =
-              'Punct marcat in timpul turei la minutul ${p + 1}.';
+          final notes = 'Punct marcat in timpul turei la minutul ${p + 1}.';
           final tripPointId = nextTripPointId++;
           buf.writeln(
-              "INSERT INTO cave_trip_points (id, cave_trip_id, cave_place_id, scanned_at, notes, created_at) "
-              "VALUES ($tripPointId, $tripId, $placeId, $scannedAt, ${_esc(notes)}, ${_nowEpoch()});");
+            "INSERT INTO cave_trip_points (id, cave_trip_id, cave_place_id, scanned_at, notes, created_at) "
+            "VALUES ($tripPointId, $tripId, $placeId, $scannedAt, ${_esc(notes)}, ${_nowEpoch()});",
+          );
           totalTripPoints++;
         }
 
         // Add relations to documentation files.
         final relationCount = _randBetween(
-            rng, kDocToTripRelationsPerTripMin, kDocToTripRelationsPerTripMax);
+          rng,
+          kDocToTripRelationsPerTripMin,
+          kDocToTripRelationsPerTripMax,
+        );
         final usedDocIds = <int>{};
         for (int r = 0; r < relationCount; r++) {
           if (caveDocIds.isEmpty || usedDocIds.length >= caveDocIds.length) {
@@ -1255,8 +1337,9 @@ void main() async {
           usedDocIds.add(docId);
           final relationId = nextDocToTripId++;
           buf.writeln(
-              "INSERT INTO documentation_files_to_cave_trips (id, documentation_file_id, cave_trip_id, created_at) "
-              "VALUES ($relationId, $docId, $tripId, ${_nowEpoch()});");
+            "INSERT INTO documentation_files_to_cave_trips (id, documentation_file_id, cave_trip_id, created_at) "
+            "VALUES ($relationId, $docId, $tripId, ${_nowEpoch()});",
+          );
           totalDocToTrip++;
         }
       }
@@ -1315,13 +1398,14 @@ void main() async {
 
 /// Run sqlite3 CLI with a dot-command and capture output to a file.
 void _runSqlite3(String dbPath, String dotCommand, String outputPath) {
-  final result = Process.runSync(
-    kSqlite3Cmd,
-    [dbPath, dotCommand],
-    stdoutEncoding: null,
-  );
+  final result = Process.runSync(kSqlite3Cmd, [
+    dbPath,
+    dotCommand,
+  ], stdoutEncoding: null);
   if (result.exitCode != 0) {
-    stderr.writeln('sqlite3 failed (exit ${result.exitCode}): ${result.stderr}');
+    stderr.writeln(
+      'sqlite3 failed (exit ${result.exitCode}): ${result.stderr}',
+    );
     exit(1);
   }
   File(outputPath).writeAsBytesSync(result.stdout as List<int>);
@@ -1334,10 +1418,11 @@ void _exportDataOnly(String dbPath, String outputPath) {
   buf.writeln('-- Generated on: ${DateTime.now().toIso8601String()}');
   buf.writeln();
   for (final table in kOrderedTables) {
-    final result = Process.runSync(
-      kSqlite3Cmd,
-      [dbPath, '.mode insert $table', 'SELECT * FROM $table;'],
-    );
+    final result = Process.runSync(kSqlite3Cmd, [
+      dbPath,
+      '.mode insert $table',
+      'SELECT * FROM $table;',
+    ]);
     if (result.exitCode != 0) {
       // Table may not exist in DB - skip silently
       continue;
@@ -1363,59 +1448,68 @@ void _emitCompatibilitySchema(
 }) {
   if (addDocFileTypeColumn) {
     buf.writeln(
-        "ALTER TABLE documentation_files ADD COLUMN file_type TEXT(25) NOT NULL DEFAULT 'text_document';");
+      "ALTER TABLE documentation_files ADD COLUMN file_type TEXT(25) NOT NULL DEFAULT 'text_document';",
+    );
   }
 
   if (addDocGeoTable) {
-    buf.writeln('CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures ('
-        'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
-        'geofeature_id INTEGER, '
-        'geofeature_type TEXT(10) NOT NULL, '
-        'documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id), '
-        'updated_at INTEGER, '
-        'deleted_at INTEGER, '
-        'UNIQUE(geofeature_id, geofeature_type, documentation_file_id) ON CONFLICT ROLLBACK'
-        ');');
+    buf.writeln(
+      'CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures ('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
+      'geofeature_id INTEGER, '
+      'geofeature_type TEXT(10) NOT NULL, '
+      'documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id), '
+      'updated_at INTEGER, '
+      'deleted_at INTEGER, '
+      'UNIQUE(geofeature_id, geofeature_type, documentation_file_id) ON CONFLICT ROLLBACK'
+      ');',
+    );
   }
 
   if (addTripsTable) {
-    buf.writeln('CREATE TABLE IF NOT EXISTS cave_trips ('
-        'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
-        'cave_id INTEGER NOT NULL REFERENCES caves (id), '
-        'title TEXT(255) NOT NULL, '
-        'description TEXT, '
-        'trip_started_at INTEGER NOT NULL, '
-        'trip_ended_at INTEGER, '
-        'log TEXT, '
-        'created_at INTEGER, '
-        'updated_at INTEGER, '
-        'deleted_at INTEGER'
-        ');');
+    buf.writeln(
+      'CREATE TABLE IF NOT EXISTS cave_trips ('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
+      'cave_id INTEGER NOT NULL REFERENCES caves (id), '
+      'title TEXT(255) NOT NULL, '
+      'description TEXT, '
+      'trip_started_at INTEGER NOT NULL, '
+      'trip_ended_at INTEGER, '
+      'log TEXT, '
+      'created_at INTEGER, '
+      'updated_at INTEGER, '
+      'deleted_at INTEGER'
+      ');',
+    );
   }
 
   if (addTripPointsTable) {
-    buf.writeln('CREATE TABLE IF NOT EXISTS cave_trip_points ('
-        'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
-        'cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id), '
-        'cave_place_id INTEGER NOT NULL REFERENCES cave_places (id), '
-        'scanned_at INTEGER NOT NULL, '
-        'notes TEXT, '
-        'created_at INTEGER, '
-        'updated_at INTEGER, '
-        'deleted_at INTEGER, '
-        'UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK'
-        ');');
+    buf.writeln(
+      'CREATE TABLE IF NOT EXISTS cave_trip_points ('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
+      'cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id), '
+      'cave_place_id INTEGER NOT NULL REFERENCES cave_places (id), '
+      'scanned_at INTEGER NOT NULL, '
+      'notes TEXT, '
+      'created_at INTEGER, '
+      'updated_at INTEGER, '
+      'deleted_at INTEGER, '
+      'UNIQUE(cave_trip_id, cave_place_id, scanned_at) ON CONFLICT ROLLBACK'
+      ');',
+    );
   }
 
   if (addDocToTripTable) {
-    buf.writeln('CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips ('
-        'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
-        'documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id), '
-        'cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id), '
-        'created_at INTEGER, '
-        'deleted_at INTEGER, '
-        'UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK'
-        ');');
+    buf.writeln(
+      'CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips ('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, '
+      'documentation_file_id INTEGER NOT NULL REFERENCES documentation_files (id), '
+      'cave_trip_id INTEGER NOT NULL REFERENCES cave_trips (id), '
+      'created_at INTEGER, '
+      'deleted_at INTEGER, '
+      'UNIQUE(documentation_file_id, cave_trip_id) ON CONFLICT ROLLBACK'
+      ');',
+    );
   }
 
   if (addDocFileTypeColumn ||
@@ -1428,13 +1522,10 @@ void _emitCompatibilitySchema(
 }
 
 bool _tableExists(String dbPath, String tableName) {
-  final result = Process.runSync(
-    kSqlite3Cmd,
-    [
-      dbPath,
-      "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='${tableName.replaceAll("'", "''")}';",
-    ],
-  );
+  final result = Process.runSync(kSqlite3Cmd, [
+    dbPath,
+    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='${tableName.replaceAll("'", "''")}';",
+  ]);
   if (result.exitCode != 0) {
     return false;
   }
@@ -1455,18 +1546,19 @@ String? _resolveSourceDbPath() {
 }
 
 bool _tableHasColumn(String dbPath, String tableName, String columnName) {
-  final result = Process.runSync(
-    kSqlite3Cmd,
-    [dbPath, 'PRAGMA table_info($tableName);'],
-  );
+  final result = Process.runSync(kSqlite3Cmd, [
+    dbPath,
+    'PRAGMA table_info($tableName);',
+  ]);
   if (result.exitCode != 0) {
     return false;
   }
   final output = result.stdout as String;
   final pattern = RegExp(
-      r'^\d+\|'+ RegExp.escape(columnName) + r'\|',
-      caseSensitive: false,
-      multiLine: true);
+    r'^\d+\|' + RegExp.escape(columnName) + r'\|',
+    caseSensitive: false,
+    multiLine: true,
+  );
   return pattern.hasMatch(output);
 }
 
@@ -1486,16 +1578,23 @@ int _addGeofeatureLinksForDoc({
 
   // Optionally link to cave area and cave place.
   if (caveAreaIds.isNotEmpty && rng.nextDouble() < 0.6) {
-    links.add((type: 'cave_area', id: caveAreaIds[rng.nextInt(caveAreaIds.length)]));
+    links.add((
+      type: 'cave_area',
+      id: caveAreaIds[rng.nextInt(caveAreaIds.length)],
+    ));
   }
   if (cavePlaceIds.isNotEmpty && rng.nextDouble() < 0.75) {
-    links.add((type: 'cave_place', id: cavePlaceIds[rng.nextInt(cavePlaceIds.length)]));
+    links.add((
+      type: 'cave_place',
+      id: cavePlaceIds[rng.nextInt(cavePlaceIds.length)],
+    ));
   }
 
   for (final link in links) {
     buf.writeln(
-        "INSERT INTO documentation_files_to_geofeatures (id, geofeature_id, geofeature_type, documentation_file_id, updated_at) "
-        "VALUES ($nextDocGeoId, ${link.id}, '${link.type}', $docId, ${_nowEpoch()});");
+      "INSERT INTO documentation_files_to_geofeatures (id, geofeature_id, geofeature_type, documentation_file_id, updated_at) "
+      "VALUES ($nextDocGeoId, ${link.id}, '${link.type}', $docId, ${_nowEpoch()});",
+    );
     nextDocGeoId++;
   }
 
@@ -1510,19 +1609,17 @@ List<File> _loadPictureFiles() {
   return pictureDir
       .listSync()
       .whereType<File>()
-      .where((f) =>
-          f.path.toLowerCase().endsWith('.jpg') ||
-          f.path.toLowerCase().endsWith('.jpeg') ||
-          f.path.toLowerCase().endsWith('.png') ||
-          f.path.toLowerCase().endsWith('.webp'))
+      .where(
+        (f) =>
+            f.path.toLowerCase().endsWith('.jpg') ||
+            f.path.toLowerCase().endsWith('.jpeg') ||
+            f.path.toLowerCase().endsWith('.png') ||
+            f.path.toLowerCase().endsWith('.webp'),
+      )
       .toList();
 }
 
-List<String> _pickRandomTemplates(
-  Random rng,
-  List<String> source,
-  int count,
-) {
+List<String> _pickRandomTemplates(Random rng, List<String> source, int count) {
   final indexes = <int>{};
   while (indexes.length < count && indexes.length < source.length) {
     indexes.add(rng.nextInt(source.length));
@@ -1557,9 +1654,13 @@ List<CaveMissingDataState> _loadCavesMissingData({
 
   for (final caveId in caveIds) {
     final areas = _queryScalarInt(
-        dbPath, 'SELECT COUNT(*) FROM cave_areas WHERE cave_id = $caveId;');
+      dbPath,
+      'SELECT COUNT(*) FROM cave_areas WHERE cave_id = $caveId;',
+    );
     final places = _queryScalarInt(
-        dbPath, 'SELECT COUNT(*) FROM cave_places WHERE cave_id = $caveId;');
+      dbPath,
+      'SELECT COUNT(*) FROM cave_places WHERE cave_id = $caveId;',
+    );
 
     final textDocs = _countDocsForCave(
       dbPath: dbPath,
@@ -1578,13 +1679,15 @@ List<CaveMissingDataState> _loadCavesMissingData({
       wantedType: 'photo',
     );
 
-    out.add(CaveMissingDataState(
-      caveId: caveId,
-      needsAreas: areas == 0,
-      needsPlaces: places == 0,
-      needsTextDocs: textDocs == 0,
-      needsPictures: pictureDocs == 0,
-    ));
+    out.add(
+      CaveMissingDataState(
+        caveId: caveId,
+        needsAreas: areas == 0,
+        needsPlaces: places == 0,
+        needsTextDocs: textDocs == 0,
+        needsPictures: pictureDocs == 0,
+      ),
+    );
   }
 
   return out;
@@ -1601,7 +1704,10 @@ int _countDocsForCave({
   final conditions = <String>[];
   if (hasDocGeoTable) {
     conditions.add(
-        'EXISTS (SELECT 1 FROM documentation_files_to_geofeatures g WHERE g.documentation_file_id = d.id AND g.geofeature_type = ''cave'' AND g.geofeature_id = $caveId)');
+      'EXISTS (SELECT 1 FROM documentation_files_to_geofeatures g WHERE g.documentation_file_id = d.id AND g.geofeature_type = '
+      'cave'
+      ' AND g.geofeature_id = $caveId)',
+    );
   }
   if (hasDocCaveId) {
     conditions.add('d.cave_id = $caveId');
@@ -1660,10 +1766,12 @@ int _queryScalarInt(String dbPath, String sql) {
 }
 
 List<List<String>> _queryRows(String dbPath, String sql) {
-  final result = Process.runSync(
-    kSqlite3Cmd,
-    [dbPath, '-separator', '\t', sql],
-  );
+  final result = Process.runSync(kSqlite3Cmd, [
+    dbPath,
+    '-separator',
+    '\t',
+    sql,
+  ]);
   if (result.exitCode != 0) {
     return const <List<String>>[];
   }
@@ -1683,14 +1791,12 @@ void _buildDatabaseFromSql(String dbPath, String sqlPath) {
   }
 
   final sqliteSqlPath = sqlPath.replaceAll('\\', '/');
-  final result = Process.runSync(
-    kSqlite3Cmd,
-    [dbPath, '.read $sqliteSqlPath'],
-  );
+  final result = Process.runSync(kSqlite3Cmd, [dbPath, '.read $sqliteSqlPath']);
 
   if (result.exitCode != 0) {
     stderr.writeln(
-        'Failed to build SQLite DB from $sqlPath (exit ${result.exitCode}): ${result.stderr}');
+      'Failed to build SQLite DB from $sqlPath (exit ${result.exitCode}): ${result.stderr}',
+    );
     exit(1);
   }
 }
@@ -1740,8 +1846,7 @@ String _fillTemplate(Random rng, String template) {
 }
 
 /// Epoch seconds for "now".
-int _nowEpoch() =>
-    DateTime.now().millisecondsSinceEpoch ~/ 1000;
+int _nowEpoch() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
 /// SQL-escape a string value (single quotes).
 String _esc(String value) {

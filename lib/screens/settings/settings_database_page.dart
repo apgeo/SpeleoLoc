@@ -23,15 +23,25 @@ class SettingsDatabasePage extends StatefulWidget {
 }
 
 class _SettingsDatabasePageState extends State<SettingsDatabasePage>
-    with AppBarMenuMixin<SettingsDatabasePage>, ProductTourMixin<SettingsDatabasePage> {
+    with
+        AppBarMenuMixin<SettingsDatabasePage>,
+        ProductTourMixin<SettingsDatabasePage> {
   @override
   String get tourId => 'settings_db';
   @override
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(keyId: 'list', titleLocKey: 'tour_settings_db_list_title', bodyLocKey: 'tour_settings_db_list_body'),
-    TourStepDef(keyId: 'menu', titleLocKey: 'tour_settings_db_menu_title', bodyLocKey: 'tour_settings_db_menu_body'),
+    TourStepDef(
+      keyId: 'list',
+      titleLocKey: 'tour_settings_db_list_title',
+      bodyLocKey: 'tour_settings_db_list_body',
+    ),
+    TourStepDef(
+      keyId: 'menu',
+      titleLocKey: 'tour_settings_db_menu_title',
+      bodyLocKey: 'tour_settings_db_menu_body',
+    ),
   ];
 
   @override
@@ -41,7 +51,9 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
         title: Text(LocServ.inst.t('settings_database')),
-        actions: [KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton())],
+        actions: [
+          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+        ],
       ),
       body: ListView(
         key: tourKeys['list'],
@@ -94,8 +106,10 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
     );
   }
 
-  void _reinitializeDatabase(BuildContext context,
-      {bool populateTestData = true}) async {
+  void _reinitializeDatabase(
+    BuildContext context, {
+    bool populateTestData = true,
+  }) async {
     final confirmKey = populateTestData
         ? 'confirm_reinitialize_database'
         : 'confirm_reinitialize_database_empty';
@@ -128,9 +142,11 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
-                  Text(populateTestData
-                      ? LocServ.inst.t('reinitialize_db_with_test_data')
-                      : LocServ.inst.t('reinitialize_db')),
+                  Text(
+                    populateTestData
+                        ? LocServ.inst.t('reinitialize_db_with_test_data')
+                        : LocServ.inst.t('reinitialize_db'),
+                  ),
                 ],
               ),
             ),
@@ -143,16 +159,20 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
 
         if (context.mounted) {
           Navigator.pop(context);
-          SnackBarService.showSuccess(populateTestData
-                    ? LocServ.inst.t('database_reinitialized')
-                    : LocServ.inst.t('database_reinitialized_empty'));
+          SnackBarService.showSuccess(
+            populateTestData
+                ? LocServ.inst.t('database_reinitialized')
+                : LocServ.inst.t('database_reinitialized_empty'),
+          );
         }
 
         await DatabaseRestoreHelper.restartApplication();
       } catch (e) {
         if (context.mounted) {
           Navigator.pop(context);
-          SnackBarService.showError('${LocServ.inst.t('error_reinitializing_database')}: $e');
+          SnackBarService.showError(
+            '${LocServ.inst.t('error_reinitializing_database')}: $e',
+          );
         }
       }
     }
@@ -195,14 +215,26 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       // Preserve device identity before replacing the database.
       // Disabled when `copy_device_uuid_from_archive_on_import` is true in
       // the archive_sync_import_export_config configuration key.
-      final savedDeviceUuid = (await appDatabase.customSelect(
-        'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-        variables: [Variable<String>('device_uuid')],
-      ).get()).map((r) => r.data['value'] as String?).firstOrNull;
-      final importCfgRaw = (await appDatabase.customSelect(
-        'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-        variables: [Variable<String>('archive_sync_import_export_config')],
-      ).get()).map((r) => r.data['value'] as String?).firstOrNull;
+      final savedDeviceUuid =
+          (await appDatabase
+                  .customSelect(
+                    'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+                    variables: [Variable<String>('device_uuid')],
+                  )
+                  .get())
+              .map((r) => r.data['value'] as String?)
+              .firstOrNull;
+      final importCfgRaw =
+          (await appDatabase
+                  .customSelect(
+                    'SELECT value FROM configurations WHERE title = ? LIMIT 1',
+                    variables: [
+                      Variable<String>('archive_sync_import_export_config'),
+                    ],
+                  )
+                  .get())
+              .map((r) => r.data['value'] as String?)
+              .firstOrNull;
       // copyUuidFromArchive is true ONLY when the flag is explicitly true.
       // Absent config row, absent key, null value, false, or bad JSON all
       // leave it false, so the local device_uuid is preserved.
@@ -228,7 +260,9 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       await File(pickedPath).copy(targetPath);
 
       appDatabase = AppDatabase();
-      DatabaseRestoreHelper.logMigrationIfAny(source: 'external-database-restore');
+      DatabaseRestoreHelper.logMigrationIfAny(
+        source: 'external-database-restore',
+      );
 
       // Restore device identity so this device keeps its own UUID,
       // unless the flag says to adopt the archive's identity.
@@ -254,7 +288,9 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        SnackBarService.showError('${LocServ.inst.t('database_restore_failed')}: $e');
+        SnackBarService.showError(
+          '${LocServ.inst.t('database_restore_failed')}: $e',
+        );
       }
     }
   }
@@ -273,7 +309,8 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
     try {
       if (Platform.isAndroid || Platform.isIOS) {
         final dir = await FilePicker.platform.getDirectoryPath(
-            dialogTitle: LocServ.inst.t('select_folder_save_database'));
+          dialogTitle: LocServ.inst.t('select_folder_save_database'),
+        );
         if (dir == null) return;
         outputFile = '$dir/speleo_loc_export.sqlite';
       } else {
@@ -286,14 +323,17 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       if (outputFile != null) {
         await sourceFile.copy(outputFile);
         if (context.mounted) {
-          SnackBarService.showSuccess('${LocServ.inst.t('database_export_success')}: $outputFile');
+          SnackBarService.showSuccess(
+            '${LocServ.inst.t('database_export_success')}: $outputFile',
+          );
         }
       }
     } catch (e) {
       if (context.mounted) {
-        SnackBarService.showError('${LocServ.inst.t('database_export_failed')}: $e');
+        SnackBarService.showError(
+          '${LocServ.inst.t('database_export_failed')}: $e',
+        );
       }
     }
   }
 }
-

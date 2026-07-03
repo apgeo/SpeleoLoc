@@ -50,7 +50,8 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
       // every later app launch.
       if (!await BeaconScanHelper.ensureAndroidPermissions()) {
         SnackBarService.showWarning(
-            LocServ.inst.t('beacon_lab_permissions_missing'));
+          LocServ.inst.t('beacon_lab_permissions_missing'),
+        );
         return;
       }
       try {
@@ -62,7 +63,9 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
     }
     await _update(cfg.copyWith(enabled: enable));
     if (enable && !BeaconDetectionService.instance.isRunning) {
-      SnackBarService.showWarning(LocServ.inst.t('beacon_detection_not_running'));
+      SnackBarService.showWarning(
+        LocServ.inst.t('beacon_detection_not_running'),
+      );
     }
   }
 
@@ -75,7 +78,8 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
       final notifOk = await BeaconAlertNotifier.instance.requestPermission();
       if (!notifOk) {
         SnackBarService.showWarning(
-            LocServ.inst.t('beacon_background_notif_denied'));
+          LocServ.inst.t('beacon_background_notif_denied'),
+        );
         return;
       }
       // …and multi-hour scanning needs a battery-optimisation exemption.
@@ -98,17 +102,20 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
               children: [
                 SwitchListTile(
                   title: Text(LocServ.inst.t('beacon_detection_enable')),
-                  subtitle:
-                      Text(LocServ.inst.t('beacon_detection_enable_desc')),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_detection_enable_desc'),
+                  ),
                   value: cfg.enabled,
                   onChanged: _toggleEnabled,
                 ),
                 const Divider(),
                 ListTile(
                   title: Text(LocServ.inst.t('beacon_detection_threshold')),
-                  subtitle: Text(LocServ.inst.t(
-                      'beacon_detection_threshold_desc',
-                      {'v': '${cfg.rssiThresholdDbm}'})),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_detection_threshold_desc', {
+                      'v': '${cfg.rssiThresholdDbm}',
+                    }),
+                  ),
                 ),
                 Slider(
                   min: -100,
@@ -117,17 +124,22 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                   value: cfg.rssiThresholdDbm.toDouble(),
                   label: '${cfg.rssiThresholdDbm} dBm',
                   onChanged: cfg.enabled
-                      ? (v) => setState(() => _config =
-                          cfg.copyWith(rssiThresholdDbm: v.round()))
+                      ? (v) => setState(
+                          () => _config = cfg.copyWith(
+                            rssiThresholdDbm: v.round(),
+                          ),
+                        )
                       : null,
                   onChangeEnd: (v) =>
                       _update(cfg.copyWith(rssiThresholdDbm: v.round())),
                 ),
                 ListTile(
                   title: Text(LocServ.inst.t('beacon_detection_cooldown')),
-                  subtitle: Text(LocServ.inst.t(
-                      'beacon_detection_cooldown_desc',
-                      {'v': (cfg.cooldownSec / 60).toStringAsFixed(0)})),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_detection_cooldown_desc', {
+                      'v': (cfg.cooldownSec / 60).toStringAsFixed(0),
+                    }),
+                  ),
                 ),
                 Slider(
                   min: 60,
@@ -137,15 +149,17 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                   label: '${(cfg.cooldownSec / 60).toStringAsFixed(0)} min',
                   onChanged: cfg.enabled
                       ? (v) => setState(
-                          () => _config = cfg.copyWith(cooldownSec: v.round()))
+                          () => _config = cfg.copyWith(cooldownSec: v.round()),
+                        )
                       : null,
                   onChangeEnd: (v) =>
                       _update(cfg.copyWith(cooldownSec: v.round())),
                 ),
                 SwitchListTile(
                   title: Text(LocServ.inst.t('beacon_detection_auto_open')),
-                  subtitle:
-                      Text(LocServ.inst.t('beacon_detection_auto_open_desc')),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_detection_auto_open_desc'),
+                  ),
                   value: cfg.autoOpenPlace,
                   onChanged: cfg.enabled
                       ? (v) => _update(cfg.copyWith(autoOpenPlace: v))
@@ -154,30 +168,36 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                 const Divider(),
                 SwitchListTile(
                   title: Text(LocServ.inst.t('beacon_background_enable')),
-                  subtitle:
-                      Text(LocServ.inst.t('beacon_background_enable_desc')),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_background_enable_desc'),
+                  ),
                   value: cfg.backgroundEnabled,
                   onChanged: cfg.enabled ? _toggleBackground : null,
                 ),
                 ListTile(
                   title: Text(LocServ.inst.t('beacon_background_interval')),
-                  subtitle: Text(LocServ.inst.t(
-                      'beacon_background_interval_desc',
-                      {'v': '${cfg.backgroundScanIntervalSec}'})),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_background_interval_desc', {
+                      'v': '${cfg.backgroundScanIntervalSec}',
+                    }),
+                  ),
                 ),
                 Slider(
                   min: 20,
                   max: 60,
                   divisions: 8,
-                  value:
-                      cfg.backgroundScanIntervalSec.toDouble().clamp(20, 60),
+                  value: cfg.backgroundScanIntervalSec.toDouble().clamp(20, 60),
                   label: '${cfg.backgroundScanIntervalSec} s',
                   onChanged: cfg.enabled && cfg.backgroundEnabled
-                      ? (v) => setState(() => _config = cfg.copyWith(
-                          backgroundScanIntervalSec: v.round()))
+                      ? (v) => setState(
+                          () => _config = cfg.copyWith(
+                            backgroundScanIntervalSec: v.round(),
+                          ),
+                        )
                       : null,
                   onChangeEnd: (v) => _update(
-                      cfg.copyWith(backgroundScanIntervalSec: v.round())),
+                    cfg.copyWith(backgroundScanIntervalSec: v.round()),
+                  ),
                 ),
                 const Divider(),
                 ListTile(

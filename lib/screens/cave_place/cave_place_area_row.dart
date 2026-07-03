@@ -120,7 +120,8 @@ class CavePlaceAreaRow extends StatelessWidget {
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           style: IconButton.styleFrom(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: onManageAreas,
         ),
 
@@ -131,7 +132,8 @@ class CavePlaceAreaRow extends StatelessWidget {
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             style: IconButton.styleFrom(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: onShowPciRow,
           ),
       ],

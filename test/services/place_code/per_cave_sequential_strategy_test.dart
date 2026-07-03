@@ -12,16 +12,18 @@ void main() {
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     caveUuid = Uuid.v7();
-    await db.into(db.caves).insert(
-          CavesCompanion.insert(uuid: caveUuid, title: 'C'),
-        );
+    await db
+        .into(db.caves)
+        .insert(CavesCompanion.insert(uuid: caveUuid, title: 'C'));
   });
 
   tearDown(() async => db.close());
 
   Future<Uuid> addPlace(String title, {String? pci}) async {
     final id = Uuid.v7();
-    await db.into(db.cavePlaces).insert(
+    await db
+        .into(db.cavePlaces)
+        .insert(
           CavePlacesCompanion.insert(
             uuid: id,
             title: title,
@@ -43,10 +45,12 @@ void main() {
     expect(r1, isA<PlaceCodeGenerationOk>());
     expect((r1 as PlaceCodeGenerationOk).pci, '1');
 
-    await db.update(db.cavePlaces).replace(
-          (await db.select(db.cavePlaces).get())
-              .first
-              .copyWith(placeCodeIdentifier: const Value('1')),
+    await db
+        .update(db.cavePlaces)
+        .replace(
+          (await db.select(db.cavePlaces).get()).first.copyWith(
+            placeCodeIdentifier: const Value('1'),
+          ),
         );
     final p2 = await addPlace('b');
     final r2 = await strat.generate(
@@ -88,8 +92,7 @@ void main() {
     final p1 = await addPlace('a', pci: '5');
     final p2 = await addPlace('b');
     expect(
-      await strat.validate('abc',
-          cavePlaceUuid: p2, caveUuid: caveUuid),
+      await strat.validate('abc', cavePlaceUuid: p2, caveUuid: caveUuid),
       'place_code_error_must_be_integer',
     );
     expect(

@@ -42,11 +42,8 @@ class SoundFileViewer extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => SoundFileViewer(
-        file: file,
-        doc: doc,
-        autoClose: autoClose,
-      ),
+      builder: (_) =>
+          SoundFileViewer(file: file, doc: doc, autoClose: autoClose),
     );
   }
 
@@ -124,7 +121,9 @@ class _SoundFileViewerState extends State<SoundFileViewer> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.4,
+                ),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -161,9 +160,7 @@ class _SoundFileViewerState extends State<SoundFileViewer> {
             // Play / pause button
             IconButton.filled(
               iconSize: 36,
-              onPressed: _prepared
-                  ? (_isPlaying ? _pause : _play)
-                  : null,
+              onPressed: _prepared ? (_isPlaying ? _pause : _play) : null,
               icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
             ),
           ],

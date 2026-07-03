@@ -91,11 +91,13 @@ class _BeaconLabPageState extends State<BeaconLabPage>
       _logLines.removeAt(0);
       _droppedLogLines++;
     }
-    _logLines.add(jsonEncode({
-      'ts': DateTime.now().toIso8601String(),
-      'src': source,
-      ...payload,
-    }));
+    _logLines.add(
+      jsonEncode({
+        'ts': DateTime.now().toIso8601String(),
+        'src': source,
+        ...payload,
+      }),
+    );
   }
 
   Future<void> _exportLog() async {
@@ -109,8 +111,9 @@ class _BeaconLabPageState extends State<BeaconLabPage>
           .replaceAll(':', '-')
           .split('.')
           .first;
-      final bytes =
-          Uint8List.fromList(utf8.encode('${_logLines.join('\n')}\n'));
+      final bytes = Uint8List.fromList(
+        utf8.encode('${_logLines.join('\n')}\n'),
+      );
       final outputPath = await FilePicker.platform.saveFile(
         dialogTitle: LocServ.inst.t('beacon_lab_export_log'),
         fileName: 'beacon_lab_$ts.jsonl',
@@ -126,8 +129,9 @@ class _BeaconLabPageState extends State<BeaconLabPage>
           await File(outputPath).writeAsBytes(bytes);
         }
       }
-      SnackBarService.showSuccess(LocServ.inst.t(
-          'beacon_lab_log_exported', {'n': '${_logLines.length}'}));
+      SnackBarService.showSuccess(
+        LocServ.inst.t('beacon_lab_log_exported', {'n': '${_logLines.length}'}),
+      );
     } catch (e, st) {
       _log.warning('Log export failed', e, st);
       SnackBarService.showError(e);
@@ -151,7 +155,8 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     final ok = await BeaconScanHelper.ensureAndroidPermissions();
     if (!ok && mounted) {
       SnackBarService.showWarning(
-          LocServ.inst.t('beacon_lab_permissions_missing'));
+        LocServ.inst.t('beacon_lab_permissions_missing'),
+      );
     }
     return ok;
   }
@@ -170,32 +175,36 @@ class _BeaconLabPageState extends State<BeaconLabPage>
 
     final regions = BeaconScanHelper.buildRegions(_regionUuids);
 
-    _rangingSub = flutterBeacon.ranging(regions).listen(
-      (result) {
-        final now = DateTime.now();
-        for (final b in result.beacons) {
-          final key = '${b.proximityUUID}/${b.major}/${b.minor}';
-          final entry = _ranged.putIfAbsent(
-              key, () => _RangedBeacon(first: now, beacon: b));
-          entry.update(b, now);
-          _appendLog('ranging', {
-            'uuid': b.proximityUUID,
-            'major': b.major,
-            'minor': b.minor,
-            'rssi': b.rssi,
-            'accuracy': b.accuracy,
-            'proximity': b.proximity.name,
-            if (b.macAddress != null) 'mac': b.macAddress,
-            if (b.txPower != null) 'txPower': b.txPower,
-          });
-        }
-        if (mounted && result.beacons.isNotEmpty) setState(() {});
-      },
-      onError: (Object e, StackTrace st) {
-        _log.warning('Ranging stream error', e, st);
-        if (mounted) setState(() => _rangingError = e.toString());
-      },
-    );
+    _rangingSub = flutterBeacon
+        .ranging(regions)
+        .listen(
+          (result) {
+            final now = DateTime.now();
+            for (final b in result.beacons) {
+              final key = '${b.proximityUUID}/${b.major}/${b.minor}';
+              final entry = _ranged.putIfAbsent(
+                key,
+                () => _RangedBeacon(first: now, beacon: b),
+              );
+              entry.update(b, now);
+              _appendLog('ranging', {
+                'uuid': b.proximityUUID,
+                'major': b.major,
+                'minor': b.minor,
+                'rssi': b.rssi,
+                'accuracy': b.accuracy,
+                'proximity': b.proximity.name,
+                if (b.macAddress != null) 'mac': b.macAddress,
+                if (b.txPower != null) 'txPower': b.txPower,
+              });
+            }
+            if (mounted && result.beacons.isNotEmpty) setState(() {});
+          },
+          onError: (Object e, StackTrace st) {
+            _log.warning('Ranging stream error', e, st);
+            if (mounted) setState(() => _rangingError = e.toString());
+          },
+        );
     setState(() => _ranging = true);
   }
 
@@ -235,7 +244,8 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     if (value == null || value.isEmpty) return;
     final normalized = value.toUpperCase();
     final uuidPattern = RegExp(
-        r'^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$');
+      r'^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$',
+    );
     if (!uuidPattern.hasMatch(normalized)) {
       SnackBarService.showWarning(LocServ.inst.t('beacon_lab_invalid_uuid'));
       return;
@@ -298,9 +308,12 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     var changed = false;
     for (final r in results) {
       final id = r.device.remoteId.str;
-      final entry =
-          _rawDevices.putIfAbsent(id, () => _RawDevice(first: now, last: r));
-      final isNewPacket = entry.count == 0 || r.timeStamp != entry.last.timeStamp;
+      final entry = _rawDevices.putIfAbsent(
+        id,
+        () => _RawDevice(first: now, last: r),
+      );
+      final isNewPacket =
+          entry.count == 0 || r.timeStamp != entry.last.timeStamp;
       entry.update(r, now);
       changed = true;
       if (isNewPacket && (entry.isBeaconLike || !_beaconsOnly)) {
@@ -327,11 +340,11 @@ class _BeaconLabPageState extends State<BeaconLabPage>
             },
           'manufacturerData': {
             for (final e in r.advertisementData.manufacturerData.entries)
-              '0x${e.key.toRadixString(16).padLeft(4, '0')}': _hex(e.value)
+              '0x${e.key.toRadixString(16).padLeft(4, '0')}': _hex(e.value),
           },
           'serviceData': {
             for (final e in r.advertisementData.serviceData.entries)
-              e.key.str: _hex(e.value)
+              e.key.str: _hex(e.value),
           },
         });
       }
@@ -399,14 +412,15 @@ class _BeaconLabPageState extends State<BeaconLabPage>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.fiber_manual_record,
-              size: 12,
-              color: (_ranging || _scanning) ? Colors.red : Colors.grey),
+          Icon(
+            Icons.fiber_manual_record,
+            size: 12,
+            color: (_ranging || _scanning) ? Colors.red : Colors.grey,
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              LocServ.inst
-                  .t('beacon_lab_captured_lines', {'n': '$total'}),
+              LocServ.inst.t('beacon_lab_captured_lines', {'n': '$total'}),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -430,8 +444,10 @@ class _BeaconLabPageState extends State<BeaconLabPage>
             children: [
               for (final uuid in _regionUuids)
                 Chip(
-                  label: Text('…${uuid.substring(uuid.length - 12)}',
-                      style: const TextStyle(fontSize: 12)),
+                  label: Text(
+                    '…${uuid.substring(uuid.length - 12)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   onDeleted: _regionUuids.length > 1
                       ? () => _removeRegionUuid(uuid)
                       : null,
@@ -455,15 +471,18 @@ class _BeaconLabPageState extends State<BeaconLabPage>
         if (_rangingError != null)
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(_rangingError!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(
+              _rangingError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         Padding(
           padding: const EdgeInsets.all(8),
           child: FilledButton.icon(
             icon: Icon(_ranging ? Icons.stop : Icons.play_arrow),
-            label: Text(LocServ.inst
-                .t(_ranging ? 'beacon_lab_stop' : 'beacon_lab_start')),
+            label: Text(
+              LocServ.inst.t(_ranging ? 'beacon_lab_stop' : 'beacon_lab_start'),
+            ),
             onPressed: _ranging ? _stopRanging : _startRanging,
           ),
         ),
@@ -486,8 +505,10 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     return ListTile(
       dense: true,
       leading: _rssiBadge(b.rssi),
-      title: Text('major ${b.major} / minor ${b.minor}',
-          style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        'major ${b.major} / minor ${b.minor}',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(
         '${b.proximityUUID}\n'
         '~${b.accuracy.toStringAsFixed(1)} m · ${b.proximity.name}'
@@ -501,10 +522,11 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   }
 
   Widget _buildRawTab() {
-    final devices = _rawDevices.values
-        .where((d) => !_beaconsOnly || d.isBeaconLike)
-        .toList()
-      ..sort((a, b) => b.last.rssi.compareTo(a.last.rssi));
+    final devices =
+        _rawDevices.values
+            .where((d) => !_beaconsOnly || d.isBeaconLike)
+            .toList()
+          ..sort((a, b) => b.last.rssi.compareTo(a.last.rssi));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -517,15 +539,20 @@ class _BeaconLabPageState extends State<BeaconLabPage>
         if (_scanError != null)
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(_scanError!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(
+              _scanError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         Padding(
           padding: const EdgeInsets.all(8),
           child: FilledButton.icon(
             icon: Icon(_scanning ? Icons.stop : Icons.play_arrow),
-            label: Text(LocServ.inst
-                .t(_scanning ? 'beacon_lab_stop' : 'beacon_lab_start')),
+            label: Text(
+              LocServ.inst.t(
+                _scanning ? 'beacon_lab_stop' : 'beacon_lab_start',
+              ),
+            ),
             onPressed: _scanning ? _stopRawScan : _startRawScan,
           ),
         ),
@@ -549,8 +576,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     final ib = d.iBeacon;
     final sd = d.bp1003;
     final subtitleParts = <String>[
-      if (ib != null)
-        'iBeacon ${ib.major}/${ib.minor} @${ib.measuredPower}dBm',
+      if (ib != null) 'iBeacon ${ib.major}/${ib.minor} @${ib.measuredPower}dBm',
       if (sd != null)
         'bat ${sd.batteryMv}mV · ${sd.macAddress}'
             '${sd.temperatureC != null ? ' · ${sd.temperatureC!.toStringAsFixed(2)}°C ${sd.humidityPct}%' : ''}',
@@ -560,21 +586,27 @@ class _BeaconLabPageState extends State<BeaconLabPage>
       dense: true,
       leading: _rssiBadge(r.rssi),
       title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitleParts.join(' · '),
-          style: const TextStyle(fontSize: 11)),
+      subtitle: Text(
+        subtitleParts.join(' · '),
+        style: const TextStyle(fontSize: 11),
+      ),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (ib != null) _kv('iBeacon UUID', ib.proximityUuid),
         if (sd != null) ...[
           _kv('BP1003', sd.toString()),
-          _kv('Flags',
-              '0x${sd.statusFlags.toRadixString(16)} · connectable: ${sd.isConnectable} · accel: ${sd.hasAccelerometer} · T/H sensor: ${sd.hasTempHumiditySensor}'),
+          _kv(
+            'Flags',
+            '0x${sd.statusFlags.toRadixString(16)} · connectable: ${sd.isConnectable} · accel: ${sd.hasAccelerometer} · T/H sensor: ${sd.hasTempHumiditySensor}',
+          ),
           _kv('Raw T/H bytes', _hex(sd.rawTempHumidity)),
         ],
         for (final e in adv.manufacturerData.entries)
-          _kv('MSD 0x${e.key.toRadixString(16).padLeft(4, '0')}',
-              _hex(e.value)),
+          _kv(
+            'MSD 0x${e.key.toRadixString(16).padLeft(4, '0')}',
+            _hex(e.value),
+          ),
         for (final e in adv.serviceData.entries)
           _kv('SD ${e.key.str}', _hex(e.value)),
         _kv('Device ID', r.device.remoteId.str),
@@ -584,22 +616,27 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   }
 
   Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: SelectableText('$k: $v', style: const TextStyle(fontSize: 12)),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: SelectableText('$k: $v', style: const TextStyle(fontSize: 12)),
+  );
 
   Widget _rssiBadge(int rssi) {
     final Color color = rssi >= -60
         ? Colors.green
         : rssi >= -80
-            ? Colors.orange
-            : Colors.grey;
+        ? Colors.orange
+        : Colors.grey;
     return CircleAvatar(
       radius: 20,
       backgroundColor: color.withValues(alpha: 0.15),
-      child: Text('$rssi',
-          style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+      child: Text(
+        '$rssi',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -616,8 +653,7 @@ class _RangedBeacon {
   int minRssi = 0;
   int maxRssi = -999;
 
-  _RangedBeacon({required this.first, required this.beacon})
-      : lastSeen = first;
+  _RangedBeacon({required this.first, required this.beacon}) : lastSeen = first;
 
   void update(Beacon b, DateTime now) {
     beacon = b;
@@ -647,12 +683,15 @@ class _RawDevice {
     count++;
     // Advertising and scan-response arrive merged or separately depending on
     // platform timing — keep the latest successful decode of each.
-    iBeacon = IBeaconFrame.fromManufacturerData(
-            r.advertisementData.manufacturerData) ??
+    iBeacon =
+        IBeaconFrame.fromManufacturerData(
+          r.advertisementData.manufacturerData,
+        ) ??
         iBeacon;
-    bp1003 = Bp1003ServiceData.fromServiceData({
+    bp1003 =
+        Bp1003ServiceData.fromServiceData({
           for (final e in r.advertisementData.serviceData.entries)
-            e.key.str: e.value
+            e.key.str: e.value,
         }) ??
         bp1003;
   }

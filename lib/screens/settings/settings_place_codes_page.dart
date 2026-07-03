@@ -61,17 +61,26 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
 
   Future<void> _load() async {
     final strategy = await SettingsHelper.loadStringConfig(
-        ConfigKey.placeCodeStrategy, GlobalHierarchicalStrategy.strategyId);
+      ConfigKey.placeCodeStrategy,
+      GlobalHierarchicalStrategy.strategyId,
+    );
     final blob = await SettingsHelper.loadJsonConfig(
-        ConfigKey.placeCodeStrategyConfig, () => <String, dynamic>{});
-    final mode =
-        await SettingsHelper.loadStringConfig(ConfigKey.qcriMode, 'mirror');
+      ConfigKey.placeCodeStrategyConfig,
+      () => <String, dynamic>{},
+    );
+    final mode = await SettingsHelper.loadStringConfig(
+      ConfigKey.qcriMode,
+      'mirror',
+    );
     final hashCfg = await SettingsHelper.loadJsonConfig(
-        ConfigKey.qcriHashConfig, () => <String, dynamic>{'length': 8});
+      ConfigKey.qcriHashConfig,
+      () => <String, dynamic>{'length': 8},
+    );
     if (!mounted) return;
     setState(() {
-      _strategyId =
-          _strategies.contains(strategy) ? strategy : _strategies.first;
+      _strategyId = _strategies.contains(strategy)
+          ? strategy
+          : _strategies.first;
       _strategyConfigs = Map<String, dynamic>.from(blob);
       _qcriMode = mode == 'hash' ? 'hash' : 'mirror';
       final n = (hashCfg['length'] is num)
@@ -81,7 +90,9 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
       _qcriEntranceHash = (hashCfg['entrance_hash'] is bool)
           ? hashCfg['entrance_hash'] as bool
           : false;
-      _qcriSalt = (hashCfg['salt'] is String) ? (hashCfg['salt'] as String) : '';
+      _qcriSalt = (hashCfg['salt'] is String)
+          ? (hashCfg['salt'] as String)
+          : '';
       _saltController.text = _qcriSalt;
       _loading = false;
     });
@@ -150,29 +161,29 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
   }
 
   Future<void> _saveQcriLength(int length) async {
-    await SettingsHelper.saveJsonConfig(
-      ConfigKey.qcriHashConfig,
-      {'length': length, 'entrance_hash': _qcriEntranceHash, 'salt': _qcriSalt},
-      isSynced: true,
-    );
+    await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
+      'length': length,
+      'entrance_hash': _qcriEntranceHash,
+      'salt': _qcriSalt,
+    }, isSynced: true);
     setState(() => _qcriLength = length);
   }
 
   Future<void> _saveQcriEntranceHash(bool v) async {
-    await SettingsHelper.saveJsonConfig(
-      ConfigKey.qcriHashConfig,
-      {'length': _qcriLength, 'entrance_hash': v, 'salt': _qcriSalt},
-      isSynced: true,
-    );
+    await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
+      'length': _qcriLength,
+      'entrance_hash': v,
+      'salt': _qcriSalt,
+    }, isSynced: true);
     setState(() => _qcriEntranceHash = v);
   }
 
   Future<void> _saveQcriSalt(String salt) async {
-    await SettingsHelper.saveJsonConfig(
-      ConfigKey.qcriHashConfig,
-      {'length': _qcriLength, 'entrance_hash': _qcriEntranceHash, 'salt': salt},
-      isSynced: true,
-    );
+    await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
+      'length': _qcriLength,
+      'entrance_hash': _qcriEntranceHash,
+      'salt': salt,
+    }, isSynced: true);
     setState(() => _qcriSalt = salt);
   }
 
@@ -183,7 +194,8 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
         title: Text(LocServ.inst.t('place_code_strategy_$_strategyId')),
         content: SingleChildScrollView(
           child: Text(
-              LocServ.inst.t('place_code_strategy_${_strategyId}_long')),
+            LocServ.inst.t('place_code_strategy_${_strategyId}_long'),
+          ),
         ),
         actions: [
           TextButton(
@@ -221,21 +233,27 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
           children: [
             _stringField('country_code', cfg['country_code'] ?? ''),
             _stringField('organization_code', cfg['organization_code'] ?? ''),
-            _intField('general_area_identifier_width',
-                cfg['general_area_identifier_width'] ?? 3),
-            _intField('cave_local_index_width',
-                cfg['cave_local_index_width'] ?? 3),
-            _intField('cave_place_local_index_width',
-                cfg['cave_place_local_index_width'] ?? 3),
-            _stringField('main_entrance_suffix',
-                cfg['main_entrance_suffix'] ?? '0'),
+            _intField(
+              'general_area_identifier_width',
+              cfg['general_area_identifier_width'] ?? 3,
+            ),
+            _intField(
+              'cave_local_index_width',
+              cfg['cave_local_index_width'] ?? 3,
+            ),
+            _intField(
+              'cave_place_local_index_width',
+              cfg['cave_place_local_index_width'] ?? 3,
+            ),
             _stringField(
-                'segment_separator', cfg['segment_separator'] ?? ''),
+              'main_entrance_suffix',
+              cfg['main_entrance_suffix'] ?? '0',
+            ),
+            _stringField('segment_separator', cfg['segment_separator'] ?? ''),
             SwitchListTile(
               title: Text(LocServ.inst.t('allow_non_digit')),
               value: cfg['allow_non_digit'] == true,
-              onChanged: (v) =>
-                  _saveStrategyConfigField('allow_non_digit', v),
+              onChanged: (v) => _saveStrategyConfigField('allow_non_digit', v),
             ),
           ],
         );
@@ -270,12 +288,14 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
 
   String _qcriPreview() {
     const sample = '040150001001';
-    if (_qcriMode == 'hash' ||
-        (_qcriMode == 'mirror' && _qcriEntranceHash)) {
+    if (_qcriMode == 'hash' || (_qcriMode == 'mirror' && _qcriEntranceHash)) {
       final hasher = const QcriHasher();
       try {
-        return hasher.hash(sample, length: _qcriLength,
-            userSalt: _qcriSalt.isEmpty ? null : _qcriSalt);
+        return hasher.hash(
+          sample,
+          length: _qcriLength,
+          userSalt: _qcriSalt.isEmpty ? null : _qcriSalt,
+        );
       } catch (_) {
         return sample;
       }
@@ -307,10 +327,7 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
           ),
         ),
         body: TabBarView(
-          children: [
-            _buildStrategyTab(context),
-            _buildQcriTab(context),
-          ],
+          children: [_buildStrategyTab(context), _buildQcriTab(context)],
         ),
       ),
     );
@@ -320,16 +337,20 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(LocServ.inst.t('place_code_strategy'),
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          LocServ.inst.t('place_code_strategy'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _strategyId,
           items: _strategies
-              .map((id) => DropdownMenuItem<String>(
-                    value: id,
-                    child: Text(LocServ.inst.t('place_code_strategy_$id')),
-                  ))
+              .map(
+                (id) => DropdownMenuItem<String>(
+                  value: id,
+                  child: Text(LocServ.inst.t('place_code_strategy_$id')),
+                ),
+              )
               .toList(),
           onChanged: (v) {
             if (v != null) _saveStrategyId(v);
@@ -349,8 +370,10 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
           ),
         ),
         const Divider(height: 24),
-        Text(LocServ.inst.t('place_code_strategy_rules'),
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          LocServ.inst.t('place_code_strategy_rules'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         _strategyForm(),
         const Divider(height: 24),
@@ -359,8 +382,7 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
             context,
             scope: const GlobalScope(),
             confirmTitle: LocServ.inst.t('generate_codes_dataset'),
-            confirmBody:
-                LocServ.inst.t('generate_codes_confirm_dataset'),
+            confirmBody: LocServ.inst.t('generate_codes_confirm_dataset'),
           ),
           icon: const Icon(Icons.auto_awesome),
           label: Text(LocServ.inst.t('generate_codes_dataset')),
@@ -373,8 +395,10 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(LocServ.inst.t('qcri_mode'),
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          LocServ.inst.t('qcri_mode'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _qcriMode,
@@ -394,9 +418,7 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
         ),
         if (_qcriMode == 'hash') ...[
           const SizedBox(height: 8),
-          Text(
-            '${LocServ.inst.t('qcri_hash_length')}: $_qcriLength',
-          ),
+          Text('${LocServ.inst.t('qcri_hash_length')}: $_qcriLength'),
           Slider(
             min: QcriHasher.minLength.toDouble(),
             max: QcriHasher.maxLength.toDouble(),
@@ -411,15 +433,14 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
           SwitchListTile(
             title: Text(LocServ.inst.t('qcri_entrance_hash_in_mirror_mode')),
             subtitle: Text(
-                LocServ.inst.t('qcri_entrance_hash_in_mirror_mode_help')),
+              LocServ.inst.t('qcri_entrance_hash_in_mirror_mode_help'),
+            ),
             value: _qcriEntranceHash,
             onChanged: _saveQcriEntranceHash,
           ),
           if (_qcriEntranceHash) ...[
             const SizedBox(height: 8),
-            Text(
-              '${LocServ.inst.t('qcri_hash_length')}: $_qcriLength',
-            ),
+            Text('${LocServ.inst.t('qcri_hash_length')}: $_qcriLength'),
             Slider(
               min: QcriHasher.minLength.toDouble(),
               max: QcriHasher.maxLength.toDouble(),
