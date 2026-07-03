@@ -23,6 +23,12 @@ jobs:
       - name: Static analysis
         run: flutter analyze --no-fatal-infos
 
+      - name: Format check
+        # Repo was bulk-formatted with the Dart 3.10 tall style (commit
+        # c046a93); this keeps it that way. Generated *.g.dart files are
+        # emitted pre-formatted by build_runner, so no exclusions needed.
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
       - name: Refactor guardrails
         # Fails when new code outside lib/data/ or lib/services/ uses the
         # global `appDatabase`. Existing call-sites are grandfathered via the
