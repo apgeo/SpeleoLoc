@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_importer.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -47,7 +46,7 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
     super.initState();
     _importer = CSVCaveImporter(
       ref.read(appDatabaseProvider),
-      currentUserService,
+      ref.read(currentUserServiceProvider),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }

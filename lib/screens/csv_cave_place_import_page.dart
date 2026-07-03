@@ -4,7 +4,6 @@ import 'package:speleoloc/data/source/database/app_database.dart' show Uuid;
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
 import 'package:speleoloc/services/csv_cave_place_importer.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -68,8 +67,8 @@ class _CSVCavePlacesImportPageState
     super.initState();
     _importer = CSVCavePlaceImporter(
       ref.read(appDatabaseProvider),
-      currentUserService,
-      placeCodeService,
+      ref.read(currentUserServiceProvider),
+      ref.read(placeCodeServiceProvider),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }
