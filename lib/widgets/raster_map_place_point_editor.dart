@@ -10,6 +10,7 @@ import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_image_filter.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_filter_panel.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_sort_options.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_toolbar_widgets.dart';
 import 'package:speleoloc/widgets/raster_map/trip_overlay_data.dart';
 import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
@@ -1653,7 +1654,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       bool active,
     ) => PopupMenuItem<String>(
       value: value,
-      child: _MenuRow(icon, label, active: active),
+      child: OverlayMenuRow(icon, label, active: active),
     );
 
     return [
@@ -1695,7 +1696,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       // Additive / advanced panel
       PopupMenuItem<String>(
         value: 'custom',
-        child: _MenuRow(
+        child: OverlayMenuRow(
           Icons.tune,
           t('img_filter_custom'),
           active: current.mode == RasterMapFilterMode.custom,
@@ -1734,7 +1735,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   }
 
   // ── Side toolbar helpers ──────────────────────────────────────────────────
-  // All visual constants live in _ToolbarStyle (see bottom of this file).
+  // All visual constants live in RasterMapToolbarStyle
+  // (widgets/raster_map/raster_map_toolbar_widgets.dart).
 
   // ── Action-bar button list (shared by bottom-bar and landscape right-bar) ──
 
@@ -1886,16 +1888,18 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
           decoration: BoxDecoration(
-            color: surfaceColor.withValues(alpha: _ToolbarStyle.bgAlpha),
-            border: Border.all(
-              color: _ToolbarStyle.borderColor,
-              width: _ToolbarStyle.borderWidth,
+            color: surfaceColor.withValues(
+              alpha: RasterMapToolbarStyle.bgAlpha,
             ),
-            borderRadius: BorderRadius.circular(_ToolbarStyle.radius),
+            border: Border.all(
+              color: RasterMapToolbarStyle.borderColor,
+              width: RasterMapToolbarStyle.borderWidth,
+            ),
+            borderRadius: BorderRadius.circular(RasterMapToolbarStyle.radius),
             boxShadow: const [
               BoxShadow(
-                color: _ToolbarStyle.shadowColor,
-                blurRadius: _ToolbarStyle.shadowBlur,
+                color: RasterMapToolbarStyle.shadowColor,
+                blurRadius: RasterMapToolbarStyle.shadowBlur,
               ),
             ],
           ),
@@ -1904,7 +1908,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
             children:
                 _buildActionBarButtons(context)
                     .expand(
-                      (b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)],
+                      (b) => [
+                        b,
+                        const SizedBox(height: RasterMapToolbarStyle.btnGap),
+                      ],
                     )
                     .toList()
                   ..removeLast(),
@@ -1921,27 +1928,27 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     final onLeft = widget.toolbarSide == ToolbarSide.left;
     final surfaceColor = Theme.of(context).colorScheme.surface;
     return Positioned(
-      left: onLeft ? _ToolbarStyle.sideMargin : null,
-      right: onLeft ? null : _ToolbarStyle.sideMargin,
-      top: _ToolbarStyle.sideMargin,
+      left: onLeft ? RasterMapToolbarStyle.sideMargin : null,
+      right: onLeft ? null : RasterMapToolbarStyle.sideMargin,
+      top: RasterMapToolbarStyle.sideMargin,
       child: Container(
-        padding: const EdgeInsets.all(_ToolbarStyle.togglePad),
+        padding: const EdgeInsets.all(RasterMapToolbarStyle.togglePad),
         decoration: BoxDecoration(
-          color: surfaceColor.withValues(alpha: _ToolbarStyle.bgAlpha),
+          color: surfaceColor.withValues(alpha: RasterMapToolbarStyle.bgAlpha),
           border: Border.all(
-            color: _ToolbarStyle.borderColor,
-            width: _ToolbarStyle.borderWidth,
+            color: RasterMapToolbarStyle.borderColor,
+            width: RasterMapToolbarStyle.borderWidth,
           ),
-          borderRadius: BorderRadius.circular(_ToolbarStyle.radius),
+          borderRadius: BorderRadius.circular(RasterMapToolbarStyle.radius),
           boxShadow: const [
             BoxShadow(
-              color: _ToolbarStyle.shadowColor,
-              blurRadius: _ToolbarStyle.shadowBlur,
+              color: RasterMapToolbarStyle.shadowColor,
+              blurRadius: RasterMapToolbarStyle.shadowBlur,
               spreadRadius: 0,
             ),
           ],
         ),
-        child: _OverlayIconButton(
+        child: OverlayIconButton(
           icon: _toolbarVisible ? Icons.chevron_left : Icons.chevron_right,
           iconFlip: !onLeft,
           tooltip: _toolbarVisible
@@ -1988,22 +1995,25 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     final actionItems = <PopupMenuEntry<String>>[
       PopupMenuItem<String>(
         value: 'filter_cave_places',
-        child: _MenuRow(Icons.search, LocServ.inst.t('filter_cave_places')),
+        child: OverlayMenuRow(
+          Icons.search,
+          LocServ.inst.t('filter_cave_places'),
+        ),
       ),
       PopupMenuItem<String>(
         value: 'sort_cave_places',
-        child: _MenuRow(
+        child: OverlayMenuRow(
           Icons.sort_by_alpha,
           LocServ.inst.t('sort_cave_places_navbar'),
         ),
       ),
       PopupMenuItem<String>(
         value: 'sort_raster_maps',
-        child: _MenuRow(Icons.sort, LocServ.inst.t('sort_raster_maps')),
+        child: OverlayMenuRow(Icons.sort, LocServ.inst.t('sort_raster_maps')),
       ),
       PopupMenuItem<String>(
         value: 'manage_raster_maps',
-        child: _MenuRow(
+        child: OverlayMenuRow(
           Icons.map_outlined,
           LocServ.inst.t('manage_raster_maps'),
         ),
@@ -2012,7 +2022,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
     final buttons = <Widget>[
       // Navigate to next place without a defined point
-      _OverlayIconButton(
+      OverlayIconButton(
         icon: Icons.location_searching,
         tooltip: undefinedCount > 0
             ? LocServ.inst.t('next_undefined_place_count', {
@@ -2024,14 +2034,14 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         onPressed: _navigateToNextUndefined,
       ),
       // Toggle cave-places filter in the nav bar
-      _OverlayIconButton(
+      OverlayIconButton(
         icon: Icons.search,
         tooltip: LocServ.inst.t('filter_cave_places'),
         active: _visiblePlaceUuids != null,
         onPressed: _toggleNavBarCavePlaceFilter,
       ),
       // Nav-bar view toggles (show/hide maps list, show/hide places list)
-      _OverlayPopupButton(
+      OverlayPopupButton(
         icon: Icons.layers_outlined,
         tooltip: LocServ.inst.t('navbar_view_options'),
         items: navViewItems,
@@ -2054,7 +2064,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         },
       ),
       // More actions (filter / sort / manage — mirrors app drawer)
-      _OverlayPopupButton(
+      OverlayPopupButton(
         icon: Icons.more_vert,
         tooltip: LocServ.inst.t('more_actions'),
         items: actionItems,
@@ -2075,7 +2085,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         },
       ),
       // Toggle full-screen (hides nav bar + parent AppBar, keeps bottom bar)
-      _OverlayIconButton(
+      OverlayIconButton(
         icon: _fullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
         tooltip: LocServ.inst.t(
           _fullScreen ? 'exit_full_screen' : 'full_screen',
@@ -2084,7 +2094,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         onPressed: _toggleFullScreen,
       ),
       // Invert raster-map colours (quick toggle, also available in the processing menu)
-      _OverlayIconButton(
+      OverlayIconButton(
         icon: Icons.invert_colors,
         tooltip: LocServ.inst.t(
           _colorInverted ? 'invert_colors_restore' : 'invert_colors',
@@ -2094,7 +2104,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       ),
       // ── Image processing ──────────────────────────────────────────────────
       // Active indicator: any non-normal filter is highlighted.
-      _OverlayPopupButton(
+      OverlayPopupButton(
         icon: Icons.tune,
         tooltip: LocServ.inst.t('img_processing'),
         active: !_activeFilter.isNormal,
@@ -2104,22 +2114,22 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     ];
 
     return Positioned(
-      left: onLeft ? _ToolbarStyle.sideMargin : null,
-      right: onLeft ? null : _ToolbarStyle.sideMargin,
-      top: _ToolbarStyle.toolbarTopOffset,
+      left: onLeft ? RasterMapToolbarStyle.sideMargin : null,
+      right: onLeft ? null : RasterMapToolbarStyle.sideMargin,
+      top: RasterMapToolbarStyle.toolbarTopOffset,
       child: Container(
-        padding: const EdgeInsets.all(_ToolbarStyle.panelPad),
+        padding: const EdgeInsets.all(RasterMapToolbarStyle.panelPad),
         decoration: BoxDecoration(
-          color: surfaceColor.withValues(alpha: _ToolbarStyle.bgAlpha),
+          color: surfaceColor.withValues(alpha: RasterMapToolbarStyle.bgAlpha),
           border: Border.all(
-            color: _ToolbarStyle.borderColor,
-            width: _ToolbarStyle.borderWidth,
+            color: RasterMapToolbarStyle.borderColor,
+            width: RasterMapToolbarStyle.borderWidth,
           ),
-          borderRadius: BorderRadius.circular(_ToolbarStyle.radius),
+          borderRadius: BorderRadius.circular(RasterMapToolbarStyle.radius),
           boxShadow: const [
             BoxShadow(
-              color: _ToolbarStyle.shadowColor,
-              blurRadius: _ToolbarStyle.shadowBlur,
+              color: RasterMapToolbarStyle.shadowColor,
+              blurRadius: RasterMapToolbarStyle.shadowBlur,
               spreadRadius: 0,
             ),
           ],
@@ -2129,7 +2139,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
           children:
               buttons
                   .expand(
-                    (b) => [b, const SizedBox(height: _ToolbarStyle.btnGap)],
+                    (b) => [
+                      b,
+                      const SizedBox(height: RasterMapToolbarStyle.btnGap),
+                    ],
                   )
                   .toList()
                 ..removeLast(),
@@ -2552,218 +2565,5 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         ],
       ), // Column
     ); // PopScope
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// TOOLBAR STYLE CONSTANTS
-// Edit values here to change the look of the entire side-toolbar system.
-// ───────────────────────────────────────────────────────────────────────────
-abstract final class _ToolbarStyle {
-  // ── Sizes ───────────────────────────────────────────────────────────────────
-
-  /// Button cell width & height.  Small size is 32 px.
-  static const double btnSize = 40.0;
-
-  /// Icon size inside each button cell.  Scaled proportionally from 18 px.
-  static const double iconSize = 28.0;
-
-  /// Padding inside the toggle-button wrapper container.
-  static const double togglePad = 1.0;
-
-  /// Distance from the map edge to the toolbar / toggle anchor.
-  static const double sideMargin = 10.0;
-
-  /// Vertical gap between the toggle-button wrapper and the toolbar panel.
-  static const double toggleGap = 4.0;
-
-  /// Inner padding of the toolbar panel container.
-  static const double panelPad = 1.0;
-
-  /// Vertical gap between buttons inside the toolbar panel.
-  static const double btnGap = 2.0;
-
-  /// Corner radius for the toolbar / toggle wrapper containers.
-  static const double radius = 8.0;
-
-  /// Corner radius for individual button ink-well cells.
-  static const double btnRadius = 6.0;
-
-  /// Border width for toolbar containers.
-  static const double borderWidth = 1.0;
-
-  /// Drop-shadow blur radius.
-  static const double shadowBlur = 4.0;
-
-  // ── Transparency / colour ─────────────────────────────────────────────────
-
-  /// Opacity of toolbar / toggle-wrapper background (semi-transparent).
-  static const double bgAlpha = 0.55;
-
-  /// Opacity of an active (highlighted) button background.
-  static const double activeBgAlpha = 0.15;
-
-  /// Opacity of normal (non-active, non-disabled) icons.
-  static const double iconAlpha = 0.75;
-
-  /// Border colour for toolbar containers.  Grey 400 ≈ #BDBDBD.
-  static const Color borderColor = Color(0xFFBDBDBD);
-
-  /// Drop-shadow colour.
-  static const Color shadowColor = Colors.black26;
-
-  // ── Derived ───────────────────────────────────────────────────────────────────
-
-  /// Top offset of the toolbar panel =
-  ///   sideMargin + (togglePad + btnSize + togglePad) + toggleGap.
-  static const double toolbarTopOffset =
-      sideMargin + (2 * togglePad + btnSize) + toggleGap;
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// TOOLBAR WIDGETS
-// ───────────────────────────────────────────────────────────────────────────
-
-/// A plain icon button used inside the side toolbar.
-/// Size and colours are driven entirely by [_ToolbarStyle].
-class _OverlayIconButton extends StatelessWidget {
-  const _OverlayIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-    this.active = false,
-    this.enabled = true,
-    this.iconFlip = false,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-  final bool active;
-  final bool enabled;
-
-  /// When true the icon is horizontally mirrored (for right-side chevrons).
-  final bool iconFlip;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final iconColor = !enabled
-        ? Theme.of(context).disabledColor
-        : active
-        ? primary
-        : Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
-    Widget iconWidget = Icon(
-      icon,
-      size: _ToolbarStyle.iconSize,
-      color: iconColor,
-    );
-    if (iconFlip) {
-      iconWidget = Transform.scale(scaleX: -1, child: iconWidget);
-    }
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: enabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(_ToolbarStyle.btnRadius),
-        child: Container(
-          width: _ToolbarStyle.btnSize,
-          height: _ToolbarStyle.btnSize,
-          decoration: BoxDecoration(
-            color: active
-                ? primary.withValues(alpha: _ToolbarStyle.activeBgAlpha)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(_ToolbarStyle.btnRadius),
-          ),
-          alignment: Alignment.center,
-          child: iconWidget,
-        ),
-      ),
-    );
-  }
-}
-
-/// A popup-menu button styled to match [_OverlayIconButton].
-/// Size and colours are driven entirely by [_ToolbarStyle].
-class _OverlayPopupButton extends StatelessWidget {
-  const _OverlayPopupButton({
-    required this.icon,
-    required this.tooltip,
-    required this.items,
-    required this.onSelected,
-    this.active = false,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final List<PopupMenuEntry<String>> items;
-  final FutureOr<void> Function(String) onSelected;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final iconColor = active
-        ? primary
-        : Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
-    return PopupMenuButton<String>(
-      tooltip: tooltip,
-      onSelected: onSelected,
-      itemBuilder: (_) => items,
-      child: Container(
-        width: _ToolbarStyle.btnSize,
-        height: _ToolbarStyle.btnSize,
-        decoration: BoxDecoration(
-          color: active
-              ? primary.withValues(alpha: _ToolbarStyle.activeBgAlpha)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(_ToolbarStyle.btnRadius),
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, size: _ToolbarStyle.iconSize, color: iconColor),
-      ),
-    );
-  }
-}
-
-/// A row with an icon and a label used inside popup menu items in the toolbar.
-class _MenuRow extends StatelessWidget {
-  const _MenuRow(this.icon, this.label, {this.active = false});
-  final IconData icon;
-  final String label;
-
-  /// When true a check icon is shown on the right, indicating active state.
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: _ToolbarStyle.iconAlpha);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            style: active
-                ? TextStyle(color: color, fontWeight: FontWeight.w600)
-                : null,
-          ),
-        ),
-        if (active) ...[
-          const SizedBox(width: 8),
-          Icon(Icons.check, size: 16, color: color),
-        ],
-      ],
-    );
   }
 }
