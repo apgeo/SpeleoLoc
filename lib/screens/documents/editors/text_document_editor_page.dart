@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -15,7 +16,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// text is written to a `.txt` file inside the documentation storage folder
 /// and a corresponding DB record is inserted, optionally linked to a
 /// geofeature parent.
-class TextDocumentEditorPage extends StatefulWidget {
+class TextDocumentEditorPage extends ConsumerStatefulWidget {
   const TextDocumentEditorPage({
     super.key,
     this.cavePlaceUuid,
@@ -33,10 +34,11 @@ class TextDocumentEditorPage extends StatefulWidget {
   final DocumentationFile? existingDoc;
 
   @override
-  State<TextDocumentEditorPage> createState() => _TextDocumentEditorPageState();
+  ConsumerState<TextDocumentEditorPage> createState() =>
+      _TextDocumentEditorPageState();
 }
 
-class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
+class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
     with
         AppBarMenuMixin<TextDocumentEditorPage>,
         ProductTourMixin<TextDocumentEditorPage> {
@@ -198,7 +200,8 @@ class _TextDocumentEditorPageState extends State<TextDocumentEditorPage>
           );
         }
 
-        final parentLink = await documentationRepository
+        final parentLink = await ref
+            .read(documentationRepositoryProvider)
             .getDocumentationParentLink(
               cavePlaceUuid: widget.cavePlaceUuid,
               caveUuid: widget.caveUuid,

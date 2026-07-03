@@ -2,9 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -17,7 +18,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///   overwrites it on save.
 /// * **Create mode**: expects [initialFile] (e.g. from file-picker or camera)
 ///   so the user can annotate / crop before the first save.
-class ImageEditorPage extends StatefulWidget {
+class ImageEditorPage extends ConsumerStatefulWidget {
   const ImageEditorPage({
     super.key,
     this.cavePlaceUuid,
@@ -39,10 +40,10 @@ class ImageEditorPage extends StatefulWidget {
   final File? initialFile;
 
   @override
-  State<ImageEditorPage> createState() => _ImageEditorPageState();
+  ConsumerState<ImageEditorPage> createState() => _ImageEditorPageState();
 }
 
-class _ImageEditorPageState extends State<ImageEditorPage> {
+class _ImageEditorPageState extends ConsumerState<ImageEditorPage> {
   bool _isEditing = false;
   bool _isLoading = true;
   Uint8List? _imageBytes;
@@ -101,7 +102,8 @@ class _ImageEditorPageState extends State<ImageEditorPage> {
           bytes: editedBytes,
         );
 
-        final parentLink = await documentationRepository
+        final parentLink = await ref
+            .read(documentationRepositoryProvider)
             .getDocumentationParentLink(
               cavePlaceUuid: widget.cavePlaceUuid,
               caveUuid: widget.caveUuid,

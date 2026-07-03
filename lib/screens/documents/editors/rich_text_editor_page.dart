@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -19,7 +20,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// * **Edit mode** (`existingDoc != null`): loads the existing `.qldoc` file,
 ///   parses its Delta JSON, and overwrites on save.
 /// * **Create mode**: starts with an empty document.
-class RichTextEditorPage extends StatefulWidget {
+class RichTextEditorPage extends ConsumerStatefulWidget {
   const RichTextEditorPage({
     super.key,
     this.cavePlaceUuid,
@@ -34,10 +35,10 @@ class RichTextEditorPage extends StatefulWidget {
   final DocumentationFile? existingDoc;
 
   @override
-  State<RichTextEditorPage> createState() => _RichTextEditorPageState();
+  ConsumerState<RichTextEditorPage> createState() => _RichTextEditorPageState();
 }
 
-class _RichTextEditorPageState extends State<RichTextEditorPage>
+class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
     with
         AppBarMenuMixin<RichTextEditorPage>,
         ProductTourMixin<RichTextEditorPage> {
@@ -206,7 +207,8 @@ class _RichTextEditorPageState extends State<RichTextEditorPage>
           content: deltaJson,
         );
 
-        final parentLink = await documentationRepository
+        final parentLink = await ref
+            .read(documentationRepositoryProvider)
             .getDocumentationParentLink(
               cavePlaceUuid: widget.cavePlaceUuid,
               caveUuid: widget.caveUuid,

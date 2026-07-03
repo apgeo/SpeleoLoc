@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
@@ -19,7 +20,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///
 /// If the device has no camera the user sees a friendly message and can fall
 /// back to picking from the gallery.
-class CameraCapturePage extends StatefulWidget {
+class CameraCapturePage extends ConsumerStatefulWidget {
   const CameraCapturePage({
     super.key,
     this.cavePlaceUuid,
@@ -32,10 +33,10 @@ class CameraCapturePage extends StatefulWidget {
   final Uuid? caveAreaUuid;
 
   @override
-  State<CameraCapturePage> createState() => _CameraCapturePageState();
+  ConsumerState<CameraCapturePage> createState() => _CameraCapturePageState();
 }
 
-class _CameraCapturePageState extends State<CameraCapturePage>
+class _CameraCapturePageState extends ConsumerState<CameraCapturePage>
     with
         AppBarMenuMixin<CameraCapturePage>,
         ProductTourMixin<CameraCapturePage> {
@@ -118,7 +119,8 @@ class _CameraCapturePageState extends State<CameraCapturePage>
       final saved = await DocumentationFileHelper.saveExternalFile(
         _capturedFile!,
       );
-      final parentLink = await documentationRepository
+      final parentLink = await ref
+          .read(documentationRepositoryProvider)
           .getDocumentationParentLink(
             cavePlaceUuid: widget.cavePlaceUuid,
             caveUuid: widget.caveUuid,

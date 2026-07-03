@@ -4,11 +4,12 @@ import 'dart:typed_data';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -24,7 +25,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///
 /// * **Create mode** (default): record → preview → save.
 /// * **Edit mode** (`existingDoc != null`): re-record and overwrite.
-class SoundRecorderPage extends StatefulWidget {
+class SoundRecorderPage extends ConsumerStatefulWidget {
   const SoundRecorderPage({
     super.key,
     this.cavePlaceUuid,
@@ -39,10 +40,10 @@ class SoundRecorderPage extends StatefulWidget {
   final DocumentationFile? existingDoc;
 
   @override
-  State<SoundRecorderPage> createState() => _SoundRecorderPageState();
+  ConsumerState<SoundRecorderPage> createState() => _SoundRecorderPageState();
 }
 
-class _SoundRecorderPageState extends State<SoundRecorderPage>
+class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     with
         AppBarMenuMixin<SoundRecorderPage>,
         ProductTourMixin<SoundRecorderPage> {
@@ -443,7 +444,8 @@ class _SoundRecorderPageState extends State<SoundRecorderPage>
         final saved = await DocumentationFileHelper.saveExternalFile(
           recordedFile,
         );
-        final parentLink = await documentationRepository
+        final parentLink = await ref
+            .read(documentationRepositoryProvider)
             .getDocumentationParentLink(
               cavePlaceUuid: widget.cavePlaceUuid,
               caveUuid: widget.caveUuid,
