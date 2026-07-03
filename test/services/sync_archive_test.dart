@@ -508,6 +508,64 @@ void main() {
       await b.db.close();
     },
   );
+
+  test('is_synced configurations propagate but device-local do not', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+    final aConfig = ConfigurationRepository(a.db);
+    final bConfig = ConfigurationRepository(b.db);
+
+    await aConfig.writeString(
+      'place_code_strategy',
+      'per_cave_sequential',
+      isSynced: true,
+    );
+    // Device-local (is_synced defaults to 0) — must never be exported.
+    await aConfig.writeString('last_open_cave', 'A-only');
+
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final report = await b.sync.importFromZip(zip.path);
+    expect(report.warnings, isEmpty);
+
+    expect(
+      await bConfig.readString('place_code_strategy'),
+      'per_cave_sequential',
+      reason: 'synced strategy config should propagate',
+    );
+    expect(
+      await bConfig.readString('last_open_cave'),
+      isNull,
+      reason: 'device-local config must not sync',
+    );
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('configuration merge is last-writer-wins by updated_at', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+    final aConfig = ConfigurationRepository(a.db);
+    final bConfig = ConfigurationRepository(b.db);
+
+    // A writes first, B writes the newer value for the same key.
+    await aConfig.writeString('qcri_mode', 'plain', isSynced: true);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await bConfig.writeString('qcri_mode', 'hashed', isSynced: true);
+
+    // A (older) -> B: B keeps its newer value.
+    final zipA = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    await b.sync.importFromZip(zipA.path);
+    expect(await bConfig.readString('qcri_mode'), 'hashed');
+
+    // B (newer) -> A: A adopts the newer value.
+    final zipB = await b.sync.exportToZip(tempDir.path, filenameHint: 'b.zip');
+    await a.sync.importFromZip(zipB.path);
+    expect(await aConfig.readString('qcri_mode'), 'hashed');
+
+    await a.db.close();
+    await b.db.close();
+  });
 }
 
 class _Harness {

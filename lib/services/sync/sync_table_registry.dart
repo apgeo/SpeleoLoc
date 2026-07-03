@@ -268,7 +268,92 @@ class SyncTableRegistry {
         resolver,
       ),
     ),
+    // `configurations` is the one syncable table with an INTEGER primary key
+    // and no uuid/audit columns, so it can't use the generic uuid-keyed
+    // upsert. Only rows flagged `is_synced = 1` (the place-code strategy and
+    // QCRI settings) travel; device-local rows (device_uuid, current_user,
+    // last-open-cave, …) are is_synced = 0 and never exported. Keyed on the
+    // `title` UNIQUE, plain last-writer-wins on updated_at — a config setting
+    // is a "latest wins" value, so it is not routed through the resolver.
+    SyncTableHandler(
+      name: 'configurations',
+      dump: () async {
+        final rows = await _db
+            .customSelect(
+              'SELECT title, value, is_synced, created_at, updated_at '
+              'FROM configurations WHERE is_synced = 1',
+            )
+            .get();
+        return rows.map((r) => Map<String, dynamic>.from(r.data)).toList();
+      },
+      upsert: (rows, _) => _upsertConfigurations(rows),
+    ),
   ];
+
+  /// Title-keyed LWW merge for the syncable `configurations` rows. Ignores
+  /// any incoming row not flagged `is_synced = 1` so a malformed or hostile
+  /// archive cannot flip a device-local key into the synced set.
+  Future<UpsertCounters> _upsertConfigurations(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    var inserted = 0;
+    var updated = 0;
+    var skipped = 0;
+
+    for (final row in rows) {
+      final title = row['title'] as String?;
+      if (title == null || (row['is_synced'] as int?) != 1) {
+        skipped++;
+        continue;
+      }
+      final incomingValue = row['value'] as String?;
+      final incomingTs =
+          (row['updated_at'] as int?) ?? (row['created_at'] as int?) ?? 0;
+
+      final local = await _db
+          .customSelect(
+            'SELECT value, created_at, updated_at FROM configurations '
+            'WHERE title = ? LIMIT 1',
+            variables: [Variable<String>(title)],
+          )
+          .getSingleOrNull();
+
+      if (local == null) {
+        await _db.customStatement(
+          'INSERT INTO configurations '
+          '(title, value, is_synced, created_at, updated_at) '
+          'VALUES (?, ?, 1, ?, ?)',
+          [title, incomingValue, row['created_at'], row['updated_at']],
+        );
+        inserted++;
+        continue;
+      }
+
+      final localValue = local.data['value'] as String?;
+      final localTs =
+          (local.data['updated_at'] as int?) ??
+          (local.data['created_at'] as int?) ??
+          0;
+      if (localValue == incomingValue) {
+        skipped++;
+      } else if (incomingTs > localTs) {
+        await _db.customStatement(
+          'UPDATE configurations SET value = ?, is_synced = 1, updated_at = ? '
+          'WHERE title = ?',
+          [incomingValue, row['updated_at'], title],
+        );
+        updated++;
+      } else {
+        skipped++;
+      }
+    }
+
+    return UpsertCounters(
+      inserted: inserted,
+      updated: updated,
+      skipped: skipped,
+    );
+  }
 
   /// Generic last-writer-wins upsert with optional [resolver] callback for
   /// surfacing conflicts to the user.
