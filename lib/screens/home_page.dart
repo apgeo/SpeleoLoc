@@ -123,21 +123,21 @@ class _HomePageState extends ConsumerState<HomePage>
           context,
           MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
         );
-        if (result == true) _loadCaves();
+        if (result == true) unawaited(_loadCaves());
         break;
       case 'csv_import':
         final result = await Navigator.push<bool?>(
           context,
           MaterialPageRoute(builder: (_) => const CSVCavePlacesImportPage()),
         );
-        if (result == true) _loadCaves();
+        if (result == true) unawaited(_loadCaves());
         break;
       case 'csv_import_caves':
         final result = await Navigator.push<bool?>(
           context,
           MaterialPageRoute(builder: (_) => const CSVCavesImportPage()),
         );
-        if (result == true) _loadCaves();
+        if (result == true) unawaited(_loadCaves());
         break;
     }
   }
@@ -281,10 +281,12 @@ class _HomePageState extends ConsumerState<HomePage>
           AppStartCounter.count <= 4) {
         _testDataPromptShown = true;
         _testDataPromptCompleter = Completer<void>();
-        _offerTestDataPopulation().whenComplete(() {
-          _testDataPromptCompleter?.complete();
-          _testDataPromptCompleter = null;
-        });
+        unawaited(
+          _offerTestDataPopulation().whenComplete(() {
+            _testDataPromptCompleter?.complete();
+            _testDataPromptCompleter = null;
+          }),
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -353,20 +355,22 @@ class _HomePageState extends ConsumerState<HomePage>
     final messageNotifier = ValueNotifier<String>(
       LocServ.inst.t('downloading_test_archive'),
     );
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            ValueListenableBuilder<String>(
-              valueListenable: messageNotifier,
-              builder: (_, msg, __) => Text(msg),
-            ),
-          ],
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<String>(
+                valueListenable: messageNotifier,
+                builder: (_, msg, __) => Text(msg),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -434,7 +438,7 @@ class _HomePageState extends ConsumerState<HomePage>
       context,
       MaterialPageRoute(builder: (_) => const DocumentationFilesPage()),
     );
-    if (result == true) _loadCaves();
+    if (result == true) unawaited(_loadCaves());
   }
 
   Future<void> _openSettings() async {
@@ -443,7 +447,7 @@ class _HomePageState extends ConsumerState<HomePage>
       MaterialPageRoute(builder: (_) => const SettingsMainPage()),
     );
     await _loadUiSettings();
-    _loadCaves();
+    unawaited(_loadCaves());
     if (mounted) setState(() {});
   }
 
@@ -639,20 +643,20 @@ class _HomePageState extends ConsumerState<HomePage>
     final result = await ref
         .read(qrCodeLookupHandlerProvider)
         .manualInputAndHandle(context);
-    if (result != null) _loadCaves();
+    if (result != null) unawaited(_loadCaves());
   }
 
   Future<void> _scanAndLookupQr() async {
     final result = await ref
         .read(qrCodeLookupHandlerProvider)
         .openAndHandle(context);
-    if (result != null) _loadCaves();
+    if (result != null) unawaited(_loadCaves());
   }
 
   Future<dynamic> _navigateToCavePage(BuildContext context, Cave cave) async {
     final result = await AppRoutes.pushCave(context, cave.uuid);
     // Always refresh cave list summary after returning: cave places/areas/maps/definitions may have changed.
-    _loadCaves();
+    unawaited(_loadCaves());
     return result;
   }
 
@@ -681,7 +685,7 @@ class _HomePageState extends ConsumerState<HomePage>
             context,
             MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
           );
-          if (result == true) _loadCaves();
+          if (result == true) unawaited(_loadCaves());
         },
       ),
       _HomeToolbarBtn(
@@ -692,7 +696,7 @@ class _HomePageState extends ConsumerState<HomePage>
             context,
             MaterialPageRoute(builder: (_) => const CSVCavesImportPage()),
           );
-          if (result == true) _loadCaves();
+          if (result == true) unawaited(_loadCaves());
         },
       ),
       _HomeToolbarBtn(

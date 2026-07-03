@@ -28,13 +28,17 @@ analyzer:
     # are now guarded, so it is promoted to a build-failing warning to keep
     # new violations out.
     use_build_context_synchronously: warning
-    # Refactoring guardrails (see docs/REFACTORING_PLAN.md). Surfaced as
-    # `info` so they show up in the IDE / CI logs without breaking the
-    # build during the migration. Promote to `warning` / `error` once the
-    # corresponding PR is merged.
-    unawaited_futures: info
-    avoid_catches_without_on_clauses: info
-    avoid_catching_errors: info
+    # WS-H3 (2026-07-03): these guardrail lints were previously listed here at
+    # `info` but never enabled under `linter.rules`, so the analyzer never ran
+    # them (a severity override does not enable a lint). They are now enabled
+    # below and enforced as build-failing warnings.
+    #
+    # `avoid_catches_without_on_clauses` was intentionally dropped: it flagged
+    # 187 mostly-deliberate defensive `catch (e)` blocks, is not part of
+    # flutter_lints, and enforcing it changes runtime behaviour (Error
+    # subtypes would propagate). Revisit as a separate workstream if desired.
+    unawaited_futures: warning
+    avoid_catching_errors: warning
 
 linter:
   # The lint rules applied to this project can be customized in the
@@ -55,6 +59,10 @@ linter:
     prefer_const_constructors: true
     prefer_const_declarations: true
     unnecessary_const: true
+    # WS-H3 — enable the guardrail rules so the analyzer actually runs them
+    # (severity is set to `warning` in `analyzer.errors` above).
+    unawaited_futures: true
+    avoid_catching_errors: true
     # `unused_element` and `dead_code` are already reported as analyzer diagnostics.
 
 # Additional information about this file can be found at

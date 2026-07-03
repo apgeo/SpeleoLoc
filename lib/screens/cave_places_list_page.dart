@@ -138,7 +138,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
         ),
       );
       if (result == true) {
-        _loadCavePlaces();
+        unawaited(_loadCavePlaces());
       }
     } else if (value == 'beacons') {
       await Navigator.push(
@@ -361,18 +361,22 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     if (!mounted) return;
     final selectedFromController = _listController.selectedItems;
     if (_listController.selectionMode && selectedFromController.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              GeneratedQRCodeViewer(cavePlaces: selectedFromController),
+      unawaited(
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                GeneratedQRCodeViewer(cavePlaces: selectedFromController),
+          ),
         ),
       );
     } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => GeneratedQRCodeViewer(caveUuid: widget.caveUuid),
+      unawaited(
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GeneratedQRCodeViewer(caveUuid: widget.caveUuid),
+          ),
         ),
       );
     }
@@ -487,7 +491,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   Future<void> _loadCave() async {
     _cave = await ref.read(caveRepositoryProvider).findById(widget.caveUuid);
     // Save last open cave for deep link resolution
-    DeepLinkHandler.saveLastOpenCave(widget.caveUuid);
+    unawaited(DeepLinkHandler.saveLastOpenCave(widget.caveUuid));
     if (!mounted) return;
     setState(() {});
   }
@@ -664,7 +668,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
 
   Future<void> _deleteCavePlace(Uuid id) async {
     await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(id);
-    _loadCavePlaces();
+    unawaited(_loadCavePlaces());
     if (mounted)
       SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
   }
@@ -696,7 +700,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     final result = await ref
         .read(qrCodeLookupHandlerProvider)
         .handleScannedCode(context, code, currentCaveId: widget.caveUuid);
-    if (result != null && mounted) _loadCavePlaces();
+    if (result != null && mounted) unawaited(_loadCavePlaces());
   }
 
   @override
@@ -809,7 +813,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                     final result = await ref
                         .read(qrCodeLookupHandlerProvider)
                         .openAndHandle(context, currentCaveId: widget.caveUuid);
-                    if (result != null && mounted) _loadCavePlaces();
+                    if (result != null && mounted) unawaited(_loadCavePlaces());
                   },
                   icon: Icons.qr_code_scanner,
                   tooltip: LocServ.inst.t('scan_qr'),
@@ -825,7 +829,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                       builder: (_) => CavePlacePage(caveUuid: widget.caveUuid),
                     ),
                   );
-                  if (result == true) _loadCavePlaces();
+                  if (result == true) unawaited(_loadCavePlaces());
                 },
                 icon: Icons.add,
                 tooltip: LocServ.inst.t('add_cave_place'),
@@ -837,7 +841,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                     context,
                     widget.caveUuid,
                   );
-                  if (result == true) _loadCavePlaces();
+                  if (result == true) unawaited(_loadCavePlaces());
                 },
                 icon: Icons.map,
                 tooltip: LocServ.inst.t('view_raster_maps'),
@@ -869,7 +873,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                       builder: (_) => CaveAreasPage(caveUuid: widget.caveUuid),
                     ),
                   );
-                  if (result == true) _loadCavePlaces();
+                  if (result == true) unawaited(_loadCavePlaces());
                 },
               ),
               const SizedBox(width: TOOLBAR_BUTTON_SPACING),
@@ -888,7 +892,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                           CSVCavePlacesImportPage(caveUuid: widget.caveUuid),
                     ),
                   );
-                  if (result == true) _loadCavePlaces();
+                  if (result == true) unawaited(_loadCavePlaces());
                 },
                 icon: Icons.upload_file,
                 tooltip: LocServ.inst.t('csv_import_places'),
@@ -964,7 +968,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
             pastTripsCount: _pastTripsCount,
             onPressed: () async {
               await AppRoutes.pushCaveTripList(context, widget.caveUuid);
-              _loadTripCount();
+              unawaited(_loadTripCount());
             },
           ),
 
@@ -1125,7 +1129,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
           caveUuid: widget.caveUuid,
           cavePlaceUuid: cp.uuid,
         );
-        if (result == true) _loadCavePlaces();
+        if (result == true) unawaited(_loadCavePlaces());
       },
       itemDecoration: (context, cp, child) {
         final bool isMainEntrance = cp.isMainEntrance == 1;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:drift/drift.dart' show Variable;
@@ -134,21 +135,23 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
     if (confirmed == true && confirmed2 == true) {
       try {
         if (context.mounted) {
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(
-                    populateTestData
-                        ? LocServ.inst.t('reinitialize_db_with_test_data')
-                        : LocServ.inst.t('reinitialize_db'),
-                  ),
-                ],
+          unawaited(
+            showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(
+                      populateTestData
+                          ? LocServ.inst.t('reinitialize_db_with_test_data')
+                          : LocServ.inst.t('reinitialize_db'),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -197,17 +200,19 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       if (result == null || result.files.single.path == null) return;
 
       if (context.mounted) {
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text(LocServ.inst.t('restoring_database_from_file')),
-              ],
+        unawaited(
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(LocServ.inst.t('restoring_database_from_file')),
+                ],
+              ),
             ),
           ),
         );

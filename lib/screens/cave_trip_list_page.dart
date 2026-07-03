@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
@@ -144,7 +146,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
           : suggestedTitle;
       await ref.read(caveTripServiceProvider).startTrip(widget.caveUuid, title);
       if (mounted) {
-        _load();
+        unawaited(_load());
       }
     }
   }
@@ -236,7 +238,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
           color: Colors.blue,
           onTap: () async {
             await AppRoutes.pushCaveTrip(context, activeTripId);
-            _load();
+            unawaited(_load());
           },
         ),
       );
@@ -308,7 +310,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
               await AppRoutes.pushCaveTrip(context, tripId);
-              _load();
+              unawaited(_load());
             },
           ),
         );
@@ -379,7 +381,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
                         ),
                         onTap: () async {
                           await AppRoutes.pushCaveTrip(context, trip.uuid);
-                          _load();
+                          unawaited(_load());
                         },
                       );
                     },

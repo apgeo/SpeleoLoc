@@ -26,7 +26,7 @@ class DeepLinkHandler {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onDeepLink') {
         final String uri = call.arguments as String;
-        handleUri(uri);
+        await handleUri(uri);
       }
     });
   }

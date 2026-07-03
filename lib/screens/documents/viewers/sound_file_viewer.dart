@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
@@ -81,7 +82,7 @@ class _SoundFileViewerState extends State<SoundFileViewer> {
       if (mounted) {
         setState(() => _prepared = true);
         // Auto-start playback.
-        _play();
+        unawaited(_play());
       }
     } catch (e) {
       log.warning('prepare error', e);

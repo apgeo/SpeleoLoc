@@ -208,24 +208,26 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     if (!micStatus.isGranted) {
       if (!mounted) return;
       if (micStatus.isPermanentlyDenied) {
-        showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(LocServ.inst.t('permission_required')),
-            content: Text(LocServ.inst.t('microphone_permission_required')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              TextButton(
-                onPressed: () {
-                  openAppSettings();
-                  Navigator.of(context).pop();
-                },
-                child: Text(LocServ.inst.t('open_settings')),
-              ),
-            ],
+        unawaited(
+          showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(LocServ.inst.t('permission_required')),
+              content: Text(LocServ.inst.t('microphone_permission_required')),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(LocServ.inst.t('cancel')),
+                ),
+                TextButton(
+                  onPressed: () {
+                    openAppSettings();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(LocServ.inst.t('open_settings')),
+                ),
+              ],
+            ),
           ),
         );
       } else {
@@ -261,7 +263,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
       );
       await _waveController.record();
 
-      _recorderProgressSub?.cancel();
+      unawaited(_recorderProgressSub?.cancel());
       _recorderProgressSub = _recorder.onProgress!.listen((event) {
         if (mounted) setState(() => _elapsed = event.duration);
       });
@@ -281,7 +283,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
 
   Future<void> _stopRecording() async {
     try {
-      _recorderProgressSub?.cancel();
+      unawaited(_recorderProgressSub?.cancel());
       _recorderProgressSub = null;
       await _recorder.stopRecorder();
       await _waveController.stop();

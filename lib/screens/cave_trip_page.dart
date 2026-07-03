@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -139,13 +140,13 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       _editorController.toggleCavePlaceFilter();
     } else if (value == 'sort_cave_places') {
       _editorController.ensurePlacesListVisible();
-      _showCavePlacesSortDialog();
+      await _showCavePlacesSortDialog();
     } else if (value == 'sort_raster_maps') {
       _editorController.ensureMapsListVisible();
-      _showRasterMapSortDialog();
+      await _showRasterMapSortDialog();
     } else if (value == 'manage_raster_maps') {
       _editorController.ensureMapsListVisible();
-      _openRasterMapsPage();
+      await _openRasterMapsPage();
     } else if (value == 'rename_trip') {
       await _renameTrip();
     } else if (value == 'delete_trip') {
@@ -522,7 +523,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             .renameCaveTrip(trip.uuid, newTitle);
         if (mounted) {
           SnackBarService.showSuccess(LocServ.inst.t('trip_renamed'));
-          _load();
+          unawaited(_load());
         }
       }
     }
@@ -550,7 +551,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       await ref.read(caveTripServiceProvider).stopTrip();
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
-        _load();
+        unawaited(_load());
       }
     }
   }
@@ -591,7 +592,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     await ref.read(caveTripServiceProvider).restartTrip(trip.uuid);
     if (mounted) {
       SnackBarService.showSuccess(LocServ.inst.t('trip_restarted'));
-      _load();
+      unawaited(_load());
     }
   }
 

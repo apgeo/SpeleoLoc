@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,7 +116,7 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
         ),
       );
       if (confirmed == true && mounted) {
-        _forceDeleteRasterMap(id);
+        unawaited(_forceDeleteRasterMap(id));
       }
     } else {
       final confirmed = await showDialog<bool>(

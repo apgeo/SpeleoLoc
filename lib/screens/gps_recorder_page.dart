@@ -91,7 +91,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         return;
       }
 
-      _sub?.cancel();
+      unawaited(_sub?.cancel());
       _sub =
           Geolocator.getPositionStream(
             locationSettings: const LocationSettings(
@@ -188,7 +188,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         primaryAction: ElevatedButton.icon(
           onPressed: () async {
             await Geolocator.openLocationSettings();
-            _start();
+            unawaited(_start());
           },
           icon: const Icon(Icons.settings),
           label: Text(loc.t('open_settings')),
@@ -203,7 +203,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         primaryAction: ElevatedButton.icon(
           onPressed: () async {
             await Geolocator.openAppSettings();
-            _start();
+            unawaited(_start());
           },
           icon: const Icon(Icons.settings),
           label: Text(loc.t('open_settings')),

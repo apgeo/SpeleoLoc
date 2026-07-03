@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -176,10 +178,12 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     if (!context.mounted) return;
 
     final progressKey = GlobalKey<_ProgressDialogState>();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _ProgressDialog(key: progressKey),
+    unawaited(
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _ProgressDialog(key: progressKey),
+      ),
     );
 
     try {
@@ -294,10 +298,12 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     if (confirmed != true || !context.mounted) return;
 
     final progressKey = GlobalKey<_ProgressDialogState>();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _ProgressDialog(key: progressKey),
+    unawaited(
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _ProgressDialog(key: progressKey),
+      ),
     );
 
     try {
@@ -329,10 +335,12 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
 
   Future<void> _importMerge(BuildContext context, String zipPath) async {
     final progressKey = GlobalKey<_ProgressDialogState>();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _ProgressDialog(key: progressKey),
+    unawaited(
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _ProgressDialog(key: progressKey),
+      ),
     );
 
     final batchState = _BatchResolverState();
@@ -406,20 +414,22 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     final messageNotifier = ValueNotifier<String>(
       LocServ.inst.t('downloading_test_archive'),
     );
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            ValueListenableBuilder<String>(
-              valueListenable: messageNotifier,
-              builder: (_, msg, __) => Text(msg),
-            ),
-          ],
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<String>(
+                valueListenable: messageNotifier,
+                builder: (_, msg, __) => Text(msg),
+              ),
+            ],
+          ),
         ),
       ),
     );

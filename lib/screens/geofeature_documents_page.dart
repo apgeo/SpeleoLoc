@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -286,10 +287,12 @@ class _GeofeatureDocumentsPageState
     );
 
     if (page != null) {
-      _navigateAndRefresh(page);
+      unawaited(_navigateAndRefresh(page));
     } else {
       // Fallback: open with the generic viewer.
-      _navigateAndRefresh(DocumentationFileViewer(file: file, doc: doc));
+      unawaited(
+        _navigateAndRefresh(DocumentationFileViewer(file: file, doc: doc)),
+      );
     }
   }
 
@@ -542,7 +545,7 @@ class _GeofeatureDocumentsPageState
           geofeatureLink: widget.source.geofeatureLink,
         ) ??
         DocumentationFileViewer(file: file, doc: doc);
-    _navigateAndRefresh(page);
+    unawaited(_navigateAndRefresh(page));
   }
 
   /// Open a document explicitly in editor mode.
@@ -554,7 +557,7 @@ class _GeofeatureDocumentsPageState
       existingDoc: doc,
     );
     if (editor == null) return;
-    _navigateAndRefresh(editor);
+    unawaited(_navigateAndRefresh(editor));
   }
 
   /// Shows a context menu for the given document with View / Edit options.

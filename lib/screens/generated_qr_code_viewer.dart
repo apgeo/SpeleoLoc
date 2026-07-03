@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -220,7 +221,9 @@ class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
                         builder: (_) => const SettingsQrGenerationPage(),
                       ),
                     );
-                    if (autoRefreshQrAfterSettings && mounted) _generate();
+                    if (autoRefreshQrAfterSettings && mounted) {
+                      unawaited(_generate());
+                    }
                   },
                 ),
                 IconButton(
@@ -233,7 +236,9 @@ class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
                         builder: (_) => const SettingsPdfOutputPage(),
                       ),
                     );
-                    if (autoRefreshQrAfterSettings && mounted) _generate();
+                    if (autoRefreshQrAfterSettings && mounted) {
+                      unawaited(_generate());
+                    }
                   },
                 ),
               ],
@@ -293,10 +298,12 @@ class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
     try {
       final tmpPath = await _writeTempFile(f.name, f.bytes);
       if (!context.mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => _InAppPdfViewer(filePath: tmpPath, title: f.name),
+      unawaited(
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _InAppPdfViewer(filePath: tmpPath, title: f.name),
+          ),
         ),
       );
     } catch (e) {

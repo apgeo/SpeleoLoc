@@ -202,7 +202,7 @@ class DocumentationFileHelper {
       parentLink: parentLink,
     );
     await changeLogger.logInsert('documentation_files', docId);
-    caveTripService.linkDocument(
+    await caveTripService.linkDocument(
       docId,
       documentTitle: title,
       textContent: textContent,
