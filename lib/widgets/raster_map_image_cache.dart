@@ -80,6 +80,15 @@ Future<RawImageData?> decodeImageToRawCached(String path) {
   return future;
 }
 
+/// Drops the cached decode for a single [path]. Call this whenever the file
+/// at [path] is rewritten with different content, so a later
+/// [decodeImageToRawCached] re-decodes it instead of serving stale pixels
+/// (finding 4.8). A no-op when [path] isn't cached.
+void invalidateDecodedImage(String path) {
+  decodedImageCache.remove(path);
+  _cacheInsertionOrder.remove(path);
+}
+
 /// Clears the decoded-image cache (useful for tests or low-memory scenarios).
 void clearDecodedImageCache() {
   decodedImageCache.clear();

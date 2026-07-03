@@ -12,6 +12,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/full_screen_image_viewer.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/raster_map_image_cache.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Whether to apply image compression when picking raster map images.
@@ -123,6 +124,11 @@ class _RasterMapFormState extends State<RasterMapForm>
         final compressionSettings = await ImageCompressionSettings.load();
         await ImageCompressor.compressFile(savedFile, compressionSettings);
       }
+
+      // Drop any cached decode for this path so viewers re-decode the new
+      // bytes. Filenames are timestamped (so this is normally a no-op), but
+      // this keeps the decoded-image cache correct if a path is ever reused.
+      invalidateDecodedImage(savedFile.path);
 
       // Compute SHA-256 hash and file size for duplicate detection.
       final bytes = await savedFile.readAsBytes();
