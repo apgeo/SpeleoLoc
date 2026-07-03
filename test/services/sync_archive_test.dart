@@ -390,6 +390,124 @@ void main() {
     // silence unused-var lint for zip
     zip.toString();
   });
+
+  test(
+    'insert unique collision keeps local and does not abort import',
+    () async {
+      final a = await buildHarness();
+      final b = await buildHarness();
+
+      final tOld = DateTime.now().millisecondsSinceEpoch;
+      final bSurf = Uuid.v7();
+      final aSurf = Uuid.v7();
+      // B already has a surface area titled "Dup".
+      await b.db
+          .into(b.db.surfaceAreas)
+          .insert(
+            SurfaceAreasCompanion.insert(
+              uuid: bSurf,
+              title: 'Dup',
+              createdAt: Value(tOld),
+              updatedAt: Value(tOld),
+            ),
+          );
+      // A has a DIFFERENT surface area with the SAME title (collides on
+      // UNIQUE(title)) plus an unrelated cave to prove the rest still imports.
+      await a.db
+          .into(a.db.surfaceAreas)
+          .insert(
+            SurfaceAreasCompanion.insert(
+              uuid: aSurf,
+              title: 'Dup',
+              createdAt: Value(tOld),
+              updatedAt: Value(tOld),
+            ),
+          );
+      final caveId = await a.caveRepo.addCave('SoloCave');
+
+      final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+      // Must complete rather than abort on the colliding surface area.
+      final report = await b.sync.importFromZip(zip.path);
+
+      final ids = (await b.db.select(b.db.surfaceAreas).get())
+          .map((s) => s.uuid)
+          .toSet();
+      expect(ids, contains(bSurf), reason: 'local row preserved');
+      expect(ids, isNot(contains(aSurf)), reason: 'colliding incoming skipped');
+      expect(
+        (await b.caveRepo.getCaves()).any((c) => c.uuid == caveId),
+        isTrue,
+        reason: 'unrelated rows still imported despite the collision',
+      );
+      expect(report.rowsInserted, greaterThan(0));
+
+      await a.db.close();
+      await b.db.close();
+    },
+  );
+
+  test(
+    'incoming update never destroys an unrelated row (no REPLACE)',
+    () async {
+      final a = await buildHarness();
+      final b = await buildHarness();
+
+      final tOld = DateTime.now().millisecondsSinceEpoch;
+      final tNew = tOld + 1000;
+      final x = Uuid.v7();
+      final y = Uuid.v7();
+      // B: X="Alpha", Y="Beta".
+      await b.db
+          .into(b.db.surfaceAreas)
+          .insert(
+            SurfaceAreasCompanion.insert(
+              uuid: x,
+              title: 'Alpha',
+              createdAt: Value(tOld),
+              updatedAt: Value(tOld),
+            ),
+          );
+      await b.db
+          .into(b.db.surfaceAreas)
+          .insert(
+            SurfaceAreasCompanion.insert(
+              uuid: y,
+              title: 'Beta',
+              createdAt: Value(tOld),
+              updatedAt: Value(tOld),
+            ),
+          );
+      // A has the SAME uuid X but renamed to "Beta" and newer — the incoming
+      // edit collides with B's unrelated Y on UNIQUE(title). Under the old
+      // InsertMode.insertOrReplace this REPLACE would delete Y.
+      await a.db
+          .into(a.db.surfaceAreas)
+          .insert(
+            SurfaceAreasCompanion.insert(
+              uuid: x,
+              title: 'Beta',
+              createdAt: Value(tOld),
+              updatedAt: Value(tNew),
+            ),
+          );
+
+      final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+      await b.sync.importFromZip(zip.path); // must not abort
+
+      final surfs = await b.db.select(b.db.surfaceAreas).get();
+      final ids = surfs.map((s) => s.uuid).toSet();
+      expect(
+        ids,
+        contains(y),
+        reason: 'unrelated row Y must survive; REPLACE would have deleted it',
+      );
+      // X kept its local title because the incoming rename could not apply.
+      expect(surfs.firstWhere((s) => s.uuid == x).title, 'Alpha');
+
+      await a.db.close();
+      await b.db.close();
+    },
+  );
 }
 
 class _Harness {

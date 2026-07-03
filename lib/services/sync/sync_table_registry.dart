@@ -298,8 +298,23 @@ class SyncTableRegistry {
 
       final local = await _loadLocal<D>(table, uuid);
       if (local == null) {
-        await _db.into(table).insert(incoming);
-        inserted++;
+        // A brand-new uuid, but its unique key may still collide with a
+        // DIFFERENT existing local row (two devices created the same logical
+        // entity with different uuids). A plain insert would throw, and
+        // because the whole import runs in one transaction that would abort
+        // every other table too. Keep the local row, drop the incoming one,
+        // and record it — one collision must never sink the import.
+        try {
+          await _db.into(table).insert(incoming);
+          inserted++;
+        } on Exception catch (e) {
+          skipped++;
+          _log.warning(
+            'unique-constraint collision inserting '
+            '${table.actualTableName} $uuid; keeping local, skipping '
+            'incoming: $e',
+          );
+        }
         continue;
       }
 
@@ -336,10 +351,24 @@ class SyncTableRegistry {
       }
 
       if (action == SyncConflictAction.useIncoming) {
-        await _db
-            .into(table)
-            .insert(incoming, mode: InsertMode.insertOrReplace);
-        updated++;
+        // Update the row sharing this uuid, matched by primary key. The old
+        // InsertMode.insertOrReplace used SQLite REPLACE, which deletes EVERY
+        // row conflicting on ANY unique index before re-inserting — so an
+        // incoming edit whose new unique key collided with an unrelated local
+        // row silently destroyed that row (and orphaned its children, failing
+        // the deferred-FK check at commit). An update-by-pk touches only this
+        // uuid; a secondary-unique collision throws and we keep local rather
+        // than clobber the other row.
+        try {
+          await _db.update(table).replace(incoming);
+          updated++;
+        } on Exception catch (e) {
+          skipped++;
+          _log.warning(
+            'unique-constraint collision updating '
+            '${table.actualTableName} $uuid; keeping local: $e',
+          );
+        }
       } else {
         skipped++;
       }
