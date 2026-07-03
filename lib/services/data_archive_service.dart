@@ -9,6 +9,7 @@ import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
+import 'package:speleoloc/services/service_locator.dart';
 
 import 'package:speleoloc/services/archive/archive_models.dart';
 import 'package:speleoloc/services/archive/archive_table_configs.dart';
@@ -188,7 +189,7 @@ class DataArchiveService {
       await _copyAllExtractedFiles(tempDir, docsDir);
 
       // Re-open database.
-      appDatabase = AppDatabase();
+      replaceAppDatabase(AppDatabase());
       DatabaseRestoreHelper.logMigrationIfAny(source: 'archive-import-replace');
 
       // Restore device identity unless the flag says to adopt the archive's.

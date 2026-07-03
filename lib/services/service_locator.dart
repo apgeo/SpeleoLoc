@@ -43,6 +43,19 @@ void initRootContainer(ProviderContainer container) {
   _rootContainer = container;
 }
 
+/// Swaps the process-wide [appDatabase] after a restore/import/reinitialize.
+///
+/// Never reassign the [appDatabase] global directly for a swap:
+/// [appDatabaseProvider] (and everything built on it — repositories,
+/// services, drift-backed streams) caches the instance captured at first
+/// read and would keep serving the old, closed database. This chokepoint
+/// assigns the global and invalidates the provider so all dependents are
+/// rebuilt against the new instance on their next use.
+void replaceAppDatabase(AppDatabase newDb) {
+  appDatabase = newDb;
+  _rootContainer?.invalidate(appDatabaseProvider);
+}
+
 // Convenience shortcuts matching the previous `service_locator.dart` globals.
 // Prefer `ref.read(xxxProvider)` inside widgets; use these only in code that
 // has no access to a `Ref`.

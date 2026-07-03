@@ -14,6 +14,9 @@ export 'package:speleoloc/utils/uuid.dart' show Uuid, UuidConverter;
 
 part 'app_database.g.dart';
 
+/// Process-wide database instance. To swap it (restore/import/reinitialize)
+/// use `replaceAppDatabase()` from service_locator.dart — a direct
+/// reassignment leaves provider-derived objects on the old, closed instance.
 AppDatabase appDatabase = AppDatabase();
 
 class DatabaseMigrationEvent {

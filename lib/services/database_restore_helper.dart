@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/test_database_loader.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:restart_app/restart_app.dart';
 
@@ -30,11 +31,11 @@ class DatabaseRestoreHelper {
 
     if (populateTestData) {
       final newDb = await TestDatabaseLoader.loadTestDatabase();
-      appDatabase = newDb;
+      replaceAppDatabase(newDb);
       logMigrationIfAny(source: 'test-database-restore');
     } else {
       final newDb = AppDatabase();
-      appDatabase = newDb;
+      replaceAppDatabase(newDb);
       logMigrationIfAny(source: 'empty-database-reinitialize');
     }
     return true;
