@@ -68,6 +68,12 @@ Future<void> _runApp() async {
   // Load persisted menu mode preference (popup vs drawer).
   await initAppMenuMode();
 
+  // Ensure device + current-user identity is loaded before anything can
+  // record a change_log row (attribution + device filtering depend on it).
+  // The provider kicks this off fire-and-forget; awaiting the same cached
+  // future here guarantees it has actually finished.
+  await container.read(currentUserServiceProvider).initialize();
+
   await container.read(caveTripServiceProvider).initActiveTrip();
 
   runApp(

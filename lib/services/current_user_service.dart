@@ -92,13 +92,21 @@ class CurrentUserService {
   final ValueNotifier<Uuid?> currentUserUuid = ValueNotifier<Uuid?>(null);
   final ValueNotifier<Uuid?> deviceUuid = ValueNotifier<Uuid?>(null);
 
-  bool _initialized = false;
+  Future<void>? _initFuture;
 
   /// Loads `device_uuid` and `current_user_uuid` from `configurations` and
-  /// publishes them on the notifiers. Safe to call multiple times.
-  Future<void> initialize() async {
-    if (_initialized) return;
-    _initialized = true;
+  /// publishes them on the notifiers. Idempotent, and safe to call
+  /// concurrently: every caller awaits the *same* load, so awaiting the
+  /// return value always observes the finished state.
+  ///
+  /// The previous implementation set an `_initialized` flag synchronously
+  /// before its first `await`, so a second concurrent call (e.g. `main()`
+  /// awaiting after the provider kicked off a fire-and-forget init) returned
+  /// immediately while the values were still null — the writes that follow
+  /// would then be attributed to a null user/device.
+  Future<void> initialize() => _initFuture ??= _doInitialize();
+
+  Future<void> _doInitialize() async {
     deviceUuid.value = await _readOrCreateDeviceUuid();
     currentUserUuid.value = await _readCurrentUserUuid();
     _log.info(
