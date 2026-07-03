@@ -239,12 +239,16 @@ class SyncArchiveService {
     bool includeDocumentationFiles = true,
     bool includeRasterMaps = true,
   }) async {
-    final archive = Archive();
     final tables = _syncedTables();
 
+    // Everything that needs the database runs here on the main isolate: dump
+    // each table and the change log to JSONL byte blobs, and resolve the
+    // asset file paths. The CPU-bound zip compression (and the asset file
+    // reads) then run in a background isolate so a large export never blocks
+    // the UI thread (Android ANR — see the class doc-comment).
+    final jsonlEntries = <(String, Uint8List)>[];
     for (final t in tables) {
-      final rows = await t.dump();
-      archive.addFile(_jsonlFile('tables/${t.name}.jsonl', rows));
+      jsonlEntries.add(('tables/${t.name}.jsonl', _jsonlBytes(await t.dump())));
     }
 
     // change_log + change_log_field (shipped verbatim; dedup by uuid on
@@ -252,16 +256,17 @@ class SyncArchiveService {
     final changeLogRows = (await _db.select(_db.changeLog).get())
         .map((r) => r.toJson(serializer: _serializer))
         .toList();
-    archive.addFile(_jsonlFile('change_log.jsonl', changeLogRows));
+    final changeLogCount = changeLogRows.length;
+    jsonlEntries.add(('change_log.jsonl', _jsonlBytes(changeLogRows)));
 
     final fieldRows = (await _db.select(_db.changeLogField).get())
         .map((r) => r.toJson(serializer: _serializer))
         .toList();
-    archive.addFile(_jsonlFile('change_log_field.jsonl', fieldRows));
+    jsonlEntries.add(('change_log_field.jsonl', _jsonlBytes(fieldRows)));
 
-    // Asset files: read from the app's documents directory and add them
-    // under `assets/<relative path>`.
-    var assetCount = 0;
+    // Resolve the asset relative paths (the isolate reads the files itself,
+    // so no file bytes cross the isolate boundary).
+    final assetRelPaths = <String>[];
     Directory? baseDir;
     try {
       baseDir = await _assetsBaseDirResolver();
@@ -270,33 +275,33 @@ class SyncArchiveService {
     }
     if (baseDir != null) {
       if (includeDocumentationFiles) {
-        final paths =
-            (await _db
-                    .customSelect(
-                      'SELECT DISTINCT file_name FROM documentation_files '
-                      'WHERE deleted_at IS NULL',
-                    )
-                    .get())
-                .map((r) => r.read<String>('file_name'))
-                .toList();
-        assetCount += await _addAssetsToArchive(archive, baseDir.path, paths);
+        assetRelPaths.addAll(
+          (await _db
+                  .customSelect(
+                    'SELECT DISTINCT file_name FROM documentation_files '
+                    'WHERE deleted_at IS NULL',
+                  )
+                  .get())
+              .map((r) => r.read<String>('file_name')),
+        );
       }
       if (includeRasterMaps) {
-        final paths =
-            (await _db
-                    .customSelect(
-                      'SELECT DISTINCT file_name FROM raster_maps '
-                      'WHERE deleted_at IS NULL',
-                    )
-                    .get())
-                .map((r) => r.read<String>('file_name'))
-                .toList();
-        assetCount += await _addAssetsToArchive(archive, baseDir.path, paths);
+        assetRelPaths.addAll(
+          (await _db
+                  .customSelect(
+                    'SELECT DISTINCT file_name FROM raster_maps '
+                    'WHERE deleted_at IS NULL',
+                  )
+                  .get())
+              .map((r) => r.read<String>('file_name')),
+        );
       }
     }
 
     final nowMs = _clock.nowMs();
     final pkgInfo = await _safeReadPackageInfo();
+    // asset_count is filled in by the isolate once it knows how many files
+    // actually existed on disk.
     final manifest = <String, dynamic>{
       'format': 'speleo_loc_sync',
       'format_version': kSyncArchiveVersion,
@@ -307,32 +312,27 @@ class SyncArchiveService {
       'tables': tables.map((t) => t.name).toList(),
       'includes_documentation_files': includeDocumentationFiles,
       'includes_raster_maps': includeRasterMaps,
-      'asset_count': assetCount,
     };
-    archive.addFile(
-      ArchiveFile.string(
-        'manifest.json',
-        const JsonEncoder.withIndent('  ').convert(manifest),
-      ),
-    );
 
     final dir = Directory(outputDir);
     if (!await dir.exists()) await dir.create(recursive: true);
     final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
     final out = File('${dir.path}${Platform.pathSeparator}$name');
-    // Stream-encode to disk so very large archives (raster maps, etc.) do
-    // not have to be held in memory all at once.
-    final output = OutputFileStream(out.path);
-    try {
-      ZipEncoder().encode(archive, output: output);
-    } finally {
-      await output.close();
-    }
+
+    final job = _EncodeArchiveJob(
+      jsonlEntries: jsonlEntries,
+      assetBaseDir: baseDir?.path,
+      assetRelPaths: assetRelPaths,
+      manifest: manifest,
+      outputPath: out.path,
+    );
+    final assetCount = await Isolate.run(() => _encodeSyncArchive(job));
+
     final size = await out.length();
     _log.info(
       'Sync archive exported: ${out.path} '
       '($size bytes, ${tables.length} tables, '
-      '${changeLogRows.length} change-log entries, '
+      '$changeLogCount change-log entries, '
       '$assetCount asset files)',
     );
     return out;
@@ -562,7 +562,10 @@ class SyncArchiveService {
         for (final r in await _db.select(_db.changeLog).get()) {
           existingLogUuids.add(r.uuid.toString());
         }
-        final deleteTargets = <String, int>{}; // uuid-string -> changed_at
+        // uuid-string -> (entity_table, changed_at). The entity_table lets
+        // us target the one table the row lives in instead of probing all
+        // of them.
+        final deleteTargets = <String, (String, int)>{};
 
         for (final row in logRows) {
           final uuidStr = row['uuid'] as String;
@@ -572,7 +575,10 @@ class SyncArchiveService {
           existingLogUuids.add(uuidStr);
           changeLogMerged++;
           if (data.changeType == ChangeType.delete) {
-            deleteTargets[data.entityUuid.toString()] = data.changedAt;
+            deleteTargets[data.entityUuid.toString()] = (
+              data.entityTable,
+              data.changedAt,
+            );
           }
         }
 
@@ -625,67 +631,47 @@ class SyncArchiveService {
   /// synced table still holds it iff its updated_at/created_at is older than
   /// the tombstone. Returns the number of rows physically removed.
   Future<int> _applyDeletes(
-    Map<String, int> deleteTargets,
+    Map<String, (String, int)> deleteTargets,
     List<String> warnings,
   ) async {
     var n = 0;
-    // Brute-force scan each synced table. The dataset is small enough
-    // that this is simpler than tracking entity_table per tombstone.
-    // We rely on the caller holding a transaction.
-    final tables = <(String, Future<int> Function(Uuid, int))>[
-      ('users', (u, ts) async => _deleteIfOlder(_db.users, u, ts)),
-      (
-        'cave_place_to_raster_map_definitions',
-        (u, ts) async =>
-            _deleteIfOlder(_db.cavePlaceToRasterMapDefinitions, u, ts),
-      ),
-      (
-        'documentation_files_to_geofeatures',
-        (u, ts) async =>
-            _deleteIfOlder(_db.documentationFilesToGeofeatures, u, ts),
-      ),
-      (
-        'documentation_files_to_cave_trips',
-        (u, ts) async =>
-            _deleteIfOlder(_db.documentationFilesToCaveTrips, u, ts),
-      ),
-      (
-        'cave_trip_points',
-        (u, ts) async => _deleteIfOlder(_db.caveTripPoints, u, ts),
-      ),
-      ('cave_trips', (u, ts) async => _deleteIfOlder(_db.caveTrips, u, ts)),
-      (
-        'documentation_files',
-        (u, ts) async => _deleteIfOlder(_db.documentationFiles, u, ts),
-      ),
-      (
-        'trip_report_templates',
-        (u, ts) async => _deleteIfOlder(_db.tripReportTemplates, u, ts),
-      ),
-      ('raster_maps', (u, ts) async => _deleteIfOlder(_db.rasterMaps, u, ts)),
-      // Beacons reference cave_places, so remove them before their parent.
-      (
-        'cave_place_beacons',
-        (u, ts) async => _deleteIfOlder(_db.cavePlaceBeacons, u, ts),
-      ),
-      ('cave_places', (u, ts) async => _deleteIfOlder(_db.cavePlaces, u, ts)),
-      ('cave_areas', (u, ts) async => _deleteIfOlder(_db.caveAreas, u, ts)),
-      ('caves', (u, ts) async => _deleteIfOlder(_db.caves, u, ts)),
-      (
-        'surface_areas',
-        (u, ts) async => _deleteIfOlder(_db.surfaceAreas, u, ts),
-      ),
-    ];
+    // Each synced table's delete-by-uuid function, keyed by table name.
+    // Tombstones record the entity_table, so we run only that table's
+    // delete instead of probing all of them per tombstone. Relies on the
+    // caller holding a transaction with deferred FK checks.
+    final deleteByTable = <String, Future<int> Function(Uuid, int)>{
+      'users': (u, ts) => _deleteIfOlder(_db.users, u, ts),
+      'cave_place_to_raster_map_definitions': (u, ts) =>
+          _deleteIfOlder(_db.cavePlaceToRasterMapDefinitions, u, ts),
+      'documentation_files_to_geofeatures': (u, ts) =>
+          _deleteIfOlder(_db.documentationFilesToGeofeatures, u, ts),
+      'documentation_files_to_cave_trips': (u, ts) =>
+          _deleteIfOlder(_db.documentationFilesToCaveTrips, u, ts),
+      'cave_trip_points': (u, ts) => _deleteIfOlder(_db.caveTripPoints, u, ts),
+      'cave_trips': (u, ts) => _deleteIfOlder(_db.caveTrips, u, ts),
+      'documentation_files': (u, ts) =>
+          _deleteIfOlder(_db.documentationFiles, u, ts),
+      'trip_report_templates': (u, ts) =>
+          _deleteIfOlder(_db.tripReportTemplates, u, ts),
+      'raster_maps': (u, ts) => _deleteIfOlder(_db.rasterMaps, u, ts),
+      'cave_place_beacons': (u, ts) =>
+          _deleteIfOlder(_db.cavePlaceBeacons, u, ts),
+      'cave_places': (u, ts) => _deleteIfOlder(_db.cavePlaces, u, ts),
+      'cave_areas': (u, ts) => _deleteIfOlder(_db.caveAreas, u, ts),
+      'caves': (u, ts) => _deleteIfOlder(_db.caves, u, ts),
+      'surface_areas': (u, ts) => _deleteIfOlder(_db.surfaceAreas, u, ts),
+    };
 
     for (final entry in deleteTargets.entries) {
-      final uuid = Uuid.parse(entry.key);
-      final ts = entry.value;
-      for (final (_, delete) in tables) {
-        try {
-          n += await delete(uuid, ts);
-        } catch (e) {
-          warnings.add('delete ${entry.key}: $e');
-        }
+      final (entityTable, ts) = entry.value;
+      final deleteFn = deleteByTable[entityTable];
+      // A tombstone for a non-physically-deletable table (e.g. a local-only
+      // key/value row) simply has nothing to remove here.
+      if (deleteFn == null) continue;
+      try {
+        n += await deleteFn(Uuid.parse(entry.key), ts);
+      } catch (e) {
+        warnings.add('delete ${entry.key} ($entityTable): $e');
       }
     }
     return n;
@@ -718,13 +704,12 @@ class SyncArchiveService {
   //  helpers
   // ---------------------------------------------------------------------------
 
-  ArchiveFile _jsonlFile(String name, List<Map<String, dynamic>> rows) {
+  Uint8List _jsonlBytes(List<Map<String, dynamic>> rows) {
     final buf = StringBuffer();
     for (final r in rows) {
       buf.writeln(jsonEncode(r));
     }
-    final bytes = utf8.encode(buf.toString());
-    return ArchiveFile(name, bytes.length, bytes);
+    return utf8.encode(buf.toString());
   }
 
   List<Map<String, dynamic>> _readJsonl(ArchiveFile file) {
@@ -752,33 +737,6 @@ class SyncArchiveService {
   // ---------------------------------------------------------------------------
   //  Asset file helpers
   // ---------------------------------------------------------------------------
-
-  /// Add [relativePaths] (relative to [baseDir]) into [archive] under the
-  /// `assets/` prefix. Returns the number of files actually added.
-  Future<int> _addAssetsToArchive(
-    Archive archive,
-    String baseDir,
-    List<String> relativePaths,
-  ) async {
-    var added = 0;
-    final seen = <String>{};
-    for (final relPath in relativePaths) {
-      if (relPath.isEmpty) continue;
-      if (!seen.add(relPath)) continue;
-      final file = File('$baseDir${Platform.pathSeparator}$relPath');
-      if (!await file.exists()) {
-        _log.fine('asset missing on disk, skipping: $relPath');
-        continue;
-      }
-      final bytes = await file.readAsBytes();
-      final normalized = relPath.replaceAll('\\', '/');
-      archive.addFile(
-        ArchiveFile('$_assetsPrefix$normalized', bytes.length, bytes),
-      );
-      added++;
-    }
-    return added;
-  }
 
   /// Walk every `assets/*` entry in [archive] and copy it into the local
   /// documents directory. Existing local files are preserved (LWW on
@@ -1000,4 +958,78 @@ class _AssetResult {
   final int copied;
   final int skipped;
   const _AssetResult({required this.copied, required this.skipped});
+}
+
+/// Payload for [_encodeSyncArchive] — everything the background isolate needs
+/// to assemble and compress the archive without touching the database. All
+/// fields are plain sendable data so the whole object can cross an
+/// [Isolate.run] boundary.
+class _EncodeArchiveJob {
+  const _EncodeArchiveJob({
+    required this.jsonlEntries,
+    required this.assetBaseDir,
+    required this.assetRelPaths,
+    required this.manifest,
+    required this.outputPath,
+  });
+
+  /// `(entryName, bytes)` for each `tables/*.jsonl` and change-log file.
+  final List<(String, Uint8List)> jsonlEntries;
+
+  /// Base directory the [assetRelPaths] are relative to, or null when no
+  /// assets should be bundled. The isolate reads the files itself, so their
+  /// bytes never cross the isolate boundary.
+  final String? assetBaseDir;
+  final List<String> assetRelPaths;
+
+  /// Manifest fields WITHOUT `asset_count`; the isolate fills that in once it
+  /// knows how many asset files actually existed on disk.
+  final Map<String, dynamic> manifest;
+  final String outputPath;
+}
+
+/// Assembles the sync archive and compresses it to
+/// [_EncodeArchiveJob.outputPath], reading asset files itself. Runs in a
+/// background isolate (spawned from [SyncArchiveService.exportToZip]) so the
+/// CPU-bound zip compression never blocks the UI isolate. Returns the number
+/// of asset files actually bundled.
+Future<int> _encodeSyncArchive(_EncodeArchiveJob job) async {
+  final archive = Archive();
+  for (final (name, bytes) in job.jsonlEntries) {
+    archive.addFile(ArchiveFile(name, bytes.length, bytes));
+  }
+
+  var assetCount = 0;
+  final baseDir = job.assetBaseDir;
+  if (baseDir != null) {
+    final seen = <String>{};
+    for (final relPath in job.assetRelPaths) {
+      if (relPath.isEmpty || !seen.add(relPath)) continue;
+      final file = File('$baseDir${Platform.pathSeparator}$relPath');
+      if (!await file.exists()) continue;
+      final bytes = await file.readAsBytes();
+      final normalized = relPath.replaceAll('\\', '/');
+      archive.addFile(ArchiveFile('assets/$normalized', bytes.length, bytes));
+      assetCount++;
+    }
+  }
+
+  final manifest = <String, dynamic>{
+    ...job.manifest,
+    'asset_count': assetCount,
+  };
+  archive.addFile(
+    ArchiveFile.string(
+      'manifest.json',
+      const JsonEncoder.withIndent('  ').convert(manifest),
+    ),
+  );
+
+  final output = OutputFileStream(job.outputPath);
+  try {
+    ZipEncoder().encode(archive, output: output);
+  } finally {
+    await output.close();
+  }
+  return assetCount;
 }
