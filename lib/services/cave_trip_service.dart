@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
@@ -10,11 +11,12 @@ import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 class CaveTripService {
-  CaveTripService(this._db, {Clock clock = const SystemClock()})
+  CaveTripService(this._db, this._logger, {Clock clock = const SystemClock()})
     : _clock = clock,
       _renderer = TripLogRenderer(_db);
 
   final AppDatabase _db;
+  final ChangeLogger _logger;
   final Clock _clock;
   final TripLogRenderer _renderer;
 
@@ -55,6 +57,7 @@ class CaveTripService {
       authorUuid: author,
       deviceUuid: currentUserService.deviceUuid.value,
     );
+    await _logger.logInsert('cave_trips', tripUuid);
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
     await _regenerateLog(tripUuid);
@@ -66,7 +69,23 @@ class CaveTripService {
   Future<void> restartTrip(Uuid tripUuid) async {
     isPausedNotifier.value = false;
     final author = await currentUserService.currentOrSystem();
+    final old = await _tripRow(tripUuid);
     await _db.restartCaveTrip(tripUuid, authorUuid: author);
+    final updated = await _tripRow(tripUuid);
+    if (old != null && updated != null) {
+      await _logger.logUpdate(
+        'cave_trips',
+        tripUuid,
+        oldValues: {
+          'trip_started_at': old.tripStartedAt,
+          'trip_ended_at': old.tripEndedAt,
+        },
+        newValues: {
+          'trip_started_at': updated.tripStartedAt,
+          'trip_ended_at': updated.tripEndedAt,
+        },
+      );
+    }
     await _saveConfig(tripUuid);
     activeTripIdNotifier.value = tripUuid;
     await _regenerateLog(tripUuid);
@@ -76,7 +95,17 @@ class CaveTripService {
     final id = activeTripIdNotifier.value;
     if (id != null) {
       final author = await currentUserService.currentOrSystem();
+      final old = await _tripRow(id);
       await _db.endCaveTrip(id, authorUuid: author);
+      final updated = await _tripRow(id);
+      if (old != null && updated != null) {
+        await _logger.logUpdate(
+          'cave_trips',
+          id,
+          oldValues: {'trip_ended_at': old.tripEndedAt},
+          newValues: {'trip_ended_at': updated.tripEndedAt},
+        );
+      }
       await _appendForNewEvent(id);
     }
     await _clearConfig();
@@ -104,11 +133,12 @@ class CaveTripService {
     if (id == null || isPausedNotifier.value) return;
     try {
       final author = await currentUserService.currentOrSystem();
-      await _db.insertTripPoint(
+      final pointUuid = await _db.insertTripPoint(
         tripUuid: id,
         cavePlaceUuid: cavePlaceUuid,
         authorUuid: author,
       );
+      await _logger.logInsert('cave_trip_points', pointUuid);
       await _appendForNewEvent(id);
     } catch (e, st) {
       log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
@@ -130,6 +160,18 @@ class CaveTripService {
     try {
       final author = await currentUserService.currentOrSystem();
       await _db.linkDocumentToTrip(docUuid, id, authorUuid: author);
+      // linkDocumentToTrip upserts and does not return the row uuid; fetch
+      // it for the audit entry.
+      final link =
+          await (_db.select(_db.documentationFilesToCaveTrips)..where(
+                (l) =>
+                    l.documentationFileUuid.equalsValue(docUuid) &
+                    l.caveTripUuid.equalsValue(id),
+              ))
+              .getSingleOrNull();
+      if (link != null) {
+        await _logger.logInsert('documentation_files_to_cave_trips', link.uuid);
+      }
       await _appendForNewEvent(id);
     } catch (e, st) {
       log.warning('linkDocument failed (doc=$docUuid)', e, st);
@@ -137,6 +179,10 @@ class CaveTripService {
   }
 
   Future<CaveTrip?> getActiveTrip() => _db.getActiveTrip();
+
+  Future<CaveTrip?> _tripRow(Uuid tripUuid) => (_db.select(
+    _db.caveTrips,
+  )..where((t) => t.uuid.equalsValue(tripUuid))).getSingleOrNull();
 
   /// Returns the cave UUID of the currently tracked active trip, or [null]
   /// when no trip is active.  Uses [activeTripIdNotifier] as the single source
@@ -210,12 +256,28 @@ class CaveTripService {
 
   /// Public hook called by the trip log page after the user picks a new
   /// method. Persists the choice and rewrites the log.
+  ///
+  /// Unlike the internal [_regenerateLog]/[_appendForNewEvent] calls (whose
+  /// log rewrites ride on the change-log entry of the structural event that
+  /// triggered them), a method switch is the only mutation of its turn, so
+  /// it writes its own update entry — otherwise the rewritten log would
+  /// never trip the sync upload gate.
   Future<void> regenerateLogWithMethod(
     Uuid tripUuid,
     TripLogMethod method,
   ) async {
     await currentUserService.setTripLogMethod(method);
+    final old = await _tripRow(tripUuid);
     await _regenerateLog(tripUuid);
+    final updated = await _tripRow(tripUuid);
+    if (old != null && updated != null) {
+      await _logger.logUpdate(
+        'cave_trips',
+        tripUuid,
+        oldValues: {'log': old.log},
+        newValues: {'log': updated.log},
+      );
+    }
   }
 
   Future<void> _saveConfig(Uuid tripUuid) {

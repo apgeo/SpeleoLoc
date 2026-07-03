@@ -81,7 +81,16 @@ class CaveTripRepository implements ICaveTripRepository {
   @override
   Future<void> renameCaveTrip(Uuid tripUuid, String newTitle) async {
     try {
+      final old = await findById(tripUuid);
       await _database.renameCaveTrip(tripUuid, newTitle);
+      if (old != null) {
+        await _logger.logUpdate(
+          'cave_trips',
+          tripUuid,
+          oldValues: {'title': old.title},
+          newValues: {'title': newTitle},
+        );
+      }
     } catch (e, st) {
       _log.severe('Failed to rename cave trip', e, st);
       throw DbException('Failed to rename cave trip', cause: e, stackTrace: st);
@@ -141,7 +150,16 @@ class CaveTripRepository implements ICaveTripRepository {
   @override
   Future<void> updateTripLog(Uuid tripUuid, String log) async {
     try {
+      final old = await findById(tripUuid);
       await _database.updateTripLog(tripUuid, log);
+      if (old != null) {
+        await _logger.logUpdate(
+          'cave_trips',
+          tripUuid,
+          oldValues: {'log': old.log},
+          newValues: {'log': log},
+        );
+      }
     } catch (e, st) {
       _log.severe('Failed to update trip log', e, st);
       throw DbException('Failed to update trip log', cause: e, stackTrace: st);
@@ -156,12 +174,14 @@ class CaveTripRepository implements ICaveTripRepository {
     required String format,
   }) async {
     try {
-      return await _database.insertTripReportTemplate(
+      final uuid = await _database.insertTripReportTemplate(
         title: title,
         fileName: fileName,
         fileSize: fileSize,
         format: format,
       );
+      await _logger.logInsert('trip_report_templates', uuid);
+      return uuid;
     } catch (e, st) {
       _log.severe('Failed to insert trip report template', e, st);
       throw DbException(

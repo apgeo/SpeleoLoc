@@ -165,6 +165,7 @@ final definitionRepositoryProvider = Provider<IDefinitionRepository>(
 final caveTripServiceProvider = Provider<CaveTripService>(
   (ref) => CaveTripService(
     ref.watch(appDatabaseProvider),
+    ref.watch(changeLoggerProvider),
     clock: ref.watch(clockProvider),
   ),
 );
