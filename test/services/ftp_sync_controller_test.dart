@@ -1,11 +1,3 @@
-// Baseline failures parked so CI can gate on a green suite (2026-07-03).
-// 7 of 9 tests here have expectations that predate the .sha256 sidecar
-// upload feature (e.g. they expect 1 uploaded file, the controller now
-// uploads archive + sidecar). Fix the expectations and remove this @Skip
-// in step WS-A A6 (.claude/refactoring20260702/phase-2-plan.md).
-@Skip('stale expectations predating the .sha256 sidecar feature — WS-A A6')
-library;
-
 import 'dart:async';
 import 'dart:io';
 
@@ -252,6 +244,12 @@ Future<_Harness> _buildHarness() async {
   return _Harness(db, caveRepo, loggerRef, sync, currentUser, assetsDir);
 }
 
+/// Archive uploads only — every `<name>.zip` upload is followed by a
+/// best-effort `<name>.zip.sha256` sidecar upload, which these tests
+/// deliberately ignore when counting archives.
+Iterable<String> _zipsOnly(Iterable<String> names) =>
+    names.where((n) => n.endsWith('.zip'));
+
 /// Drives the controller through [FtpSyncController.progress] and returns the
 /// final progress once it reaches a terminal phase.
 Future<FtpSyncProgress> _waitForTerminal(FtpSyncController c) async {
@@ -378,21 +376,23 @@ void main() {
     await _waitForTerminal(controller);
 
     expect(controller.progress.phase, FtpSyncPhase.completed);
-    // Exactly one archive should be on the remote — the one we just uploaded.
-    final archives = fake.store.keys
-        .where((k) => k.startsWith('speleo_loc_sync_'))
-        .toList();
+    // Exactly one archive should be on the remote — the one we just
+    // uploaded — plus its SHA-256 sidecar.
+    final archives = _zipsOnly(fake.store.keys).toList();
     expect(archives, hasLength(1));
+    expect(fake.store.containsKey('${archives.single}.sha256'), isTrue);
   });
 
   test('downloads unseen remote archives and imports them', () async {
-    // Peer A produces an archive carrying two caves.
+    // Peer A produces an archive carrying two caves. Remote archive names
+    // must match the strict `speleo_loc_sync_<ts>_<deviceHex>.zip` pattern —
+    // suffix-less names are treated as alien files and ignored.
     final a = await _buildHarness();
     await a.caveRepo.addCave('FromPeerA1');
     await a.caveRepo.addCave('FromPeerA2');
     final zipA = await a.sync.exportToZip(
       tempDir.path,
-      filenameHint: 'speleo_loc_sync_1000.zip',
+      filenameHint: 'speleo_loc_sync_1000_deadbeef.zip',
     );
 
     // Peer B starts empty and pulls it.
@@ -400,7 +400,7 @@ void main() {
     final (controller, fake) = await makeController(
       b,
       seedFromHarnessExports: {
-        'speleo_loc_sync_1000.zip': await zipA.readAsBytes(),
+        'speleo_loc_sync_1000_deadbeef.zip': await zipA.readAsBytes(),
         'unrelated.txt': [1, 2, 3],
       },
     );
@@ -434,16 +434,18 @@ void main() {
   });
 
   test('processes archives oldest-first by embedded timestamp', () async {
-    // Two valid archives from the same peer, different timestamps.
+    // Two valid archives from two DIFFERENT peers (same-device archives are
+    // deduped to only the latest snapshot, so cross-archive ordering is
+    // only observable across devices), different timestamps.
     final a = await _buildHarness();
     await a.caveRepo.addCave('Cave1');
     final zip1 = await a.sync.exportToZip(
       tempDir.path,
-      filenameHint: 'speleo_loc_sync_2000.zip',
+      filenameHint: 'speleo_loc_sync_2000_bbbbbbbb.zip',
     );
     final zip2 = await a.sync.exportToZip(
       tempDir.path,
-      filenameHint: 'speleo_loc_sync_1000.zip',
+      filenameHint: 'speleo_loc_sync_1000_aaaaaaaa.zip',
     );
 
     final b = await _buildHarness();
@@ -461,8 +463,8 @@ void main() {
     await profileRepo.save(profile, password: 'pw');
     await profileRepo.setDefaultUuid(profile.profileUuid);
     final fake = _FakeTransport(profile);
-    fake.store['speleo_loc_sync_2000.zip'] = await zip1.readAsBytes();
-    fake.store['speleo_loc_sync_1000.zip'] = await zip2.readAsBytes();
+    fake.store['speleo_loc_sync_2000_bbbbbbbb.zip'] = await zip1.readAsBytes();
+    fake.store['speleo_loc_sync_1000_aaaaaaaa.zip'] = await zip2.readAsBytes();
 
     // Wrap the fake to record download order.
     final tracking = _OrderTrackingTransport(fake, downloadOrder);
@@ -479,8 +481,8 @@ void main() {
 
     expect(controller.progress.phase, FtpSyncPhase.completed);
     expect(downloadOrder, [
-      'speleo_loc_sync_1000.zip',
-      'speleo_loc_sync_2000.zip',
+      'speleo_loc_sync_1000_aaaaaaaa.zip',
+      'speleo_loc_sync_2000_bbbbbbbb.zip',
     ]);
   });
 
@@ -491,14 +493,14 @@ void main() {
       await a.caveRepo.addCave('FromPeer');
       final zip = await a.sync.exportToZip(
         tempDir.path,
-        filenameHint: 'speleo_loc_sync_5000.zip',
+        filenameHint: 'speleo_loc_sync_5000_deadbeef.zip',
       );
 
       final b = await _buildHarness();
       final (c1, fake) = await makeController(
         b,
         seedFromHarnessExports: {
-          'speleo_loc_sync_5000.zip': await zip.readAsBytes(),
+          'speleo_loc_sync_5000_deadbeef.zip': await zip.readAsBytes(),
         },
       );
       await c1.startDefault();
@@ -533,7 +535,7 @@ void main() {
       await a.caveRepo.addCave('Peer');
       final zip = await a.sync.exportToZip(
         tempDir.path,
-        filenameHint: 'speleo_loc_sync_7000.zip',
+        filenameHint: 'speleo_loc_sync_7000_deadbeef.zip',
       );
 
       final b = await _buildHarness();
@@ -551,7 +553,8 @@ void main() {
       await profileRepo.setDefaultUuid(profile.profileUuid);
 
       final inner = _FakeTransport(profile);
-      inner.store['speleo_loc_sync_7000.zip'] = await zip.readAsBytes();
+      inner.store['speleo_loc_sync_7000_deadbeef.zip'] = await zip
+          .readAsBytes();
 
       // First run: blocking transport that waits inside downloadFile until we
       // release it. We pause while the transport is stuck → controller should
@@ -619,7 +622,7 @@ void main() {
     await controller.startDefault();
     await _waitForTerminal(controller);
     expect(controller.progress.phase, FtpSyncPhase.completed);
-    expect(fake.uploadedNames, hasLength(1));
+    expect(_zipsOnly(fake.uploadedNames), hasLength(1));
 
     // Second sync, no local mutations between runs: should NOT upload.
     fake.uploadedNames.clear();
@@ -642,7 +645,7 @@ void main() {
 
     await controller.startDefault();
     await _waitForTerminal(controller);
-    expect(fake.uploadedNames, hasLength(1));
+    expect(_zipsOnly(fake.uploadedNames), hasLength(1));
 
     // Touch the DB → change_log gets a new row → next sync must upload.
     fake.uploadedNames.clear();
@@ -655,7 +658,7 @@ void main() {
     await _waitForTerminal(controller);
     expect(controller.progress.phase, FtpSyncPhase.completed);
     expect(
-      fake.uploadedNames,
+      _zipsOnly(fake.uploadedNames),
       hasLength(1),
       reason: 'A local change after lastUploadAt must trigger an upload',
     );
@@ -668,7 +671,7 @@ void main() {
     await peer.caveRepo.addCave('FromPeer');
     final peerZip = await peer.sync.exportToZip(
       tempDir.path,
-      filenameHint: 'speleo_loc_sync_8000.zip',
+      filenameHint: 'speleo_loc_sync_8000_deadbeef.zip',
     );
 
     // Receiver harness: do an initial empty sync to set lastUploadAt, then
@@ -680,12 +683,13 @@ void main() {
     // archive because lastUploadAt is null on first run.
     await controller.startDefault();
     await _waitForTerminal(controller);
-    expect(fake.uploadedNames, hasLength(1));
+    expect(_zipsOnly(fake.uploadedNames), hasLength(1));
 
     // Now seed the remote with a peer archive. No local DB changes since
     // the upload above, so this run must download + import only.
     fake.uploadedNames.clear();
-    fake.store['speleo_loc_sync_8000.zip'] = await peerZip.readAsBytes();
+    fake.store['speleo_loc_sync_8000_deadbeef.zip'] = await peerZip
+        .readAsBytes();
 
     await controller.startDefault();
     await _waitForTerminal(controller);

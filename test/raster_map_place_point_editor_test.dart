@@ -1,8 +1,10 @@
-// Baseline failures parked so CI can gate on a green suite (2026-07-03).
-// 2 of the 3 tests hang for the full 10-minute timeout (pre-existing, see
-// 00-PROGRESS.md baseline). Diagnose and re-enable during the editor
-// decomposition, step WS-H2 HW1 (.claude/refactoring20260702/phase-2-plan.md).
-@Skip('2 of 3 tests hang at baseline (10-min timeouts) — WS-H2 HW1')
+// Parked: these tests hang for testWidgets' full 10-minute timeout at
+// baseline. A 2026-07-03 fix attempt (tester.runAsync so the FileImage can
+// decode + bounded pumps instead of pumpAndSettle, see _pumpUntilImageReady)
+// did NOT cure the hang — the widget blocks on something beyond the image
+// loading spinner, so the diagnosis needs the editor decomposition work.
+// Re-enable during WS-H2 HW1 (.claude/refactoring20260702/phase-2-plan.md).
+@Skip('hangs at baseline; runAsync image-decode fix insufficient — WS-H2 HW1')
 library;
 
 import 'dart:io';
@@ -12,25 +14,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
+/// Writes a solid-color PNG fixture to a temp file.
+Future<File> _writePng(int width, int height, List<int> rgba) async {
+  final tmp = await Directory.systemTemp.createTemp('rmp_test');
+  final file = File('${tmp.path}/test.png');
+  final im = img.Image(width: width, height: height);
+  for (var y = 0; y < im.height; y++) {
+    for (var x = 0; x < im.width; x++) {
+      im.setPixelRgba(x, y, rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+  }
+  file.writeAsBytesSync(img.encodePng(im));
+  return file;
+}
+
+/// Pumps [widget] and lets the editor's FileImage decode.
+///
+/// Image decoding needs the real event loop: under plain fake-async pumping
+/// the FileImage never resolves, PhotoView keeps its indeterminate loading
+/// spinner animating forever, and `pumpAndSettle` spins until its 10-minute
+/// timeout (the historical hang in this file). `runAsync` + a real delay
+/// completes the decode; afterwards use bounded `pump`s, never
+/// `pumpAndSettle`.
+Future<void> _pumpUntilImageReady(WidgetTester tester, Widget widget) async {
+  await tester.runAsync(() async {
+    await tester.pumpWidget(widget);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+  });
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
+}
+
 void main() {
   testWidgets('tapping in editor calls onImagePointChanged when not readonly', (
     tester,
   ) async {
-    final tmp = await Directory.systemTemp.createTemp('rmp_test');
-    final file = File('${tmp.path}/test.png');
-
-    // create a simple 100x100 PNG
-    final im = img.Image(width: 100, height: 100);
-    for (var y = 0; y < im.height; y++) {
-      for (var x = 0; x < im.width; x++) {
-        im.setPixelRgba(x, y, 255, 0, 0, 255);
-      }
-    }
-    file.writeAsBytesSync(img.encodePng(im));
+    final file = await _writePng(100, 100, [255, 0, 0, 255]);
 
     double? rx, ry;
 
-    await tester.pumpWidget(
+    await _pumpUntilImageReady(
+      tester,
       MaterialApp(
         home: Scaffold(
           body: SizedBox(
@@ -49,11 +73,9 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
-
     final center = tester.getCenter(find.byType(RasterMapPlacePointEditor));
     await tester.tapAt(center);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(rx, isNotNull);
     expect(ry, isNotNull);
@@ -62,24 +84,17 @@ void main() {
       closeTo(50, 25),
     ); // allow some tolerance depending on PhotoView scale
     expect(ry!, closeTo(50, 25));
-  }, skip: true);
+  });
 
   testWidgets('tapping in readonly editor does NOT call onImagePointChanged', (
     tester,
   ) async {
-    final tmp = await Directory.systemTemp.createTemp('rmp_test');
-    final file = File('${tmp.path}/test.png');
-    final im = img.Image(width: 100, height: 100);
-    for (var y = 0; y < im.height; y++) {
-      for (var x = 0; x < im.width; x++) {
-        im.setPixelRgba(x, y, 0, 255, 0, 255);
-      }
-    }
-    file.writeAsBytesSync(img.encodePng(im));
+    final file = await _writePng(100, 100, [0, 255, 0, 255]);
 
     bool called = false;
 
-    await tester.pumpWidget(
+    await _pumpUntilImageReady(
+      tester,
       MaterialApp(
         home: Scaffold(
           body: SizedBox(
@@ -98,10 +113,9 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
     final center = tester.getCenter(find.byType(RasterMapPlacePointEditor));
     await tester.tapAt(center);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(called, isFalse);
   });
@@ -109,19 +123,12 @@ void main() {
   testWidgets('controller methods are callable and do not throw', (
     tester,
   ) async {
-    final tmp = await Directory.systemTemp.createTemp('rmp_test');
-    final file = File('${tmp.path}/test.png');
-    final im = img.Image(width: 50, height: 50);
-    for (var y = 0; y < im.height; y++) {
-      for (var x = 0; x < im.width; x++) {
-        im.setPixelRgba(x, y, 0, 0, 255, 255);
-      }
-    }
-    file.writeAsBytesSync(img.encodePng(im));
+    final file = await _writePng(50, 50, [0, 0, 255, 255]);
 
     final controller = RasterMapPlacePointEditorController();
 
-    await tester.pumpWidget(
+    await _pumpUntilImageReady(
+      tester,
       MaterialApp(
         home: Scaffold(
           body: SizedBox(
@@ -137,8 +144,6 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
-
     // Ensure controller methods can be invoked after widget is built
     expect(() => controller.zoomIn(), returnsNormally);
     expect(() => controller.zoomOut(), returnsNormally);
@@ -147,5 +152,10 @@ void main() {
       () => controller.zoomToPoint(10, 10, zoomLevel: 2.0),
       returnsNormally,
     );
+
+    // Drive the pan/zoom animation (220 ms) to completion so no ticker is
+    // active when the test framework's leftover-callback check runs.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
   });
 }
