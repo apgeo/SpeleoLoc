@@ -707,6 +707,51 @@ void main() {
     expect(caves.map((c) => c.title), contains('FromPeer'));
   });
 
+  test(
+    'a corrupt latest archive does not permanently strand valid older ones',
+    () async {
+      final peer = await _buildHarness();
+      await peer.caveRepo.addCave('FromPeer');
+      final validOld = await peer.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'speleo_loc_sync_1000_deadbeef.zip',
+      );
+
+      final b = await _buildHarness();
+      final (controller, fake) = await makeController(
+        b,
+        seedFromHarnessExports: {
+          'speleo_loc_sync_1000_deadbeef.zip': await validOld.readAsBytes(),
+          // Newer archive from the SAME device, but not a valid zip.
+          'speleo_loc_sync_2000_deadbeef.zip': <int>[0, 1, 2, 3],
+        },
+      );
+
+      // Round 1: the corrupt newer archive is the device's latest and fails
+      // to import; the valid older one is superseded and must NOT be marked
+      // seen (pre-fix it was, permanently).
+      await controller.startDefault();
+      await _waitForTerminal(controller);
+      expect(
+        (await b.caveRepo.getCaves()).any((c) => c.title == 'FromPeer'),
+        isFalse,
+      );
+
+      // The corrupt archive is removed (source device replaced it). The
+      // previously-superseded valid archive must now import.
+      fake.store.remove('speleo_loc_sync_2000_deadbeef.zip');
+      await controller.startDefault();
+      await _waitForTerminal(controller);
+      expect(
+        (await b.caveRepo.getCaves()).any((c) => c.title == 'FromPeer'),
+        isTrue,
+        reason:
+            'the valid older archive should import once the corrupt '
+            'latest is gone',
+      );
+    },
+  );
+
   // The "remote unseen + local changed" union case is logically the
   // composition of the two preceding tests; the dual-system-user UNIQUE
   // constraint in the in-memory test fixture (each harness lazily creates

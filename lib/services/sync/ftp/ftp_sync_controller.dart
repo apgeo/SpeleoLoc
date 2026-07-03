@@ -242,30 +242,52 @@ class FtpSyncController extends ChangeNotifier {
         }
         byDevice.putIfAbsent(deviceId, () => []).add(e);
       }
-      final superseded = <RemoteFileEntry>[];
       final unseen = <RemoteFileEntry>[];
-      for (final group in byDevice.values) {
-        group.sort(
-          (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
-        );
+      // deviceId -> names of that device's older, subsumed archives. They are
+      // marked seen only AFTER the device's latest archive imports (or is
+      // permanently unimportable). Marking them upfront meant a corrupt
+      // latest archive stranded valid older snapshots as permanently seen —
+      // so once the corrupt one was removed the valid one was never re-tried
+      // (finding 5.3).
+      final supersededByDevice = <String, List<String>>{};
+      var supersededCount = 0;
+      for (final deviceEntry in byDevice.entries) {
+        final group = deviceEntry.value
+          ..sort(
+            (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
+          );
         unseen.add(group.last);
-        if (group.length > 1)
-          superseded.addAll(group.sublist(0, group.length - 1));
+        if (group.length > 1) {
+          final olders = group
+              .sublist(0, group.length - 1)
+              .map((e) => e.name)
+              .toList();
+          supersededByDevice[deviceEntry.key] = olders;
+          supersededCount += olders.length;
+        }
       }
       // Oldest-first: sort ascending by embedded timestamp across devices.
       unseen.sort(
         (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
       );
-      if (superseded.isNotEmpty) {
+      if (supersededCount > 0) {
         _appendLog(
           FtpSyncLogLevel.info,
-          'Skipping ${superseded.length} superseded archive(s) '
+          'Skipping $supersededCount superseded archive(s) '
           '(older snapshots from same device)',
         );
-        // Mark them as seen locally so we don't re-list them next run.
-        seen.addAll(superseded.map((e) => e.name));
-        await _saveSeenArchives(seen);
       }
+
+      /// Marks [archiveName]'s device's superseded (older) archives as seen.
+      /// Called only once the device's latest archive has been dealt with
+      /// successfully, so a failed import never strands the older ones.
+      void markSupersededSeen(String archiveName) {
+        final deviceId = _deviceIdOf(archiveName);
+        if (deviceId == null) return;
+        final olders = supersededByDevice.remove(deviceId);
+        if (olders != null) seen.addAll(olders);
+      }
+
       _appendLog(
         FtpSyncLogLevel.info,
         '${unseen.length} new archive(s) to import of ${remoteEntries.length} on server',
@@ -530,9 +552,13 @@ class FtpSyncController extends ChangeNotifier {
                       'device.',
           );
           // Older archives won't ever import — mark as seen so we stop
-          // re-listing them. Newer archives are intentionally left unseen
+          // re-listing them (and its older superseded siblings too, which
+          // are older still). Newer archives are intentionally left unseen
           // so a future app upgrade can import them.
-          if (!e.tooNew) seen.add(entry.name);
+          if (!e.tooNew) {
+            seen.add(entry.name);
+            markSupersededSeen(entry.name);
+          }
           // Skip the trailing seen.add for too-new archives.
           _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
           try {
@@ -548,8 +574,19 @@ class FtpSyncController extends ChangeNotifier {
             FtpSyncLogLevel.error,
             'Import failed for ${entry.name}: $e — continuing with next',
           );
+          // Leave this archive AND its device's superseded siblings unseen so
+          // a later run can retry once the source device re-uploads or the
+          // corrupt copy is removed (finding 5.3).
+          _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
+          try {
+            await File(localPath).delete();
+          } catch (e, st) {
+            _log.fine('best-effort delete failed: $localPath', e, st);
+          }
+          continue;
         }
         seen.add(entry.name);
+        markSupersededSeen(entry.name);
         _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
         // Best-effort cleanup of the local copy.
         try {
