@@ -658,6 +658,11 @@ class SyncArchiveService {
         (u, ts) async => _deleteIfOlder(_db.tripReportTemplates, u, ts),
       ),
       ('raster_maps', (u, ts) async => _deleteIfOlder(_db.rasterMaps, u, ts)),
+      // Beacons reference cave_places, so remove them before their parent.
+      (
+        'cave_place_beacons',
+        (u, ts) async => _deleteIfOlder(_db.cavePlaceBeacons, u, ts),
+      ),
       ('cave_places', (u, ts) async => _deleteIfOlder(_db.cavePlaces, u, ts)),
       ('cave_areas', (u, ts) async => _deleteIfOlder(_db.caveAreas, u, ts)),
       ('caves', (u, ts) async => _deleteIfOlder(_db.caves, u, ts)),

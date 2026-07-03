@@ -4,6 +4,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_repository.dart';
@@ -22,6 +23,7 @@ class _Device {
     this.placeRepo,
     this.tripRepo,
     this.docRepo,
+    this.beaconRepo,
     this.sync,
   );
 
@@ -31,6 +33,7 @@ class _Device {
   final CavePlaceRepository placeRepo;
   final CaveTripRepository tripRepo;
   final DocumentationRepository docRepo;
+  final BeaconRepository beaconRepo;
   final SyncArchiveService sync;
 
   Uuid get author => currentUser.currentUserUuid.value!;
@@ -55,6 +58,7 @@ Future<_Device> _buildDevice() async {
     CavePlaceRepository(db, currentUser, logger),
     CaveTripRepository(db, logger),
     DocumentationRepository(db, logger),
+    BeaconRepository(db, currentUser, logger),
     SyncArchiveService(
       db,
       logger,
@@ -237,6 +241,58 @@ void main() {
       // The cave and place themselves are untouched.
       expect(await b.db.select(b.db.caves).get(), hasLength(1));
       expect(await b.db.select(b.db.cavePlaces).get(), hasLength(1));
+    },
+  );
+
+  test(
+    'deleted beacon does not resurrect on a peer after sync round-trip',
+    () async {
+      final a = await _buildDevice();
+      final b = await _buildDevice();
+      addTearDown(a.db.close);
+      addTearDown(b.db.close);
+
+      final caveUuid = await a.caveRepo.addCave('Beacon Cave');
+      await a.placeRepo.addCavePlace(caveUuid, 'P1');
+      final placeUuid = (await a.placeRepo.findCavePlaceByTitle(
+        caveUuid,
+        'P1',
+      ))!.uuid;
+      final beaconUuid = await a.beaconRepo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: '11111111-2222-3333-4444-555555555555',
+        major: 1,
+        minor: 2,
+      );
+
+      final zip1 = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'b1.zip',
+        includeDocumentationFiles: false,
+        includeRasterMaps: false,
+      );
+      await b.sync.importFromZip(zip1.path);
+      expect(await b.beaconRepo.getBeaconsForCave(caveUuid), hasLength(1));
+
+      // A unregisters the beacon (soft-delete + tombstone). deleted_at is
+      // excluded from the sync diff, so the row upsert alone skips the
+      // change on B; only the tombstone applied via _applyDeletes — which
+      // pre-fix did not cover cave_place_beacons — removes it.
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await a.beaconRepo.unregisterBeacon(beaconUuid);
+      final zip2 = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'b2.zip',
+        includeDocumentationFiles: false,
+        includeRasterMaps: false,
+      );
+      final report = await b.sync.importFromZip(zip2.path);
+
+      expect(report.deletesApplied, greaterThanOrEqualTo(1));
+      expect(await b.beaconRepo.getBeaconsForCave(caveUuid), isEmpty);
+      // Physically removed on B, not merely soft-deleted.
+      expect(await b.db.select(b.db.cavePlaceBeacons).get(), isEmpty);
     },
   );
 }
