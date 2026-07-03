@@ -4,11 +4,12 @@ import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
@@ -21,15 +22,15 @@ import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class CaveTripPage extends StatefulWidget {
+class CaveTripPage extends ConsumerStatefulWidget {
   const CaveTripPage({super.key, required this.tripUuid});
   final Uuid tripUuid;
 
   @override
-  State<CaveTripPage> createState() => _CaveTripPageState();
+  ConsumerState<CaveTripPage> createState() => _CaveTripPageState();
 }
 
-class _CaveTripPageState extends State<CaveTripPage>
+class _CaveTripPageState extends ConsumerState<CaveTripPage>
     with
         TickerProviderStateMixin,
         AppBarMenuMixin<CaveTripPage>,
@@ -158,14 +159,26 @@ class _CaveTripPageState extends State<CaveTripPage>
     _editorController.externalNavBarKey = _navBarKey;
     _loadCavePlaceSortOption();
     _load();
-    caveTripService.activeTripIdNotifier.addListener(_onTripStateChanged);
-    caveTripService.isPausedNotifier.addListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .addListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .isPausedNotifier
+        .addListener(_onTripStateChanged);
   }
 
   @override
   void dispose() {
-    caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
-    caveTripService.isPausedNotifier.removeListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .removeListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .isPausedNotifier
+        .removeListener(_onTripStateChanged);
     _playbackController?.dispose();
     _editorController.detach();
     _imageProviderCache.clear();
@@ -177,13 +190,17 @@ class _CaveTripPageState extends State<CaveTripPage>
   }
 
   Future<void> _load() async {
-    final trip = await caveTripRepository.findById(widget.tripUuid);
+    final trip = await ref
+        .read(caveTripRepositoryProvider)
+        .findById(widget.tripUuid);
     if (trip == null) {
       if (mounted) Navigator.pop(context);
       return;
     }
-    final cave = await caveRepository.findById(trip.caveUuid);
-    final points = await caveTripRepository.getTripPoints(widget.tripUuid);
+    final cave = await ref.read(caveRepositoryProvider).findById(trip.caveUuid);
+    final points = await ref
+        .read(caveTripRepositoryProvider)
+        .getTripPoints(widget.tripUuid);
     final placeIds = points
         .map((p) => p.cavePlaceUuid)
         .whereType<Uuid>()
@@ -191,14 +208,18 @@ class _CaveTripPageState extends State<CaveTripPage>
         .toList();
     Map<Uuid, CavePlace> placesById = {};
     if (placeIds.isNotEmpty) {
-      final places = await cavePlaceRepository.findByIds(placeIds);
+      final places = await ref
+          .read(cavePlaceRepositoryProvider)
+          .findByIds(placeIds);
       placesById = {for (var p in places) p.uuid: p};
     }
 
     // Load raster maps for the cave
     List<RasterMap> rasterMaps = [];
     if (cave != null) {
-      rasterMaps = await rasterMapRepository.getRasterMaps(cave.uuid);
+      rasterMaps = await ref
+          .read(rasterMapRepositoryProvider)
+          .getRasterMaps(cave.uuid);
     }
 
     if (mounted) {
@@ -222,7 +243,8 @@ class _CaveTripPageState extends State<CaveTripPage>
     final cave = _cave;
     if (rm == null || cave == null) return;
 
-    final defs = await rasterMapRepository
+    final defs = await ref
+        .read(rasterMapRepositoryProvider)
         .getCavePlacesWithDefinitionsForRasterMap(cave.uuid, rm.uuid);
 
     File? imageFile;
@@ -386,7 +408,9 @@ class _CaveTripPageState extends State<CaveTripPage>
   }
 
   Future<TripReportTemplate?> _showTemplateSelectionDialog() async {
-    final templates = await caveTripRepository.getTripReportTemplates();
+    final templates = await ref
+        .read(caveTripRepositoryProvider)
+        .getTripReportTemplates();
 
     if (!mounted) return null;
 
@@ -493,7 +517,9 @@ class _CaveTripPageState extends State<CaveTripPage>
     if (confirmed == true && mounted) {
       final newTitle = controller.text.trim();
       if (newTitle.isNotEmpty && newTitle != trip.title) {
-        await caveTripRepository.renameCaveTrip(trip.uuid, newTitle);
+        await ref
+            .read(caveTripRepositoryProvider)
+            .renameCaveTrip(trip.uuid, newTitle);
         if (mounted) {
           SnackBarService.showSuccess(LocServ.inst.t('trip_renamed'));
           _load();
@@ -521,7 +547,7 @@ class _CaveTripPageState extends State<CaveTripPage>
       ),
     );
     if (confirmed == true) {
-      await caveTripService.stopTrip();
+      await ref.read(caveTripServiceProvider).stopTrip();
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
         _load();
@@ -548,8 +574,10 @@ class _CaveTripPageState extends State<CaveTripPage>
       ),
     );
     if (confirmed == true) {
-      if (_isActive) await caveTripService.stopTrip();
-      await caveTripRepository.deleteCaveTrip(widget.tripUuid);
+      if (_isActive) await ref.read(caveTripServiceProvider).stopTrip();
+      await ref
+          .read(caveTripRepositoryProvider)
+          .deleteCaveTrip(widget.tripUuid);
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_deleted'));
         Navigator.pop(context, true);
@@ -560,7 +588,7 @@ class _CaveTripPageState extends State<CaveTripPage>
   Future<void> _restartTrip() async {
     final trip = _trip;
     if (trip == null) return;
-    await caveTripService.restartTrip(trip.uuid);
+    await ref.read(caveTripServiceProvider).restartTrip(trip.uuid);
     if (mounted) {
       SnackBarService.showSuccess(LocServ.inst.t('trip_restarted'));
       _load();
@@ -579,7 +607,7 @@ class _CaveTripPageState extends State<CaveTripPage>
   }
 
   Widget _buildActionToolbar() {
-    final isPaused = caveTripService.isPausedNotifier.value;
+    final isPaused = ref.read(caveTripServiceProvider).isPausedNotifier.value;
     final buttons = <_TripToolbarButton>[];
 
     if (_isActive) {
@@ -598,7 +626,7 @@ class _CaveTripPageState extends State<CaveTripPage>
             label: LocServ.inst.t('trip_resume'),
             color: Colors.green,
             onTap: () {
-              caveTripService.resumeTrip();
+              ref.read(caveTripServiceProvider).resumeTrip();
               setState(() {});
             },
           ),
@@ -610,7 +638,7 @@ class _CaveTripPageState extends State<CaveTripPage>
             label: LocServ.inst.t('trip_pause'),
             color: Colors.orange,
             onTap: () {
-              caveTripService.pauseTrip();
+              ref.read(caveTripServiceProvider).pauseTrip();
               setState(() {});
             },
           ),
@@ -729,7 +757,7 @@ class _CaveTripPageState extends State<CaveTripPage>
       );
     }
 
-    final isPaused = caveTripService.isPausedNotifier.value;
+    final isPaused = ref.read(caveTripServiceProvider).isPausedNotifier.value;
     final dateTimeFormat = DateFormat('yyyy/MM/dd HH:mm');
     final startDt = DateTime.fromMillisecondsSinceEpoch(trip.tripStartedAt);
     final endDt = trip.tripEndedAt != null

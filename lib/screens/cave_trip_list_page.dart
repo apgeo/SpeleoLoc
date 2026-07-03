@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class CaveTripListPage extends StatefulWidget {
+class CaveTripListPage extends ConsumerStatefulWidget {
   const CaveTripListPage({super.key, required this.caveUuid});
   final Uuid caveUuid;
 
   @override
-  State<CaveTripListPage> createState() => _CaveTripListPageState();
+  ConsumerState<CaveTripListPage> createState() => _CaveTripListPageState();
 }
 
-class _CaveTripListPageState extends State<CaveTripListPage>
+class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
     with AppBarMenuMixin<CaveTripListPage>, ProductTourMixin<CaveTripListPage> {
   @override
   String get tourId => 'cave_trip_list';
@@ -50,14 +51,26 @@ class _CaveTripListPageState extends State<CaveTripListPage>
   void initState() {
     super.initState();
     _load();
-    caveTripService.activeTripIdNotifier.addListener(_onTripStateChanged);
-    caveTripService.isPausedNotifier.addListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .addListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .isPausedNotifier
+        .addListener(_onTripStateChanged);
   }
 
   @override
   void dispose() {
-    caveTripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
-    caveTripService.isPausedNotifier.removeListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .removeListener(_onTripStateChanged);
+    ref
+        .read(caveTripServiceProvider)
+        .isPausedNotifier
+        .removeListener(_onTripStateChanged);
     super.dispose();
   }
 
@@ -66,12 +79,18 @@ class _CaveTripListPageState extends State<CaveTripListPage>
   }
 
   Future<void> _load() async {
-    final cave = await caveRepository.findById(widget.caveUuid);
-    final allTrips = await caveTripRepository.getCaveTrips(widget.caveUuid);
+    final cave = await ref
+        .read(caveRepositoryProvider)
+        .findById(widget.caveUuid);
+    final allTrips = await ref
+        .read(caveTripRepositoryProvider)
+        .getCaveTrips(widget.caveUuid);
     final ended = allTrips.where((t) => t.tripEndedAt != null).toList();
     Map<Uuid, int> counts = {};
     for (final trip in ended) {
-      final points = await caveTripRepository.getTripPoints(trip.uuid);
+      final points = await ref
+          .read(caveTripRepositoryProvider)
+          .getTripPoints(trip.uuid);
       counts[trip.uuid] = points.length;
     }
     if (mounted) {
@@ -87,9 +106,9 @@ class _CaveTripListPageState extends State<CaveTripListPage>
     final caveName = _cave?.title ?? '';
     final dateStr = DateFormat('yyyy/MM/dd').format(DateTime.now());
     final defaultTitle = '$caveName $dateStr';
-    final existingTitles = await caveTripRepository.getCaveTripTitles(
-      widget.caveUuid,
-    );
+    final existingTitles = await ref
+        .read(caveTripRepositoryProvider)
+        .getCaveTripTitles(widget.caveUuid);
     final suggestedTitle = CaveTripService.uniqueTripTitle(
       defaultTitle,
       existingTitles,
@@ -123,7 +142,7 @@ class _CaveTripListPageState extends State<CaveTripListPage>
       final title = controller.text.trim().isNotEmpty
           ? controller.text.trim()
           : suggestedTitle;
-      await caveTripService.startTrip(widget.caveUuid, title);
+      await ref.read(caveTripServiceProvider).startTrip(widget.caveUuid, title);
       if (mounted) {
         _load();
       }
@@ -149,7 +168,7 @@ class _CaveTripListPageState extends State<CaveTripListPage>
       ),
     );
     if (confirmed == true) {
-      await caveTripService.stopTrip();
+      await ref.read(caveTripServiceProvider).stopTrip();
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
         setState(() {});
@@ -158,8 +177,11 @@ class _CaveTripListPageState extends State<CaveTripListPage>
   }
 
   Widget _buildToolbar() {
-    final activeTripId = caveTripService.activeTripIdNotifier.value;
-    final isPaused = caveTripService.isPausedNotifier.value;
+    final activeTripId = ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .value;
+    final isPaused = ref.read(caveTripServiceProvider).isPausedNotifier.value;
     final isActiveForThisCave = activeTripId != null;
 
     final buttons = <_ToolbarBtn>[];
@@ -189,7 +211,7 @@ class _CaveTripListPageState extends State<CaveTripListPage>
             label: LocServ.inst.t('trip_resume'),
             color: Colors.green,
             onTap: () {
-              caveTripService.resumeTrip();
+              ref.read(caveTripServiceProvider).resumeTrip();
               setState(() {});
             },
           ),
@@ -201,7 +223,7 @@ class _CaveTripListPageState extends State<CaveTripListPage>
             label: LocServ.inst.t('trip_pause'),
             color: Colors.orange,
             onTap: () {
-              caveTripService.pauseTrip();
+              ref.read(caveTripServiceProvider).pauseTrip();
               setState(() {});
             },
           ),
@@ -255,11 +277,14 @@ class _CaveTripListPageState extends State<CaveTripListPage>
 
   Widget _buildActiveTripCard(Uuid tripId) {
     return FutureBuilder<CaveTrip?>(
-      future: caveTripRepository.findById(tripId),
+      future: ref.read(caveTripRepositoryProvider).findById(tripId),
       builder: (context, snap) {
         final trip = snap.data;
         if (trip == null) return const SizedBox.shrink();
-        final isPaused = caveTripService.isPausedNotifier.value;
+        final isPaused = ref
+            .read(caveTripServiceProvider)
+            .isPausedNotifier
+            .value;
         final pts = _pointCounts[trip.uuid] ?? 0;
         return Card(
           margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
@@ -293,7 +318,10 @@ class _CaveTripListPageState extends State<CaveTripListPage>
 
   @override
   Widget build(BuildContext context) {
-    final activeTripId = caveTripService.activeTripIdNotifier.value;
+    final activeTripId = ref
+        .read(caveTripServiceProvider)
+        .activeTripIdNotifier
+        .value;
     final dateFormat = DateFormat('yyyy/MM/dd HH:mm');
 
     return Scaffold(
