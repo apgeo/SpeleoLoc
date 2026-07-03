@@ -730,10 +730,21 @@ class SyncArchiveService {
   List<Map<String, dynamic>> _readJsonl(ArchiveFile file) {
     final content = utf8.decode(file.content as List<int>);
     final out = <Map<String, dynamic>>[];
+    var lineNo = 0;
     for (final line in const LineSplitter().convert(content)) {
+      lineNo++;
       final trimmed = line.trim();
       if (trimmed.isEmpty) continue;
-      out.add(jsonDecode(trimmed) as Map<String, dynamic>);
+      // One malformed line must not sink the whole import: a truncated
+      // download or a single corrupt row would otherwise throw straight out
+      // of parsing and roll back every table. Skip the bad line, keep the
+      // rest. (A sidecar SHA-256, when present, still rejects tampered
+      // archives before we get here.)
+      try {
+        out.add(jsonDecode(trimmed) as Map<String, dynamic>);
+      } catch (e) {
+        _log.warning('skipping malformed JSONL line $lineNo in ${file.name}');
+      }
     }
     return out;
   }

@@ -566,6 +566,31 @@ void main() {
     await a.db.close();
     await b.db.close();
   });
+
+  test('a malformed JSONL line is skipped, not fatal to the import', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    await a.caveRepo.addCave('Keeper');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final corrupted = await _injectBadLineIntoTable(
+      zip.path,
+      tempDir.path,
+      'caves',
+    );
+
+    // Import must complete and still carry the valid cave: one corrupt row
+    // (truncated download, bit-rot) can't be allowed to roll back the lot.
+    final report = await b.sync.importFromZip(corrupted);
+    expect(report.rowsInserted, greaterThan(0));
+    expect(
+      (await b.caveRepo.getCaves()).any((c) => c.title == 'Keeper'),
+      isTrue,
+    );
+
+    await a.db.close();
+    await b.db.close();
+  });
 }
 
 class _Harness {
@@ -603,6 +628,36 @@ Future<String> _rewriteSchemaVersion(
   }
   final data = ZipEncoder().encode(out)!;
   final destPath = p.join(destDir, 'relabeled_$newSchema.zip');
+  await File(destPath).writeAsBytes(data);
+  return destPath;
+}
+
+/// Appends a corrupt (non-JSON) line to `tables/<tableName>.jsonl` in a copy
+/// of the archive, leaving every other entry intact, and returns the new zip
+/// path. Simulates a truncated/bit-rotted row.
+Future<String> _injectBadLineIntoTable(
+  String srcZipPath,
+  String destDir,
+  String tableName,
+) async {
+  final srcBytes = await File(srcZipPath).readAsBytes();
+  final src = ZipDecoder().decodeBytes(srcBytes);
+  final out = Archive();
+  final target = 'tables/$tableName.jsonl';
+  for (final f in src.files) {
+    if (!f.isFile) continue;
+    final content = (f.content as List<int>);
+    if (f.name == target) {
+      final corrupted = utf8.encode(
+        '${utf8.decode(content)}\n{ this is not valid json',
+      );
+      out.addFile(ArchiveFile(target, corrupted.length, corrupted));
+    } else {
+      out.addFile(ArchiveFile(f.name, content.length, content));
+    }
+  }
+  final data = ZipEncoder().encode(out)!;
+  final destPath = p.join(destDir, 'corrupted_line.zip');
   await File(destPath).writeAsBytes(data);
   return destPath;
 }
