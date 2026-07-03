@@ -43,7 +43,7 @@ void main() {
         [tripUuid, caveUuid, 'Survivor Trip', 1000, 1000],
       );
     } finally {
-      raw.dispose();
+      raw.close();
     }
 
     // Opening as AppDatabase runs the migration ladder (v7 -> current).
