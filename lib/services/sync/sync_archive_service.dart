@@ -715,6 +715,11 @@ class SyncArchiveService {
     return n;
   }
 
+  /// Applies a delete tombstone to a local row using last-write-wins on
+  /// timestamps. The local row survives only when it is *strictly* newer than
+  /// the tombstone; on a tie (`tombstoneTs == localTs`) the delete wins. This
+  /// tie-goes-to-delete policy is deliberate and must match the LWW upsert side
+  /// so a delete and an equal-timestamp edit can't disagree about the outcome.
   Future<int> _deleteIfOlder(
     TableInfo table,
     Uuid entityUuid,
@@ -730,7 +735,7 @@ class SyncArchiveService {
         .get();
     if (countRows.isEmpty) return 0;
     final localTs = countRows.first.read<int>('ts');
-    if (tombstoneTs < localTs) return 0; // local is newer
+    if (tombstoneTs < localTs) return 0; // local strictly newer → keep (ties delete)
     await _db.customStatement(
       'DELETE FROM ${table.actualTableName} WHERE uuid = ?',
       [entityUuid.bytes],
