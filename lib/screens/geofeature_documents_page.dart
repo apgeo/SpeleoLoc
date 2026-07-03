@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/documents/editors/camera_capture_page.dart';
 import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
@@ -49,17 +51,18 @@ enum DocSortField { title, type, size, date }
 ///
 /// The source of documents is described by [DocumentsSource], making this
 /// page generic and reusable across different geofeature types.
-class GeofeatureDocumentsPage extends StatefulWidget {
+class GeofeatureDocumentsPage extends ConsumerStatefulWidget {
   const GeofeatureDocumentsPage({super.key, required this.source});
 
   final DocumentsSource source;
 
   @override
-  State<GeofeatureDocumentsPage> createState() =>
+  ConsumerState<GeofeatureDocumentsPage> createState() =>
       _GeofeatureDocumentsPageState();
 }
 
-class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
+class _GeofeatureDocumentsPageState
+    extends ConsumerState<GeofeatureDocumentsPage>
     with
         AppBarMenuMixin<GeofeatureDocumentsPage>,
         ProductTourMixin<GeofeatureDocumentsPage> {
@@ -132,7 +135,10 @@ class _GeofeatureDocumentsPageState extends State<GeofeatureDocumentsPage>
   @override
   void initState() {
     super.initState();
-    _controller = DocumentsController(widget.source);
+    _controller = DocumentsController(
+      widget.source,
+      ref.read(documentationRepositoryProvider),
+    );
     _searchCtrl.addListener(_applyFilter);
     _init();
   }

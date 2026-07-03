@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
@@ -104,9 +104,10 @@ class DocumentsSource {
 /// The controller is intentionally separated from the widget so that the page
 /// stays source-agnostic.
 class DocumentsController extends ChangeNotifier {
-  DocumentsController(this.source);
+  DocumentsController(this.source, this._docRepo);
 
   final DocumentsSource source;
+  final IDocumentationRepository _docRepo;
 
   List<DocumentationFile> _documents = [];
   List<DocumentationFile> get documents => _documents;
@@ -124,7 +125,7 @@ class DocumentsController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _documents = await documentationRepository.getDocumentationFiles(
+      _documents = await _docRepo.getDocumentationFiles(
         parentLink: source.geofeatureLink,
       );
     } catch (e) {
