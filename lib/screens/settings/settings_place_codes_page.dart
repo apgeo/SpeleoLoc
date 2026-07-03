@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/qcri_hasher.dart';
@@ -13,14 +15,15 @@ import 'package:speleoloc/widgets/product_tour.dart';
 
 /// Settings sub-page for Place Code Identifier (PCI) and
 /// QR Code Resource Identifier (QCRI) configuration.
-class SettingsPlaceCodesPage extends StatefulWidget {
+class SettingsPlaceCodesPage extends ConsumerStatefulWidget {
   const SettingsPlaceCodesPage({super.key});
 
   @override
-  State<SettingsPlaceCodesPage> createState() => _SettingsPlaceCodesPageState();
+  ConsumerState<SettingsPlaceCodesPage> createState() =>
+      _SettingsPlaceCodesPageState();
 }
 
-class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
+class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
     with
         AppBarMenuMixin<SettingsPlaceCodesPage>,
         ProductTourMixin<SettingsPlaceCodesPage> {
@@ -380,6 +383,7 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
         ElevatedButton.icon(
           onPressed: () => PlaceCodeBatchUi.run(
             context,
+            runner: ref.read(placeCodeBatchRunnerProvider),
             scope: const GlobalScope(),
             confirmTitle: LocServ.inst.t('generate_codes_dataset'),
             confirmBody: LocServ.inst.t('generate_codes_confirm_dataset'),
@@ -479,6 +483,7 @@ class _SettingsPlaceCodesPageState extends State<SettingsPlaceCodesPage>
         OutlinedButton.icon(
           onPressed: () => PlaceCodeBatchUi.run(
             context,
+            runner: ref.read(placeCodeBatchRunnerProvider),
             scope: const GlobalScope(),
             confirmTitle: LocServ.inst.t('recompute_all_qcris'),
             confirmBody: LocServ.inst.t('recompute_all_qcris_confirm'),

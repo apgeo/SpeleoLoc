@@ -127,6 +127,7 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
               onPressed: () async {
                 await PlaceCodeBatchUi.run(
                   context,
+                  runner: ref.read(placeCodeBatchRunnerProvider),
                   scope: PerAreaScope(existing.uuid),
                   confirmTitle: LocServ.inst.t('generate_codes'),
                   confirmBody: LocServ.inst.t('generate_codes_confirm_area'),
@@ -252,6 +253,7 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
                     IconButton(
                       onPressed: () => PlaceCodeBatchUi.run(
                         context,
+                        runner: ref.read(placeCodeBatchRunnerProvider),
                         scope: PerAreaScope(area.uuid),
                         confirmTitle: LocServ.inst.t('generate_codes'),
                         confirmBody: LocServ.inst.t(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_overwrite_policy.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// UI bridge that runs a [PlaceCodeBatchRunner] with overwrite prompts,
@@ -11,6 +10,7 @@ class PlaceCodeBatchUi {
   /// and shows the summary.
   static Future<void> run(
     BuildContext context, {
+    required PlaceCodeBatchRunner runner,
     required PlaceCodeBatchScope scope,
     required String confirmTitle,
     required String confirmBody,
@@ -39,7 +39,7 @@ class PlaceCodeBatchUi {
     final summary = await showDialog<PlaceCodeBatchSummary>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _BatchProgressDialog(scope: scope),
+      builder: (ctx) => _BatchProgressDialog(scope: scope, runner: runner),
     );
     if (summary == null || !context.mounted) return;
     await _showSummary(context, summary);
@@ -233,8 +233,9 @@ class PlaceCodeBatchUi {
 
 class _BatchProgressDialog extends StatefulWidget {
   final PlaceCodeBatchScope scope;
+  final PlaceCodeBatchRunner runner;
 
-  const _BatchProgressDialog({required this.scope});
+  const _BatchProgressDialog({required this.scope, required this.runner});
 
   @override
   State<_BatchProgressDialog> createState() => _BatchProgressDialogState();
@@ -255,7 +256,7 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
   }
 
   void _startBatch() {
-    placeCodeBatchRunner
+    widget.runner
         .run(
           scope: widget.scope,
           cancellationToken: _token,

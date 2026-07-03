@@ -67,6 +67,7 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
     if (value == 'generate_codes' && widget.cave != null) {
       await PlaceCodeBatchUi.run(
         context,
+        runner: ref.read(placeCodeBatchRunnerProvider),
         scope: PerCaveScope(widget.cave!.uuid),
         confirmTitle: LocServ.inst.t('generate_codes'),
         confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),

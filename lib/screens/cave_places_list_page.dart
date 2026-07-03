@@ -180,6 +180,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     } else if (value == 'generate_codes') {
       await PlaceCodeBatchUi.run(
         context,
+        runner: ref.read(placeCodeBatchRunnerProvider),
         scope: PerCaveScope(widget.caveUuid),
         confirmTitle: LocServ.inst.t('generate_codes'),
         confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),
@@ -898,6 +899,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                 onPressed: () async {
                   await PlaceCodeBatchUi.run(
                     context,
+                    runner: ref.read(placeCodeBatchRunnerProvider),
                     scope: PerCaveScope(widget.caveUuid),
                     confirmTitle: LocServ.inst.t('generate_codes'),
                     confirmBody: LocServ.inst.t('generate_codes_confirm_cave'),
