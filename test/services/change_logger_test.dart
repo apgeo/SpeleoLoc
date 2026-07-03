@@ -83,4 +83,28 @@ void main() {
     // No-diff updates are not logged at all.
     expect(updates, isEmpty);
   });
+
+  test('audit write failures propagate instead of being swallowed', () async {
+    // A logger over a closed database must throw, not warn-and-continue:
+    // callers run inside their write transaction, and a silently missing
+    // change_log row means the change never syncs (no tombstone, no
+    // upload-gate trigger) while the caller believes it was audited.
+    final failingDb = AppDatabase.forTesting(NativeDatabase.memory());
+    late ChangeLogger ref;
+    final userRepo = UserRepository(failingDb, () => ref);
+    final currentUser = CurrentUserService(
+      failingDb,
+      userRepo,
+      ConfigurationRepository(failingDb),
+    );
+    await currentUser.initialize();
+    ref = ChangeLogger(failingDb, currentUser);
+    await failingDb.close();
+
+    await expectLater(ref.logInsert('caves', Uuid.v7()), throwsA(anything));
+    await expectLater(
+      ref.logDelete('caves', Uuid.v7(), oldValues: {'title': 'x'}),
+      throwsA(anything),
+    );
+  });
 }

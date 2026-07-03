@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
-import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 /// Change types stored in `change_log.change_type`.
@@ -45,7 +44,6 @@ class ChangeLogger {
   final AppDatabase _db;
   final CurrentUserService _currentUser;
   final Clock _clock;
-  final _log = AppLogger.of('ChangeLogger');
 
   int _suspendDepth = 0;
   bool get isSuspended => _suspendDepth > 0;
@@ -115,55 +113,54 @@ class ChangeLogger {
     await _writeFields(changeUuid, filtered);
   }
 
+  /// Writes the change_log header row. Failures propagate to the caller:
+  /// repositories invoke the logger inside their write transaction, so a
+  /// failed audit insert rolls the whole operation back instead of leaving
+  /// an entity change that silently never syncs (change_log drives both
+  /// delete tombstones and the upload gate).
   Future<Uuid> _writeHeader(
     String entityTable,
     Uuid entityUuid,
     int changeType,
   ) async {
     final changeUuid = Uuid.v7();
-    try {
-      await _db
-          .into(_db.changeLog)
-          .insert(
-            ChangeLogCompanion.insert(
-              uuid: changeUuid,
-              entityTable: entityTable,
-              entityUuid: entityUuid,
-              changeType: changeType,
-              changedAt: _clock.nowMs(),
-              changedByUserUuid: Value(_currentUser.currentUserUuid.value),
-              deviceUuid: Value(_currentUser.deviceUuid.value),
-            ),
-          );
-    } catch (e, st) {
-      _log.warning('Failed to write change_log header', e, st);
-    }
+    await _db
+        .into(_db.changeLog)
+        .insert(
+          ChangeLogCompanion.insert(
+            uuid: changeUuid,
+            entityTable: entityTable,
+            entityUuid: entityUuid,
+            changeType: changeType,
+            changedAt: _clock.nowMs(),
+            changedByUserUuid: Value(_currentUser.currentUserUuid.value),
+            deviceUuid: Value(_currentUser.deviceUuid.value),
+          ),
+        );
     return changeUuid;
   }
 
+  /// Writes the per-field old-value rows. Failures propagate for the same
+  /// reason as [_writeHeader].
   Future<void> _writeFields(
     Uuid changeUuid,
     Map<String, Object?> oldValues,
   ) async {
     if (oldValues.isEmpty) return;
-    try {
-      await _db.batch((b) {
-        for (final entry in oldValues.entries) {
-          final (bytes, truncated) = _encodeOldValue(entry.value);
-          b.insert(
-            _db.changeLogField,
-            ChangeLogFieldCompanion.insert(
-              changeUuid: changeUuid,
-              fieldName: entry.key,
-              oldValueShort: Value(bytes),
-              oldValueTruncated: Value(truncated ? 1 : 0),
-            ),
-          );
-        }
-      });
-    } catch (e, st) {
-      _log.warning('Failed to write change_log_field rows', e, st);
-    }
+    await _db.batch((b) {
+      for (final entry in oldValues.entries) {
+        final (bytes, truncated) = _encodeOldValue(entry.value);
+        b.insert(
+          _db.changeLogField,
+          ChangeLogFieldCompanion.insert(
+            changeUuid: changeUuid,
+            fieldName: entry.key,
+            oldValueShort: Value(bytes),
+            oldValueTruncated: Value(truncated ? 1 : 0),
+          ),
+        );
+      }
+    });
   }
 
   static (Uint8List?, bool) _encodeOldValue(Object? value) {
