@@ -73,6 +73,20 @@ class SyncImportReport {
     required this.warnings,
   });
 
+  /// Returns a copy with the asset-file counts filled in — used by
+  /// `importFromZip`, which runs asset extraction after the DB merge.
+  SyncImportReport copyWith({int? filesCopied, int? filesSkipped}) =>
+      SyncImportReport(
+        rowsInserted: rowsInserted,
+        rowsUpdated: rowsUpdated,
+        rowsSkipped: rowsSkipped,
+        deletesApplied: deletesApplied,
+        changeLogMerged: changeLogMerged,
+        filesCopied: filesCopied ?? this.filesCopied,
+        filesSkipped: filesSkipped ?? this.filesSkipped,
+        warnings: warnings,
+      );
+
   @override
   String toString() =>
       'SyncImportReport(inserted=$rowsInserted, updated=$rowsUpdated, '
@@ -374,10 +388,10 @@ class SyncArchiveService {
     // (raster maps) are never inflated via entry.content in this isolate —
     // _extractAssetsInBackground opens its own InputFileStream in a
     // background isolate and handles all binary extraction there.
-    final bytes = await File(zipPath).readAsBytes();
-    // InputStream is backed by the Uint8List above; both live until
-    // _importFromArchive returns and the archive goes out of scope.
-    final Archive archive = ZipDecoder().decodeBuffer(InputStream(bytes));
+    var bytes = await File(zipPath).readAsBytes();
+    // InputStream is backed by the Uint8List above. Both are released (see
+    // below) once the DB merge is done, before asset extraction runs.
+    var archive = ZipDecoder().decodeBuffer(InputStream(bytes));
 
     if (archive.findFile('manifest.json') == null) {
       final size = bytes.length;
@@ -393,7 +407,30 @@ class SyncArchiveService {
       );
     }
 
-    return await _importFromArchive(archive, conflictResolver, zipPath);
+    // Phase 1+2: parse the JSONL and merge into the DB. Returns the report
+    // (with file counts still zero) plus the names of the `assets/*` entries.
+    final (partial, assetEntryNames) = await _mergeArchiveIntoDb(
+      archive,
+      conflictResolver,
+      zipPath,
+    );
+
+    // Release the full in-memory archive and its backing byte buffer before
+    // the file-backed asset extraction. The extractor re-opens the zip in a
+    // background isolate, so holding this copy here would just double peak
+    // memory for a large archive (finding 5.6).
+    bytes = Uint8List(0);
+    archive = Archive();
+
+    final assetResult = await _extractAssets(
+      assetEntryNames,
+      zipPath,
+      partial.warnings,
+    );
+    return partial.copyWith(
+      filesCopied: assetResult.copied,
+      filesSkipped: assetResult.skipped,
+    );
   }
 
   /// Returns every byte offset in [bytes] where the 4-byte zip End-Of-
@@ -430,7 +467,12 @@ class SyncArchiveService {
         .join(' ');
   }
 
-  Future<SyncImportReport> _importFromArchive(
+  /// Validates the manifest, replays the JSONL into the DB (Phase 1 parse +
+  /// Phase 2 transaction), and returns the report (with file counts still
+  /// zero) alongside the names of the `assets/*` entries the caller should
+  /// extract. Asset extraction is deliberately left to the caller so the
+  /// in-memory archive can be released first (finding 5.6).
+  Future<(SyncImportReport, List<String>)> _mergeArchiveIntoDb(
     Archive archive,
     ConflictResolver? conflictResolver,
     String zipPath,
@@ -483,8 +525,6 @@ class SyncArchiveService {
     var skipped = 0;
     var deletesApplied = 0;
     var changeLogMerged = 0;
-    var filesCopied = 0;
-    var filesSkipped = 0;
     final warnings = <String>[];
 
     // Build a remap table for incoming user UUIDs that collide on
@@ -605,26 +645,24 @@ class SyncArchiveService {
       });
     });
 
-    // Extract asset files outside the DB transaction (filesystem IO
-    // shouldn't be tied to the transaction's lifetime).
-    final assetResult = await _extractAssets(
-      archive,
-      warnings,
-      zipPath: zipPath,
-    );
-    filesCopied = assetResult.copied;
-    filesSkipped = assetResult.skipped;
+    // Collect the asset entry names for the caller to extract after it has
+    // released this archive; file counts are filled in there.
+    final assetEntryNames = [
+      for (final entry in archive.files)
+        if (entry.isFile && entry.name.startsWith(_assetsPrefix)) entry.name,
+    ];
 
-    return SyncImportReport(
+    final report = SyncImportReport(
       rowsInserted: inserted,
       rowsUpdated: updated,
       rowsSkipped: skipped,
       deletesApplied: deletesApplied,
       changeLogMerged: changeLogMerged,
-      filesCopied: filesCopied,
-      filesSkipped: filesSkipped,
+      filesCopied: 0,
+      filesSkipped: 0,
       warnings: warnings,
     );
+    return (report, assetEntryNames);
   }
 
   /// For each (entityUuid -> deleteTs) mapping, delete the row from whichever
@@ -738,15 +776,22 @@ class SyncArchiveService {
   //  Asset file helpers
   // ---------------------------------------------------------------------------
 
-  /// Walk every `assets/*` entry in [archive] and copy it into the local
-  /// documents directory. Existing local files are preserved (LWW on
-  /// content: assume last export wins only for DB rows; filesystem assets
-  /// are treated as immutable-per-name).
+  /// Copies each `assets/*` archive entry (named in [assetEntryNames]) into
+  /// the local documents directory. Existing local files are preserved (LWW
+  /// on content: last export wins only for DB rows; filesystem assets are
+  /// treated as immutable-per-name).
+  ///
+  /// Takes the entry names (not the [Archive]) so the caller can release the
+  /// full in-memory archive first; the actual bytes are re-read from
+  /// [zipPath] in a background isolate.
   Future<_AssetResult> _extractAssets(
-    Archive archive,
-    List<String> warnings, {
-    required String zipPath,
-  }) async {
+    List<String> assetEntryNames,
+    String zipPath,
+    List<String> warnings,
+  ) async {
+    if (assetEntryNames.isEmpty) {
+      return const _AssetResult(copied: 0, skipped: 0);
+    }
     Directory baseDir;
     try {
       baseDir = await _assetsBaseDirResolver();
@@ -761,10 +806,8 @@ class SyncArchiveService {
     // and Directory.create() use platform channels that must run on the main
     // isolate, so we resolve all paths here before spawning.
     final toExtract = <List<String>>[];
-    for (final entry in archive) {
-      if (!entry.isFile) continue;
-      if (!entry.name.startsWith(_assetsPrefix)) continue;
-      final relPath = entry.name
+    for (final entryName in assetEntryNames) {
+      final relPath = entryName
           .substring(_assetsPrefix.length)
           .replaceAll('/', Platform.pathSeparator);
       if (relPath.isEmpty) continue;
@@ -774,7 +817,7 @@ class SyncArchiveService {
         continue;
       }
       await dest.parent.create(recursive: true);
-      toExtract.add([entry.name, dest.path]);
+      toExtract.add([entryName, dest.path]);
     }
 
     if (toExtract.isEmpty) {
