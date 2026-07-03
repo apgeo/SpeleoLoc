@@ -98,19 +98,30 @@ class _SyncPageState extends ConsumerState<SyncPage>
           LocServ.inst.t('sync_conflict_mode_title'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        RadioListTile<_ConflictMode>(
-          title: Text(LocServ.inst.t('sync_conflict_mode_auto')),
-          subtitle: Text(LocServ.inst.t('sync_conflict_mode_auto_desc')),
-          value: _ConflictMode.auto,
+        RadioGroup<_ConflictMode>(
           groupValue: _conflictMode,
-          onChanged: _busy ? null : (v) => setState(() => _conflictMode = v!),
-        ),
-        RadioListTile<_ConflictMode>(
-          title: Text(LocServ.inst.t('sync_conflict_mode_manual')),
-          subtitle: Text(LocServ.inst.t('sync_conflict_mode_manual_desc')),
-          value: _ConflictMode.manual,
-          groupValue: _conflictMode,
-          onChanged: _busy ? null : (v) => setState(() => _conflictMode = v!),
+          onChanged: (v) {
+            if (_busy || v == null) return;
+            setState(() => _conflictMode = v);
+          },
+          child: Column(
+            children: [
+              RadioListTile<_ConflictMode>(
+                title: Text(LocServ.inst.t('sync_conflict_mode_auto')),
+                subtitle: Text(LocServ.inst.t('sync_conflict_mode_auto_desc')),
+                value: _ConflictMode.auto,
+                enabled: !_busy,
+              ),
+              RadioListTile<_ConflictMode>(
+                title: Text(LocServ.inst.t('sync_conflict_mode_manual')),
+                subtitle: Text(
+                  LocServ.inst.t('sync_conflict_mode_manual_desc'),
+                ),
+                value: _ConflictMode.manual,
+                enabled: !_busy,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         ElevatedButton.icon(

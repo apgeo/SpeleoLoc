@@ -217,36 +217,38 @@ class _CavePlacesSortDialogState extends State<_CavePlacesSortDialog> {
       title: Text(loc.t('sort_cave_places_navbar')),
       contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final field in CavePlaceSortField.values)
-              RadioListTile<CavePlaceSortField>(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(loc.t('sort_cave_place_field_${field.name}')),
-                value: field,
-                groupValue: _field,
-                onChanged: (v) => setState(() => _field = v!),
+        child: RadioGroup<CavePlaceSortField>(
+          groupValue: _field,
+          onChanged: (v) => setState(() => _field = v!),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final field in CavePlaceSortField.values)
+                RadioListTile<CavePlaceSortField>(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(loc.t('sort_cave_place_field_${field.name}')),
+                  value: field,
+                ),
+              const Divider(height: 16),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: Text(loc.t('sort_asc')),
+                    selected: _ascending,
+                    onSelected: (_) => setState(() => _ascending = true),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text(loc.t('sort_desc')),
+                    selected: !_ascending,
+                    onSelected: (_) => setState(() => _ascending = false),
+                  ),
+                ],
               ),
-            const Divider(height: 16),
-            Row(
-              children: [
-                ChoiceChip(
-                  label: Text(loc.t('sort_asc')),
-                  selected: _ascending,
-                  onSelected: (_) => setState(() => _ascending = true),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: Text(loc.t('sort_desc')),
-                  selected: !_ascending,
-                  onSelected: (_) => setState(() => _ascending = false),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -399,36 +401,38 @@ class _RasterMapSortDialogState extends State<_RasterMapSortDialog> {
     return AlertDialog(
       title: Text(loc.t('sort_raster_maps')),
       contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final field in RasterMapSortField.values)
-            RadioListTile<RasterMapSortField>(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(loc.t('sort_field_${field.name}')),
-              value: field,
-              groupValue: _field,
-              onChanged: (v) => setState(() => _field = v!),
+      content: RadioGroup<RasterMapSortField>(
+        groupValue: _field,
+        onChanged: (v) => setState(() => _field = v!),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final field in RasterMapSortField.values)
+              RadioListTile<RasterMapSortField>(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(loc.t('sort_field_${field.name}')),
+                value: field,
+              ),
+            const Divider(height: 16),
+            Row(
+              children: [
+                ChoiceChip(
+                  label: Text(loc.t('sort_asc')),
+                  selected: _ascending,
+                  onSelected: (_) => setState(() => _ascending = true),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(loc.t('sort_desc')),
+                  selected: !_ascending,
+                  onSelected: (_) => setState(() => _ascending = false),
+                ),
+              ],
             ),
-          const Divider(height: 16),
-          Row(
-            children: [
-              ChoiceChip(
-                label: Text(loc.t('sort_asc')),
-                selected: _ascending,
-                onSelected: (_) => setState(() => _ascending = true),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: Text(loc.t('sort_desc')),
-                selected: !_ascending,
-                onSelected: (_) => setState(() => _ascending = false),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
       actions: [
         TextButton(
