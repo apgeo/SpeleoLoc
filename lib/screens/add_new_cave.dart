@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -12,16 +13,16 @@ import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class CaveFormPage extends StatefulWidget {
+class CaveFormPage extends ConsumerStatefulWidget {
   final Cave? cave; // if provided, we're editing
 
   const CaveFormPage({super.key, this.cave});
 
   @override
-  State<CaveFormPage> createState() => _CaveFormPageState();
+  ConsumerState<CaveFormPage> createState() => _CaveFormPageState();
 }
 
-class _CaveFormPageState extends State<CaveFormPage>
+class _CaveFormPageState extends ConsumerState<CaveFormPage>
     with AppBarMenuMixin<CaveFormPage>, ProductTourMixin<CaveFormPage> {
   @override
   String get tourId => 'add_new_cave';
@@ -95,7 +96,7 @@ class _CaveFormPageState extends State<CaveFormPage>
   }
 
   void _loadSurfaceAreas() async {
-    final areas = await caveRepository.getSurfaceAreas();
+    final areas = await ref.read(caveRepositoryProvider).getSurfaceAreas();
     if (!mounted) return;
     setState(() => _surfaceAreas = areas);
   }
@@ -119,33 +120,39 @@ class _CaveFormPageState extends State<CaveFormPage>
           ? null
           : _caveLocalIndexController.text.trim();
       if (widget.cave != null) {
-        await caveRepository.updateCave(
-          widget.cave!.uuid,
-          _titleController.text.trim(),
-          surfaceAreaUuid: _selectedSurfaceAreaId,
-          description: desc,
-          caveLocalIndex: localIdx,
-        );
+        await ref
+            .read(caveRepositoryProvider)
+            .updateCave(
+              widget.cave!.uuid,
+              _titleController.text.trim(),
+              surfaceAreaUuid: _selectedSurfaceAreaId,
+              description: desc,
+              caveLocalIndex: localIdx,
+            );
         if (mounted) Navigator.pop(context, widget.cave!.uuid);
       } else {
-        final id = await caveRepository.addCave(
-          _titleController.text.trim(),
-          surfaceAreaUuid: _selectedSurfaceAreaId,
-          description: desc,
-          caveLocalIndex: localIdx,
-        );
+        final id = await ref
+            .read(caveRepositoryProvider)
+            .addCave(
+              _titleController.text.trim(),
+              surfaceAreaUuid: _selectedSurfaceAreaId,
+              description: desc,
+              caveLocalIndex: localIdx,
+            );
         // Auto-add entrance cave place if setting is enabled (default: true)
         final autoAdd = await SettingsHelper.loadStringConfig(
           autoAddEntrancePlaceKey,
           'true',
         );
         if (autoAdd == 'true') {
-          await cavePlaceRepository.addCavePlace(
-            id,
-            LocServ.inst.t('entrance'),
-            isEntrance: true,
-            isMainEntrance: true,
-          );
+          await ref
+              .read(cavePlaceRepositoryProvider)
+              .addCavePlace(
+                id,
+                LocServ.inst.t('entrance'),
+                isEntrance: true,
+                isMainEntrance: true,
+              );
         }
         if (mounted) Navigator.pop(context, id);
       }

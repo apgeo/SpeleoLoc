@@ -2,10 +2,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
@@ -25,7 +26,7 @@ import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 /// When [cavePlaceUuid] is `null` the caller is responsible for saving the
 /// cave-place first; [onSaveRequired] is invoked and must return the newly
 /// created cave-place id (or `null` to abort).
-class CavePlaceMapTab extends StatefulWidget {
+class CavePlaceMapTab extends ConsumerStatefulWidget {
   const CavePlaceMapTab({
     super.key,
     required this.caveUuid,
@@ -48,10 +49,10 @@ class CavePlaceMapTab extends StatefulWidget {
   final bool useInteractiveEditor;
 
   @override
-  State<CavePlaceMapTab> createState() => _CavePlaceMapTabState();
+  ConsumerState<CavePlaceMapTab> createState() => _CavePlaceMapTabState();
 }
 
-class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
+class _CavePlaceMapTabState extends ConsumerState<CavePlaceMapTab> {
   Future<String>? _imagePathFuture;
   Future<List<CavePlaceWithDefinition>>? _definitionsFuture;
 
@@ -80,10 +81,12 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
   }
 
   Future<List<CavePlaceWithDefinition>> _loadDefinitions() {
-    return rasterMapRepository.getCavePlacesWithDefinitionsForRasterMap(
-      widget.caveUuid,
-      widget.rasterMap.uuid,
-    );
+    return ref
+        .read(rasterMapRepositoryProvider)
+        .getCavePlacesWithDefinitionsForRasterMap(
+          widget.caveUuid,
+          widget.rasterMap.uuid,
+        );
   }
 
   void _invalidateDefinitions() {
@@ -106,11 +109,11 @@ class _CavePlaceMapTabState extends State<CavePlaceMapTab> {
     _log.fine(
       'Opening place selector for cavePlaceUuid=$cavePlaceUuid rasterMapUuid=${rm.uuid}',
     );
-    final existing = await definitionRepository.findDefinition(
-      cavePlaceUuid,
-      rm.uuid,
-    );
-    final cavePlacesWithDefs = await rasterMapRepository
+    final existing = await ref
+        .read(definitionRepositoryProvider)
+        .findDefinition(cavePlaceUuid, rm.uuid);
+    final cavePlacesWithDefs = await ref
+        .read(rasterMapRepositoryProvider)
         .getCavePlacesWithDefinitionsForRasterMap(widget.caveUuid, rm.uuid);
 
     if (!mounted) return;

@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
@@ -19,7 +20,7 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
-class MapViewerPage extends StatefulWidget {
+class MapViewerPage extends ConsumerStatefulWidget {
   const MapViewerPage({
     super.key,
     required this.cavePlaceUuid,
@@ -50,10 +51,10 @@ class MapViewerPage extends StatefulWidget {
   final bool allowEditorOverflow;
 
   @override
-  State<MapViewerPage> createState() => _MapViewerPageState();
+  ConsumerState<MapViewerPage> createState() => _MapViewerPageState();
 }
 
-class _MapViewerPageState extends State<MapViewerPage>
+class _MapViewerPageState extends ConsumerState<MapViewerPage>
     with
         SingleTickerProviderStateMixin,
         AppBarMenuMixin<MapViewerPage>,
@@ -157,11 +158,15 @@ class _MapViewerPageState extends State<MapViewerPage>
     _editorController.sortOption = savedSort;
 
     // Load cave place and raster maps for its cave
-    _cavePlace = await cavePlaceRepository.findById(widget.cavePlaceUuid);
+    _cavePlace = await ref
+        .read(cavePlaceRepositoryProvider)
+        .findById(widget.cavePlaceUuid);
     if (_cavePlace == null) {
       // If an explicit caveUuid was provided, still load raster maps for that cave.
       if (widget.caveUuid != null) {
-        _rasterMaps = await rasterMapRepository.getRasterMaps(widget.caveUuid!);
+        _rasterMaps = await ref
+            .read(rasterMapRepositoryProvider)
+            .getRasterMaps(widget.caveUuid!);
         _rasterMaps = _editorController.sortOption.apply(_rasterMaps, []);
         if (_rasterMaps.isNotEmpty) {
           _selectedRasterMap = _rasterMaps.first;
@@ -173,7 +178,9 @@ class _MapViewerPageState extends State<MapViewerPage>
       return;
     }
     final Uuid caveUuid = _cavePlace!.caveUuid;
-    _rasterMaps = await rasterMapRepository.getRasterMaps(caveUuid);
+    _rasterMaps = await ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(caveUuid);
     _rasterMaps = _editorController.sortOption.apply(
       _rasterMaps,
       _placesWithDefs,
@@ -201,7 +208,8 @@ class _MapViewerPageState extends State<MapViewerPage>
   Future<void> _loadDefinitionsForSelected() async {
     if (_selectedRasterMap == null || _cavePlace == null) return;
     // get cave places with definitions for this cave and raster map
-    _placesWithDefs = await definitionRepository
+    _placesWithDefs = await ref
+        .read(definitionRepositoryProvider)
         .getCavePlacesWithDefinitionsForRasterMap(
           _cavePlace!.caveUuid,
           _selectedRasterMap!.uuid,

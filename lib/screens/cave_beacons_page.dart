@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -10,16 +11,16 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// Maintenance view: every beacon registered in one cave with its place,
 /// identity, last-seen time and battery. Entry point: cave places list →
 /// cave management menu.
-class CaveBeaconsPage extends StatefulWidget {
+class CaveBeaconsPage extends ConsumerStatefulWidget {
   const CaveBeaconsPage({super.key, required this.caveUuid});
 
   final Uuid caveUuid;
 
   @override
-  State<CaveBeaconsPage> createState() => _CaveBeaconsPageState();
+  ConsumerState<CaveBeaconsPage> createState() => _CaveBeaconsPageState();
 }
 
-class _CaveBeaconsPageState extends State<CaveBeaconsPage> {
+class _CaveBeaconsPageState extends ConsumerState<CaveBeaconsPage> {
   List<BeaconWithPlace> _beacons = [];
   bool _loading = true;
 
@@ -30,7 +31,9 @@ class _CaveBeaconsPageState extends State<CaveBeaconsPage> {
   }
 
   Future<void> _load() async {
-    final beacons = await beaconRepository.getBeaconsForCave(widget.caveUuid);
+    final beacons = await ref
+        .read(beaconRepositoryProvider)
+        .getBeaconsForCave(widget.caveUuid);
     if (!mounted) return;
     beacons.sort((a, b) => a.cavePlace.title.compareTo(b.cavePlace.title));
     setState(() {
@@ -63,7 +66,9 @@ class _CaveBeaconsPageState extends State<CaveBeaconsPage> {
     );
     if (confirmed != true || !mounted) return;
     try {
-      await beaconRepository.unregisterBeacon(item.beacon.uuid);
+      await ref
+          .read(beaconRepositoryProvider)
+          .unregisterBeacon(item.beacon.uuid);
       SnackBarService.showSuccess(LocServ.inst.t('beacon_unregistered'));
       await _load();
     } catch (e) {

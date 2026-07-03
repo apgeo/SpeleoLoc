@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
@@ -15,7 +16,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class RasterMapPlaceSelectorPage extends StatefulWidget {
+class RasterMapPlaceSelectorPage extends ConsumerStatefulWidget {
   const RasterMapPlaceSelectorPage({
     super.key,
     required this.rasterMap,
@@ -34,11 +35,12 @@ class RasterMapPlaceSelectorPage extends StatefulWidget {
   final bool initialTapDefinesNewPoint;
 
   @override
-  State<RasterMapPlaceSelectorPage> createState() =>
+  ConsumerState<RasterMapPlaceSelectorPage> createState() =>
       _RasterMapPlaceSelectorPageState();
 }
 
-class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
+class _RasterMapPlaceSelectorPageState
+    extends ConsumerState<RasterMapPlaceSelectorPage>
     with
         AppBarMenuMixin<RasterMapPlaceSelectorPage>,
         ProductTourMixin<RasterMapPlaceSelectorPage>,
@@ -177,7 +179,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   );
 
   Future<void> _loadCaveAreas() async {
-    final areas = await caveRepository.getCaveAreas(widget.rasterMap.caveUuid);
+    final areas = await ref
+        .read(caveRepositoryProvider)
+        .getCaveAreas(widget.rasterMap.caveUuid);
     if (mounted) {
       setState(() {
         _caveAreaTitles = {for (final a in areas) a.uuid: a.title};
@@ -188,17 +192,17 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _loadRasterMaps() async {
-    final maps = await rasterMapRepository.getRasterMaps(
-      widget.rasterMap.caveUuid,
-    );
+    final maps = await ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(widget.rasterMap.caveUuid);
 
     // Collect definition counts across all raster maps for the definitions_count sort.
     if (maps.isNotEmpty) {
       final rasterMapIds = maps.map((r) => r.uuid).toList();
       try {
-        final allDefs = await definitionRepository.getDefinitionsForRasterMaps(
-          rasterMapIds,
-        );
+        final allDefs = await ref
+            .read(definitionRepositoryProvider)
+            .getDefinitionsForRasterMaps(rasterMapIds);
         final placeToRasters = <Uuid, Set<Uuid>>{};
         for (final d in allDefs) {
           placeToRasters
@@ -228,7 +232,8 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
   }
 
   Future<void> _loadDefinitionsForSelected() async {
-    final defs = await definitionRepository
+    final defs = await ref
+        .read(definitionRepositoryProvider)
         .getCavePlacesWithDefinitionsForRasterMap(
           _selectedRasterMap.caveUuid,
           _selectedRasterMap.uuid,
@@ -297,12 +302,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     double imageX,
     double imageY,
   ) async {
-    final saved = await definitionRepository.saveDefinition(
-      cavePlaceUuid,
-      rasterMapUuid,
-      imageX,
-      imageY,
-    );
+    final saved = await ref
+        .read(definitionRepositoryProvider)
+        .saveDefinition(cavePlaceUuid, rasterMapUuid, imageX, imageY);
     // keep local list in sync so subsequent navigation reflects the persisted state
     final idx = _placesWithDefinitions.indexWhere(
       (c) => c.cavePlace.uuid == cavePlaceUuid,
@@ -331,10 +333,9 @@ class _RasterMapPlaceSelectorPageState extends State<RasterMapPlaceSelectorPage>
     Uuid cavePlaceUuid,
     Uuid rasterMapUuid,
   ) async {
-    final removed = await definitionRepository.deleteDefinition(
-      cavePlaceUuid,
-      rasterMapUuid,
-    );
+    final removed = await ref
+        .read(definitionRepositoryProvider)
+        .deleteDefinition(cavePlaceUuid, rasterMapUuid);
     if (removed) {
       // Update local list so the UI reflects the deletion immediately.
       final idx = _placesWithDefinitions.indexWhere(

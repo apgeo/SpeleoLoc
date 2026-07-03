@@ -10,7 +10,6 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_progress_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -27,7 +26,7 @@ import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/screens/csv_caves_import_page.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key, required this.title});
 
   // This widget is the home page of your application. It is stateful, meaning
@@ -42,10 +41,10 @@ class HomePage extends StatefulWidget {
   final String title;
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
+class _HomePageState extends ConsumerState<HomePage>
     with AppBarMenuMixin<HomePage>, ProductTourMixin<HomePage> {
   static const bool _pinTopControls = true;
   @override
@@ -203,7 +202,7 @@ class _HomePageState extends State<HomePage>
     super.initState();
     homePageRefreshNotifier.addListener(_onHomePageRefreshRequested);
     _loadUiSettings();
-    _cavesSub = caveRepository.watchCaves().listen((_) {
+    _cavesSub = ref.read(caveRepositoryProvider).watchCaves().listen((_) {
       if (!mounted) return;
       _loadCaves();
     });
@@ -260,15 +259,18 @@ class _HomePageState extends State<HomePage>
 
   Future<void> _loadCaves() async {
     try {
-      _caves = await caveRepository.getCaves();
+      _caves = await ref.read(caveRepositoryProvider).getCaves();
       // compute place counts
-      _cavePlaceCounts = await cavePlaceRepository.getCavePlaceCountsByCave();
+      _cavePlaceCounts = await ref
+          .read(cavePlaceRepositoryProvider)
+          .getCavePlaceCountsByCave();
       // compute raster map counts
-      _caveRasterMapCounts = await rasterMapRepository
+      _caveRasterMapCounts = await ref
+          .read(rasterMapRepositoryProvider)
           .getRasterMapCountsByCave();
 
       // load surface area titles for display on the cave list
-      final areas = await caveRepository.getSurfaceAreas();
+      final areas = await ref.read(caveRepositoryProvider).getSurfaceAreas();
       _surfaceAreaTitles = {for (var a in areas) a.uuid: a.title};
 
       if (!mounted) return;
@@ -393,8 +395,11 @@ class _HomePageState extends State<HomePage>
   /// already in the local DB that would be wiped by a replace-import.
   Future<bool> _hasResidualUserData() async {
     try {
-      if (await rasterMapRepository.hasAnyRasterMaps()) return true;
-      return documentationRepository.hasAnyDocumentationFiles();
+      if (await ref.read(rasterMapRepositoryProvider).hasAnyRasterMaps())
+        return true;
+      return ref
+          .read(documentationRepositoryProvider)
+          .hasAnyDocumentationFiles();
     } catch (e, st) {
       log.warning(
         '_hasResidualUserData query failed; treating as empty',
@@ -445,7 +450,7 @@ class _HomePageState extends State<HomePage>
 
   void _deleteCave(Uuid caveUuid) async {
     try {
-      await caveRepository.deleteCave(caveUuid);
+      await ref.read(caveRepositoryProvider).deleteCave(caveUuid);
       // Stream subscription auto-refreshes _caves.
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('cave_deleted'));
@@ -511,7 +516,7 @@ class _HomePageState extends State<HomePage>
     );
     if (second != true || !mounted) return;
     for (final c in selected) {
-      await caveRepository.deleteCave(c.uuid);
+      await ref.read(caveRepositoryProvider).deleteCave(c.uuid);
     }
   }
 

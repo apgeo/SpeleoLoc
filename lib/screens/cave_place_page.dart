@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_area_row.dart';
@@ -20,24 +22,23 @@ import 'package:speleoloc/screens/gps_recorder_page.dart';
 import 'package:speleoloc/screens/general_data/cave_areas_page.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
-class CavePlacePage extends StatefulWidget {
+class CavePlacePage extends ConsumerStatefulWidget {
   const CavePlacePage({super.key, required this.caveUuid, this.cavePlaceUuid});
 
   final Uuid caveUuid;
   final Uuid? cavePlaceUuid;
 
   @override
-  State<CavePlacePage> createState() => _CavePlacePageState();
+  ConsumerState<CavePlacePage> createState() => _CavePlacePageState();
 }
 
-class _CavePlacePageState extends State<CavePlacePage>
+class _CavePlacePageState extends ConsumerState<CavePlacePage>
     with
         TickerProviderStateMixin,
         AppBarMenuMixin<CavePlacePage>,
@@ -139,8 +140,8 @@ class _CavePlacePageState extends State<CavePlacePage>
     _qrController = CavePlaceQrController(
       state: this,
       form: _form,
-      cavePlaceRepository: cavePlaceRepository,
-      placeCodeService: placeCodeService,
+      cavePlaceRepository: ref.read(cavePlaceRepositoryProvider),
+      placeCodeService: ref.read(placeCodeServiceProvider),
       caveUuid: widget.caveUuid,
       cavePlaceId: () => _currentCavePlaceId,
       cavePlace: () => _cavePlace,
@@ -171,12 +172,18 @@ class _CavePlacePageState extends State<CavePlacePage>
     // rasterMaps, caveAreas, then mirror-mode), which on cold DB cache
     // dominated the page-open latency. The mirror-mode check still runs
     // sequentially because it needs the form text populated from _cavePlace.
-    final caveFuture = caveRepository.findById(widget.caveUuid);
+    final caveFuture = ref
+        .read(caveRepositoryProvider)
+        .findById(widget.caveUuid);
     final cavePlaceFuture = _currentCavePlaceId != null
-        ? cavePlaceRepository.findById(_currentCavePlaceId!)
+        ? ref.read(cavePlaceRepositoryProvider).findById(_currentCavePlaceId!)
         : Future<CavePlace?>.value(null);
-    final rasterMapsFuture = rasterMapRepository.getRasterMaps(widget.caveUuid);
-    final caveAreasFuture = caveRepository.getCaveAreas(widget.caveUuid);
+    final rasterMapsFuture = ref
+        .read(rasterMapRepositoryProvider)
+        .getRasterMaps(widget.caveUuid);
+    final caveAreasFuture = ref
+        .read(caveRepositoryProvider)
+        .getCaveAreas(widget.caveUuid);
 
     _cave = await caveFuture;
     if (_currentCavePlaceId != null) {
@@ -200,7 +207,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     // QCRI — the user is unlikely to want to edit a field that mirrors
     // another. They can reveal it with a button on the area row.
     try {
-      final mirror = await placeCodeService.isMirrorMode();
+      final mirror = await ref.read(placeCodeServiceProvider).isMirrorMode();
       final pci = _form.qr.text.trim();
       final qcri = _form.qcri.text.trim();
       _pciRowHidden = mirror && pci.isNotEmpty && pci == qcri;
@@ -248,8 +255,8 @@ class _CavePlacePageState extends State<CavePlacePage>
       caveUuid: widget.caveUuid,
       currentCavePlaceId: _currentCavePlaceId,
       form: _form,
-      repository: cavePlaceRepository,
-      placeCodeService: placeCodeService,
+      repository: ref.read(cavePlaceRepositoryProvider),
+      placeCodeService: ref.read(placeCodeServiceProvider),
       confirmations: PageCavePlaceConfirmationPort(this),
     );
     final result = await command.execute();
@@ -271,7 +278,9 @@ class _CavePlacePageState extends State<CavePlacePage>
   }
 
   Future<void> _refreshCavePlaceState(Uuid cavePlaceUuid) async {
-    final refreshed = await cavePlaceRepository.findById(cavePlaceUuid);
+    final refreshed = await ref
+        .read(cavePlaceRepositoryProvider)
+        .findById(cavePlaceUuid);
 
     if (!mounted || refreshed == null) return;
     _cavePlace = refreshed;
@@ -290,7 +299,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (enabled) {
       apply = await CavePlaceEntranceHandler.confirmEnableEntrance(
         context,
-        repository: cavePlaceRepository,
+        repository: ref.read(cavePlaceRepositoryProvider),
         caveUuid: widget.caveUuid,
         excludeUuid: _currentCavePlaceId,
       );
@@ -310,7 +319,7 @@ class _CavePlacePageState extends State<CavePlacePage>
     if (enabled) {
       apply = await CavePlaceEntranceHandler.confirmEnableMainEntrance(
         context,
-        repository: cavePlaceRepository,
+        repository: ref.read(cavePlaceRepositoryProvider),
         caveUuid: widget.caveUuid,
         excludeUuid: _currentCavePlaceId,
       );
@@ -477,9 +486,9 @@ class _CavePlacePageState extends State<CavePlacePage>
                       ),
                     );
                     // Reload areas after returning from CaveAreasPage.
-                    final reloadedAreas = await caveRepository.getCaveAreas(
-                      widget.caveUuid,
-                    );
+                    final reloadedAreas = await ref
+                        .read(caveRepositoryProvider)
+                        .getCaveAreas(widget.caveUuid);
                     // Deduplicate by UUID to prevent DropdownButtonFormField
                     // assertion errors.
                     final seen = <dynamic>{};

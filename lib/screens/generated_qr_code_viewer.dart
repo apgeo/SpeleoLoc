@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/cave_place_qr_generator.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -21,7 +22,7 @@ import 'package:pdfx/pdfx.dart';
 /// Loads configuration, generates the PDF internally, and displays it inline.
 /// Provides toolbar buttons to regenerate, open QR settings, and open PDF
 /// output settings.
-class GeneratedQRCodeViewer extends StatefulWidget {
+class GeneratedQRCodeViewer extends ConsumerStatefulWidget {
   final Uuid? caveUuid;
   final List<CavePlace>? cavePlaces;
 
@@ -32,10 +33,11 @@ class GeneratedQRCodeViewer extends StatefulWidget {
       );
 
   @override
-  State<GeneratedQRCodeViewer> createState() => _GeneratedQRCodeViewerState();
+  ConsumerState<GeneratedQRCodeViewer> createState() =>
+      _GeneratedQRCodeViewerState();
 }
 
-class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
+class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
     with
         AppBarMenuMixin<GeneratedQRCodeViewer>,
         ProductTourMixin<GeneratedQRCodeViewer> {
@@ -87,25 +89,31 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
     try {
       // Load cave (only if caveUuid is provided)
       final cave = widget.caveUuid != null
-          ? await caveRepository.findById(widget.caveUuid!)
+          ? await ref.read(caveRepositoryProvider).findById(widget.caveUuid!)
           : null;
 
       // Load output kind preference
-      final outputKind = await configurationRepository.readString(
-        'qr_output_kind',
-      );
+      final outputKind = await ref
+          .read(configurationRepositoryProvider)
+          .readString('qr_output_kind');
       final asPdf = (outputKind ?? 'pdf') == 'pdf';
 
       // Load full QR generation config (JSON)
-      final cfg = await configurationRepository.readJson(qrGenerationConfigKey);
+      final cfg = await ref
+          .read(configurationRepositoryProvider)
+          .readJson(qrGenerationConfigKey);
 
       // Load PDF output config (grid, template)
-      final pdfCfg = await configurationRepository.readJson(pdfOutputConfigKey);
+      final pdfCfg = await ref
+          .read(configurationRepositoryProvider)
+          .readJson(pdfOutputConfigKey);
 
       // Get cave places
       final cavePlaces =
           widget.cavePlaces ??
-          await cavePlaceRepository.getCavePlaces(widget.caveUuid!);
+          await ref
+              .read(cavePlaceRepositoryProvider)
+              .getCavePlaces(widget.caveUuid!);
 
       // Build generation preferences from config
       final genPrefs = GenerationPreferences(
@@ -377,17 +385,17 @@ class _GeneratedQRCodeViewerState extends State<GeneratedQRCodeViewer>
 }
 
 /// In-app PDF viewer using the pdfx package (same rendering as documentation files).
-class _InAppPdfViewer extends StatefulWidget {
+class _InAppPdfViewer extends ConsumerStatefulWidget {
   final String filePath;
   final String title;
 
   const _InAppPdfViewer({required this.filePath, required this.title});
 
   @override
-  State<_InAppPdfViewer> createState() => _InAppPdfViewerState();
+  ConsumerState<_InAppPdfViewer> createState() => _InAppPdfViewerState();
 }
 
-class _InAppPdfViewerState extends State<_InAppPdfViewer> {
+class _InAppPdfViewerState extends ConsumerState<_InAppPdfViewer> {
   PdfControllerPinch? _pdfController;
 
   @override

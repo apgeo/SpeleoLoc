@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/beacon_picker_dialog.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -9,10 +10,10 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// with an unassign action and offers "Assign beacon" via the nearby
 /// picker. Shown only for persisted places (needs the place uuid).
 ///
-/// Self-contained: reads/writes through [beaconRepository] directly, so the
+/// Self-contained: reads/writes through [ref.read(beaconRepositoryProvider)] directly, so the
 /// cave-place form save flow stays untouched (registrations are immediate,
 /// like documents).
-class CavePlaceBeaconSection extends StatefulWidget {
+class CavePlaceBeaconSection extends ConsumerStatefulWidget {
   const CavePlaceBeaconSection({
     super.key,
     required this.cavePlaceUuid,
@@ -23,10 +24,12 @@ class CavePlaceBeaconSection extends StatefulWidget {
   final Uuid caveUuid;
 
   @override
-  State<CavePlaceBeaconSection> createState() => _CavePlaceBeaconSectionState();
+  ConsumerState<CavePlaceBeaconSection> createState() =>
+      _CavePlaceBeaconSectionState();
 }
 
-class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
+class _CavePlaceBeaconSectionState
+    extends ConsumerState<CavePlaceBeaconSection> {
   List<CavePlaceBeacon> _beacons = [];
   bool _loading = true;
 
@@ -37,9 +40,9 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
   }
 
   Future<void> _load() async {
-    final beacons = await beaconRepository.getBeaconsForPlace(
-      widget.cavePlaceUuid,
-    );
+    final beacons = await ref
+        .read(beaconRepositoryProvider)
+        .getBeaconsForPlace(widget.cavePlaceUuid);
     if (!mounted) return;
     setState(() {
       _beacons = beacons;
@@ -49,9 +52,9 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
 
   Future<void> _assign() async {
     // Disable identities already registered anywhere in this cave.
-    final caveBeacons = await beaconRepository.getBeaconsForCave(
-      widget.caveUuid,
-    );
+    final caveBeacons = await ref
+        .read(beaconRepositoryProvider)
+        .getBeaconsForCave(widget.caveUuid);
     if (!mounted) return;
     final registered = {
       for (final b in caveBeacons)
@@ -63,14 +66,16 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
     );
     if (picked == null || !mounted) return;
     try {
-      await beaconRepository.registerBeacon(
-        cavePlaceUuid: widget.cavePlaceUuid,
-        caveUuid: widget.caveUuid,
-        proximityUuid: picked.proximityUuid,
-        major: picked.major,
-        minor: picked.minor,
-        macAddress: picked.macAddress,
-      );
+      await ref
+          .read(beaconRepositoryProvider)
+          .registerBeacon(
+            cavePlaceUuid: widget.cavePlaceUuid,
+            caveUuid: widget.caveUuid,
+            proximityUuid: picked.proximityUuid,
+            major: picked.major,
+            minor: picked.minor,
+            macAddress: picked.macAddress,
+          );
       SnackBarService.showSuccess(LocServ.inst.t('beacon_registered'));
       await _load();
     } catch (e) {
@@ -102,7 +107,7 @@ class _CavePlaceBeaconSectionState extends State<CavePlaceBeaconSection> {
     );
     if (confirmed != true || !mounted) return;
     try {
-      await beaconRepository.unregisterBeacon(beacon.uuid);
+      await ref.read(beaconRepositoryProvider).unregisterBeacon(beacon.uuid);
       SnackBarService.showSuccess(LocServ.inst.t('beacon_unregistered'));
       await _load();
     } catch (e) {
