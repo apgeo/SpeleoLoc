@@ -184,6 +184,51 @@ void main() {
     expect(cave1Row.caveLocalIndex, '001');
   });
 
+  test(
+    'cave_local_index space is per-area, not global (finding 4.1)',
+    () async {
+      final areaA = await addArea(identifier: '2048');
+      final areaB = await addArea(identifier: '4096');
+      // Area A already holds a cave at index 001.
+      await addCave(surfaceAreaUuid: areaA, localIndex: '001');
+      // A brand-new cave in area B must also get 001 — the index space is
+      // scoped to <country><org><area>, not the whole dataset. Pre-fix it
+      // pooled every cave globally and would have handed out 002.
+      final caveB = await addCave(surfaceAreaUuid: areaB);
+      final p = await addPlace(caveB);
+      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final r = await strat.generate(
+        caveUuid: caveB,
+        cavePlaceUuid: p,
+        isMainEntrance: false,
+      );
+      final caveBRow = await (db.select(
+        db.caves,
+      )..where((c) => c.uuid.equalsValue(caveB))).getSingle();
+      expect(caveBRow.caveLocalIndex, '001', reason: 'index space is per-area');
+      // country(881) + org(028) + area(4096) + caveLocal(001) ...
+      expect((r as PlaceCodeGenerationOk).pci, startsWith('8810284096001'));
+    },
+  );
+
+  test('caves in the zeros fallback bucket share one index space', () async {
+    // Two caves with no surface area both land in the '000' area bucket, so
+    // they must NOT collide on cave_local_index.
+    await addCave(localIndex: '001'); // no surface area -> area '000'
+    final cave2 = await addCave();
+    final p = await addPlace(cave2);
+    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    await strat.generate(
+      caveUuid: cave2,
+      cavePlaceUuid: p,
+      isMainEntrance: false,
+    );
+    final cave2Row = await (db.select(
+      db.caves,
+    )..where((c) => c.uuid.equalsValue(cave2))).getSingle();
+    expect(cave2Row.caveLocalIndex, '002', reason: 'same fallback area bucket');
+  });
+
   test('validate rejects non-digit when allow_non_digit=false', () async {
     final area = await addArea(identifier: '2048');
     final cave = await addCave(surfaceAreaUuid: area, localIndex: '001');

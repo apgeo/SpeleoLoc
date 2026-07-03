@@ -149,7 +149,7 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
     var caveLocal = cave.caveLocalIndex;
     if (caveLocal == null || caveLocal.isEmpty) {
       caveLocal = await _allocateCaveLocalIndex(
-        baseline: _country + _sep + _org + _sep + areaSegment,
+        areaSegment: areaSegment,
         currentCaveUuid: caveUuid,
       );
       // Persist the allocation so subsequent generations are stable.
@@ -238,22 +238,43 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
 
   // ----- Helpers -----
 
+  /// The area segment a cave contributes to a PCI baseline, applying the
+  /// same zeros/nines fallbacks as [generate]. [areaIdById] maps a
+  /// surface-area uuid to its `general_area_identifier` (batch-loaded so we
+  /// avoid a query per cave). Kept in sync with the inline logic in
+  /// [generate] — both must classify a cave into the same area bucket.
+  String _areaSegmentForCave(Cave cave, Map<Uuid, String?> areaIdById) {
+    final areaUuid = cave.surfaceAreaUuid;
+    if (areaUuid == null) return '0' * _areaIdentifierWidth;
+    final id = areaIdById[areaUuid];
+    if (id == null || id.isEmpty) return '9' * _areaIdentifierWidth;
+    return id;
+  }
+
   Future<String> _allocateCaveLocalIndex({
-    required String baseline,
+    required String areaSegment,
     required Uuid currentCaveUuid,
   }) async {
-    // Collect used cave_local_index values within
-    // <country><org><area>. We rely on caves.cave_local_index for the
-    // canonical record; PCIs in cave_places are not consulted because
-    // they may not exist yet.
+    // cave_local_index is the smallest unused value *within* an area
+    // (<country><org><area>), not globally — two caves in different areas
+    // may both be index 001. Only caves sharing this [areaSegment] compete
+    // for the space. We rely on caves.cave_local_index for the canonical
+    // record; PCIs in cave_places are not consulted because they may not
+    // exist yet.
     final caves = await _db.select(_db.caves).get();
+    // Batch-load surface-area identifiers to classify each cave's area
+    // without a query apiece.
+    final areas = await _db.select(_db.surfaceAreas).get();
+    final areaIdById = {for (final a in areas) a.uuid: a.generalAreaIdentifier};
     final used = <int>{};
     for (final c in caves) {
       if (c.uuid == currentCaveUuid) continue;
       final v = c.caveLocalIndex;
       if (v == null || v.isEmpty) continue;
       final n = int.tryParse(v);
-      if (n != null) used.add(n);
+      if (n == null) continue;
+      if (_areaSegmentForCave(c, areaIdById) != areaSegment) continue;
+      used.add(n);
     }
     var next = 1;
     while (used.contains(next)) {
