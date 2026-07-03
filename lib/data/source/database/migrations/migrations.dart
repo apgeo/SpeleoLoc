@@ -52,8 +52,37 @@ class V7ToV8Migration extends SchemaMigration {
     await db.customStatement(
       'UPDATE cave_places SET is_main_entrance = 0 WHERE is_main_entrance IS NULL',
     );
-    await migrator.drop(db.caveTrips);
-    await migrator.create(db.caveTrips);
+    // Recreate cave_trips for its new UNIQUE constraint, PRESERVING existing
+    // rows. The previous code did drop + create, which silently discarded
+    // every trip in any v7 database that had them (the v7 cave_trips table
+    // already existed). Reinsert the v7 column set; audit columns
+    // (created_by/last_modified) and device_uuid are added by later
+    // migrations and stay NULL here.
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.caveTrips,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO cave_trips '
+          '(uuid, cave_uuid, title, description, trip_started_at, '
+          'trip_ended_at, log, created_at, updated_at, deleted_at) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            d['uuid'],
+            d['cave_uuid'],
+            d['title'],
+            d['description'],
+            d['trip_started_at'],
+            d['trip_ended_at'],
+            d['log'],
+            d['created_at'],
+            d['updated_at'],
+            d['deleted_at'],
+          ],
+        );
+      },
+    );
     await TableRecreator.recreate(
       db: db,
       migrator: migrator,
@@ -153,6 +182,23 @@ class V8ToV9Migration extends SchemaMigration {
       'CREATE INDEX IF NOT EXISTS idx_change_log_changed_by '
       'ON change_log(changed_by_user_uuid)',
     );
+
+    // The shared [_seedConfiguration] helper writes the `is_synced` column,
+    // but that column is only formally added in v10→v11. For a real v7/v8
+    // database (where v6→v7's createAll did not run) the column does not yet
+    // exist here, so seeding below would crash with "no column named
+    // is_synced" and the whole upgrade would fail. Add it now, idempotently;
+    // v10→v11's own guarded add-column then skips it.
+    final cfgInfo = await db
+        .customSelect('PRAGMA table_info(configurations)')
+        .get();
+    final cfgCols = cfgInfo.map((r) => r.data['name'] as String).toSet();
+    if (!cfgCols.contains('is_synced')) {
+      await db.customStatement(
+        'ALTER TABLE configurations '
+        'ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0',
+      );
+    }
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     await _seedConfiguration(db, 'device_uuid', Uuid.v7().toString(), nowMs);
