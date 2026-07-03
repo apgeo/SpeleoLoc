@@ -10,8 +10,7 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// (`main.dart`, `SettingsHelper`, `DeepLinkHandler.saveLastOpenCave`,
 /// `CurrentUserService`, `CaveTripService._saveConfig`) each rolled their
 /// own read-then-insert-or-replace logic against the `configurations`
-/// table. That duplication is exactly the kind of thing PR 1 of the
-/// refactor plan (see `docs/REFACTORING_PLAN.md`) eliminates.
+/// table. That duplication is exactly what this repository eliminates.
 ///
 /// Concurrency: writes use a single SQL `INSERT … ON CONFLICT(title) DO
 /// UPDATE` so they are atomic at the SQLite level and cannot lose the

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Guardrail: the global `appDatabase` may only be referenced from
 # lib/data/, lib/services/ and lib/main.dart during the migration
-# towards full Riverpod injection (see docs/REFACTORING_PLAN.md, PR 2).
+# towards full Riverpod injection.
 #
 # A baseline file tracks the call-sites that already existed when the
 # guardrail was introduced. New leakages outside the allowed roots
@@ -46,7 +46,7 @@ if [[ -n "${new_leaks// /}" ]]; then
   echo "::error::New global appDatabase. references found outside the allowed roots:"
   printf '  %s\n' $new_leaks
   echo
-  echo "Migrate them to a repository / provider (see docs/REFACTORING_PLAN.md, PR 2)."
+  echo "Migrate them to a repository / provider."
   echo "If the file is legitimately a new data-layer or service-layer file,"
   echo "place it under lib/data/ or lib/services/."
   exit 1

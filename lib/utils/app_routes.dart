@@ -35,10 +35,9 @@ class CavePlaceViewRouteArgs {
 /// `T` baked into the constructed `MaterialPageRoute<T>` or the cast
 /// throws (`MaterialPageRoute<X> is not a subtype of Route<Y?>?`).
 ///
-/// Companion to PR 9 (i18n reconcile). Full `go_router` migration is
-/// deferred (logged as PR 9b in `REFACTORING_PLAN.md`); this class
-/// delivers the "type-safe routing" half without touching `navigatorKey`
-/// or `DeepLinkHandler` integration.
+/// Full `go_router` migration is deferred; this class delivers the
+/// "type-safe routing" half without touching `navigatorKey` or
+/// `DeepLinkHandler` integration.
 class AppRoutes {
   const AppRoutes._();
 

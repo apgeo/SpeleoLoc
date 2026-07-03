@@ -79,8 +79,8 @@ class ConfigKey {
 class CurrentUserService {
   CurrentUserService(this._db, this._users, this._configs);
 
-  // Reserved: PR 2 of the refactor plan (`docs/REFACTORING_PLAN.md`) will
-  // route the remaining direct DB access here through `_db`. Until then it
+  // Reserved: a later change will route the remaining direct DB access here
+  // through `_db`. Until then it
   // is referenced only by the constructor so tests and the production
   // provider can pass a real DB without further plumbing churn.
   // ignore: unused_field
