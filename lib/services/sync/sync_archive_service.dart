@@ -25,9 +25,26 @@ import 'package:speleoloc/utils/clock.dart';
 ///     can tell the user the minimum app version required.
 const int kSyncArchiveVersion = 3;
 
-/// Database schema version this archive format targets. Imports with a
-/// different `schema_version` are refused (rather than silently mis-merging).
-const int kSyncArchiveDbSchemaVersion = 9;
+/// Current database schema version an exported archive targets, written to
+/// the manifest as `schema_version`. Must equal [AppDatabase.schemaVersion]
+/// — a guard test in `test/services/sync_archive_test.dart` fails if they
+/// drift apart.
+///
+/// History: this was frozen at 9 for a long time while the real DB schema
+/// advanced to 15, so every archive in the wild currently carries `9`
+/// regardless of the app version that produced it. The import gate accepts
+/// any version in [kSyncArchiveMinImportSchemaVersion, this] (see below),
+/// so raising this to the true schema does not orphan those archives.
+const int kSyncArchiveDbSchemaVersion = 15;
+
+/// Oldest archive `schema_version` this app still imports. The sync-v2
+/// format has only ever emitted `schema_version >= 9`, and every schema in
+/// `[9, kSyncArchiveDbSchemaVersion]` is additively compatible on read
+/// (columns added since 9 are nullable or defaulted when absent, and
+/// unknown tables are ignored), so archives in that range merge safely.
+/// Archives below this floor, or above the current version (from a newer
+/// app), are refused rather than silently mis-merged.
+const int kSyncArchiveMinImportSchemaVersion = 9;
 
 /// Result of an import operation.
 class SyncImportReport {
@@ -442,7 +459,11 @@ class SyncArchiveService {
         'Archive manifest is missing or has an invalid schema_version',
       );
     }
-    if (archiveSchema != kSyncArchiveDbSchemaVersion) {
+    // Accept any schema in the supported range; the JSONL format is
+    // additively compatible across it. Refuse only archives from a newer
+    // app (schema above ours) or implausibly old ones below the floor.
+    if (archiveSchema > kSyncArchiveDbSchemaVersion ||
+        archiveSchema < kSyncArchiveMinImportSchemaVersion) {
       throw SyncArchiveSchemaMismatchException(
         archiveSchemaVersion: archiveSchema,
         localSchemaVersion: kSyncArchiveDbSchemaVersion,

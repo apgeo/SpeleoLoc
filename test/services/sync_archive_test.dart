@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -163,6 +164,91 @@ void main() {
     await b.db.close();
   });
 
+  test('emitted schema_version tracks the real DB schema', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    // Guard against the historical drift where this constant was frozen at 9
+    // while the schema advanced. If a future migration bumps the schema,
+    // bump kSyncArchiveDbSchemaVersion in the same change.
+    expect(kSyncArchiveDbSchemaVersion, db.schemaVersion);
+    await db.close();
+  });
+
+  test('accepts an older but in-range schema_version', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    final id = await a.caveRepo.addCave('Legacy');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    // Relabel to the oldest supported schema; the JSONL still carries the
+    // current columns, which are additively compatible, so it must import.
+    final relabeled = await _rewriteSchemaVersion(
+      zip.path,
+      tempDir.path,
+      kSyncArchiveMinImportSchemaVersion,
+    );
+
+    final report = await b.sync.importFromZip(relabeled);
+    expect(report.rowsInserted, greaterThan(0));
+    expect((await b.caveRepo.getCaves()).single.uuid, id);
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('rejects an archive from a newer app (schema above local)', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    await a.caveRepo.addCave('FromFuture');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final tooNew = await _rewriteSchemaVersion(
+      zip.path,
+      tempDir.path,
+      kSyncArchiveDbSchemaVersion + 1,
+    );
+
+    await expectLater(
+      () => b.sync.importFromZip(tooNew),
+      throwsA(
+        isA<SyncArchiveSchemaMismatchException>().having(
+          (e) => e.tooNew,
+          'tooNew',
+          isTrue,
+        ),
+      ),
+    );
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('rejects an archive below the import floor', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    await a.caveRepo.addCave('Ancient');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final tooOld = await _rewriteSchemaVersion(
+      zip.path,
+      tempDir.path,
+      kSyncArchiveMinImportSchemaVersion - 1,
+    );
+
+    await expectLater(
+      () => b.sync.importFromZip(tooOld),
+      throwsA(
+        isA<SyncArchiveSchemaMismatchException>().having(
+          (e) => e.tooNew,
+          'tooNew',
+          isFalse,
+        ),
+      ),
+    );
+
+    await a.db.close();
+    await b.db.close();
+  });
+
   test('asset files round-trip with documentation_files', () async {
     final a = await buildHarness();
     final b = await buildHarness();
@@ -313,4 +399,34 @@ class _Harness {
   final SyncArchiveService sync;
   final Directory assetsDir;
   _Harness(this.db, this.caveRepo, this.logger, this.sync, this.assetsDir);
+}
+
+/// Rewrites `manifest.json`'s `schema_version` to [newSchema] in a copy of
+/// the archive at [srcZipPath], leaving every other entry byte-identical, and
+/// returns the path of the rewritten zip. Used to exercise the import gate
+/// without a second app build.
+Future<String> _rewriteSchemaVersion(
+  String srcZipPath,
+  String destDir,
+  int newSchema,
+) async {
+  final srcBytes = await File(srcZipPath).readAsBytes();
+  final src = ZipDecoder().decodeBytes(srcBytes);
+  final out = Archive();
+  for (final f in src.files) {
+    if (!f.isFile) continue;
+    final content = (f.content as List<int>);
+    if (f.name == 'manifest.json') {
+      final manifest = jsonDecode(utf8.decode(content)) as Map<String, dynamic>;
+      manifest['schema_version'] = newSchema;
+      final rewritten = utf8.encode(jsonEncode(manifest));
+      out.addFile(ArchiveFile('manifest.json', rewritten.length, rewritten));
+    } else {
+      out.addFile(ArchiveFile(f.name, content.length, content));
+    }
+  }
+  final data = ZipEncoder().encode(out)!;
+  final destPath = p.join(destDir, 'relabeled_$newSchema.zip');
+  await File(destPath).writeAsBytes(data);
+  return destPath;
 }
