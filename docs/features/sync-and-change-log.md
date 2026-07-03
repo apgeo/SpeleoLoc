@@ -50,12 +50,18 @@ devices in step between trips.
 Each device has a stable **device UUID** stamped into every archive it
 exports. The importer:
 
-- **Refuses** archives produced by a device on a **different schema
-  version** of the database — sync only works between devices on the
-  same app version.
+- **Accepts** archives from **the same or an older** supported schema
+  version — the archive layout is backward-compatible, so a newer app
+  reads an older device's archive. It **refuses** an archive from a
+  **newer** app than the one importing it and tells you to update.
 - **Warns** before applying an archive from an unknown device.
 - Optionally **preserves the local device UUID** during import (see
   the option in **Settings → Data export/import**).
+
+Alongside the cave data, archives also carry the shared **place-code /
+QR strategy settings** so every device in a dataset generates codes the
+same way. Device-local settings (device UUID, current user, last-opened
+cave) are never shared.
 
 ### Archive sync vs the full export
 

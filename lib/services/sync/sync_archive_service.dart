@@ -23,7 +23,12 @@ import 'package:speleoloc/utils/clock.dart';
 ///     documents directory layout.
 /// v3: manifest gains `app_version`/`app_build_number` so import errors
 ///     can tell the user the minimum app version required.
-const int kSyncArchiveVersion = 3;
+/// v4: adds `tables/configurations.jsonl` (the is_synced=1 rows), stamps
+///     the true DB schema version (15) with a backward-compatible import
+///     range, and hardens delete/LWW merge semantics. Older archives lack
+///     the configurations entry and its absence is tolerated on import, so
+///     v3 archives still merge into a v4 reader.
+const int kSyncArchiveVersion = 4;
 
 /// Current database schema version an exported archive targets, written to
 /// the manifest as `schema_version`. Must equal [AppDatabase.schemaVersion]
