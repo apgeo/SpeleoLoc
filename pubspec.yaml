@@ -88,5 +88,15 @@ flutter:
     # the legacy in-binary test data load (useLegacyTestDataLoad = true).
     # - test_data/maps/
     # - test_data/db/binaries/
+    #
+    # "Local archive" dev workflow (launch config `speleo_loc_local_archive`,
+    # --dart-define-from-file=build_settings_local_archive.json): the DataArchive
+    # zip in assets/test_archive/ is bundled so it can be imported on-device via
+    # rootBundle. The heavy zip itself is git-ignored (machine-local); only
+    # .gitkeep is tracked, so a fresh clone bundles nothing here. NOTE: whatever
+    # you drop in assets/test_archive/ is bundled into ALL builds (incl. release)
+    # — comment this line out for lean release builds. See
+    # docs/workflows/local-test-archive.md.
+    - assets/test_archive/
     - assets/fonts/
     - assets/i18n/

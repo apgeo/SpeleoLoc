@@ -88,5 +88,12 @@ docs/contributing-docs.md
 # Live-integration FTP credentials (opt-in, never committed)
 test_data/ftp_test.json
 
+# Local test-archive dev workflow: the heavy DataArchive zip(s) dropped here
+# are machine-local and never committed; the tracked .gitkeep keeps the
+# bundled-asset directory present on fresh clones. See
+# docs/workflows/local-test-archive.md.
+/assets/test_archive/*
+!/assets/test_archive/.gitkeep
+
 /resource_docs/
 .claude/

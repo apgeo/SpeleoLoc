@@ -3,5 +3,5 @@
   "test_maps_dir": "test_data/maps",
   "test_docs_dir": "test_data/pictures",
   "test_report_templates_dir": "test_data/report_templates",
-  "test_archive_url": "C:\\temp\\flutter_projects\\speleo_loc_aux\\test_exports\\test_data\\speleo_loc_2026-05-26_15-17-33.zip"
+  "test_archive_url": "assets/test_archive/speleo_loc_2026-05-26_15-17-33.zip"
 }
