@@ -208,11 +208,20 @@ class BeaconDetectionService {
     } catch (e, st) {
       _log.warning('Restoring scan periods failed', e, st);
     }
-    // Restore the persisted debounce settings.
+    // Restore the persisted debounce settings. On failure keep the engine's
+    // current config, but surface the failure so a broken debounce config
+    // isn't silently ignored.
     try {
       final config = await BeaconDetectionConfig.load();
       _engine?.config = config;
-    } catch (_) {}
+    } catch (e, st) {
+      _log.warning(
+        'Loading beacon detection config failed; '
+        'keeping current config',
+        e,
+        st,
+      );
+    }
     if (!_running) await start();
   }
 
