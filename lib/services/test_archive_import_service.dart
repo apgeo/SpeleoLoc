@@ -9,9 +9,10 @@ import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
-/// Fetches a test-data archive (zip exported by [DataArchiveService]) from
-/// either a remote `http(s)` URL or a build-embedded asset path, and imports
-/// it via [DataArchiveService.importArchiveReplace] (full replace).
+/// Fetches a test-data archive (zip exported by [DataArchiveService]) from a
+/// remote `http(s)` URL, a local filesystem path, or a build-embedded asset
+/// path, and imports it via [DataArchiveService.importArchiveReplace] (full
+/// replace).
 ///
 /// The archive is expected to be a `DataArchiveService` zip even if the file
 /// (or URL) carries no `.zip` extension.
@@ -26,8 +27,13 @@ class TestArchiveImportService {
     return lower.startsWith('http://') || lower.startsWith('https://');
   }
 
-  /// Downloads the archive bytes (HTTP/HTTPS) or loads them from the bundled
-  /// assets ([rootBundle]) when [urlOrPath] is a relative path.
+  /// Resolves [urlOrPath] to archive bytes, in order:
+  ///  1. `http(s)://` → download over the network.
+  ///  2. an existing file on disk → read it directly (e.g. an absolute
+  ///     dev-machine path supplied via `--dart-define-from-file` for the
+  ///     "local archive" run workflow; requires the run target to be able to
+  ///     reach that path, e.g. the desktop build / the dev machine).
+  ///  3. otherwise → treat it as a bundled asset key ([rootBundle]).
   ///
   /// Throws on network/asset failure with a descriptive message.
   static Future<Uint8List> fetchArchiveBytes(String urlOrPath) async {
@@ -61,7 +67,19 @@ class TestArchiveImportService {
       }
     }
 
-    // Treat as a bundled asset path (e.g. test_data/test_archive/foo.zip).
+    // A local filesystem path (e.g. an absolute dev-machine path supplied via
+    // --dart-define-from-file for the "local archive" run workflow). When the
+    // file exists on disk, read it directly so it loads without being bundled
+    // as an asset. Works on any run target that can reach the path (desktop
+    // build / dev machine); on a mobile device an absolute host path won't
+    // exist, so it falls through to the asset lookup below.
+    final localFile = File(value);
+    if (await localFile.exists()) {
+      _log.info('Loading test archive from local file "$value"');
+      return localFile.readAsBytes();
+    }
+
+    // Otherwise treat as a bundled asset key (e.g. assets/test_archive/foo.zip).
     _log.info('Loading test archive from bundled asset "$value"');
     final ByteData data = await rootBundle.load(value);
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
