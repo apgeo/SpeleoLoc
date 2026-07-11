@@ -1110,6 +1110,8 @@
   "beacon_already_registered": "already assigned",
   "beacon_picker_title": "Nearby beacons",
   "beacon_picker_searching": "Searching for beacons… hold the phone next to the tag",
+  "beacon_location_services_off_title": "Turn on location",
+  "beacon_location_services_off_message": "On Android, Bluetooth beacon scans only return results while the device location (GPS) switch is on — even though no GPS position is taken. Enable location, then try assigning the beacon again.",
   "cave_beacons_title": "Cave beacons",
   "cave_beacons_empty": "No beacons registered in this cave yet",
   "beacon_last_seen": "Last seen",

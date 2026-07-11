@@ -151,19 +151,24 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   // iBeacon ranging (dchs_flutter_beacon)
   // ---------------------------------------------------------------------------
 
-  Future<bool> _ensureAndroidPermissions() async {
-    final ok = await BeaconScanHelper.ensureAndroidPermissions();
-    if (!ok && mounted) {
-      SnackBarService.showWarning(
-        LocServ.inst.t('beacon_lab_permissions_missing'),
-      );
+  Future<bool> _ensureScanReady() async {
+    if (!await BeaconScanHelper.ensureAndroidPermissions()) {
+      if (mounted) {
+        SnackBarService.showWarning(
+          LocServ.inst.t('beacon_lab_permissions_missing'),
+        );
+      }
+      return false;
     }
-    return ok;
+    if (!mounted) return false;
+    // BLE scan results also need the location master switch on (Android);
+    // otherwise both ranging and raw scans come back empty.
+    return BeaconScanHelper.ensureLocationServicesEnabled(context);
   }
 
   Future<void> _startRanging() async {
     if (_ranging) return;
-    if (!await _ensureAndroidPermissions()) return;
+    if (!await _ensureScanReady()) return;
     setState(() => _rangingError = null);
     try {
       await flutterBeacon.initializeAndCheckScanning;
@@ -275,7 +280,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
 
   Future<void> _startRawScan() async {
     if (_scanning) return;
-    if (!await _ensureAndroidPermissions()) return;
+    if (!await _ensureScanReady()) return;
     setState(() => _scanError = null);
     try {
       if (await fbp.FlutterBluePlus.adapterState.first !=

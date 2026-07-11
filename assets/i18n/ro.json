@@ -1108,6 +1108,8 @@
   "beacon_already_registered": "deja asociat",
   "beacon_picker_title": "Beaconuri în apropiere",
   "beacon_picker_searching": "Se caută beaconuri… ține telefonul lângă tag",
+  "beacon_location_services_off_title": "Activează localizarea",
+  "beacon_location_services_off_message": "Pe Android, scanările Bluetooth pentru beaconuri returnează rezultate doar când comutatorul de localizare (GPS) al dispozitivului este pornit — deși nu se preia nicio poziție GPS. Activează localizarea, apoi încearcă din nou asocierea beaconului.",
   "cave_beacons_title": "Beaconurile peșterii",
   "cave_beacons_empty": "Niciun beacon înregistrat în această peșteră încă",
   "beacon_last_seen": "Văzut ultima dată",

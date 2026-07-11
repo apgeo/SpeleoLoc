@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// A beacon chosen from the nearby-scan picker.
 class PickedBeacon {
@@ -39,7 +40,21 @@ class BeaconPickerDialog extends StatefulWidget {
     BuildContext context, {
     Set<String> registeredIdentities = const {},
   }) async {
-    if (!await BeaconScanHelper.ensureAndroidPermissions()) return null;
+    if (!await BeaconScanHelper.ensureAndroidPermissions()) {
+      if (context.mounted) {
+        SnackBarService.showWarning(
+          LocServ.inst.t('beacon_lab_permissions_missing'),
+        );
+      }
+      return null;
+    }
+    if (!context.mounted) return null;
+    // BLE scan results are also gated behind the location master switch on
+    // Android: with it off the scan silently returns nothing and the plugin's
+    // own check hangs, so prompt the user to enable it before opening.
+    if (!await BeaconScanHelper.ensureLocationServicesEnabled(context)) {
+      return null;
+    }
     if (!context.mounted) return null;
     return showDialog<PickedBeacon>(
       context: context,
