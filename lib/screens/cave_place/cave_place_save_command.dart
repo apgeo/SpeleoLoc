@@ -220,9 +220,9 @@ class CavePlaceSaveCommand {
     } else {
       final companion = CavePlacesCompanion(
         title: Value(title),
-        description: description == null
-            ? const Value.absent()
-            : Value(description),
+        // Value(null) — not absent — so clearing the description field
+        // actually clears the column (absent would keep the old text).
+        description: Value(description),
         depthInCave: Value(depth),
         placeCodeIdentifier: Value(qr),
         qrCodeResourceIdentifier: Value(qcri),
