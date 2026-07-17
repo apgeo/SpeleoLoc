@@ -68,6 +68,10 @@ class BeaconPickerDialog extends StatefulWidget {
 }
 
 class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
+  /// A tag not ranged for this long has moved away (or stopped) — drop it
+  /// so its stale RSSI can't outrank the tag actually held to the phone.
+  static const _staleAfter = Duration(seconds: 15);
+
   final _log = AppLogger.of('BeaconPickerDialog');
   StreamSubscription<RangingResult>? _sub;
   final Map<String, _Seen> _seen = {};
@@ -94,6 +98,8 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
       return;
     }
     final uuids = await BeaconScanHelper.loadRegionUuids();
+    // Dialog dismissed during init: subscribing now would outlive dispose.
+    if (!mounted) return;
     _sub = flutterBeacon
         .ranging(BeaconScanHelper.buildRegions(uuids))
         .listen(
@@ -104,7 +110,14 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
                   '${b.proximityUUID.toUpperCase()}/${b.major}/${b.minor}';
               _seen[key] = _Seen(beacon: b, lastSeen: now);
             }
-            if (mounted && result.beacons.isNotEmpty) setState(() {});
+            final sizeBefore = _seen.length;
+            _seen.removeWhere(
+              (_, s) => now.difference(s.lastSeen) > _staleAfter,
+            );
+            if (mounted &&
+                (result.beacons.isNotEmpty || _seen.length != sizeBefore)) {
+              setState(() {});
+            }
           },
           onError: (Object e, StackTrace st) {
             _log.warning('Beacon picker ranging error', e, st);
