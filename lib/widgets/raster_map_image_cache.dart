@@ -35,10 +35,14 @@ Future<RawImageData?> decodeImageToRawCached(String path) {
   final future = compute(decodeImageToRawSync, path)
       .then((result) {
         if (result == null) return null;
-        final rawPixels = (result['pixels'] as List).cast<int>();
+        final rawPixels = result['pixels'] as List;
         final w = result['w'] as int;
         final h = result['h'] as int;
-        final pixels = Uint8List.fromList(rawPixels);
+        // The isolate hands back a Uint8List; use it directly — copying a
+        // full-map RGBA buffer (tens of MB) on the UI isolate causes jank.
+        final pixels = rawPixels is Uint8List
+            ? rawPixels
+            : Uint8List.fromList(rawPixels.cast<int>());
 
         final expectedRGBA = w * h * 4;
 
