@@ -76,7 +76,7 @@ class _RasterMapPlaceSelectorPageState
   final RasterMapPlacePointEditorController
   _editorController = RasterMapPlacePointEditorController(
     showLegend: false,
-    showZoomControls: !false,
+    showZoomControls: true,
     showNavBar: true,
     showTapModeCheckbox: true,
     initialTapDefinesNewPoint: true,
@@ -573,41 +573,6 @@ class _RasterMapPlaceSelectorPageState
                 ),
               ],
             ),
-      // bottom controls: legend + zoom controls + save button — responsive layout
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.all(8.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 520;
-
-            if (isNarrow) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Row(
-                      children: [
-                        // const Expanded(child: RasterMapPointsLegend()),
-                        // const SizedBox(width: 12),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                // const Padding(padding: EdgeInsets.only(left: 4.0), child: RasterMapPointsLegend()),
-                // const SizedBox(width: 12),
-              ],
-            );
-          },
-        ),
-      ),
-
       body: !_imageLoaded
           ? const Center(child: CircularProgressIndicator())
           : _imageFile == null
