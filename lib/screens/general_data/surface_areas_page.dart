@@ -174,6 +174,9 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
         ],
       ),
     );
+    controller.dispose();
+    descController.dispose();
+    identifierController.dispose();
 
     if (result == true) {
       _changed = true;

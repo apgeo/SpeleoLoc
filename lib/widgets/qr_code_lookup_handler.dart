@@ -433,11 +433,13 @@ class QrCodeLookupHandler {
         ],
       ),
     );
+    final enteredTitle = controller.text.trim();
+    controller.dispose();
     if (confirmed == true) {
-      final title = controller.text.trim().isNotEmpty
-          ? controller.text.trim()
-          : suggestedTitle;
-      await _tripService.startTrip(caveUuid, title);
+      await _tripService.startTrip(
+        caveUuid,
+        enteredTitle.isNotEmpty ? enteredTitle : suggestedTitle,
+      );
     }
   }
 
@@ -561,6 +563,7 @@ class QrCodeLookupHandler {
         ],
       ),
     );
+    controller.dispose();
     if (confirmed == null || confirmed.isEmpty || !context.mounted) {
       return null;
     }

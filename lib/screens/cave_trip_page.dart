@@ -355,8 +355,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     final log = trip.log;
     if (log == null || log.trim().isEmpty) {
       if (mounted) {
-        if (mounted)
-          SnackBarService.showWarning(LocServ.inst.t('trip_export_no_log'));
+        SnackBarService.showWarning(LocServ.inst.t('trip_export_no_log'));
       }
       return;
     }
@@ -515,8 +514,9 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         ],
       ),
     );
+    final newTitle = controller.text.trim();
+    controller.dispose();
     if (confirmed == true && mounted) {
-      final newTitle = controller.text.trim();
       if (newTitle.isNotEmpty && newTitle != trip.title) {
         await ref
             .read(caveTripRepositoryProvider)

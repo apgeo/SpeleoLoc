@@ -97,9 +97,9 @@ class _TripReportTemplatesPageState
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
-
     final title = titleController.text.trim();
+    titleController.dispose();
+    if (confirmed != true || !mounted) return;
     if (title.isEmpty) return;
 
     try {

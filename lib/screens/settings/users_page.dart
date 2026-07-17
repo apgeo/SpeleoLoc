@@ -187,6 +187,10 @@ class _UsersPageState extends ConsumerState<UsersPage>
         ],
       ),
     );
+    usernameCtrl.dispose();
+    firstNameCtrl.dispose();
+    lastNameCtrl.dispose();
+    detailsCtrl.dispose();
     if (saved == true && mounted) setState(() {});
   }
 }

@@ -105,6 +105,7 @@ class _CaveAreasPageState extends ConsumerState<CaveAreasPage>
         ],
       ),
     );
+    controller.dispose();
 
     if (result == true) {
       _changed = true;
