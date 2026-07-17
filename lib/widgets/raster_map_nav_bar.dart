@@ -6,6 +6,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
 
+/// Decode width for raster-map thumbnails: ≥3× the largest display size
+/// (56 px), so tiles stay sharp on high-DPR screens without decoding the
+/// full map image.
+const int _kNavThumbCacheWidth = 168;
+
 /// Configuration that controls sizing and layout of the [RasterMapNavBar].
 class RasterMapNavBarStyle {
   const RasterMapNavBarStyle({
@@ -443,12 +448,21 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                                   ),
                                 );
                               }
+                              // Decode at thumbnail width under a '#thumb'
+                              // cache key — reusing the editor's full-res
+                              // FileImage here would pin every map's full
+                              // decode in the image cache for a ~56 px tile.
                               final cache = widget.imageProviderCache;
-                              final provider = cache != null
-                                  ? (cache[snap.data!] ??= FileImage(
-                                      File(snap.data!),
-                                    ))
-                                  : FileImage(f);
+                              final ImageProvider provider = cache != null
+                                  ? (cache['${snap.data!}#thumb'] ??=
+                                        ResizeImage(
+                                          FileImage(File(snap.data!)),
+                                          width: _kNavThumbCacheWidth,
+                                        ))
+                                  : ResizeImage(
+                                      FileImage(f),
+                                      width: _kNavThumbCacheWidth,
+                                    );
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: Image(
