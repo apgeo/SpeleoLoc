@@ -1000,11 +1000,23 @@ class FtpSyncController extends ChangeNotifier {
 
   /// Parses the millisecond timestamp embedded in an archive filename. Unknown
   /// formats sort as 0 so they are treated as oldest (rare).
+  ///
+  /// A `.sha256` sidecar inherits its base archive's timestamp so the
+  /// seen-set trim in [_saveSeenArchives] evicts the pair together —
+  /// sidecars used to sort as 0 and were always evicted first, causing
+  /// pointless re-downloads on every later sync (finding 5.4).
   int _timestampOf(String archiveName) {
-    final m = _archiveNameRe.firstMatch(archiveName);
+    final base = archiveName.endsWith('.sha256')
+        ? archiveName.substring(0, archiveName.length - '.sha256'.length)
+        : archiveName;
+    final m = _archiveNameRe.firstMatch(base);
     if (m == null) return 0;
     return int.tryParse(m.group(1) ?? '0') ?? 0;
   }
+
+  /// Test hook for the eviction-ordering logic above.
+  @visibleForTesting
+  int timestampOfArchiveName(String archiveName) => _timestampOf(archiveName);
 
   /// Extracts the source-device identifier from an archive filename
   /// (`speleo_loc_sync_<ts>_<deviceUuidPrefix>.zip`). Returns `null` only

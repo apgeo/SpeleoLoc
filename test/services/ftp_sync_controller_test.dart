@@ -760,4 +760,25 @@ void main() {
   // import-side limitation unrelated to the upload-skipping logic under
   // test here. Worth revisiting once the import handles user merge by
   // username.
+
+  test(
+    'sha256 sidecars inherit their base archive timestamp (seen-set trim)',
+    () async {
+      final h = await _buildHarness();
+      final controller = FtpSyncController(
+        db: h.db,
+        profileRepository: FtpProfileRepository(h.db),
+        archiveService: h.sync,
+        currentUserService: h.currentUser,
+        transportBuilder: (p) => _FakeTransport(p),
+      );
+      const zip = 'speleo_loc_sync_1700000000000_aabbccdd.zip';
+      expect(controller.timestampOfArchiveName(zip), 1700000000000);
+      // Sidecars must sort WITH their archive, not as timestamp 0 — the
+      // 500-entry seen-set trim used to evict every sidecar first, causing
+      // re-downloads on each later sync (finding 5.4).
+      expect(controller.timestampOfArchiveName('$zip.sha256'), 1700000000000);
+      expect(controller.timestampOfArchiveName('garbage.txt'), 0);
+    },
+  );
 }
