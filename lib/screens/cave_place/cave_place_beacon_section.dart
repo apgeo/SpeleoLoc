@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/beacon_picker_dialog.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -78,6 +79,10 @@ class _CavePlaceBeaconSectionState
           );
       SnackBarService.showSuccess(LocServ.inst.t('beacon_registered'));
       await _load();
+    } on DuplicateEntryException {
+      // Race with another registration (the picker already greys out known
+      // identities) — name the cause instead of the generic DB error.
+      SnackBarService.showWarning(LocServ.inst.t('beacon_already_registered'));
     } catch (e) {
       SnackBarService.showError(e);
     }
@@ -117,7 +122,8 @@ class _CavePlaceBeaconSectionState
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const SizedBox.shrink();
+    // The header renders immediately (loading only delays the beacon tiles)
+    // so the section doesn't pop in and shift the form layout.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -138,27 +144,28 @@ class _CavePlaceBeaconSectionState
             ),
           ],
         ),
-        for (final b in _beacons)
-          ListTile(
-            dense: true,
-            contentPadding: const EdgeInsets.only(left: 28),
-            leading: const Icon(Icons.wifi_tethering, size: 20),
-            title: Text(
-              'major ${b.major} / minor ${b.minor}',
-              style: const TextStyle(fontSize: 13),
+        if (!_loading)
+          for (final b in _beacons)
+            ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.only(left: 28),
+              leading: const Icon(Icons.wifi_tethering, size: 20),
+              title: Text(
+                'major ${b.major} / minor ${b.minor}',
+                style: const TextStyle(fontSize: 13),
+              ),
+              subtitle: Text(
+                '${b.proximityUuid}'
+                '${b.macAddress != null ? '\n${b.macAddress}' : ''}'
+                '${b.lastBatteryMv != null ? ' · ${b.lastBatteryMv} mV' : ''}',
+                style: const TextStyle(fontSize: 11),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.link_off, size: 20),
+                tooltip: LocServ.inst.t('beacon_unassign'),
+                onPressed: () => _unassign(b),
+              ),
             ),
-            subtitle: Text(
-              '${b.proximityUuid}'
-              '${b.macAddress != null ? '\n${b.macAddress}' : ''}'
-              '${b.lastBatteryMv != null ? ' · ${b.lastBatteryMv} mV' : ''}',
-              style: const TextStyle(fontSize: 11),
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.link_off, size: 20),
-              tooltip: LocServ.inst.t('beacon_unassign'),
-              onPressed: () => _unassign(b),
-            ),
-          ),
       ],
     );
   }

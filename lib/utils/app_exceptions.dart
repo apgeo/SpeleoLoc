@@ -35,6 +35,13 @@ class DbException extends AppException {
   const DbException(super.message, {super.cause, super.stackTrace});
 }
 
+/// Raised when an insert/update violates a uniqueness rule (UNIQUE
+/// constraint). Screens catch this to show a specific "already exists"
+/// message instead of the generic DB failure text.
+class DuplicateEntryException extends DbException {
+  const DuplicateEntryException(super.message, {super.cause, super.stackTrace});
+}
+
 /// Raised when input data fails a business-level validation rule
 /// (e.g. empty required field, malformed QR payload).
 class ValidationException extends AppException {

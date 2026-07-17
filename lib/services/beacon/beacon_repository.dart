@@ -153,6 +153,15 @@ class BeaconRepository {
       return newUuid;
     } catch (e, st) {
       _log.severe('Failed to register beacon', e, st);
+      // Drift surfaces the sqlite error only as text; the identity triple has
+      // a UNIQUE index per cave, so flag that case for a specific UI message.
+      if (e.toString().contains('UNIQUE constraint failed')) {
+        throw DuplicateEntryException(
+          'Beacon already registered',
+          cause: e,
+          stackTrace: st,
+        );
+      }
       throw DbException('Failed to register beacon', cause: e, stackTrace: st);
     }
   }
