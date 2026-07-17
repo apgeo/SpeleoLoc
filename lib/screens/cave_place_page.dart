@@ -495,6 +495,7 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
                     final deduped = reloadedAreas
                         .where((a) => seen.add(a.uuid))
                         .toList();
+                    if (!mounted) return;
                     setState(() {
                       _caveAreas = deduped;
                       // Clear selected area if it was deleted.
