@@ -287,11 +287,14 @@ class _GeofeatureDocumentsPageState
     );
 
     if (page != null) {
-      unawaited(_navigateAndRefresh(page));
+      unawaited(_navigateAndRefresh(page, editedDoc: doc));
     } else {
       // Fallback: open with the generic viewer.
       unawaited(
-        _navigateAndRefresh(DocumentationFileViewer(file: file, doc: doc)),
+        _navigateAndRefresh(
+          DocumentationFileViewer(file: file, doc: doc),
+          editedDoc: doc,
+        ),
       );
     }
   }
@@ -545,7 +548,7 @@ class _GeofeatureDocumentsPageState
           geofeatureLink: widget.source.geofeatureLink,
         ) ??
         DocumentationFileViewer(file: file, doc: doc);
-    unawaited(_navigateAndRefresh(page));
+    unawaited(_navigateAndRefresh(page, editedDoc: doc));
   }
 
   /// Open a document explicitly in editor mode.
@@ -557,7 +560,7 @@ class _GeofeatureDocumentsPageState
       existingDoc: doc,
     );
     if (editor == null) return;
-    unawaited(_navigateAndRefresh(editor));
+    unawaited(_navigateAndRefresh(editor, editedDoc: doc));
   }
 
   /// Shows a context menu for the given document with View / Edit options.
@@ -620,17 +623,39 @@ class _GeofeatureDocumentsPageState
   }
 
   /// Push a page and reload the document list when it returns `true`.
-  /// Also evicts cached file images so edited thumbnails refresh.
-  Future<void> _navigateAndRefresh(Widget page) async {
+  /// [editedDoc] identifies the document whose file may have been rewritten;
+  /// only its cached images are evicted (create-new flows pass nothing —
+  /// a fresh file has no stale cache entries).
+  Future<void> _navigateAndRefresh(
+    Widget page, {
+    DocumentationFile? editedDoc,
+  }) async {
     final result = await Navigator.push<bool?>(
       context,
       MaterialPageRoute(builder: (_) => page),
     );
     if (!mounted) return;
     if (result == true) {
-      imageCache.clear();
-      imageCache.clearLiveImages();
+      if (editedDoc != null) await _evictDocImages(editedDoc);
       await _loadDocuments();
+    }
+  }
+
+  /// Evicts every image-cache variant of [doc]'s file: the plain provider
+  /// plus the `ResizeImage` thumbnail variants created by
+  /// [DocumentThumbnailWidgets.imageTile] via `cacheWidth`. Replaces the
+  /// old blanket `imageCache.clear()`, which re-decoded every thumbnail on
+  /// every screen after any single edit.
+  Future<void> _evictDocImages(DocumentationFile doc) async {
+    final dir = _docsDir;
+    if (dir == null || doc.fileName.isEmpty) return;
+    final base = FileImage(File('$dir/${doc.fileName}'));
+    await base.evict();
+    for (final width in const [
+      DocumentThumbnailWidgets.smallCacheWidth,
+      DocumentThumbnailWidgets.largeCacheWidth,
+    ]) {
+      await ResizeImage(base, width: width).evict();
     }
   }
 

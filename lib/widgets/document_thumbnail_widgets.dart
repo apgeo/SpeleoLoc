@@ -9,6 +9,12 @@ enum DocumentThumbnailSize { small, large }
 class DocumentThumbnailWidgets {
   const DocumentThumbnailWidgets._();
 
+  /// Decode widths for [imageTile]. Named so eviction code can target the
+  /// exact `ResizeImage` variants these create (see
+  /// `GeofeatureDocumentsPage._evictDocImages`).
+  static const int smallCacheWidth = 96;
+  static const int largeCacheWidth = 300;
+
   static Widget iconTile({
     required BuildContext context,
     required IconData icon,
@@ -65,12 +71,12 @@ class DocumentThumbnailWidgets {
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          cacheWidth: 96,
+          cacheWidth: smallCacheWidth,
         ),
       );
     }
 
-    return Image.file(file, fit: BoxFit.cover, cacheWidth: 300);
+    return Image.file(file, fit: BoxFit.cover, cacheWidth: largeCacheWidth);
   }
 
   static Widget textSnippetTile({
