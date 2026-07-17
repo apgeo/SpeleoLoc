@@ -76,7 +76,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
 
   Future<void> _loadRegionUuids() async {
     final uuids = await BeaconScanHelper.loadRegionUuids();
-    setState(() => _regionUuids = uuids);
+    if (mounted) setState(() => _regionUuids = uuids);
   }
 
   Future<void> _saveRegionUuids() =>
@@ -169,14 +169,17 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   Future<void> _startRanging() async {
     if (_ranging) return;
     if (!await _ensureScanReady()) return;
+    if (!mounted) return;
     setState(() => _rangingError = null);
     try {
       await flutterBeacon.initializeAndCheckScanning;
     } on PlatformException catch (e, st) {
       _log.warning('Beacon scanning init failed', e, st);
-      setState(() => _rangingError = e.message ?? e.code);
+      if (mounted) setState(() => _rangingError = e.message ?? e.code);
       return;
     }
+    // Disposed during init: subscribing now would leak past _stopRanging.
+    if (!mounted) return;
 
     final regions = BeaconScanHelper.buildRegions(_regionUuids);
 
@@ -246,7 +249,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
       ),
     );
     controller.dispose();
-    if (value == null || value.isEmpty) return;
+    if (value == null || value.isEmpty || !mounted) return;
     final normalized = value.toUpperCase();
     final uuidPattern = RegExp(
       r'^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$',
@@ -281,13 +284,18 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   Future<void> _startRawScan() async {
     if (_scanning) return;
     if (!await _ensureScanReady()) return;
+    if (!mounted) return;
     setState(() => _scanError = null);
     try {
       if (await fbp.FlutterBluePlus.adapterState.first !=
           fbp.BluetoothAdapterState.on) {
-        setState(() => _scanError = LocServ.inst.t('beacon_lab_bt_off'));
+        if (mounted) {
+          setState(() => _scanError = LocServ.inst.t('beacon_lab_bt_off'));
+        }
         return;
       }
+      // Disposed during the adapter check: don't subscribe past dispose.
+      if (!mounted) return;
       _scanSub = fbp.FlutterBluePlus.scanResults.listen(
         _onRawResults,
         onError: (Object e, StackTrace st) {
@@ -299,12 +307,12 @@ class _BeaconLabPageState extends State<BeaconLabPage>
         continuousUpdates: true,
         androidUsesFineLocation: true,
       );
-      setState(() => _scanning = true);
+      if (mounted) setState(() => _scanning = true);
     } catch (e, st) {
       _log.warning('Raw scan start failed', e, st);
       await _scanSub?.cancel();
       _scanSub = null;
-      setState(() => _scanError = e.toString());
+      if (mounted) setState(() => _scanError = e.toString());
     }
   }
 
