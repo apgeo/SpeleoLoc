@@ -21,21 +21,11 @@ import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/filterable_list.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
-import 'package:speleoloc/screens/csv_cave_place_import_page.dart';
 import 'package:speleoloc/screens/csv_caves_import_page.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -122,13 +112,6 @@ class _HomePageState extends ConsumerState<HomePage>
         final result = await Navigator.push<bool?>(
           context,
           MaterialPageRoute(builder: (_) => const SurfaceAreasPage()),
-        );
-        if (result == true) unawaited(_loadCaves());
-        break;
-      case 'csv_import':
-        final result = await Navigator.push<bool?>(
-          context,
-          MaterialPageRoute(builder: (_) => const CSVCavePlacesImportPage()),
         );
         if (result == true) unawaited(_loadCaves());
         break;
@@ -452,6 +435,26 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   void _deleteCave(Uuid caveUuid) async {
+    // Deleting a cave cascades over places/maps/trips — always confirm,
+    // even though the per-row button is currently feature-flagged off.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('confirm')),
+        content: Text(LocServ.inst.t('delete_cave_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(LocServ.inst.t('yes')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     try {
       await ref.read(caveRepositoryProvider).deleteCave(caveUuid);
       // Stream subscription auto-refreshes _caves.
@@ -525,22 +528,11 @@ class _HomePageState extends ConsumerState<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: GestureDetector(
           onTap: _onTitleTap,
           child: Text(
@@ -631,11 +623,6 @@ class _HomePageState extends ConsumerState<HomePage>
                 ),
               ),
             ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _incrementCounter,
-      //   tooltip: 'Increment',
-      //   child: const Icon(Icons.add),
-      // ),
     );
   }
 
@@ -708,7 +695,6 @@ class _HomePageState extends ConsumerState<HomePage>
 
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      // color: Theme.of(context).colorScheme.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
       child: Align(
         alignment: Alignment.centerLeft,
