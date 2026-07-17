@@ -17,7 +17,7 @@ import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
-import 'package:speleoloc/widgets/raster_map/raster_map_sort_options.dart';
+import 'package:speleoloc/state/raster_map_sort_options.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Foreground automatic beacon detection (plan Phase 2).
