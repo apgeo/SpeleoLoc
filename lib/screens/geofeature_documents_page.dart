@@ -626,6 +626,7 @@ class _GeofeatureDocumentsPageState
       context,
       MaterialPageRoute(builder: (_) => page),
     );
+    if (!mounted) return;
     if (result == true) {
       imageCache.clear();
       imageCache.clearLiveImages();
