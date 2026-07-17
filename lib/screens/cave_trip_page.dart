@@ -607,7 +607,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     return h > 0 ? '${h}h ${m}m' : '${m}m';
   }
 
-  Widget _buildActionToolbar() {
+  Widget _buildActionToolbar({bool compact = false}) {
     final isPaused = ref.read(caveTripServiceProvider).isPausedNotifier.value;
     final buttons = <_TripToolbarButton>[];
 
@@ -718,18 +718,28 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
 
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+      padding: EdgeInsets.symmetric(vertical: compact ? 0 : 4, horizontal: 2),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: buttons.map((b) => _buildTripButton(b)).toList(),
+          children: buttons
+              .map((b) => _buildTripButton(b, compact: compact))
+              .toList(),
         ),
       ),
     );
   }
 
-  Widget _buildTripButton(_TripToolbarButton btn) {
+  Widget _buildTripButton(_TripToolbarButton btn, {bool compact = false}) {
+    if (compact) {
+      return IconButton(
+        icon: Icon(btn.icon, size: 24, color: btn.color),
+        tooltip: btn.label,
+        visualDensity: VisualDensity.compact,
+        onPressed: btn.onTap,
+      );
+    }
     return InkWell(
       onTap: btn.onTap,
       borderRadius: BorderRadius.circular(8),
@@ -782,11 +792,12 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             ),
       body: Column(
         children: [
-          if (!isLandscapePhone)
-            KeyedSubtree(
-              key: tourKeys['toolbar'],
-              child: _buildActionToolbar(),
-            ),
+          // Landscape phones get an icon-only strip rather than losing the
+          // stop/pause/export actions entirely (vertical space is scarce).
+          KeyedSubtree(
+            key: tourKeys['toolbar'],
+            child: _buildActionToolbar(compact: isLandscapePhone),
+          ),
           Expanded(
             key: tourKeys['map'],
             child: _showMapView
