@@ -37,7 +37,10 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
   }
 
   Future<void> _update(BeaconDetectionConfig cfg) async {
-    setState(() => _config = cfg);
+    // Toggle handlers reach here after permission-dialog awaits, when the
+    // page may already be disposed — persist regardless, skip the rebuild.
+    _config = cfg;
+    if (mounted) setState(() {});
     await cfg.save();
     await BeaconDetectionService.instance.restart();
   }
@@ -121,7 +124,7 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                   min: -100,
                   max: -40,
                   divisions: 60,
-                  value: cfg.rssiThresholdDbm.toDouble(),
+                  value: cfg.rssiThresholdDbm.toDouble().clamp(-100, -40),
                   label: '${cfg.rssiThresholdDbm} dBm',
                   onChanged: cfg.enabled
                       ? (v) => setState(
