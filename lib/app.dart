@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/home_page.dart';
+import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/screens/cave_places_list_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
@@ -38,6 +41,11 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
     // Fire-and-forget: stays off unless enabled in settings AND
     // permissions are already granted; all failures are logged only.
     BeaconDetectionService.instance.start();
+    // After the first frame (navigator must exist): if a detection
+    // notification cold-started the app, finish its navigation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(BeaconAlertNotifier.instance.handleLaunchFromNotification());
+    });
   }
 
   @override

@@ -114,6 +114,22 @@ class BeaconAlertNotifier {
     }
   }
 
+  /// Cold-start path: when the user taps a detection notification after the
+  /// app process died, [_onTap] never fires — the payload arrives via the
+  /// launch details instead. Call once after the first frame (the navigator
+  /// must exist) to complete that navigation.
+  Future<void> handleLaunchFromNotification() async {
+    try {
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      final response = details?.notificationResponse;
+      if ((details?.didNotificationLaunchApp ?? false) && response != null) {
+        _onTap(response);
+      }
+    } catch (e, st) {
+      _log.warning('Notification launch-details check failed', e, st);
+    }
+  }
+
   void _onTap(NotificationResponse response) {
     final payload = response.payload;
     if (payload == null || !payload.startsWith('place/')) return;
