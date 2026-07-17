@@ -20,6 +20,7 @@ import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/user_repository.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 // Re-export SessionPrefs so callers importing this file keep working.
 export 'package:speleoloc/providers/providers.dart' show SessionPrefs;
@@ -54,6 +55,27 @@ void initRootContainer(ProviderContainer container) {
 void replaceAppDatabase(AppDatabase newDb) {
   appDatabase = newDb;
   _rootContainer?.invalidate(appDatabaseProvider);
+  for (final callback in List.of(_onAppDatabaseReplaced)) {
+    try {
+      callback();
+    } catch (e, st) {
+      // A broken listener must not abort the swap mid-restore.
+      AppLogger.of(
+        'service_locator',
+      ).warning('onAppDatabaseReplaced listener failed', e, st);
+    }
+  }
+}
+
+final List<void Function()> _onAppDatabaseReplaced = [];
+
+/// Registers [callback] to run after every [replaceAppDatabase] swap.
+///
+/// For long-lived imperative singletons whose drift `watch()` streams are
+/// bound to the old instance: provider dependents rewire themselves via the
+/// invalidation above, but a plain subscription must re-subscribe itself.
+void onAppDatabaseReplaced(void Function() callback) {
+  _onAppDatabaseReplaced.add(callback);
 }
 
 // Convenience shortcuts matching the previous `service_locator.dart` globals.

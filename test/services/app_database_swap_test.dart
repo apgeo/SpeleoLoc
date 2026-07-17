@@ -45,4 +45,22 @@ void main() {
       expect(await configurationRepository.readString('swap_probe'), 'two');
     },
   );
+
+  test('replaceAppDatabase notifies registered swap listeners', () async {
+    final db1 = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db1.close);
+    appDatabase = db1;
+
+    var calls = 0;
+    onAppDatabaseReplaced(() => calls++);
+    // A throwing listener is logged, not propagated — the swap must finish.
+    onAppDatabaseReplaced(() => throw StateError('boom'));
+
+    final db2 = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db2.close);
+    replaceAppDatabase(db2);
+
+    expect(calls, 1);
+    expect(appDatabase, same(db2));
+  });
 }

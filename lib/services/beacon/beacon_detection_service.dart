@@ -42,7 +42,11 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// permissions itself — [start] silently stays off until the user enables
 /// detection in Settings → Beacon detection (which runs the request flow).
 class BeaconDetectionService {
-  BeaconDetectionService._();
+  BeaconDetectionService._() {
+    // The registration watch subscribes against the appDatabase instance
+    // current at start; re-subscribe whenever a restore/import swaps it.
+    onAppDatabaseReplaced(() => unawaited(restart()));
+  }
   static final BeaconDetectionService instance = BeaconDetectionService._();
 
   final _log = AppLogger.of('BeaconDetectionService');
@@ -257,8 +261,9 @@ class BeaconDetectionService {
   /// (assign/unassign/import all refresh it automatically).
   ///
   /// Bound to the [appDatabase] instance current at subscribe time — the
-  /// watch does not survive `replaceAppDatabase()`. Safe as long as every
-  /// DB restore/import flow ends in a full app restart (all do today).
+  /// watch does not survive `replaceAppDatabase()`. The constructor's
+  /// [onAppDatabaseReplaced] listener restarts detection after every swap,
+  /// so the watch re-subscribes even if a flow ever skips the app restart.
   void _watchRegistrations() {
     final db = appDatabase;
     _registrationsSub =
