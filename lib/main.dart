@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:speleoloc/app.dart';
 import 'package:speleoloc/providers/providers.dart';
-import 'package:speleoloc/services/document_format_registry.dart';
+import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';

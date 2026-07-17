@@ -11,7 +11,7 @@ import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
 import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
 import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
 import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
-import 'package:speleoloc/services/document_format_registry.dart';
+import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/screens/general_data/edit_documentation_file_page.dart';
 import 'package:speleoloc/utils/constants.dart';

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/document_format_registry.dart';
+import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// A wrapper that adds a floating "edit" button to any document viewer widget.
