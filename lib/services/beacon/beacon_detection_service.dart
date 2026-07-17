@@ -17,7 +17,7 @@ import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
-import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_sort_options.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Foreground automatic beacon detection (plan Phase 2).
@@ -255,6 +255,10 @@ class BeaconDetectionService {
 
   /// Keeps the engine's registered-identity cache in sync with the table
   /// (assign/unassign/import all refresh it automatically).
+  ///
+  /// Bound to the [appDatabase] instance current at subscribe time — the
+  /// watch does not survive `replaceAppDatabase()`. Safe as long as every
+  /// DB restore/import flow ends in a full app restart (all do today).
   void _watchRegistrations() {
     final db = appDatabase;
     _registrationsSub =
