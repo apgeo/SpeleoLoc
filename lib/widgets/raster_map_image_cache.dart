@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
@@ -20,10 +21,29 @@ Map<String, dynamic>? decodeImageToRawSync(String path) {
 /// Persistent in-memory cache for decoded [RawImageData] keyed by absolute
 /// file path. Storing the Future prevents duplicate isolate work when multiple
 /// widgets request the same image concurrently.
-/// Limited to [maxCacheEntries] entries to avoid unbounded memory growth.
-const int maxCacheEntries = 5;
+///
+/// Bounded by [maxCacheBytes] of decoded RGBA pixels rather than an entry
+/// count: five 4000×3000 scans is ~240 MB while five small maps is a few MB,
+/// so a fixed entry cap either wastes memory or evicts needlessly. The most
+/// recent entry is always kept, even when it alone exceeds the budget.
+const int maxCacheBytes = 128 * 1024 * 1024;
 final Map<String, Future<RawImageData?>?> decodedImageCache = {};
 final List<String> _cacheInsertionOrder = [];
+
+/// Resolved pixel-buffer sizes; entries still decoding are absent (count 0).
+final Map<String, int> _cacheSizeBytes = {};
+
+void _evictOverBudget() {
+  var total = 0;
+  for (final size in _cacheSizeBytes.values) {
+    total += size;
+  }
+  while (total > maxCacheBytes && _cacheInsertionOrder.length > 1) {
+    final oldest = _cacheInsertionOrder.removeAt(0);
+    decodedImageCache.remove(oldest);
+    total -= _cacheSizeBytes.remove(oldest) ?? 0;
+  }
+}
 
 /// Returns a cached [RawImageData] for [path] or decodes it (in an isolate)
 /// and caches the result. Safe to call from any file; callers get a
@@ -77,10 +97,17 @@ Future<RawImageData?> decodeImageToRawCached(String path) {
   decodedImageCache[path] = future;
   _cacheInsertionOrder.remove(path);
   _cacheInsertionOrder.add(path);
-  while (_cacheInsertionOrder.length > maxCacheEntries) {
-    final oldest = _cacheInsertionOrder.removeAt(0);
-    decodedImageCache.remove(oldest);
-  }
+  // Size is known only once the decode resolves; record it then and evict.
+  // The identity check skips entries invalidated (or re-decoded) meanwhile.
+  unawaited(
+    future.then((raw) {
+      if (raw != null && identical(decodedImageCache[path], future)) {
+        _cacheSizeBytes[path] = raw.pixels.length;
+        _evictOverBudget();
+      }
+    }),
+  );
+  _evictOverBudget();
   return future;
 }
 
@@ -91,10 +118,12 @@ Future<RawImageData?> decodeImageToRawCached(String path) {
 void invalidateDecodedImage(String path) {
   decodedImageCache.remove(path);
   _cacheInsertionOrder.remove(path);
+  _cacheSizeBytes.remove(path);
 }
 
 /// Clears the decoded-image cache (useful for tests or low-memory scenarios).
 void clearDecodedImageCache() {
   decodedImageCache.clear();
   _cacheInsertionOrder.clear();
+  _cacheSizeBytes.clear();
 }
