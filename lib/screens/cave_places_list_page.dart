@@ -298,14 +298,14 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
         ],
       ),
     );
+    final enteredTitle = controller.text.trim();
+    controller.dispose();
     if (confirmed == true && mounted) {
       await ref
           .read(caveTripServiceProvider)
           .startTrip(
             widget.caveUuid,
-            controller.text.trim().isNotEmpty
-                ? controller.text.trim()
-                : suggestedTitle,
+            enteredTitle.isNotEmpty ? enteredTitle : suggestedTitle,
           );
       if (mounted) {
         await AppRoutes.pushCaveTripList(context, widget.caveUuid);
