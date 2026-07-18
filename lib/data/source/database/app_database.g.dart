@@ -10511,34 +10511,46 @@ class CavePlaceBeacons extends Table
         requiredDuringInsert: true,
         $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
       ).withConverter<Uuid>(CavePlaceBeacons.$convertercaveUuid);
+  static const VerificationMeta _beaconTypeMeta = const VerificationMeta(
+    'beaconType',
+  );
+  late final GeneratedColumn<String> beaconType = GeneratedColumn<String>(
+    'beacon_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'ibeacon\'',
+    defaultValue: const CustomExpression('\'ibeacon\''),
+  );
   static const VerificationMeta _proximityUuidMeta = const VerificationMeta(
     'proximityUuid',
   );
   late final GeneratedColumn<String> proximityUuid = GeneratedColumn<String>(
     'proximity_uuid',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL',
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
   static const VerificationMeta _majorMeta = const VerificationMeta('major');
   late final GeneratedColumn<int> major = GeneratedColumn<int>(
     'major',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL',
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
   static const VerificationMeta _minorMeta = const VerificationMeta('minor');
   late final GeneratedColumn<int> minor = GeneratedColumn<int>(
     'minor',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL',
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
   static const VerificationMeta _macAddressMeta = const VerificationMeta(
     'macAddress',
@@ -10579,6 +10591,17 @@ class CavePlaceBeacons extends Table
     aliasedName,
     true,
     type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _firmwareVersionMeta = const VerificationMeta(
+    'firmwareVersion',
+  );
+  late final GeneratedColumn<String> firmwareVersion = GeneratedColumn<String>(
+    'firmware_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
     $customConstraints: '',
   );
@@ -10632,6 +10655,27 @@ class CavePlaceBeacons extends Table
     aliasedName,
     true,
     type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _lastPressureHpaMeta = const VerificationMeta(
+    'lastPressureHpa',
+  );
+  late final GeneratedColumn<double> lastPressureHpa = GeneratedColumn<double>(
+    'last_pressure_hpa',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _lastMovementCounterMeta =
+      const VerificationMeta('lastMovementCounter');
+  late final GeneratedColumn<int> lastMovementCounter = GeneratedColumn<int>(
+    'last_movement_counter',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
     $customConstraints: '',
   );
@@ -10691,6 +10735,7 @@ class CavePlaceBeacons extends Table
     uuid,
     cavePlaceUuid,
     caveUuid,
+    beaconType,
     proximityUuid,
     major,
     minor,
@@ -10698,11 +10743,14 @@ class CavePlaceBeacons extends Table
     localName,
     model,
     measuredPower,
+    firmwareVersion,
     notes,
     lastSeenAt,
     lastBatteryMv,
     lastTemperatureC,
     lastHumidityPct,
+    lastPressureHpa,
+    lastMovementCounter,
     createdAt,
     updatedAt,
     deletedAt,
@@ -10721,6 +10769,12 @@ class CavePlaceBeacons extends Table
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('beacon_type')) {
+      context.handle(
+        _beaconTypeMeta,
+        beaconType.isAcceptableOrUnknown(data['beacon_type']!, _beaconTypeMeta),
+      );
+    }
     if (data.containsKey('proximity_uuid')) {
       context.handle(
         _proximityUuidMeta,
@@ -10729,24 +10783,18 @@ class CavePlaceBeacons extends Table
           _proximityUuidMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_proximityUuidMeta);
     }
     if (data.containsKey('major')) {
       context.handle(
         _majorMeta,
         major.isAcceptableOrUnknown(data['major']!, _majorMeta),
       );
-    } else if (isInserting) {
-      context.missing(_majorMeta);
     }
     if (data.containsKey('minor')) {
       context.handle(
         _minorMeta,
         minor.isAcceptableOrUnknown(data['minor']!, _minorMeta),
       );
-    } else if (isInserting) {
-      context.missing(_minorMeta);
     }
     if (data.containsKey('mac_address')) {
       context.handle(
@@ -10772,6 +10820,15 @@ class CavePlaceBeacons extends Table
         measuredPower.isAcceptableOrUnknown(
           data['measured_power']!,
           _measuredPowerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('firmware_version')) {
+      context.handle(
+        _firmwareVersionMeta,
+        firmwareVersion.isAcceptableOrUnknown(
+          data['firmware_version']!,
+          _firmwareVersionMeta,
         ),
       );
     }
@@ -10814,6 +10871,24 @@ class CavePlaceBeacons extends Table
         lastHumidityPct.isAcceptableOrUnknown(
           data['last_humidity_pct']!,
           _lastHumidityPctMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_pressure_hpa')) {
+      context.handle(
+        _lastPressureHpaMeta,
+        lastPressureHpa.isAcceptableOrUnknown(
+          data['last_pressure_hpa']!,
+          _lastPressureHpaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_movement_counter')) {
+      context.handle(
+        _lastMovementCounterMeta,
+        lastMovementCounter.isAcceptableOrUnknown(
+          data['last_movement_counter']!,
+          _lastMovementCounterMeta,
         ),
       );
     }
@@ -10866,18 +10941,22 @@ class CavePlaceBeacons extends Table
           data['${effectivePrefix}cave_uuid'],
         )!,
       ),
+      beaconType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}beacon_type'],
+      )!,
       proximityUuid: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}proximity_uuid'],
-      )!,
+      ),
       major: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}major'],
-      )!,
+      ),
       minor: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}minor'],
-      )!,
+      ),
       macAddress: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}mac_address'],
@@ -10893,6 +10972,10 @@ class CavePlaceBeacons extends Table
       measuredPower: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}measured_power'],
+      ),
+      firmwareVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}firmware_version'],
       ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -10913,6 +10996,14 @@ class CavePlaceBeacons extends Table
       lastHumidityPct: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}last_humidity_pct'],
+      ),
+      lastPressureHpa: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}last_pressure_hpa'],
+      ),
+      lastMovementCounter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_movement_counter'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -10972,28 +11063,38 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
   final Uuid uuid;
   final Uuid cavePlaceUuid;
   final Uuid caveUuid;
-  final String proximityUuid;
+  final String beaconType;
+  final String? proximityUuid;
 
-  /// canonical uppercase 8-4-4-4-12
-  final int major;
-  final int minor;
+  /// canonical uppercase 8-4-4-4-12; NULL for ruuvi
+  final int? major;
+
+  /// NULL for ruuvi
+  final int? minor;
+
+  /// NULL for ruuvi
   final String? macAddress;
 
-  /// AA:BB:CC:DD:EE:FF, Android-sourced
+  /// AA:BB:CC:DD:EE:FF; Ruuvi identity (payload-sourced)
   final String? localName;
 
-  /// BP1003 name, e.g. K02109b
+  /// BP1003 name (K02109b) / Ruuvi name (Ruuvi 884F)
   final String? model;
 
-  /// free text: HCBB22 / H8 / ...
+  /// free text: HCBB22 / H8 / RuuviTag Pro 3in1 / ...
   final int? measuredPower;
 
   /// advertised RSSI@1m, for proximity calc
+  final String? firmwareVersion;
+
+  /// read via DIS during Ruuvi history download
   final String? notes;
   final int? lastSeenAt;
   final int? lastBatteryMv;
   final double? lastTemperatureC;
   final double? lastHumidityPct;
+  final double? lastPressureHpa;
+  final int? lastMovementCounter;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -11003,18 +11104,22 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     required this.uuid,
     required this.cavePlaceUuid,
     required this.caveUuid,
-    required this.proximityUuid,
-    required this.major,
-    required this.minor,
+    required this.beaconType,
+    this.proximityUuid,
+    this.major,
+    this.minor,
     this.macAddress,
     this.localName,
     this.model,
     this.measuredPower,
+    this.firmwareVersion,
     this.notes,
     this.lastSeenAt,
     this.lastBatteryMv,
     this.lastTemperatureC,
     this.lastHumidityPct,
+    this.lastPressureHpa,
+    this.lastMovementCounter,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -11039,9 +11144,16 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
         CavePlaceBeacons.$convertercaveUuid.toSql(caveUuid),
       );
     }
-    map['proximity_uuid'] = Variable<String>(proximityUuid);
-    map['major'] = Variable<int>(major);
-    map['minor'] = Variable<int>(minor);
+    map['beacon_type'] = Variable<String>(beaconType);
+    if (!nullToAbsent || proximityUuid != null) {
+      map['proximity_uuid'] = Variable<String>(proximityUuid);
+    }
+    if (!nullToAbsent || major != null) {
+      map['major'] = Variable<int>(major);
+    }
+    if (!nullToAbsent || minor != null) {
+      map['minor'] = Variable<int>(minor);
+    }
     if (!nullToAbsent || macAddress != null) {
       map['mac_address'] = Variable<String>(macAddress);
     }
@@ -11053,6 +11165,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     }
     if (!nullToAbsent || measuredPower != null) {
       map['measured_power'] = Variable<int>(measuredPower);
+    }
+    if (!nullToAbsent || firmwareVersion != null) {
+      map['firmware_version'] = Variable<String>(firmwareVersion);
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
@@ -11068,6 +11183,12 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     }
     if (!nullToAbsent || lastHumidityPct != null) {
       map['last_humidity_pct'] = Variable<double>(lastHumidityPct);
+    }
+    if (!nullToAbsent || lastPressureHpa != null) {
+      map['last_pressure_hpa'] = Variable<double>(lastPressureHpa);
+    }
+    if (!nullToAbsent || lastMovementCounter != null) {
+      map['last_movement_counter'] = Variable<int>(lastMovementCounter);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -11098,9 +11219,16 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       uuid: Value(uuid),
       cavePlaceUuid: Value(cavePlaceUuid),
       caveUuid: Value(caveUuid),
-      proximityUuid: Value(proximityUuid),
-      major: Value(major),
-      minor: Value(minor),
+      beaconType: Value(beaconType),
+      proximityUuid: proximityUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(proximityUuid),
+      major: major == null && nullToAbsent
+          ? const Value.absent()
+          : Value(major),
+      minor: minor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(minor),
       macAddress: macAddress == null && nullToAbsent
           ? const Value.absent()
           : Value(macAddress),
@@ -11113,6 +11241,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       measuredPower: measuredPower == null && nullToAbsent
           ? const Value.absent()
           : Value(measuredPower),
+      firmwareVersion: firmwareVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(firmwareVersion),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -11128,6 +11259,12 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       lastHumidityPct: lastHumidityPct == null && nullToAbsent
           ? const Value.absent()
           : Value(lastHumidityPct),
+      lastPressureHpa: lastPressureHpa == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPressureHpa),
+      lastMovementCounter: lastMovementCounter == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMovementCounter),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -11155,13 +11292,15 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       uuid: serializer.fromJson<Uuid>(json['uuid']),
       cavePlaceUuid: serializer.fromJson<Uuid>(json['cave_place_uuid']),
       caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
-      proximityUuid: serializer.fromJson<String>(json['proximity_uuid']),
-      major: serializer.fromJson<int>(json['major']),
-      minor: serializer.fromJson<int>(json['minor']),
+      beaconType: serializer.fromJson<String>(json['beacon_type']),
+      proximityUuid: serializer.fromJson<String?>(json['proximity_uuid']),
+      major: serializer.fromJson<int?>(json['major']),
+      minor: serializer.fromJson<int?>(json['minor']),
       macAddress: serializer.fromJson<String?>(json['mac_address']),
       localName: serializer.fromJson<String?>(json['local_name']),
       model: serializer.fromJson<String?>(json['model']),
       measuredPower: serializer.fromJson<int?>(json['measured_power']),
+      firmwareVersion: serializer.fromJson<String?>(json['firmware_version']),
       notes: serializer.fromJson<String?>(json['notes']),
       lastSeenAt: serializer.fromJson<int?>(json['last_seen_at']),
       lastBatteryMv: serializer.fromJson<int?>(json['last_battery_mv']),
@@ -11169,6 +11308,10 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
         json['last_temperature_c'],
       ),
       lastHumidityPct: serializer.fromJson<double?>(json['last_humidity_pct']),
+      lastPressureHpa: serializer.fromJson<double?>(json['last_pressure_hpa']),
+      lastMovementCounter: serializer.fromJson<int?>(
+        json['last_movement_counter'],
+      ),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -11187,18 +11330,22 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       'uuid': serializer.toJson<Uuid>(uuid),
       'cave_place_uuid': serializer.toJson<Uuid>(cavePlaceUuid),
       'cave_uuid': serializer.toJson<Uuid>(caveUuid),
-      'proximity_uuid': serializer.toJson<String>(proximityUuid),
-      'major': serializer.toJson<int>(major),
-      'minor': serializer.toJson<int>(minor),
+      'beacon_type': serializer.toJson<String>(beaconType),
+      'proximity_uuid': serializer.toJson<String?>(proximityUuid),
+      'major': serializer.toJson<int?>(major),
+      'minor': serializer.toJson<int?>(minor),
       'mac_address': serializer.toJson<String?>(macAddress),
       'local_name': serializer.toJson<String?>(localName),
       'model': serializer.toJson<String?>(model),
       'measured_power': serializer.toJson<int?>(measuredPower),
+      'firmware_version': serializer.toJson<String?>(firmwareVersion),
       'notes': serializer.toJson<String?>(notes),
       'last_seen_at': serializer.toJson<int?>(lastSeenAt),
       'last_battery_mv': serializer.toJson<int?>(lastBatteryMv),
       'last_temperature_c': serializer.toJson<double?>(lastTemperatureC),
       'last_humidity_pct': serializer.toJson<double?>(lastHumidityPct),
+      'last_pressure_hpa': serializer.toJson<double?>(lastPressureHpa),
+      'last_movement_counter': serializer.toJson<int?>(lastMovementCounter),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -11213,18 +11360,22 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     Uuid? uuid,
     Uuid? cavePlaceUuid,
     Uuid? caveUuid,
-    String? proximityUuid,
-    int? major,
-    int? minor,
+    String? beaconType,
+    Value<String?> proximityUuid = const Value.absent(),
+    Value<int?> major = const Value.absent(),
+    Value<int?> minor = const Value.absent(),
     Value<String?> macAddress = const Value.absent(),
     Value<String?> localName = const Value.absent(),
     Value<String?> model = const Value.absent(),
     Value<int?> measuredPower = const Value.absent(),
+    Value<String?> firmwareVersion = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     Value<int?> lastSeenAt = const Value.absent(),
     Value<int?> lastBatteryMv = const Value.absent(),
     Value<double?> lastTemperatureC = const Value.absent(),
     Value<double?> lastHumidityPct = const Value.absent(),
+    Value<double?> lastPressureHpa = const Value.absent(),
+    Value<int?> lastMovementCounter = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
@@ -11234,15 +11385,21 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     uuid: uuid ?? this.uuid,
     cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
     caveUuid: caveUuid ?? this.caveUuid,
-    proximityUuid: proximityUuid ?? this.proximityUuid,
-    major: major ?? this.major,
-    minor: minor ?? this.minor,
+    beaconType: beaconType ?? this.beaconType,
+    proximityUuid: proximityUuid.present
+        ? proximityUuid.value
+        : this.proximityUuid,
+    major: major.present ? major.value : this.major,
+    minor: minor.present ? minor.value : this.minor,
     macAddress: macAddress.present ? macAddress.value : this.macAddress,
     localName: localName.present ? localName.value : this.localName,
     model: model.present ? model.value : this.model,
     measuredPower: measuredPower.present
         ? measuredPower.value
         : this.measuredPower,
+    firmwareVersion: firmwareVersion.present
+        ? firmwareVersion.value
+        : this.firmwareVersion,
     notes: notes.present ? notes.value : this.notes,
     lastSeenAt: lastSeenAt.present ? lastSeenAt.value : this.lastSeenAt,
     lastBatteryMv: lastBatteryMv.present
@@ -11254,6 +11411,12 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     lastHumidityPct: lastHumidityPct.present
         ? lastHumidityPct.value
         : this.lastHumidityPct,
+    lastPressureHpa: lastPressureHpa.present
+        ? lastPressureHpa.value
+        : this.lastPressureHpa,
+    lastMovementCounter: lastMovementCounter.present
+        ? lastMovementCounter.value
+        : this.lastMovementCounter,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -11271,6 +11434,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           ? data.cavePlaceUuid.value
           : this.cavePlaceUuid,
       caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
+      beaconType: data.beaconType.present
+          ? data.beaconType.value
+          : this.beaconType,
       proximityUuid: data.proximityUuid.present
           ? data.proximityUuid.value
           : this.proximityUuid,
@@ -11284,6 +11450,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       measuredPower: data.measuredPower.present
           ? data.measuredPower.value
           : this.measuredPower,
+      firmwareVersion: data.firmwareVersion.present
+          ? data.firmwareVersion.value
+          : this.firmwareVersion,
       notes: data.notes.present ? data.notes.value : this.notes,
       lastSeenAt: data.lastSeenAt.present
           ? data.lastSeenAt.value
@@ -11297,6 +11466,12 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       lastHumidityPct: data.lastHumidityPct.present
           ? data.lastHumidityPct.value
           : this.lastHumidityPct,
+      lastPressureHpa: data.lastPressureHpa.present
+          ? data.lastPressureHpa.value
+          : this.lastPressureHpa,
+      lastMovementCounter: data.lastMovementCounter.present
+          ? data.lastMovementCounter.value
+          : this.lastMovementCounter,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -11315,6 +11490,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           ..write('uuid: $uuid, ')
           ..write('cavePlaceUuid: $cavePlaceUuid, ')
           ..write('caveUuid: $caveUuid, ')
+          ..write('beaconType: $beaconType, ')
           ..write('proximityUuid: $proximityUuid, ')
           ..write('major: $major, ')
           ..write('minor: $minor, ')
@@ -11322,11 +11498,14 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           ..write('localName: $localName, ')
           ..write('model: $model, ')
           ..write('measuredPower: $measuredPower, ')
+          ..write('firmwareVersion: $firmwareVersion, ')
           ..write('notes: $notes, ')
           ..write('lastSeenAt: $lastSeenAt, ')
           ..write('lastBatteryMv: $lastBatteryMv, ')
           ..write('lastTemperatureC: $lastTemperatureC, ')
           ..write('lastHumidityPct: $lastHumidityPct, ')
+          ..write('lastPressureHpa: $lastPressureHpa, ')
+          ..write('lastMovementCounter: $lastMovementCounter, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -11337,10 +11516,11 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     uuid,
     cavePlaceUuid,
     caveUuid,
+    beaconType,
     proximityUuid,
     major,
     minor,
@@ -11348,17 +11528,20 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     localName,
     model,
     measuredPower,
+    firmwareVersion,
     notes,
     lastSeenAt,
     lastBatteryMv,
     lastTemperatureC,
     lastHumidityPct,
+    lastPressureHpa,
+    lastMovementCounter,
     createdAt,
     updatedAt,
     deletedAt,
     createdByUserUuid,
     lastModifiedByUserUuid,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -11366,6 +11549,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           other.uuid == this.uuid &&
           other.cavePlaceUuid == this.cavePlaceUuid &&
           other.caveUuid == this.caveUuid &&
+          other.beaconType == this.beaconType &&
           other.proximityUuid == this.proximityUuid &&
           other.major == this.major &&
           other.minor == this.minor &&
@@ -11373,11 +11557,14 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           other.localName == this.localName &&
           other.model == this.model &&
           other.measuredPower == this.measuredPower &&
+          other.firmwareVersion == this.firmwareVersion &&
           other.notes == this.notes &&
           other.lastSeenAt == this.lastSeenAt &&
           other.lastBatteryMv == this.lastBatteryMv &&
           other.lastTemperatureC == this.lastTemperatureC &&
           other.lastHumidityPct == this.lastHumidityPct &&
+          other.lastPressureHpa == this.lastPressureHpa &&
+          other.lastMovementCounter == this.lastMovementCounter &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -11389,18 +11576,22 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
   final Value<Uuid> uuid;
   final Value<Uuid> cavePlaceUuid;
   final Value<Uuid> caveUuid;
-  final Value<String> proximityUuid;
-  final Value<int> major;
-  final Value<int> minor;
+  final Value<String> beaconType;
+  final Value<String?> proximityUuid;
+  final Value<int?> major;
+  final Value<int?> minor;
   final Value<String?> macAddress;
   final Value<String?> localName;
   final Value<String?> model;
   final Value<int?> measuredPower;
+  final Value<String?> firmwareVersion;
   final Value<String?> notes;
   final Value<int?> lastSeenAt;
   final Value<int?> lastBatteryMv;
   final Value<double?> lastTemperatureC;
   final Value<double?> lastHumidityPct;
+  final Value<double?> lastPressureHpa;
+  final Value<int?> lastMovementCounter;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
@@ -11411,6 +11602,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     this.uuid = const Value.absent(),
     this.cavePlaceUuid = const Value.absent(),
     this.caveUuid = const Value.absent(),
+    this.beaconType = const Value.absent(),
     this.proximityUuid = const Value.absent(),
     this.major = const Value.absent(),
     this.minor = const Value.absent(),
@@ -11418,11 +11610,14 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     this.localName = const Value.absent(),
     this.model = const Value.absent(),
     this.measuredPower = const Value.absent(),
+    this.firmwareVersion = const Value.absent(),
     this.notes = const Value.absent(),
     this.lastSeenAt = const Value.absent(),
     this.lastBatteryMv = const Value.absent(),
     this.lastTemperatureC = const Value.absent(),
     this.lastHumidityPct = const Value.absent(),
+    this.lastPressureHpa = const Value.absent(),
+    this.lastMovementCounter = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -11434,18 +11629,22 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     required Uuid uuid,
     required Uuid cavePlaceUuid,
     required Uuid caveUuid,
-    required String proximityUuid,
-    required int major,
-    required int minor,
+    this.beaconType = const Value.absent(),
+    this.proximityUuid = const Value.absent(),
+    this.major = const Value.absent(),
+    this.minor = const Value.absent(),
     this.macAddress = const Value.absent(),
     this.localName = const Value.absent(),
     this.model = const Value.absent(),
     this.measuredPower = const Value.absent(),
+    this.firmwareVersion = const Value.absent(),
     this.notes = const Value.absent(),
     this.lastSeenAt = const Value.absent(),
     this.lastBatteryMv = const Value.absent(),
     this.lastTemperatureC = const Value.absent(),
     this.lastHumidityPct = const Value.absent(),
+    this.lastPressureHpa = const Value.absent(),
+    this.lastMovementCounter = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -11454,14 +11653,12 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     this.rowid = const Value.absent(),
   }) : uuid = Value(uuid),
        cavePlaceUuid = Value(cavePlaceUuid),
-       caveUuid = Value(caveUuid),
-       proximityUuid = Value(proximityUuid),
-       major = Value(major),
-       minor = Value(minor);
+       caveUuid = Value(caveUuid);
   static Insertable<CavePlaceBeacon> custom({
     Expression<Uint8List>? uuid,
     Expression<Uint8List>? cavePlaceUuid,
     Expression<Uint8List>? caveUuid,
+    Expression<String>? beaconType,
     Expression<String>? proximityUuid,
     Expression<int>? major,
     Expression<int>? minor,
@@ -11469,11 +11666,14 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     Expression<String>? localName,
     Expression<String>? model,
     Expression<int>? measuredPower,
+    Expression<String>? firmwareVersion,
     Expression<String>? notes,
     Expression<int>? lastSeenAt,
     Expression<int>? lastBatteryMv,
     Expression<double>? lastTemperatureC,
     Expression<double>? lastHumidityPct,
+    Expression<double>? lastPressureHpa,
+    Expression<int>? lastMovementCounter,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
@@ -11485,6 +11685,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
       if (uuid != null) 'uuid': uuid,
       if (cavePlaceUuid != null) 'cave_place_uuid': cavePlaceUuid,
       if (caveUuid != null) 'cave_uuid': caveUuid,
+      if (beaconType != null) 'beacon_type': beaconType,
       if (proximityUuid != null) 'proximity_uuid': proximityUuid,
       if (major != null) 'major': major,
       if (minor != null) 'minor': minor,
@@ -11492,11 +11693,15 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
       if (localName != null) 'local_name': localName,
       if (model != null) 'model': model,
       if (measuredPower != null) 'measured_power': measuredPower,
+      if (firmwareVersion != null) 'firmware_version': firmwareVersion,
       if (notes != null) 'notes': notes,
       if (lastSeenAt != null) 'last_seen_at': lastSeenAt,
       if (lastBatteryMv != null) 'last_battery_mv': lastBatteryMv,
       if (lastTemperatureC != null) 'last_temperature_c': lastTemperatureC,
       if (lastHumidityPct != null) 'last_humidity_pct': lastHumidityPct,
+      if (lastPressureHpa != null) 'last_pressure_hpa': lastPressureHpa,
+      if (lastMovementCounter != null)
+        'last_movement_counter': lastMovementCounter,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -11511,18 +11716,22 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     Value<Uuid>? uuid,
     Value<Uuid>? cavePlaceUuid,
     Value<Uuid>? caveUuid,
-    Value<String>? proximityUuid,
-    Value<int>? major,
-    Value<int>? minor,
+    Value<String>? beaconType,
+    Value<String?>? proximityUuid,
+    Value<int?>? major,
+    Value<int?>? minor,
     Value<String?>? macAddress,
     Value<String?>? localName,
     Value<String?>? model,
     Value<int?>? measuredPower,
+    Value<String?>? firmwareVersion,
     Value<String?>? notes,
     Value<int?>? lastSeenAt,
     Value<int?>? lastBatteryMv,
     Value<double?>? lastTemperatureC,
     Value<double?>? lastHumidityPct,
+    Value<double?>? lastPressureHpa,
+    Value<int?>? lastMovementCounter,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
@@ -11534,6 +11743,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
       uuid: uuid ?? this.uuid,
       cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
       caveUuid: caveUuid ?? this.caveUuid,
+      beaconType: beaconType ?? this.beaconType,
       proximityUuid: proximityUuid ?? this.proximityUuid,
       major: major ?? this.major,
       minor: minor ?? this.minor,
@@ -11541,11 +11751,14 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
       localName: localName ?? this.localName,
       model: model ?? this.model,
       measuredPower: measuredPower ?? this.measuredPower,
+      firmwareVersion: firmwareVersion ?? this.firmwareVersion,
       notes: notes ?? this.notes,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
       lastBatteryMv: lastBatteryMv ?? this.lastBatteryMv,
       lastTemperatureC: lastTemperatureC ?? this.lastTemperatureC,
       lastHumidityPct: lastHumidityPct ?? this.lastHumidityPct,
+      lastPressureHpa: lastPressureHpa ?? this.lastPressureHpa,
+      lastMovementCounter: lastMovementCounter ?? this.lastMovementCounter,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -11574,6 +11787,9 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
         CavePlaceBeacons.$convertercaveUuid.toSql(caveUuid.value),
       );
     }
+    if (beaconType.present) {
+      map['beacon_type'] = Variable<String>(beaconType.value);
+    }
     if (proximityUuid.present) {
       map['proximity_uuid'] = Variable<String>(proximityUuid.value);
     }
@@ -11595,6 +11811,9 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     if (measuredPower.present) {
       map['measured_power'] = Variable<int>(measuredPower.value);
     }
+    if (firmwareVersion.present) {
+      map['firmware_version'] = Variable<String>(firmwareVersion.value);
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -11609,6 +11828,12 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     }
     if (lastHumidityPct.present) {
       map['last_humidity_pct'] = Variable<double>(lastHumidityPct.value);
+    }
+    if (lastPressureHpa.present) {
+      map['last_pressure_hpa'] = Variable<double>(lastPressureHpa.value);
+    }
+    if (lastMovementCounter.present) {
+      map['last_movement_counter'] = Variable<int>(lastMovementCounter.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -11645,6 +11870,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
           ..write('uuid: $uuid, ')
           ..write('cavePlaceUuid: $cavePlaceUuid, ')
           ..write('caveUuid: $caveUuid, ')
+          ..write('beaconType: $beaconType, ')
           ..write('proximityUuid: $proximityUuid, ')
           ..write('major: $major, ')
           ..write('minor: $minor, ')
@@ -11652,16 +11878,425 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
           ..write('localName: $localName, ')
           ..write('model: $model, ')
           ..write('measuredPower: $measuredPower, ')
+          ..write('firmwareVersion: $firmwareVersion, ')
           ..write('notes: $notes, ')
           ..write('lastSeenAt: $lastSeenAt, ')
           ..write('lastBatteryMv: $lastBatteryMv, ')
           ..write('lastTemperatureC: $lastTemperatureC, ')
           ..write('lastHumidityPct: $lastHumidityPct, ')
+          ..write('lastPressureHpa: $lastPressureHpa, ')
+          ..write('lastMovementCounter: $lastMovementCounter, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('createdByUserUuid: $createdByUserUuid, ')
           ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class RuuviSensorHistory extends Table
+    with TableInfo<RuuviSensorHistory, RuuviSensorHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  RuuviSensorHistory(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _macAddressMeta = const VerificationMeta(
+    'macAddress',
+  );
+  late final GeneratedColumn<String> macAddress = GeneratedColumn<String>(
+    'mac_address',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _measuredAtMeta = const VerificationMeta(
+    'measuredAt',
+  );
+  late final GeneratedColumn<int> measuredAt = GeneratedColumn<int>(
+    'measured_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _temperatureCMeta = const VerificationMeta(
+    'temperatureC',
+  );
+  late final GeneratedColumn<double> temperatureC = GeneratedColumn<double>(
+    'temperature_c',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _humidityPctMeta = const VerificationMeta(
+    'humidityPct',
+  );
+  late final GeneratedColumn<double> humidityPct = GeneratedColumn<double>(
+    'humidity_pct',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _pressureHpaMeta = const VerificationMeta(
+    'pressureHpa',
+  );
+  late final GeneratedColumn<double> pressureHpa = GeneratedColumn<double>(
+    'pressure_hpa',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    macAddress,
+    measuredAt,
+    temperatureC,
+    humidityPct,
+    pressureHpa,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ruuvi_sensor_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RuuviSensorHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('mac_address')) {
+      context.handle(
+        _macAddressMeta,
+        macAddress.isAcceptableOrUnknown(data['mac_address']!, _macAddressMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_macAddressMeta);
+    }
+    if (data.containsKey('measured_at')) {
+      context.handle(
+        _measuredAtMeta,
+        measuredAt.isAcceptableOrUnknown(data['measured_at']!, _measuredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_measuredAtMeta);
+    }
+    if (data.containsKey('temperature_c')) {
+      context.handle(
+        _temperatureCMeta,
+        temperatureC.isAcceptableOrUnknown(
+          data['temperature_c']!,
+          _temperatureCMeta,
+        ),
+      );
+    }
+    if (data.containsKey('humidity_pct')) {
+      context.handle(
+        _humidityPctMeta,
+        humidityPct.isAcceptableOrUnknown(
+          data['humidity_pct']!,
+          _humidityPctMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pressure_hpa')) {
+      context.handle(
+        _pressureHpaMeta,
+        pressureHpa.isAcceptableOrUnknown(
+          data['pressure_hpa']!,
+          _pressureHpaMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {macAddress, measuredAt};
+  @override
+  RuuviSensorHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RuuviSensorHistoryData(
+      macAddress: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mac_address'],
+      )!,
+      measuredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}measured_at'],
+      )!,
+      temperatureC: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}temperature_c'],
+      ),
+      humidityPct: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}humidity_pct'],
+      ),
+      pressureHpa: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pressure_hpa'],
+      ),
+    );
+  }
+
+  @override
+  RuuviSensorHistory createAlias(String alias) {
+    return RuuviSensorHistory(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(mac_address, measured_at)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class RuuviSensorHistoryData extends DataClass
+    implements Insertable<RuuviSensorHistoryData> {
+  final String macAddress;
+  final int measuredAt;
+
+  /// Unix epoch seconds (tag log timestamps)
+  final double? temperatureC;
+  final double? humidityPct;
+  final double? pressureHpa;
+  const RuuviSensorHistoryData({
+    required this.macAddress,
+    required this.measuredAt,
+    this.temperatureC,
+    this.humidityPct,
+    this.pressureHpa,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['mac_address'] = Variable<String>(macAddress);
+    map['measured_at'] = Variable<int>(measuredAt);
+    if (!nullToAbsent || temperatureC != null) {
+      map['temperature_c'] = Variable<double>(temperatureC);
+    }
+    if (!nullToAbsent || humidityPct != null) {
+      map['humidity_pct'] = Variable<double>(humidityPct);
+    }
+    if (!nullToAbsent || pressureHpa != null) {
+      map['pressure_hpa'] = Variable<double>(pressureHpa);
+    }
+    return map;
+  }
+
+  RuuviSensorHistoryCompanion toCompanion(bool nullToAbsent) {
+    return RuuviSensorHistoryCompanion(
+      macAddress: Value(macAddress),
+      measuredAt: Value(measuredAt),
+      temperatureC: temperatureC == null && nullToAbsent
+          ? const Value.absent()
+          : Value(temperatureC),
+      humidityPct: humidityPct == null && nullToAbsent
+          ? const Value.absent()
+          : Value(humidityPct),
+      pressureHpa: pressureHpa == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pressureHpa),
+    );
+  }
+
+  factory RuuviSensorHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RuuviSensorHistoryData(
+      macAddress: serializer.fromJson<String>(json['mac_address']),
+      measuredAt: serializer.fromJson<int>(json['measured_at']),
+      temperatureC: serializer.fromJson<double?>(json['temperature_c']),
+      humidityPct: serializer.fromJson<double?>(json['humidity_pct']),
+      pressureHpa: serializer.fromJson<double?>(json['pressure_hpa']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'mac_address': serializer.toJson<String>(macAddress),
+      'measured_at': serializer.toJson<int>(measuredAt),
+      'temperature_c': serializer.toJson<double?>(temperatureC),
+      'humidity_pct': serializer.toJson<double?>(humidityPct),
+      'pressure_hpa': serializer.toJson<double?>(pressureHpa),
+    };
+  }
+
+  RuuviSensorHistoryData copyWith({
+    String? macAddress,
+    int? measuredAt,
+    Value<double?> temperatureC = const Value.absent(),
+    Value<double?> humidityPct = const Value.absent(),
+    Value<double?> pressureHpa = const Value.absent(),
+  }) => RuuviSensorHistoryData(
+    macAddress: macAddress ?? this.macAddress,
+    measuredAt: measuredAt ?? this.measuredAt,
+    temperatureC: temperatureC.present ? temperatureC.value : this.temperatureC,
+    humidityPct: humidityPct.present ? humidityPct.value : this.humidityPct,
+    pressureHpa: pressureHpa.present ? pressureHpa.value : this.pressureHpa,
+  );
+  RuuviSensorHistoryData copyWithCompanion(RuuviSensorHistoryCompanion data) {
+    return RuuviSensorHistoryData(
+      macAddress: data.macAddress.present
+          ? data.macAddress.value
+          : this.macAddress,
+      measuredAt: data.measuredAt.present
+          ? data.measuredAt.value
+          : this.measuredAt,
+      temperatureC: data.temperatureC.present
+          ? data.temperatureC.value
+          : this.temperatureC,
+      humidityPct: data.humidityPct.present
+          ? data.humidityPct.value
+          : this.humidityPct,
+      pressureHpa: data.pressureHpa.present
+          ? data.pressureHpa.value
+          : this.pressureHpa,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RuuviSensorHistoryData(')
+          ..write('macAddress: $macAddress, ')
+          ..write('measuredAt: $measuredAt, ')
+          ..write('temperatureC: $temperatureC, ')
+          ..write('humidityPct: $humidityPct, ')
+          ..write('pressureHpa: $pressureHpa')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    macAddress,
+    measuredAt,
+    temperatureC,
+    humidityPct,
+    pressureHpa,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RuuviSensorHistoryData &&
+          other.macAddress == this.macAddress &&
+          other.measuredAt == this.measuredAt &&
+          other.temperatureC == this.temperatureC &&
+          other.humidityPct == this.humidityPct &&
+          other.pressureHpa == this.pressureHpa);
+}
+
+class RuuviSensorHistoryCompanion
+    extends UpdateCompanion<RuuviSensorHistoryData> {
+  final Value<String> macAddress;
+  final Value<int> measuredAt;
+  final Value<double?> temperatureC;
+  final Value<double?> humidityPct;
+  final Value<double?> pressureHpa;
+  final Value<int> rowid;
+  const RuuviSensorHistoryCompanion({
+    this.macAddress = const Value.absent(),
+    this.measuredAt = const Value.absent(),
+    this.temperatureC = const Value.absent(),
+    this.humidityPct = const Value.absent(),
+    this.pressureHpa = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RuuviSensorHistoryCompanion.insert({
+    required String macAddress,
+    required int measuredAt,
+    this.temperatureC = const Value.absent(),
+    this.humidityPct = const Value.absent(),
+    this.pressureHpa = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : macAddress = Value(macAddress),
+       measuredAt = Value(measuredAt);
+  static Insertable<RuuviSensorHistoryData> custom({
+    Expression<String>? macAddress,
+    Expression<int>? measuredAt,
+    Expression<double>? temperatureC,
+    Expression<double>? humidityPct,
+    Expression<double>? pressureHpa,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (macAddress != null) 'mac_address': macAddress,
+      if (measuredAt != null) 'measured_at': measuredAt,
+      if (temperatureC != null) 'temperature_c': temperatureC,
+      if (humidityPct != null) 'humidity_pct': humidityPct,
+      if (pressureHpa != null) 'pressure_hpa': pressureHpa,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RuuviSensorHistoryCompanion copyWith({
+    Value<String>? macAddress,
+    Value<int>? measuredAt,
+    Value<double?>? temperatureC,
+    Value<double?>? humidityPct,
+    Value<double?>? pressureHpa,
+    Value<int>? rowid,
+  }) {
+    return RuuviSensorHistoryCompanion(
+      macAddress: macAddress ?? this.macAddress,
+      measuredAt: measuredAt ?? this.measuredAt,
+      temperatureC: temperatureC ?? this.temperatureC,
+      humidityPct: humidityPct ?? this.humidityPct,
+      pressureHpa: pressureHpa ?? this.pressureHpa,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (macAddress.present) {
+      map['mac_address'] = Variable<String>(macAddress.value);
+    }
+    if (measuredAt.present) {
+      map['measured_at'] = Variable<int>(measuredAt.value);
+    }
+    if (temperatureC.present) {
+      map['temperature_c'] = Variable<double>(temperatureC.value);
+    }
+    if (humidityPct.present) {
+      map['humidity_pct'] = Variable<double>(humidityPct.value);
+    }
+    if (pressureHpa.present) {
+      map['pressure_hpa'] = Variable<double>(pressureHpa.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RuuviSensorHistoryCompanion(')
+          ..write('macAddress: $macAddress, ')
+          ..write('measuredAt: $measuredAt, ')
+          ..write('temperatureC: $temperatureC, ')
+          ..write('humidityPct: $humidityPct, ')
+          ..write('pressureHpa: $pressureHpa, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -13185,6 +13820,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final DocumentationFilesToCaveTrips documentationFilesToCaveTrips =
       DocumentationFilesToCaveTrips(this);
   late final CavePlaceBeacons cavePlaceBeacons = CavePlaceBeacons(this);
+  late final Index idxCavePlaceBeaconsRuuvi = Index(
+    'idx_cave_place_beacons_ruuvi',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi ON cave_place_beacons (mac_address, cave_uuid) WHERE beacon_type = \'ruuvi\'',
+  );
+  late final RuuviSensorHistory ruuviSensorHistory = RuuviSensorHistory(this);
   late final TripReportTemplates tripReportTemplates = TripReportTemplates(
     this,
   );
@@ -13223,6 +13863,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTripPoints,
     documentationFilesToCaveTrips,
     cavePlaceBeacons,
+    idxCavePlaceBeaconsRuuvi,
+    ruuviSensorHistory,
     tripReportTemplates,
     changeLog,
     changeLogField,
@@ -13278,10 +13920,7 @@ final class $UsersReferences
   static MultiTypedResultKey<ChangeLog, List<ChangeLogData>>
   _changeLogRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.changeLog,
-    aliasName: $_aliasNameGenerator(
-      db.users.uuid,
-      db.changeLog.changedByUserUuid,
-    ),
+    aliasName: 'users__uuid__change_log__changed_by_user_uuid',
   );
 
   $ChangeLogProcessedTableManager get changeLogRefs {
@@ -13667,9 +14306,7 @@ final class $SurfaceAreasReferences
   $SurfaceAreasReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.surfaceAreas.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('surface_areas__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -13685,13 +14322,8 @@ final class $SurfaceAreasReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.surfaceAreas.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('surface_areas__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -13713,10 +14345,7 @@ final class $SurfaceAreasReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.caves,
-    aliasName: $_aliasNameGenerator(
-      db.surfaceAreas.uuid,
-      db.caves.surfaceAreaUuid,
-    ),
+    aliasName: 'surface_areas__uuid__caves__surface_area_uuid',
   );
 
   $CavesProcessedTableManager get cavesRefs {
@@ -14261,10 +14890,8 @@ final class $CavesReferences
     extends BaseReferences<_$AppDatabase, Caves, Cave> {
   $CavesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static SurfaceAreas _surfaceAreaUuidTable(_$AppDatabase db) =>
-      db.surfaceAreas.createAlias(
-        $_aliasNameGenerator(db.caves.surfaceAreaUuid, db.surfaceAreas.uuid),
-      );
+  static SurfaceAreas _surfaceAreaUuidTable(_$AppDatabase db) => db.surfaceAreas
+      .createAlias('caves__surface_area_uuid__surface_areas__uuid');
 
   $SurfaceAreasProcessedTableManager? get surfaceAreaUuid {
     final $_column = $_itemColumn<Uint8List>('surface_area_uuid');
@@ -14281,9 +14908,7 @@ final class $CavesReferences
   }
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.caves.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('caves__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -14300,9 +14925,7 @@ final class $CavesReferences
   }
 
   static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.caves.lastModifiedByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('caves__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -14324,7 +14947,7 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.caveAreas,
-    aliasName: $_aliasNameGenerator(db.caves.uuid, db.caveAreas.caveUuid),
+    aliasName: 'caves__uuid__cave_areas__cave_uuid',
   );
 
   $CaveAreasProcessedTableManager get caveAreasRefs {
@@ -14341,7 +14964,7 @@ final class $CavesReferences
   static MultiTypedResultKey<CaveEntrances, List<CaveEntrance>>
   _caveEntrancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveEntrances,
-    aliasName: $_aliasNameGenerator(db.caves.uuid, db.caveEntrances.caveUuid),
+    aliasName: 'caves__uuid__cave_entrances__cave_uuid',
   );
 
   $CaveEntrancesProcessedTableManager get caveEntrancesRefs {
@@ -14359,7 +14982,7 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.cavePlaces,
-    aliasName: $_aliasNameGenerator(db.caves.uuid, db.cavePlaces.caveUuid),
+    aliasName: 'caves__uuid__cave_places__cave_uuid',
   );
 
   $CavePlacesProcessedTableManager get cavePlacesRefs {
@@ -14377,7 +15000,7 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rasterMaps,
-    aliasName: $_aliasNameGenerator(db.caves.uuid, db.rasterMaps.caveUuid),
+    aliasName: 'caves__uuid__raster_maps__cave_uuid',
   );
 
   $RasterMapsProcessedTableManager get rasterMapsRefs {
@@ -14395,7 +15018,7 @@ final class $CavesReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.caveTrips,
-    aliasName: $_aliasNameGenerator(db.caves.uuid, db.caveTrips.caveUuid),
+    aliasName: 'caves__uuid__cave_trips__cave_uuid',
   );
 
   $CaveTripsProcessedTableManager get caveTripsRefs {
@@ -14412,10 +15035,7 @@ final class $CavesReferences
   static MultiTypedResultKey<CavePlaceBeacons, List<CavePlaceBeacon>>
   _cavePlaceBeaconsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.cavePlaceBeacons,
-    aliasName: $_aliasNameGenerator(
-      db.caves.uuid,
-      db.cavePlaceBeacons.caveUuid,
-    ),
+    aliasName: 'caves__uuid__cave_place_beacons__cave_uuid',
   );
 
   $CavePlaceBeaconsProcessedTableManager get cavePlaceBeaconsRefs {
@@ -15382,9 +16002,8 @@ final class $CaveAreasReferences
     extends BaseReferences<_$AppDatabase, CaveAreas, CaveArea> {
   $CaveAreasReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.caveAreas.caveUuid, db.caves.uuid),
-  );
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('cave_areas__cave_uuid__caves__uuid');
 
   $CavesProcessedTableManager get caveUuid {
     final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
@@ -15401,9 +16020,7 @@ final class $CaveAreasReferences
   }
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.caveAreas.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('cave_areas__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -15419,13 +16036,8 @@ final class $CaveAreasReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.caveAreas.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_areas__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -15447,10 +16059,7 @@ final class $CaveAreasReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.cavePlaces,
-    aliasName: $_aliasNameGenerator(
-      db.caveAreas.uuid,
-      db.cavePlaces.caveAreaUuid,
-    ),
+    aliasName: 'cave_areas__uuid__cave_places__cave_area_uuid',
   );
 
   $CavePlacesProcessedTableManager get cavePlacesRefs {
@@ -15468,10 +16077,7 @@ final class $CaveAreasReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rasterMaps,
-    aliasName: $_aliasNameGenerator(
-      db.caveAreas.uuid,
-      db.rasterMaps.caveAreaUuid,
-    ),
+    aliasName: 'cave_areas__uuid__raster_maps__cave_area_uuid',
   );
 
   $RasterMapsProcessedTableManager get rasterMapsRefs {
@@ -16166,9 +16772,7 @@ final class $SurfacePlacesReferences
   $SurfacePlacesReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.surfacePlaces.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('surface_places__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -16184,13 +16788,8 @@ final class $SurfacePlacesReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.surfacePlaces.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('surface_places__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -16211,10 +16810,7 @@ final class $SurfacePlacesReferences
   static MultiTypedResultKey<CaveEntrances, List<CaveEntrance>>
   _caveEntrancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveEntrances,
-    aliasName: $_aliasNameGenerator(
-      db.surfacePlaces.uuid,
-      db.caveEntrances.surfacePlaceUuid,
-    ),
+    aliasName: 'surface_places__uuid__cave_entrances__surface_place_uuid',
   );
 
   $CaveEntrancesProcessedTableManager get caveEntrancesRefs {
@@ -16819,9 +17415,8 @@ final class $CaveEntrancesReferences
     extends BaseReferences<_$AppDatabase, CaveEntrances, CaveEntrance> {
   $CaveEntrancesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.caveEntrances.caveUuid, db.caves.uuid),
-  );
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('cave_entrances__cave_uuid__caves__uuid');
 
   $CavesProcessedTableManager get caveUuid {
     final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
@@ -16837,13 +17432,9 @@ final class $CaveEntrancesReferences
     );
   }
 
-  static SurfacePlaces _surfacePlaceUuidTable(_$AppDatabase db) =>
-      db.surfacePlaces.createAlias(
-        $_aliasNameGenerator(
-          db.caveEntrances.surfacePlaceUuid,
-          db.surfacePlaces.uuid,
-        ),
-      );
+  static SurfacePlaces _surfacePlaceUuidTable(_$AppDatabase db) => db
+      .surfacePlaces
+      .createAlias('cave_entrances__surface_place_uuid__surface_places__uuid');
 
   $SurfacePlacesProcessedTableManager? get surfacePlaceUuid {
     final $_column = $_itemColumn<Uint8List>('surface_place_uuid');
@@ -16860,9 +17451,7 @@ final class $CaveEntrancesReferences
   }
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.caveEntrances.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('cave_entrances__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -16878,13 +17467,8 @@ final class $CaveEntrancesReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.caveEntrances.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_entrances__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -17539,9 +18123,8 @@ final class $CavePlacesReferences
     extends BaseReferences<_$AppDatabase, CavePlaces, CavePlace> {
   $CavePlacesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.cavePlaces.caveUuid, db.caves.uuid),
-  );
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('cave_places__cave_uuid__caves__uuid');
 
   $CavesProcessedTableManager get caveUuid {
     final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
@@ -17558,9 +18141,7 @@ final class $CavePlacesReferences
   }
 
   static CaveAreas _caveAreaUuidTable(_$AppDatabase db) =>
-      db.caveAreas.createAlias(
-        $_aliasNameGenerator(db.cavePlaces.caveAreaUuid, db.caveAreas.uuid),
-      );
+      db.caveAreas.createAlias('cave_places__cave_area_uuid__cave_areas__uuid');
 
   $CaveAreasProcessedTableManager? get caveAreaUuid {
     final $_column = $_itemColumn<Uint8List>('cave_area_uuid');
@@ -17577,9 +18158,7 @@ final class $CavePlacesReferences
   }
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.cavePlaces.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('cave_places__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -17595,13 +18174,8 @@ final class $CavePlacesReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaces.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_places__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -17623,14 +18197,13 @@ final class $CavePlacesReferences
     CavePlaceToRasterMapDefinitions,
     List<CavePlaceToRasterMapDefinition>
   >
-  _cavePlaceToRasterMapDefinitionsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.cavePlaceToRasterMapDefinitions,
-        aliasName: $_aliasNameGenerator(
-          db.cavePlaces.uuid,
-          db.cavePlaceToRasterMapDefinitions.cavePlaceUuid,
-        ),
-      );
+  _cavePlaceToRasterMapDefinitionsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.cavePlaceToRasterMapDefinitions,
+    aliasName:
+        'cave_places__uuid__cave_place_to_raster_map_definitions__cave_place_uuid',
+  );
 
   $CavePlaceToRasterMapDefinitionsProcessedTableManager
   get cavePlaceToRasterMapDefinitionsRefs {
@@ -17654,10 +18227,7 @@ final class $CavePlacesReferences
   static MultiTypedResultKey<CaveTripPoints, List<CaveTripPoint>>
   _caveTripPointsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveTripPoints,
-    aliasName: $_aliasNameGenerator(
-      db.cavePlaces.uuid,
-      db.caveTripPoints.cavePlaceUuid,
-    ),
+    aliasName: 'cave_places__uuid__cave_trip_points__cave_place_uuid',
   );
 
   $CaveTripPointsProcessedTableManager get caveTripPointsRefs {
@@ -17676,10 +18246,7 @@ final class $CavePlacesReferences
   static MultiTypedResultKey<CavePlaceBeacons, List<CavePlaceBeacon>>
   _cavePlaceBeaconsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.cavePlaceBeacons,
-    aliasName: $_aliasNameGenerator(
-      db.cavePlaces.uuid,
-      db.cavePlaceBeacons.cavePlaceUuid,
-    ),
+    aliasName: 'cave_places__uuid__cave_place_beacons__cave_place_uuid',
   );
 
   $CavePlaceBeaconsProcessedTableManager get cavePlaceBeaconsRefs {
@@ -18697,9 +19264,8 @@ final class $RasterMapsReferences
     extends BaseReferences<_$AppDatabase, RasterMaps, RasterMap> {
   $RasterMapsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.rasterMaps.caveUuid, db.caves.uuid),
-  );
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('raster_maps__cave_uuid__caves__uuid');
 
   $CavesProcessedTableManager get caveUuid {
     final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
@@ -18716,9 +19282,7 @@ final class $RasterMapsReferences
   }
 
   static CaveAreas _caveAreaUuidTable(_$AppDatabase db) =>
-      db.caveAreas.createAlias(
-        $_aliasNameGenerator(db.rasterMaps.caveAreaUuid, db.caveAreas.uuid),
-      );
+      db.caveAreas.createAlias('raster_maps__cave_area_uuid__cave_areas__uuid');
 
   $CaveAreasProcessedTableManager? get caveAreaUuid {
     final $_column = $_itemColumn<Uint8List>('cave_area_uuid');
@@ -18735,9 +19299,7 @@ final class $RasterMapsReferences
   }
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.rasterMaps.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('raster_maps__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -18753,13 +19315,8 @@ final class $RasterMapsReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.rasterMaps.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('raster_maps__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -18781,14 +19338,13 @@ final class $RasterMapsReferences
     CavePlaceToRasterMapDefinitions,
     List<CavePlaceToRasterMapDefinition>
   >
-  _cavePlaceToRasterMapDefinitionsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.cavePlaceToRasterMapDefinitions,
-        aliasName: $_aliasNameGenerator(
-          db.rasterMaps.uuid,
-          db.cavePlaceToRasterMapDefinitions.rasterMapUuid,
-        ),
-      );
+  _cavePlaceToRasterMapDefinitionsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.cavePlaceToRasterMapDefinitions,
+    aliasName:
+        'raster_maps__uuid__cave_place_to_raster_map_definitions__raster_map_uuid',
+  );
 
   $CavePlaceToRasterMapDefinitionsProcessedTableManager
   get cavePlaceToRasterMapDefinitionsRefs {
@@ -19584,13 +20140,11 @@ final class $CavePlaceToRasterMapDefinitionsReferences
     super.$_typedResult,
   );
 
-  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) =>
-      db.cavePlaces.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceToRasterMapDefinitions.cavePlaceUuid,
-          db.cavePlaces.uuid,
-        ),
-      );
+  static CavePlaces _cavePlaceUuidTable(
+    _$AppDatabase db,
+  ) => db.cavePlaces.createAlias(
+    'cave_place_to_raster_map_definitions__cave_place_uuid__cave_places__uuid',
+  );
 
   $CavePlacesProcessedTableManager get cavePlaceUuid {
     final $_column = $_itemColumn<Uint8List>('cave_place_uuid')!;
@@ -19606,13 +20160,11 @@ final class $CavePlaceToRasterMapDefinitionsReferences
     );
   }
 
-  static RasterMaps _rasterMapUuidTable(_$AppDatabase db) =>
-      db.rasterMaps.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceToRasterMapDefinitions.rasterMapUuid,
-          db.rasterMaps.uuid,
-        ),
-      );
+  static RasterMaps _rasterMapUuidTable(
+    _$AppDatabase db,
+  ) => db.rasterMaps.createAlias(
+    'cave_place_to_raster_map_definitions__raster_map_uuid__raster_maps__uuid',
+  );
 
   $RasterMapsProcessedTableManager get rasterMapUuid {
     final $_column = $_itemColumn<Uint8List>('raster_map_uuid')!;
@@ -19628,13 +20180,11 @@ final class $CavePlaceToRasterMapDefinitionsReferences
     );
   }
 
-  static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceToRasterMapDefinitions.createdByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _createdByUserUuidTable(
+    _$AppDatabase db,
+  ) => db.users.createAlias(
+    'cave_place_to_raster_map_definitions__created_by_user_uuid__users__uuid',
+  );
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -19650,13 +20200,11 @@ final class $CavePlaceToRasterMapDefinitionsReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceToRasterMapDefinitions.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(
+    _$AppDatabase db,
+  ) => db.users.createAlias(
+    'cave_place_to_raster_map_definitions__last_modified_by_user_uuid__users__uuid',
+  );
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -20327,13 +20875,8 @@ final class $DocumentationFilesReferences
         BaseReferences<_$AppDatabase, DocumentationFiles, DocumentationFile> {
   $DocumentationFilesReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFiles.createdByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _createdByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('documentation_files__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -20351,10 +20894,7 @@ final class $DocumentationFilesReferences
 
   static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
       db.users.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFiles.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
+        'documentation_files__last_modified_by_user_uuid__users__uuid',
       );
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
@@ -20377,14 +20917,13 @@ final class $DocumentationFilesReferences
     DocumentationFilesToGeofeatures,
     List<DocumentationFilesToGeofeature>
   >
-  _documentationFilesToGeofeaturesRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.documentationFilesToGeofeatures,
-        aliasName: $_aliasNameGenerator(
-          db.documentationFiles.uuid,
-          db.documentationFilesToGeofeatures.documentationFileUuid,
-        ),
-      );
+  _documentationFilesToGeofeaturesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.documentationFilesToGeofeatures,
+    aliasName:
+        'documentation_files__uuid__documentation_files_to_geofeatures__documentation_file_uuid',
+  );
 
   $DocumentationFilesToGeofeaturesProcessedTableManager
   get documentationFilesToGeofeaturesRefs {
@@ -20410,14 +20949,13 @@ final class $DocumentationFilesReferences
     DocumentationFilesToCaveTrips,
     List<DocumentationFilesToCaveTrip>
   >
-  _documentationFilesToCaveTripsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.documentationFilesToCaveTrips,
-        aliasName: $_aliasNameGenerator(
-          db.documentationFiles.uuid,
-          db.documentationFilesToCaveTrips.documentationFileUuid,
-        ),
-      );
+  _documentationFilesToCaveTripsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.documentationFilesToCaveTrips,
+    aliasName:
+        'documentation_files__uuid__documentation_files_to_cave_trips__documentation_file_uuid',
+  );
 
   $DocumentationFilesToCaveTripsProcessedTableManager
   get documentationFilesToCaveTripsRefs {
@@ -21122,13 +21660,11 @@ final class $DocumentationFilesToGeofeaturesReferences
     super.$_typedResult,
   );
 
-  static DocumentationFiles _documentationFileUuidTable(_$AppDatabase db) =>
-      db.documentationFiles.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToGeofeatures.documentationFileUuid,
-          db.documentationFiles.uuid,
-        ),
-      );
+  static DocumentationFiles _documentationFileUuidTable(
+    _$AppDatabase db,
+  ) => db.documentationFiles.createAlias(
+    'documentation_files_to_geofeatures__documentation_file_uuid__documentation_files__uuid',
+  );
 
   $DocumentationFilesProcessedTableManager get documentationFileUuid {
     final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
@@ -21148,10 +21684,7 @@ final class $DocumentationFilesToGeofeaturesReferences
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
       db.users.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToGeofeatures.createdByUserUuid,
-          db.users.uuid,
-        ),
+        'documentation_files_to_geofeatures__created_by_user_uuid__users__uuid',
       );
 
   $UsersProcessedTableManager? get createdByUserUuid {
@@ -21168,13 +21701,11 @@ final class $DocumentationFilesToGeofeaturesReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToGeofeatures.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(
+    _$AppDatabase db,
+  ) => db.users.createAlias(
+    'documentation_files_to_geofeatures__last_modified_by_user_uuid__users__uuid',
+  );
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -21970,9 +22501,8 @@ final class $CaveTripsReferences
     extends BaseReferences<_$AppDatabase, CaveTrips, CaveTrip> {
   $CaveTripsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.caveTrips.caveUuid, db.caves.uuid),
-  );
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('cave_trips__cave_uuid__caves__uuid');
 
   $CavesProcessedTableManager get caveUuid {
     final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
@@ -21989,9 +22519,7 @@ final class $CaveTripsReferences
   }
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.caveTrips.createdByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('cave_trips__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -22007,13 +22535,8 @@ final class $CaveTripsReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.caveTrips.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_trips__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -22034,10 +22557,7 @@ final class $CaveTripsReferences
   static MultiTypedResultKey<CaveTripPoints, List<CaveTripPoint>>
   _caveTripPointsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.caveTripPoints,
-    aliasName: $_aliasNameGenerator(
-      db.caveTrips.uuid,
-      db.caveTripPoints.caveTripUuid,
-    ),
+    aliasName: 'cave_trips__uuid__cave_trip_points__cave_trip_uuid',
   );
 
   $CaveTripPointsProcessedTableManager get caveTripPointsRefs {
@@ -22057,14 +22577,13 @@ final class $CaveTripsReferences
     DocumentationFilesToCaveTrips,
     List<DocumentationFilesToCaveTrip>
   >
-  _documentationFilesToCaveTripsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.documentationFilesToCaveTrips,
-        aliasName: $_aliasNameGenerator(
-          db.caveTrips.uuid,
-          db.documentationFilesToCaveTrips.caveTripUuid,
-        ),
-      );
+  _documentationFilesToCaveTripsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.documentationFilesToCaveTrips,
+    aliasName:
+        'cave_trips__uuid__documentation_files_to_cave_trips__cave_trip_uuid',
+  );
 
   $DocumentationFilesToCaveTripsProcessedTableManager
   get documentationFilesToCaveTripsRefs {
@@ -22841,10 +23360,8 @@ final class $CaveTripPointsReferences
     extends BaseReferences<_$AppDatabase, CaveTripPoints, CaveTripPoint> {
   $CaveTripPointsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static CaveTrips _caveTripUuidTable(_$AppDatabase db) =>
-      db.caveTrips.createAlias(
-        $_aliasNameGenerator(db.caveTripPoints.caveTripUuid, db.caveTrips.uuid),
-      );
+  static CaveTrips _caveTripUuidTable(_$AppDatabase db) => db.caveTrips
+      .createAlias('cave_trip_points__cave_trip_uuid__cave_trips__uuid');
 
   $CaveTripsProcessedTableManager get caveTripUuid {
     final $_column = $_itemColumn<Uint8List>('cave_trip_uuid')!;
@@ -22860,13 +23377,8 @@ final class $CaveTripPointsReferences
     );
   }
 
-  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) =>
-      db.cavePlaces.createAlias(
-        $_aliasNameGenerator(
-          db.caveTripPoints.cavePlaceUuid,
-          db.cavePlaces.uuid,
-        ),
-      );
+  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) => db.cavePlaces
+      .createAlias('cave_trip_points__cave_place_uuid__cave_places__uuid');
 
   $CavePlacesProcessedTableManager? get cavePlaceUuid {
     final $_column = $_itemColumn<Uint8List>('cave_place_uuid');
@@ -22882,13 +23394,8 @@ final class $CaveTripPointsReferences
     );
   }
 
-  static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.caveTripPoints.createdByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _createdByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_trip_points__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -22904,13 +23411,8 @@ final class $CaveTripPointsReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.caveTripPoints.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_trip_points__last_modified_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -23550,13 +24052,11 @@ final class $DocumentationFilesToCaveTripsReferences
     super.$_typedResult,
   );
 
-  static DocumentationFiles _documentationFileUuidTable(_$AppDatabase db) =>
-      db.documentationFiles.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToCaveTrips.documentationFileUuid,
-          db.documentationFiles.uuid,
-        ),
-      );
+  static DocumentationFiles _documentationFileUuidTable(
+    _$AppDatabase db,
+  ) => db.documentationFiles.createAlias(
+    'documentation_files_to_cave_trips__documentation_file_uuid__documentation_files__uuid',
+  );
 
   $DocumentationFilesProcessedTableManager get documentationFileUuid {
     final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
@@ -23576,10 +24076,7 @@ final class $DocumentationFilesToCaveTripsReferences
 
   static CaveTrips _caveTripUuidTable(_$AppDatabase db) =>
       db.caveTrips.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToCaveTrips.caveTripUuid,
-          db.caveTrips.uuid,
-        ),
+        'documentation_files_to_cave_trips__cave_trip_uuid__cave_trips__uuid',
       );
 
   $CaveTripsProcessedTableManager get caveTripUuid {
@@ -23598,10 +24095,7 @@ final class $DocumentationFilesToCaveTripsReferences
 
   static Users _createdByUserUuidTable(_$AppDatabase db) =>
       db.users.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToCaveTrips.createdByUserUuid,
-          db.users.uuid,
-        ),
+        'documentation_files_to_cave_trips__created_by_user_uuid__users__uuid',
       );
 
   $UsersProcessedTableManager? get createdByUserUuid {
@@ -23618,13 +24112,11 @@ final class $DocumentationFilesToCaveTripsReferences
     );
   }
 
-  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.documentationFilesToCaveTrips.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _lastModifiedByUserUuidTable(
+    _$AppDatabase db,
+  ) => db.users.createAlias(
+    'documentation_files_to_cave_trips__last_modified_by_user_uuid__users__uuid',
+  );
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
@@ -24204,18 +24696,22 @@ typedef $CavePlaceBeaconsCreateCompanionBuilder =
       required Uuid uuid,
       required Uuid cavePlaceUuid,
       required Uuid caveUuid,
-      required String proximityUuid,
-      required int major,
-      required int minor,
+      Value<String> beaconType,
+      Value<String?> proximityUuid,
+      Value<int?> major,
+      Value<int?> minor,
       Value<String?> macAddress,
       Value<String?> localName,
       Value<String?> model,
       Value<int?> measuredPower,
+      Value<String?> firmwareVersion,
       Value<String?> notes,
       Value<int?> lastSeenAt,
       Value<int?> lastBatteryMv,
       Value<double?> lastTemperatureC,
       Value<double?> lastHumidityPct,
+      Value<double?> lastPressureHpa,
+      Value<int?> lastMovementCounter,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -24228,18 +24724,22 @@ typedef $CavePlaceBeaconsUpdateCompanionBuilder =
       Value<Uuid> uuid,
       Value<Uuid> cavePlaceUuid,
       Value<Uuid> caveUuid,
-      Value<String> proximityUuid,
-      Value<int> major,
-      Value<int> minor,
+      Value<String> beaconType,
+      Value<String?> proximityUuid,
+      Value<int?> major,
+      Value<int?> minor,
       Value<String?> macAddress,
       Value<String?> localName,
       Value<String?> model,
       Value<int?> measuredPower,
+      Value<String?> firmwareVersion,
       Value<String?> notes,
       Value<int?> lastSeenAt,
       Value<int?> lastBatteryMv,
       Value<double?> lastTemperatureC,
       Value<double?> lastHumidityPct,
+      Value<double?> lastPressureHpa,
+      Value<int?> lastMovementCounter,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -24252,13 +24752,8 @@ final class $CavePlaceBeaconsReferences
     extends BaseReferences<_$AppDatabase, CavePlaceBeacons, CavePlaceBeacon> {
   $CavePlaceBeaconsReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) =>
-      db.cavePlaces.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceBeacons.cavePlaceUuid,
-          db.cavePlaces.uuid,
-        ),
-      );
+  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) => db.cavePlaces
+      .createAlias('cave_place_beacons__cave_place_uuid__cave_places__uuid');
 
   $CavePlacesProcessedTableManager get cavePlaceUuid {
     final $_column = $_itemColumn<Uint8List>('cave_place_uuid')!;
@@ -24274,9 +24769,8 @@ final class $CavePlaceBeaconsReferences
     );
   }
 
-  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
-    $_aliasNameGenerator(db.cavePlaceBeacons.caveUuid, db.caves.uuid),
-  );
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('cave_place_beacons__cave_uuid__caves__uuid');
 
   $CavesProcessedTableManager get caveUuid {
     final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
@@ -24292,13 +24786,8 @@ final class $CavePlaceBeaconsReferences
     );
   }
 
-  static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceBeacons.createdByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _createdByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('cave_place_beacons__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -24316,10 +24805,7 @@ final class $CavePlaceBeaconsReferences
 
   static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
       db.users.createAlias(
-        $_aliasNameGenerator(
-          db.cavePlaceBeacons.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
+        'cave_place_beacons__last_modified_by_user_uuid__users__uuid',
       );
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
@@ -24353,6 +24839,11 @@ class $CavePlaceBeaconsFilterComposer
         column: $table.uuid,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<String> get beaconType => $composableBuilder(
+    column: $table.beaconType,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get proximityUuid => $composableBuilder(
     column: $table.proximityUuid,
@@ -24389,6 +24880,11 @@ class $CavePlaceBeaconsFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get firmwareVersion => $composableBuilder(
+    column: $table.firmwareVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnFilters(column),
@@ -24411,6 +24907,16 @@ class $CavePlaceBeaconsFilterComposer
 
   ColumnFilters<double> get lastHumidityPct => $composableBuilder(
     column: $table.lastHumidityPct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lastPressureHpa => $composableBuilder(
+    column: $table.lastPressureHpa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastMovementCounter => $composableBuilder(
+    column: $table.lastMovementCounter,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -24536,6 +25042,11 @@ class $CavePlaceBeaconsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get beaconType => $composableBuilder(
+    column: $table.beaconType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get proximityUuid => $composableBuilder(
     column: $table.proximityUuid,
     builder: (column) => ColumnOrderings(column),
@@ -24571,6 +25082,11 @@ class $CavePlaceBeaconsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get firmwareVersion => $composableBuilder(
+    column: $table.firmwareVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
@@ -24593,6 +25109,16 @@ class $CavePlaceBeaconsOrderingComposer
 
   ColumnOrderings<double> get lastHumidityPct => $composableBuilder(
     column: $table.lastHumidityPct,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lastPressureHpa => $composableBuilder(
+    column: $table.lastPressureHpa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastMovementCounter => $composableBuilder(
+    column: $table.lastMovementCounter,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -24716,6 +25242,11 @@ class $CavePlaceBeaconsAnnotationComposer
   GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
       $composableBuilder(column: $table.uuid, builder: (column) => column);
 
+  GeneratedColumn<String> get beaconType => $composableBuilder(
+    column: $table.beaconType,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get proximityUuid => $composableBuilder(
     column: $table.proximityUuid,
     builder: (column) => column,
@@ -24743,6 +25274,11 @@ class $CavePlaceBeaconsAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get firmwareVersion => $composableBuilder(
+    column: $table.firmwareVersion,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -24763,6 +25299,16 @@ class $CavePlaceBeaconsAnnotationComposer
 
   GeneratedColumn<double> get lastHumidityPct => $composableBuilder(
     column: $table.lastHumidityPct,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get lastPressureHpa => $composableBuilder(
+    column: $table.lastPressureHpa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastMovementCounter => $composableBuilder(
+    column: $table.lastMovementCounter,
     builder: (column) => column,
   );
 
@@ -24904,18 +25450,22 @@ class $CavePlaceBeaconsTableManager
                 Value<Uuid> uuid = const Value.absent(),
                 Value<Uuid> cavePlaceUuid = const Value.absent(),
                 Value<Uuid> caveUuid = const Value.absent(),
-                Value<String> proximityUuid = const Value.absent(),
-                Value<int> major = const Value.absent(),
-                Value<int> minor = const Value.absent(),
+                Value<String> beaconType = const Value.absent(),
+                Value<String?> proximityUuid = const Value.absent(),
+                Value<int?> major = const Value.absent(),
+                Value<int?> minor = const Value.absent(),
                 Value<String?> macAddress = const Value.absent(),
                 Value<String?> localName = const Value.absent(),
                 Value<String?> model = const Value.absent(),
                 Value<int?> measuredPower = const Value.absent(),
+                Value<String?> firmwareVersion = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int?> lastSeenAt = const Value.absent(),
                 Value<int?> lastBatteryMv = const Value.absent(),
                 Value<double?> lastTemperatureC = const Value.absent(),
                 Value<double?> lastHumidityPct = const Value.absent(),
+                Value<double?> lastPressureHpa = const Value.absent(),
+                Value<int?> lastMovementCounter = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -24926,6 +25476,7 @@ class $CavePlaceBeaconsTableManager
                 uuid: uuid,
                 cavePlaceUuid: cavePlaceUuid,
                 caveUuid: caveUuid,
+                beaconType: beaconType,
                 proximityUuid: proximityUuid,
                 major: major,
                 minor: minor,
@@ -24933,11 +25484,14 @@ class $CavePlaceBeaconsTableManager
                 localName: localName,
                 model: model,
                 measuredPower: measuredPower,
+                firmwareVersion: firmwareVersion,
                 notes: notes,
                 lastSeenAt: lastSeenAt,
                 lastBatteryMv: lastBatteryMv,
                 lastTemperatureC: lastTemperatureC,
                 lastHumidityPct: lastHumidityPct,
+                lastPressureHpa: lastPressureHpa,
+                lastMovementCounter: lastMovementCounter,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -24950,18 +25504,22 @@ class $CavePlaceBeaconsTableManager
                 required Uuid uuid,
                 required Uuid cavePlaceUuid,
                 required Uuid caveUuid,
-                required String proximityUuid,
-                required int major,
-                required int minor,
+                Value<String> beaconType = const Value.absent(),
+                Value<String?> proximityUuid = const Value.absent(),
+                Value<int?> major = const Value.absent(),
+                Value<int?> minor = const Value.absent(),
                 Value<String?> macAddress = const Value.absent(),
                 Value<String?> localName = const Value.absent(),
                 Value<String?> model = const Value.absent(),
                 Value<int?> measuredPower = const Value.absent(),
+                Value<String?> firmwareVersion = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int?> lastSeenAt = const Value.absent(),
                 Value<int?> lastBatteryMv = const Value.absent(),
                 Value<double?> lastTemperatureC = const Value.absent(),
                 Value<double?> lastHumidityPct = const Value.absent(),
+                Value<double?> lastPressureHpa = const Value.absent(),
+                Value<int?> lastMovementCounter = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -24972,6 +25530,7 @@ class $CavePlaceBeaconsTableManager
                 uuid: uuid,
                 cavePlaceUuid: cavePlaceUuid,
                 caveUuid: caveUuid,
+                beaconType: beaconType,
                 proximityUuid: proximityUuid,
                 major: major,
                 minor: minor,
@@ -24979,11 +25538,14 @@ class $CavePlaceBeaconsTableManager
                 localName: localName,
                 model: model,
                 measuredPower: measuredPower,
+                firmwareVersion: firmwareVersion,
                 notes: notes,
                 lastSeenAt: lastSeenAt,
                 lastBatteryMv: lastBatteryMv,
                 lastTemperatureC: lastTemperatureC,
                 lastHumidityPct: lastHumidityPct,
+                lastPressureHpa: lastPressureHpa,
+                lastMovementCounter: lastMovementCounter,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -25112,6 +25674,224 @@ typedef $CavePlaceBeaconsProcessedTableManager =
         bool lastModifiedByUserUuid,
       })
     >;
+typedef $RuuviSensorHistoryCreateCompanionBuilder =
+    RuuviSensorHistoryCompanion Function({
+      required String macAddress,
+      required int measuredAt,
+      Value<double?> temperatureC,
+      Value<double?> humidityPct,
+      Value<double?> pressureHpa,
+      Value<int> rowid,
+    });
+typedef $RuuviSensorHistoryUpdateCompanionBuilder =
+    RuuviSensorHistoryCompanion Function({
+      Value<String> macAddress,
+      Value<int> measuredAt,
+      Value<double?> temperatureC,
+      Value<double?> humidityPct,
+      Value<double?> pressureHpa,
+      Value<int> rowid,
+    });
+
+class $RuuviSensorHistoryFilterComposer
+    extends Composer<_$AppDatabase, RuuviSensorHistory> {
+  $RuuviSensorHistoryFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get macAddress => $composableBuilder(
+    column: $table.macAddress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get measuredAt => $composableBuilder(
+    column: $table.measuredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get temperatureC => $composableBuilder(
+    column: $table.temperatureC,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get humidityPct => $composableBuilder(
+    column: $table.humidityPct,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pressureHpa => $composableBuilder(
+    column: $table.pressureHpa,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $RuuviSensorHistoryOrderingComposer
+    extends Composer<_$AppDatabase, RuuviSensorHistory> {
+  $RuuviSensorHistoryOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get macAddress => $composableBuilder(
+    column: $table.macAddress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get measuredAt => $composableBuilder(
+    column: $table.measuredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get temperatureC => $composableBuilder(
+    column: $table.temperatureC,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get humidityPct => $composableBuilder(
+    column: $table.humidityPct,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pressureHpa => $composableBuilder(
+    column: $table.pressureHpa,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $RuuviSensorHistoryAnnotationComposer
+    extends Composer<_$AppDatabase, RuuviSensorHistory> {
+  $RuuviSensorHistoryAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get macAddress => $composableBuilder(
+    column: $table.macAddress,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get measuredAt => $composableBuilder(
+    column: $table.measuredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get temperatureC => $composableBuilder(
+    column: $table.temperatureC,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get humidityPct => $composableBuilder(
+    column: $table.humidityPct,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get pressureHpa => $composableBuilder(
+    column: $table.pressureHpa,
+    builder: (column) => column,
+  );
+}
+
+class $RuuviSensorHistoryTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          RuuviSensorHistory,
+          RuuviSensorHistoryData,
+          $RuuviSensorHistoryFilterComposer,
+          $RuuviSensorHistoryOrderingComposer,
+          $RuuviSensorHistoryAnnotationComposer,
+          $RuuviSensorHistoryCreateCompanionBuilder,
+          $RuuviSensorHistoryUpdateCompanionBuilder,
+          (
+            RuuviSensorHistoryData,
+            BaseReferences<
+              _$AppDatabase,
+              RuuviSensorHistory,
+              RuuviSensorHistoryData
+            >,
+          ),
+          RuuviSensorHistoryData,
+          PrefetchHooks Function()
+        > {
+  $RuuviSensorHistoryTableManager(_$AppDatabase db, RuuviSensorHistory table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $RuuviSensorHistoryFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $RuuviSensorHistoryOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $RuuviSensorHistoryAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> macAddress = const Value.absent(),
+                Value<int> measuredAt = const Value.absent(),
+                Value<double?> temperatureC = const Value.absent(),
+                Value<double?> humidityPct = const Value.absent(),
+                Value<double?> pressureHpa = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RuuviSensorHistoryCompanion(
+                macAddress: macAddress,
+                measuredAt: measuredAt,
+                temperatureC: temperatureC,
+                humidityPct: humidityPct,
+                pressureHpa: pressureHpa,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String macAddress,
+                required int measuredAt,
+                Value<double?> temperatureC = const Value.absent(),
+                Value<double?> humidityPct = const Value.absent(),
+                Value<double?> pressureHpa = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RuuviSensorHistoryCompanion.insert(
+                macAddress: macAddress,
+                measuredAt: measuredAt,
+                temperatureC: temperatureC,
+                humidityPct: humidityPct,
+                pressureHpa: pressureHpa,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $RuuviSensorHistoryProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      RuuviSensorHistory,
+      RuuviSensorHistoryData,
+      $RuuviSensorHistoryFilterComposer,
+      $RuuviSensorHistoryOrderingComposer,
+      $RuuviSensorHistoryAnnotationComposer,
+      $RuuviSensorHistoryCreateCompanionBuilder,
+      $RuuviSensorHistoryUpdateCompanionBuilder,
+      (
+        RuuviSensorHistoryData,
+        BaseReferences<
+          _$AppDatabase,
+          RuuviSensorHistory,
+          RuuviSensorHistoryData
+        >,
+      ),
+      RuuviSensorHistoryData,
+      PrefetchHooks Function()
+    >;
 typedef $TripReportTemplatesCreateCompanionBuilder =
     TripReportTemplatesCompanion Function({
       required Uuid uuid,
@@ -25150,13 +25930,8 @@ final class $TripReportTemplatesReferences
     super.$_typedResult,
   );
 
-  static Users _createdByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(
-          db.tripReportTemplates.createdByUserUuid,
-          db.users.uuid,
-        ),
-      );
+  static Users _createdByUserUuidTable(_$AppDatabase db) => db.users
+      .createAlias('trip_report_templates__created_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get createdByUserUuid {
     final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
@@ -25174,10 +25949,7 @@ final class $TripReportTemplatesReferences
 
   static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
       db.users.createAlias(
-        $_aliasNameGenerator(
-          db.tripReportTemplates.lastModifiedByUserUuid,
-          db.users.uuid,
-        ),
+        'trip_report_templates__last_modified_by_user_uuid__users__uuid',
       );
 
   $UsersProcessedTableManager? get lastModifiedByUserUuid {
@@ -25667,9 +26439,7 @@ final class $ChangeLogReferences
   $ChangeLogReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static Users _changedByUserUuidTable(_$AppDatabase db) =>
-      db.users.createAlias(
-        $_aliasNameGenerator(db.changeLog.changedByUserUuid, db.users.uuid),
-      );
+      db.users.createAlias('change_log__changed_by_user_uuid__users__uuid');
 
   $UsersProcessedTableManager? get changedByUserUuid {
     final $_column = $_itemColumn<Uint8List>('changed_by_user_uuid');
@@ -25688,10 +26458,7 @@ final class $ChangeLogReferences
   static MultiTypedResultKey<ChangeLogField, List<ChangeLogFieldData>>
   _changeLogFieldRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.changeLogField,
-    aliasName: $_aliasNameGenerator(
-      db.changeLog.uuid,
-      db.changeLogField.changeUuid,
-    ),
+    aliasName: 'change_log__uuid__change_log_field__change_uuid',
   );
 
   $ChangeLogFieldProcessedTableManager get changeLogFieldRefs {
@@ -26122,10 +26889,8 @@ final class $ChangeLogFieldReferences
     extends BaseReferences<_$AppDatabase, ChangeLogField, ChangeLogFieldData> {
   $ChangeLogFieldReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static ChangeLog _changeUuidTable(_$AppDatabase db) =>
-      db.changeLog.createAlias(
-        $_aliasNameGenerator(db.changeLogField.changeUuid, db.changeLog.uuid),
-      );
+  static ChangeLog _changeUuidTable(_$AppDatabase db) => db.changeLog
+      .createAlias('change_log_field__change_uuid__change_log__uuid');
 
   $ChangeLogProcessedTableManager get changeUuid {
     final $_column = $_itemColumn<Uint8List>('change_uuid')!;
@@ -26451,6 +27216,8 @@ class $AppDatabaseManager {
       );
   $CavePlaceBeaconsTableManager get cavePlaceBeacons =>
       $CavePlaceBeaconsTableManager(_db, _db.cavePlaceBeacons);
+  $RuuviSensorHistoryTableManager get ruuviSensorHistory =>
+      $RuuviSensorHistoryTableManager(_db, _db.ruuviSensorHistory);
   $TripReportTemplatesTableManager get tripReportTemplates =>
       $TripReportTemplatesTableManager(_db, _db.tripReportTemplates);
   $ChangeLogTableManager get changeLog =>

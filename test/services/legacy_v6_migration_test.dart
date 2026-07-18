@@ -70,7 +70,7 @@ void main() {
         }
 
         // Drift reports the new schema version.
-        expect(db.schemaVersion, 15);
+        expect(db.schemaVersion, 16);
       } finally {
         await db.close();
         await tmpDir.delete(recursive: true);

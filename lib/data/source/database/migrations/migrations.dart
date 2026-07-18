@@ -473,6 +473,81 @@ class V14ToV15Migration extends SchemaMigration {
   }
 }
 
+/// v15 → v16: multi-kind tag support + Ruuvi history.
+/// 1. Recreate cave_place_beacons: beacon_type discriminator (existing
+///    rows become 'ibeacon'), iBeacon triple relaxed to nullable, new
+///    firmware_version + last_pressure_hpa + last_movement_counter
+///    columns. The triple UNIQUE constraint keeps guarding iBeacon rows
+///    (NULL triples never collide), so Ruuvi identity gets its own
+///    partial unique index on (mac_address, cave_uuid).
+/// 2. Create the local-only ruuvi_sensor_history table.
+class V15ToV16Migration extends SchemaMigration {
+  const V15ToV16Migration();
+
+  @override
+  int get toVersion => 16;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.cavePlaceBeacons,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO cave_place_beacons '
+          '(uuid, cave_place_uuid, cave_uuid, beacon_type, '
+          'proximity_uuid, major, minor, mac_address, local_name, model, '
+          'measured_power, notes, '
+          'last_seen_at, last_battery_mv, last_temperature_c, '
+          'last_humidity_pct, '
+          'created_at, updated_at, deleted_at, '
+          'created_by_user_uuid, last_modified_by_user_uuid) '
+          "VALUES (?, ?, ?, 'ibeacon', ?, ?, ?, ?, ?, ?, ?, ?, "
+          '?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            d['uuid'],
+            d['cave_place_uuid'],
+            d['cave_uuid'],
+            d['proximity_uuid'],
+            d['major'],
+            d['minor'],
+            d['mac_address'],
+            d['local_name'],
+            d['model'],
+            d['measured_power'],
+            d['notes'],
+            d['last_seen_at'],
+            d['last_battery_mv'],
+            d['last_temperature_c'],
+            d['last_humidity_pct'],
+            d['created_at'],
+            d['updated_at'],
+            d['deleted_at'],
+            d['created_by_user_uuid'],
+            d['last_modified_by_user_uuid'],
+          ],
+        );
+      },
+    );
+    // The recreate drops the v15 indexes with the table — restore them.
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_identity '
+      'ON cave_place_beacons(proximity_uuid, major, minor)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place '
+      'ON cave_place_beacons(cave_place_uuid)',
+    );
+    await db.customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi '
+      "ON cave_place_beacons(mac_address, cave_uuid) "
+      "WHERE beacon_type = 'ruuvi'",
+    );
+    await migrator.createTable(db.ruuviSensorHistory);
+  }
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -488,6 +563,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V12ToV13Migration(),
   V13ToV14Migration(),
   V14ToV15Migration(),
+  V15ToV16Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

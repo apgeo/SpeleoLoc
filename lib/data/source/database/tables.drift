@@ -268,33 +268,63 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
 );
 
 -- Table: cave_place_beacons
--- BLE beacon registrations: maps a physical iBeacon tag (identity =
--- proximity UUID + major + minor, treated as opaque — hardware tests showed
--- the vendor's MAC-derivation rule does not hold) to a cave place, the
--- beacon analogue of a QR label. Health columns (last_seen_at, battery,
--- temperature) are local telemetry refreshed on each encounter.
+-- BLE tag registrations: maps a physical tag to a cave place, the beacon
+-- analogue of a QR label. Two tag kinds share the table, discriminated by
+-- beacon_type: 'ibeacon' (identity = proximity UUID + major + minor,
+-- treated as opaque — hardware tests showed the vendor's MAC-derivation
+-- rule does not hold) and 'ruuvi' (identity = payload MAC; the iBeacon
+-- triple stays NULL — SQLite treats NULLs as distinct in the UNIQUE
+-- constraint, so Ruuvi uniqueness is enforced by a dedicated partial
+-- index instead, see the migration). Health columns (last_*) are local
+-- telemetry refreshed on each encounter.
 CREATE TABLE IF NOT EXISTS cave_place_beacons (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
     cave_place_uuid             BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
     cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
-    proximity_uuid              TEXT(36) NOT NULL, -- canonical uppercase 8-4-4-4-12
-    major                       INTEGER NOT NULL,
-    minor                       INTEGER NOT NULL,
-    mac_address                 TEXT(17),          -- AA:BB:CC:DD:EE:FF, Android-sourced
-    local_name                  TEXT(32),          -- BP1003 name, e.g. K02109b
-    model                       TEXT(32),          -- free text: HCBB22 / H8 / ...
+    beacon_type                 TEXT(16) NOT NULL DEFAULT 'ibeacon',
+    proximity_uuid              TEXT(36),          -- canonical uppercase 8-4-4-4-12; NULL for ruuvi
+    major                       INTEGER,           -- NULL for ruuvi
+    minor                       INTEGER,           -- NULL for ruuvi
+    mac_address                 TEXT(17),          -- AA:BB:CC:DD:EE:FF; Ruuvi identity (payload-sourced)
+    local_name                  TEXT(32),          -- BP1003 name (K02109b) / Ruuvi name (Ruuvi 884F)
+    model                       TEXT(32),          -- free text: HCBB22 / H8 / RuuviTag Pro 3in1 / ...
     measured_power              INTEGER,           -- advertised RSSI@1m, for proximity calc
+    firmware_version            TEXT(32),          -- read via DIS during Ruuvi history download
     notes                       TEXT,
     last_seen_at                INTEGER,
     last_battery_mv             INTEGER,
     last_temperature_c          REAL,
     last_humidity_pct           REAL,
+    last_pressure_hpa           REAL,
+    last_movement_counter       INTEGER,
     created_at                  INTEGER,
     updated_at                  INTEGER,
     deleted_at                  INTEGER,
     created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(proximity_uuid, major, minor, cave_uuid) ON CONFLICT ROLLBACK
+);
+
+-- Ruuvi identity uniqueness per cave. Constraint-bearing (not just perf),
+-- so it lives here for fresh installs; the v15→v16 migration creates the
+-- same index for upgraders.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi
+    ON cave_place_beacons(mac_address, cave_uuid) WHERE beacon_type = 'ruuvi';
+
+-- Table: ruuvi_sensor_history
+-- Downloaded Ruuvi on-tag measurement history. Local-only telemetry like
+-- `configurations`: never change-logged, never exported by sync/archive —
+-- sharing happens via CSV export. Keyed by the physical tag's MAC (not
+-- the registration uuid) so history survives unregister/re-register and
+-- cave moves. Wide rows merge the per-sensor log streams that share one
+-- timestamp; the PK makes re-downloads idempotent upserts.
+CREATE TABLE IF NOT EXISTS ruuvi_sensor_history (
+    mac_address     TEXT(17) NOT NULL,
+    measured_at     INTEGER NOT NULL,  -- Unix epoch seconds (tag log timestamps)
+    temperature_c   REAL,
+    humidity_pct    REAL,
+    pressure_hpa    REAL,
+    PRIMARY KEY(mac_address, measured_at)
 );
 
 -- Table: trip_report_templates
