@@ -106,5 +106,20 @@ void main() {
       expect(await repo.upsertSamples(mac, const []), 0);
       expect(await repo.getReadings(mac), isEmpty);
     });
+
+    test('watchReadings emits after an upsert (raw SQL must notify)', () async {
+      final sawRow = expectLater(
+        repo.watchReadings(mac),
+        emitsThrough(
+          predicate<List<RuuviSensorHistoryData>>(
+            (rows) => rows.length == 1 && rows.single.temperatureC == 4.2,
+          ),
+        ),
+      );
+      await repo.upsertSamples(mac, [
+        RuuviLogSample(measuredAt: epoch(1000), temperatureC: 4.2),
+      ]);
+      await sawRow;
+    });
   });
 }

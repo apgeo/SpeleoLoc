@@ -51,6 +51,10 @@ class RuuviHistoryRepository {
           );
         }
       });
+      // Raw statements bypass drift's table-update tracking, so the
+      // [watchReadings] streams behind the history screen would never
+      // re-emit without this explicit notification.
+      _database.markTablesUpdated([_database.ruuviSensorHistory]);
       return merged.length;
     } catch (e, st) {
       _log.severe('Failed to store Ruuvi history', e, st);
