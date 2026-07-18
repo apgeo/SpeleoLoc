@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_history_repository.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
@@ -129,6 +131,26 @@ final beaconRepositoryProvider = Provider<BeaconRepository>(
     clock: ref.watch(clockProvider),
   ),
 );
+
+/// Downloaded Ruuvi on-tag history (ruuvi_sensor_history, local-only).
+final ruuviHistoryRepositoryProvider = Provider<RuuviHistoryRepository>(
+  (ref) => RuuviHistoryRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// GATT download of a Ruuvi tag's on-board log.
+final ruuviHistoryServiceProvider = Provider<RuuviHistoryService>(
+  (ref) => RuuviHistoryService(
+    ref.watch(ruuviHistoryRepositoryProvider),
+    ref.watch(beaconRepositoryProvider),
+  ),
+);
+
+/// Stored history readings of one tag (keyed by MAC), oldest first.
+final ruuviHistoryStreamProvider =
+    StreamProvider.family<List<RuuviSensorHistoryData>, String>(
+      (ref, macAddress) =>
+          ref.watch(ruuviHistoryRepositoryProvider).watchReadings(macAddress),
+    );
 
 /// The single chokepoint for PCI/QCRI generation, validation and write
 /// integration. See `docs/features/place-code-identifiers.md`.
