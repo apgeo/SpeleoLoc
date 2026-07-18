@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/services/beacon/bp1003_advertisement_parser.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -20,9 +21,10 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///    `dchs_flutter_beacon`. This is the only channel able to see iBeacon
 ///    frames on iOS.
 ///  * **Raw scan tab** — generic BLE scanning via `flutter_blue_plus` with
-///    BP1003 scan-response decoding (battery, MAC, temperature…). On iOS
-///    the iBeacon manufacturer frame is hidden by the OS; this tab tells us
-///    which secondary identity channels remain visible there.
+///    BP1003 scan-response and Ruuvi RAWv2 decoding (battery, MAC,
+///    temperature…). On iOS the iBeacon manufacturer frame is hidden by the
+///    OS; this tab tells us which secondary identity channels remain
+///    visible there.
 ///
 /// Everything observed can be exported as a JSON-lines file for offline
 /// analysis of field tests (see `.claude/plans/ble-beacon-support-plan.md`,
@@ -351,6 +353,23 @@ class _BeaconLabPageState extends State<BeaconLabPage>
               'temperatureC': entry.bp1003!.temperatureC,
               'humidityPct': entry.bp1003!.humidityPct,
             },
+          if (entry.ruuvi != null)
+            'ruuvi': {
+              'mac': entry.ruuvi!.macAddress,
+              'model': entry.ruuvi!.inferredModel.label,
+              'temperatureC': entry.ruuvi!.temperatureC,
+              'humidityPct': entry.ruuvi!.humidityPct,
+              'pressureHpa': entry.ruuvi!.pressureHpa,
+              'batteryMv': entry.ruuvi!.batteryMv,
+              'txPowerDbm': entry.ruuvi!.txPowerDbm,
+              'accMg': [
+                entry.ruuvi!.accelerationXMg,
+                entry.ruuvi!.accelerationYMg,
+                entry.ruuvi!.accelerationZMg,
+              ],
+              'movement': entry.ruuvi!.movementCounter,
+              'sequence': entry.ruuvi!.measurementSequence,
+            },
           'manufacturerData': {
             for (final e in r.advertisementData.manufacturerData.entries)
               '0x${e.key.toRadixString(16).padLeft(4, '0')}': _hex(e.value),
@@ -588,11 +607,17 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     final name = adv.advName.isNotEmpty ? adv.advName : r.device.remoteId.str;
     final ib = d.iBeacon;
     final sd = d.bp1003;
+    final rv = d.ruuvi;
     final subtitleParts = <String>[
       if (ib != null) 'iBeacon ${ib.major}/${ib.minor} @${ib.measuredPower}dBm',
       if (sd != null)
         'bat ${sd.batteryMv}mV · ${sd.macAddress}'
             '${sd.temperatureC != null ? ' · ${sd.temperatureC!.toStringAsFixed(2)}°C ${sd.humidityPct}%' : ''}',
+      if (rv != null)
+        '${rv.inferredModel.label} · bat ${rv.batteryMv}mV'
+            '${rv.temperatureC != null ? ' · ${rv.temperatureC!.toStringAsFixed(2)}°C' : ''}'
+            '${rv.humidityPct != null ? ' ${rv.humidityPct!.toStringAsFixed(1)}%' : ''}'
+            '${rv.pressureHpa != null ? ' ${rv.pressureHpa!.toStringAsFixed(1)}hPa' : ''}',
       '×${d.count}',
     ];
     return ExpansionTile(
@@ -614,6 +639,15 @@ class _BeaconLabPageState extends State<BeaconLabPage>
             '0x${sd.statusFlags.toRadixString(16)} · connectable: ${sd.isConnectable} · accel: ${sd.hasAccelerometer} · T/H sensor: ${sd.hasTempHumiditySensor}',
           ),
           _kv('Raw T/H bytes', _hex(sd.rawTempHumidity)),
+        ],
+        if (rv != null) ...[
+          _kv('Ruuvi', rv.toString()),
+          _kv(
+            'Ruuvi acc/tx',
+            'acc (${rv.accelerationXMg}, ${rv.accelerationYMg}, '
+                '${rv.accelerationZMg}) mG · tx ${rv.txPowerDbm} dBm'
+                '${rv.isLowBattery ? ' · LOW BATTERY' : ''}',
+          ),
         ],
         for (final e in adv.manufacturerData.entries)
           _kv(
@@ -687,6 +721,7 @@ class _RawDevice {
   int count = 0;
   IBeaconFrame? iBeacon;
   Bp1003ServiceData? bp1003;
+  RuuviAdvertisement? ruuvi;
 
   _RawDevice({required this.first, required this.last}) : lastSeen = first;
 
@@ -707,10 +742,16 @@ class _RawDevice {
             e.key.str: e.value,
         }) ??
         bp1003;
+    ruuvi =
+        RuuviAdvertisement.fromManufacturerData(
+          r.advertisementData.manufacturerData,
+        ) ??
+        ruuvi;
   }
 
   bool get isBeaconLike =>
       iBeacon != null ||
       bp1003 != null ||
+      ruuvi != null ||
       bp1003LocalNamePattern.hasMatch(last.advertisementData.advName);
 }
