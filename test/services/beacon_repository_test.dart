@@ -196,4 +196,94 @@ void main() {
       );
     });
   });
+
+  group('BeaconRepository (ruuvi)', () {
+    const mac = 'CB:B8:33:4C:88:4F';
+
+    test('register + findByMac round-trip, MAC normalised', () async {
+      await repo.registerRuuviTag(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        macAddress: mac.toLowerCase(),
+        model: 'RuuviTag Pro 3in1',
+      );
+      final beacons = await repo.getBeaconsForPlace(placeUuid);
+      expect(beacons, hasLength(1));
+      final b = beacons.single;
+      expect(b.beaconType, BeaconTypes.ruuvi);
+      expect(b.macAddress, mac);
+      expect(b.proximityUuid, isNull);
+      expect(b.major, isNull);
+      expect(b.model, 'RuuviTag Pro 3in1');
+
+      final hits = await repo.findByMac(mac.toLowerCase());
+      expect(hits, hasLength(1));
+      expect(hits.single.cavePlace.uuid, placeUuid);
+      expect(await repo.findByMac('AA:AA:AA:AA:AA:AA'), isEmpty);
+    });
+
+    test('duplicate MAC in the same cave is rejected', () async {
+      await repo.registerRuuviTag(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        macAddress: mac,
+      );
+      expect(
+        () => repo.registerRuuviTag(
+          cavePlaceUuid: placeUuid,
+          caveUuid: caveUuid,
+          macAddress: mac,
+        ),
+        throwsA(isA<DuplicateEntryException>()),
+      );
+    });
+
+    test('ruuvi and iBeacon registrations coexist on one place', () async {
+      await repo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: uuidA,
+        major: 1,
+        minor: 2,
+      );
+      await repo.registerRuuviTag(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        macAddress: mac,
+      );
+      final beacons = await repo.getBeaconsForPlace(placeUuid);
+      expect(beacons, hasLength(2));
+      expect(
+        beacons.map(BeaconRepository.identityOf),
+        containsAll(['$uuidA/1/2', 'RUUVI/$mac']),
+      );
+    });
+
+    test('updateHealth stamps the ruuvi telemetry columns', () async {
+      final id = await repo.registerRuuviTag(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        macAddress: mac,
+      );
+      final before = (await repo.getBeaconsForPlace(placeUuid)).single;
+      await repo.updateHealth(
+        id,
+        batteryMv: 2977,
+        temperatureC: 4.2,
+        humidityPct: 98.5,
+        pressureHpa: 1000.44,
+        movementCounter: 66,
+        firmwareVersion: '3.31.1',
+      );
+      final after = (await repo.getBeaconsForPlace(placeUuid)).single;
+      expect(after.lastPressureHpa, 1000.44);
+      expect(after.lastMovementCounter, 66);
+      expect(after.firmwareVersion, '3.31.1');
+      expect(
+        after.updatedAt,
+        before.updatedAt,
+        reason: 'telemetry must not bump the sync timestamp',
+      );
+    });
+  });
 }
