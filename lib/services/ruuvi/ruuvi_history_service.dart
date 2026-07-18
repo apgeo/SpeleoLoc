@@ -96,9 +96,14 @@ class RuuviHistoryService {
           await _beacons.updateHealth(m.beacon.uuid, firmwareVersion: firmware);
         }
       }
+      // The sample time range diagnoses tags whose clock was never synced
+      // (their log timestamps then land far in the past and vanish behind
+      // the history screen's recent-range filters).
+      final times = [for (final s in samples) s.measuredAt]..sort();
       _log.info(
-        'Ruuvi history download for $mac: ${samples.length} samples, '
-        '$stored timestamps stored, firmware ${firmware ?? 'unknown'}',
+        'Ruuvi history download for $mac: ${samples.length} samples '
+        '${times.isEmpty ? '' : '(${times.first} … ${times.last}) '}'
+        '→ $stored timestamps stored, firmware ${firmware ?? 'unknown'}',
       );
       return RuuviDownloadResult(
         timestampsStored: stored,

@@ -318,8 +318,21 @@ class _RuuviHistoryPageState extends ConsumerState<RuuviHistoryPage> {
               data: (rows) {
                 final ranged = _applyRange(rows);
                 if (ranged.isEmpty) {
+                  // Distinguish "nothing downloaded yet" from "the selected
+                  // range hides it" — tags with an unsynced clock can report
+                  // timestamps far outside the recent ranges.
                   return Center(
-                    child: Text(LocServ.inst.t('ruuvi_history_empty')),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        rows.isEmpty
+                            ? LocServ.inst.t('ruuvi_history_empty')
+                            : LocServ.inst.t('ruuvi_history_range_empty', {
+                                'n': '${rows.length}',
+                              }),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   );
                 }
                 return _listView ? _list(ranged) : _chart(ranged);
