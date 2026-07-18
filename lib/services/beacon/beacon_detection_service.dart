@@ -11,6 +11,8 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
@@ -22,11 +24,14 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Foreground automatic beacon detection (plan Phase 2).
 ///
-/// While the app is in the foreground and detection is enabled, ranges
-/// iBeacons, feeds sightings through [BeaconMatchEngine], and on a trigger:
+/// While the app is in the foreground and detection is enabled, two frame
+/// sources — iBeacon ranging and the shared Ruuvi advertisement scan
+/// (active only while Ruuvi registrations exist) — feed one
+/// [BeaconMatchEngine], and on a trigger:
 ///  1. resolves the identity to a registered cave place
-///     ([BeaconRepository.findByIdentity], ambiguity resolved quietly by
-///     preferring the active-trip cave, then the last-open cave),
+///     ([BeaconRepository.findByIdentity] / [BeaconRepository.findByMac],
+///     ambiguity resolved quietly by preferring the active-trip cave,
+///     then the last-open cave),
 ///  2. stamps beacon health (last seen),
 ///  3. records a trip point when a trip is active in that cave
 ///     (exactly like a QR scan),
@@ -52,10 +57,22 @@ class BeaconDetectionService {
   final _log = AppLogger.of('BeaconDetectionService');
 
   StreamSubscription<RangingResult>? _rangingSub;
+  StreamSubscription<RuuviSighting>? _ruuviSub;
   StreamSubscription<List<CavePlaceBeacon>>? _registrationsSub;
+  Timer? _ruuviDutyTimer;
   BeaconMatchEngine? _engine;
   bool _running = false;
   bool get isRunning => _running;
+
+  /// Registered identities, mirrored from the watch — gates the passive
+  /// Ruuvi health harvesting without a DB lookup per advertisement.
+  Set<String> _registeredIdentities = const {};
+  bool _ruuviNeeded = false;
+
+  /// Ruuvi advertisements arrive ~every 1.3 s; telemetry writes are
+  /// throttled to one per tag per minute.
+  static const _ruuviHealthInterval = Duration(minutes: 1);
+  final Map<String, DateTime> _lastRuuviHealth = {};
 
   /// True between app-pause and app-resume while the foreground service
   /// keeps scanning; triggers then alert via notification + loud sound.
@@ -113,8 +130,14 @@ class BeaconDetectionService {
   Future<void> stop() async {
     await _rangingSub?.cancel();
     _rangingSub = null;
+    _ruuviDutyTimer?.cancel();
+    _ruuviDutyTimer = null;
+    await _ruuviSub?.cancel();
+    _ruuviSub = null;
     await _registrationsSub?.cancel();
     _registrationsSub = null;
+    _registeredIdentities = const {};
+    _ruuviNeeded = false;
     _engine = null;
     if (_inBackground) {
       _inBackground = false;
@@ -188,6 +211,18 @@ class BeaconDetectionService {
       await flutterBeacon.setBetweenScanPeriod(between);
       _engine?.config = config.copyWith(debounceCount: 1);
       _inBackground = true;
+      // The Ruuvi scan has no AltBeacon-style duty cycle, so burst it with
+      // a timer: subscribe (starts the shared scan) for one burst length,
+      // then release (stops it) until the next interval.
+      if (_ruuviNeeded) {
+        await _ruuviSub?.cancel();
+        _ruuviSub = null;
+        _ruuviDutyTimer = Timer.periodic(
+          Duration(seconds: config.backgroundScanIntervalSec),
+          (_) => _ruuviBurst(),
+        );
+        _ruuviBurst();
+      }
       _log.info(
         'Background detection: burst ${_backgroundScanBurstMs}ms '
         'every ${config.backgroundScanIntervalSec}s',
@@ -198,8 +233,25 @@ class BeaconDetectionService {
     }
   }
 
+  void _ruuviBurst() {
+    if (!_inBackground || !_ruuviNeeded || _ruuviSub != null) return;
+    _ruuviSub = RuuviScanService.instance.sightings.listen(
+      _onRuuviSighting,
+      onError: (Object e, StackTrace st) =>
+          _log.warning('Background ruuvi scan error', e, st),
+    );
+    Timer(const Duration(milliseconds: _backgroundScanBurstMs), () {
+      if (!_inBackground) return;
+      unawaited(_ruuviSub?.cancel());
+      _ruuviSub = null;
+    });
+  }
+
   Future<void> _exitBackgroundMode() async {
     _inBackground = false;
+    _ruuviDutyTimer?.cancel();
+    _ruuviDutyTimer = null;
+    _syncRuuviSubscription();
     if (!Platform.isAndroid) return;
     try {
       await FlutterForegroundTask.stopService();
@@ -271,16 +323,77 @@ class BeaconDetectionService {
           db.cavePlaceBeacons,
         )..where((b) => b.deletedAt.isNull())).watch().listen(
           (rows) {
-            _engine?.updateRegistrations({
-              for (final r in rows)
-                '${r.proximityUuid.toUpperCase()}/${r.major}/${r.minor}',
-            });
+            _registeredIdentities = {
+              for (final r in rows) ?BeaconRepository.identityOf(r),
+            };
+            _engine?.updateRegistrations(_registeredIdentities);
+            _ruuviNeeded = rows.any(
+              (r) => r.beaconType == BeaconTypes.ruuvi,
+            );
+            _syncRuuviSubscription();
           },
           onError: (Object e, StackTrace st) {
             _log.warning('Registration watch error', e, st);
           },
         );
   }
+
+  /// Attaches/detaches the Ruuvi frame source to match the registration
+  /// set — the shared scan only runs while a registered Ruuvi tag exists.
+  /// In background mode the duty-cycle timer owns the subscription instead.
+  void _syncRuuviSubscription() {
+    if (_inBackground) return;
+    if (_ruuviNeeded && _engine != null) {
+      _ruuviSub ??= RuuviScanService.instance.sightings.listen(
+        _onRuuviSighting,
+        onError: (Object e, StackTrace st) =>
+            _log.warning('Detection ruuvi scan error', e, st),
+      );
+    } else {
+      unawaited(_ruuviSub?.cancel());
+      _ruuviSub = null;
+    }
+  }
+
+  void _onRuuviSighting(RuuviSighting s) {
+    final engine = _engine;
+    if (engine == null) return;
+    if (engine.observe(s.identity, s.rssi, DateTime.now())) {
+      // Sequential, not awaited: scan callbacks must not queue up.
+      unawaited(_handleRuuviTrigger(s));
+    } else if (_registeredIdentities.contains(s.identity)) {
+      // No trigger, but the tag broadcasts telemetry anyway — harvest it.
+      unawaited(_harvestRuuviHealth(s));
+    }
+  }
+
+  /// Passive telemetry from advertisements of registered tags, throttled
+  /// per tag; stamps every registration of the physical tag (any cave).
+  Future<void> _harvestRuuviHealth(RuuviSighting s) async {
+    try {
+      final now = DateTime.now();
+      final last = _lastRuuviHealth[s.identity];
+      if (last != null && now.difference(last) < _ruuviHealthInterval) return;
+      _lastRuuviHealth[s.identity] = now;
+      final mac = s.advertisement.macAddress;
+      if (mac == null) return;
+      for (final m in await beaconRepository.findByMac(mac)) {
+        await _stampRuuviHealth(m.beacon.uuid, s.advertisement);
+      }
+    } catch (e, st) {
+      _log.warning('Ruuvi health harvest failed', e, st);
+    }
+  }
+
+  Future<void> _stampRuuviHealth(Uuid beaconUuid, RuuviAdvertisement adv) =>
+      beaconRepository.updateHealth(
+        beaconUuid,
+        batteryMv: adv.batteryMv,
+        temperatureC: adv.temperatureC,
+        humidityPct: adv.humidityPct,
+        pressureHpa: adv.pressureHpa,
+        movementCounter: adv.movementCounter,
+      );
 
   void _onRangingResult(RangingResult result) {
     final engine = _engine;
@@ -303,42 +416,64 @@ class BeaconDetectionService {
         b.minor,
       );
       if (matches.isEmpty) return;
-
       final selected = await _selectMatch(matches);
-      final place = selected.cavePlace;
-      _log.info(
-        'Beacon trigger → place "${place.title}" '
-        '(${b.proximityUUID}/${b.major}/${b.minor}, ${b.rssi} dBm)',
-      );
-
       unawaited(beaconRepository.updateHealth(selected.beacon.uuid));
-
-      // Trip point — same semantics as a QR scan of this place.
-      final activeTripCaveId = await caveTripService.getActiveTripCaveId();
-      final tripPointRecorded = activeTripCaveId == place.caveUuid;
-      if (tripPointRecorded) {
-        await caveTripService.recordPoint(place.uuid, placeTitle: place.title);
-      }
-
-      if (_inBackground) {
-        // App not on screen: loud notification instead of a toast.
-        await BeaconAlertNotifier.instance.showDetection(
-          placeTitle: place.title,
-          tripPointRecorded: tripPointRecorded,
-          caveUuid: place.caveUuid,
-          placeUuid: place.uuid,
-        );
-      } else {
-        SnackBarService.showSuccess(
-          '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"'
-          '${tripPointRecorded ? ' · ${LocServ.inst.t('trip_point_added')}' : ''}',
-        );
-        if ((_engine?.config.autoOpenPlace ?? false)) {
-          await _openPlace(place);
-        }
-      }
+      await _completeTrigger(
+        selected,
+        '${b.proximityUUID}/${b.major}/${b.minor}, ${b.rssi} dBm',
+      );
     } catch (e, st) {
       _log.warning('Beacon trigger handling failed', e, st);
+    }
+  }
+
+  Future<void> _handleRuuviTrigger(RuuviSighting s) async {
+    try {
+      final mac = s.advertisement.macAddress;
+      if (mac == null) return;
+      final matches = await beaconRepository.findByMac(mac);
+      if (matches.isEmpty) return;
+      final selected = await _selectMatch(matches);
+      _lastRuuviHealth[s.identity] = DateTime.now();
+      unawaited(_stampRuuviHealth(selected.beacon.uuid, s.advertisement));
+      await _completeTrigger(selected, '${s.identity}, ${s.rssi} dBm');
+    } catch (e, st) {
+      _log.warning('Ruuvi trigger handling failed', e, st);
+    }
+  }
+
+  /// The shared post-identification tail, identical for both frame
+  /// sources: trip point, then notification / toast / navigation.
+  Future<void> _completeTrigger(
+    BeaconWithPlace selected,
+    String logDetail,
+  ) async {
+    final place = selected.cavePlace;
+    _log.info('Beacon trigger → place "${place.title}" ($logDetail)');
+
+    // Trip point — same semantics as a QR scan of this place.
+    final activeTripCaveId = await caveTripService.getActiveTripCaveId();
+    final tripPointRecorded = activeTripCaveId == place.caveUuid;
+    if (tripPointRecorded) {
+      await caveTripService.recordPoint(place.uuid, placeTitle: place.title);
+    }
+
+    if (_inBackground) {
+      // App not on screen: loud notification instead of a toast.
+      await BeaconAlertNotifier.instance.showDetection(
+        placeTitle: place.title,
+        tripPointRecorded: tripPointRecorded,
+        caveUuid: place.caveUuid,
+        placeUuid: place.uuid,
+      );
+    } else {
+      SnackBarService.showSuccess(
+        '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"'
+        '${tripPointRecorded ? ' · ${LocServ.inst.t('trip_point_added')}' : ''}',
+      );
+      if ((_engine?.config.autoOpenPlace ?? false)) {
+        await _openPlace(place);
+      }
     }
   }
 
