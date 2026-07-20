@@ -1222,5 +1222,15 @@
   "map_mbtiles_none_found": "Nu s-au găsit fișiere MBTiles",
   "map_mbtiles_role_base": "Hartă de bază",
   "map_mbtiles_role_overlay": "Suprapunere",
-  "map_mbtiles_unsupported_format": "MBTiles vectorial nesuportat"
+  "map_mbtiles_unsupported_format": "MBTiles vectorial nesuportat",
+  "map_mbtiles_import": "Importă fișier MBTiles",
+  "map_mbtiles_import_desc": "Alege un fișier .mbtiles și copiază-l în folderul de mai sus",
+  "map_mbtiles_import_success": "S-a importat {name}",
+  "map_mbtiles_import_vector_warning": "S-a importat {name}, dar MBTiles vectorial nu este suportat pe hartă",
+  "map_mbtiles_import_wrong_type": "Te rog alege un fișier .mbtiles",
+  "map_mbtiles_import_unreadable": "Acel fișier nu este o bază de date MBTiles care poate fi citită",
+  "map_mbtiles_import_failed": "Fișierul MBTiles nu a putut fi importat",
+  "map_mbtiles_import_exists_title": "Fișierul există deja",
+  "map_mbtiles_import_exists_message": "Un fișier numit {name} este deja în folder. Îl suprascrii?",
+  "map_mbtiles_import_overwrite": "Suprascrie"
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +26,7 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
   List<MbTilesDescriptor> _files = [];
   String _folderPath = '';
   bool _loading = true;
+  bool _importing = false;
 
   @override
   void initState() {
@@ -58,6 +60,100 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
     setState(() => _loading = false);
   }
 
+  /// Browses for a `.mbtiles` file via the system document picker and copies
+  /// it into the scan folder. `FileType.any` (rather than an extension
+  /// filter) keeps `.mbtiles` selectable on Android, whose picker may not
+  /// know that MIME type; the extension is validated on import instead. The
+  /// picker grants per-file access, so no storage permission is requested.
+  Future<void> _importMbTiles() async {
+    final FilePickerResult? picked;
+    try {
+      picked = await FilePicker.platform.pickFiles(allowMultiple: false);
+    } catch (e) {
+      SnackBarService.showError(
+        '${LocServ.inst.t('map_mbtiles_import_failed')}: $e',
+      );
+      return;
+    }
+    final sourcePath = picked?.files.single.path;
+    if (sourcePath == null) return; // cancelled, or no accessible path
+    await _copyIntoFolder(sourcePath, overwrite: false);
+  }
+
+  Future<void> _copyIntoFolder(
+    String sourcePath, {
+    required bool overwrite,
+  }) async {
+    final loc = LocServ.inst;
+    setState(() => _importing = true);
+    try {
+      final descriptor = await ref
+          .read(mbTilesRegistryProvider)
+          .importFromPath(sourcePath, overwrite: overwrite);
+      if (!mounted) return;
+      // A valid but vector (pbf) file imports fine; warn since the map can
+      // only render raster tiles (it is still listed, flagged unsupported).
+      if (descriptor.metadata.isRaster) {
+        SnackBarService.showSuccess(
+          loc
+              .t('map_mbtiles_import_success')
+              .replaceAll('{name}', descriptor.fileName),
+        );
+      } else {
+        SnackBarService.showWarning(
+          loc
+              .t('map_mbtiles_import_vector_warning')
+              .replaceAll('{name}', descriptor.fileName),
+        );
+      }
+      await _refresh();
+    } on MbTilesImportException catch (e) {
+      if (!mounted) return;
+      switch (e.error) {
+        case MbTilesImportError.wrongExtension:
+          SnackBarService.showError(loc.t('map_mbtiles_import_wrong_type'));
+        case MbTilesImportError.notReadable:
+          SnackBarService.showError(loc.t('map_mbtiles_import_unreadable'));
+        case MbTilesImportError.alreadyExists:
+          await _confirmAndOverwrite(sourcePath, e.fileName ?? '');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarService.showError('${loc.t('map_mbtiles_import_failed')}: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  Future<void> _confirmAndOverwrite(String sourcePath, String fileName) async {
+    final loc = LocServ.inst;
+    final overwrite = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.t('map_mbtiles_import_exists_title')),
+        content: Text(
+          loc
+              .t('map_mbtiles_import_exists_message')
+              .replaceAll('{name}', fileName),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(loc.t('map_mbtiles_import_overwrite')),
+          ),
+        ],
+      ),
+    );
+    if (overwrite == true) {
+      await _copyIntoFolder(sourcePath, overwrite: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = LocServ.inst;
@@ -66,9 +162,14 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
         title: Text(loc.t('settings_map')),
         actions: [
           IconButton(
+            icon: const Icon(Icons.file_upload),
+            tooltip: loc.t('map_mbtiles_import'),
+            onPressed: (_loading || _importing) ? null : _importMbTiles,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: loc.t('map_mbtiles_refresh'),
-            onPressed: _loading ? null : _refresh,
+            onPressed: (_loading || _importing) ? null : _refresh,
           ),
         ],
       ),
@@ -105,6 +206,18 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
                     loc.t('map_mbtiles_folder_desc'),
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
+                ),
+                ListTile(
+                  leading: _importing
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.file_upload),
+                  title: Text(loc.t('map_mbtiles_import')),
+                  subtitle: Text(loc.t('map_mbtiles_import_desc')),
+                  onTap: (_loading || _importing) ? null : _importMbTiles,
                 ),
                 const Divider(),
                 Padding(

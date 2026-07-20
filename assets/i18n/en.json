@@ -1223,5 +1223,15 @@
   "map_mbtiles_none_found": "No MBTiles files found",
   "map_mbtiles_role_base": "Base map",
   "map_mbtiles_role_overlay": "Overlay",
-  "map_mbtiles_unsupported_format": "vector MBTiles not supported"
+  "map_mbtiles_unsupported_format": "vector MBTiles not supported",
+  "map_mbtiles_import": "Import MBTiles file",
+  "map_mbtiles_import_desc": "Browse for a .mbtiles file and copy it into the folder above",
+  "map_mbtiles_import_success": "Imported {name}",
+  "map_mbtiles_import_vector_warning": "Imported {name}, but vector MBTiles are not supported on the map",
+  "map_mbtiles_import_wrong_type": "Please choose a .mbtiles file",
+  "map_mbtiles_import_unreadable": "That file is not a readable MBTiles database",
+  "map_mbtiles_import_failed": "Could not import the MBTiles file",
+  "map_mbtiles_import_exists_title": "File already exists",
+  "map_mbtiles_import_exists_message": "A file named {name} is already in the folder. Overwrite it?",
+  "map_mbtiles_import_overwrite": "Overwrite"
 }

@@ -57,10 +57,15 @@ Offline layers are read from the app-managed folder
 
     <application documents directory>/mbtiles/
 
-next to `speleo_loc.sqlite`. Drop `.mbtiles` files there (file manager,
-USB, etc.) and they are picked up automatically when the map opens —
-governed by **Settings → Map**:
+next to `speleo_loc.sqlite`. Add `.mbtiles` files there and they are picked
+up automatically when the map opens — governed by **Settings → Map**:
 
+- **Import MBTiles file** — browses for a file via the system document
+  picker and copies it into the folder. This is the supported way to add
+  files on Android/iOS (no storage permission needed; works on debug or
+  sideloaded installs where the folder is app-private). Imports are
+  validated and name clashes prompt before overwriting. Files can also be
+  placed in the folder directly (adb push / file manager) where reachable.
 - **Auto-load MBTiles** — master switch for scanning the folder.
 - The exact folder path is displayed there (with a copy button), since it
   differs per platform/device.
