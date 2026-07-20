@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
+import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/csv_cave_importer.dart';
+import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -55,6 +57,7 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
     _importer = CSVCaveImporter(
       ref.read(appDatabaseProvider),
       ref.read(currentUserServiceProvider),
+      ref.read(cavePlaceRepositoryProvider),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }
@@ -87,6 +90,12 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
     setState(() => _isProcessing = true);
 
     try {
+      // Auto-add entrance cave place if setting is enabled (default: true)
+      final autoAdd = await SettingsHelper.loadStringConfig(
+        autoAddEntrancePlaceKey,
+        'true',
+      );
+
       final config = CSVCavesImportConfig(
         caveNameColumn: csvResult.columnMappings['cave_name'],
         descriptionColumn: csvResult.columnMappings['description'],
@@ -94,6 +103,9 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
         surfaceAreaColumn: csvResult.columnMappings['surface_area'],
         generalAreaIdentifierColumn:
             csvResult.columnMappings['general_area_identifier'],
+        entrancePlaceTitle: autoAdd == 'true'
+            ? LocServ.inst.t('entrance')
+            : null,
         maxPreviewDuplicates: widget.maxPreviewDuplicates,
       );
 

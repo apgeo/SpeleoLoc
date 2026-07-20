@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/csv_cave_importer.dart';
 import 'package:speleoloc/services/current_user_service.dart';
@@ -26,6 +27,7 @@ void main() {
     importer = CSVCaveImporter(
       db,
       currentUser,
+      CavePlaceRepository(db, currentUser, loggerRef),
       clock: FakeClock(DateTime.utc(2026, 7, 20)),
     );
   });
@@ -275,6 +277,67 @@ void main() {
       final cave = await db.select(db.caves).getSingle();
       expect(cave.caveLocalIndex, '012');
       expect(cave.description, 'new description');
+    });
+  });
+
+  group('importRows entrance place', () {
+    final entranceConfig = CSVCavesImportConfig(
+      caveNameColumn: 0,
+      descriptionColumn: 1,
+      caveLocalIndexColumn: 2,
+      surfaceAreaColumn: 3,
+      generalAreaIdentifierColumn: 4,
+      entrancePlaceTitle: 'Entrance',
+    );
+
+    test('each new cave gets a main entrance place', () async {
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '', '', ''],
+          ['Cave B', '', '', 'Padis', ''],
+        ]),
+        entranceConfig,
+      );
+      await importer.importRows(rows, entranceConfig);
+
+      final caves = await db.select(db.caves).get();
+      final places = await db.select(db.cavePlaces).get();
+      expect(places, hasLength(2));
+      expect(
+        places.map((p) => p.caveUuid).toSet(),
+        caves.map((c) => c.uuid).toSet(),
+      );
+      for (final place in places) {
+        expect(place.title, 'Entrance');
+        expect(place.isEntrance, 1);
+        expect(place.isMainEntrance, 1);
+      }
+    });
+
+    test('skipped duplicates get no additional entrance', () async {
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '', '', ''],
+        ]),
+        entranceConfig,
+      );
+      await importer.importRows(rows, entranceConfig);
+      final second = await importer.importRows(rows, entranceConfig);
+
+      expect(second.skippedDuplicates, 1);
+      expect(await db.select(db.cavePlaces).get(), hasLength(1));
+    });
+
+    test('no entrance is created when the title is not configured', () async {
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '', '', ''],
+        ]),
+        config,
+      );
+      await importer.importRows(rows, config);
+
+      expect(await db.select(db.cavePlaces).get(), isEmpty);
     });
   });
 

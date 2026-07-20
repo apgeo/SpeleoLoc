@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 /// Configuration for CSV cave import.
@@ -21,6 +22,10 @@ class CSVCavesImportConfig {
   /// Resolves the cave's surface area by `general_area_identifier`.
   final int? generalAreaIdentifierColumn;
 
+  /// When non-null, every newly created cave gets a main entrance place
+  /// with this title — the same default as adding a cave in the UI.
+  final String? entrancePlaceTitle;
+
   /// Maximum number of existing duplicate entries to preview before import.
   final int maxPreviewDuplicates;
 
@@ -30,6 +35,7 @@ class CSVCavesImportConfig {
     this.caveLocalIndexColumn,
     this.surfaceAreaColumn,
     this.generalAreaIdentifierColumn,
+    this.entrancePlaceTitle,
     this.maxPreviewDuplicates = 5,
   });
 }
@@ -82,11 +88,13 @@ class CSVCaveImportResult {
 class CSVCaveImporter {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
+  final ICavePlaceRepository _cavePlaces;
   final Clock _clock;
 
   CSVCaveImporter(
     this._database,
-    this._currentUser, {
+    this._currentUser,
+    this._cavePlaces, {
     Clock clock = const SystemClock(),
   }) : _clock = clock;
 
@@ -165,7 +173,8 @@ class CSVCaveImporter {
           : null;
       final saTitle =
           identifiedTitle ?? row.surfaceArea ?? row.generalAreaIdentifier;
-      final key = '${row.caveName!.toLowerCase()}|${saTitle?.toLowerCase() ?? ''}';
+      final key =
+          '${row.caveName!.toLowerCase()}|${saTitle?.toLowerCase() ?? ''}';
       if (caveSet.contains(key)) {
         allMatches.add(
           CaveExistingMatch(caveName: row.caveName!, surfaceArea: saTitle),
@@ -188,7 +197,8 @@ class CSVCaveImporter {
 
       // Cache existing data
       final surfaceAreaCache = <String, Uuid>{}; // title.lower -> uuid
-      final identifierCache = <String, Uuid>{}; // general_area_identifier -> uuid
+      final identifierCache =
+          <String, Uuid>{}; // general_area_identifier -> uuid
       final identifierByUuid = <Uuid, String>{}; // uuid -> non-empty identifier
       final existingSAs = await _database.select(_database.surfaceAreas).get();
       for (var s in existingSAs) {
@@ -322,6 +332,16 @@ class CSVCaveImporter {
             );
         caveCache[caveKey] = newUuid;
         cavesCreated++;
+
+        // Same default as adding a cave in the UI: a main entrance place.
+        if (config.entrancePlaceTitle != null) {
+          await _cavePlaces.addCavePlace(
+            newUuid,
+            config.entrancePlaceTitle!,
+            isEntrance: true,
+            isMainEntrance: true,
+          );
+        }
       }
 
       return CSVCaveImportResult(
