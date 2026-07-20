@@ -395,6 +395,17 @@ class CSVCaveImporter {
         }
       }
 
+      // Preload which caves already have an entrance place so an imported
+      // cave — newly created or matched to an existing one — can be given a
+      // default main entrance when it has none. Maintained as entrances are
+      // added below.
+      final cavesWithEntrance = <Uuid>{};
+      if (config.entrancePlaceTitle != null) {
+        cavesWithEntrance.addAll(
+          (await _cavePlaces.getEntranceCountsByCave()).keys,
+        );
+      }
+
       // Resolve the row's surface area to a uuid, creating the area when
       // needed: an existing area matched by general_area_identifier wins,
       // then one matched by title (backfilling its identifier when it has
@@ -458,6 +469,21 @@ class CSVCaveImporter {
         return newUuid;
       }
 
+      // Give [caveUuid] a default main entrance when it has none — the same
+      // place adding a cave in the UI creates. No-op when the entrance
+      // default is disabled or the cave already has an entrance.
+      Future<void> ensureEntrance(Uuid caveUuid) async {
+        if (config.entrancePlaceTitle == null) return;
+        if (cavesWithEntrance.contains(caveUuid)) return;
+        await _cavePlaces.addCavePlace(
+          caveUuid,
+          config.entrancePlaceTitle!,
+          isEntrance: true,
+          isMainEntrance: true,
+        );
+        cavesWithEntrance.add(caveUuid);
+      }
+
       for (var i = 0; i < rows.length; i++) {
         final row = rows[i];
         if (row.caveName == null || row.caveName!.isEmpty) continue;
@@ -470,51 +496,60 @@ class CSVCaveImporter {
         final caveKey = '$titleKey|${surfaceAreaUuid ?? ''}';
 
         // Row matches an existing cave with differing fields: apply the
-        // update only when the user approved it, otherwise leave untouched.
+        // update only when the user approved it, otherwise leave the fields
+        // untouched. Either way the matched cave still gets a default
+        // entrance when it has none.
         final candidate = candidateByRow[i];
         if (candidate != null) {
-          if (!approvedUpdates.contains(i)) {
+          if (approvedUpdates.contains(i)) {
+            // Re-check the unique (title, surface area) slot: it may have
+            // been taken by a cave created earlier in this import.
+            final occupant = caveCache[caveKey];
+            final moveArea =
+                (row.surfaceArea != null ||
+                    row.generalAreaIdentifier != null) &&
+                (occupant == null || occupant == candidate.caveUuid);
+            await (_database.update(
+              _database.caves,
+            )..where((c) => c.uuid.equalsValue(candidate.caveUuid))).write(
+              CavesCompanion(
+                description: row.description != null
+                    ? Value(row.description)
+                    : const Value.absent(),
+                caveLocalIndex: row.caveLocalIndex != null
+                    ? Value(row.caveLocalIndex)
+                    : const Value.absent(),
+                surfaceAreaUuid: moveArea
+                    ? Value(surfaceAreaUuid)
+                    : const Value.absent(),
+                updatedAt: Value(now),
+                lastModifiedByUserUuid: Value(author),
+              ),
+            );
+            if (moveArea) caveCache[caveKey] = candidate.caveUuid;
+            cavesUpdated++;
+          } else {
             skippedDuplicates++;
-            continue;
           }
-          // Re-check the unique (title, surface area) slot: it may have
-          // been taken by a cave created earlier in this import.
-          final occupant = caveCache[caveKey];
-          final moveArea =
-              (row.surfaceArea != null || row.generalAreaIdentifier != null) &&
-              (occupant == null || occupant == candidate.caveUuid);
-          await (_database.update(
-            _database.caves,
-          )..where((c) => c.uuid.equalsValue(candidate.caveUuid))).write(
-            CavesCompanion(
-              description: row.description != null
-                  ? Value(row.description)
-                  : const Value.absent(),
-              caveLocalIndex: row.caveLocalIndex != null
-                  ? Value(row.caveLocalIndex)
-                  : const Value.absent(),
-              surfaceAreaUuid: moveArea
-                  ? Value(surfaceAreaUuid)
-                  : const Value.absent(),
-              updatedAt: Value(now),
-              lastModifiedByUserUuid: Value(author),
-            ),
-          );
-          if (moveArea) caveCache[caveKey] = candidate.caveUuid;
-          cavesUpdated++;
+          await ensureEntrance(candidate.caveUuid);
           continue;
         }
 
         // Same cave already present (title + local index): nothing changed.
-        if (row.caveLocalIndex != null &&
-            caveByTitleIdx.containsKey('$titleKey|${row.caveLocalIndex}')) {
+        final byIndex = row.caveLocalIndex != null
+            ? caveByTitleIdx['$titleKey|${row.caveLocalIndex}']
+            : null;
+        if (byIndex != null) {
           skippedDuplicates++;
+          await ensureEntrance(byIndex);
           continue;
         }
 
         // Check if cave already exists (title + surface_area_uuid is unique)
-        if (caveCache.containsKey(caveKey)) {
+        final existingUuid = caveCache[caveKey];
+        if (existingUuid != null) {
           skippedDuplicates++;
+          await ensureEntrance(existingUuid);
           continue;
         }
 
@@ -539,14 +574,7 @@ class CSVCaveImporter {
         cavesCreated++;
 
         // Same default as adding a cave in the UI: a main entrance place.
-        if (config.entrancePlaceTitle != null) {
-          await _cavePlaces.addCavePlace(
-            newUuid,
-            config.entrancePlaceTitle!,
-            isEntrance: true,
-            isMainEntrance: true,
-          );
-        }
+        await ensureEntrance(newUuid);
       }
 
       return CSVCaveImportResult(

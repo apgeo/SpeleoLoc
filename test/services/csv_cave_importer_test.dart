@@ -82,6 +82,19 @@ void main() {
     return uuid;
   }
 
+  Future<void> insertEntrance(Uuid caveUuid, {String title = 'Existing'}) async {
+    await db
+        .into(db.cavePlaces)
+        .insert(
+          CavePlacesCompanion.insert(
+            uuid: Uuid.v7(),
+            title: title,
+            caveUuid: caveUuid,
+            isEntrance: const Value(1),
+          ),
+        );
+  }
+
   group('parseRows', () {
     test('extracts cave local index and general area identifier', () {
       final rows = importer.parseRows(
@@ -496,6 +509,88 @@ void main() {
       final second = await importer.importRows(rows, entranceConfig);
 
       expect(second.skippedDuplicates, 1);
+      expect(await db.select(db.cavePlaces).get(), hasLength(1));
+    });
+
+    test('an approved update backfills a missing entrance', () async {
+      await insertCave('Cave A', localIndex: '042');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'new', '042', '', ''],
+        ]),
+        entranceConfig,
+      );
+      final candidates = await importer.planCaveUpdates(rows, entranceConfig);
+      final result = await importer.importRows(
+        rows,
+        entranceConfig,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+
+      expect(result.cavesUpdated, 1);
+      final places = await db.select(db.cavePlaces).get();
+      expect(places, hasLength(1));
+      expect(places.single.title, 'Entrance');
+      expect(places.single.isMainEntrance, 1);
+    });
+
+    test('an exact duplicate backfills a missing entrance', () async {
+      await insertCave('Cave A', localIndex: '042');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '042', '', ''],
+        ]),
+        entranceConfig,
+      );
+      final result = await importer.importRows(rows, entranceConfig);
+
+      expect(result.cavesUpdated, 0);
+      expect(result.skippedDuplicates, 1);
+      final places = await db.select(db.cavePlaces).get();
+      expect(places, hasLength(1));
+      expect(places.single.title, 'Entrance');
+    });
+
+    test('a declined update still backfills a missing entrance', () async {
+      await insertCave('Cave A', localIndex: '042');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'new', '042', '', ''],
+        ]),
+        entranceConfig,
+      );
+      final candidates = await importer.planCaveUpdates(rows, entranceConfig);
+      final result = await importer.importRows(
+        rows,
+        entranceConfig,
+        updateCandidates: candidates,
+      );
+
+      expect(result.cavesUpdated, 0);
+      expect(result.skippedDuplicates, 1);
+      final places = await db.select(db.cavePlaces).get();
+      expect(places, hasLength(1));
+      expect(places.single.title, 'Entrance');
+    });
+
+    test('a matched cave keeps its single existing entrance', () async {
+      final caveA = await insertCave('Cave A', localIndex: '042');
+      await insertEntrance(caveA);
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'new', '042', '', ''],
+        ]),
+        entranceConfig,
+      );
+      final candidates = await importer.planCaveUpdates(rows, entranceConfig);
+      await importer.importRows(
+        rows,
+        entranceConfig,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+
       expect(await db.select(db.cavePlaces).get(), hasLength(1));
     });
 
