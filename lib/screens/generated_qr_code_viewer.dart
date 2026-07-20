@@ -116,6 +116,25 @@ class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
               .read(cavePlaceRepositoryProvider)
               .getCavePlaces(widget.caveUuid!);
 
+      // Resolve owning-cave titles so the label template's @cave_title works
+      // per place — including a batch that spans multiple caves. The single
+      // caveUuid path already has its cave loaded; the explicit-places path
+      // resolves every referenced cave in one query.
+      final caveTitleByCaveUuid = <Uuid, String>{};
+      if (cave != null) {
+        caveTitleByCaveUuid[cave.uuid] = cave.title;
+      } else {
+        final neededCaveIds = {for (final p in cavePlaces) p.caveUuid};
+        if (neededCaveIds.isNotEmpty) {
+          final caves = await ref.read(caveRepositoryProvider).getCaves();
+          for (final c in caves) {
+            if (neededCaveIds.contains(c.uuid)) {
+              caveTitleByCaveUuid[c.uuid] = c.title;
+            }
+          }
+        }
+      }
+
       // Build generation preferences from config
       final genPrefs = GenerationPreferences(
         asPdf: asPdf,
@@ -144,6 +163,7 @@ class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
             : 2.0,
         caveTitle: cave?.title,
         areaTitle: null,
+        caveTitleByCaveUuid: caveTitleByCaveUuid,
         includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,
       );
 

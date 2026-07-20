@@ -79,6 +79,12 @@ class GenerationPreferences {
   /// Area title for template resolution.
   final String? areaTitle;
 
+  /// Per-cave title lookup (`caveUuid → title`). When present, the label
+  /// template's `@cave_title` resolves to each place's OWN cave, so a batch
+  /// spanning multiple caves labels every code with the right cave. Falls
+  /// back to the single [caveTitle] when a place's cave is absent here.
+  final Map<Uuid, String>? caveTitleByCaveUuid;
+
   /// When true (default), the printed QR payload is prefixed with
   /// [deepLinkPrefix] (e.g. `sp://`). The stored
   /// `qr_code_resource_identifier` is **not** affected — the prefix
@@ -106,8 +112,15 @@ class GenerationPreferences {
     this.pdfQrPaddingV = QrGenerationDefaults.pdfQrPaddingV,
     this.caveTitle,
     this.areaTitle,
+    this.caveTitleByCaveUuid,
     this.includeDeepLinkPrefix = true,
   });
+
+  /// Cave title to use for [place]'s label — prefers the per-cave
+  /// [caveTitleByCaveUuid] map (so a multi-cave batch resolves `@cave_title`
+  /// per place), falling back to the single [caveTitle].
+  String? caveTitleFor(CavePlace place) =>
+      caveTitleByCaveUuid?[place.caveUuid] ?? caveTitle;
 }
 
 /// A single generated output file (image or PDF), stored in memory.
@@ -181,7 +194,7 @@ class QrImageRenderer {
         ? QrLabelTemplateEngine.resolve(
             template: prefs.labelTemplate,
             place: place,
-            caveTitle: prefs.caveTitle,
+            caveTitle: prefs.caveTitleFor(place),
             areaTitle: prefs.areaTitle,
           )
         : '';
@@ -349,7 +362,7 @@ class CavePlaceQRCodePDFGenerator {
                       final segments = QrLabelTemplateEngine.parseSegments(
                         template: prefs.labelTemplate,
                         place: place,
-                        caveTitle: prefs.caveTitle,
+                        caveTitle: prefs.caveTitleFor(place),
                         areaTitle: prefs.areaTitle,
                       );
 

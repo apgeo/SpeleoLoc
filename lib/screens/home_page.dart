@@ -10,6 +10,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_progress_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
+import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -126,6 +127,8 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   List<Cave> _caves = [];
+  final FilterableListController<Cave> _caveListController =
+      FilterableListController<Cave>();
   Map<Uuid, int> _cavePlaceCounts = {};
   Map<Uuid, int> _caveRasterMapCounts = {};
   Map<Uuid, String?> _surfaceAreaTitles = {}; // surface_area_id -> title
@@ -194,6 +197,7 @@ class _HomePageState extends ConsumerState<HomePage>
   void dispose() {
     _qrScanLongPressTimer?.cancel();
     _cavesSub?.cancel();
+    _caveListController.dispose();
     homePageRefreshNotifier.removeListener(_onHomePageRefreshRequested);
     super.dispose();
   }
@@ -647,6 +651,96 @@ class _HomePageState extends ConsumerState<HomePage>
     return result;
   }
 
+  bool _isEntrance(CavePlace place) =>
+      place.isEntrance == 1 || place.isMainEntrance == 1;
+
+  /// Generates QR codes for the cave places of every cave in the list. When
+  /// the list is in checkbox selection mode, only the checked caves are used;
+  /// otherwise the caves currently visible (after any active filter) are used.
+  ///
+  /// Reuses the standard [GeneratedQRCodeViewer] workflow — only the input set
+  /// of places differs. When any target cave holds non-entrance places, the
+  /// user is asked whether to include only entrances or all places.
+  Future<void> _generateQrForCaves() async {
+    final targetCaves = _caveListController.selectionMode
+        ? _caveListController.selectedItems
+        : _caveListController.filteredItems;
+    if (targetCaves.isEmpty) {
+      SnackBarService.showWarning(LocServ.inst.t('no_caves_for_qr'));
+      return;
+    }
+
+    final repo = ref.read(cavePlaceRepositoryProvider);
+    final placesByCave = <Uuid, List<CavePlace>>{};
+    var anyNonEntrance = false;
+    try {
+      for (final cave in targetCaves) {
+        final places = await repo.getCavePlaces(cave.uuid);
+        placesByCave[cave.uuid] = places;
+        if (!anyNonEntrance && places.any((p) => !_isEntrance(p))) {
+          anyNonEntrance = true;
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarService.showError('${LocServ.inst.t('error')}: $e');
+      return;
+    }
+    if (!mounted) return;
+
+    // Only prompt about the entrance/all split when there is actually a
+    // distinction to make (i.e. at least one non-entrance place exists).
+    var entrancesOnly = false;
+    if (anyNonEntrance) {
+      final scope = await _askQrPlaceScope();
+      if (scope == null || !mounted) return;
+      entrancesOnly = scope == _CaveQrScope.entrancesOnly;
+    }
+
+    final places = <CavePlace>[];
+    for (final cave in targetCaves) {
+      final cavePlaces = placesByCave[cave.uuid] ?? const <CavePlace>[];
+      places.addAll(entrancesOnly ? cavePlaces.where(_isEntrance) : cavePlaces);
+    }
+    if (places.isEmpty) {
+      SnackBarService.showWarning(LocServ.inst.t('no_places_for_qr'));
+      return;
+    }
+
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GeneratedQRCodeViewer(cavePlaces: places),
+      ),
+    );
+  }
+
+  Future<_CaveQrScope?> _askQrPlaceScope() {
+    final loc = LocServ.inst;
+    return showDialog<_CaveQrScope>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.t('generate_qr_scope_title')),
+        content: Text(loc.t('generate_qr_scope_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(loc.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _CaveQrScope.entrancesOnly),
+            child: Text(loc.t('generate_qr_entrances_only')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, _CaveQrScope.allPlaces),
+            child: Text(loc.t('generate_qr_all_places')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMainToolbar() {
     final buttons = <_HomeToolbarBtn>[
       _HomeToolbarBtn(
@@ -786,7 +880,14 @@ class _HomePageState extends ConsumerState<HomePage>
     return FilterableList<Cave>(
       headerKey: tourKeys['cave_list'],
       headerLabelText: '${LocServ.inst.t('caves')}:',
+      controller: _caveListController,
       headerTrailing: [
+        IconButton(
+          icon: const Icon(Icons.qr_code_2),
+          tooltip: LocServ.inst.t('generate_qr_for_caves'),
+          visualDensity: VisualDensity.compact,
+          onPressed: _generateQrForCaves,
+        ),
         IconButton(
           icon: Icon(
             _showMainToolbar ? Icons.view_day : Icons.view_day_outlined,
@@ -896,6 +997,10 @@ class _HomePageState extends ConsumerState<HomePage>
     );
   }
 }
+
+/// Which cave places to include when generating QR codes for a set of caves
+/// that contain non-entrance places.
+enum _CaveQrScope { entrancesOnly, allPlaces }
 
 class _HomeToolbarBtn {
   final IconData icon;
