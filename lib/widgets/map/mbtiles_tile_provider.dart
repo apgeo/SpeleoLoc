@@ -1,0 +1,34 @@
+import 'dart:typed_data';
+
+import 'package:flutter/painting.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:speleoloc/services/map/mbtiles_reader.dart';
+
+/// 1×1 fully transparent PNG served for coordinates the MBTiles file does
+/// not cover, so partial-coverage overlays don't paint error tiles.
+const List<int> _transparentPng = [
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+];
+
+/// Serves flutter_map tiles from a local raster MBTiles file.
+class MbTilesTileProvider extends TileProvider {
+  MbTilesTileProvider(this._reader);
+
+  final MbTilesReader _reader;
+
+  static final ImageProvider _transparentTile = MemoryImage(
+    Uint8List.fromList(_transparentPng),
+  );
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    final bytes = _reader.tile(coordinates.z, coordinates.x, coordinates.y);
+    if (bytes == null) return _transparentTile;
+    return MemoryImage(bytes);
+  }
+}

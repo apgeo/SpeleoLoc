@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_page.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_pick.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_area_row.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_beacon_section.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_confirmation_port.dart';
@@ -373,6 +375,38 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
     });
   }
 
+  /// Opens the surface map as a coordinate picker. Like the GPS recorder,
+  /// the result only fills the form fields — nothing is persisted until
+  /// the place is saved.
+  Future<void> _openMapPicker() async {
+    final lat = double.tryParse(_form.lat.text.trim());
+    final lng = double.tryParse(_form.long.text.trim());
+    final hasPosition = lat != null && lng != null;
+    final title = _form.title.text.trim();
+    final result = await Navigator.push<CaveMapPickResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CaveMapPage(
+          focusCaveUuids: {widget.caveUuid},
+          pickRequest: CaveMapPickRequest(
+            placeTitle: title.isNotEmpty
+                ? title
+                : LocServ.inst.t('cave_place'),
+            caveTitle: _cave?.title ?? '',
+            initialLatitude: hasPosition ? lat : null,
+            initialLongitude: hasPosition ? lng : null,
+          ),
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _showLatLngFields = true;
+      _form.lat.text = result.latitude.toStringAsFixed(7);
+      _form.long.text = result.longitude.toStringAsFixed(7);
+    });
+  }
+
   Widget _buildMapTab(RasterMap rm) {
     return CavePlaceMapTab(
       caveUuid: widget.caveUuid,
@@ -440,6 +474,13 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
                   );
                 },
               ),
+            IconButton(
+              icon: const Icon(Icons.travel_explore),
+              tooltip: LocServ.inst.t('map_pick_coordinates'),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              onPressed: _openMapPicker,
+            ),
             IconButton(
               icon: const Icon(Icons.save),
               tooltip: LocServ.inst.t('save'),
@@ -551,6 +592,7 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
                   visible: _showLatLngFields,
                   form: _form,
                   onOpenGpsRecorder: _openGpsRecorder,
+                  onOpenMapPicker: _openMapPicker,
                 ),
 
                 /// Raster maps section

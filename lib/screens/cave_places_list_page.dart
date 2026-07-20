@@ -4,6 +4,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_beacons_page.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_page.dart';
 import 'package:speleoloc/screens/cave_places/past_trips_button.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
@@ -380,6 +381,24 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
         ),
       );
     }
+  }
+
+  /// Opens the surface map with this cave's places highlighted among the
+  /// places of all other caves. In selection mode only the checked places
+  /// are highlighted, otherwise the ones left visible by the filter.
+  void _openCaveMap() {
+    final targetPlaces = _listController.selectionMode
+        ? _listController.selectedItems
+        : _listController.filteredItems;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CaveMapPage(
+          focusPlaceUuids: {for (final place in targetPlaces) place.uuid},
+          highlightFocus: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _openRasterMapPlaceSelector() async {
@@ -845,6 +864,12 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                 },
                 icon: Icons.map,
                 tooltip: LocServ.inst.t('view_raster_maps'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: _openCaveMap,
+                icon: Icons.travel_explore,
+                tooltip: LocServ.inst.t('open_cave_map'),
               ),
               const SizedBox(width: TOOLBAR_BUTTON_SPACING),
               IconActionButton(

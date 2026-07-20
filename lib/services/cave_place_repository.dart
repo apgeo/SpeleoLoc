@@ -375,6 +375,48 @@ class CavePlaceRepository implements ICavePlaceRepository {
   }
 
   @override
+  Future<List<CavePlace>> getCavePlacesWithCoordinates() async {
+    try {
+      return await (_database.select(_database.cavePlaces)..where(
+            (cp) => cp.latitude.isNotNull() & cp.longitude.isNotNull(),
+          ))
+          .get();
+    } catch (e, st) {
+      _log.severe('Failed to load cave places with coordinates', e, st);
+      throw DbException(
+        'Failed to load cave places with coordinates',
+        cause: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  @override
+  Future<Map<Uuid, int>> getEntranceCountsByCave() async {
+    try {
+      final rows = await _database
+          .customSelect(
+            'SELECT cave_uuid, COUNT(*) AS cnt FROM cave_places '
+            'WHERE is_entrance = 1 OR is_main_entrance = 1 '
+            'GROUP BY cave_uuid',
+          )
+          .get();
+      return {
+        for (final row in rows)
+          Uuid.fromBytes(row.data['cave_uuid'] as List<int>):
+              row.data['cnt'] as int,
+      };
+    } catch (e, st) {
+      _log.severe('Failed to count entrances by cave', e, st);
+      throw DbException(
+        'Failed to count entrances by cave',
+        cause: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  @override
   Future<Map<Uuid, int>> getCavePlaceCountsByCave() async {
     try {
       final rows = await _database

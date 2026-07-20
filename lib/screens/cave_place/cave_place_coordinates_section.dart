@@ -2,22 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
 import 'package:speleoloc/utils/localization.dart';
 
-/// Lat / long / altitude row plus the "record GPS" icon button.
+/// Lat / long / altitude row plus the "record GPS" and "pick on map"
+/// icon buttons.
 ///
 /// Visible only when [visible] is true. Reads + writes the form's
 /// `lat`, `long`, `alt` text controllers directly; the parent owns
-/// the GPS-recorder dialog flow via [onOpenGpsRecorder].
+/// the GPS-recorder flow via [onOpenGpsRecorder] and the map-picker
+/// flow via [onOpenMapPicker].
 class CavePlaceCoordinatesSection extends StatelessWidget {
   const CavePlaceCoordinatesSection({
     super.key,
     required this.visible,
     required this.form,
     required this.onOpenGpsRecorder,
+    required this.onOpenMapPicker,
   });
 
   final bool visible;
   final CavePlaceFormController form;
   final VoidCallback onOpenGpsRecorder;
+  final VoidCallback onOpenMapPicker;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +88,11 @@ class CavePlaceCoordinatesSection extends StatelessWidget {
               tooltip: LocServ.inst.t('record_gps_point'),
               onPressed: onOpenGpsRecorder,
               icon: const Icon(Icons.gps_fixed),
+            ),
+            IconButton(
+              tooltip: LocServ.inst.t('map_pick_coordinates'),
+              onPressed: onOpenMapPicker,
+              icon: const Icon(Icons.travel_explore),
             ),
           ],
         ),

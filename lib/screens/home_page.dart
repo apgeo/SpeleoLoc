@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_page.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
@@ -98,6 +99,11 @@ class _HomePageState extends ConsumerState<HomePage>
       icon: Icons.upload_file,
       label: LocServ.inst.t('csv_import_caves'),
     ),
+    AppMenuItem(
+      value: 'cave_map',
+      icon: Icons.travel_explore,
+      label: LocServ.inst.t('open_cave_map'),
+    ),
   ];
 
   @override
@@ -122,6 +128,9 @@ class _HomePageState extends ConsumerState<HomePage>
           MaterialPageRoute(builder: (_) => const CSVCavesImportPage()),
         );
         if (result == true) unawaited(_loadCaves());
+        break;
+      case 'cave_map':
+        _openCaveMap();
         break;
     }
   }
@@ -418,6 +427,23 @@ class _HomePageState extends ConsumerState<HomePage>
         SnackBarService.showError('${LocServ.inst.t('error_adding_cave')}: $e');
       }
     }
+  }
+
+  /// Opens the surface map for the caves currently in scope: the checked
+  /// caves in selection mode, otherwise all caves left visible by the
+  /// active filter.
+  void _openCaveMap() {
+    final targetCaves = _caveListController.selectionMode
+        ? _caveListController.selectedItems
+        : _caveListController.filteredItems;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CaveMapPage(
+          focusCaveUuids: {for (final cave in targetCaves) cave.uuid},
+        ),
+      ),
+    );
   }
 
   Future<void> _openDocumentationFiles() async {
@@ -757,6 +783,11 @@ class _HomePageState extends ConsumerState<HomePage>
         icon: Icons.description,
         tooltip: LocServ.inst.t('documentation'),
         onTap: _openDocumentationFiles,
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.travel_explore,
+        tooltip: LocServ.inst.t('open_cave_map'),
+        onTap: _openCaveMap,
       ),
       _HomeToolbarBtn(
         icon: Icons.landscape,

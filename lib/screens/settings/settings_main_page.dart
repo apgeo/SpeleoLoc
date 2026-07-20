@@ -7,6 +7,7 @@ import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
 import 'package:speleoloc/screens/settings/settings_place_codes_page.dart';
 import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_database_page.dart';
+import 'package:speleoloc/screens/settings/settings_map_page.dart';
 import 'package:speleoloc/screens/settings/users_page.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
@@ -133,6 +134,17 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                   MaterialPageRoute(
                     builder: (_) => const SettingsPdfOutputPage(),
                   ),
+                );
+              },
+            ),
+            _SettingsSection(
+              icon: Icons.travel_explore,
+              title: LocServ.inst.t('settings_map'),
+              subtitle: LocServ.inst.t('settings_map_desc'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsMapPage()),
                 );
               },
             ),

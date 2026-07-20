@@ -136,6 +136,15 @@ abstract class ICavePlaceRepository {
   /// Used by the home-page summary; computed in SQL to avoid loading
   /// every place into memory.
   Future<Map<Uuid, int>> getCavePlaceCountsByCave();
+
+  /// Returns every cave place (across all caves) that has both latitude and
+  /// longitude set — the set of places plottable on the surface map.
+  Future<List<CavePlace>> getCavePlacesWithCoordinates();
+
+  /// Returns a map of `caveUuid → number of entrance places` (main entrances
+  /// included). Counts all entrances, with or without coordinates, so the
+  /// surface map can label a single-entrance cave with the cave title alone.
+  Future<Map<Uuid, int>> getEntranceCountsByCave();
 }
 
 /// Abstract contract for the raster-map repository.

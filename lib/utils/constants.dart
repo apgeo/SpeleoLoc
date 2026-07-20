@@ -136,3 +136,8 @@ const String rasterMapSortAscKey = 'raster_map_sort_asc';
 // Cave-places nav bar sort option (horizontal list in RasterMapNavBar)
 const String cavePlacesNavBarSortFieldKey = 'cave_places_navbar_sort_field';
 const String cavePlacesNavBarSortAscKey = 'cave_places_navbar_sort_asc';
+
+// Surface map (geographic cave-places map): last base layer / overlays /
+// camera, and the MBTiles auto-load + per-file role configuration.
+const String mapScreenPrefsKey = 'map_screen_prefs';
+const String mapMbtilesConfigKey = 'map_mbtiles_config';

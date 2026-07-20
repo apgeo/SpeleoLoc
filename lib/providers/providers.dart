@@ -13,6 +13,7 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
+import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
@@ -229,6 +230,12 @@ final documentationRepositoryProvider = Provider<IDocumentationRepository>(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
   ),
+);
+
+/// Discovers `.mbtiles` basemap/overlay files in the app-managed folder
+/// used by the surface map (see docs/workflows/mbtiles-layers.md).
+final mbTilesRegistryProvider = Provider<MbTilesRegistry>(
+  (ref) => MbTilesRegistry(),
 );
 
 /// Session-level preferences that persist for the lifetime of the app process.
