@@ -61,6 +61,27 @@ void main() {
     return uuid;
   }
 
+  Future<Uuid> insertCave(
+    String title, {
+    String? localIndex,
+    Uuid? areaUuid,
+    String? description,
+  }) async {
+    final uuid = Uuid.v7();
+    await db
+        .into(db.caves)
+        .insert(
+          CavesCompanion.insert(
+            uuid: uuid,
+            title: title,
+            description: Value(description),
+            caveLocalIndex: Value(localIndex),
+            surfaceAreaUuid: Value(areaUuid),
+          ),
+        );
+    return uuid;
+  }
+
   group('parseRows', () {
     test('extracts cave local index and general area identifier', () {
       final rows = importer.parseRows(
@@ -229,54 +250,204 @@ void main() {
       expect(cave.caveLocalIndex, '012');
     });
 
-    test('updated on duplicate caves when provided', () async {
-      await importer.importRows(
-        importer.parseRows(
-          csv([
-            ['Cave A', '', '012', '', ''],
-          ]),
-          config,
-        ),
-        config,
-      );
-      final result = await importer.importRows(
-        importer.parseRows(
-          csv([
-            ['Cave A', '', '013', '', ''],
-          ]),
-          config,
-        ),
+    test('updated on duplicate caves when the user approves', () async {
+      await insertCave('Cave A', localIndex: '012');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '013', '', ''],
+        ]),
         config,
       );
 
-      expect(result.skippedDuplicates, 1);
+      final candidates = await importer.planCaveUpdates(rows, config);
+      expect(candidates, hasLength(1));
+      expect(
+        candidates.single.changes.single.field,
+        CSVCaveField.caveLocalIndex,
+      );
+
+      final result = await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+
+      expect(result.cavesUpdated, 1);
+      expect(result.cavesCreated, 0);
       final cave = await db.select(db.caves).getSingle();
       expect(cave.caveLocalIndex, '013');
     });
 
-    test('kept on duplicate caves when the column is empty', () async {
-      await importer.importRows(
-        importer.parseRows(
-          csv([
-            ['Cave A', '', '012', '', ''],
-          ]),
-          config,
-        ),
+    test('kept when the update is declined', () async {
+      await insertCave('Cave A', localIndex: '012');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '013', '', ''],
+        ]),
         config,
       );
-      await importer.importRows(
-        importer.parseRows(
-          csv([
-            ['Cave A', 'new description', '', '', ''],
-          ]),
-          config,
-        ),
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+      final result = await importer.importRows(
+        rows,
         config,
+        updateCandidates: candidates,
+      );
+
+      expect(result.cavesUpdated, 0);
+      expect(result.skippedDuplicates, 1);
+      final cave = await db.select(db.caves).getSingle();
+      expect(cave.caveLocalIndex, '012');
+    });
+
+    test('kept on approved update when the column is empty', () async {
+      await insertCave('Cave A', localIndex: '012');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'new description', '', '', ''],
+        ]),
+        config,
+      );
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+      expect(candidates.single.changes.single.field, CSVCaveField.description);
+
+      await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
       );
 
       final cave = await db.select(db.caves).getSingle();
       expect(cave.caveLocalIndex, '012');
       expect(cave.description, 'new description');
+    });
+  });
+
+  group('planCaveUpdates', () {
+    test('no candidates when the CSV matches the stored values', () async {
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'desc', '012', 'Padis', '005'],
+        ]),
+        config,
+      );
+      await importer.importRows(rows, config);
+
+      expect(await importer.planCaveUpdates(rows, config), isEmpty);
+    });
+
+    test('same title and local index in another area proposes a move', () async {
+      await insertArea('Padis', identifier: '005');
+      await insertCave('Cave A', localIndex: '042', description: 'old');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'new', '042', '', '005'],
+        ]),
+        config,
+      );
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+
+      expect(candidates, hasLength(1));
+      final fields = candidates.single.changes.map((c) => c.field).toSet();
+      expect(fields, {CSVCaveField.description, CSVCaveField.surfaceArea});
+      final areaChange = candidates.single.changes.firstWhere(
+        (c) => c.field == CSVCaveField.surfaceArea,
+      );
+      expect(areaChange.oldValue, isNull);
+      expect(areaChange.newValue, 'Padis');
+    });
+
+    test('area move is suppressed when the slot is occupied', () async {
+      final padis = await insertArea('Padis', identifier: '005');
+      await insertCave('Cave A', localIndex: '042');
+      await insertCave('Cave A', localIndex: '099', areaUuid: padis);
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '042', '', '005'],
+        ]),
+        config,
+      );
+
+      expect(await importer.planCaveUpdates(rows, config), isEmpty);
+    });
+  });
+
+  group('importRows approved updates', () {
+    test('moves the cave into the area matched by identifier', () async {
+      final padis = await insertArea('Padis', identifier: '005');
+      await insertCave('Cave A', localIndex: '042', description: 'old');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', 'new', '042', '', '005'],
+        ]),
+        config,
+      );
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+      final result = await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+
+      expect(result.cavesUpdated, 1);
+      expect(result.cavesCreated, 0);
+      final cave = await db.select(db.caves).getSingle();
+      expect(cave.surfaceAreaUuid, padis);
+      expect(cave.description, 'new');
+    });
+
+    test('creates the target surface area when it does not exist', () async {
+      await insertCave('Cave A', localIndex: '042');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '042', 'Padis', ''],
+        ]),
+        config,
+      );
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+      expect(candidates.single.changes.single.field, CSVCaveField.surfaceArea);
+
+      final result = await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+
+      expect(result.surfaceAreasCreated, 1);
+      final area = await db.select(db.surfaceAreas).getSingle();
+      expect(area.title, 'Padis');
+      final cave = await db.select(db.caves).getSingle();
+      expect(cave.surfaceAreaUuid, area.uuid);
+    });
+
+    test('declined move leaves no duplicate cave behind', () async {
+      await insertArea('Padis', identifier: '005');
+      await insertCave('Cave A', localIndex: '042');
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '042', '', '005'],
+        ]),
+        config,
+      );
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+      final result = await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+      );
+
+      expect(result.cavesCreated, 0);
+      expect(result.skippedDuplicates, 1);
+      expect(await db.select(db.caves).get(), hasLength(1));
     });
   });
 

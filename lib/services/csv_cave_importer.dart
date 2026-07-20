@@ -71,14 +71,47 @@ class CaveExistingMatch {
   CaveExistingMatch({required this.caveName, this.surfaceArea});
 }
 
+/// Cave fields the import can update on an existing cave.
+enum CSVCaveField { description, caveLocalIndex, surfaceArea }
+
+/// One field whose CSV value differs from the existing cave's value.
+class CSVCaveFieldChange {
+  final CSVCaveField field;
+  final String? oldValue;
+  final String? newValue;
+
+  CSVCaveFieldChange({required this.field, this.oldValue, this.newValue});
+}
+
+/// A CSV row matching an existing cave whose fields would change; the user
+/// decides per cave (or for all) whether to apply the changes.
+class CSVCaveUpdateCandidate {
+  /// Index into the parsed rows list passed to [CSVCaveImporter.importRows].
+  final int rowIndex;
+  final Uuid caveUuid;
+  final String caveTitle;
+  final String? caveLocalIndex;
+  final List<CSVCaveFieldChange> changes;
+
+  CSVCaveUpdateCandidate({
+    required this.rowIndex,
+    required this.caveUuid,
+    required this.caveTitle,
+    this.caveLocalIndex,
+    required this.changes,
+  });
+}
+
 /// Result of a cave import operation.
 class CSVCaveImportResult {
   final int cavesCreated;
+  final int cavesUpdated;
   final int surfaceAreasCreated;
   final int skippedDuplicates;
 
   CSVCaveImportResult({
     required this.cavesCreated,
+    required this.cavesUpdated,
     required this.surfaceAreasCreated,
     required this.skippedDuplicates,
   });
@@ -185,15 +218,152 @@ class CSVCaveImporter {
     return (matches: allMatches, totalCount: allMatches.length);
   }
 
-  /// Perform the actual import.
-  Future<CSVCaveImportResult> importRows(
+  /// Find rows matching an existing cave — same title and cave local index,
+  /// or the (title, surface area) identity — whose provided CSV values
+  /// differ from the stored ones. Read-only: run before [importRows] so the
+  /// user can be asked which caves to update.
+  Future<List<CSVCaveUpdateCandidate>> planCaveUpdates(
     List<CSVCaveImportRow> rows,
     CSVCavesImportConfig config,
   ) async {
+    final caves = await _database.select(_database.caves).get();
+    final areas = await _database.select(_database.surfaceAreas).get();
+
+    final saTitleByUuid = {for (var a in areas) a.uuid: a.title};
+    final saByIdentifier = <String, SurfaceArea>{};
+    final saByTitle = <String, SurfaceArea>{};
+    for (var a in areas) {
+      saByTitle[a.title.toLowerCase()] = a;
+      final identifier = a.generalAreaIdentifier;
+      if (identifier != null && identifier.isNotEmpty) {
+        saByIdentifier[identifier] = a;
+      }
+    }
+
+    final caveByTitleIdx = <String, Cave>{};
+    final caveByTitleSa = <String, Cave>{};
+    for (var c in caves) {
+      final titleKey = c.title.toLowerCase();
+      final idx = c.caveLocalIndex;
+      if (idx != null && idx.isNotEmpty) {
+        caveByTitleIdx.putIfAbsent('$titleKey|$idx', () => c);
+      }
+      caveByTitleSa['$titleKey|${c.surfaceAreaUuid ?? ''}'] = c;
+    }
+
+    final candidates = <CSVCaveUpdateCandidate>[];
+    for (var i = 0; i < rows.length; i++) {
+      final row = rows[i];
+      if (row.caveName == null) continue;
+      final titleKey = row.caveName!.toLowerCase();
+
+      // Resolve the row's target surface area without creating anything.
+      // Null when the row carries no area information; `existing` is null
+      // when the import would create a new area.
+      ({String title, SurfaceArea? existing})? resolvedSa;
+      if (row.generalAreaIdentifier != null || row.surfaceArea != null) {
+        final byIdentifier = row.generalAreaIdentifier != null
+            ? saByIdentifier[row.generalAreaIdentifier!]
+            : null;
+        if (byIdentifier != null) {
+          resolvedSa = (title: byIdentifier.title, existing: byIdentifier);
+        } else {
+          final effectiveTitle = row.surfaceArea ?? row.generalAreaIdentifier!;
+          final byTitle = saByTitle[effectiveTitle.toLowerCase()];
+          resolvedSa = (
+            title: byTitle?.title ?? effectiveTitle,
+            existing: byTitle,
+          );
+        }
+      }
+
+      // Same cave: matched by title + cave local index first, then by the
+      // (title, surface area) unique identity.
+      Cave? target;
+      if (row.caveLocalIndex != null) {
+        target = caveByTitleIdx['$titleKey|${row.caveLocalIndex}'];
+      }
+      if (target == null &&
+          (resolvedSa == null || resolvedSa.existing != null)) {
+        target = caveByTitleSa['$titleKey|${resolvedSa?.existing?.uuid ?? ''}'];
+      }
+      if (target == null) continue;
+
+      final changes = <CSVCaveFieldChange>[];
+      if (row.description != null && row.description != target.description) {
+        changes.add(
+          CSVCaveFieldChange(
+            field: CSVCaveField.description,
+            oldValue: target.description,
+            newValue: row.description,
+          ),
+        );
+      }
+      if (row.caveLocalIndex != null &&
+          row.caveLocalIndex != target.caveLocalIndex) {
+        changes.add(
+          CSVCaveFieldChange(
+            field: CSVCaveField.caveLocalIndex,
+            oldValue: target.caveLocalIndex,
+            newValue: row.caveLocalIndex,
+          ),
+        );
+      }
+      if (resolvedSa != null) {
+        final sameArea =
+            resolvedSa.existing != null &&
+            resolvedSa.existing!.uuid == target.surfaceAreaUuid;
+        // Moving the cave into an area where a same-titled cave already
+        // lives would break UNIQUE(title, surface_area_uuid) — leave the
+        // area untouched in that case.
+        final occupied =
+            resolvedSa.existing != null &&
+            caveByTitleSa.containsKey('$titleKey|${resolvedSa.existing!.uuid}');
+        if (!sameArea && !occupied) {
+          changes.add(
+            CSVCaveFieldChange(
+              field: CSVCaveField.surfaceArea,
+              oldValue: target.surfaceAreaUuid != null
+                  ? saTitleByUuid[target.surfaceAreaUuid]
+                  : null,
+              newValue: resolvedSa.title,
+            ),
+          );
+        }
+      }
+
+      if (changes.isNotEmpty) {
+        candidates.add(
+          CSVCaveUpdateCandidate(
+            rowIndex: i,
+            caveUuid: target.uuid,
+            caveTitle: target.title,
+            caveLocalIndex: target.caveLocalIndex,
+            changes: changes,
+          ),
+        );
+      }
+    }
+    return candidates;
+  }
+
+  /// Perform the actual import.
+  ///
+  /// [updateCandidates] is the output of [planCaveUpdates];
+  /// [approvedUpdates] holds the row indexes the user approved. Candidate
+  /// rows not approved are skipped untouched.
+  Future<CSVCaveImportResult> importRows(
+    List<CSVCaveImportRow> rows,
+    CSVCavesImportConfig config, {
+    List<CSVCaveUpdateCandidate> updateCandidates = const [],
+    Set<int> approvedUpdates = const {},
+  }) async {
     return _database.transaction(() async {
       int cavesCreated = 0;
+      int cavesUpdated = 0;
       int surfaceAreasCreated = 0;
       int skippedDuplicates = 0;
+      final candidateByRow = {for (final c in updateCandidates) c.rowIndex: c};
 
       // Cache existing data
       final surfaceAreaCache = <String, Uuid>{}; // title.lower -> uuid
@@ -211,10 +381,18 @@ class CSVCaveImporter {
       }
 
       final caveCache = <String, Uuid>{}; // "title.lower|saUuid" -> uuid
+      final caveByTitleIdx = <String, Uuid>{}; // "title.lower|localIdx" -> uuid
       final existingCaves = await _database.select(_database.caves).get();
       for (var c in existingCaves) {
         final key = '${c.title.toLowerCase()}|${c.surfaceAreaUuid ?? ''}';
         caveCache[key] = c.uuid;
+        final idx = c.caveLocalIndex;
+        if (idx != null && idx.isNotEmpty) {
+          caveByTitleIdx.putIfAbsent(
+            '${c.title.toLowerCase()}|$idx',
+            () => c.uuid,
+          );
+        }
       }
 
       // Resolve the row's surface area to a uuid, creating the area when
@@ -280,35 +458,62 @@ class CSVCaveImporter {
         return newUuid;
       }
 
-      for (final row in rows) {
+      for (var i = 0; i < rows.length; i++) {
+        final row = rows[i];
         if (row.caveName == null || row.caveName!.isEmpty) continue;
 
         final now = _clock.nowMs();
         final author = await _currentUser.currentOrSystem();
 
         final surfaceAreaUuid = await resolveSurfaceArea(row, now, author);
+        final titleKey = row.caveName!.toLowerCase();
+        final caveKey = '$titleKey|${surfaceAreaUuid ?? ''}';
+
+        // Row matches an existing cave with differing fields: apply the
+        // update only when the user approved it, otherwise leave untouched.
+        final candidate = candidateByRow[i];
+        if (candidate != null) {
+          if (!approvedUpdates.contains(i)) {
+            skippedDuplicates++;
+            continue;
+          }
+          // Re-check the unique (title, surface area) slot: it may have
+          // been taken by a cave created earlier in this import.
+          final occupant = caveCache[caveKey];
+          final moveArea =
+              (row.surfaceArea != null || row.generalAreaIdentifier != null) &&
+              (occupant == null || occupant == candidate.caveUuid);
+          await (_database.update(
+            _database.caves,
+          )..where((c) => c.uuid.equalsValue(candidate.caveUuid))).write(
+            CavesCompanion(
+              description: row.description != null
+                  ? Value(row.description)
+                  : const Value.absent(),
+              caveLocalIndex: row.caveLocalIndex != null
+                  ? Value(row.caveLocalIndex)
+                  : const Value.absent(),
+              surfaceAreaUuid: moveArea
+                  ? Value(surfaceAreaUuid)
+                  : const Value.absent(),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
+          if (moveArea) caveCache[caveKey] = candidate.caveUuid;
+          cavesUpdated++;
+          continue;
+        }
+
+        // Same cave already present (title + local index): nothing changed.
+        if (row.caveLocalIndex != null &&
+            caveByTitleIdx.containsKey('$titleKey|${row.caveLocalIndex}')) {
+          skippedDuplicates++;
+          continue;
+        }
 
         // Check if cave already exists (title + surface_area_uuid is unique)
-        final caveKey =
-            '${row.caveName!.toLowerCase()}|${surfaceAreaUuid ?? ''}';
         if (caveCache.containsKey(caveKey)) {
-          // Update description / local index if provided and cave exists
-          if (row.description != null || row.caveLocalIndex != null) {
-            await (_database.update(
-              _database.caves,
-            )..where((c) => c.uuid.equalsValue(caveCache[caveKey]!))).write(
-              CavesCompanion(
-                description: row.description != null
-                    ? Value(row.description)
-                    : const Value.absent(),
-                caveLocalIndex: row.caveLocalIndex != null
-                    ? Value(row.caveLocalIndex)
-                    : const Value.absent(),
-                updatedAt: Value(now),
-                lastModifiedByUserUuid: Value(author),
-              ),
-            );
-          }
           skippedDuplicates++;
           continue;
         }
@@ -346,6 +551,7 @@ class CSVCaveImporter {
 
       return CSVCaveImportResult(
         cavesCreated: cavesCreated,
+        cavesUpdated: cavesUpdated,
         surfaceAreasCreated: surfaceAreasCreated,
         skippedDuplicates: skippedDuplicates,
       );

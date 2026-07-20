@@ -8,6 +8,9 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
+/// User decision for one existing cave whose fields differ from the CSV.
+enum _CaveUpdateChoice { update, skip, updateAll, skipAll }
+
 /// Screen for importing caves from CSV files.
 ///
 /// Uses [CSVImportPage] to handle file selection and column mapping,
@@ -133,13 +136,49 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
         }
       }
 
-      // Step 2: Import
-      final importResult = await _importer.importRows(rows, config);
+      // Step 2: Ask, per matched cave with differing fields, whether to
+      // update it (decided before the import transaction starts).
+      final candidates = await _importer.planCaveUpdates(rows, config);
+      final approved = <int>{};
+      bool? applyToAll;
+      for (var i = 0; i < candidates.length; i++) {
+        bool update;
+        if (applyToAll != null) {
+          update = applyToAll;
+        } else {
+          if (!mounted) return;
+          final choice = await _showCaveUpdateDialog(
+            candidates[i],
+            i + 1,
+            candidates.length,
+          );
+          switch (choice) {
+            case _CaveUpdateChoice.updateAll:
+              applyToAll = update = true;
+            case _CaveUpdateChoice.skipAll:
+              applyToAll = update = false;
+            case _CaveUpdateChoice.update:
+              update = true;
+            case _CaveUpdateChoice.skip:
+            case null:
+              update = false;
+          }
+        }
+        if (update) approved.add(candidates[i].rowIndex);
+      }
+
+      // Step 3: Import
+      final importResult = await _importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: approved,
+      );
 
       setState(() => _isProcessing = false);
 
       if (!mounted) return;
-      // Step 3: Show results
+      // Step 4: Show results
       await _showImportResultDialog(importResult);
     } catch (e) {
       setState(() => _isProcessing = false);
@@ -216,6 +255,74 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
     );
   }
 
+  String _fieldLabel(CSVCaveField field) => switch (field) {
+    CSVCaveField.description => LocServ.inst.t('csv_field_description'),
+    CSVCaveField.caveLocalIndex => LocServ.inst.t('cave_local_index'),
+    CSVCaveField.surfaceArea => LocServ.inst.t('csv_field_surface_area'),
+  };
+
+  /// Ask whether to apply the differing CSV values to one existing cave.
+  Future<_CaveUpdateChoice?> _showCaveUpdateDialog(
+    CSVCaveUpdateCandidate candidate,
+    int position,
+    int total,
+  ) {
+    return showDialog<_CaveUpdateChoice>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '${LocServ.inst.t('csv_update_existing_cave')} ($position/$total)',
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                candidate.caveLocalIndex != null
+                    ? '${candidate.caveTitle} (${candidate.caveLocalIndex})'
+                    : candidate.caveTitle,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...candidate.changes.map(
+                (change) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    '${_fieldLabel(change.field)}: '
+                    '${change.oldValue ?? '—'} → ${change.newValue ?? '—'}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _CaveUpdateChoice.skipAll),
+            child: Text(LocServ.inst.t('csv_skip_all')),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context, _CaveUpdateChoice.updateAll),
+            child: Text(LocServ.inst.t('csv_update_all')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _CaveUpdateChoice.skip),
+            child: Text(LocServ.inst.t('csv_skip')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _CaveUpdateChoice.update),
+            child: Text(LocServ.inst.t('csv_update')),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Show the import result summary.
   Future<void> _showImportResultDialog(CSVCaveImportResult result) async {
     await showDialog<void>(
@@ -228,6 +335,9 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
           children: [
             Text(
               '${LocServ.inst.t('csv_caves_created')}: ${result.cavesCreated}',
+            ),
+            Text(
+              '${LocServ.inst.t('csv_caves_updated')}: ${result.cavesUpdated}',
             ),
             Text(
               '${LocServ.inst.t('csv_surface_areas_created')}: ${result.surfaceAreasCreated}',
