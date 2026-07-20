@@ -36,8 +36,16 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
       label: LocServ.inst.t('csv_field_description'),
     ),
     CSVColumnDefinition(
+      key: 'cave_local_index',
+      label: LocServ.inst.t('cave_local_index'),
+    ),
+    CSVColumnDefinition(
       key: 'surface_area',
       label: LocServ.inst.t('csv_field_surface_area'),
+    ),
+    CSVColumnDefinition(
+      key: 'general_area_identifier',
+      label: LocServ.inst.t('general_area_identifier'),
     ),
   ];
 
@@ -82,7 +90,10 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
       final config = CSVCavesImportConfig(
         caveNameColumn: csvResult.columnMappings['cave_name'],
         descriptionColumn: csvResult.columnMappings['description'],
+        caveLocalIndexColumn: csvResult.columnMappings['cave_local_index'],
         surfaceAreaColumn: csvResult.columnMappings['surface_area'],
+        generalAreaIdentifierColumn:
+            csvResult.columnMappings['general_area_identifier'],
         maxPreviewDuplicates: widget.maxPreviewDuplicates,
       );
 
