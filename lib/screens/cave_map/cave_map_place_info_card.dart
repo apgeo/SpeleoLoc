@@ -11,11 +11,16 @@ class CaveMapPlaceInfoCard extends StatelessWidget {
     required this.item,
     required this.onClose,
     this.onOpenPlace,
+    this.onSetLocation,
   });
 
   final CaveMapPlaceItem item;
   final VoidCallback onClose;
   final VoidCallback? onOpenPlace;
+
+  /// Re-positions this place by placing a new point (tap / GPS). Null while
+  /// the map is an external coordinate picker.
+  final VoidCallback? onSetLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +84,13 @@ class CaveMapPlaceInfoCard extends StatelessWidget {
                     tooltip: loc.t('map_open_place'),
                     visualDensity: VisualDensity.compact,
                     onPressed: onOpenPlace,
+                  ),
+                if (onSetLocation != null)
+                  IconButton(
+                    icon: const Icon(Icons.edit_location_alt, size: 20),
+                    tooltip: loc.t('map_set_location'),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onSetLocation,
                   ),
               ],
             ),

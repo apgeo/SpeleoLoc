@@ -33,11 +33,39 @@ plots every cave place with GPS coordinates (`cave_places.latitude` /
 
 ## Toolbar
 
-Back · layer picker · show/hide other caves · show/hide non-entrance
-places (the two toggles combine) · list of all places · list of entrances.
-The two lists open as inline panels on the same screen (`<place title> -
-<cave title>`, tap to fly to the place). In pick mode a confirm button is
-added.
+Back · my-location · layer picker · show/hide other caves · show/hide
+non-entrance places (the two toggles combine) · list of all places · list
+of entrances · add-point. The two lists open as inline panels on the same
+screen (`<place title> - <cave title>`, tap to fly to the place).
+
+## GPS and point management
+
+The map doubles as a GPS/geodata point manager. `LocationService`
+(`lib/services/location/`) is the generic device-location primitive
+(permission handling, a one-shot fix, and a position stream) that the map's
+specific use cases build on. `CaveGeoService` (`lib/services/cave_geo_service.dart`)
+performs the creation writes (new entrance, new cave + entrance, set a
+place's location) so the rules — e.g. the first entrance of a cave becomes
+its main entrance — are unit-tested independently of the UI.
+
+- **My location** — the location button requests permission (once), then
+  shows the live position as a blue dot with a translucent accuracy circle
+  and follows it. Panning the map releases follow.
+- **Placing a point** — every "create" or "set location" action enters one
+  shared placement flow. The point can be set three ways: **tap** the map,
+  **long-press** the map (which also opens the create menu at that point),
+  or **Use my location** (the current GPS fix). A bottom bar shows the
+  chosen coordinates and a confirm button.
+- **Add point** (toolbar +, or long-press) offers:
+  - **New cave** — enter a cave title and entrance name; creates the cave
+    and its main entrance at the point.
+  - **New entrance** — pick an existing cave and a name; adds an entrance
+    place at the point (marked main if the cave had none).
+- **Set an existing place's location** — tap a place marker → the info
+  card's edit-location button re-places that point (tap / GPS).
+- **From the cave-place form** — the pick button opens the map in the same
+  placement flow and returns the coordinates (tap or GPS) to the form,
+  where they are saved with the place.
 
 ## Layers
 

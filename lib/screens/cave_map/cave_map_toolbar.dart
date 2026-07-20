@@ -3,34 +3,37 @@ import 'package:speleoloc/screens/cave_map/cave_map_panel.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Compact horizontal toolbar pinned to the top of the surface map (the
-/// screen hides its AppBar). Hosts navigation, the layer picker, the two
-/// visibility toggles and the two place-list buttons; in pick mode it adds
-/// the confirm action.
+/// screen hides its AppBar). Hosts navigation, the my-location toggle, the
+/// layer picker, the two visibility toggles, the two place-list buttons and
+/// the create-point menu.
 class CaveMapToolbar extends StatelessWidget {
   const CaveMapToolbar({
     super.key,
-    required this.pickMode,
-    required this.canConfirmPick,
     required this.showOtherCaves,
     required this.showNonEntrances,
+    required this.locationActive,
     required this.activePanel,
     required this.onBack,
+    required this.onMyLocation,
     required this.onToggleOtherCaves,
     required this.onToggleNonEntrances,
     required this.onPanelToggled,
-    required this.onConfirmPick,
+    this.onAdd,
   });
 
-  final bool pickMode;
-  final bool canConfirmPick;
   final bool showOtherCaves;
   final bool showNonEntrances;
+  final bool locationActive;
   final CaveMapPanel activePanel;
   final VoidCallback onBack;
+  final VoidCallback onMyLocation;
   final VoidCallback onToggleOtherCaves;
   final VoidCallback onToggleNonEntrances;
   final ValueChanged<CaveMapPanel> onPanelToggled;
-  final VoidCallback? onConfirmPick;
+
+  /// Opens the create-point menu. Null hides the button (e.g. while the map
+  /// is being used as an external coordinate picker).
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +70,14 @@ class CaveMapToolbar extends StatelessWidget {
                 icon: Icons.arrow_back,
                 tooltip: loc.t('back'),
                 onPressed: onBack,
+              ),
+              button(
+                icon: locationActive
+                    ? Icons.my_location
+                    : Icons.location_searching,
+                tooltip: loc.t('map_my_location'),
+                active: locationActive,
+                onPressed: onMyLocation,
               ),
               button(
                 icon: Icons.layers,
@@ -110,13 +121,12 @@ class CaveMapToolbar extends StatelessWidget {
                 active: activePanel == CaveMapPanel.entrances,
                 onPressed: () => onPanelToggled(CaveMapPanel.entrances),
               ),
-              if (pickMode) ...[
+              if (onAdd != null) ...[
                 const SizedBox(width: 4),
                 button(
-                  icon: Icons.check_circle,
-                  tooltip: loc.t('map_pick_save'),
-                  active: canConfirmPick,
-                  onPressed: canConfirmPick ? onConfirmPick : null,
+                  icon: Icons.add_location_alt,
+                  tooltip: loc.t('map_add_point'),
+                  onPressed: onAdd,
                 ),
               ],
             ],

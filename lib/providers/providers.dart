@@ -13,6 +13,8 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
+import 'package:speleoloc/services/cave_geo_service.dart';
+import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
@@ -236,6 +238,21 @@ final documentationRepositoryProvider = Provider<IDocumentationRepository>(
 /// used by the surface map (see docs/workflows/mbtiles-layers.md).
 final mbTilesRegistryProvider = Provider<MbTilesRegistry>(
   (ref) => MbTilesRegistry(),
+);
+
+/// Generic device-location access (permission + position stream/one-shot)
+/// used by the surface map's GPS features.
+final locationServiceProvider = Provider<LocationService>(
+  (ref) => const GeolocatorLocationService(),
+);
+
+/// Creates and positions geographic cave points (new cave + entrance, new
+/// entrance for a cave, set a place's location) from the surface map.
+final caveGeoServiceProvider = Provider<CaveGeoService>(
+  (ref) => CaveGeoService(
+    ref.watch(caveRepositoryProvider),
+    ref.watch(cavePlaceRepositoryProvider),
+  ),
 );
 
 /// Session-level preferences that persist for the lifetime of the app process.
