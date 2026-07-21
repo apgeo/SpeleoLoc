@@ -22,7 +22,7 @@ import 'package:speleoloc/screens/cave_map/cave_map_toolbar.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/map_mbtiles_config.dart';
-import 'package:speleoloc/services/map/mbtiles_reader.dart';
+import 'package:speleoloc/services/map/mbtiles_isolate_reader.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
@@ -104,7 +104,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   Set<String> _enabledOverlays = {};
   MapMbTilesConfig _mbConfig = const MapMbTilesConfig();
   List<MbTilesDescriptor> _mbtiles = [];
-  final Map<String, MbTilesReader?> _readers = {};
+  final Map<String, MbTilesIsolateReader?> _readers = {};
+  final Set<String> _readerOpensInFlight = {};
 
   LatLng _initialCenter = _fallbackCenter;
   double _initialZoom = 6;
@@ -333,20 +334,33 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     return null;
   }
 
-  MbTilesReader? _readerFor(MbTilesDescriptor descriptor) {
+  /// Returns the worker-isolate reader for [descriptor] once it is open;
+  /// null while the first open is still in flight (kicked off here) and
+  /// for files that failed to open.
+  MbTilesIsolateReader? _readerFor(MbTilesDescriptor descriptor) {
     if (_readers.containsKey(descriptor.path)) {
       return _readers[descriptor.path];
     }
-    MbTilesReader? reader;
+    if (_readerOpensInFlight.add(descriptor.path)) {
+      unawaited(_openReader(descriptor));
+    }
+    return null;
+  }
+
+  Future<void> _openReader(MbTilesDescriptor descriptor) async {
+    MbTilesIsolateReader? reader;
     try {
-      reader = MbTilesReader.open(descriptor.path);
+      reader = await MbTilesIsolateReader.open(descriptor.path);
     } catch (e, st) {
       _log.warning('Failed to open MBTiles ${descriptor.fileName}', e, st);
     }
+    if (!mounted) {
+      reader?.dispose();
+      return;
+    }
     // Failures are cached as null so a corrupt file is not re-opened on
     // every rebuild.
-    _readers[descriptor.path] = reader;
-    return reader;
+    setState(() => _readers[descriptor.path] = reader);
   }
 
   void _moveTo(LatLng point, {double minZoom = 16}) {
@@ -688,7 +702,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   // Layers
   // ---------------------------------------------------------------------
 
-  TileLayer _buildBaseLayer() {
+  TileLayer? _buildBaseLayer() {
     final descriptor = _mbtilesBaseDescriptor(_baseId);
     if (descriptor != null) {
       final reader = _readerFor(descriptor);
@@ -699,6 +713,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
           maxNativeZoom: reader.metadata.maxZoom ?? 19,
         );
       }
+      // First open still in flight: render no base layer for the frames
+      // the worker needs, rather than flashing (and fetching) the online
+      // fallback. An unreadable file falls through to the fallback.
+      if (!_readers.containsKey(descriptor.path)) return null;
     }
     final source = findTileSourceById(_baseId) ?? builtInTileSources.first;
     return TileLayer(
@@ -728,10 +746,13 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   /// Mirrors [_buildBaseLayer]'s resolution so the attribution always
   /// names the source actually rendered (an unreadable MBTiles file falls
-  /// back to the online source in both places).
+  /// back to the online source in both places; one still opening renders
+  /// blank tiles under its own name).
   String get _attributionText {
     final descriptor = _mbtilesBaseDescriptor(_baseId);
-    if (descriptor != null && _readerFor(descriptor) != null) {
+    if (descriptor != null &&
+        (_readerFor(descriptor) != null ||
+            !_readers.containsKey(descriptor.path))) {
       return descriptor.displayName;
     }
     return (findTileSourceById(_baseId) ?? builtInTileSources.first)
@@ -838,7 +859,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                       ),
                     ),
                     children: [
-                      _buildBaseLayer(),
+                      ?_buildBaseLayer(),
                       ..._buildOverlayLayers(),
                       if (_myPosition != null)
                         ...CaveMapMyLocation.layers(_myPosition!),
