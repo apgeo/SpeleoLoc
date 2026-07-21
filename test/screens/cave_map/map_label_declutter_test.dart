@@ -69,5 +69,34 @@ void main() {
       // 50px wide labels every 30px: 0 overlaps 1, 1 overlaps 2, ...
       expect(visible, {'l0', 'l2', 'l4'});
     });
+
+    test('overlaps across grid cell boundaries are still detected', () {
+      // Rects straddling the 64px spatial-hash cell edges, including
+      // negative coordinates (labels partially off-screen).
+      final visible = selectVisibleLabels([
+        candidate('a', 60, 60),
+        candidate('b', 62, 62, priority: 0),
+        candidate('c', -10, -10),
+        candidate('d', -12, -8, priority: 0),
+      ], padding: 0);
+      expect(visible, {'a', 'c'});
+    });
+
+    test('a dense field stays consistent with pairwise checking', () {
+      // 20x20 labels on a 40px grid: 50px wide rects overlap horizontal
+      // neighbors only, so every other column survives per row.
+      final candidates = [
+        for (var row = 0; row < 20; row++)
+          for (var col = 0; col < 20; col++)
+            candidate('r${row}c$col', col * 40.0, row * 20.0),
+      ];
+      final visible = selectVisibleLabels(candidates, padding: 0);
+      expect(visible, hasLength(200));
+      for (var row = 0; row < 20; row++) {
+        for (var col = 0; col < 20; col += 2) {
+          expect(visible, contains('r${row}c$col'));
+        }
+      }
+    });
   });
 }
