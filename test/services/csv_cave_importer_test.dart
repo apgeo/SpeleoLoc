@@ -607,6 +607,97 @@ void main() {
     });
   });
 
+  group('matching is case-insensitive on every axis', () {
+    test('area identifier match ignores case', () async {
+      final padis = await insertArea('Padis', identifier: 'A05');
+
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '', '', 'a05'],
+        ]),
+        config,
+      );
+      final result = await importer.importRows(rows, config);
+
+      expect(result.surfaceAreasCreated, 0);
+      final cave = await db.select(db.caves).getSingle();
+      expect(cave.surfaceAreaUuid, padis);
+    });
+
+    test('cave local index match ignores case', () async {
+      await insertCave('Cave A', localIndex: 'P12');
+
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', 'p12', '', ''],
+        ]),
+        config,
+      );
+      final existing = await importer.findExistingCaves(rows, config);
+      expect(existing.totalCount, 1);
+
+      final result = await importer.importRows(rows, config);
+      expect(result.cavesCreated, 0);
+      expect(result.skippedDuplicates, 1);
+      expect(await db.select(db.caves).get(), hasLength(1));
+    });
+  });
+
+  group('same-run consistency', () {
+    test('an enriched local index dedupes later rows on that axis', () async {
+      // Row 1 creates the cave without an index, row 2 enriches the index
+      // through the area identity, row 3 carries only the index — it must
+      // match the enriched cave instead of creating a NULL-area twin.
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '', 'Padis', ''],
+          ['Cave A', '', '042', 'Padis', ''],
+          ['Cave A', '', '042', '', ''],
+        ]),
+        config,
+      );
+      final result = await importer.importRows(rows, config);
+
+      expect(result.cavesCreated, 1);
+      expect(result.cavesUpdated, 1);
+      expect(result.skippedDuplicates, 1);
+      final cave = await db.select(db.caves).getSingle();
+      expect(cave.caveLocalIndex, '042');
+    });
+
+    test('preview, plan and import agree on a mixed CSV', () async {
+      final padis = await insertArea('Padis', identifier: '005');
+      await insertCave('Cave A', areaUuid: padis);
+      await insertCave('Cave B', localIndex: '007', description: 'old');
+
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '', '', '005'], // exact duplicate via identifier
+          ['Cave B', 'new', '007', '', ''], // update candidate via index
+          ['Cave C', '', '', 'Padis', ''], // new cave in existing area
+        ]),
+        config,
+      );
+
+      final existing = await importer.findExistingCaves(rows, config);
+      expect(existing.totalCount, 2);
+
+      final candidates = await importer.planCaveUpdates(rows, config);
+      expect(candidates, hasLength(1));
+
+      final result = await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+      expect(result.cavesCreated, 1);
+      expect(result.cavesUpdated, 1);
+      expect(result.skippedDuplicates, 1);
+      expect(result.surfaceAreasCreated, 0);
+    });
+  });
+
   group('findExistingCaves', () {
     test('matches duplicates through the identifier', () async {
       final padis = await insertArea('Padis', identifier: '005');
