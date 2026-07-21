@@ -98,6 +98,72 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
       (_config[kMainEntranceSuffix] as String?) ?? '0001';
   String get _sep => (_config[kSegmentSeparator] as String?) ?? '';
 
+  // ----- Pure composition (no DB, no allocation) -----
+  //
+  // These compose a PCI for a *hypothetical* cave/place from explicit
+  // inputs, sharing the exact concatenation rules of [generate] so codes
+  // pre-generated for an index range match what the app would later assign.
+  // Used by range QR pre-generation.
+
+  /// Whether the dataset codes ([kCountryCode] + [kOrganizationCode]) are
+  /// set. [generate] aborts without them, so composition is meaningless.
+  bool get isDatasetConfigured => _country.isNotEmpty && _org.isNotEmpty;
+
+  /// The reserved main-entrance place index (integer form of
+  /// [kMainEntranceSuffix]), or null when the suffix is not numeric. A
+  /// regular place must never reuse it.
+  int? get reservedPlaceIndex => int.tryParse(_mainEntranceSuffix);
+
+  /// The area segment a [SurfaceArea] contributes to a PCI baseline, with
+  /// the same zeros/nines fallbacks as [generate]: zeros when there is no
+  /// area, nines when the area has no `general_area_identifier`.
+  String areaSegmentForArea(SurfaceArea? area) {
+    if (area == null) return '0' * _areaIdentifierWidth;
+    final id = area.generalAreaIdentifier;
+    if (id == null || id.isEmpty) return '9' * _areaIdentifierWidth;
+    return id;
+  }
+
+  /// Compose the main-entrance PCI for a hypothetical cave whose local
+  /// index is [caveLocalIndex] (zero-padded to the configured width).
+  ///
+  /// Mirrors [generate]: the reserved [kMainEntranceSuffix] is used only
+  /// when non-empty; otherwise the main entrance is the first allocated
+  /// place index (a hypothetical cave has no places yet, so that is `1`
+  /// padded to the place width).
+  String composeMainEntrancePci({
+    required String areaSegment,
+    required int caveLocalIndex,
+  }) {
+    final caveLocal = caveLocalIndex.toString().padLeft(
+      _caveLocalIndexWidth,
+      '0',
+    );
+    final baseline =
+        _country + _sep + _org + _sep + areaSegment + _sep + caveLocal;
+    final placeSegment = _mainEntranceSuffix.isNotEmpty
+        ? _mainEntranceSuffix
+        : (1).toString().padLeft(_cavePlaceLocalIndexWidth, '0');
+    return baseline + _sep + placeSegment;
+  }
+
+  /// Compose the PCI for a hypothetical place [placeLocalIndex] (zero-padded
+  /// to the configured width) under a cave that already carries
+  /// [caveLocalIndex] (its stored, verbatim value).
+  String composePlacePci({
+    required String areaSegment,
+    required String caveLocalIndex,
+    required int placeLocalIndex,
+  }) {
+    final placeLocal = placeLocalIndex.toString().padLeft(
+      _cavePlaceLocalIndexWidth,
+      '0',
+    );
+    final baseline =
+        _country + _sep + _org + _sep + areaSegment + _sep + caveLocalIndex;
+    return baseline + _sep + placeLocal;
+  }
+
   // ----- Generation -----
 
   @override
