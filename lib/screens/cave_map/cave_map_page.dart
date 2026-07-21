@@ -7,8 +7,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_controller.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_label_layer.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_layer_panel.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_layers_controller.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_markers.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_my_location.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_pick.dart';
@@ -21,17 +24,10 @@ import 'package:speleoloc/screens/cave_map/cave_map_prompts.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_toolbar.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/services/location/location_service.dart';
-import 'package:speleoloc/services/map/map_mbtiles_config.dart';
-import 'package:speleoloc/services/map/mbtiles_isolate_reader.dart';
-import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/cave_place_flags.dart';
-import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/widgets/map/cave_map_marker_icons.dart';
-import 'package:speleoloc/widgets/map/mbtiles_tile_provider.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Full-screen geographic map of cave places (no AppBar; a compact
@@ -47,6 +43,10 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 ///   ([highlightFocus]);
 /// - from CavePlacePage: [pickRequest] turns the screen into a coordinate
 ///   picker that pops a [CaveMapPickResult].
+///
+/// The page itself is wiring and the placement/GPS flows; the view state
+/// lives in [CaveMapController] and the tile stack in
+/// [CaveMapLayersController].
 class CaveMapPage extends ConsumerStatefulWidget {
   const CaveMapPage({
     super.key,
@@ -66,19 +66,16 @@ class CaveMapPage extends ConsumerStatefulWidget {
 }
 
 class _CaveMapPageState extends ConsumerState<CaveMapPage> {
-  static const String _userAgentPackageName = 'com.example.speleoloc';
   static const LatLng _fallbackCenter = LatLng(45.9432, 24.9668);
 
   final _log = AppLogger.of('CaveMapPage');
   final MapController _mapController = MapController();
 
-  bool _loaded = false;
-  List<CaveMapPlaceItem> _items = [];
+  late final CaveMapController _map;
+  late final CaveMapLayersController _layers;
 
-  bool _showOtherCaves = true;
-  bool _showNonEntrances = true;
+  bool _loaded = false;
   CaveMapPanel _panel = CaveMapPanel.none;
-  Uuid? _selectedUuid;
 
   // Point placement (create/move/pick). Null when just browsing.
   CaveMapPlacement? _placement;
@@ -92,26 +89,9 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   Position? _myPosition;
   bool _followMe = false;
 
-  /// Mutable focus filter seeded from the widget args; points created on
-  /// the map join it so they render focused. Null = no focus filter.
-  /// Empty sets from the callers (nothing checked, or a filter matching
-  /// nothing) degrade to null — "no filter" instead of an all-grey map
-  /// that the other-caves toggle can blank entirely.
-  Set<Uuid>? _focusCaveUuids;
-  Set<Uuid>? _focusPlaceUuids;
-
-  String _baseId = builtInTileSourcesDefaultId;
-  Set<String> _enabledOverlays = {};
-  MapMbTilesConfig _mbConfig = const MapMbTilesConfig();
-  List<MbTilesDescriptor> _mbtiles = [];
-  final Map<String, MbTilesIsolateReader?> _readers = {};
-  final Set<String> _readerOpensInFlight = {};
-
   LatLng _initialCenter = _fallbackCenter;
   double _initialZoom = 6;
   CameraFit? _initialFit;
-  LatLng? _lastCenter;
-  double? _lastZoom;
 
   bool get _isExternalPicker => widget.pickRequest != null;
 
@@ -120,14 +100,19 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   @override
   void initState() {
     super.initState();
-    final caveUuids = widget.focusCaveUuids;
-    final placeUuids = widget.focusPlaceUuids;
-    _focusCaveUuids = (caveUuids != null && caveUuids.isNotEmpty)
-        ? {...caveUuids}
-        : null;
-    _focusPlaceUuids = (placeUuids != null && placeUuids.isNotEmpty)
-        ? {...placeUuids}
-        : null;
+    _map = CaveMapController(
+      placeRepository: ref.read(cavePlaceRepositoryProvider),
+      caveRepository: ref.read(caveRepositoryProvider),
+      focusCaveUuids: widget.focusCaveUuids,
+      focusPlaceUuids: widget.focusPlaceUuids,
+    );
+    _layers = CaveMapLayersController(
+      configRepository: ref.read(configurationRepositoryProvider),
+      scanMbTiles: ref.read(mbTilesRegistryProvider).scan,
+    );
+    _map.addListener(_onControllersChanged);
+    _layers.addListener(_onControllersChanged);
+
     final pick = widget.pickRequest;
     if (pick != null) {
       _placement = CaveMapPlacement(
@@ -146,35 +131,24 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   @override
   void dispose() {
-    unawaited(_savePrefs());
+    unawaited(_layers.savePrefs());
     unawaited(_positionSub?.cancel());
-    for (final reader in _readers.values) {
-      reader?.dispose();
-    }
+    _map.removeListener(_onControllersChanged);
+    _layers.removeListener(_onControllersChanged);
+    _map.dispose();
+    _layers.dispose();
     _mapController.dispose();
     super.dispose();
   }
 
+  void _onControllersChanged() {
+    if (mounted) setState(() {});
+  }
+
   Future<void> _load() async {
     try {
-      final configRepo = ref.read(configurationRepositoryProvider);
-      final prefs = await configRepo.readJson(
-        mapScreenPrefsKey,
-        defaults: () => <String, dynamic>{},
-      );
-      _mbConfig = MapMbTilesConfig.fromJson(
-        await configRepo.readJson(
-          mapMbtilesConfigKey,
-          defaults: () => <String, dynamic>{},
-        ),
-      );
-      if (_mbConfig.autoLoad) {
-        _mbtiles = await ref.read(mbTilesRegistryProvider).scan();
-      }
-
-      await _loadItems();
-
-      _restorePrefs(prefs);
+      final prefs = await _layers.load();
+      await _map.loadItems();
       _computeInitialCamera(prefs);
       if (mounted) setState(() => _loaded = true);
     } catch (e, st) {
@@ -185,64 +159,6 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     }
   }
 
-  /// (Re)builds the render items from the database. Does not touch the
-  /// camera, so it is also safe after a create/edit.
-  Future<void> _loadItems() async {
-    final placeRepo = ref.read(cavePlaceRepositoryProvider);
-    final (places, entranceCounts, caves) = await (
-      placeRepo.getCavePlacesWithCoordinates(),
-      placeRepo.getEntranceCountsByCave(),
-      ref.read(caveRepositoryProvider).getCaves(),
-    ).wait;
-    final caveTitles = {for (final c in caves) c.uuid: c.title};
-
-    _items = [
-      for (final place in places)
-        CaveMapPlaceItem(
-          place: place,
-          caveTitle: caveTitles[place.caveUuid] ?? '',
-          point: LatLng(place.latitude!, place.longitude!),
-          label: resolvePlaceLabel(
-            caveTitle: caveTitles[place.caveUuid] ?? '',
-            placeTitle: place.title,
-            isEntrance: place.isAnyEntrance,
-            caveEntranceCount: entranceCounts[place.caveUuid] ?? 0,
-          ),
-          isEntrance: place.isAnyEntrance,
-          isMainEntrance: place.isMainEntrance == 1,
-          isFocus: _isFocusPlace(place),
-        ),
-    ];
-  }
-
-  bool _isFocusPlace(CavePlace place) {
-    if (_focusCaveUuids == null && _focusPlaceUuids == null) return true;
-    return (_focusPlaceUuids?.contains(place.uuid) ?? false) ||
-        (_focusCaveUuids?.contains(place.caveUuid) ?? false);
-  }
-
-  /// Adds a point created on the map to the focus filter (no-op when no
-  /// filter is active — everything is already in focus then).
-  void _addToFocus({Uuid? caveUuid, Uuid? placeUuid}) {
-    if (_focusCaveUuids == null && _focusPlaceUuids == null) return;
-    if (caveUuid != null) (_focusCaveUuids ??= {}).add(caveUuid);
-    if (placeUuid != null) (_focusPlaceUuids ??= {}).add(placeUuid);
-  }
-
-  void _restorePrefs(Map<String, dynamic> prefs) {
-    final base = prefs['base'];
-    if (base is String && _baseLayerExists(base)) _baseId = base;
-    final overlays = prefs['overlays'];
-    if (overlays is List) {
-      final known = _overlayDescriptors.map((d) => d.fileName).toSet();
-      _enabledOverlays =
-          overlays.whereType<String>().where(known.contains).toSet();
-    }
-  }
-
-  bool _baseLayerExists(String id) =>
-      findTileSourceById(id) != null || _mbtilesBaseDescriptor(id) != null;
-
   void _computeInitialCamera(Map<String, dynamic> prefs) {
     if (_pendingPoint != null) {
       _initialCenter = _pendingPoint!;
@@ -251,10 +167,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     }
 
     var points = [
-      for (final item in _items)
+      for (final item in _map.items)
         if (item.isFocus) item.point,
     ];
-    if (points.isEmpty) points = [for (final item in _items) item.point];
+    if (points.isEmpty) points = [for (final item in _map.items) item.point];
 
     if (points.length == 1) {
       _initialCenter = points.first;
@@ -274,95 +190,6 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     }
   }
 
-  Future<void> _savePrefs() async {
-    try {
-      await ref.read(configurationRepositoryProvider).writeJson(
-        mapScreenPrefsKey,
-        {
-          'base': _baseId,
-          'overlays': _enabledOverlays.toList(),
-          if (_lastCenter != null) 'lat': _lastCenter!.latitude,
-          if (_lastCenter != null) 'lng': _lastCenter!.longitude,
-          if (_lastZoom != null) 'zoom': _lastZoom,
-        },
-      );
-    } catch (e, st) {
-      _log.warning('Failed to persist map prefs', e, st);
-    }
-  }
-
-  // ---------------------------------------------------------------------
-  // Derived collections
-  // ---------------------------------------------------------------------
-
-  List<MbTilesDescriptor> get _baseDescriptors => [
-        for (final d in _mbtiles)
-          if (d.metadata.isRaster &&
-              _mbConfig.roleOf(d.fileName) == MbTilesRole.base)
-            d,
-      ];
-
-  List<MbTilesDescriptor> get _overlayDescriptors => [
-        for (final d in _mbtiles)
-          if (d.metadata.isRaster &&
-              _mbConfig.roleOf(d.fileName) == MbTilesRole.overlay)
-            d,
-      ];
-
-  List<CaveMapPlaceItem> get _visibleItems => [
-        for (final item in _items)
-          if ((item.isFocus || _showOtherCaves) &&
-              (item.isEntrance || _showNonEntrances))
-            item,
-      ];
-
-  CaveMapPlaceItem? get _selectedItem {
-    for (final item in _visibleItems) {
-      if (item.uuid == _selectedUuid) return item;
-    }
-    return null;
-  }
-
-  /// Resolves a base-layer id of the form `mbtiles:<fileName>` to its
-  /// descriptor; null for online-source ids and files no longer present.
-  MbTilesDescriptor? _mbtilesBaseDescriptor(String id) {
-    if (!id.startsWith('mbtiles:')) return null;
-    final fileName = id.substring('mbtiles:'.length);
-    for (final descriptor in _baseDescriptors) {
-      if (descriptor.fileName == fileName) return descriptor;
-    }
-    return null;
-  }
-
-  /// Returns the worker-isolate reader for [descriptor] once it is open;
-  /// null while the first open is still in flight (kicked off here) and
-  /// for files that failed to open.
-  MbTilesIsolateReader? _readerFor(MbTilesDescriptor descriptor) {
-    if (_readers.containsKey(descriptor.path)) {
-      return _readers[descriptor.path];
-    }
-    if (_readerOpensInFlight.add(descriptor.path)) {
-      unawaited(_openReader(descriptor));
-    }
-    return null;
-  }
-
-  Future<void> _openReader(MbTilesDescriptor descriptor) async {
-    MbTilesIsolateReader? reader;
-    try {
-      reader = await MbTilesIsolateReader.open(descriptor.path);
-    } catch (e, st) {
-      _log.warning('Failed to open MBTiles ${descriptor.fileName}', e, st);
-    }
-    if (!mounted) {
-      reader?.dispose();
-      return;
-    }
-    // Failures are cached as null so a corrupt file is not re-opened on
-    // every rebuild.
-    setState(() => _readers[descriptor.path] = reader);
-  }
-
   void _moveTo(LatLng point, {double minZoom = 16}) {
     // Before the first FlutterMap frame the controller has no camera —
     // reachable via the toolbar/GPS while the loading spinner shows.
@@ -377,16 +204,12 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   void _onMapTap(TapPosition tapPosition, LatLng latLng) {
     if (_placement != null) {
-      setState(() {
-        _pendingPoint = latLng;
-        _selectedUuid = null;
-      });
+      setState(() => _pendingPoint = latLng);
+      _map.select(null);
       return;
     }
-    setState(() {
-      _selectedUuid = null;
-      _panel = CaveMapPanel.none;
-    });
+    setState(() => _panel = CaveMapPanel.none);
+    _map.select(null);
   }
 
   void _onMapLongPress(TapPosition tapPosition, LatLng latLng) {
@@ -398,43 +221,22 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     // During placement a marker tap identifies the place (highlight +
     // label priority) without hijacking the pending point — moving the
     // point stays an explicit map tap / GPS action.
-    setState(() {
-      _selectedUuid = item.uuid;
-      if (_placement == null) _panel = CaveMapPanel.none;
-    });
+    if (_placement == null) setState(() => _panel = CaveMapPanel.none);
+    _map.select(item.uuid);
   }
 
   void _onPanelToggled(CaveMapPanel panel) {
     setState(() => _panel = _panel == panel ? CaveMapPanel.none : panel);
   }
 
-  void _onToggleOtherCaves() {
-    setState(() {
-      _showOtherCaves = !_showOtherCaves;
-      if (_selectedItem == null) _selectedUuid = null;
-    });
-  }
-
-  void _onToggleNonEntrances() {
-    setState(() {
-      _showNonEntrances = !_showNonEntrances;
-      if (_selectedItem == null) _selectedUuid = null;
-    });
-  }
-
   void _navigateToItem(CaveMapPlaceItem item) {
-    setState(() {
-      _panel = CaveMapPanel.none;
-      _selectedUuid = item.uuid;
-      // Make sure the target is not filtered out of view.
-      if (!item.isFocus) _showOtherCaves = true;
-      if (!item.isEntrance) _showNonEntrances = true;
-    });
+    setState(() => _panel = CaveMapPanel.none);
+    _map.reveal(item);
     _moveTo(item.point, minZoom: 15);
   }
 
   Future<void> _openSelectedPlace() async {
-    final item = _selectedItem;
+    final item = _map.selectedItem;
     if (item == null) return;
     await Navigator.push(
       context,
@@ -447,11 +249,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     );
     // Coordinates/titles may have changed while the place was open.
     try {
-      await _loadItems();
+      await _map.loadItems();
     } catch (e, st) {
       _log.warning('Reload after place edit failed', e, st);
     }
-    if (mounted) setState(() {});
   }
 
   // ---------------------------------------------------------------------
@@ -530,15 +331,16 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         existingPlace: existingPlace,
         subjectLabel: subjectLabel,
       );
-      _pendingPoint = point ??
+      _pendingPoint =
+          point ??
           (existingPlace != null &&
                   existingPlace.latitude != null &&
                   existingPlace.longitude != null
               ? LatLng(existingPlace.latitude!, existingPlace.longitude!)
               : null);
       _panel = CaveMapPanel.none;
-      _selectedUuid = null;
     });
+    _map.select(null);
     if (_pendingPoint != null) _moveTo(_pendingPoint!, minZoom: 15);
   }
 
@@ -660,7 +462,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
             latitude: point.latitude,
             longitude: point.longitude,
           );
-          _addToFocus(placeUuid: selectAfter);
+          _map.addToFocus(placeUuid: selectAfter);
           SnackBarService.showSuccess(loc.t('map_entrance_added'));
         case PlacementKind.newCave:
           final input = await showNewCavePrompt(context);
@@ -672,7 +474,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
             latitude: point.latitude,
             longitude: point.longitude,
           );
-          _addToFocus(
+          _map.addToFocus(
             caveUuid: created.caveUuid,
             placeUuid: created.entranceUuid,
           );
@@ -680,14 +482,14 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
           SnackBarService.showSuccess(loc.t('map_cave_added'));
       }
 
-      await _loadItems();
+      await _map.loadItems();
       if (!mounted) return;
       setState(() {
         _placement = null;
         _pendingPoint = null;
         _placementBusy = false;
-        _selectedUuid = selectAfter;
       });
+      _map.select(selectAfter);
       _moveTo(point, minZoom: 15);
     } catch (e, st) {
       _log.warning('Placement confirm failed', e, st);
@@ -696,133 +498,6 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         SnackBarService.showError('${loc.t('error')}: $e');
       }
     }
-  }
-
-  // ---------------------------------------------------------------------
-  // Layers
-  // ---------------------------------------------------------------------
-
-  TileLayer? _buildBaseLayer() {
-    final descriptor = _mbtilesBaseDescriptor(_baseId);
-    if (descriptor != null) {
-      final reader = _readerFor(descriptor);
-      if (reader != null) {
-        return TileLayer(
-          tileProvider: MbTilesTileProvider(reader),
-          minNativeZoom: reader.metadata.minZoom ?? 0,
-          maxNativeZoom: reader.metadata.maxZoom ?? 19,
-        );
-      }
-      // First open still in flight: render no base layer for the frames
-      // the worker needs, rather than flashing (and fetching) the online
-      // fallback. An unreadable file falls through to the fallback.
-      if (!_readers.containsKey(descriptor.path)) return null;
-    }
-    final source = findTileSourceById(_baseId) ?? builtInTileSources.first;
-    return TileLayer(
-      urlTemplate: source.urlTemplate,
-      subdomains: source.subdomains,
-      maxNativeZoom: source.maxNativeZoom,
-      userAgentPackageName: _userAgentPackageName,
-    );
-  }
-
-  List<TileLayer> _buildOverlayLayers() {
-    final layers = <TileLayer>[];
-    for (final descriptor in _overlayDescriptors) {
-      if (!_enabledOverlays.contains(descriptor.fileName)) continue;
-      final reader = _readerFor(descriptor);
-      if (reader == null) continue;
-      layers.add(
-        TileLayer(
-          tileProvider: MbTilesTileProvider(reader),
-          minNativeZoom: reader.metadata.minZoom ?? 0,
-          maxNativeZoom: reader.metadata.maxZoom ?? 19,
-        ),
-      );
-    }
-    return layers;
-  }
-
-  /// Mirrors [_buildBaseLayer]'s resolution so the attribution always
-  /// names the source actually rendered (an unreadable MBTiles file falls
-  /// back to the online source in both places; one still opening renders
-  /// blank tiles under its own name).
-  String get _attributionText {
-    final descriptor = _mbtilesBaseDescriptor(_baseId);
-    if (descriptor != null &&
-        (_readerFor(descriptor) != null ||
-            !_readers.containsKey(descriptor.path))) {
-      return descriptor.displayName;
-    }
-    return (findTileSourceById(_baseId) ?? builtInTileSources.first)
-        .attribution;
-  }
-
-  List<Marker> _buildMarkers() {
-    int rank(CaveMapPlaceItem item) {
-      var r = item.isEntrance ? 1 : 0;
-      if (item.isFocus) r += 2;
-      if (item.uuid == _selectedUuid) r += 100;
-      return r;
-    }
-
-    final ordered = [..._visibleItems]
-      ..sort((a, b) => rank(a).compareTo(rank(b)));
-
-    return [
-      for (final item in ordered)
-        Marker(
-          key: ValueKey(item.uuid),
-          point: item.point,
-          width: item.isEntrance ? 30 : 20,
-          height: item.isEntrance ? 26 : 20,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _onMarkerTap(item),
-            child: Center(child: _markerIcon(item)),
-          ),
-        ),
-      if (_placement != null && _pendingPoint != null)
-        Marker(
-          point: _pendingPoint!,
-          width: 40,
-          height: 40,
-          alignment: Alignment.topCenter,
-          child: const Icon(
-            Icons.location_on,
-            size: 40,
-            color: Color(0xFFD32F2F),
-            shadows: [Shadow(color: Colors.white, blurRadius: 4)],
-          ),
-        ),
-    ];
-  }
-
-  Widget _markerIcon(CaveMapPlaceItem item) {
-    final highlighted =
-        (widget.highlightFocus && item.isFocus) || item.uuid == _selectedUuid;
-    if (item.isEntrance) {
-      final color = !item.isFocus
-          ? CaveMapMarkerStyle.entranceNonFocus
-          : item.isMainEntrance
-              ? CaveMapMarkerStyle.mainEntrance
-              : CaveMapMarkerStyle.entrance;
-      return CaveEntranceMarkerIcon(
-        size: item.isMainEntrance
-            ? CaveMapMarkerStyle.mainEntranceSize
-            : CaveMapMarkerStyle.entranceSize,
-        color: color,
-        highlighted: highlighted,
-      );
-    }
-    return PlacePointMarkerIcon(
-      size: CaveMapMarkerStyle.placeDotSize,
-      color: item.isFocus
-          ? CaveMapMarkerStyle.placeDot
-          : CaveMapMarkerStyle.placeDotNonFocus,
-      highlighted: highlighted,
-    );
   }
 
   // ---------------------------------------------------------------------
@@ -848,8 +523,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                       onTap: _onMapTap,
                       onLongPress: _onMapLongPress,
                       onPositionChanged: (camera, hasGesture) {
-                        _lastCenter = camera.center;
-                        _lastZoom = camera.zoom;
+                        _layers.lastCenter = camera.center;
+                        _layers.lastZoom = camera.zoom;
                         if (hasGesture && _followMe) {
                           setState(() => _followMe = false);
                         }
@@ -859,14 +534,24 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                       ),
                     ),
                     children: [
-                      ?_buildBaseLayer(),
-                      ..._buildOverlayLayers(),
+                      ?_layers.buildBaseLayer(),
+                      ..._layers.buildOverlayLayers(),
                       if (_myPosition != null)
                         ...CaveMapMyLocation.layers(_myPosition!),
-                      MarkerLayer(markers: _buildMarkers()),
+                      MarkerLayer(
+                        markers: CaveMapMarkers.build(
+                          paintOrder: _map.paintOrder,
+                          highlightFocus: widget.highlightFocus,
+                          selectedUuid: _map.selectedUuid,
+                          onTap: _onMarkerTap,
+                          pendingPoint: _placement != null
+                              ? _pendingPoint
+                              : null,
+                        ),
+                      ),
                       CaveMapLabelLayer(
-                        items: _visibleItems,
-                        selectedUuid: _selectedUuid,
+                        items: _map.visibleItems,
+                        selectedUuid: _map.selectedUuid,
                       ),
                       Align(
                         alignment: Alignment.bottomLeft,
@@ -874,12 +559,13 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                           child: Padding(
                             padding: const EdgeInsets.all(4),
                             child: Text(
-                              _attributionText,
+                              _layers.attributionText,
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.black.withValues(alpha: 0.65),
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.6),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
                             ),
                           ),
@@ -892,14 +578,14 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
             child: Column(
               children: [
                 CaveMapToolbar(
-                  showOtherCaves: _showOtherCaves,
-                  showNonEntrances: _showNonEntrances,
+                  showOtherCaves: _map.showOtherCaves,
+                  showNonEntrances: _map.showNonEntrances,
                   locationActive: _followMe,
                   activePanel: _panel,
                   onBack: () => Navigator.pop(context),
                   onMyLocation: () => unawaited(_toggleMyLocation()),
-                  onToggleOtherCaves: _onToggleOtherCaves,
-                  onToggleNonEntrances: _onToggleNonEntrances,
+                  onToggleOtherCaves: _map.toggleOtherCaves,
+                  onToggleNonEntrances: _map.toggleNonEntrances,
                   onPanelToggled: _onPanelToggled,
                   onAdd: (_isExternalPicker || _placement != null)
                       ? null
@@ -909,10 +595,9 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                   child: _panel == CaveMapPanel.none
                       ? const IgnorePointer(child: SizedBox.expand())
                       : Material(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withValues(alpha: 0.97),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surface.withValues(alpha: 0.97),
                           child: _buildPanel(),
                         ),
                 ),
@@ -934,22 +619,22 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
       case CaveMapPanel.layers:
         return CaveMapLayerPanel(
           baseSources: builtInTileSources,
-          mbtilesBaseFiles: _baseDescriptors,
-          mbtilesOverlayFiles: _overlayDescriptors,
-          selectedBaseId: _baseId,
-          enabledOverlayFiles: _enabledOverlays,
+          mbtilesBaseFiles: _layers.baseDescriptors,
+          mbtilesOverlayFiles: _layers.overlayDescriptors,
+          selectedBaseId: _layers.baseId,
+          enabledOverlayFiles: _layers.enabledOverlays,
           onBaseSelected: _onBaseSelected,
-          onOverlayToggled: _onOverlayToggled,
+          onOverlayToggled: _layers.toggleOverlay,
         );
       case CaveMapPanel.allPlaces:
         return CaveMapPlaceListPanel(
-          items: _items,
+          items: _map.items,
           onItemSelected: _navigateToItem,
         );
       case CaveMapPanel.entrances:
         return CaveMapPlaceListPanel(
           items: [
-            for (final item in _items)
+            for (final item in _map.items)
               if (item.isEntrance) item,
           ],
           onItemSelected: _navigateToItem,
@@ -971,35 +656,24 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         onConfirm: () => unawaited(_confirmPlacement()),
       );
     }
-    final selected = _selectedItem;
+    final selected = _map.selectedItem;
     if (selected != null) {
       return CaveMapPlaceInfoCard(
         item: selected,
-        onClose: () => setState(() => _selectedUuid = null),
-        onOpenPlace: _isExternalPicker ? null : _openSelectedPlace,
-        onSetLocation:
-            _isExternalPicker ? null : () => _startMovePlace(selected),
+        onClose: () => _map.select(null),
+        onOpenPlace: _isExternalPicker
+            ? null
+            : () => unawaited(_openSelectedPlace()),
+        onSetLocation: _isExternalPicker
+            ? null
+            : () => _startMovePlace(selected),
       );
     }
     return const SizedBox.shrink();
   }
 
   void _onBaseSelected(String id) {
-    setState(() {
-      _baseId = id;
-      _panel = CaveMapPanel.none;
-    });
-    unawaited(_savePrefs());
-  }
-
-  void _onOverlayToggled(String fileName, bool enabled) {
-    setState(() {
-      if (enabled) {
-        _enabledOverlays = {..._enabledOverlays, fileName};
-      } else {
-        _enabledOverlays = {..._enabledOverlays}..remove(fileName);
-      }
-    });
-    unawaited(_savePrefs());
+    setState(() => _panel = CaveMapPanel.none);
+    _layers.selectBase(id);
   }
 }
