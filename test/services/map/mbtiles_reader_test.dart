@@ -109,5 +109,17 @@ void main() {
 
       expect(() => MbTilesReader.open(path), throwsA(anything));
     });
+
+    test('open throws on a metadata-only file with no tiles table', () {
+      final path = '${tempDir.path}${Platform.pathSeparator}meta_only.mbtiles';
+      final db = sqlite3.open(path);
+      db.execute('CREATE TABLE metadata (name TEXT, value TEXT)');
+      db.execute(
+        "INSERT INTO metadata (name, value) VALUES ('format', 'png')",
+      );
+      db.close();
+
+      expect(() => MbTilesReader.open(path), throwsA(anything));
+    });
   });
 }

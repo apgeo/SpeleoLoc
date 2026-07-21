@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
 
+/// Shared marker palette and sizes. The map's markers and the list-panel
+/// legend both draw from here so the two cannot drift apart.
+abstract final class CaveMapMarkerStyle {
+  static const Color mainEntrance = Color(0xFF3E2723);
+  static const Color entrance = Color(0xFF6D4C41);
+  static const Color entranceNonFocus = Color(0xFF8D8D8D);
+  static const Color placeDot = Color(0xFF1565C0);
+  static const Color placeDotNonFocus = Color(0xFF90A4AE);
+  static const double mainEntranceSize = 26;
+  static const double entranceSize = 22;
+  static const double placeDotSize = 13;
+}
+
 /// Cave-entrance waymark: a filled arch over a baseline, the symbol used
 /// on hiking/topo maps for cave mouths. Drawn with a white casing so it
 /// stays readable on any basemap.

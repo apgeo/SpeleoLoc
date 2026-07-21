@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
-import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/map/map_mbtiles_config.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -36,21 +35,26 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
 
   Future<void> _load() async {
     final registry = ref.read(mbTilesRegistryProvider);
-    _config = MapMbTilesConfig.fromJson(
-      await SettingsHelper.loadJsonConfig(
+    final (configJson, dir, files) = await (
+      ref.read(configurationRepositoryProvider).readJson(
         mapMbtilesConfigKey,
-        () => <String, dynamic>{},
+        defaults: () => <String, dynamic>{},
       ),
-    );
-    _folderPath = (await registry.ensureDirectory()).path;
-    _files = await registry.scan();
+      registry.ensureDirectory(),
+      registry.scan(),
+    ).wait;
+    _config = MapMbTilesConfig.fromJson(configJson);
+    _folderPath = dir.path;
+    _files = files;
     if (!mounted) return;
     setState(() => _loading = false);
   }
 
   Future<void> _saveConfig(MapMbTilesConfig config) async {
     setState(() => _config = config);
-    await SettingsHelper.saveJsonConfig(mapMbtilesConfigKey, config.toJson());
+    await ref
+        .read(configurationRepositoryProvider)
+        .writeJson(mapMbtilesConfigKey, config.toJson());
   }
 
   Future<void> _refresh() async {

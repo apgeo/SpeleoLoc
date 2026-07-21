@@ -4,6 +4,13 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_item.dart';
 import 'package:speleoloc/screens/cave_map/map_label_declutter.dart';
 
+/// One on-screen label: the item plus the screen rect its text occupies.
+class _LabelPlacement {
+  final CaveMapPlaceItem item;
+  final Rect rect;
+  const _LabelPlacement(this.item, this.rect);
+}
+
 /// Draws the place labels as a flutter_map layer. Rebuilds on every camera
 /// change (via [MapCamera.of]) and runs the greedy declutter pass so that
 /// on crowded views only the highest-priority labels survive — plain
@@ -36,27 +43,32 @@ class CaveMapLabelLayer extends StatelessWidget {
 
   /// Text-size cache: measuring with a TextPainter every frame for every
   /// label is the hot path of this layer, and label strings are stable.
+  /// Keyed by scale as well — the declutter rects must match what the
+  /// Text widget will actually paint under the ambient [TextScaler].
   static final Map<String, Size> _sizeCache = {};
 
-  static Size _measure(String text) {
-    final cached = _sizeCache[text];
+  static Size _measure(String text, TextScaler textScaler) {
+    final key = '${textScaler.scale(100).toStringAsFixed(2)}|$text';
+    final cached = _sizeCache[key];
     if (cached != null) return cached;
     final painter = TextPainter(
       text: TextSpan(text: text, style: _style),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
       maxLines: 1,
     )..layout();
     if (_sizeCache.length > 4000) _sizeCache.clear();
-    return _sizeCache[text] = painter.size;
+    return _sizeCache[key] = painter.size;
   }
 
   @override
   Widget build(BuildContext context) {
     final camera = MapCamera.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
     final screen = camera.nonRotatedSize;
 
+    final onScreen = <_LabelPlacement>[];
     final candidates = <LabelCandidate>[];
-    final placements = <Uuid, Rect>{};
     for (final item in items) {
       final offset = camera.latLngToScreenOffset(item.point);
       if (offset.dx < -160 ||
@@ -65,7 +77,7 @@ class CaveMapLabelLayer extends StatelessWidget {
           offset.dy > screen.height + 60) {
         continue;
       }
-      final textSize = _measure(item.label);
+      final textSize = _measure(item.label, textScaler);
       // Label sits under the marker, horizontally centered on it.
       final markerHalfHeight = item.isEntrance ? 12.0 : 8.0;
       final rect = Rect.fromLTWH(
@@ -85,7 +97,7 @@ class CaveMapLabelLayer extends StatelessWidget {
       candidates.add(
         LabelCandidate(id: item.uuid, rect: rect, priority: priority),
       );
-      placements[item.uuid] = rect;
+      onScreen.add(_LabelPlacement(item, rect));
     }
 
     final visible = selectVisibleLabels(candidates);
@@ -94,16 +106,17 @@ class CaveMapLabelLayer extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          for (final item in items)
-            if (visible.contains(item.uuid))
+          for (final placement in onScreen)
+            if (visible.contains(placement.item.uuid))
               Positioned(
-                left: placements[item.uuid]!.left,
-                top: placements[item.uuid]!.top,
-                width: placements[item.uuid]!.width,
-                height: placements[item.uuid]!.height,
+                left: placement.rect.left,
+                top: placement.rect.top,
+                width: placement.rect.width,
+                height: placement.rect.height,
                 child: Text(
-                  item.label,
+                  placement.item.label,
                   style: _style,
+                  textScaler: textScaler,
                   maxLines: 1,
                   overflow: TextOverflow.visible,
                   softWrap: false,

@@ -54,6 +54,32 @@ void main() {
       expect(place.caveUuid, caveUuid);
     });
 
+    test('a duplicate default title is made unique within the cave', () async {
+      final caveUuid = await caveRepo.addCave('Cave');
+      final firstId = await geo.addEntranceAt(
+        caveUuid: caveUuid,
+        title: 'Entrance',
+        latitude: 45.1,
+        longitude: 22.2,
+      );
+      final secondId = await geo.addEntranceAt(
+        caveUuid: caveUuid,
+        title: 'Entrance',
+        latitude: 45.11,
+        longitude: 22.21,
+      );
+      final thirdId = await geo.addEntranceAt(
+        caveUuid: caveUuid,
+        title: 'Entrance',
+        latitude: 45.12,
+        longitude: 22.22,
+      );
+
+      expect((await placeRepo.findById(firstId))!.title, 'Entrance');
+      expect((await placeRepo.findById(secondId))!.title, 'Entrance 2');
+      expect((await placeRepo.findById(thirdId))!.title, 'Entrance 3');
+    });
+
     test('a second entrance is not marked as main', () async {
       final caveUuid = await caveRepo.addCave('Cave');
       await geo.addEntranceAt(

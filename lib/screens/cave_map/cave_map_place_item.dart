@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/map/place_label_resolver.dart';
 
 /// A cave place prepared for rendering on the surface map: coordinates
 /// resolved to a [LatLng], label precomputed, and focus/entrance flags
@@ -32,5 +33,6 @@ class CaveMapPlaceItem {
 
   /// Label used by the in-screen place lists (`<place> - <cave>` per spec,
   /// the reverse of the on-map label which leads with the cave).
-  String get listLabel => '${place.title} - $caveTitle';
+  String get listLabel =>
+      resolveListLabel(caveTitle: caveTitle, placeTitle: place.title);
 }

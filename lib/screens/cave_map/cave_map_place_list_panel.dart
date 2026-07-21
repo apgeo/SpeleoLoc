@@ -39,12 +39,17 @@ class CaveMapPlaceListPanel extends StatelessWidget {
           dense: true,
           leading: item.isEntrance
               ? CaveEntranceMarkerIcon(
-                  size: 22,
+                  size: item.isMainEntrance
+                      ? CaveMapMarkerStyle.mainEntranceSize
+                      : CaveMapMarkerStyle.entranceSize,
                   color: item.isMainEntrance
-                      ? const Color(0xFF3E2723)
-                      : const Color(0xFF6D4C41),
+                      ? CaveMapMarkerStyle.mainEntrance
+                      : CaveMapMarkerStyle.entrance,
                 )
-              : const PlacePointMarkerIcon(size: 14, color: Colors.blueGrey),
+              : const PlacePointMarkerIcon(
+                  size: CaveMapMarkerStyle.placeDotSize,
+                  color: CaveMapMarkerStyle.placeDot,
+                ),
           title: Text(item.listLabel, overflow: TextOverflow.ellipsis),
           subtitle: item.isMainEntrance
               ? Text(LocServ.inst.t('main_entrance'))

@@ -63,7 +63,10 @@ class MbTilesReader {
   final MbTilesMetadata metadata;
 
   /// Opens [path] read-only and parses its metadata. Throws on files that
-  /// are not readable SQLite databases or lack the MBTiles tables.
+  /// are not readable SQLite databases or lack the MBTiles tables — the
+  /// `tiles` table/view is probed too, so a metadata-only database is
+  /// rejected here (at import/scan) instead of failing per tile at render
+  /// time.
   static MbTilesReader open(String path) {
     final db = sqlite3.open(path, mode: OpenMode.readOnly);
     try {
@@ -72,6 +75,7 @@ class MbTilesReader {
         for (final r in rows)
           (r['name'] as String).toLowerCase(): (r['value'] as String?) ?? '',
       };
+      db.select('SELECT zoom_level FROM tiles LIMIT 1');
       return MbTilesReader._(db, path, MbTilesMetadata.fromMap(map));
     } catch (_) {
       db.close();
@@ -79,18 +83,26 @@ class MbTilesReader {
     }
   }
 
+  /// Tile lookups run per rendered tile during pan/zoom; the prepared
+  /// statement is compiled once and reused instead of re-parsing the SQL
+  /// on every fetch.
+  PreparedStatement? _tileStatement;
+
   /// Returns the raw tile bytes at XYZ coordinates, or null when the file
   /// holds no tile there (outside coverage or beyond the stored zooms).
   Uint8List? tile(int z, int x, int y) {
     final tmsY = (1 << z) - 1 - y;
-    final rows = _db.select(
+    final statement = _tileStatement ??= _db.prepare(
       'SELECT tile_data FROM tiles '
       'WHERE zoom_level = ? AND tile_column = ? AND tile_row = ? LIMIT 1',
-      [z, x, tmsY],
     );
+    final rows = statement.select([z, x, tmsY]);
     if (rows.isEmpty) return null;
     return rows.first['tile_data'] as Uint8List?;
   }
 
-  void dispose() => _db.close();
+  void dispose() {
+    _tileStatement?.close();
+    _db.close();
+  }
 }

@@ -23,6 +23,11 @@ class CaveGeoService {
   /// Creates an entrance cave place at ([latitude], [longitude]) in [caveUuid].
   /// The entrance is marked as the cave's main entrance when the cave does
   /// not already have one. Returns the new place's uuid.
+  ///
+  /// The title is made unique within the cave ("Entrance", "Entrance 2", …):
+  /// the schema's UNIQUE(title, cave_uuid, cave_area_uuid) never fires for
+  /// NULL cave_area_uuid, and archive sync cannot match twin rows either,
+  /// so silent duplicates would multiply across devices.
   Future<Uuid> addEntranceAt({
     required Uuid caveUuid,
     required String title,
@@ -35,10 +40,18 @@ class CaveGeoService {
       mainOnly: true,
     );
     final isMain = existingMain.isEmpty;
+    var uniqueTitle = title;
+    for (
+      var n = 2;
+      await _placeRepo.findCavePlaceByTitle(caveUuid, uniqueTitle) != null;
+      n++
+    ) {
+      uniqueTitle = '$title $n';
+    }
     return _placeRepo.addCavePlaceFromCompanion(
       CavePlacesCompanion.insert(
         uuid: Uuid.v7(),
-        title: title,
+        title: uniqueTitle,
         caveUuid: caveUuid,
         isEntrance: const Value(1),
         isMainEntrance: Value(isMain ? 1 : 0),

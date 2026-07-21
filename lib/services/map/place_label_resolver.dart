@@ -13,3 +13,12 @@ String resolvePlaceLabel({
   if (isEntrance && caveEntranceCount == 1) return caveTitle;
   return '$caveTitle - $placeTitle';
 }
+
+/// List/subject pairing used by the map's inline lists and the placement
+/// bar: `<place title> - <cave title>` (the reverse of the on-map label).
+/// Kept beside [resolvePlaceLabel] so the pairing rule and separator live
+/// in one place.
+String resolveListLabel({
+  required String caveTitle,
+  required String placeTitle,
+}) => '$placeTitle - $caveTitle';

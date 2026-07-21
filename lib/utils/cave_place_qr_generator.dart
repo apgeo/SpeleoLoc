@@ -460,9 +460,25 @@ class CavePlaceQRCodePDFGenerator {
   }) async {
     final files = <GeneratedFile>[];
 
+    // Same-titled places (common across caves: every cave has an
+    // "Entrance") must not share a file name — Archive.addFile silently
+    // REPLACES same-named entries, so colliding QR images would vanish
+    // from the ZIP. Disambiguate with the cave title first, then a counter.
+    final usedNames = <String>{};
     for (final place in places) {
       final imgBytes = await QrImageRenderer.render(place, prefs);
-      final name = '${_sanitizeFilename(place.title)}.png';
+      var base = _sanitizeFilename(place.title);
+      if (usedNames.contains('$base.png')) {
+        final caveTitle = prefs.caveTitleFor(place);
+        if (caveTitle != null && caveTitle.isNotEmpty) {
+          base = '${_sanitizeFilename(caveTitle)}_$base';
+        }
+      }
+      var name = '$base.png';
+      for (var n = 2; usedNames.contains(name); n++) {
+        name = '${base}_$n.png';
+      }
+      usedNames.add(name);
       files.add(
         GeneratedFile(name: name, bytes: imgBytes, mimeType: 'image/png'),
       );

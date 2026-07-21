@@ -16,6 +16,7 @@ import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
+import 'package:speleoloc/utils/cave_place_flags.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -677,8 +678,7 @@ class _HomePageState extends ConsumerState<HomePage>
     return result;
   }
 
-  bool _isEntrance(CavePlace place) =>
-      place.isEntrance == 1 || place.isMainEntrance == 1;
+  bool _isEntrance(CavePlace place) => place.isAnyEntrance;
 
   /// Generates QR codes for the cave places of every cave in the list. When
   /// the list is in checkbox selection mode, only the checked caves are used;

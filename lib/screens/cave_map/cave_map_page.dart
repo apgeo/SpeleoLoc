@@ -17,9 +17,9 @@ import 'package:speleoloc/screens/cave_map/cave_map_placement_bar.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_info_card.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_item.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_list_panel.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_prompts.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_toolbar.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
-import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/map_mbtiles_config.dart';
 import 'package:speleoloc/services/map/mbtiles_reader.dart';
@@ -27,18 +27,12 @@ import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/cave_place_flags.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/map/cave_map_marker_icons.dart';
 import 'package:speleoloc/widgets/map/mbtiles_tile_provider.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
-
-/// Details entered for a new cave created from the map.
-class _NewCaveInput {
-  final String caveTitle;
-  final String entranceTitle;
-  const _NewCaveInput(this.caveTitle, this.entranceTitle);
-}
 
 /// Full-screen geographic map of cave places (no AppBar; a compact
 /// toolbar sits on top of the map) that doubles as a GPS/geodata point
@@ -92,15 +86,19 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   bool _placementBusy = false;
   bool _locating = false;
 
-  // Live GPS position.
+  // Live GPS position. The dot renders whenever a fix exists; _followMe
+  // additionally keeps the camera on it until the user pans away.
   StreamSubscription<Position>? _positionSub;
   Position? _myPosition;
-  bool _locationActive = false;
   bool _followMe = false;
 
-  // Caves created during this session are treated as in-focus so they show
-  // and highlight even when the map was opened for a narrower set.
-  final Set<Uuid> _createdCaveUuids = {};
+  /// Mutable focus filter seeded from the widget args; points created on
+  /// the map join it so they render focused. Null = no focus filter.
+  /// Empty sets from the callers (nothing checked, or a filter matching
+  /// nothing) degrade to null — "no filter" instead of an all-grey map
+  /// that the other-caves toggle can blank entirely.
+  Set<Uuid>? _focusCaveUuids;
+  Set<Uuid>? _focusPlaceUuids;
 
   String _baseId = builtInTileSourcesDefaultId;
   Set<String> _enabledOverlays = {};
@@ -121,11 +119,22 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   @override
   void initState() {
     super.initState();
+    final caveUuids = widget.focusCaveUuids;
+    final placeUuids = widget.focusPlaceUuids;
+    _focusCaveUuids = (caveUuids != null && caveUuids.isNotEmpty)
+        ? {...caveUuids}
+        : null;
+    _focusPlaceUuids = (placeUuids != null && placeUuids.isNotEmpty)
+        ? {...placeUuids}
+        : null;
     final pick = widget.pickRequest;
     if (pick != null) {
       _placement = CaveMapPlacement(
         kind: PlacementKind.returnToCaller,
-        subjectLabel: '${pick.placeTitle} — ${pick.caveTitle}',
+        subjectLabel: resolveListLabel(
+          caveTitle: pick.caveTitle,
+          placeTitle: pick.placeTitle,
+        ),
       );
       if (pick.hasInitialPosition) {
         _pendingPoint = LatLng(pick.initialLatitude!, pick.initialLongitude!);
@@ -147,14 +156,15 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   Future<void> _load() async {
     try {
-      final prefs = await SettingsHelper.loadJsonConfig(
+      final configRepo = ref.read(configurationRepositoryProvider);
+      final prefs = await configRepo.readJson(
         mapScreenPrefsKey,
-        () => <String, dynamic>{},
+        defaults: () => <String, dynamic>{},
       );
       _mbConfig = MapMbTilesConfig.fromJson(
-        await SettingsHelper.loadJsonConfig(
+        await configRepo.readJson(
           mapMbtilesConfigKey,
-          () => <String, dynamic>{},
+          defaults: () => <String, dynamic>{},
         ),
       );
       if (_mbConfig.autoLoad) {
@@ -178,9 +188,11 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   /// camera, so it is also safe after a create/edit.
   Future<void> _loadItems() async {
     final placeRepo = ref.read(cavePlaceRepositoryProvider);
-    final places = await placeRepo.getCavePlacesWithCoordinates();
-    final entranceCounts = await placeRepo.getEntranceCountsByCave();
-    final caves = await ref.read(caveRepositoryProvider).getCaves();
+    final (places, entranceCounts, caves) = await (
+      placeRepo.getCavePlacesWithCoordinates(),
+      placeRepo.getEntranceCountsByCave(),
+      ref.read(caveRepositoryProvider).getCaves(),
+    ).wait;
     final caveTitles = {for (final c in caves) c.uuid: c.title};
 
     _items = [
@@ -192,10 +204,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
           label: resolvePlaceLabel(
             caveTitle: caveTitles[place.caveUuid] ?? '',
             placeTitle: place.title,
-            isEntrance: place.isEntrance == 1 || place.isMainEntrance == 1,
+            isEntrance: place.isAnyEntrance,
             caveEntranceCount: entranceCounts[place.caveUuid] ?? 0,
           ),
-          isEntrance: place.isEntrance == 1 || place.isMainEntrance == 1,
+          isEntrance: place.isAnyEntrance,
           isMainEntrance: place.isMainEntrance == 1,
           isFocus: _isFocusPlace(place),
         ),
@@ -203,12 +215,17 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   bool _isFocusPlace(CavePlace place) {
-    if (_createdCaveUuids.contains(place.caveUuid)) return true;
-    final placeUuids = widget.focusPlaceUuids;
-    if (placeUuids != null) return placeUuids.contains(place.uuid);
-    final caveUuids = widget.focusCaveUuids;
-    if (caveUuids != null) return caveUuids.contains(place.caveUuid);
-    return true;
+    if (_focusCaveUuids == null && _focusPlaceUuids == null) return true;
+    return (_focusPlaceUuids?.contains(place.uuid) ?? false) ||
+        (_focusCaveUuids?.contains(place.caveUuid) ?? false);
+  }
+
+  /// Adds a point created on the map to the focus filter (no-op when no
+  /// filter is active — everything is already in focus then).
+  void _addToFocus({Uuid? caveUuid, Uuid? placeUuid}) {
+    if (_focusCaveUuids == null && _focusPlaceUuids == null) return;
+    if (caveUuid != null) (_focusCaveUuids ??= {}).add(caveUuid);
+    if (placeUuid != null) (_focusPlaceUuids ??= {}).add(placeUuid);
   }
 
   void _restorePrefs(Map<String, dynamic> prefs) {
@@ -222,12 +239,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     }
   }
 
-  bool _baseLayerExists(String id) {
-    if (findTileSourceById(id) != null) return true;
-    if (!id.startsWith('mbtiles:')) return false;
-    final fileName = id.substring('mbtiles:'.length);
-    return _baseDescriptors.any((d) => d.fileName == fileName);
-  }
+  bool _baseLayerExists(String id) =>
+      findTileSourceById(id) != null || _mbtilesBaseDescriptor(id) != null;
 
   void _computeInitialCamera(Map<String, dynamic> prefs) {
     if (_pendingPoint != null) {
@@ -262,13 +275,16 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   Future<void> _savePrefs() async {
     try {
-      await SettingsHelper.saveJsonConfig(mapScreenPrefsKey, {
-        'base': _baseId,
-        'overlays': _enabledOverlays.toList(),
-        if (_lastCenter != null) 'lat': _lastCenter!.latitude,
-        if (_lastCenter != null) 'lng': _lastCenter!.longitude,
-        if (_lastZoom != null) 'zoom': _lastZoom,
-      });
+      await ref.read(configurationRepositoryProvider).writeJson(
+        mapScreenPrefsKey,
+        {
+          'base': _baseId,
+          'overlays': _enabledOverlays.toList(),
+          if (_lastCenter != null) 'lat': _lastCenter!.latitude,
+          if (_lastCenter != null) 'lng': _lastCenter!.longitude,
+          if (_lastZoom != null) 'zoom': _lastZoom,
+        },
+      );
     } catch (e, st) {
       _log.warning('Failed to persist map prefs', e, st);
     }
@@ -306,6 +322,17 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     return null;
   }
 
+  /// Resolves a base-layer id of the form `mbtiles:<fileName>` to its
+  /// descriptor; null for online-source ids and files no longer present.
+  MbTilesDescriptor? _mbtilesBaseDescriptor(String id) {
+    if (!id.startsWith('mbtiles:')) return null;
+    final fileName = id.substring('mbtiles:'.length);
+    for (final descriptor in _baseDescriptors) {
+      if (descriptor.fileName == fileName) return descriptor;
+    }
+    return null;
+  }
+
   MbTilesReader? _readerFor(MbTilesDescriptor descriptor) {
     if (_readers.containsKey(descriptor.path)) {
       return _readers[descriptor.path];
@@ -316,11 +343,16 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     } catch (e, st) {
       _log.warning('Failed to open MBTiles ${descriptor.fileName}', e, st);
     }
+    // Failures are cached as null so a corrupt file is not re-opened on
+    // every rebuild.
     _readers[descriptor.path] = reader;
     return reader;
   }
 
   void _moveTo(LatLng point, {double minZoom = 16}) {
+    // Before the first FlutterMap frame the controller has no camera —
+    // reachable via the toolbar/GPS while the loading spinner shows.
+    if (!_loaded) return;
     final zoom = _mapController.camera.zoom;
     _mapController.move(point, zoom < minZoom ? minZoom : zoom);
   }
@@ -331,7 +363,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   void _onMapTap(TapPosition tapPosition, LatLng latLng) {
     if (_placement != null) {
-      setState(() => _pendingPoint = latLng);
+      setState(() {
+        _pendingPoint = latLng;
+        _selectedUuid = null;
+      });
       return;
     }
     setState(() {
@@ -346,14 +381,12 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   void _onMarkerTap(CaveMapPlaceItem item) {
-    if (_placement != null) {
-      // While placing, snap the pending point onto the tapped marker.
-      setState(() => _pendingPoint = item.point);
-      return;
-    }
+    // During placement a marker tap identifies the place (highlight +
+    // label priority) without hijacking the pending point — moving the
+    // point stays an explicit map tap / GPS action.
     setState(() {
       _selectedUuid = item.uuid;
-      _panel = CaveMapPanel.none;
+      if (_placement == null) _panel = CaveMapPanel.none;
     });
   }
 
@@ -379,6 +412,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     setState(() {
       _panel = CaveMapPanel.none;
       _selectedUuid = item.uuid;
+      // Make sure the target is not filtered out of view.
       if (!item.isFocus) _showOtherCaves = true;
       if (!item.isEntrance) _showNonEntrances = true;
     });
@@ -397,6 +431,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         ),
       ),
     );
+    // Coordinates/titles may have changed while the place was open.
     try {
       await _loadItems();
     } catch (e, st) {
@@ -433,8 +468,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   void _startPositionStream() {
-    unawaited(_positionSub?.cancel());
-    _positionSub = _location.positionStream().listen(
+    if (_positionSub != null) return;
+    // A small distance filter keeps a stationary device from triggering
+    // full-page rebuilds (markers + label declutter) every second.
+    _positionSub = _location.positionStream(distanceFilterMeters: 3).listen(
       (position) {
         if (!mounted) return;
         setState(() => _myPosition = position);
@@ -448,12 +485,15 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   Future<void> _toggleMyLocation() async {
+    if (_followMe) {
+      setState(() => _followMe = false);
+      return;
+    }
     if (!await _ensureLocationReady()) return;
-    if (!_locationActive) _startPositionStream();
+    _startPositionStream();
     final fix = await _location.currentPosition();
     if (!mounted) return;
     setState(() {
-      _locationActive = true;
       _followMe = true;
       if (fix != null) _myPosition = fix;
     });
@@ -527,12 +567,11 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     setState(() => _locating = true);
     try {
       if (!await _ensureLocationReady()) return;
-      if (!_locationActive) _startPositionStream();
+      _startPositionStream();
       final fix = await _location.currentPosition();
       if (!mounted || fix == null) return;
       final point = LatLng(fix.latitude, fix.longitude);
       setState(() {
-        _locationActive = true;
         _myPosition = fix;
         _pendingPoint = point;
       });
@@ -558,23 +597,19 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     final point = _pendingPoint;
     if (placement == null || point == null) return;
 
-    if (placement.kind == PlacementKind.returnToCaller) {
-      Navigator.pop(
-        context,
-        CaveMapPickResult(
-          latitude: point.latitude,
-          longitude: point.longitude,
-        ),
-      );
-      return;
-    }
-
     final loc = LocServ.inst;
     final geo = ref.read(caveGeoServiceProvider);
     Uuid? selectAfter;
     try {
       switch (placement.kind) {
         case PlacementKind.returnToCaller:
+          Navigator.pop(
+            context,
+            CaveMapPickResult(
+              latitude: point.latitude,
+              longitude: point.longitude,
+            ),
+          );
           return;
         case PlacementKind.moveExistingPlace:
           setState(() => _placementBusy = true);
@@ -586,9 +621,19 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
           selectAfter = placement.existingPlace!.uuid;
           SnackBarService.showSuccess(loc.t('map_place_moved'));
         case PlacementKind.newEntrance:
-          final caveUuid = await _chooseCave();
+          final caves = await ref.read(caveRepositoryProvider).getCaves()
+            ..sort(
+              (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+            );
+          if (!mounted) return;
+          if (caves.isEmpty) {
+            SnackBarService.showWarning(loc.t('map_no_caves_for_entrance'));
+            return;
+          }
+          final caveUuid = await showCaveChooser(context, caves);
           if (caveUuid == null || !mounted) return;
-          final title = await _promptText(
+          final title = await showTextPrompt(
+            context,
             titleKey: 'map_new_entrance',
             labelKey: 'title',
             initial: loc.t('entrance'),
@@ -601,9 +646,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
             latitude: point.latitude,
             longitude: point.longitude,
           );
+          _addToFocus(placeUuid: selectAfter);
           SnackBarService.showSuccess(loc.t('map_entrance_added'));
         case PlacementKind.newCave:
-          final input = await _promptNewCave();
+          final input = await showNewCavePrompt(context);
           if (input == null || !mounted) return;
           setState(() => _placementBusy = true);
           final created = await geo.addCaveWithEntranceAt(
@@ -612,7 +658,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
             latitude: point.latitude,
             longitude: point.longitude,
           );
-          _createdCaveUuids.add(created.caveUuid);
+          _addToFocus(
+            caveUuid: created.caveUuid,
+            placeUuid: created.entranceUuid,
+          );
           selectAfter = created.entranceUuid;
           SnackBarService.showSuccess(loc.t('map_cave_added'));
       }
@@ -636,175 +685,14 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   // ---------------------------------------------------------------------
-  // Prompts
-  // ---------------------------------------------------------------------
-
-  Future<Uuid?> _chooseCave() async {
-    final loc = LocServ.inst;
-    final caves = await ref.read(caveRepositoryProvider).getCaves()
-      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-    if (!mounted) return null;
-    if (caves.isEmpty) {
-      SnackBarService.showWarning(loc.t('map_no_caves_for_entrance'));
-      return null;
-    }
-    var query = '';
-    return showModalBottomSheet<Uuid>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          final filtered = query.isEmpty
-              ? caves
-              : caves
-                  .where((c) => c.title.toLowerCase().contains(query))
-                  .toList();
-          return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Text(
-                      loc.t('map_choose_cave'),
-                      style: Theme.of(ctx).textTheme.titleMedium,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextField(
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: loc.t('search'),
-                      ),
-                      onChanged: (v) =>
-                          setSheet(() => query = v.trim().toLowerCase()),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: filtered.length,
-                      itemBuilder: (_, i) => ListTile(
-                        dense: true,
-                        title: Text(filtered[i].title),
-                        onTap: () => Navigator.pop(ctx, filtered[i].uuid),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<String?> _promptText({
-    required String titleKey,
-    required String labelKey,
-    String initial = '',
-  }) async {
-    final loc = LocServ.inst;
-    final controller = TextEditingController(text: initial);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(loc.t(titleKey)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(labelText: loc.t(labelKey)),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(loc.t('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: Text(loc.t('ok')),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (result == null || result.isEmpty) return null;
-    return result;
-  }
-
-  Future<_NewCaveInput?> _promptNewCave() async {
-    final loc = LocServ.inst;
-    final caveController = TextEditingController();
-    final entranceController = TextEditingController(text: loc.t('entrance'));
-    final result = await showDialog<_NewCaveInput>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(loc.t('map_new_cave')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: caveController,
-              autofocus: true,
-              decoration: InputDecoration(labelText: loc.t('cave_title')),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: entranceController,
-              decoration: InputDecoration(
-                labelText: loc.t('map_entrance_title'),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(loc.t('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final caveTitle = caveController.text.trim();
-              if (caveTitle.isEmpty) return;
-              final entrance = entranceController.text.trim();
-              Navigator.pop(
-                ctx,
-                _NewCaveInput(
-                  caveTitle,
-                  entrance.isEmpty ? loc.t('entrance') : entrance,
-                ),
-              );
-            },
-            child: Text(loc.t('add')),
-          ),
-        ],
-      ),
-    );
-    caveController.dispose();
-    entranceController.dispose();
-    return result;
-  }
-
-  // ---------------------------------------------------------------------
   // Layers
   // ---------------------------------------------------------------------
 
   TileLayer _buildBaseLayer() {
-    if (_baseId.startsWith('mbtiles:')) {
-      final fileName = _baseId.substring('mbtiles:'.length);
-      for (final descriptor in _baseDescriptors) {
-        if (descriptor.fileName != fileName) continue;
-        final reader = _readerFor(descriptor);
-        if (reader == null) break;
+    final descriptor = _mbtilesBaseDescriptor(_baseId);
+    if (descriptor != null) {
+      final reader = _readerFor(descriptor);
+      if (reader != null) {
         return TileLayer(
           tileProvider: MbTilesTileProvider(reader),
           minNativeZoom: reader.metadata.minZoom ?? 0,
@@ -838,13 +726,13 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     return layers;
   }
 
+  /// Mirrors [_buildBaseLayer]'s resolution so the attribution always
+  /// names the source actually rendered (an unreadable MBTiles file falls
+  /// back to the online source in both places).
   String get _attributionText {
-    if (_baseId.startsWith('mbtiles:')) {
-      final fileName = _baseId.substring('mbtiles:'.length);
-      for (final descriptor in _baseDescriptors) {
-        if (descriptor.fileName == fileName) return descriptor.displayName;
-      }
-      return fileName;
+    final descriptor = _mbtilesBaseDescriptor(_baseId);
+    if (descriptor != null && _readerFor(descriptor) != null) {
+      return descriptor.displayName;
     }
     return (findTileSourceById(_baseId) ?? builtInTileSources.first)
         .attribution;
@@ -895,19 +783,23 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         (widget.highlightFocus && item.isFocus) || item.uuid == _selectedUuid;
     if (item.isEntrance) {
       final color = !item.isFocus
-          ? const Color(0xFF8D8D8D)
+          ? CaveMapMarkerStyle.entranceNonFocus
           : item.isMainEntrance
-              ? const Color(0xFF3E2723)
-              : const Color(0xFF6D4C41);
+              ? CaveMapMarkerStyle.mainEntrance
+              : CaveMapMarkerStyle.entrance;
       return CaveEntranceMarkerIcon(
-        size: item.isMainEntrance ? 26 : 22,
+        size: item.isMainEntrance
+            ? CaveMapMarkerStyle.mainEntranceSize
+            : CaveMapMarkerStyle.entranceSize,
         color: color,
         highlighted: highlighted,
       );
     }
     return PlacePointMarkerIcon(
-      size: 13,
-      color: item.isFocus ? const Color(0xFF1565C0) : const Color(0xFF90A4AE),
+      size: CaveMapMarkerStyle.placeDotSize,
+      color: item.isFocus
+          ? CaveMapMarkerStyle.placeDot
+          : CaveMapMarkerStyle.placeDotNonFocus,
       highlighted: highlighted,
     );
   }
@@ -948,7 +840,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                     children: [
                       _buildBaseLayer(),
                       ..._buildOverlayLayers(),
-                      if (_locationActive && _myPosition != null)
+                      if (_myPosition != null)
                         ...CaveMapMyLocation.layers(_myPosition!),
                       MarkerLayer(markers: _buildMarkers()),
                       CaveMapLabelLayer(
@@ -981,7 +873,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                 CaveMapToolbar(
                   showOtherCaves: _showOtherCaves,
                   showNonEntrances: _showNonEntrances,
-                  locationActive: _locationActive && _followMe,
+                  locationActive: _followMe,
                   activePanel: _panel,
                   onBack: () => Navigator.pop(context),
                   onMyLocation: () => unawaited(_toggleMyLocation()),

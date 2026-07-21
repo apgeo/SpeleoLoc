@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/csv_import_page.dart';
-import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/csv_cave_importer.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -94,10 +93,11 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
 
     try {
       // Auto-add entrance cave place if setting is enabled (default: true)
-      final autoAdd = await SettingsHelper.loadStringConfig(
-        autoAddEntrancePlaceKey,
-        'true',
-      );
+      final autoAdd =
+          await ref
+              .read(configurationRepositoryProvider)
+              .readString(autoAddEntrancePlaceKey) ??
+          'true';
 
       final config = CSVCavesImportConfig(
         caveNameColumn: csvResult.columnMappings['cave_name'],
@@ -115,9 +115,10 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
       final rows = _importer.parseRows(csvResult.rawData, config);
 
       if (rows.isEmpty) {
+        if (!mounted) return;
         setState(() => _isProcessing = false);
         _showMessage(LocServ.inst.t('csv_no_valid_rows'));
-        if (mounted) Navigator.pop(context);
+        Navigator.pop(context);
         return;
       }
 
@@ -130,8 +131,9 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
           existing.totalCount,
         );
         if (proceed != true) {
+          if (!mounted) return;
           setState(() => _isProcessing = false);
-          if (mounted) Navigator.pop(context);
+          Navigator.pop(context);
           return;
         }
       }
@@ -175,15 +177,15 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
         approvedUpdates: approved,
       );
 
-      setState(() => _isProcessing = false);
-
       if (!mounted) return;
+      setState(() => _isProcessing = false);
       // Step 4: Show results
       await _showImportResultDialog(importResult);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       _showMessage('${LocServ.inst.t('error')}: $e');
-      if (mounted) Navigator.pop(context);
+      Navigator.pop(context);
     }
   }
 

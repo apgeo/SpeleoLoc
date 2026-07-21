@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -27,7 +28,13 @@ class GpsRecorderResult {
 /// running arithmetic mean, and letting the user "Capture" a snapshot then
 /// "Use" it. Returns a [GpsRecorderResult] via [Navigator.pop].
 class GpsRecorderPage extends StatefulWidget {
-  const GpsRecorderPage({super.key});
+  const GpsRecorderPage({
+    super.key,
+    this.locationService = const GeolocatorLocationService(),
+  });
+
+  /// Injectable so tests can fake the device location.
+  final LocationService locationService;
 
   @override
   State<GpsRecorderPage> createState() => _GpsRecorderPageState();
@@ -75,35 +82,30 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
     });
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() => _serviceDisabled = true);
-        return;
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        setState(() => _permissionDenied = true);
-        return;
+      // Shared readiness flow (service check + permission request) from
+      // LocationService, so the recorder and the surface map cannot drift.
+      final readiness = await widget.locationService.ensureReady();
+      if (!mounted) return;
+      switch (readiness) {
+        case LocationReadiness.serviceDisabled:
+          setState(() => _serviceDisabled = true);
+          return;
+        case LocationReadiness.permissionDenied:
+        case LocationReadiness.permissionDeniedForever:
+          setState(() => _permissionDenied = true);
+          return;
+        case LocationReadiness.ready:
+          break;
       }
 
       unawaited(_sub?.cancel());
-      _sub =
-          Geolocator.getPositionStream(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.bestForNavigation,
-            ),
-          ).listen(
-            _onPosition,
-            onError: (Object e, StackTrace st) {
-              _log.warning('Position stream error: $e');
-              if (mounted) setState(() => _errorMessage = e.toString());
-            },
-          );
+      _sub = widget.locationService.positionStream().listen(
+        _onPosition,
+        onError: (Object e, StackTrace st) {
+          _log.warning('Position stream error: $e');
+          if (mounted) setState(() => _errorMessage = e.toString());
+        },
+      );
     } catch (e) {
       _log.warning('Failed to start GPS: $e');
       if (mounted) setState(() => _errorMessage = e.toString());
@@ -187,7 +189,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         message: loc.t('gps_location_service_disabled_message'),
         primaryAction: ElevatedButton.icon(
           onPressed: () async {
-            await Geolocator.openLocationSettings();
+            await widget.locationService.openLocationSettings();
             unawaited(_start());
           },
           icon: const Icon(Icons.settings),
@@ -202,7 +204,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         message: loc.t('gps_permission_denied_message'),
         primaryAction: ElevatedButton.icon(
           onPressed: () async {
-            await Geolocator.openAppSettings();
+            await widget.locationService.openAppSettings();
             unawaited(_start());
           },
           icon: const Icon(Icons.settings),
