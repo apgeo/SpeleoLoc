@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:speleoloc/services/location/gps_running_average.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -52,12 +53,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   bool _serviceDisabled = false;
 
   // Running mean state
-  int _sampleCount = 0;
-  double _sumLat = 0;
-  double _sumLong = 0;
-  double _sumAlt = 0;
-  int _altSampleCount = 0;
-  double _bestAccuracy = double.infinity;
+  final GpsRunningAverage _average = GpsRunningAverage();
 
   // Captured snapshot (frozen running average)
   GpsRecorderResult? _captured;
@@ -113,23 +109,9 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   }
 
   void _onPosition(Position p) {
-    _sampleCount += 1;
-    _sumLat += p.latitude;
-    _sumLong += p.longitude;
-    if (!p.altitude.isNaN) {
-      _altSampleCount += 1;
-      _sumAlt += p.altitude;
-    }
-    if (p.accuracy > 0 && p.accuracy < _bestAccuracy) {
-      _bestAccuracy = p.accuracy;
-    }
+    _average.add(p);
     if (mounted) setState(() => _lastPosition = p);
   }
-
-  double? get _avgLat => _sampleCount == 0 ? null : _sumLat / _sampleCount;
-  double? get _avgLong => _sampleCount == 0 ? null : _sumLong / _sampleCount;
-  double? get _avgAlt =>
-      _altSampleCount == 0 ? null : _sumAlt / _altSampleCount;
 
   /// Quality estimate from current accuracy (lower meters = better).
   /// Returns a 0..1 quality score and a label.
@@ -145,18 +127,16 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   }
 
   void _capture() {
-    final lat = _avgLat;
-    final lng = _avgLong;
+    final lat = _average.latitude;
+    final lng = _average.longitude;
     if (lat == null || lng == null) return;
     setState(() {
       _captured = GpsRecorderResult(
         latitude: lat,
         longitude: lng,
-        altitude: _avgAlt,
-        accuracyMeters: _bestAccuracy.isFinite
-            ? _bestAccuracy
-            : _lastPosition?.accuracy,
-        samples: _sampleCount,
+        altitude: _average.altitude,
+        accuracyMeters: _average.accuracyMeters,
+        samples: _average.sampleCount,
       );
     });
   }
@@ -267,17 +247,18 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
             else ...[
               _kv(
                 loc.t('latitude'),
-                _avgLat?.toStringAsFixed(7) ?? pos.latitude.toStringAsFixed(7),
+                _average.latitude?.toStringAsFixed(7) ??
+                    pos.latitude.toStringAsFixed(7),
               ),
               _kv(
                 loc.t('longitude'),
-                _avgLong?.toStringAsFixed(7) ??
+                _average.longitude?.toStringAsFixed(7) ??
                     pos.longitude.toStringAsFixed(7),
               ),
               _kv(
                 loc.t('altitude'),
-                _avgAlt != null
-                    ? '${_avgAlt!.toStringAsFixed(1)} m'
+                _average.altitude != null
+                    ? '${_average.altitude!.toStringAsFixed(1)} m'
                     : (pos.altitude.isNaN
                           ? '—'
                           : '${pos.altitude.toStringAsFixed(1)} m'),
@@ -288,7 +269,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
                     ? '—'
                     : '±${accuracy.toStringAsFixed(1)} m',
               ),
-              _kv(loc.t('gps_samples'), _sampleCount.toString()),
+              _kv(loc.t('gps_samples'), _average.sampleCount.toString()),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -366,7 +347,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   }
 
   Widget _buildBottomBar(LocServ loc) {
-    final canCapture = _avgLat != null && _avgLong != null;
+    final canCapture = _average.sampleCount > 0;
     final canUse = _captured != null;
     return Row(
       children: [
