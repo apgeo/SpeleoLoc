@@ -18,6 +18,7 @@ import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
+import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -168,6 +169,15 @@ final placeCodeBatchRunnerProvider = Provider<PlaceCodeBatchRunner>(
     ref.watch(placeCodeServiceProvider),
     ref.watch(cavePlaceRepositoryProvider),
     clock: ref.watch(clockProvider),
+  ),
+);
+
+/// Composes QR-ready codes for a range of not-yet-recorded cave entrances
+/// (per surface area) or cave places (per cave), without persisting them.
+final rangeCodeGeneratorProvider = Provider<RangeCodeGenerator>(
+  (ref) => RangeCodeGenerator(
+    ref.watch(appDatabaseProvider),
+    ref.watch(placeCodeServiceProvider),
   ),
 );
 
