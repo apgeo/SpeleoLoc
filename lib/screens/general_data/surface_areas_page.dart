@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/index_range_dialog.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/range_qr_launcher.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class SurfaceAreasPage extends ConsumerStatefulWidget {
@@ -214,6 +217,26 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
     }
   }
 
+  /// Pre-generate main-entrance QR codes for a range of cave local indices
+  /// in [area] that have no recorded cave yet.
+  Future<void> _generateEntranceQrRange(SurfaceArea area) async {
+    final range = await showIndexRangeDialog(
+      context,
+      title: LocServ.inst.t('generate_entrance_qr_range'),
+      maxSize: RangeCodeGenerator.maxRangeSize,
+    );
+    if (range == null || !mounted) return;
+    final result = await ref
+        .read(rangeCodeGeneratorProvider)
+        .generateAreaEntranceCodes(
+          area: area,
+          start: range.start,
+          end: range.end,
+        );
+    if (!mounted) return;
+    await presentRangeCodeResult(context, result);
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -252,7 +275,7 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_showGenerateIcons)
+                  if (_showGenerateIcons) ...[
                     IconButton(
                       onPressed: () => PlaceCodeBatchUi.run(
                         context,
@@ -266,6 +289,12 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
                       icon: const Icon(Icons.auto_awesome),
                       tooltip: LocServ.inst.t('generate_codes'),
                     ),
+                    IconButton(
+                      onPressed: () => _generateEntranceQrRange(area),
+                      icon: const Icon(Icons.qr_code_2),
+                      tooltip: LocServ.inst.t('generate_entrance_qr_range'),
+                    ),
+                  ],
                   IconButton(
                     onPressed: () => _showAddEditDialog(existing: area),
                     icon: const Icon(Icons.edit),

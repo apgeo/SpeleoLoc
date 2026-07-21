@@ -13,8 +13,11 @@ import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/index_range_dialog.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
+import 'package:speleoloc/widgets/range_qr_launcher.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/widgets/filterable_list.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
@@ -188,6 +191,28 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     } else if (value == 'raster_map_place_selector') {
       await _openRasterMapPlaceSelector();
     }
+  }
+
+  /// Pre-generate QR codes for a range of place indices under this cave that
+  /// have no recorded cave place yet.
+  Future<void> _generatePlaceQrRange() async {
+    final cave = _cave;
+    if (cave == null) return;
+    final range = await showIndexRangeDialog(
+      context,
+      title: LocServ.inst.t('generate_place_qr_range'),
+      maxSize: RangeCodeGenerator.maxRangeSize,
+    );
+    if (range == null || !mounted) return;
+    final result = await ref
+        .read(rangeCodeGeneratorProvider)
+        .generateCavePlaceCodes(
+          cave: cave,
+          start: range.start,
+          end: range.end,
+        );
+    if (!mounted) return;
+    await presentRangeCodeResult(context, result);
   }
 
   // Using global appDatabase instance
@@ -935,6 +960,12 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                 },
                 icon: Icons.auto_awesome,
                 tooltip: LocServ.inst.t('generate_codes'),
+              ),
+              const SizedBox(width: TOOLBAR_BUTTON_SPACING),
+              IconActionButton(
+                onPressed: _generatePlaceQrRange,
+                icon: Icons.qr_code_2,
+                tooltip: LocServ.inst.t('generate_place_qr_range'),
               ),
               const SizedBox(width: TOOLBAR_BUTTON_SPACING),
               PopupMenuButton<String>(
