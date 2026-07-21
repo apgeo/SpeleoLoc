@@ -1244,7 +1244,7 @@
   "map_no_caves_for_entrance": "There are no caves yet — add a cave first",
   "map_place_set_location": "Set location",
   "map_place_hint": "Tap the map, long-press, or use your location",
-  "map_place_tap_to_change": "tap the map to change",
+  "map_place_tap_to_change": "tap the map or drag the pin to change",
   "map_place_confirm": "Confirm",
   "map_use_my_location": "Use my location",
   "map_place_moved": "Location updated",

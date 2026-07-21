@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_pending_pin.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_item.dart';
 import 'package:speleoloc/widgets/map/cave_map_marker_icons.dart';
 
@@ -16,6 +17,7 @@ class CaveMapMarkers {
     required Uuid? selectedUuid,
     required void Function(CaveMapPlaceItem) onTap,
     LatLng? pendingPoint,
+    ValueChanged<LatLng>? onPendingDragged,
   }) => [
     for (final item in paintOrder)
       Marker(
@@ -42,12 +44,17 @@ class CaveMapMarkers {
         width: 40,
         height: 40,
         alignment: Alignment.topCenter,
-        child: const Icon(
-          Icons.location_on,
-          size: 40,
-          color: Color(0xFFD32F2F),
-          shadows: [Shadow(color: Colors.white, blurRadius: 4)],
-        ),
+        child: onPendingDragged != null
+            ? CaveMapPendingPin(
+                point: pendingPoint,
+                onDragged: onPendingDragged,
+              )
+            : const Icon(
+                Icons.location_on,
+                size: 40,
+                color: Color(0xFFD32F2F),
+                shadows: [Shadow(color: Colors.white, blurRadius: 4)],
+              ),
       ),
   ];
 

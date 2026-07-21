@@ -52,10 +52,11 @@ its main entrance — are unit-tested independently of the UI.
   shows the live position as a blue dot with a translucent accuracy circle
   and follows it. Panning the map releases follow.
 - **Placing a point** — every "create" or "set location" action enters one
-  shared placement flow. The point can be set three ways: **tap** the map,
-  **long-press** the map (which also opens the create menu at that point),
-  or **Use my location** (the current GPS fix). A bottom bar shows the
-  chosen coordinates and a confirm button.
+  shared placement flow. The point can be set four ways: **tap** the map,
+  **drag** the red pin for fine adjustment, **long-press** the map (which
+  also opens the create menu at that point), or **Use my location** (the
+  current GPS fix). A bottom bar shows the chosen coordinates and a
+  confirm button.
 - **Add point** (toolbar +, or long-press) offers:
   - **New cave** — enter a cave title and entrance name; creates the cave
     and its main entrance at the point.

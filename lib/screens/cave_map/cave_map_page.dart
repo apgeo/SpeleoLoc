@@ -547,6 +547,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                           pendingPoint: _placement != null
                               ? _pendingPoint
                               : null,
+                          onPendingDragged: (point) =>
+                              setState(() => _pendingPoint = point),
                         ),
                       ),
                       CaveMapLabelLayer(
