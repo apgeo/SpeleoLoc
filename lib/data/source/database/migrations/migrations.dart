@@ -17,6 +17,13 @@ class LegacyV6ToV7Migration extends SchemaMigration {
     final snap = await snapshotLegacyV6(db);
     await dropLegacyV6Tables(db);
     await migrator.createAll();
+    // createAll builds the partial title index for NULL-area cave places,
+    // but legacy data may still contain title twins that would abort the
+    // reinsert below. Drop it here; V16ToV17Migration (which also runs on
+    // this path) renames the twins and recreates the index afterwards.
+    await db.customStatement(
+      'DROP INDEX IF EXISTS idx_cave_places_title_no_area',
+    );
     if (snap.totalRows > 0) {
       await reinsertLegacyData(db, snap);
     }
@@ -548,6 +555,82 @@ class V15ToV16Migration extends SchemaMigration {
   }
 }
 
+/// v16 → v17: enforce title uniqueness for cave places without a cave
+/// area. UNIQUE(title, cave_uuid, cave_area_uuid) never fires when
+/// cave_area_uuid is NULL (SQLite treats NULLs as distinct), so a partial
+/// unique index on (title, cave_uuid) WHERE cave_area_uuid IS NULL closes
+/// the gap — the same pattern as the Ruuvi identity index in v15→v16.
+/// Existing twins are renamed with a numeric suffix (earliest row by
+/// created_at keeps its title) before the index is created. The renames
+/// bypass change_log: migrations run before the services that own audit
+/// logging, and the rows sync by uuid afterwards either way.
+class V16ToV17Migration extends SchemaMigration {
+  const V16ToV17Migration();
+
+  @override
+  int get toVersion => 17;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    final rows = await db
+        .customSelect(
+          'SELECT uuid, title, hex(cave_uuid) AS cave_hex '
+          'FROM cave_places WHERE cave_area_uuid IS NULL '
+          'ORDER BY cave_uuid, title, COALESCE(created_at, 0), uuid',
+        )
+        .get();
+
+    // Group NULL-area rows by (cave, title); every row after the first in
+    // a group is a twin that needs a new title.
+    final groups = <String, List<QueryRow>>{};
+    for (final row in rows) {
+      final key =
+          '${row.read<String>('cave_hex')}|${row.read<String>('title')}';
+      (groups[key] ??= []).add(row);
+    }
+
+    final takenByCave = <String, Set<String>>{};
+    Future<Set<String>> takenTitles(String caveHex) async {
+      final cached = takenByCave[caveHex];
+      if (cached != null) return cached;
+      final titleRows = await db
+          .customSelect(
+            'SELECT title FROM cave_places WHERE hex(cave_uuid) = ?',
+            variables: [Variable.withString(caveHex)],
+          )
+          .get();
+      return takenByCave[caveHex] = {
+        for (final r in titleRows) r.read<String>('title'),
+      };
+    }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    for (final group in groups.values) {
+      if (group.length < 2) continue;
+      final caveHex = group.first.read<String>('cave_hex');
+      final title = group.first.read<String>('title');
+      final taken = await takenTitles(caveHex);
+      for (final twin in group.skip(1)) {
+        var n = 2;
+        while (taken.contains('$title $n')) {
+          n++;
+        }
+        final newTitle = '$title $n';
+        taken.add(newTitle);
+        await db.customStatement(
+          'UPDATE cave_places SET title = ?, updated_at = ? WHERE uuid = ?',
+          [newTitle, nowMs, twin.read<Uint8List>('uuid')],
+        );
+      }
+    }
+
+    await db.customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area '
+      'ON cave_places(title, cave_uuid) WHERE cave_area_uuid IS NULL',
+    );
+  }
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -564,6 +647,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V13ToV14Migration(),
   V14ToV15Migration(),
   V15ToV16Migration(),
+  V16ToV17Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

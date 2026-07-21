@@ -13811,6 +13811,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final RasterMaps rasterMaps = RasterMaps(this);
   late final CavePlaceToRasterMapDefinitions cavePlaceToRasterMapDefinitions =
       CavePlaceToRasterMapDefinitions(this);
+  late final Index idxCavePlacesTitleNoArea = Index(
+    'idx_cave_places_title_no_area',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area ON cave_places (title, cave_uuid) WHERE cave_area_uuid IS NULL',
+  );
   late final DocumentationFiles documentationFiles = DocumentationFiles(this);
   late final DocumentationFilesToGeofeatures documentationFilesToGeofeatures =
       DocumentationFilesToGeofeatures(this);
@@ -13856,6 +13860,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cavePlaces,
     rasterMaps,
     cavePlaceToRasterMapDefinitions,
+    idxCavePlacesTitleNoArea,
     documentationFiles,
     documentationFilesToGeofeatures,
     configurations,

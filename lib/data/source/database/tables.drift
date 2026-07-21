@@ -107,9 +107,16 @@ CREATE TABLE IF NOT EXISTS cave_places (
     deleted_at                  INTEGER,
     created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
-    --todo: UNIQUE constraint allows silent title duplicates when cave_area_uuid is NULL; redesign
     UNIQUE(title, cave_uuid, cave_area_uuid) ON CONFLICT ROLLBACK
 );
+
+-- Title uniqueness for places without a cave area. The UNIQUE above never
+-- fires when cave_area_uuid is NULL (SQLite treats NULLs as distinct), so
+-- this partial index closes that gap. Constraint-bearing, so it lives here
+-- for fresh installs; the v16→v17 migration renames existing twins and
+-- creates the same index for upgraders.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area
+    ON cave_places(title, cave_uuid) WHERE cave_area_uuid IS NULL;
 
 -- Table: caves
 CREATE TABLE IF NOT EXISTS caves (

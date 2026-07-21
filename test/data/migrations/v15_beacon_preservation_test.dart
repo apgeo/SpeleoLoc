@@ -31,7 +31,13 @@ void main() {
       // Minimal FK parents (shape only, as far as the beacon table needs).
       raw.execute('CREATE TABLE users (uuid BLOB PRIMARY KEY NOT NULL)');
       raw.execute('CREATE TABLE caves (uuid BLOB PRIMARY KEY NOT NULL)');
-      raw.execute('CREATE TABLE cave_places (uuid BLOB PRIMARY KEY NOT NULL)');
+      // Stub carries the columns V16ToV17's twin-rename pass reads, so the
+      // full ladder can run over this fixture.
+      raw.execute(
+        'CREATE TABLE cave_places (uuid BLOB PRIMARY KEY NOT NULL, '
+        "title TEXT NOT NULL DEFAULT '', cave_uuid BLOB, "
+        'cave_area_uuid BLOB, created_at INTEGER, updated_at INTEGER)',
+      );
       raw.execute('INSERT INTO caves (uuid) VALUES (?)', [caveUuid]);
       raw.execute('INSERT INTO cave_places (uuid) VALUES (?)', [placeUuid]);
 
