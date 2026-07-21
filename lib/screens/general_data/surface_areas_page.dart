@@ -275,7 +275,7 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_showGenerateIcons) ...[
+                  if (_showGenerateIcons)
                     IconButton(
                       onPressed: () => PlaceCodeBatchUi.run(
                         context,
@@ -289,12 +289,14 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
                       icon: const Icon(Icons.auto_awesome),
                       tooltip: LocServ.inst.t('generate_codes'),
                     ),
-                    IconButton(
-                      onPressed: () => _generateEntranceQrRange(area),
-                      icon: const Icon(Icons.qr_code_2),
-                      tooltip: LocServ.inst.t('generate_entrance_qr_range'),
-                    ),
-                  ],
+                  // Entrance QR range is always visible — it generates codes
+                  // for not-yet-recorded caves, so it is useful independently
+                  // of the existing-code batch toggle above.
+                  IconButton(
+                    onPressed: () => _generateEntranceQrRange(area),
+                    icon: const Icon(Icons.qr_code_2),
+                    tooltip: LocServ.inst.t('generate_entrance_qr_range'),
+                  ),
                   IconButton(
                     onPressed: () => _showAddEditDialog(existing: area),
                     icon: const Icon(Icons.edit),
