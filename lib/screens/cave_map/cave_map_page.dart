@@ -23,6 +23,7 @@ import 'package:speleoloc/screens/cave_map/cave_map_place_list_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_prompts.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_toolbar.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
+import 'package:speleoloc/services/location/gps_running_average.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
@@ -82,6 +83,11 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   LatLng? _pendingPoint;
   bool _placementBusy = false;
   bool _locating = false;
+
+  // Averaged GPS capture for the pending point: while active, every fix
+  // feeds the running mean and the pin follows it.
+  GpsRunningAverage? _averaging;
+  StreamSubscription<Position>? _averagingSub;
 
   // Live GPS position. The dot renders whenever a fix exists; _followMe
   // additionally keeps the camera on it until the user pans away.
@@ -379,25 +385,52 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     if (kind != null) _startPlacement(kind, point: initialPoint);
   }
 
+  /// First tap starts an averaged GPS capture: every fix feeds a running
+  /// mean and the pin follows it, converging far tighter than a single
+  /// fix. A second tap (or a manual tap/drag of the point) stops it and
+  /// keeps the mean.
   Future<void> _useMyLocationForPending() async {
+    if (_averaging != null) {
+      _stopAveraging();
+      return;
+    }
+    if (_locating) return;
     setState(() => _locating = true);
     try {
       if (!await _ensureLocationReady()) return;
-      _startPositionStream();
-      final fix = await _location.currentPosition();
-      if (!mounted || fix == null) return;
-      final point = LatLng(fix.latitude, fix.longitude);
-      setState(() {
-        _myPosition = fix;
-        _pendingPoint = point;
-      });
-      _moveTo(point, minZoom: 16);
+      if (!mounted) return;
+      final average = GpsRunningAverage();
+      // Dedicated unfiltered stream: the my-location stream's distance
+      // filter would starve a stationary averaging session of samples.
+      _averagingSub = _location.positionStream().listen(
+        (position) {
+          if (!mounted) return;
+          average.add(position);
+          final mean = LatLng(average.latitude!, average.longitude!);
+          setState(() {
+            _myPosition = position;
+            _pendingPoint = mean;
+          });
+          if (average.sampleCount == 1) _moveTo(mean, minZoom: 16);
+        },
+        onError: (Object e, StackTrace st) =>
+            _log.warning('Averaging stream error', e, st),
+      );
+      setState(() => _averaging = average);
     } finally {
       if (mounted) setState(() => _locating = false);
     }
   }
 
+  void _stopAveraging() {
+    if (_averaging == null) return;
+    unawaited(_averagingSub?.cancel());
+    _averagingSub = null;
+    setState(() => _averaging = null);
+  }
+
   void _cancelPlacement() {
+    _stopAveraging();
     if (_isExternalPicker) {
       Navigator.pop(context);
       return;
