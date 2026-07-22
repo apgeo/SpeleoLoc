@@ -20,43 +20,56 @@ class CaveMapMarkers {
     ValueChanged<LatLng>? onPendingDragged,
   }) => [
     for (final item in paintOrder)
-      Marker(
-        key: ValueKey(item.uuid),
-        point: item.point,
-        width: item.isEntrance ? 30 : 20,
-        height: item.isEntrance ? 26 : 20,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onTap(item),
-          child: Center(
-            child: _icon(
-              item,
-              highlighted:
-                  (highlightFocus && item.isFocus) ||
-                  item.uuid == selectedUuid,
-            ),
-          ),
-        ),
+      placeMarker(
+        item,
+        highlightFocus: highlightFocus,
+        selectedUuid: selectedUuid,
+        onTap: onTap,
       ),
     if (pendingPoint != null)
-      Marker(
-        point: pendingPoint,
-        width: 40,
-        height: 40,
-        alignment: Alignment.topCenter,
-        child: onPendingDragged != null
-            ? CaveMapPendingPin(
-                point: pendingPoint,
-                onDragged: onPendingDragged,
-              )
-            : const Icon(
-                Icons.location_on,
-                size: 40,
-                color: Color(0xFFD32F2F),
-                shadows: [Shadow(color: Colors.white, blurRadius: 4)],
-              ),
-      ),
+      pendingPinMarker(pendingPoint, onDragged: onPendingDragged),
   ];
+
+  static Marker placeMarker(
+    CaveMapPlaceItem item, {
+    required bool highlightFocus,
+    required Uuid? selectedUuid,
+    required void Function(CaveMapPlaceItem) onTap,
+  }) => Marker(
+    key: ValueKey(item.uuid),
+    point: item.point,
+    width: item.isEntrance ? 30 : 20,
+    height: item.isEntrance ? 26 : 20,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onTap(item),
+      child: Center(
+        child: _icon(
+          item,
+          highlighted:
+              (highlightFocus && item.isFocus) || item.uuid == selectedUuid,
+        ),
+      ),
+    ),
+  );
+
+  static Marker pendingPinMarker(
+    LatLng pendingPoint, {
+    ValueChanged<LatLng>? onDragged,
+  }) => Marker(
+    point: pendingPoint,
+    width: 40,
+    height: 40,
+    alignment: Alignment.topCenter,
+    child: onDragged != null
+        ? CaveMapPendingPin(point: pendingPoint, onDragged: onDragged)
+        : const Icon(
+            Icons.location_on,
+            size: 40,
+            color: Color(0xFFD32F2F),
+            shadows: [Shadow(color: Colors.white, blurRadius: 4)],
+          ),
+  );
 
   static Widget _icon(CaveMapPlaceItem item, {required bool highlighted}) {
     if (item.isEntrance) {

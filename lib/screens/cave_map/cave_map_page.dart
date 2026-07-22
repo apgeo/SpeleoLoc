@@ -7,11 +7,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_clustered_places.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_controller.dart';
-import 'package:speleoloc/screens/cave_map/cave_map_label_layer.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_layer_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_layers_controller.dart';
-import 'package:speleoloc/screens/cave_map/cave_map_markers.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_measure.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_measure_bar.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_measure_overlay.dart';
@@ -249,6 +248,16 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     // point stays an explicit map tap / GPS action.
     if (_placement == null) setState(() => _panel = CaveMapPanel.none);
     _map.select(item.uuid);
+  }
+
+  void _onClusterTap(List<CaveMapPlaceItem> members) {
+    _mapController.fitCamera(
+      CameraFit.coordinates(
+        coordinates: [for (final member in members) member.point],
+        padding: const EdgeInsets.fromLTRB(60, 120, 60, 100),
+        maxZoom: 17,
+      ),
+    );
   }
 
   void _toggleMeasure() {
@@ -602,22 +611,18 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                       ..._layers.buildOverlayLayers(),
                       if (_myPosition != null)
                         ...CaveMapMyLocation.layers(_myPosition!),
-                      MarkerLayer(
-                        markers: CaveMapMarkers.build(
-                          paintOrder: _map.paintOrder,
-                          highlightFocus: widget.highlightFocus,
-                          selectedUuid: _map.selectedUuid,
-                          onTap: _onMarkerTap,
-                          pendingPoint: _placement != null
-                              ? _pendingPoint
-                              : null,
-                          onPendingDragged: (point) =>
-                              setState(() => _pendingPoint = point),
-                        ),
-                      ),
-                      CaveMapLabelLayer(
-                        items: _map.visibleItems,
+                      CaveMapClusteredPlaces(
+                        paintOrder: _map.paintOrder,
+                        visibleItems: _map.visibleItems,
+                        highlightFocus: widget.highlightFocus,
                         selectedUuid: _map.selectedUuid,
+                        onTap: _onMarkerTap,
+                        onClusterTap: _onClusterTap,
+                        pendingPoint: _placement != null
+                            ? _pendingPoint
+                            : null,
+                        onPendingDragged: (point) =>
+                            setState(() => _pendingPoint = point),
                       ),
                       if (_measuring)
                         ...CaveMapMeasureOverlay.layers(_measurePoints),

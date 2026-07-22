@@ -55,6 +55,10 @@ its main entrance — are unit-tested independently of the UI.
   a marker, snapping to the exact place point) to add vertices; the bar
   shows the total distance plus the last leg's length and bearing, with
   undo. Exclusive with point placement.
+- **Clustering** — below zoom 14 nearby markers collapse into count
+  bubbles (blue when any member is in focus, grey otherwise); tapping a
+  bubble zooms onto its members. Labels only ever attach to unclustered
+  markers.
 - **Placing a point** — every "create" or "set location" action enters one
   shared placement flow. The point can be set four ways: **tap** the map,
   **drag** the red pin for fine adjustment, **long-press** the map (which
