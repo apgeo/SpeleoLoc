@@ -59,10 +59,18 @@ class BeaconDetectionService {
   StreamSubscription<RangingResult>? _rangingSub;
   StreamSubscription<RuuviSighting>? _ruuviSub;
   StreamSubscription<List<CavePlaceBeacon>>? _registrationsSub;
+  StreamSubscription<BluetoothState>? _btStateSub;
   Timer? _ruuviDutyTimer;
+  Timer? _startRetryTimer;
   BeaconMatchEngine? _engine;
   bool _running = false;
   bool get isRunning => _running;
+
+  /// Delay before retrying a [start] that failed on a transient error
+  /// (database still opening, platform channel not ready, Bluetooth
+  /// adapter initializing). Retries stop as soon as one attempt gets far
+  /// enough to read the config.
+  static const _startRetryDelay = Duration(seconds: 30);
 
   /// Registered identities, mirrored from the watch — gates the passive
   /// Ruuvi health harvesting without a DB lookup per advertisement.
@@ -90,6 +98,8 @@ class BeaconDetectionService {
   /// every failure path only logs.
   Future<void> start() async {
     if (_running) return;
+    _startRetryTimer?.cancel();
+    _startRetryTimer = null;
     try {
       final config = await BeaconDetectionConfig.load();
       if (!config.enabled) return;
@@ -100,19 +110,22 @@ class BeaconDetectionService {
         );
         return;
       }
+      if (!await BeaconScanHelper.isLocationServiceEnabled()) {
+        // Android silently returns no BLE results with the location master
+        // switch off; keep going (the switch may come on any time) but
+        // leave a trace for "detection is enabled yet finds nothing".
+        _log.warning(
+          'Beacon detection started with location services off — '
+          'Android will deliver no scan results until they are enabled',
+        );
+      }
       await flutterBeacon.initializeScanning;
 
       _engine = BeaconMatchEngine(config);
       _watchRegistrations();
+      _watchBluetoothState();
 
-      final uuids = await BeaconScanHelper.loadRegionUuids();
-      _rangingSub = flutterBeacon
-          .ranging(BeaconScanHelper.buildRegions(uuids))
-          .listen(
-            _onRangingResult,
-            onError: (Object e, StackTrace st) =>
-                _log.warning('Detection ranging error', e, st),
-          );
+      _listenRanging(await BeaconScanHelper.loadRegionUuids());
       _running = true;
       _log.info(
         'Beacon detection started '
@@ -121,13 +134,22 @@ class BeaconDetectionService {
       );
     } catch (e, st) {
       // Platform channels are unavailable in widget tests and detection
-      // must never break app startup — log and stay off.
+      // must never break app startup — log, stay off, and retry once the
+      // transient cold-start condition may have cleared.
       _log.warning('Beacon detection failed to start', e, st);
       await stop();
+      _startRetryTimer = Timer(_startRetryDelay, () {
+        _startRetryTimer = null;
+        if (!_running) unawaited(start());
+      });
     }
   }
 
   Future<void> stop() async {
+    _startRetryTimer?.cancel();
+    _startRetryTimer = null;
+    await _btStateSub?.cancel();
+    _btStateSub = null;
     await _rangingSub?.cancel();
     _rangingSub = null;
     _ruuviDutyTimer?.cancel();
@@ -307,6 +329,43 @@ class BeaconDetectionService {
     if (!Platform.isAndroid) return true;
     return await Permission.bluetoothScan.isGranted &&
         await Permission.locationWhenInUse.isGranted;
+  }
+
+  /// Re-arms iBeacon ranging when Bluetooth turns (back) on. A ranging
+  /// subscription opened while the adapter is off/still initializing —
+  /// e.g. detection auto-starting at app launch — can otherwise stay
+  /// silent until the next full restart.
+  void _watchBluetoothState() {
+    _btStateSub = flutterBeacon.bluetoothStateChanged().listen(
+      (state) {
+        if (state != BluetoothState.stateOn || !_running) return;
+        unawaited(
+          _resubscribeRanging().catchError((Object e, StackTrace st) {
+            _log.warning('Ranging restart on Bluetooth-on failed', e, st);
+          }),
+        );
+      },
+      onError: (Object e, StackTrace st) =>
+          _log.warning('Bluetooth state watch error', e, st),
+    );
+  }
+
+  Future<void> _resubscribeRanging() async {
+    final uuids = await BeaconScanHelper.loadRegionUuids();
+    await _rangingSub?.cancel();
+    _rangingSub = null;
+    if (!_running) return;
+    _listenRanging(uuids);
+  }
+
+  void _listenRanging(List<String> uuids) {
+    _rangingSub = flutterBeacon
+        .ranging(BeaconScanHelper.buildRegions(uuids))
+        .listen(
+          _onRangingResult,
+          onError: (Object e, StackTrace st) =>
+              _log.warning('Detection ranging error', e, st),
+        );
   }
 
   /// Keeps the engine's registered-identity cache in sync with the table

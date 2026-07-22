@@ -42,7 +42,9 @@ class RuuviScanService {
   static final RuuviScanService instance = RuuviScanService._();
 
   final _log = AppLogger.of('RuuviScanService');
+  StreamSubscription<fbp.BluetoothAdapterState>? _adapterSub;
   StreamSubscription<List<fbp.ScanResult>>? _resultsSub;
+  bool _scanning = false;
   late final StreamController<RuuviSighting> _controller =
       StreamController.broadcast(
         onListen: () => unawaited(_start()),
@@ -54,13 +56,34 @@ class RuuviScanService {
   Stream<RuuviSighting> get sightings => _controller.stream;
 
   Future<void> _start() async {
+    // At a cold app start the adapter briefly reports `unknown` before the
+    // platform delivers the real state; a one-shot check here used to give
+    // up in that window, leaving detection silent until re-subscribed.
+    // Follow the state instead: scan while the adapter is on, and resume
+    // automatically when Bluetooth comes (back) on.
+    _adapterSub ??= fbp.FlutterBluePlus.adapterState.listen(
+      (state) {
+        if (state == fbp.BluetoothAdapterState.on) {
+          unawaited(_beginScan());
+        } else {
+          // The platform scan dies with the adapter; allow a fresh start.
+          _scanning = false;
+          if (state == fbp.BluetoothAdapterState.off) {
+            _log.warning('Ruuvi scan interrupted: Bluetooth is off');
+          }
+        }
+      },
+      onError: (Object e, StackTrace st) {
+        _log.warning('Bluetooth adapter state watch error', e, st);
+      },
+    );
+  }
+
+  Future<void> _beginScan() async {
+    if (_scanning) return;
+    _scanning = true;
     try {
-      if (await fbp.FlutterBluePlus.adapterState.first !=
-          fbp.BluetoothAdapterState.on) {
-        _log.warning('Ruuvi scan not started: Bluetooth is off');
-        return;
-      }
-      _resultsSub = fbp.FlutterBluePlus.scanResults.listen(
+      _resultsSub ??= fbp.FlutterBluePlus.scanResults.listen(
         _onResults,
         onError: (Object e, StackTrace st) {
           _log.warning('Ruuvi scan stream error', e, st);
@@ -70,7 +93,11 @@ class RuuviScanService {
         continuousUpdates: true,
         androidUsesFineLocation: true,
       );
+      // The last listener may have left during the await above — don't
+      // leave the radio scanning for nobody.
+      if (_adapterSub == null) await _stop();
     } catch (e, st) {
+      _scanning = false;
       _log.warning('Ruuvi scan start failed', e, st);
     }
   }
@@ -96,6 +123,9 @@ class RuuviScanService {
   }
 
   Future<void> _stop() async {
+    await _adapterSub?.cancel();
+    _adapterSub = null;
+    _scanning = false;
     await _resultsSub?.cancel();
     _resultsSub = null;
     try {
