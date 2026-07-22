@@ -148,6 +148,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   void dispose() {
     unawaited(_layers.savePrefs());
     unawaited(_positionSub?.cancel());
+    unawaited(_averagingSub?.cancel());
     _map.removeListener(_onControllersChanged);
     _layers.removeListener(_onControllersChanged);
     _map.dispose();
@@ -229,6 +230,9 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
       return;
     }
     if (_placement != null) {
+      // A manual point overrides a running averaged capture — otherwise
+      // the next GPS fix would snap the pin right back to the mean.
+      _stopAveraging();
       setState(() => _pendingPoint = latLng);
       _map.select(null);
       return;
@@ -491,6 +495,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     final placement = _placement;
     final point = _pendingPoint;
     if (placement == null || point == null) return;
+    // Freeze the confirmed point: a still-running averaged capture would
+    // keep overwriting _pendingPoint after the bar (and its stop toggle)
+    // is gone.
+    _stopAveraging();
 
     final loc = LocServ.inst;
     final geo = ref.read(caveGeoServiceProvider);
@@ -627,8 +635,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                         pendingPoint: _placement != null
                             ? _pendingPoint
                             : null,
-                        onPendingDragged: (point) =>
-                            setState(() => _pendingPoint = point),
+                        onPendingDragged: (point) {
+                          _stopAveraging();
+                          setState(() => _pendingPoint = point);
+                        },
                       ),
                       if (_measuring)
                         ...CaveMapMeasureOverlay.layers(_measurePoints),

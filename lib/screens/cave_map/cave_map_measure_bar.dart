@@ -50,7 +50,8 @@ class CaveMapMeasureBar extends StatelessWidget {
                         Text(
                           '${loc.t('map_measure_leg')}: '
                           '${MeasurePath.formatMeters(leg!)} · '
-                          '${bearing!.round()}°',
+                          // Re-wrap after rounding: 359.7° must show 0°.
+                          '${bearing!.round() % 360}°',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[700],

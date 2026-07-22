@@ -50,6 +50,10 @@ void main() {
   group('loadTileBytes', () {
     final url = Uri.parse('https://tile.example/12/2282/1441.png');
 
+    // Payloads must pass the image sniff; a PNG signature is enough.
+    List<int> png(List<int> payload) =>
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0, ...payload];
+
     http.Client clientReturning(List<int> bytes, {int status = 200}) =>
         MockClient((request) async {
           return http.Response.bytes(bytes, status);
@@ -66,11 +70,11 @@ void main() {
         x: 2282,
         y: 1441,
         url: url,
-        client: clientReturning([9, 9, 9]),
+        client: clientReturning(png([9])),
       );
 
-      expect(bytes, [9, 9, 9]);
-      expect((await cache.read('osm', 12, 2282, 1441))!.bytes, [9, 9, 9]);
+      expect(bytes, png([9]));
+      expect((await cache.read('osm', 12, 2282, 1441))!.bytes, png([9]));
     });
 
     test('a fresh cached tile skips the network entirely', () async {
@@ -98,11 +102,11 @@ void main() {
         x: 2282,
         y: 1441,
         url: url,
-        client: clientReturning([2, 2, 2]),
+        client: clientReturning(png([2])),
         now: () => DateTime.now().add(const Duration(days: 8)),
       );
-      expect(bytes, [2, 2, 2]);
-      expect((await cache.read('osm', 12, 2282, 1441))!.bytes, [2, 2, 2]);
+      expect(bytes, png([2]));
+      expect((await cache.read('osm', 12, 2282, 1441))!.bytes, png([2]));
     });
 
     test('a stale tile is served when the network fails', () async {
@@ -131,7 +135,38 @@ void main() {
         x: 2282,
         y: 1441,
         url: url,
-        client: clientReturning([0], status: 503),
+        client: clientReturning(png([0]), status: 503),
+        now: () => DateTime.now().add(const Duration(days: 8)),
+      );
+      expect(bytes, [1, 1, 1]);
+    });
+
+    test('a 200 non-image body is never cached (captive portal)', () async {
+      final html = '<html>login required</html>'.codeUnits;
+      await expectLater(
+        loadTileBytes(
+          cache: cache,
+          sourceId: 'osm',
+          z: 12,
+          x: 2282,
+          y: 1441,
+          url: url,
+          client: clientReturning(html),
+        ),
+        throwsA(isA<HttpException>()),
+      );
+      expect(await cache.read('osm', 12, 2282, 1441), isNull);
+
+      // With a stale tile present, the non-image body falls back to it.
+      await cache.write('osm', 12, 2282, 1441, [1, 1, 1]);
+      final bytes = await loadTileBytes(
+        cache: cache,
+        sourceId: 'osm',
+        z: 12,
+        x: 2282,
+        y: 1441,
+        url: url,
+        client: clientReturning(html),
         now: () => DateTime.now().add(const Duration(days: 8)),
       );
       expect(bytes, [1, 1, 1]);
@@ -163,7 +198,7 @@ void main() {
         url: url,
         client: MockClient((request) async {
           seen = request.headers;
-          return http.Response.bytes(Uint8List.fromList([1]), 200);
+          return http.Response.bytes(Uint8List.fromList(png([1])), 200);
         }),
         headers: {'User-Agent': 'speleoloc-test'},
       );
