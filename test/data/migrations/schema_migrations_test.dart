@@ -98,20 +98,21 @@ void main() {
       ];
 
       // Pre-v7: legacy step runs (calls createAll at the latest schema),
-      // V7->V8 is gated off (from != 7), and V8..V17 run as no-op-ish
+      // V7->V8 is gated off (from != 7), and V8..V18 run as no-op-ish
       // idempotent backfills against the already-current schema.
-      expect(appliedFor(5), [7, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
-      expect(appliedFor(6), [7, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+      expect(appliedFor(5), [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+      expect(appliedFor(6), [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
 
       // From v7: every migration from v8 onward fires.
-      expect(appliedFor(7), [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+      expect(appliedFor(7), [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
 
       // Mid-ladder upgrade: only the remaining steps fire.
-      expect(appliedFor(10), [11, 12, 13, 14, 15, 16, 17]);
-      expect(appliedFor(16), [17]);
+      expect(appliedFor(10), [11, 12, 13, 14, 15, 16, 17, 18]);
+      expect(appliedFor(16), [17, 18]);
+      expect(appliedFor(17), [18]);
 
       // Already current: nothing fires.
-      expect(appliedFor(17), isEmpty);
+      expect(appliedFor(18), isEmpty);
     });
   });
 }
