@@ -136,6 +136,28 @@ void main() {
       expect(raw.deletedAt, isNotNull);
     });
 
+    test('unregistered identity can be registered again in the cave', () async {
+      final first = await repo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: uuidA,
+        major: 5,
+        minor: 6,
+      );
+      await repo.unregisterBeacon(first);
+      // The soft-deleted row must not trip the identity guard (partial
+      // unique index scoped to active rows).
+      final second = await repo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: uuidA,
+        major: 5,
+        minor: 6,
+      );
+      expect(second, isNot(first));
+      expect(await repo.findByIdentity(uuidA, 5, 6), hasLength(1));
+    });
+
     test('updateHealth stamps telemetry without touching updated_at', () async {
       final id = await repo.registerBeacon(
         cavePlaceUuid: placeUuid,
@@ -236,6 +258,22 @@ void main() {
         ),
         throwsA(isA<DuplicateEntryException>()),
       );
+    });
+
+    test('unregistered MAC can be registered again in the cave', () async {
+      final first = await repo.registerRuuviTag(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        macAddress: mac,
+      );
+      await repo.unregisterBeacon(first);
+      final second = await repo.registerRuuviTag(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        macAddress: mac,
+      );
+      expect(second, isNot(first));
+      expect(await repo.findByMac(mac), hasLength(1));
     });
 
     test('ruuvi and iBeacon registrations coexist on one place', () async {

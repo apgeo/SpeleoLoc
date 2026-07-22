@@ -10605,6 +10605,15 @@ class CavePlaceBeacons extends Table
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
     'notes',
@@ -10744,6 +10753,7 @@ class CavePlaceBeacons extends Table
     model,
     measuredPower,
     firmwareVersion,
+    title,
     notes,
     lastSeenAt,
     lastBatteryMv,
@@ -10832,6 +10842,12 @@ class CavePlaceBeacons extends Table
         ),
       );
     }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    }
     if (data.containsKey('notes')) {
       context.handle(
         _notesMeta,
@@ -10916,10 +10932,6 @@ class CavePlaceBeacons extends Table
   @override
   Set<GeneratedColumn> get $primaryKey => {uuid};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {proximityUuid, major, minor, caveUuid},
-  ];
-  @override
   CavePlaceBeacon map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CavePlaceBeacon(
@@ -10976,6 +10988,10 @@ class CavePlaceBeacons extends Table
       firmwareVersion: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}firmware_version'],
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
       ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -11052,10 +11068,6 @@ class CavePlaceBeacons extends Table
   static TypeConverter<Uuid?, Uint8List?> $converterlastModifiedByUserUuidn =
       NullAwareTypeConverter.wrap($converterlastModifiedByUserUuid);
   @override
-  List<String> get customConstraints => const [
-    'UNIQUE(proximity_uuid, major, minor, cave_uuid)ON CONFLICT ROLLBACK',
-  ];
-  @override
   bool get dontWriteConstraints => true;
 }
 
@@ -11088,6 +11100,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
   final String? firmwareVersion;
 
   /// read via DIS during Ruuvi history download
+  final String? title;
+
+  /// user-facing tag name (tag management)
   final String? notes;
   final int? lastSeenAt;
   final int? lastBatteryMv;
@@ -11113,6 +11128,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     this.model,
     this.measuredPower,
     this.firmwareVersion,
+    this.title,
     this.notes,
     this.lastSeenAt,
     this.lastBatteryMv,
@@ -11168,6 +11184,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     }
     if (!nullToAbsent || firmwareVersion != null) {
       map['firmware_version'] = Variable<String>(firmwareVersion);
+    }
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
@@ -11244,6 +11263,9 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       firmwareVersion: firmwareVersion == null && nullToAbsent
           ? const Value.absent()
           : Value(firmwareVersion),
+      title: title == null && nullToAbsent
+          ? const Value.absent()
+          : Value(title),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -11301,6 +11323,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       model: serializer.fromJson<String?>(json['model']),
       measuredPower: serializer.fromJson<int?>(json['measured_power']),
       firmwareVersion: serializer.fromJson<String?>(json['firmware_version']),
+      title: serializer.fromJson<String?>(json['title']),
       notes: serializer.fromJson<String?>(json['notes']),
       lastSeenAt: serializer.fromJson<int?>(json['last_seen_at']),
       lastBatteryMv: serializer.fromJson<int?>(json['last_battery_mv']),
@@ -11339,6 +11362,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       'model': serializer.toJson<String?>(model),
       'measured_power': serializer.toJson<int?>(measuredPower),
       'firmware_version': serializer.toJson<String?>(firmwareVersion),
+      'title': serializer.toJson<String?>(title),
       'notes': serializer.toJson<String?>(notes),
       'last_seen_at': serializer.toJson<int?>(lastSeenAt),
       'last_battery_mv': serializer.toJson<int?>(lastBatteryMv),
@@ -11369,6 +11393,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     Value<String?> model = const Value.absent(),
     Value<int?> measuredPower = const Value.absent(),
     Value<String?> firmwareVersion = const Value.absent(),
+    Value<String?> title = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     Value<int?> lastSeenAt = const Value.absent(),
     Value<int?> lastBatteryMv = const Value.absent(),
@@ -11400,6 +11425,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     firmwareVersion: firmwareVersion.present
         ? firmwareVersion.value
         : this.firmwareVersion,
+    title: title.present ? title.value : this.title,
     notes: notes.present ? notes.value : this.notes,
     lastSeenAt: lastSeenAt.present ? lastSeenAt.value : this.lastSeenAt,
     lastBatteryMv: lastBatteryMv.present
@@ -11453,6 +11479,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
       firmwareVersion: data.firmwareVersion.present
           ? data.firmwareVersion.value
           : this.firmwareVersion,
+      title: data.title.present ? data.title.value : this.title,
       notes: data.notes.present ? data.notes.value : this.notes,
       lastSeenAt: data.lastSeenAt.present
           ? data.lastSeenAt.value
@@ -11499,6 +11526,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           ..write('model: $model, ')
           ..write('measuredPower: $measuredPower, ')
           ..write('firmwareVersion: $firmwareVersion, ')
+          ..write('title: $title, ')
           ..write('notes: $notes, ')
           ..write('lastSeenAt: $lastSeenAt, ')
           ..write('lastBatteryMv: $lastBatteryMv, ')
@@ -11529,6 +11557,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
     model,
     measuredPower,
     firmwareVersion,
+    title,
     notes,
     lastSeenAt,
     lastBatteryMv,
@@ -11558,6 +11587,7 @@ class CavePlaceBeacon extends DataClass implements Insertable<CavePlaceBeacon> {
           other.model == this.model &&
           other.measuredPower == this.measuredPower &&
           other.firmwareVersion == this.firmwareVersion &&
+          other.title == this.title &&
           other.notes == this.notes &&
           other.lastSeenAt == this.lastSeenAt &&
           other.lastBatteryMv == this.lastBatteryMv &&
@@ -11585,6 +11615,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
   final Value<String?> model;
   final Value<int?> measuredPower;
   final Value<String?> firmwareVersion;
+  final Value<String?> title;
   final Value<String?> notes;
   final Value<int?> lastSeenAt;
   final Value<int?> lastBatteryMv;
@@ -11611,6 +11642,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     this.model = const Value.absent(),
     this.measuredPower = const Value.absent(),
     this.firmwareVersion = const Value.absent(),
+    this.title = const Value.absent(),
     this.notes = const Value.absent(),
     this.lastSeenAt = const Value.absent(),
     this.lastBatteryMv = const Value.absent(),
@@ -11638,6 +11670,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     this.model = const Value.absent(),
     this.measuredPower = const Value.absent(),
     this.firmwareVersion = const Value.absent(),
+    this.title = const Value.absent(),
     this.notes = const Value.absent(),
     this.lastSeenAt = const Value.absent(),
     this.lastBatteryMv = const Value.absent(),
@@ -11667,6 +11700,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     Expression<String>? model,
     Expression<int>? measuredPower,
     Expression<String>? firmwareVersion,
+    Expression<String>? title,
     Expression<String>? notes,
     Expression<int>? lastSeenAt,
     Expression<int>? lastBatteryMv,
@@ -11694,6 +11728,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
       if (model != null) 'model': model,
       if (measuredPower != null) 'measured_power': measuredPower,
       if (firmwareVersion != null) 'firmware_version': firmwareVersion,
+      if (title != null) 'title': title,
       if (notes != null) 'notes': notes,
       if (lastSeenAt != null) 'last_seen_at': lastSeenAt,
       if (lastBatteryMv != null) 'last_battery_mv': lastBatteryMv,
@@ -11725,6 +11760,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     Value<String?>? model,
     Value<int?>? measuredPower,
     Value<String?>? firmwareVersion,
+    Value<String?>? title,
     Value<String?>? notes,
     Value<int?>? lastSeenAt,
     Value<int?>? lastBatteryMv,
@@ -11752,6 +11788,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
       model: model ?? this.model,
       measuredPower: measuredPower ?? this.measuredPower,
       firmwareVersion: firmwareVersion ?? this.firmwareVersion,
+      title: title ?? this.title,
       notes: notes ?? this.notes,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
       lastBatteryMv: lastBatteryMv ?? this.lastBatteryMv,
@@ -11813,6 +11850,9 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
     }
     if (firmwareVersion.present) {
       map['firmware_version'] = Variable<String>(firmwareVersion.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
@@ -11879,6 +11919,7 @@ class CavePlaceBeaconsCompanion extends UpdateCompanion<CavePlaceBeacon> {
           ..write('model: $model, ')
           ..write('measuredPower: $measuredPower, ')
           ..write('firmwareVersion: $firmwareVersion, ')
+          ..write('title: $title, ')
           ..write('notes: $notes, ')
           ..write('lastSeenAt: $lastSeenAt, ')
           ..write('lastBatteryMv: $lastBatteryMv, ')
@@ -13824,9 +13865,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final DocumentationFilesToCaveTrips documentationFilesToCaveTrips =
       DocumentationFilesToCaveTrips(this);
   late final CavePlaceBeacons cavePlaceBeacons = CavePlaceBeacons(this);
+  late final Index idxCavePlaceBeaconsIbeacon = Index(
+    'idx_cave_place_beacons_ibeacon',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ibeacon ON cave_place_beacons (proximity_uuid, major, minor, cave_uuid) WHERE beacon_type = \'ibeacon\' AND deleted_at IS NULL',
+  );
   late final Index idxCavePlaceBeaconsRuuvi = Index(
     'idx_cave_place_beacons_ruuvi',
-    'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi ON cave_place_beacons (mac_address, cave_uuid) WHERE beacon_type = \'ruuvi\'',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi ON cave_place_beacons (mac_address, cave_uuid) WHERE beacon_type = \'ruuvi\' AND deleted_at IS NULL',
+  );
+  late final Index idxCavePlaceBeaconsIdentity = Index(
+    'idx_cave_place_beacons_identity',
+    'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_identity ON cave_place_beacons (proximity_uuid, major, minor)',
+  );
+  late final Index idxCavePlaceBeaconsPlace = Index(
+    'idx_cave_place_beacons_place',
+    'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place ON cave_place_beacons (cave_place_uuid)',
   );
   late final RuuviSensorHistory ruuviSensorHistory = RuuviSensorHistory(this);
   late final TripReportTemplates tripReportTemplates = TripReportTemplates(
@@ -13868,7 +13921,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTripPoints,
     documentationFilesToCaveTrips,
     cavePlaceBeacons,
+    idxCavePlaceBeaconsIbeacon,
     idxCavePlaceBeaconsRuuvi,
+    idxCavePlaceBeaconsIdentity,
+    idxCavePlaceBeaconsPlace,
     ruuviSensorHistory,
     tripReportTemplates,
     changeLog,
@@ -24710,6 +24766,7 @@ typedef $CavePlaceBeaconsCreateCompanionBuilder =
       Value<String?> model,
       Value<int?> measuredPower,
       Value<String?> firmwareVersion,
+      Value<String?> title,
       Value<String?> notes,
       Value<int?> lastSeenAt,
       Value<int?> lastBatteryMv,
@@ -24738,6 +24795,7 @@ typedef $CavePlaceBeaconsUpdateCompanionBuilder =
       Value<String?> model,
       Value<int?> measuredPower,
       Value<String?> firmwareVersion,
+      Value<String?> title,
       Value<String?> notes,
       Value<int?> lastSeenAt,
       Value<int?> lastBatteryMv,
@@ -24887,6 +24945,11 @@ class $CavePlaceBeaconsFilterComposer
 
   ColumnFilters<String> get firmwareVersion => $composableBuilder(
     column: $table.firmwareVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -25092,6 +25155,11 @@ class $CavePlaceBeaconsOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
@@ -25284,6 +25352,9 @@ class $CavePlaceBeaconsAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -25464,6 +25535,7 @@ class $CavePlaceBeaconsTableManager
                 Value<String?> model = const Value.absent(),
                 Value<int?> measuredPower = const Value.absent(),
                 Value<String?> firmwareVersion = const Value.absent(),
+                Value<String?> title = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int?> lastSeenAt = const Value.absent(),
                 Value<int?> lastBatteryMv = const Value.absent(),
@@ -25490,6 +25562,7 @@ class $CavePlaceBeaconsTableManager
                 model: model,
                 measuredPower: measuredPower,
                 firmwareVersion: firmwareVersion,
+                title: title,
                 notes: notes,
                 lastSeenAt: lastSeenAt,
                 lastBatteryMv: lastBatteryMv,
@@ -25518,6 +25591,7 @@ class $CavePlaceBeaconsTableManager
                 Value<String?> model = const Value.absent(),
                 Value<int?> measuredPower = const Value.absent(),
                 Value<String?> firmwareVersion = const Value.absent(),
+                Value<String?> title = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int?> lastSeenAt = const Value.absent(),
                 Value<int?> lastBatteryMv = const Value.absent(),
@@ -25544,6 +25618,7 @@ class $CavePlaceBeaconsTableManager
                 model: model,
                 measuredPower: measuredPower,
                 firmwareVersion: firmwareVersion,
+                title: title,
                 notes: notes,
                 lastSeenAt: lastSeenAt,
                 lastBatteryMv: lastBatteryMv,

@@ -279,11 +279,12 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
 -- analogue of a QR label. Two tag kinds share the table, discriminated by
 -- beacon_type: 'ibeacon' (identity = proximity UUID + major + minor,
 -- treated as opaque — hardware tests showed the vendor's MAC-derivation
--- rule does not hold) and 'ruuvi' (identity = payload MAC; the iBeacon
--- triple stays NULL — SQLite treats NULLs as distinct in the UNIQUE
--- constraint, so Ruuvi uniqueness is enforced by a dedicated partial
--- index instead, see the migration). Health columns (last_*) are local
--- telemetry refreshed on each encounter.
+-- rule does not hold) and 'ruuvi' (identity = payload MAC). Identity
+-- uniqueness per cave is enforced by the partial indexes below, scoped to
+-- active rows: unregistering is a soft delete, and a deleted registration
+-- must not block re-registering the same tag elsewhere in the cave.
+-- Health columns (last_*) are local telemetry refreshed on each
+-- encounter; title/notes are user-facing tag documentation.
 CREATE TABLE IF NOT EXISTS cave_place_beacons (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
     cave_place_uuid             BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
@@ -297,6 +298,7 @@ CREATE TABLE IF NOT EXISTS cave_place_beacons (
     model                       TEXT(32),          -- free text: HCBB22 / H8 / RuuviTag Pro 3in1 / ...
     measured_power              INTEGER,           -- advertised RSSI@1m, for proximity calc
     firmware_version            TEXT(32),          -- read via DIS during Ruuvi history download
+    title                       TEXT(64),          -- user-facing tag name (tag management)
     notes                       TEXT,
     last_seen_at                INTEGER,
     last_battery_mv             INTEGER,
@@ -308,15 +310,25 @@ CREATE TABLE IF NOT EXISTS cave_place_beacons (
     updated_at                  INTEGER,
     deleted_at                  INTEGER,
     created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
-    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
-    UNIQUE(proximity_uuid, major, minor, cave_uuid) ON CONFLICT ROLLBACK
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid)
 );
 
--- Ruuvi identity uniqueness per cave. Constraint-bearing (not just perf),
--- so it lives here for fresh installs; the v15→v16 migration creates the
--- same index for upgraders.
+-- Identity uniqueness per cave, one guard per tag kind, active rows only
+-- (see the table comment). Constraint-bearing, so they live here for
+-- fresh installs; the v17→v18 migration creates the same indexes for
+-- upgraders.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ibeacon
+    ON cave_place_beacons(proximity_uuid, major, minor, cave_uuid)
+    WHERE beacon_type = 'ibeacon' AND deleted_at IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi
-    ON cave_place_beacons(mac_address, cave_uuid) WHERE beacon_type = 'ruuvi';
+    ON cave_place_beacons(mac_address, cave_uuid)
+    WHERE beacon_type = 'ruuvi' AND deleted_at IS NULL;
+
+-- Lookup indexes (detection resolves identities on every trigger).
+CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_identity
+    ON cave_place_beacons(proximity_uuid, major, minor);
+CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place
+    ON cave_place_beacons(cave_place_uuid);
 
 -- Table: ruuvi_sensor_history
 -- Downloaded Ruuvi on-tag measurement history. Local-only telemetry like

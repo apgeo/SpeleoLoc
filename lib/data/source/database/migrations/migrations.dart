@@ -631,6 +631,90 @@ class V16ToV17Migration extends SchemaMigration {
   }
 }
 
+/// v17 → v18: tag titles + re-registration after unassign.
+/// Recreates cave_place_beacons (a) without the inline identity UNIQUE
+/// constraint — it also covered soft-deleted rows, so an unassigned tag
+/// could never be registered again in the same cave — and (b) with the
+/// new user-facing `title` column. The identity guards return as partial
+/// unique indexes scoped to active rows, one per beacon_type (the iBeacon
+/// one replaces the inline constraint, the Ruuvi one gains the
+/// deleted_at filter).
+class V17ToV18Migration extends SchemaMigration {
+  const V17ToV18Migration();
+
+  @override
+  int get toVersion => 18;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.cavePlaceBeacons,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO cave_place_beacons '
+          '(uuid, cave_place_uuid, cave_uuid, beacon_type, '
+          'proximity_uuid, major, minor, mac_address, local_name, model, '
+          'measured_power, firmware_version, notes, '
+          'last_seen_at, last_battery_mv, last_temperature_c, '
+          'last_humidity_pct, last_pressure_hpa, last_movement_counter, '
+          'created_at, updated_at, deleted_at, '
+          'created_by_user_uuid, last_modified_by_user_uuid) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '
+          '?, ?, ?, ?, ?, ?)',
+          [
+            d['uuid'],
+            d['cave_place_uuid'],
+            d['cave_uuid'],
+            d['beacon_type'],
+            d['proximity_uuid'],
+            d['major'],
+            d['minor'],
+            d['mac_address'],
+            d['local_name'],
+            d['model'],
+            d['measured_power'],
+            d['firmware_version'],
+            d['notes'],
+            d['last_seen_at'],
+            d['last_battery_mv'],
+            d['last_temperature_c'],
+            d['last_humidity_pct'],
+            d['last_pressure_hpa'],
+            d['last_movement_counter'],
+            d['created_at'],
+            d['updated_at'],
+            d['deleted_at'],
+            d['created_by_user_uuid'],
+            d['last_modified_by_user_uuid'],
+          ],
+        );
+      },
+    );
+    // The recreate drops every index with the table — restore all four
+    // (same statements as tables.drift runs for fresh installs).
+    await db.customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ibeacon '
+      'ON cave_place_beacons(proximity_uuid, major, minor, cave_uuid) '
+      "WHERE beacon_type = 'ibeacon' AND deleted_at IS NULL",
+    );
+    await db.customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_place_beacons_ruuvi '
+      'ON cave_place_beacons(mac_address, cave_uuid) '
+      "WHERE beacon_type = 'ruuvi' AND deleted_at IS NULL",
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_identity '
+      'ON cave_place_beacons(proximity_uuid, major, minor)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place '
+      'ON cave_place_beacons(cave_place_uuid)',
+    );
+  }
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -648,6 +732,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V14ToV15Migration(),
   V15ToV16Migration(),
   V16ToV17Migration(),
+  V17ToV18Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
