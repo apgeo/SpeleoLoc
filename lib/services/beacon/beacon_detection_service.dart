@@ -8,6 +8,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
+import 'package:speleoloc/services/beacon/beacon_alert_sound.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
@@ -586,6 +587,7 @@ class BeaconDetectionService {
       await caveTripService.recordPoint(place.uuid, placeTitle: place.title);
     }
 
+    final soundEnabled = _engine?.config.soundEnabled ?? true;
     if (_inBackground) {
       // App not on screen: loud notification instead of a toast.
       await BeaconAlertNotifier.instance.showDetection(
@@ -593,8 +595,10 @@ class BeaconDetectionService {
         tripPointRecorded: tripPointRecorded,
         caveUuid: place.caveUuid,
         placeUuid: place.uuid,
+        playSound: soundEnabled,
       );
     } else {
+      if (soundEnabled) unawaited(BeaconAlertSound.instance.play());
       SnackBarService.showSuccess(
         '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"'
         '${tripPointRecorded ? ' · ${LocServ.inst.t('trip_point_added')}' : ''}',

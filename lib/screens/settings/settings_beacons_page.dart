@@ -146,6 +146,16 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                       ? (v) => _update(cfg.copyWith(autoOpenPlace: v))
                       : null,
                 ),
+                SwitchListTile(
+                  title: Text(LocServ.inst.t('beacon_detection_sound')),
+                  subtitle: Text(
+                    LocServ.inst.t('beacon_detection_sound_desc'),
+                  ),
+                  value: cfg.soundEnabled,
+                  onChanged: cfg.enabled
+                      ? (v) => _update(cfg.copyWith(soundEnabled: v))
+                      : null,
+                ),
                 const Divider(),
                 SwitchListTile(
                   title: Text(LocServ.inst.t('beacon_background_enable')),

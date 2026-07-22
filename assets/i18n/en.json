@@ -1196,6 +1196,8 @@
   "beacon_detection_auto_open_desc": "Navigate to the detected place like a QR scan (off = notification only)",
   "beacon_detection_not_running": "Detection could not start — check Bluetooth is on",
   "beacon_detection_quick_toggle": "Beacon detection",
+  "beacon_detection_sound": "Detection sound",
+  "beacon_detection_sound_desc": "Play an audible alert when a beacon is detected (in background it rings via the notification)",
   "beacon_place_detected": "Place detected",
   "beacon_background_enable": "Keep detecting in background",
   "beacon_background_enable_desc": "Scanning continues with the screen off or another app open; detections ring a loud alert (Android)",

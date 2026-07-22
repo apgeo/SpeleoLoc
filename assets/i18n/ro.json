@@ -1195,6 +1195,8 @@
   "beacon_detection_auto_open_desc": "Navighează la locul detectat ca la scanarea unui QR (dezactivat = doar notificare)",
   "beacon_detection_not_running": "Detectarea nu a putut porni — verifică dacă Bluetooth este pornit",
   "beacon_detection_quick_toggle": "Detectare beaconuri",
+  "beacon_detection_sound": "Sunet la detectare",
+  "beacon_detection_sound_desc": "Redă o alertă sonoră la detectarea unui beacon (în fundal sună prin notificare)",
   "beacon_place_detected": "Loc detectat",
   "beacon_background_enable": "Continuă detectarea în fundal",
   "beacon_background_enable_desc": "Scanarea continuă cu ecranul stins sau cu altă aplicație deschisă; detectările sună o alertă puternică (Android)",

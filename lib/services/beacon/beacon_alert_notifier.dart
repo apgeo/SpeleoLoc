@@ -79,11 +79,15 @@ class BeaconAlertNotifier {
 
   /// Fire the loud detection alert. [payload] format:
   /// `place/<caveUuid>/<placeUuid>` — used to navigate on tap.
+  /// [playSound] false delivers the notification silently (per-message
+  /// `silent` flag — the channel's sound setting is immutable once the
+  /// channel exists, so it cannot express the preference).
   Future<void> showDetection({
     required String placeTitle,
     required bool tripPointRecorded,
     required Uuid caveUuid,
     required Uuid placeUuid,
+    bool playSound = true,
   }) async {
     if (!await ensureInitialized()) return;
     try {
@@ -91,7 +95,7 @@ class BeaconAlertNotifier {
         id: _notificationId,
         title: '${LocServ.inst.t('beacon_place_detected')}: $placeTitle',
         body: tripPointRecorded ? LocServ.inst.t('trip_point_added') : null,
-        notificationDetails: const NotificationDetails(
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,
             'Beacon detection alerts',
@@ -101,11 +105,12 @@ class BeaconAlertNotifier {
             priority: Priority.high,
             category: AndroidNotificationCategory.alarm,
             audioAttributesUsage: AudioAttributesUsage.alarm,
-            sound: RawResourceAndroidNotificationSound('beacon_alert'),
+            sound: const RawResourceAndroidNotificationSound('beacon_alert'),
             enableVibration: true,
             visibility: NotificationVisibility.public,
+            silent: !playSound,
           ),
-          iOS: DarwinNotificationDetails(presentSound: true),
+          iOS: DarwinNotificationDetails(presentSound: playSound),
         ),
         payload: 'place/$caveUuid/$placeUuid',
       );

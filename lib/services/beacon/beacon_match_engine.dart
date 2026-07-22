@@ -27,6 +27,10 @@ class BeaconDetectionConfig {
   /// false (default) show only a toast and record the trip point.
   final bool autoOpenPlace;
 
+  /// Play an audible alert on detection: a short in-app sound in the
+  /// foreground, the loud notification channel sound in the background.
+  final bool soundEnabled;
+
   /// Keep detecting with the app in the background via a foreground
   /// service (Android). Detections raise a loud notification.
   final bool backgroundEnabled;
@@ -42,6 +46,7 @@ class BeaconDetectionConfig {
     this.debounceWindowSec = 5,
     this.cooldownSec = 300,
     this.autoOpenPlace = false,
+    this.soundEnabled = true,
     this.backgroundEnabled = false,
     this.backgroundScanIntervalSec = 30,
   });
@@ -53,6 +58,7 @@ class BeaconDetectionConfig {
     int? debounceWindowSec,
     int? cooldownSec,
     bool? autoOpenPlace,
+    bool? soundEnabled,
     bool? backgroundEnabled,
     int? backgroundScanIntervalSec,
   }) => BeaconDetectionConfig(
@@ -62,6 +68,7 @@ class BeaconDetectionConfig {
     debounceWindowSec: debounceWindowSec ?? this.debounceWindowSec,
     cooldownSec: cooldownSec ?? this.cooldownSec,
     autoOpenPlace: autoOpenPlace ?? this.autoOpenPlace,
+    soundEnabled: soundEnabled ?? this.soundEnabled,
     backgroundEnabled: backgroundEnabled ?? this.backgroundEnabled,
     backgroundScanIntervalSec:
         backgroundScanIntervalSec ?? this.backgroundScanIntervalSec,
@@ -74,6 +81,7 @@ class BeaconDetectionConfig {
     'debounceWindowSec': debounceWindowSec,
     'cooldownSec': cooldownSec,
     'autoOpenPlace': autoOpenPlace,
+    'soundEnabled': soundEnabled,
     'backgroundEnabled': backgroundEnabled,
     'backgroundScanIntervalSec': backgroundScanIntervalSec,
   };
@@ -87,6 +95,7 @@ class BeaconDetectionConfig {
       debounceWindowSec: j['debounceWindowSec'] as int? ?? d.debounceWindowSec,
       cooldownSec: j['cooldownSec'] as int? ?? d.cooldownSec,
       autoOpenPlace: j['autoOpenPlace'] as bool? ?? d.autoOpenPlace,
+      soundEnabled: j['soundEnabled'] as bool? ?? d.soundEnabled,
       backgroundEnabled: j['backgroundEnabled'] as bool? ?? d.backgroundEnabled,
       backgroundScanIntervalSec:
           j['backgroundScanIntervalSec'] as int? ?? d.backgroundScanIntervalSec,

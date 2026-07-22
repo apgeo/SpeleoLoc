@@ -112,6 +112,7 @@ void main() {
         debounceWindowSec: 7,
         cooldownSec: 120,
         autoOpenPlace: true,
+        soundEnabled: false,
         backgroundEnabled: true,
         backgroundScanIntervalSec: 45,
       );
@@ -122,6 +123,7 @@ void main() {
       expect(back.debounceWindowSec, cfg.debounceWindowSec);
       expect(back.cooldownSec, cfg.cooldownSec);
       expect(back.autoOpenPlace, cfg.autoOpenPlace);
+      expect(back.soundEnabled, cfg.soundEnabled);
       expect(back.backgroundEnabled, cfg.backgroundEnabled);
       expect(back.backgroundScanIntervalSec, cfg.backgroundScanIntervalSec);
     });
@@ -133,6 +135,7 @@ void main() {
       expect(cfg.debounceCount, 2);
       expect(cfg.cooldownSec, 300);
       expect(cfg.autoOpenPlace, isFalse);
+      expect(cfg.soundEnabled, isTrue);
       expect(cfg.backgroundEnabled, isFalse);
       expect(cfg.backgroundScanIntervalSec, 30);
     });

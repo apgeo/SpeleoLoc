@@ -117,3 +117,6 @@ flutter:
     - assets/test_archive/
     - assets/fonts/
     - assets/i18n/
+    # Foreground beacon-detection alert; the same file also ships as an
+    # Android raw resource (res/raw) for the notification channel sound.
+    - assets/sounds/
