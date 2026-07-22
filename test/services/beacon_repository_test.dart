@@ -185,6 +185,44 @@ void main() {
       );
     });
 
+    test('updateTagInfo persists title/notes and bumps updated_at', () async {
+      final id = await repo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: uuidA,
+        major: 21,
+        minor: 22,
+      );
+      final before = (await repo.getBeaconsForPlace(placeUuid)).single;
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      await repo.updateTagInfo(id, title: 'North exit', notes: 'On the wall');
+      final after = (await repo.getBeaconsForPlace(placeUuid)).single;
+      expect(after.title, 'North exit');
+      expect(after.notes, 'On the wall');
+      expect(after.updatedAt, isNot(before.updatedAt));
+    });
+
+    test('getAllBeacons spans caves and skips deleted rows', () async {
+      await repo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: uuidA,
+        major: 31,
+        minor: 32,
+      );
+      final deleted = await repo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: uuidB,
+        major: 31,
+        minor: 32,
+      );
+      await repo.unregisterBeacon(deleted);
+      final all = await repo.getAllBeacons();
+      expect(all, hasLength(1));
+      expect(all.single.caveTitle, 'Test Cave');
+    });
+
     test('getBeaconsForCave joins place and cave titles', () async {
       await repo.registerBeacon(
         cavePlaceUuid: placeUuid,

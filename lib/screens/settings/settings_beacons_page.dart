@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:speleoloc/screens/beacon_tags_page.dart';
 import 'package:speleoloc/screens/settings/beacon_lab_page.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
@@ -191,6 +192,16 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                   ),
                 ),
                 const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.sell_outlined),
+                  title: Text(LocServ.inst.t('tag_management_title')),
+                  subtitle: Text(LocServ.inst.t('tag_management_desc')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BeaconTagsPage()),
+                  ),
+                ),
                 ListTile(
                   leading: const Icon(Icons.bluetooth_searching),
                   title: Text(LocServ.inst.t('beacon_lab')),

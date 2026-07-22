@@ -81,6 +81,20 @@ class BeaconRepository {
     }
   }
 
+  /// Active registrations across every cave, joined with their places —
+  /// the tag management list.
+  Future<List<BeaconWithPlace>> getAllBeacons() async {
+    try {
+      final beacons = await (_database.select(
+        _database.cavePlaceBeacons,
+      )..where((b) => b.deletedAt.isNull())).get();
+      return _joinPlaces(beacons);
+    } catch (e, st) {
+      _log.severe('Failed to load all beacons', e, st);
+      throw DbException('Failed to load all beacons', cause: e, stackTrace: st);
+    }
+  }
+
   /// Active registrations for a whole cave, joined with their places —
   /// the maintenance list.
   Future<List<BeaconWithPlace>> getBeaconsForCave(Uuid caveUuid) async {
@@ -270,6 +284,46 @@ class BeaconRepository {
         cause: e,
         stackTrace: st,
       );
+    }
+  }
+
+  /// Updates the user-facing tag documentation (title + notes). Regular
+  /// edited data: bumps updated_at and is change-logged, unlike telemetry.
+  Future<void> updateTagInfo(
+    Uuid beaconUuid, {
+    required String? title,
+    required String? notes,
+  }) async {
+    try {
+      final old =
+          await (_database.select(_database.cavePlaceBeacons)
+                ..where((b) => b.uuid.equalsValue(beaconUuid))
+                ..limit(1))
+              .getSingleOrNull();
+      if (old == null) {
+        throw DbException('Beacon $beaconUuid not found');
+      }
+      final now = _clock.nowMs();
+      final author = await _currentUser.currentOrSystem();
+      await (_database.update(
+        _database.cavePlaceBeacons,
+      )..where((b) => b.uuid.equalsValue(beaconUuid))).write(
+        CavePlaceBeaconsCompanion(
+          title: Value(title),
+          notes: Value(notes),
+          updatedAt: Value(now),
+          lastModifiedByUserUuid: Value(author),
+        ),
+      );
+      await _logger.logUpdate(
+        'cave_place_beacons',
+        beaconUuid,
+        oldValues: {'title': old.title, 'notes': old.notes},
+        newValues: {'title': title, 'notes': notes},
+      );
+    } catch (e, st) {
+      _log.severe('Failed to update tag info', e, st);
+      throw DbException('Failed to update tag info', cause: e, stackTrace: st);
     }
   }
 
