@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dchs_flutter_beacon/dchs_flutter_beacon.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -55,6 +56,12 @@ class BeaconDetectionService {
   static final BeaconDetectionService instance = BeaconDetectionService._();
 
   final _log = AppLogger.of('BeaconDetectionService');
+
+  /// Mirrors [BeaconDetectionConfig.enabled] so lightweight UI (the drawer
+  /// quick-toggle) can bind to the master switch without re-reading the
+  /// config. Kept current by [start] (which loads the config on every
+  /// launch/resume) and [setEnabled].
+  final ValueNotifier<bool> enabledListenable = ValueNotifier(false);
 
   StreamSubscription<RangingResult>? _rangingSub;
   StreamSubscription<RuuviSighting>? _ruuviSub;
@@ -109,6 +116,7 @@ class BeaconDetectionService {
     _startRetryTimer = null;
     try {
       final config = await BeaconDetectionConfig.load();
+      enabledListenable.value = config.enabled;
       if (!config.enabled) return;
       if (!await _permissionsAlreadyGranted()) {
         _log.info(
@@ -185,6 +193,39 @@ class BeaconDetectionService {
   Future<void> restart() async {
     await stop();
     await start();
+  }
+
+  /// Persists the master switch and applies it — the one enable/disable
+  /// flow shared by the settings page and the drawer quick-toggle.
+  /// Enabling runs the full permission flow (so detection can silently
+  /// auto-start on every later app launch) and verifies the platform can
+  /// scan; all user feedback is raised here so callers stay passive.
+  /// Returns false when a permission or platform check blocked the change.
+  Future<bool> setEnabled(bool enable) async {
+    if (enable) {
+      if (!await BeaconScanHelper.ensureAndroidPermissions()) {
+        SnackBarService.showWarning(
+          LocServ.inst.t('beacon_lab_permissions_missing'),
+        );
+        return false;
+      }
+      try {
+        await flutterBeacon.initializeAndCheckScanning;
+      } on PlatformException catch (e) {
+        SnackBarService.showWarning(e.message ?? e.code);
+        return false;
+      }
+    }
+    final config = await BeaconDetectionConfig.load();
+    await config.copyWith(enabled: enable).save();
+    enabledListenable.value = enable;
+    await restart();
+    if (enable && !_running) {
+      SnackBarService.showWarning(
+        LocServ.inst.t('beacon_detection_not_running'),
+      );
+    }
+    return true;
   }
 
   /// App lifecycle hook. With background detection enabled the scan

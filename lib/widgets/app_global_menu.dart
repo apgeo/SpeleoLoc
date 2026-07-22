@@ -11,6 +11,7 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/beacon_detection_drawer_toggle.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -482,6 +483,10 @@ class _AppMenuDrawer extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // Quick-toggle for automatic beacon detection — mirrors
+                    // the Settings → Beacon detection master switch.
+                    const Divider(height: 8),
+                    const BeaconDetectionDrawerToggle(),
                   ],
                 ),
               ),

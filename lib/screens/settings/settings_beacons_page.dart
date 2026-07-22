@@ -1,14 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:dchs_flutter_beacon/dchs_flutter_beacon.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/screens/settings/beacon_lab_page.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
-import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -46,30 +43,11 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
   }
 
   Future<void> _toggleEnabled(bool enable) async {
-    final cfg = _config;
-    if (cfg == null) return;
-    if (enable) {
-      // Full permission flow now, so detection can silently auto-start on
-      // every later app launch.
-      if (!await BeaconScanHelper.ensureAndroidPermissions()) {
-        SnackBarService.showWarning(
-          LocServ.inst.t('beacon_lab_permissions_missing'),
-        );
-        return;
-      }
-      try {
-        await flutterBeacon.initializeAndCheckScanning;
-      } on PlatformException catch (e) {
-        SnackBarService.showWarning(e.message ?? e.code);
-        return;
-      }
-    }
-    await _update(cfg.copyWith(enabled: enable));
-    if (enable && !BeaconDetectionService.instance.isRunning) {
-      SnackBarService.showWarning(
-        LocServ.inst.t('beacon_detection_not_running'),
-      );
-    }
+    if (_config == null) return;
+    // Shared flow (permissions, persistence, restart, user feedback) —
+    // identical to the drawer quick-toggle.
+    await BeaconDetectionService.instance.setEnabled(enable);
+    await _load();
   }
 
   Future<void> _toggleBackground(bool enable) async {
