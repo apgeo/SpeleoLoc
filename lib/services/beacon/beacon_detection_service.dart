@@ -77,6 +77,13 @@ class BeaconDetectionService {
   Set<String> _registeredIdentities = const {};
   bool _ruuviNeeded = false;
 
+  /// Proximity UUIDs of registered iBeacons, mirrored from the watch. iOS
+  /// only ranges explicitly listed UUIDs (Android uses a wildcard region),
+  /// so ranging must cover these on top of the Beacon Lab region list —
+  /// otherwise a tag registered with a UUID the lab never saved is
+  /// undetectable on iOS.
+  Set<String> _registeredProximityUuids = const {};
+
   /// Ruuvi advertisements arrive ~every 1.3 s; telemetry writes are
   /// throttled to one per tag per minute.
   static const _ruuviHealthInterval = Duration(minutes: 1);
@@ -159,6 +166,7 @@ class BeaconDetectionService {
     await _registrationsSub?.cancel();
     _registrationsSub = null;
     _registeredIdentities = const {};
+    _registeredProximityUuids = const {};
     _ruuviNeeded = false;
     _engine = null;
     if (_inBackground) {
@@ -351,7 +359,10 @@ class BeaconDetectionService {
   }
 
   Future<void> _resubscribeRanging() async {
-    final uuids = await BeaconScanHelper.loadRegionUuids();
+    final uuids = {
+      ...await BeaconScanHelper.loadRegionUuids(),
+      ..._registeredProximityUuids,
+    }.toList();
     await _rangingSub?.cancel();
     _rangingSub = null;
     if (!_running) return;
@@ -390,6 +401,23 @@ class BeaconDetectionService {
               (r) => r.beaconType == BeaconTypes.ruuvi,
             );
             _syncRuuviSubscription();
+            final proximityUuids = {
+              for (final r in rows)
+                if (r.beaconType == BeaconTypes.iBeacon &&
+                    r.proximityUuid != null)
+                  r.proximityUuid!.toUpperCase(),
+            };
+            final needsRegionRefresh =
+                Platform.isIOS &&
+                !_registeredProximityUuids.containsAll(proximityUuids);
+            _registeredProximityUuids = proximityUuids;
+            if (needsRegionRefresh) {
+              unawaited(
+                _resubscribeRanging().catchError((Object e, StackTrace st) {
+                  _log.warning('Ranging region refresh failed', e, st);
+                }),
+              );
+            }
           },
           onError: (Object e, StackTrace st) {
             _log.warning('Registration watch error', e, st);
