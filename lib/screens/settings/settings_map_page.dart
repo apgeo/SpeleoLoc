@@ -10,6 +10,7 @@ import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/state/coordinate_format_notifier.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/coordinate_formats.dart';
+import 'package:speleoloc/utils/format_bytes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -230,7 +231,7 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
                   title: Text(loc.t('map_tile_cache_size')),
                   subtitle: _tileCacheBytes == null
                       ? null
-                      : Text(_formatBytes(_tileCacheBytes!)),
+                      : Text(formatByteSize(_tileCacheBytes!)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: loc.t('map_tile_cache_clear'),
@@ -302,17 +303,8 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
     );
   }
 
-  static String _formatBytes(int bytes) {
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(0)} KB';
-    }
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
   Widget _buildCoordinateFormatTile(LocServ loc) {
-    final format =
-        ref.watch(coordinateFormatProvider).valueOrNull ??
-        CoordinateDisplayFormat.decimal;
+    final format = watchCoordinateFormat(ref);
     return ListTile(
       leading: const Icon(Icons.explore),
       title: Text(loc.t('settings_coordinate_format')),

@@ -26,7 +26,6 @@ import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/state/coordinate_format_notifier.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -595,9 +594,7 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
                   form: _form,
                   onOpenGpsRecorder: _openGpsRecorder,
                   onOpenMapPicker: _openMapPicker,
-                  coordinateFormat:
-                      ref.watch(coordinateFormatProvider).valueOrNull ??
-                      CoordinateDisplayFormat.decimal,
+                  coordinateFormat: watchCoordinateFormat(ref),
                 ),
 
                 /// Raster maps section

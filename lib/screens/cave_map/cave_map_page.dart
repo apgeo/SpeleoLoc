@@ -772,9 +772,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     return const SizedBox.shrink();
   }
 
-  CoordinateDisplayFormat get _coordinateFormat =>
-      ref.watch(coordinateFormatProvider).valueOrNull ??
-      CoordinateDisplayFormat.decimal;
+  CoordinateDisplayFormat get _coordinateFormat => watchCoordinateFormat(ref);
 
   void _onBaseSelected(String id) {
     setState(() => _panel = CaveMapPanel.none);

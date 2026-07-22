@@ -27,3 +27,9 @@ final coordinateFormatProvider =
     AsyncNotifierProvider<CoordinateFormatNotifier, CoordinateDisplayFormat>(
       CoordinateFormatNotifier.new,
     );
+
+/// The current preference, defaulting to decimal degrees while the first
+/// read is in flight. Watches the provider, so callers rebuild on change.
+CoordinateDisplayFormat watchCoordinateFormat(WidgetRef ref) =>
+    ref.watch(coordinateFormatProvider).valueOrNull ??
+    CoordinateDisplayFormat.decimal;

@@ -145,13 +145,10 @@ class _HomePageState extends ConsumerState<HomePage>
         _openCaveMap();
         break;
       case 'export_places':
-        final targetCaves = _caveListController.selectionMode
-            ? _caveListController.selectedItems
-            : _caveListController.filteredItems;
         await exportPlacesFlow(
           context,
           ref,
-          caveUuids: {for (final cave in targetCaves) cave.uuid},
+          caveUuids: {for (final cave in _scopedCaves) cave.uuid},
         );
         break;
       case 'import_places':
@@ -456,13 +453,16 @@ class _HomePageState extends ConsumerState<HomePage>
     }
   }
 
-  /// Opens the surface map for the caves currently in scope: the checked
-  /// caves in selection mode, otherwise all caves left visible by the
-  /// active filter.
+  /// The caves currently in scope for bulk actions (map, QR, export): the
+  /// checked caves in selection mode, otherwise all caves left visible by
+  /// the active filter.
+  List<Cave> get _scopedCaves => _caveListController.selectionMode
+      ? _caveListController.selectedItems
+      : _caveListController.filteredItems;
+
+  /// Opens the surface map for the caves currently in scope.
   void _openCaveMap() {
-    final targetCaves = _caveListController.selectionMode
-        ? _caveListController.selectedItems
-        : _caveListController.filteredItems;
+    final targetCaves = _scopedCaves;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -714,9 +714,7 @@ class _HomePageState extends ConsumerState<HomePage>
   /// of places differs. When any target cave holds non-entrance places, the
   /// user is asked whether to include only entrances or all places.
   Future<void> _generateQrForCaves() async {
-    final targetCaves = _caveListController.selectionMode
-        ? _caveListController.selectedItems
-        : _caveListController.filteredItems;
+    final targetCaves = _scopedCaves;
     if (targetCaves.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('no_caves_for_qr'));
       return;
