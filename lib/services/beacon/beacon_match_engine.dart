@@ -36,7 +36,7 @@ class BeaconDetectionConfig {
   final bool backgroundEnabled;
 
   /// Background duty cycle: one scan burst starts every this many seconds
-  /// (20–60 s per the requirement; the burst itself is ~5 s).
+  /// (5–60 s; the burst itself is ~5 s, so 5 means continuous scanning).
   final int backgroundScanIntervalSec;
 
   const BeaconDetectionConfig({

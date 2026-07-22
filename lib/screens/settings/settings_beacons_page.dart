@@ -174,10 +174,10 @@ class _SettingsBeaconsPageState extends State<SettingsBeaconsPage> {
                   ),
                 ),
                 Slider(
-                  min: 20,
+                  min: 5,
                   max: 60,
-                  divisions: 8,
-                  value: cfg.backgroundScanIntervalSec.toDouble().clamp(20, 60),
+                  divisions: 11,
+                  value: cfg.backgroundScanIntervalSec.toDouble().clamp(5, 60),
                   label: '${cfg.backgroundScanIntervalSec} s',
                   onChanged: cfg.enabled && cfg.backgroundEnabled
                       ? (v) => setState(
