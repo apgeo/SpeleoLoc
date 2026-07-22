@@ -56,6 +56,8 @@ dependencies:
   # Direct dep for the caching tile provider; flutter_map already pulls the
   # same major transitively.
   http: ^1.2.0
+  # GPX/KML place exchange; pdf already pulls the same major transitively.
+  xml: ^6.5.0
   flex_color_picker: ^3.7.1
   sentry_flutter: ^9.0.0
   flutter_localizations:

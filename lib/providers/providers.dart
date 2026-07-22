@@ -18,6 +18,7 @@ import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/cave_geo_service.dart';
 import 'package:speleoloc/services/location/location_service.dart';
+import 'package:speleoloc/services/geo_transfer/place_transfer_service.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/tile_disk_cache.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
@@ -273,6 +274,14 @@ final locationServiceProvider = Provider<LocationService>(
 /// entrance for a cave, set a place's location) from the surface map.
 final caveGeoServiceProvider = Provider<CaveGeoService>(
   (ref) => CaveGeoService(
+    ref.watch(caveRepositoryProvider),
+    ref.watch(cavePlaceRepositoryProvider),
+  ),
+);
+
+/// GPX/KML exchange of cave places with external mapping tools.
+final placeTransferServiceProvider = Provider<PlaceTransferService>(
+  (ref) => PlaceTransferService(
     ref.watch(caveRepositoryProvider),
     ref.watch(cavePlaceRepositoryProvider),
   ),

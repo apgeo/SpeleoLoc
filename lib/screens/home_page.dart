@@ -25,6 +25,7 @@ import 'package:speleoloc/widgets/filterable_list.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/screens/csv_caves_import_page.dart';
+import 'package:speleoloc/screens/place_transfer/place_transfer_flows.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -105,6 +106,16 @@ class _HomePageState extends ConsumerState<HomePage>
       icon: Icons.travel_explore,
       label: LocServ.inst.t('open_cave_map'),
     ),
+    AppMenuItem(
+      value: 'export_places',
+      icon: Icons.file_download,
+      label: LocServ.inst.t('transfer_export_places'),
+    ),
+    AppMenuItem(
+      value: 'import_places',
+      icon: Icons.file_open,
+      label: LocServ.inst.t('transfer_import_places'),
+    ),
   ];
 
   @override
@@ -132,6 +143,21 @@ class _HomePageState extends ConsumerState<HomePage>
         break;
       case 'cave_map':
         _openCaveMap();
+        break;
+      case 'export_places':
+        final targetCaves = _caveListController.selectionMode
+            ? _caveListController.selectedItems
+            : _caveListController.filteredItems;
+        await exportPlacesFlow(
+          context,
+          ref,
+          caveUuids: {for (final cave in targetCaves) cave.uuid},
+        );
+        break;
+      case 'import_places':
+        if (await importPlacesFlow(context, ref)) {
+          unawaited(_loadCaves());
+        }
         break;
     }
   }
