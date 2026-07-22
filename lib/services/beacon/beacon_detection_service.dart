@@ -218,6 +218,19 @@ class BeaconDetectionService {
       }
     }
     final config = await BeaconDetectionConfig.load();
+    if (enable && config.backgroundEnabled) {
+      // Background mode is already configured (its settings toggle ran
+      // this flow once) — but the grants can be revoked between sessions,
+      // so re-ensure them: loud alerts need notification permission and
+      // multi-hour scanning needs the battery-optimisation exemption
+      // ("unrestricted" background usage).
+      await BeaconAlertNotifier.instance.ensureInitialized();
+      await BeaconAlertNotifier.instance.requestPermission();
+      if (Platform.isAndroid &&
+          !await Permission.ignoreBatteryOptimizations.isGranted) {
+        await Permission.ignoreBatteryOptimizations.request();
+      }
+    }
     await config.copyWith(enabled: enable).save();
     enabledListenable.value = enable;
     await restart();
