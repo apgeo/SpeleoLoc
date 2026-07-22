@@ -27,7 +27,9 @@ import 'package:speleoloc/services/location/gps_running_average.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
+import 'package:speleoloc/state/coordinate_format_notifier.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -689,6 +691,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         onUseLocation: () => unawaited(_useMyLocationForPending()),
         onCancel: _cancelPlacement,
         onConfirm: () => unawaited(_confirmPlacement()),
+        coordinateFormat: _coordinateFormat,
       );
     }
     final selected = _map.selectedItem;
@@ -702,10 +705,15 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         onSetLocation: _isExternalPicker
             ? null
             : () => _startMovePlace(selected),
+        coordinateFormat: _coordinateFormat,
       );
     }
     return const SizedBox.shrink();
   }
+
+  CoordinateDisplayFormat get _coordinateFormat =>
+      ref.watch(coordinateFormatProvider).valueOrNull ??
+      CoordinateDisplayFormat.decimal;
 
   void _onBaseSelected(String id) {
     setState(() => _panel = CaveMapPanel.none);

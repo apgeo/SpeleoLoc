@@ -141,3 +141,7 @@ const String cavePlacesNavBarSortAscKey = 'cave_places_navbar_sort_asc';
 // camera, and the MBTiles auto-load + per-file role configuration.
 const String mapScreenPrefsKey = 'map_screen_prefs';
 const String mapMbtilesConfigKey = 'map_mbtiles_config';
+
+// App-wide coordinate display format (decimal / dms / utm), see
+// CoordinateDisplayFormat.id.
+const String coordinateFormatKey = 'coordinate_display_format';

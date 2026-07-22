@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_placement.dart';
+import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Bottom bar shown while placing a point on the map. It is the single
@@ -17,11 +18,13 @@ class CaveMapPlacementBar extends StatelessWidget {
     required this.onUseLocation,
     required this.onCancel,
     required this.onConfirm,
+    this.coordinateFormat = CoordinateDisplayFormat.decimal,
   });
 
   final CaveMapPlacement placement;
   final LatLng? point;
   final bool busy;
+  final CoordinateDisplayFormat coordinateFormat;
 
   /// True while a one-shot GPS fix is being fetched for the point.
   final bool locating;
@@ -63,8 +66,7 @@ class CaveMapPlacementBar extends StatelessWidget {
             Text(
               p == null
                   ? loc.t('map_place_hint')
-                  : '${p.latitude.toStringAsFixed(6)}, '
-                        '${p.longitude.toStringAsFixed(6)}'
+                  : '${formatCoordinates(p.latitude, p.longitude, coordinateFormat)}'
                         '  ·  ${loc.t('map_place_tap_to_change')}',
               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
             ),

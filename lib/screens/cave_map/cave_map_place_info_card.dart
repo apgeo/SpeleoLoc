@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_item.dart';
+import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Bottom info card shown when a marker is tapped: place identity plus a
@@ -12,6 +13,7 @@ class CaveMapPlaceInfoCard extends StatelessWidget {
     required this.onClose,
     this.onOpenPlace,
     this.onSetLocation,
+    this.coordinateFormat = CoordinateDisplayFormat.decimal,
   });
 
   final CaveMapPlaceItem item;
@@ -22,13 +24,14 @@ class CaveMapPlaceInfoCard extends StatelessWidget {
   /// the map is an external coordinate picker.
   final VoidCallback? onSetLocation;
 
+  final CoordinateDisplayFormat coordinateFormat;
+
   @override
   Widget build(BuildContext context) {
     final loc = LocServ.inst;
     final place = item.place;
     final details = <String>[
-      '${loc.t('latitude')}: ${place.latitude!.toStringAsFixed(6)}   '
-          '${loc.t('longitude')}: ${place.longitude!.toStringAsFixed(6)}',
+      formatCoordinates(place.latitude!, place.longitude!, coordinateFormat),
       if (place.altitude != null)
         '${loc.t('altitude')}: ${place.altitude!.toStringAsFixed(1)} m',
       if (place.depthInCave != null)

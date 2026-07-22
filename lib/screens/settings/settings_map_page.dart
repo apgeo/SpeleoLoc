@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/map/map_mbtiles_config.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
+import 'package:speleoloc/state/coordinate_format_notifier.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -181,6 +183,8 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                _buildCoordinateFormatTile(loc),
+                const Divider(),
                 SwitchListTile(
                   title: Text(loc.t('map_mbtiles_auto_load')),
                   subtitle: Text(loc.t('map_mbtiles_auto_load_desc')),
@@ -242,6 +246,32 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
                 for (final file in _files) _buildFileTile(file),
               ],
             ),
+    );
+  }
+
+  Widget _buildCoordinateFormatTile(LocServ loc) {
+    final format =
+        ref.watch(coordinateFormatProvider).valueOrNull ??
+        CoordinateDisplayFormat.decimal;
+    return ListTile(
+      leading: const Icon(Icons.explore),
+      title: Text(loc.t('settings_coordinate_format')),
+      trailing: DropdownButton<CoordinateDisplayFormat>(
+        value: format,
+        underline: const SizedBox.shrink(),
+        items: [
+          for (final f in CoordinateDisplayFormat.values)
+            DropdownMenuItem(
+              value: f,
+              child: Text(loc.t('coordinate_format_${f.id}')),
+            ),
+        ],
+        onChanged: (f) {
+          if (f != null) {
+            unawaited(ref.read(coordinateFormatProvider.notifier).set(f));
+          }
+        },
+      ),
     );
   }
 

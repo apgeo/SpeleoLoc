@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
+import 'package:speleoloc/screens/cave_place/coordinate_entry_dialog.dart';
+import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
 
-/// Lat / long / altitude row plus the "record GPS" and "pick on map"
-/// icon buttons.
+/// Lat / long / altitude row plus the "record GPS", "pick on map" and
+/// "type coordinates" icon buttons.
 ///
 /// Visible only when [visible] is true. Reads + writes the form's
 /// `lat`, `long`, `alt` text controllers directly; the parent owns
 /// the GPS-recorder flow via [onOpenGpsRecorder] and the map-picker
-/// flow via [onOpenMapPicker].
+/// flow via [onOpenMapPicker]. Typed entry (decimal / DMS / UTM) is
+/// handled here since it only fills the form fields.
 class CavePlaceCoordinatesSection extends StatelessWidget {
   const CavePlaceCoordinatesSection({
     super.key,
@@ -16,12 +19,24 @@ class CavePlaceCoordinatesSection extends StatelessWidget {
     required this.form,
     required this.onOpenGpsRecorder,
     required this.onOpenMapPicker,
+    this.coordinateFormat = CoordinateDisplayFormat.decimal,
   });
 
   final bool visible;
   final CavePlaceFormController form;
   final VoidCallback onOpenGpsRecorder;
   final VoidCallback onOpenMapPicker;
+
+  /// The app-wide display preference; a non-decimal choice adds a live
+  /// formatted line under the decimal fields.
+  final CoordinateDisplayFormat coordinateFormat;
+
+  Future<void> _enterCoordinates(BuildContext context) async {
+    final point = await showCoordinateEntryDialog(context);
+    if (point == null) return;
+    form.lat.text = point.latitude.toStringAsFixed(7);
+    form.long.text = point.longitude.toStringAsFixed(7);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +109,32 @@ class CavePlaceCoordinatesSection extends StatelessWidget {
               onPressed: onOpenMapPicker,
               icon: const Icon(Icons.travel_explore),
             ),
+            IconButton(
+              tooltip: LocServ.inst.t('coord_enter_title'),
+              onPressed: () => _enterCoordinates(context),
+              icon: const Icon(Icons.keyboard_alt_outlined),
+            ),
           ],
         ),
+        if (coordinateFormat != CoordinateDisplayFormat.decimal)
+          ListenableBuilder(
+            listenable: Listenable.merge([form.lat, form.long]),
+            builder: (context, _) {
+              final lat = double.tryParse(form.lat.text.trim());
+              final lng = double.tryParse(form.long.text.trim());
+              if (lat == null || lng == null) return const SizedBox.shrink();
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    formatCoordinates(lat, lng, coordinateFormat),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
+                ),
+              );
+            },
+          ),
         const SizedBox(height: 8),
       ],
     );
