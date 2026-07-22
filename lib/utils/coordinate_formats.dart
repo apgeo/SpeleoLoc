@@ -113,11 +113,14 @@ UtmCoordinate? latLngToUtm(double latitude, double longitude) {
   final band = utmBandLetter(latitude);
   if (band == null) return null;
 
-  final zone = utmZone(latitude, longitude);
+  // The same normalization utmZone applies — longitude 180 must project
+  // against zone 1's meridian as -180, not as a 357° offset.
+  final lon = ((longitude + 180) % 360 + 360) % 360 - 180;
+  final zone = utmZone(latitude, lon);
   final lonOrigin = (zone - 1) * 6 - 180 + 3;
 
   final phi = latitude * math.pi / 180;
-  final dLambda = (longitude - lonOrigin) * math.pi / 180;
+  final dLambda = (lon - lonOrigin) * math.pi / 180;
 
   final sinPhi = math.sin(phi), cosPhi = math.cos(phi), tanPhi = math.tan(phi);
   final n = _a / math.sqrt(1 - _e2 * sinPhi * sinPhi);
@@ -337,7 +340,12 @@ GeoPoint? _parseDecimal(String text) {
   return _validated(lat, lng);
 }
 
+// isFinite guards NaN/Infinity: double.tryParse accepts 'NaN', and every
+// NaN comparison is false, so a plain range check would let it through.
 GeoPoint? _validated(double latitude, double longitude) =>
-    (latitude.abs() <= 90 && longitude.abs() <= 180)
+    (latitude.isFinite &&
+            longitude.isFinite &&
+            latitude.abs() <= 90 &&
+            longitude.abs() <= 180)
         ? (latitude: latitude, longitude: longitude)
         : null;

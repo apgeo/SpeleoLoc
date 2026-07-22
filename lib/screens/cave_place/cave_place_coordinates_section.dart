@@ -33,7 +33,9 @@ class CavePlaceCoordinatesSection extends StatelessWidget {
 
   Future<void> _enterCoordinates(BuildContext context) async {
     final point = await showCoordinateEntryDialog(context);
-    if (point == null) return;
+    // The page (and the form's controllers) may have been torn down while
+    // the dialog was up — writing to disposed controllers throws.
+    if (point == null || !context.mounted) return;
     form.lat.text = point.latitude.toStringAsFixed(7);
     form.long.text = point.longitude.toStringAsFixed(7);
   }

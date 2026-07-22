@@ -36,19 +36,27 @@ String? _childText(XmlElement element, String localName) {
   return null;
 }
 
+// double.tryParse accepts 'NaN'/'Infinity', and NaN passes any range
+// comparison, so validity needs an explicit isFinite check.
+bool _validPosition(double? lat, double? lon) =>
+    lat != null &&
+    lon != null &&
+    lat.isFinite &&
+    lon.isFinite &&
+    lat.abs() <= 90 &&
+    lon.abs() <= 180;
+
 List<GeoWaypoint> _parseGpx(XmlDocument document) {
   final waypoints = <GeoWaypoint>[];
   for (final wpt in _elementsNamed(document, 'wpt')) {
     final lat = double.tryParse(wpt.getAttribute('lat') ?? '');
     final lon = double.tryParse(wpt.getAttribute('lon') ?? '');
-    if (lat == null || lon == null || lat.abs() > 90 || lon.abs() > 180) {
-      continue;
-    }
+    if (!_validPosition(lat, lon)) continue;
     waypoints.add(
       GeoWaypoint(
         name: _childText(wpt, 'name') ?? '',
-        latitude: lat,
-        longitude: lon,
+        latitude: lat!,
+        longitude: lon!,
         altitude: double.tryParse(_childText(wpt, 'ele') ?? ''),
         description: _childText(wpt, 'desc') ?? _childText(wpt, 'cmt'),
       ),
@@ -70,14 +78,12 @@ List<GeoWaypoint> _parseKml(XmlDocument document) {
     if (parts.length < 2) continue;
     final lon = double.tryParse(parts[0]);
     final lat = double.tryParse(parts[1]);
-    if (lat == null || lon == null || lat.abs() > 90 || lon.abs() > 180) {
-      continue;
-    }
+    if (!_validPosition(lat, lon)) continue;
     waypoints.add(
       GeoWaypoint(
         name: _childText(placemark, 'name') ?? '',
-        latitude: lat,
-        longitude: lon,
+        latitude: lat!,
+        longitude: lon!,
         altitude: parts.length > 2 ? double.tryParse(parts[2]) : null,
         description: _childText(placemark, 'description'),
       ),

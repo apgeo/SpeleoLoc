@@ -282,6 +282,7 @@ final caveGeoServiceProvider = Provider<CaveGeoService>(
 /// GPX/KML exchange of cave places with external mapping tools.
 final placeTransferServiceProvider = Provider<PlaceTransferService>(
   (ref) => PlaceTransferService(
+    ref.watch(appDatabaseProvider),
     ref.watch(caveRepositoryProvider),
     ref.watch(cavePlaceRepositoryProvider),
   ),

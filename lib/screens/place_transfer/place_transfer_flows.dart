@@ -105,6 +105,13 @@ Future<bool> importPlacesFlow(BuildContext context, WidgetRef ref) async {
       SnackBarService.showError(loc.t('transfer_import_unreadable'));
     }
     return false;
+  } on FileSystemException {
+    // Binary content (readAsString fails to decode) or a path the picker
+    // handed back that can no longer be read.
+    if (context.mounted) {
+      SnackBarService.showError(loc.t('transfer_import_unreadable'));
+    }
+    return false;
   }
   if (!context.mounted) return false;
   if (waypoints.isEmpty) {

@@ -100,6 +100,16 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('NaN coordinates are skipped, not imported', () {
+      const gpx = '''
+<gpx version="1.1" creator="x" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="NaN" lon="22.5"><name>bad</name></wpt>
+  <wpt lat="45.5" lon="22.5"><name>good</name></wpt>
+</gpx>''';
+      final parsed = parseWaypoints(gpx);
+      expect(parsed.map((w) => w.name), ['good']);
+    });
   });
 
   group('PlaceTransferService', () {
@@ -121,7 +131,7 @@ void main() {
       loggerRef = ChangeLogger(db, currentUser);
       caveRepo = CaveRepository(db, currentUser, loggerRef);
       placeRepo = CavePlaceRepository(db, currentUser, loggerRef);
-      service = PlaceTransferService(caveRepo, placeRepo);
+      service = PlaceTransferService(db, caveRepo, placeRepo);
     });
 
     tearDown(() => db.close());
@@ -200,6 +210,27 @@ void main() {
       final exported = await service.collectWaypoints(caveUuids: {cave});
       expect(exported.single.name, 'P1 - Cave');
       expect(exported.single.altitude, 900);
+    });
+
+    test('re-importing this app\'s own export twins nothing', () async {
+      final cave = await caveRepo.addCave('Cave A');
+      await insertPlace(cave, 'Entrance', lat: 45.1, lng: 22.1);
+
+      // Names carry the export decoration '<place> - <cave>'.
+      final exported = await service.collectWaypoints(caveUuids: {cave});
+      final result = await service.importWaypoints(cave, exported);
+
+      expect(result.created, 0);
+      expect(result.skipped, 1);
+      expect(await placeRepo.getCavePlaces(cave), hasLength(1));
+    });
+
+    test('an empty cave set exports nothing, not everything', () async {
+      final cave = await caveRepo.addCave('Cave');
+      await insertPlace(cave, 'Entrance', lat: 45.1, lng: 22.1);
+
+      expect(await service.collectWaypoints(caveUuids: const {}), isEmpty);
+      expect(await service.collectWaypoints(), hasLength(1));
     });
   });
 }

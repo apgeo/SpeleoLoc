@@ -40,6 +40,17 @@ void main() {
       expect(latLngToUtm(-81.0, 10.0), isNull);
     });
 
+    test('longitude 180 projects like -180 (antimeridian)', () {
+      final atPlus = latLngToUtm(10.0, 180.0)!;
+      final atMinus = latLngToUtm(10.0, -180.0)!;
+      expect(atPlus.zone, 1);
+      expect(atPlus.easting, closeTo(atMinus.easting, 0.01));
+      expect(atPlus.northing, closeTo(atMinus.northing, 0.01));
+      // Zone 1's central meridian is -177: 180 sits 3° west of it.
+      expect(atPlus.easting, lessThan(500000));
+      expect(atPlus.easting, greaterThan(100000));
+    });
+
     test('round-trips through utmToLatLng within centimeters', () {
       const points = [
         (45.3592, 22.7147), // Retezat
@@ -156,6 +167,9 @@ void main() {
       expect(parseCoordinates('45 21 33'), isNull);
       expect(parseCoordinates('61X 100000 1'), isNull);
       expect(parseCoordinates('45.0'), isNull);
+      // double.tryParse accepts these spellings; validation must not.
+      expect(parseCoordinates('NaN, NaN'), isNull);
+      expect(parseCoordinates('Infinity, 10'), isNull);
     });
   });
 }
