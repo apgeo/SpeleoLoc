@@ -28,6 +28,8 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
   String _folderPath = '';
   bool _loading = true;
   bool _importing = false;
+  bool _tileCacheEnabled = true;
+  int? _tileCacheBytes;
 
   @override
   void initState() {
@@ -37,19 +39,52 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
 
   Future<void> _load() async {
     final registry = ref.read(mbTilesRegistryProvider);
-    final (configJson, dir, files) = await (
+    final (configJson, dir, files, cacheEnabledRaw) = await (
       ref.read(configurationRepositoryProvider).readJson(
         mapMbtilesConfigKey,
         defaults: () => <String, dynamic>{},
       ),
       registry.ensureDirectory(),
       registry.scan(),
+      ref.read(configurationRepositoryProvider).readString(
+        tileCacheEnabledKey,
+      ),
     ).wait;
     _config = MapMbTilesConfig.fromJson(configJson);
     _folderPath = dir.path;
     _files = files;
+    _tileCacheEnabled = cacheEnabledRaw != 'false';
     if (!mounted) return;
     setState(() => _loading = false);
+    unawaited(_refreshTileCacheSize());
+  }
+
+  Future<void> _refreshTileCacheSize() async {
+    try {
+      final cache = await ref.read(tileDiskCacheProvider.future);
+      final bytes = await cache.totalSizeBytes();
+      if (mounted) setState(() => _tileCacheBytes = bytes);
+    } catch (_) {
+      // Size stays unknown; the tile just shows no number.
+    }
+  }
+
+  Future<void> _setTileCacheEnabled(bool enabled) async {
+    setState(() => _tileCacheEnabled = enabled);
+    await ref
+        .read(configurationRepositoryProvider)
+        .writeString(tileCacheEnabledKey, enabled ? 'true' : 'false');
+  }
+
+  Future<void> _clearTileCache() async {
+    try {
+      final cache = await ref.read(tileDiskCacheProvider.future);
+      await cache.clear();
+      SnackBarService.showSuccess(LocServ.inst.t('map_tile_cache_cleared'));
+    } catch (e) {
+      SnackBarService.showError('${LocServ.inst.t('error')}: $e');
+    }
+    await _refreshTileCacheSize();
   }
 
   Future<void> _saveConfig(MapMbTilesConfig config) async {
@@ -184,6 +219,24 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
           : ListView(
               children: [
                 _buildCoordinateFormatTile(loc),
+                SwitchListTile(
+                  title: Text(loc.t('map_tile_cache')),
+                  subtitle: Text(loc.t('map_tile_cache_desc')),
+                  value: _tileCacheEnabled,
+                  onChanged: (v) => unawaited(_setTileCacheEnabled(v)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.storage),
+                  title: Text(loc.t('map_tile_cache_size')),
+                  subtitle: _tileCacheBytes == null
+                      ? null
+                      : Text(_formatBytes(_tileCacheBytes!)),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: loc.t('map_tile_cache_clear'),
+                    onPressed: () => unawaited(_clearTileCache()),
+                  ),
+                ),
                 const Divider(),
                 SwitchListTile(
                   title: Text(loc.t('map_mbtiles_auto_load')),
@@ -247,6 +300,13 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
               ],
             ),
     );
+  }
+
+  static String _formatBytes(int bytes) {
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   Widget _buildCoordinateFormatTile(LocServ loc) {

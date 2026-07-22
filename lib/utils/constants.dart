@@ -145,3 +145,6 @@ const String mapMbtilesConfigKey = 'map_mbtiles_config';
 // App-wide coordinate display format (decimal / dms / utm), see
 // CoordinateDisplayFormat.id.
 const String coordinateFormatKey = 'coordinate_display_format';
+
+// 'true'/'false': cache online base-map tiles on disk for offline reuse.
+const String tileCacheEnabledKey = 'map_tile_cache_enabled';

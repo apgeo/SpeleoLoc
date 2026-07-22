@@ -59,6 +59,10 @@ its main entrance — are unit-tested independently of the UI.
   bubbles (blue when any member is in focus, grey otherwise); tapping a
   bubble zooms onto its members. Labels only ever attach to unclustered
   markers.
+- **Offline tile cache** — online base-map tiles are cached on disk
+  (7-day freshness, stale tiles served when the network fails), so any
+  previously viewed area keeps rendering offline. Toggle and clear it in
+  Map settings; MBTiles layers are unaffected.
 - **Placing a point** — every "create" or "set location" action enters one
   shared placement flow. The point can be set four ways: **tap** the map,
   **drag** the red pin for fine adjustment, **long-press** the map (which

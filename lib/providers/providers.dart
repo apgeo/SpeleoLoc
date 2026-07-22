@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
@@ -16,6 +19,7 @@ import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/cave_geo_service.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
+import 'package:speleoloc/services/map/tile_disk_cache.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/range_code_generator.dart';
@@ -249,6 +253,15 @@ final documentationRepositoryProvider = Provider<IDocumentationRepository>(
 final mbTilesRegistryProvider = Provider<MbTilesRegistry>(
   (ref) => MbTilesRegistry(),
 );
+
+/// Disk cache for online base-map tiles, under the app-support directory
+/// (not documents — it is disposable data the user never browses).
+final tileDiskCacheProvider = FutureProvider<TileDiskCache>((ref) async {
+  final support = await getApplicationSupportDirectory();
+  return TileDiskCache(
+    Directory('${support.path}${Platform.pathSeparator}tile_cache'),
+  );
+});
 
 /// Generic device-location access (permission + position stream/one-shot)
 /// used by the surface map's GPS features.

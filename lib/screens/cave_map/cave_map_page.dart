@@ -162,6 +162,12 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
 
   Future<void> _load() async {
     try {
+      try {
+        _layers.tileCache = await ref.read(tileDiskCacheProvider.future);
+      } catch (e, st) {
+        // No cache directory just means online tiles skip the disk cache.
+        _log.warning('Tile cache unavailable', e, st);
+      }
       final prefs = await _layers.load();
       await _map.loadItems();
       _computeInitialCamera(prefs);

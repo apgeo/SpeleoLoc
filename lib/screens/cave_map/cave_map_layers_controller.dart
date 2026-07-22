@@ -7,9 +7,11 @@ import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/map/map_mbtiles_config.dart';
 import 'package:speleoloc/services/map/mbtiles_isolate_reader.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
+import 'package:speleoloc/services/map/tile_disk_cache.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/widgets/map/cached_network_tile_provider.dart';
 import 'package:speleoloc/widgets/map/mbtiles_tile_provider.dart';
 
 /// Owns the surface map's tile stack: the selected base layer, the
@@ -37,6 +39,12 @@ class CaveMapLayersController extends ChangeNotifier {
   final Map<String, MbTilesIsolateReader?> _readers = {};
   final Set<String> _readerOpensInFlight = {};
   bool _disposed = false;
+  bool _tileCacheEnabled = true;
+
+  /// Disk cache for the online sources, injected by the page after the
+  /// async directory lookup. Null (or the setting being off) falls back
+  /// to flutter_map's plain network provider.
+  TileDiskCache? tileCache;
 
   /// Last camera state, pushed by the page on every move so [savePrefs]
   /// can persist it. Not listenable — it changes every frame.
@@ -76,6 +84,8 @@ class CaveMapLayersController extends ChangeNotifier {
     if (_mbConfig.autoLoad) {
       _mbtiles = await _scanMbTiles();
     }
+    _tileCacheEnabled =
+        await _configRepository.readString(tileCacheEnabledKey) != 'false';
 
     final base = prefs['base'];
     if (base is String && baseLayerExists(base)) _baseId = base;
@@ -181,11 +191,15 @@ class CaveMapLayersController extends ChangeNotifier {
       if (!_readers.containsKey(descriptor.path)) return null;
     }
     final source = findTileSourceById(_baseId) ?? builtInTileSources.first;
+    final cache = tileCache;
     return TileLayer(
       urlTemplate: source.urlTemplate,
       subdomains: source.subdomains,
       maxNativeZoom: source.maxNativeZoom,
       userAgentPackageName: _userAgentPackageName,
+      tileProvider: (_tileCacheEnabled && cache != null)
+          ? CachedNetworkTileProvider(sourceId: source.id, cache: cache)
+          : null,
     );
   }
 
