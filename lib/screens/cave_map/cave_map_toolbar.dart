@@ -18,6 +18,8 @@ class CaveMapToolbar extends StatelessWidget {
     required this.onToggleOtherCaves,
     required this.onToggleNonEntrances,
     required this.onPanelToggled,
+    this.measureActive = false,
+    this.onMeasure,
     this.onAdd,
   });
 
@@ -30,6 +32,11 @@ class CaveMapToolbar extends StatelessWidget {
   final VoidCallback onToggleOtherCaves;
   final VoidCallback onToggleNonEntrances;
   final ValueChanged<CaveMapPanel> onPanelToggled;
+
+  /// Toggles distance-measuring mode. Null hides the button (while a
+  /// point placement is in progress).
+  final bool measureActive;
+  final VoidCallback? onMeasure;
 
   /// Opens the create-point menu. Null hides the button (e.g. while the map
   /// is being used as an external coordinate picker).
@@ -121,6 +128,13 @@ class CaveMapToolbar extends StatelessWidget {
                 active: activePanel == CaveMapPanel.entrances,
                 onPressed: () => onPanelToggled(CaveMapPanel.entrances),
               ),
+              if (onMeasure != null)
+                button(
+                  icon: Icons.straighten,
+                  tooltip: loc.t('map_measure'),
+                  active: measureActive,
+                  onPressed: onMeasure,
+                ),
               if (onAdd != null) ...[
                 const SizedBox(width: 4),
                 button(

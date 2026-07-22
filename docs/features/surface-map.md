@@ -51,6 +51,10 @@ its main entrance — are unit-tested independently of the UI.
 - **My location** — the location button requests permission (once), then
   shows the live position as a blue dot with a translucent accuracy circle
   and follows it. Panning the map releases follow.
+- **Measure** — the ruler button starts a measuring path: tap the map (or
+  a marker, snapping to the exact place point) to add vertices; the bar
+  shows the total distance plus the last leg's length and bearing, with
+  undo. Exclusive with point placement.
 - **Placing a point** — every "create" or "set location" action enters one
   shared placement flow. The point can be set four ways: **tap** the map,
   **drag** the red pin for fine adjustment, **long-press** the map (which

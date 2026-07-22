@@ -12,6 +12,9 @@ import 'package:speleoloc/screens/cave_map/cave_map_label_layer.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_layer_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_layers_controller.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_markers.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_measure.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_measure_bar.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_measure_overlay.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_my_location.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_pick.dart';
@@ -96,6 +99,11 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   StreamSubscription<Position>? _positionSub;
   Position? _myPosition;
   bool _followMe = false;
+
+  // Distance-measuring mode: taps (and marker taps, snapping to the
+  // place) append to the path. Mutually exclusive with placement.
+  bool _measuring = false;
+  final List<LatLng> _measurePoints = [];
 
   LatLng _initialCenter = _fallbackCenter;
   double _initialZoom = 6;
@@ -211,6 +219,10 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   // ---------------------------------------------------------------------
 
   void _onMapTap(TapPosition tapPosition, LatLng latLng) {
+    if (_measuring) {
+      setState(() => _measurePoints.add(latLng));
+      return;
+    }
     if (_placement != null) {
       setState(() => _pendingPoint = latLng);
       _map.select(null);
@@ -221,16 +233,31 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   void _onMapLongPress(TapPosition tapPosition, LatLng latLng) {
-    if (_placement != null || _isExternalPicker) return;
+    if (_placement != null || _measuring || _isExternalPicker) return;
     unawaited(_openAddMenu(initialPoint: latLng));
   }
 
   void _onMarkerTap(CaveMapPlaceItem item) {
+    // In measure mode a marker tap snaps the next measure point to the
+    // place, so distances between recorded points are exact.
+    if (_measuring) {
+      setState(() => _measurePoints.add(item.point));
+      return;
+    }
     // During placement a marker tap identifies the place (highlight +
     // label priority) without hijacking the pending point — moving the
     // point stays an explicit map tap / GPS action.
     if (_placement == null) setState(() => _panel = CaveMapPanel.none);
     _map.select(item.uuid);
+  }
+
+  void _toggleMeasure() {
+    setState(() {
+      _measuring = !_measuring;
+      _measurePoints.clear();
+      if (_measuring) _panel = CaveMapPanel.none;
+    });
+    if (_measuring) _map.select(null);
   }
 
   void _onPanelToggled(CaveMapPanel panel) {
@@ -334,6 +361,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     String? subjectLabel,
   }) {
     setState(() {
+      _measuring = false;
+      _measurePoints.clear();
       _placement = CaveMapPlacement(
         kind: kind,
         existingPlace: existingPlace,
@@ -590,6 +619,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                         items: _map.visibleItems,
                         selectedUuid: _map.selectedUuid,
                       ),
+                      if (_measuring)
+                        ...CaveMapMeasureOverlay.layers(_measurePoints),
                       Align(
                         alignment: Alignment.bottomLeft,
                         child: IgnorePointer(
@@ -624,6 +655,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                   onToggleOtherCaves: _map.toggleOtherCaves,
                   onToggleNonEntrances: _map.toggleNonEntrances,
                   onPanelToggled: _onPanelToggled,
+                  measureActive: _measuring,
+                  onMeasure: _placement != null ? null : _toggleMeasure,
                   onAdd: (_isExternalPicker || _placement != null)
                       ? null
                       : () => unawaited(_openAddMenu()),
@@ -682,6 +715,13 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   }
 
   Widget _buildBottomOverlay() {
+    if (_measuring) {
+      return CaveMapMeasureBar(
+        path: MeasurePath(_measurePoints),
+        onUndo: () => setState(() => _measurePoints.removeLast()),
+        onClose: _toggleMeasure,
+      );
+    }
     if (_placement != null) {
       return CaveMapPlacementBar(
         placement: _placement!,
