@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
@@ -10,6 +11,16 @@ import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
+
+/// Entity uuids that carry a delete tombstone for [table] in `change_log`.
+Future<List<Uuid>> _deletedUuids(AppDatabase db, String table) async {
+  final rows =
+      await (db.select(db.changeLog)
+            ..where((t) => t.changeType.equals(ChangeType.delete))
+            ..where((t) => t.entityTable.equals(table)))
+          .get();
+  return rows.map((r) => r.entityUuid).toList();
+}
 
 /// Phase 1.5 initial repository tests — verify interface wiring and the
 /// core CRUD paths against an in-memory Drift database.
@@ -21,6 +32,7 @@ void main() {
   late CavePlaceRepository cavePlaceRepo;
   late RasterMapRepository rasterMapRepo;
   late DefinitionRepository defRepo;
+  late BeaconRepository beaconRepo;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -34,6 +46,7 @@ void main() {
     cavePlaceRepo = CavePlaceRepository(db, currentUser, logger);
     rasterMapRepo = RasterMapRepository(db, currentUser, logger);
     defRepo = DefinitionRepository(db, currentUser, logger);
+    beaconRepo = BeaconRepository(db, currentUser, logger);
   });
 
   tearDown(() async {
@@ -65,6 +78,41 @@ void main() {
       expect(await caveRepo.getCaves(), isEmpty);
       expect(await cavePlaceRepo.getCavePlaces(caveUuid), isEmpty);
     });
+
+    test('deleteCave clears beacon registrations and tombstones them', () async {
+      final caveUuid = await caveRepo.addCave('C');
+      await cavePlaceRepo.addCavePlace(caveUuid, 'P1');
+      final placeUuid = (await cavePlaceRepo.findCavePlaceByTitle(
+        caveUuid,
+        'P1',
+      ))!.uuid;
+      final activeBeacon = await beaconRepo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: '11111111-2222-3333-4444-555555555555',
+        major: 1,
+        minor: 1,
+      );
+      // A previously unregistered (soft-deleted) row still holds the FK and
+      // must not block the cave delete either — the bug this guards against.
+      final staleBeacon = await beaconRepo.registerBeacon(
+        cavePlaceUuid: placeUuid,
+        caveUuid: caveUuid,
+        proximityUuid: '11111111-2222-3333-4444-555555555555',
+        major: 1,
+        minor: 2,
+      );
+      await beaconRepo.unregisterBeacon(staleBeacon);
+
+      await caveRepo.deleteCave(caveUuid);
+
+      expect(await caveRepo.getCaves(), isEmpty);
+      expect(await db.select(db.cavePlaceBeacons).get(), isEmpty);
+      expect(
+        await _deletedUuids(db, 'cave_place_beacons'),
+        containsAll(<Uuid>[activeBeacon, staleBeacon]),
+      );
+    });
   });
 
   group('CavePlaceRepository', () {
@@ -80,6 +128,36 @@ void main() {
     test('findById returns null for unknown id', () async {
       expect(await cavePlaceRepo.findById(Uuid.v7()), isNull);
     });
+
+    test(
+      'deleteCavePlace clears beacon registrations and tombstones them',
+      () async {
+        final caveUuid = await caveRepo.addCave('C');
+        await cavePlaceRepo.addCavePlace(caveUuid, 'P1');
+        final placeUuid = (await cavePlaceRepo.findCavePlaceByTitle(
+          caveUuid,
+          'P1',
+        ))!.uuid;
+        final beaconUuid = await beaconRepo.registerBeacon(
+          cavePlaceUuid: placeUuid,
+          caveUuid: caveUuid,
+          proximityUuid: '11111111-2222-3333-4444-555555555555',
+          major: 1,
+          minor: 1,
+        );
+
+        await cavePlaceRepo.deleteCavePlace(placeUuid);
+
+        expect(await cavePlaceRepo.getCavePlaces(caveUuid), isEmpty);
+        expect(await db.select(db.cavePlaceBeacons).get(), isEmpty);
+        expect(
+          await _deletedUuids(db, 'cave_place_beacons'),
+          contains(beaconUuid),
+        );
+        // The cave itself is untouched by a place delete.
+        expect(await caveRepo.getCaves(), hasLength(1));
+      },
+    );
 
     test('watchCavePlaces emits on insert and delete', () async {
       final caveUuid = await caveRepo.addCave('C');

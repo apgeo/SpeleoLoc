@@ -150,6 +150,10 @@ class CaveRepository implements ICaveRepository {
         )..where((t) => t.caveUuid.equalsValue(id))).get();
         final caveTripIds = caveTrips.map((t) => t.uuid).toList();
 
+        final beacons = await (_database.select(
+          _database.cavePlaceBeacons,
+        )..where((b) => b.caveUuid.equalsValue(id))).get();
+
         // Remove geofeature links for cave, cave places and cave areas.
         await (_database.delete(_database.documentationFilesToGeofeatures)
               ..where(
@@ -209,6 +213,14 @@ class CaveRepository implements ICaveRepository {
           _database.caveTrips,
         )..where((t) => t.caveUuid.equalsValue(id))).go();
 
+        // Remove BLE tag registrations for this cave. Unregistering is a
+        // soft delete, so active and already-unregistered rows alike still
+        // hold the FK into cave_places/caves; clear them before those
+        // parents. Keyed on cave_uuid, which covers both references.
+        await (_database.delete(
+          _database.cavePlaceBeacons,
+        )..where((b) => b.caveUuid.equalsValue(id))).go();
+
         // Remove cave-linked base data.
         await (_database.delete(
           _database.caveEntrances,
@@ -228,8 +240,8 @@ class CaveRepository implements ICaveRepository {
         )..where((c) => c.uuid.equalsValue(id))).go();
 
         // Log deletion tombstones for the cave itself and its direct
-        // children (places, maps, areas, trips). Peers will use these
-        // during sync import to propagate the delete cascade.
+        // children (places, maps, areas, trips, beacons). Peers will use
+        // these during sync import to propagate the delete cascade.
         if (caveRow != null) {
           await _logger.logDelete(
             'caves',
@@ -267,6 +279,18 @@ class CaveRepository implements ICaveRepository {
             'cave_trips',
             t.uuid,
             oldValues: {'title': t.title, 'cave_uuid': t.caveUuid},
+          );
+        }
+        for (final b in beacons) {
+          await _logger.logDelete(
+            'cave_place_beacons',
+            b.uuid,
+            oldValues: {
+              'cave_place_uuid': b.cavePlaceUuid.toString(),
+              'proximity_uuid': b.proximityUuid,
+              'major': b.major,
+              'minor': b.minor,
+            },
           );
         }
       });

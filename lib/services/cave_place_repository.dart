@@ -183,6 +183,12 @@ class CavePlaceRepository implements ICavePlaceRepository {
                   ..limit(1))
                 .getSingleOrNull();
 
+        // Captured before the physical delete so the tombstones carry the
+        // identity peers need to remove the same rows on sync import.
+        final beacons = await (_database.select(_database.cavePlaceBeacons)
+              ..where((b) => b.cavePlaceUuid.equalsValue(id)))
+            .get();
+
         // Remove direct FK references from map bindings.
         await (_database.delete(
           _database.cavePlaceToRasterMapDefinitions,
@@ -202,9 +208,29 @@ class CavePlaceRepository implements ICavePlaceRepository {
               ))
             .go();
 
+        // Unregistering a beacon is a soft delete, so both active and
+        // already-unregistered rows still hold the FK into cave_places;
+        // clear them all before removing the place row.
+        await (_database.delete(_database.cavePlaceBeacons)
+              ..where((b) => b.cavePlaceUuid.equalsValue(id)))
+            .go();
+
         await (_database.delete(
           _database.cavePlaces,
         )..where((cp) => cp.uuid.equalsValue(id))).go();
+
+        for (final b in beacons) {
+          await _logger.logDelete(
+            'cave_place_beacons',
+            b.uuid,
+            oldValues: {
+              'cave_place_uuid': b.cavePlaceUuid.toString(),
+              'proximity_uuid': b.proximityUuid,
+              'major': b.major,
+              'minor': b.minor,
+            },
+          );
+        }
 
         if (old != null) {
           await _logger.logDelete(
