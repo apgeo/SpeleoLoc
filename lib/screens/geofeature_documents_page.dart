@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -14,7 +15,7 @@ import 'package:speleoloc/screens/documents/editors/text_document_editor_page.da
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/screens/documents/viewers/image_gallery_viewer_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
-import 'package:speleoloc/screens/general_data/edit_documentation_file_page.dart';
+import 'package:speleoloc/services/cave_document_import_service.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -456,30 +457,10 @@ class _GeofeatureDocumentsPageState
             tooltip: LocServ.inst.t('new_audio_recording'),
             onPressed: () => _onCreateNew('audio'),
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.attach_file),
+          IconActionButton(
+            icon: Icons.attach_file,
             tooltip: LocServ.inst.t('add_from_file'),
-            onSelected: _onAddFromFile,
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'text',
-                child: _menuItem(
-                  Icons.text_snippet,
-                  LocServ.inst.t('doc_type_text'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'image',
-                child: _menuItem(Icons.image, LocServ.inst.t('doc_type_photo')),
-              ),
-              PopupMenuItem(
-                value: 'audio',
-                child: _menuItem(
-                  Icons.audiotrack,
-                  LocServ.inst.t('doc_type_audio'),
-                ),
-              ),
-            ],
+            onPressed: _importMultipleFiles,
           ),
         ],
       ),
@@ -549,20 +530,82 @@ class _GeofeatureDocumentsPageState
     }
   }
 
-  /// Handle "Add from existing file" dropdown selection.
-  void _onAddFromFile(String type) {
+  /// Picks multiple files at once and attaches them all to the current
+  /// geofeature. Titles are left blank (derived from each file name); the
+  /// per-format editors remain for creating a single document with metadata.
+  Future<void> _importMultipleFiles() async {
     final link = widget.source.geofeatureLink;
     if (link == null) return;
-    _navigateAndRefresh(
-      EditDocumentationFilePage(
-        cavePlaceUuid: link.type == GeofeatureType.cavePlace
-            ? link.geofeatureUuid
-            : null,
-        caveUuid: link.type == GeofeatureType.cave ? link.geofeatureUuid : null,
-        caveAreaUuid: link.type == GeofeatureType.caveArea
-            ? link.geofeatureUuid
-            : null,
+    final res = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (!mounted || res == null) return;
+    final files = [
+      for (final f in res.files)
+        if (f.path != null) File(f.path!),
+    ];
+    if (files.isEmpty) return;
+
+    final progress = ValueNotifier<int>(0);
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        // Truly modal: the back button must not pop the dialog mid-import,
+        // otherwise the finally-block pop would dismiss the page instead.
+        builder: (_) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: progress,
+                    builder: (_, done, __) => Text(
+                      '${LocServ.inst.t('import_docs_importing')} '
+                      '$done / ${files.length}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
+    );
+
+    final service = CaveDocumentImportService(
+      ref.read(documentationRepositoryProvider),
+      ref.read(changeLoggerProvider),
+    );
+    CaveDirImportOutcome? outcome;
+    Object? error;
+    try {
+      outcome = await service.importFilesToGeofeature(
+        link: link,
+        files: files,
+        compressImages: true,
+        onFileDone: () => progress.value++,
+      );
+    } catch (e) {
+      error = e;
+    } finally {
+      if (mounted) Navigator.of(context).pop(); // dismiss progress dialog
+      progress.dispose();
+    }
+
+    if (!mounted) return;
+    if (error != null) {
+      SnackBarService.showError('${LocServ.inst.t('error')}: $error');
+      return;
+    }
+    await _loadDocuments();
+    if (!mounted) return;
+    SnackBarService.showSuccess(
+      LocServ.inst
+          .t('import_docs_summary_imported')
+          .replaceAll('{count}', '${outcome!.imported}'),
     );
   }
 
@@ -950,34 +993,11 @@ class _GeofeatureDocumentsPageState
                 ),
               ],
             ),
-            // ---- Add from existing file dropdown ----
-            PopupMenuButton<String>(
+            // ---- Add multiple files at once ----
+            IconButton(
               icon: const Icon(Icons.attach_file),
               tooltip: LocServ.inst.t('add_from_file'),
-              onSelected: _onAddFromFile,
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: 'text',
-                  child: _menuItem(
-                    Icons.text_snippet,
-                    LocServ.inst.t('doc_type_text'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'image',
-                  child: _menuItem(
-                    Icons.image,
-                    LocServ.inst.t('doc_type_photo'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'audio',
-                  child: _menuItem(
-                    Icons.audiotrack,
-                    LocServ.inst.t('doc_type_audio'),
-                  ),
-                ),
-              ],
+              onPressed: _importMultipleFiles,
             ),
           ],
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
