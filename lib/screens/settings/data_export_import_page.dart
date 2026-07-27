@@ -13,6 +13,7 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/storage_permissions.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -174,6 +175,12 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       dialogTitle: LocServ.inst.t('select_folder_save_archive'),
     );
     if (dir == null) return;
+
+    // Writing the archive into an arbitrary user-picked shared-storage
+    // folder needs all-files access on Android 11+ (the media read
+    // permissions do not grant writes) — same flow as the bulk document
+    // import. Best-effort: the try/catch below still reports failures.
+    await StoragePermissions.ensureAllFilesAccess();
 
     if (!context.mounted) return;
 
