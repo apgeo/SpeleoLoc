@@ -63,6 +63,25 @@ class DocumentationFileHelper {
     return folder;
   }
 
+  /// Builds a storage file name inside [folder] that does not yet exist.
+  ///
+  /// The millisecond timestamp is not unique on its own when many files are
+  /// saved back-to-back (e.g. bulk import): two identically-named sources in
+  /// the same millisecond would map to one path and clobber each other. A
+  /// numeric suffix disambiguates that collision. Callers must save the file
+  /// synchronously (relative to the event loop) after this returns so the
+  /// reserved name isn't reused.
+  static String _uniqueStorageName(Directory folder, String baseName) {
+    final ms = DateTime.now().millisecondsSinceEpoch;
+    var candidate = 'doc_${ms}_$baseName';
+    var n = 1;
+    while (File('${folder.path}/$candidate').existsSync()) {
+      candidate = 'doc_${ms}_${n}_$baseName';
+      n++;
+    }
+    return candidate;
+  }
+
   // -----------------------------------------------------------------------
   //  Save a picked / external file  (copy into app storage)
   // -----------------------------------------------------------------------
@@ -72,7 +91,7 @@ class DocumentationFileHelper {
   static Future<SavedFileInfo> saveExternalFile(File sourceFile) async {
     final folder = await getStorageFolder();
     final baseName = sourceFile.path.split(Platform.pathSeparator).last;
-    final outName = 'doc_${DateTime.now().millisecondsSinceEpoch}_$baseName';
+    final outName = _uniqueStorageName(folder, baseName);
     final outPath = '${folder.path}/$outName';
     await sourceFile.copy(outPath);
 
@@ -103,7 +122,7 @@ class DocumentationFileHelper {
     required Uint8List bytes,
   }) async {
     final folder = await getStorageFolder();
-    final outName = 'doc_${DateTime.now().millisecondsSinceEpoch}_$baseName';
+    final outName = _uniqueStorageName(folder, baseName);
     final outPath = '${folder.path}/$outName';
     await File(outPath).writeAsBytes(bytes, flush: true);
 
