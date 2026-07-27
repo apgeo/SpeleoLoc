@@ -12,6 +12,7 @@ import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
 import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
 import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
+import 'package:speleoloc/screens/documents/viewers/image_gallery_viewer_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/screens/general_data/edit_documentation_file_page.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -268,8 +269,39 @@ class _GeofeatureDocumentsPageState
   //  Navigation
   // -----------------------------------------------------------------------
 
+  bool _isImageDoc(DocumentationFile doc) =>
+      DocumentFormatRegistry.instance.handlerForDoc(doc)?.formatId == 'image';
+
+  /// Opens [tapped] in the swipeable image gallery, positioned at its place
+  /// among the other images currently shown (same filter/sort order).
+  Future<void> _openImageGallery(DocumentationFile tapped) async {
+    final dir = _docsDir;
+    if (dir == null) return;
+    final images = _filteredDocs.where(_isImageDoc).toList();
+    var start = images.indexWhere((d) => d.uuid == tapped.uuid);
+    if (start < 0) start = 0;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ImageGalleryViewerPage(
+          images: images,
+          initialIndex: start,
+          docsDir: dir,
+        ),
+      ),
+    );
+  }
+
   Future<void> _openDocument(DocumentationFile doc) async {
     if (doc.fileName.isEmpty) return;
+
+    // Images open in the read-only gallery viewer by default (swipe through
+    // the other images); editing stays on the long-press menu.
+    if (_isImageDoc(doc)) {
+      await _openImageGallery(doc);
+      return;
+    }
+
     final file = await getDocumentsFile(doc.fileName);
     if (file == null) {
       if (mounted) {
