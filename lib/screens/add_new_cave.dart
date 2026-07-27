@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
+import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -197,6 +199,28 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
           ],
         ),
         actions: [
+          // Documents button – only for existing (saved) caves; an unsaved
+          // cave has no uuid to link documentation files against.
+          if (isEditing)
+            IconButton(
+              icon: const Icon(Icons.folder_open),
+              tooltip: LocServ.inst.t('open_documents'),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GeofeatureDocumentsPage(
+                      source: DocumentsSource.cave(
+                        caveUuid: widget.cave!.uuid,
+                        caveTitle: widget.cave!.title,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),

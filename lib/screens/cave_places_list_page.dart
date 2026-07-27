@@ -9,9 +9,11 @@ import 'package:speleoloc/screens/cave_places/past_trips_button.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
+import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
@@ -767,6 +769,26 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
           ],
         ),
         actions: [
+          // Documents linked to the cave itself (not to any individual place).
+          IconButton(
+            icon: const Icon(Icons.folder_open),
+            tooltip: LocServ.inst.t('open_documents'),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GeofeatureDocumentsPage(
+                    source: DocumentsSource.cave(
+                      caveUuid: widget.caveUuid,
+                      caveTitle: _cave?.title ?? '',
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
