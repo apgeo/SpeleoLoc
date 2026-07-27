@@ -25,6 +25,7 @@ import 'package:speleoloc/widgets/filterable_list.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/screens/csv_caves_import_page.dart';
+import 'package:speleoloc/screens/cave_document_import_page.dart';
 import 'package:speleoloc/screens/place_transfer/place_transfer_flows.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -102,6 +103,11 @@ class _HomePageState extends ConsumerState<HomePage>
       label: LocServ.inst.t('csv_import_caves'),
     ),
     AppMenuItem(
+      value: 'import_cave_docs',
+      icon: Icons.drive_folder_upload,
+      label: LocServ.inst.t('import_cave_documents'),
+    ),
+    AppMenuItem(
       value: 'cave_map',
       icon: Icons.travel_explore,
       label: LocServ.inst.t('open_cave_map'),
@@ -143,6 +149,9 @@ class _HomePageState extends ConsumerState<HomePage>
         break;
       case 'cave_map':
         _openCaveMap();
+        break;
+      case 'import_cave_docs':
+        await _importCaveDocuments();
         break;
       case 'export_places':
         await exportPlacesFlow(
@@ -477,6 +486,24 @@ class _HomePageState extends ConsumerState<HomePage>
     final result = await Navigator.push<bool?>(
       context,
       MaterialPageRoute(builder: (_) => const DocumentationFilesPage()),
+    );
+    if (result == true) unawaited(_loadCaves());
+  }
+
+  /// Bulk-imports documents into the caves currently in scope (checked ones in
+  /// selection mode, otherwise all caves left visible by the filter), matching
+  /// each cave to a subdirectory of a user-chosen folder.
+  Future<void> _importCaveDocuments() async {
+    final targetCaves = _scopedCaves;
+    if (targetCaves.isEmpty) {
+      SnackBarService.showWarning(LocServ.inst.t('no_caves_for_import'));
+      return;
+    }
+    final result = await Navigator.push<bool?>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CaveDocumentImportPage(caves: targetCaves.toList()),
+      ),
     );
     if (result == true) unawaited(_loadCaves());
   }
@@ -834,6 +861,11 @@ class _HomePageState extends ConsumerState<HomePage>
           );
           if (result == true) unawaited(_loadCaves());
         },
+      ),
+      _HomeToolbarBtn(
+        icon: Icons.drive_folder_upload,
+        tooltip: LocServ.inst.t('import_cave_documents'),
+        onTap: _importCaveDocuments,
       ),
       _HomeToolbarBtn(
         icon: Icons.settings,
