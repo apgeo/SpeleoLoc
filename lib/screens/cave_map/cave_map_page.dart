@@ -25,7 +25,7 @@ import 'package:speleoloc/screens/cave_map/cave_map_place_list_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_prompts.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_toolbar.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
-import 'package:speleoloc/services/location/gps_running_average.dart';
+import 'package:speleoloc/services/location/gps_averaging_session.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
@@ -89,9 +89,13 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   bool _locating = false;
 
   // Averaged GPS capture for the pending point: while active, every fix
-  // feeds the running mean and the pin follows it.
-  GpsRunningAverage? _averaging;
-  StreamSubscription<Position>? _averagingSub;
+  // feeds the running mean and the pin follows it. Same precision-recording
+  // core the standalone GPS recorder screen uses.
+  late final GpsAveragingSession _gpsSession;
+
+  /// Sample count already folded into [_pendingPoint], so the listener can
+  /// tell a new fix from a plain status change.
+  int _appliedSamples = 0;
 
   // Live GPS position. The dot renders whenever a fix exists; _followMe
   // additionally keeps the camera on it until the user pans away.
@@ -127,6 +131,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     );
     _map.addListener(_onControllersChanged);
     _layers.addListener(_onControllersChanged);
+    _gpsSession = GpsAveragingSession(ref.read(locationServiceProvider))
+      ..addListener(_onAveragingChanged);
 
     final pick = widget.pickRequest;
     if (pick != null) {
@@ -148,7 +154,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   void dispose() {
     unawaited(_layers.savePrefs());
     unawaited(_positionSub?.cancel());
-    unawaited(_averagingSub?.cancel());
+    _gpsSession.removeListener(_onAveragingChanged);
+    _gpsSession.dispose();
     _map.removeListener(_onControllersChanged);
     _layers.removeListener(_onControllersChanged);
     _map.dispose();
@@ -232,7 +239,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     if (_placement != null) {
       // A manual point overrides a running averaged capture — otherwise
       // the next GPS fix would snap the pin right back to the mean.
-      _stopAveraging();
+      unawaited(_stopAveraging());
       setState(() => _pendingPoint = latLng);
       _map.select(null);
       return;
@@ -440,47 +447,69 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
   /// fix. A second tap (or a manual tap/drag of the point) stops it and
   /// keeps the mean.
   Future<void> _useMyLocationForPending() async {
-    if (_averaging != null) {
-      _stopAveraging();
+    if (_gpsSession.isRunning) {
+      await _stopAveraging();
       return;
     }
     if (_locating) return;
-    setState(() => _locating = true);
+    setState(() {
+      _locating = true;
+      _appliedSamples = 0;
+    });
     try {
-      if (!await _ensureLocationReady()) return;
+      final started = await _gpsSession.start();
       if (!mounted) return;
-      final average = GpsRunningAverage();
-      // Dedicated unfiltered stream: the my-location stream's distance
-      // filter would starve a stationary averaging session of samples.
-      _averagingSub = _location.positionStream().listen(
-        (position) {
-          if (!mounted) return;
-          average.add(position);
-          final mean = LatLng(average.latitude!, average.longitude!);
-          setState(() {
-            _myPosition = position;
-            _pendingPoint = mean;
-          });
-          if (average.sampleCount == 1) _moveTo(mean, minZoom: 16);
-        },
-        onError: (Object e, StackTrace st) =>
-            _log.warning('Averaging stream error', e, st),
-      );
-      setState(() => _averaging = average);
+      if (!started) {
+        // Readiness failed; surface the reason the same way the rest of
+        // the map's location actions do.
+        switch (_gpsSession.status) {
+          case GpsAveragingStatus.serviceDisabled:
+            SnackBarService.showWarning(
+              LocServ.inst.t('gps_service_disabled_short'),
+            );
+          case GpsAveragingStatus.permissionDenied:
+            SnackBarService.showWarning(
+              LocServ.inst.t('gps_permission_denied_short'),
+            );
+          default:
+            SnackBarService.showError(
+              _gpsSession.errorMessage ?? LocServ.inst.t('gps_error_title'),
+            );
+        }
+      }
     } finally {
       if (mounted) setState(() => _locating = false);
     }
   }
 
-  void _stopAveraging() {
-    if (_averaging == null) return;
-    unawaited(_averagingSub?.cancel());
-    _averagingSub = null;
-    setState(() => _averaging = null);
+  /// Folds each new averaged fix into the pending point so the pin tracks
+  /// the converging mean; status-only notifications just repaint the bar.
+  void _onAveragingChanged() {
+    if (!mounted) return;
+    final samples = _gpsSession.sampleCount;
+    if (samples == _appliedSamples) {
+      setState(() {});
+      return;
+    }
+    _appliedSamples = samples;
+    final lat = _gpsSession.latitude;
+    final lng = _gpsSession.longitude;
+    if (lat == null || lng == null) return;
+    final mean = LatLng(lat, lng);
+    setState(() {
+      _myPosition = _gpsSession.lastPosition ?? _myPosition;
+      _pendingPoint = mean;
+    });
+    if (samples == 1) _moveTo(mean, minZoom: 16);
+  }
+
+  Future<void> _stopAveraging() async {
+    if (!_gpsSession.isRunning) return;
+    await _gpsSession.stop();
   }
 
   void _cancelPlacement() {
-    _stopAveraging();
+    unawaited(_stopAveraging());
     if (_isExternalPicker) {
       Navigator.pop(context);
       return;
@@ -498,7 +527,8 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
     // Freeze the confirmed point: a still-running averaged capture would
     // keep overwriting _pendingPoint after the bar (and its stop toggle)
     // is gone.
-    _stopAveraging();
+    await _stopAveraging();
+    if (!mounted) return;
 
     final loc = LocServ.inst;
     final geo = ref.read(caveGeoServiceProvider);
@@ -636,7 +666,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                             ? _pendingPoint
                             : null,
                         onPendingDragged: (point) {
-                          _stopAveraging();
+                          unawaited(_stopAveraging());
                           setState(() => _pendingPoint = point);
                         },
                       ),
@@ -749,6 +779,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         point: _pendingPoint,
         busy: _placementBusy,
         locating: _locating,
+        gpsSession: _gpsSession,
         onUseLocation: () => unawaited(_useMyLocationForPending()),
         onCancel: _cancelPlacement,
         onConfirm: () => unawaited(_confirmPlacement()),

@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:speleoloc/services/location/gps_running_average.dart';
+import 'package:speleoloc/services/location/gps_averaging_session.dart';
+import 'package:speleoloc/services/location/gps_quality.dart';
 import 'package:speleoloc/services/location/location_service.dart';
-import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 
 /// Result returned from [GpsRecorderPage] when the user saves a recorded
@@ -42,18 +41,8 @@ class GpsRecorderPage extends StatefulWidget {
 }
 
 class _GpsRecorderPageState extends State<GpsRecorderPage> {
-  static final _log = AppLogger.of('GpsRecorderPage');
-
-  StreamSubscription<Position>? _sub;
-
-  // Live state
-  Position? _lastPosition;
-  String? _errorMessage;
-  bool _permissionDenied = false;
-  bool _serviceDisabled = false;
-
-  // Running mean state
-  final GpsRunningAverage _average = GpsRunningAverage();
+  /// The shared precision-recording core; this screen is its presentation.
+  late final GpsAveragingSession _session;
 
   // Captured snapshot (frozen running average)
   GpsRecorderResult? _captured;
@@ -61,82 +50,35 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   @override
   void initState() {
     super.initState();
-    _start();
+    _session = GpsAveragingSession(widget.locationService)
+      ..addListener(_onSessionChanged);
+    unawaited(_session.start());
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
+    _session.removeListener(_onSessionChanged);
+    _session.dispose();
     super.dispose();
   }
 
-  Future<void> _start() async {
-    setState(() {
-      _errorMessage = null;
-      _permissionDenied = false;
-      _serviceDisabled = false;
-    });
-
-    try {
-      // Shared readiness flow (service check + permission request) from
-      // LocationService, so the recorder and the surface map cannot drift.
-      final readiness = await widget.locationService.ensureReady();
-      if (!mounted) return;
-      switch (readiness) {
-        case LocationReadiness.serviceDisabled:
-          setState(() => _serviceDisabled = true);
-          return;
-        case LocationReadiness.permissionDenied:
-        case LocationReadiness.permissionDeniedForever:
-          setState(() => _permissionDenied = true);
-          return;
-        case LocationReadiness.ready:
-          break;
-      }
-
-      unawaited(_sub?.cancel());
-      _sub = widget.locationService.positionStream().listen(
-        _onPosition,
-        onError: (Object e, StackTrace st) {
-          _log.warning('Position stream error: $e');
-          if (mounted) setState(() => _errorMessage = e.toString());
-        },
-      );
-    } catch (e) {
-      _log.warning('Failed to start GPS: $e');
-      if (mounted) setState(() => _errorMessage = e.toString());
-    }
+  void _onSessionChanged() {
+    if (mounted) setState(() {});
   }
 
-  void _onPosition(Position p) {
-    _average.add(p);
-    if (mounted) setState(() => _lastPosition = p);
-  }
-
-  /// Quality estimate from current accuracy (lower meters = better).
-  /// Returns a 0..1 quality score and a label.
-  (double, String) _qualityFromAccuracy(double? accuracy) {
-    if (accuracy == null || accuracy <= 0 || accuracy.isNaN) {
-      return (0.0, LocServ.inst.t('gps_quality_unknown'));
-    }
-    if (accuracy <= 5) return (1.0, LocServ.inst.t('gps_quality_excellent'));
-    if (accuracy <= 10) return (0.8, LocServ.inst.t('gps_quality_good'));
-    if (accuracy <= 20) return (0.6, LocServ.inst.t('gps_quality_fair'));
-    if (accuracy <= 50) return (0.35, LocServ.inst.t('gps_quality_poor'));
-    return (0.1, LocServ.inst.t('gps_quality_very_poor'));
-  }
+  Future<void> _start() => _session.start();
 
   void _capture() {
-    final lat = _average.latitude;
-    final lng = _average.longitude;
+    final lat = _session.latitude;
+    final lng = _session.longitude;
     if (lat == null || lng == null) return;
     setState(() {
       _captured = GpsRecorderResult(
         latitude: lat,
         longitude: lng,
-        altitude: _average.altitude,
-        accuracyMeters: _average.accuracyMeters,
-        samples: _average.sampleCount,
+        altitude: _session.altitude,
+        accuracyMeters: _session.accuracyMeters,
+        samples: _session.sampleCount,
       );
     });
   }
@@ -162,7 +104,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   }
 
   Widget _buildBody(LocServ loc) {
-    if (_serviceDisabled) {
+    if (_session.status == GpsAveragingStatus.serviceDisabled) {
       return _StatusPanel(
         icon: Icons.location_disabled,
         title: loc.t('gps_location_service_disabled_title'),
@@ -177,7 +119,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         ),
       );
     }
-    if (_permissionDenied) {
+    if (_session.status == GpsAveragingStatus.permissionDenied) {
       return _StatusPanel(
         icon: Icons.gpp_bad,
         title: loc.t('gps_permission_denied_title'),
@@ -192,11 +134,11 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
         ),
       );
     }
-    if (_errorMessage != null && _lastPosition == null) {
+    if (_session.errorMessage != null && !_session.hasFix) {
       return _StatusPanel(
         icon: Icons.error_outline,
         title: loc.t('gps_error_title'),
-        message: _errorMessage!,
+        message: _session.errorMessage!,
         primaryAction: ElevatedButton(
           onPressed: _start,
           child: Text(loc.t('retry')),
@@ -217,9 +159,10 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   }
 
   Widget _buildLiveCard(LocServ loc) {
-    final pos = _lastPosition;
+    final pos = _session.lastPosition;
     final accuracy = pos?.accuracy;
-    final (quality, qLabel) = _qualityFromAccuracy(accuracy);
+    final quality = GpsQuality.fromAccuracy(accuracy);
+    final qLabel = loc.t(quality.labelKey);
 
     return Card(
       child: Padding(
@@ -247,18 +190,18 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
             else ...[
               _kv(
                 loc.t('latitude'),
-                _average.latitude?.toStringAsFixed(7) ??
+                _session.latitude?.toStringAsFixed(7) ??
                     pos.latitude.toStringAsFixed(7),
               ),
               _kv(
                 loc.t('longitude'),
-                _average.longitude?.toStringAsFixed(7) ??
+                _session.longitude?.toStringAsFixed(7) ??
                     pos.longitude.toStringAsFixed(7),
               ),
               _kv(
                 loc.t('altitude'),
-                _average.altitude != null
-                    ? '${_average.altitude!.toStringAsFixed(1)} m'
+                _session.altitude != null
+                    ? '${_session.altitude!.toStringAsFixed(1)} m'
                     : (pos.altitude.isNaN
                           ? '—'
                           : '${pos.altitude.toStringAsFixed(1)} m'),
@@ -269,13 +212,13 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
                     ? '—'
                     : '±${accuracy.toStringAsFixed(1)} m',
               ),
-              _kv(loc.t('gps_samples'), _average.sampleCount.toString()),
+              _kv(loc.t('gps_samples'), _session.sampleCount.toString()),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: LinearProgressIndicator(
-                      value: quality,
+                      value: quality.score,
                       minHeight: 8,
                     ),
                   ),
@@ -347,7 +290,7 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
   }
 
   Widget _buildBottomBar(LocServ loc) {
-    final canCapture = _average.sampleCount > 0;
+    final canCapture = _session.hasFix;
     final canUse = _captured != null;
     return Row(
       children: [

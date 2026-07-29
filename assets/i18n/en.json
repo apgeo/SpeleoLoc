@@ -1318,6 +1318,7 @@
   "map_measure_undo": "Remove last point",
   "map_place_confirm": "Confirm",
   "map_use_my_location": "Use my location",
+  "map_gps_average_stop": "Stop averaging",
   "map_place_moved": "Location updated",
   "map_entrance_added": "Entrance added",
   "map_cave_added": "Cave added",
