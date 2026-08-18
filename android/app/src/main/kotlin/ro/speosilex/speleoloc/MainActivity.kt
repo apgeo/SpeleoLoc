@@ -1,4 +1,4 @@
-package com.example.speleoloc
+package ro.speosilex.speleoloc
 
 import android.content.Intent
 import android.os.Bundle
