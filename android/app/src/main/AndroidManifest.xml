@@ -29,7 +29,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <application
-        android:label="speleoloc"
+        android:label="SpeleoLoc"
         android:name="${applicationName}"
         android:icon="@mipmap/speleo_loc_1">
         <activity
