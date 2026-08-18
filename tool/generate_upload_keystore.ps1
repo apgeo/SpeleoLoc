@@ -28,6 +28,12 @@ $plainPassword = [System.Net.NetworkCredential]::new('', $storePassword).Passwor
 if ($plainPassword.Length -lt 6) {
     Write-Error 'Password must be at least 6 characters.'
 }
+# key.properties is parsed by java.util.Properties (backslash = escape
+# character) and written as ASCII; restrict the charset so keytool and
+# Gradle are guaranteed to see the same password.
+if ($plainPassword -match '[^\x21-\x7E]' -or $plainPassword.Contains('\')) {
+    Write-Error 'Password must use printable ASCII without spaces or backslashes.'
+}
 
 & $keytool -genkey -v `
     -keystore $keystorePath `
