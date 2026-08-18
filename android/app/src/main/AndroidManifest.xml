@@ -42,7 +42,7 @@
     <application
         android:label="SpeleoLoc"
         android:name="${applicationName}"
-        android:icon="@mipmap/speleo_loc_1"
+        android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         tools:replace="android:allowBackup">
         <activity

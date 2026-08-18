@@ -96,9 +96,15 @@ dev_dependencies:
 
 # Sources in assets/icon/ are generator inputs only — not bundled (they are
 # deliberately absent from the flutter.assets list below).
+# CAUTION: the generator (0.14.x) corrupts project.pbxproj on every run — it
+# rewrites ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS to an
+# invalid value. After re-running, restore those lines to YES before
+# committing. The launcher icon is deliberately named ic_launcher (adaptive):
+# the plain speleo_loc_1 mipmap PNGs stay raster-only for the splash screen
+# and notification icon, which cannot inflate an adaptive-icon XML.
 flutter_launcher_icons:
   image_path: "assets/icon/app_icon.png"
-  android: "speleo_loc_1"
+  android: "ic_launcher"
   # The generator insets the foreground 16% itself, so the full-bleed master
   # is passed directly (a pre-padded source would shrink the icon twice).
   adaptive_icon_background: "#107494"
