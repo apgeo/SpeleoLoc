@@ -32,30 +32,6 @@ class CaveDocumentImportService {
   final ChangeLogger _changeLogger;
   final _log = AppLogger.of('CaveDocumentImportService');
 
-  /// Immediate, non-hidden regular files inside [dir], sorted by name.
-  ///
-  /// Non-recursive: only the files directly under the cave's subdirectory are
-  /// imported, matching the "one subdirectory of files per cave" layout.
-  List<File> listImportableFiles(Directory dir) {
-    try {
-      if (!dir.existsSync()) return const [];
-      final files = dir
-          .listSync(followLinks: false)
-          .whereType<File>()
-          .where((f) => !_baseName(f.path).startsWith('.'))
-          .toList();
-      files.sort(
-        (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()),
-      );
-      return files;
-    } catch (e, st) {
-      // A permission-denied on one subdirectory (Android scoped storage)
-      // must degrade to an empty row, not abort the whole scan.
-      _log.warning('Could not list ${dir.path}', e, st);
-      return const [];
-    }
-  }
-
   /// Imports [files] into the geofeature identified by [link], attaching each
   /// via that link. Files whose stored size+hash already match a document
   /// linked to the same geofeature are skipped, so re-running is idempotent.

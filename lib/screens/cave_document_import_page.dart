@@ -1,15 +1,15 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/cave_document_directory_matcher.dart';
 import 'package:speleoloc/services/cave_document_import_service.dart';
+import 'package:speleoloc/services/storage/document_import_source.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/utils/storage_permissions.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// One reviewable row: a subdirectory of the chosen import folder and the cave
@@ -23,7 +23,7 @@ class _DirRow {
     required this.method,
   });
 
-  final Directory directory;
+  final ImportDirectory directory;
   final String name;
   final int fileCount;
 
@@ -58,7 +58,7 @@ class _CaveDocumentImportPageState
 
   bool _scanning = true;
   bool _importing = false;
-  String? _rootPath;
+  ImportRoot? _root;
   List<_DirRow> _rows = [];
 
   final ValueNotifier<int> _progress = ValueNotifier<int>(0);
@@ -86,52 +86,32 @@ class _CaveDocumentImportPageState
   //  Directory selection + matching
   // -----------------------------------------------------------------------
 
-  /// Fallback for non-media documents (pdf, txt) that the media permissions
-  /// do not expose: sends the user to the system "all files access" toggle,
-  /// then rescans.
-  Future<void> _grantAllFilesAccess() async {
-    await StoragePermissions.ensureAllFilesAccess();
-    if (!mounted || _rootPath == null) return;
-    await _scan(_rootPath!);
-  }
-
   Future<void> _pickAndScan() async {
-    final path = await FilePicker.platform.getDirectoryPath(
+    // The picker itself carries the read grant on Android (SAF), so no
+    // storage permission request is needed before scanning.
+    final root = await const DocumentImportSourcePicker().pick(
       dialogTitle: LocServ.inst.t('import_docs_select_dir'),
     );
     if (!mounted) return;
-    if (path == null) {
+    if (root == null) {
       Navigator.pop(context);
       return;
     }
-    // Without the media/storage read permissions, Android's scoped storage
-    // lists the subdirectories but hides other apps' files inside them, so
-    // every row would scan as "0 files".
-    await StoragePermissions.ensureRead();
-    if (!mounted) return;
-    await _scan(path);
+    await _scan(root);
   }
 
-  Future<void> _scan(String path) async {
+  Future<void> _scan(ImportRoot root) async {
     setState(() {
-      _rootPath = path;
+      _root = root;
       _scanning = true;
     });
 
     try {
       final candidates = await _buildCandidates();
-      final subdirs = Directory(path)
-          .listSync(followLinks: false)
-          .whereType<Directory>()
-          .toList();
-      subdirs.sort(
-        (a, b) => _dirName(a).toLowerCase().compareTo(_dirName(b).toLowerCase()),
-      );
-
       final rows = <_DirRow>[];
-      for (final dir in subdirs) {
-        final name = _dirName(dir);
-        final fileCount = _service.listImportableFiles(dir).length;
+      for (final dir in root.directories) {
+        final name = dir.name;
+        final fileCount = (await dir.listFiles()).length;
         final match = CaveDocumentDirectoryMatcher.match(name, candidates);
         rows.add(
           _DirRow(
@@ -202,7 +182,7 @@ class _CaveDocumentImportPageState
     // changed between the review and pressing Run.
     final work = [
       for (final row in rows)
-        (row: row, files: _service.listImportableFiles(row.directory)),
+        (row: row, files: await row.directory.listFiles()),
     ];
     _progress.value = 0;
     _progressTotal = work.fold(0, (sum, w) => sum + w.files.length);
@@ -213,24 +193,52 @@ class _CaveDocumentImportPageState
     var failed = 0;
     var cavesTouched = 0;
 
-    for (final w in work) {
-      final outcome = await _service.importFilesToGeofeature(
-        link: DocumentationGeofeatureLink(
-          type: GeofeatureType.cave,
-          geofeatureUuid: w.row.selectedCaveUuid!,
-        ),
-        files: w.files,
-        compressImages: true,
-        // The progress callback fires from an async loop; never touch the
-        // notifier once the route (and _progress) has been disposed.
-        onFileDone: () {
-          if (mounted) _progress.value++;
-        },
-      );
-      imported += outcome.imported;
-      skipped += outcome.skippedDuplicates;
-      failed += outcome.failed;
-      if (outcome.imported > 0) cavesTouched++;
+    // SAF sources materialize into per-row temp directories, removed after
+    // the run so the copies never outlive the import.
+    final tempRoot = Directory(
+      '${(await getTemporaryDirectory()).path}'
+      '${Platform.pathSeparator}bulk_import',
+    );
+    try {
+      for (final (index, w) in work.indexed) {
+        final rowTempDir = Directory(
+          '${tempRoot.path}${Platform.pathSeparator}$index',
+        );
+        await rowTempDir.create(recursive: true);
+        final files = <File>[];
+        for (final f in w.files) {
+          try {
+            files.add(await f.materialize(rowTempDir));
+          } catch (e, st) {
+            _log.warning('Could not read ${f.name}', e, st);
+            failed++;
+            if (mounted) _progress.value++;
+          }
+        }
+        final outcome = await _service.importFilesToGeofeature(
+          link: DocumentationGeofeatureLink(
+            type: GeofeatureType.cave,
+            geofeatureUuid: w.row.selectedCaveUuid!,
+          ),
+          files: files,
+          compressImages: true,
+          // The progress callback fires from an async loop; never touch the
+          // notifier once the route (and _progress) has been disposed.
+          onFileDone: () {
+            if (mounted) _progress.value++;
+          },
+        );
+        imported += outcome.imported;
+        skipped += outcome.skippedDuplicates;
+        failed += outcome.failed;
+        if (outcome.imported > 0) cavesTouched++;
+      }
+    } finally {
+      try {
+        if (await tempRoot.exists()) await tempRoot.delete(recursive: true);
+      } catch (e, st) {
+        _log.fine('Could not remove bulk-import temp dir', e, st);
+      }
     }
 
     if (!mounted) return;
@@ -328,7 +336,7 @@ class _CaveDocumentImportPageState
     }
     return Column(
       children: [
-        if (_rootPath != null)
+        if (_root != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
@@ -337,7 +345,7 @@ class _CaveDocumentImportPageState
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _rootPath!,
+                    _root!.name,
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -390,15 +398,8 @@ class _CaveDocumentImportPageState
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (Platform.isAndroid)
-                  TextButton(
-                    onPressed: _grantAllFilesAccess,
-                    child: Text(LocServ.inst.t('import_docs_grant_all_files')),
-                  ),
                 TextButton(
-                  onPressed: _rootPath == null
-                      ? null
-                      : () => _scan(_rootPath!),
+                  onPressed: _root == null ? null : () => _scan(_root!),
                   child: Text(LocServ.inst.t('import_docs_rescan')),
                 ),
               ],
@@ -547,11 +548,6 @@ class _CaveDocumentImportPageState
     );
   }
 
-  static String _dirName(Directory dir) {
-    final parts = dir.path.split(Platform.pathSeparator)
-      ..removeWhere((s) => s.isEmpty);
-    return parts.isEmpty ? dir.path : parts.last;
-  }
 }
 
 /// Small badge showing how a directory was matched to its cave.
