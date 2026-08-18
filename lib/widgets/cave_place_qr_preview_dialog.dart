@@ -427,17 +427,17 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
     try {
       if (saveToCustom) {
         if (Platform.isAndroid || Platform.isIOS) {
-          final dir = await FilePicker.platform.getDirectoryPath(
-            dialogTitle: LocServ.inst.t('choose_folder_save_files'),
+          // Scoped storage: the system save dialog writes the bytes itself,
+          // so no storage permission (or dart:io folder write) is needed.
+          final output = await FilePicker.platform.saveFile(
+            dialogTitle: LocServ.inst.t('export'),
+            fileName: fileName,
+            bytes: bytes,
           );
-          if (dir == null || !context.mounted) return;
-          final file = File('$dir/$fileName');
-          await file.writeAsBytes(bytes);
-          if (context.mounted) {
-            SnackBarService.showSuccess(
-              '${LocServ.inst.t('files_saved')}: ${file.path}',
-            );
-          }
+          if (output == null || !context.mounted) return;
+          SnackBarService.showSuccess(
+            '${LocServ.inst.t('files_saved')}: $output',
+          );
         } else {
           final output = await FilePicker.platform.saveFile(
             dialogTitle: LocServ.inst.t('export'),

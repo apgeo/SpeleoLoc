@@ -1,19 +1,21 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/utils/storage_permissions.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -170,17 +172,19 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
   // ===========================================================================
 
   Future<void> _export(BuildContext context) async {
-    // Pick output directory.
-    final dir = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: LocServ.inst.t('select_folder_save_archive'),
-    );
-    if (dir == null) return;
-
-    // Writing the archive into an arbitrary user-picked shared-storage
-    // folder needs all-files access on Android 11+ (the media read
-    // permissions do not grant writes) — same flow as the bulk document
-    // import. Best-effort: the try/catch below still reports failures.
-    await StoragePermissions.ensureAllFilesAccess();
+    String outputDir;
+    if (Platform.isAndroid) {
+      // Scoped storage: build the archive in the app cache first, then let
+      // the user place it via the system create-document dialog — the dialog
+      // itself carries the write grant, so no storage permission is needed.
+      outputDir = (await getTemporaryDirectory()).path;
+    } else {
+      final dir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: LocServ.inst.t('select_folder_save_archive'),
+      );
+      if (dir == null) return;
+      outputDir = dir;
+    }
 
     if (!context.mounted) return;
 
@@ -193,6 +197,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       ),
     );
 
+    final String outputPath;
     try {
       final service = DataArchiveService(
         DataExportImportRepository(ref.read(appDatabaseProvider)),
@@ -203,31 +208,57 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       // password serialization in production builds.
       final includePasswords =
           exportFtpPasswordsEnabled && _includeFtpPasswords;
-      final outputPath = await service.exportArchive(
+      outputPath = await service.exportArchive(
         settings: ExportSettings(
           includeDocumentationFiles: _includeDocFiles,
           includeRasterMaps: _includeRasterMaps,
           diffOnly: _diffExport,
           includeFtpPasswords: includePasswords,
         ),
-        outputDir: dir,
+        outputDir: outputDir,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
         profileRepository: includePasswords
             ? FtpProfileRepository(ref.read(appDatabaseProvider))
             : null,
       );
-
-      if (context.mounted) {
-        Navigator.pop(context); // close progress
-        SnackBarService.showSuccess(
-          '${LocServ.inst.t('export_success')}: $outputPath',
-        );
-      }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
         SnackBarService.showError('${LocServ.inst.t('export_failed')}: $e');
       }
+      return;
+    }
+
+    if (!context.mounted) return;
+    Navigator.pop(context); // close progress
+
+    if (!Platform.isAndroid) {
+      SnackBarService.showSuccess(
+        '${LocServ.inst.t('export_success')}: $outputPath',
+      );
+      return;
+    }
+
+    // Hand the cached archive to its user-chosen destination; a null result
+    // means the user cancelled the save dialog.
+    final archive = File(outputPath);
+    try {
+      final saved = await const SafStorageService().saveDocument(
+        fileName: archive.uri.pathSegments.last,
+        mimeType: 'application/zip',
+        sourcePath: archive.path,
+      );
+      if (saved != null && context.mounted) {
+        SnackBarService.showSuccess(
+          '${LocServ.inst.t('export_success')}: $saved',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarService.showError('${LocServ.inst.t('export_failed')}: $e');
+      }
+    } finally {
+      if (await archive.exists()) await archive.delete();
     }
   }
 

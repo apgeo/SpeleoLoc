@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -144,10 +148,20 @@ class _SyncPageState extends ConsumerState<SyncPage>
   // ---------------------------------------------------------------------------
 
   Future<void> _export() async {
-    final dir = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: LocServ.inst.t('sync_select_export_folder'),
-    );
-    if (dir == null) return;
+    String outputDir;
+    if (Platform.isAndroid) {
+      // Scoped storage: write to the app cache first, then hand the archive
+      // to a user-picked destination via the system create-document dialog
+      // (the dialog carries the write grant — no storage permission needed).
+      outputDir = (await getTemporaryDirectory()).path;
+    } else {
+      final dir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: LocServ.inst.t('sync_select_export_folder'),
+      );
+      if (dir == null) return;
+      outputDir = dir;
+    }
+    if (!mounted) return;
 
     setState(() {
       _busy = true;
@@ -156,13 +170,28 @@ class _SyncPageState extends ConsumerState<SyncPage>
     try {
       final service = ref.read(syncArchiveServiceProvider);
       final file = await service.exportToZip(
-        dir,
+        outputDir,
         includeDocumentationFiles: _includeDocumentationFiles,
         includeRasterMaps: _includeRasterMaps,
       );
+      String? shownLocation = file.path;
+      if (Platform.isAndroid) {
+        try {
+          // Null when the user cancels the save dialog.
+          shownLocation = await const SafStorageService().saveDocument(
+            fileName: file.uri.pathSegments.last,
+            mimeType: 'application/zip',
+            sourcePath: file.path,
+          );
+        } finally {
+          if (await file.exists()) await file.delete();
+        }
+      }
       if (!mounted) return;
       setState(() {
-        _lastMessage = '${LocServ.inst.t('sync_export_success')}: ${file.path}';
+        _lastMessage = shownLocation == null
+            ? null
+            : '${LocServ.inst.t('sync_export_success')}: $shownLocation';
       });
     } catch (e) {
       if (!mounted) return;

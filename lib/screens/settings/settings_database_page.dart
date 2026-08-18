@@ -8,6 +8,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';
@@ -313,7 +314,22 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
 
     String? outputFile;
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isAndroid) {
+        // Scoped storage: the create-document dialog carries the write
+        // grant, so no storage permission is needed.
+        final saved = await const SafStorageService().saveDocument(
+          fileName: 'speleo_loc_export.sqlite',
+          mimeType: 'application/octet-stream',
+          sourcePath: sourceFile.path,
+        );
+        if (saved != null && context.mounted) {
+          SnackBarService.showSuccess(
+            '${LocServ.inst.t('database_export_success')}: $saved',
+          );
+        }
+        return;
+      }
+      if (Platform.isIOS) {
         final dir = await FilePicker.platform.getDirectoryPath(
           dialogTitle: LocServ.inst.t('select_folder_save_database'),
         );
