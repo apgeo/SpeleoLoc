@@ -89,9 +89,20 @@ class _CaveDocumentImportPageState
   Future<void> _pickAndScan() async {
     // The picker itself carries the read grant on Android (SAF), so no
     // storage permission request is needed before scanning.
-    final root = await const DocumentImportSourcePicker().pick(
-      dialogTitle: LocServ.inst.t('import_docs_select_dir'),
-    );
+    final ImportRoot? root;
+    try {
+      root = await const DocumentImportSourcePicker().pick(
+        dialogTitle: LocServ.inst.t('import_docs_select_dir'),
+      );
+    } catch (e, st) {
+      // A failing root listing (flaky DocumentsProvider, access denied)
+      // must not strand the page on the scanning spinner.
+      _log.warning('Failed to open import directory', e, st);
+      if (!mounted) return;
+      SnackBarService.showError('${LocServ.inst.t('error')}: $e');
+      Navigator.pop(context);
+      return;
+    }
     if (!mounted) return;
     if (root == null) {
       Navigator.pop(context);
@@ -171,11 +182,19 @@ class _CaveDocumentImportPageState
       _rows.isNotEmpty && _rows.every((r) => r.fileCount == 0);
 
   Future<void> _runImport() async {
+    if (_importing) return;
     final rows = _selectableRows;
     if (rows.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('import_docs_no_selection'));
       return;
     }
+
+    // Flip the guard before the first await: it disarms the Run button and
+    // PopScope, so the re-list below cannot race a second run or outlive a
+    // popped route.
+    _progress.value = 0;
+    _progressTotal = 0;
+    setState(() => _importing = true);
 
     // Re-list each directory now so the progress total reflects the files
     // actually imported — the scan-time counts can be stale if the folder
@@ -184,9 +203,10 @@ class _CaveDocumentImportPageState
       for (final row in rows)
         (row: row, files: await row.directory.listFiles()),
     ];
-    _progress.value = 0;
-    _progressTotal = work.fold(0, (sum, w) => sum + w.files.length);
-    setState(() => _importing = true);
+    if (!mounted) return;
+    setState(() {
+      _progressTotal = work.fold(0, (sum, w) => sum + w.files.length);
+    });
 
     var imported = 0;
     var skipped = 0;
@@ -233,6 +253,15 @@ class _CaveDocumentImportPageState
         failed += outcome.failed;
         if (outcome.imported > 0) cavesTouched++;
       }
+    } catch (e, st) {
+      // An unexpected failure must release _importing — PopScope would
+      // otherwise trap the user on the importing view forever.
+      _log.warning('Bulk import aborted', e, st);
+      if (mounted) {
+        setState(() => _importing = false);
+        SnackBarService.showError('${LocServ.inst.t('error')}: $e');
+      }
+      return;
     } finally {
       try {
         if (await tempRoot.exists()) await tempRoot.delete(recursive: true);
