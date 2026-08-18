@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
+import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';
@@ -62,13 +63,18 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
         key: tourKeys['list'],
         padding: const EdgeInsets.all(16),
         children: [
-          ElevatedButton.icon(
-            onPressed: () =>
-                _reinitializeDatabase(context, populateTestData: true),
-            icon: const Icon(Icons.refresh),
-            label: Text(LocServ.inst.t('reinitialize_db_with_test_data')),
-          ),
-          const SizedBox(height: 8),
+          // Dev tooling: the loader reads test_data/* assets that store
+          // builds do not bundle, so the button is compiled out with the
+          // dev-tools switch.
+          if (BuildConfig.devToolsEnabled) ...[
+            ElevatedButton.icon(
+              onPressed: () =>
+                  _reinitializeDatabase(context, populateTestData: true),
+              icon: const Icon(Icons.refresh),
+              label: Text(LocServ.inst.t('reinitialize_db_with_test_data')),
+            ),
+            const SizedBox(height: 8),
+          ],
           ElevatedButton.icon(
             onPressed: () =>
                 _reinitializeDatabase(context, populateTestData: false),
@@ -91,7 +97,12 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
           ValueListenableBuilder<bool>(
             valueListenable: debugModeNotifier,
             builder: (context, debugMode, _) {
-              if (!debugMode) return const SizedBox.shrink();
+              // Raw SQL against the live DB is a dev tool: store builds
+              // compile it out entirely; dev builds still require the
+              // 9-tap runtime debug unlock.
+              if (!debugMode || !BuildConfig.devToolsEnabled) {
+                return const SizedBox.shrink();
+              }
               return ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(

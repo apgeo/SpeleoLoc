@@ -16,6 +16,7 @@ import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
+import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/cave_place_flags.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
@@ -304,8 +305,12 @@ class _HomePageState extends ConsumerState<HomePage>
       if (!mounted) return;
       setState(() {});
 
-      // On the first 4 starts, if no caves exist, offer to populate test data.
-      if (!_testDataPromptShown &&
+      // Dev builds only: on the first 4 starts, if no caves exist, offer to
+      // populate test data. Store builds never show the prompt (no archive
+      // URL is configured there and the tooling is compiled out).
+      if (BuildConfig.devToolsEnabled &&
+          testArchiveUrl.trim().isNotEmpty &&
+          !_testDataPromptShown &&
           _caves.isEmpty &&
           AppStartCounter.count <= 4) {
         _testDataPromptShown = true;

@@ -13,6 +13,7 @@ import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -124,8 +125,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
             onPressed: () => _import(context),
           ),
 
-          // -- Test data section -- only shown when a URL is configured.
-          if (testArchiveUrl.isNotEmpty) ...[
+          // -- Test data section -- dev builds only, and only actionable
+          // when an archive URL is configured.
+          if (BuildConfig.devToolsEnabled && testArchiveUrl.isNotEmpty) ...[
             const Divider(height: 32),
             Text(
               LocServ.inst.t('test_data_section'),
@@ -142,7 +144,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
               label: Text(LocServ.inst.t('load_test_data_from_url')),
               onPressed: () => _importTestArchive(context),
             ),
-          ] else ...[
+          ] else if (BuildConfig.devToolsEnabled) ...[
             const Divider(height: 32),
             Text(
               LocServ.inst.t('test_data_section'),
