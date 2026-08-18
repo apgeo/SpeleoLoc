@@ -1,4 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- FTP/SFTP/HTTP sync and archive download. Declared explicitly — a
+         core capability must not depend on a plugin manifest merging it
+         in. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- BLE beacon scanning. BLUETOOTH_SCAN is intentionally declared WITHOUT
@@ -21,10 +26,25 @@
          their own access grant — no broad storage or media permission. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <!-- Merged in by plugin manifests (altbeacon/geolocator) but this app
+         never starts a location-typed foreground service — background beacon
+         scanning runs the connectedDevice-typed service below. Stripped so
+         Play's foreground-service declaration covers only connectedDevice. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove" />
+    <!-- flutter_sound library-manifest bug: the Java constant name was
+         pasted instead of a permission string. Inert, but it would show up
+         in the store's declared-permissions list. -->
+    <uses-permission android:name="Manifest.permission.CAPTURE_AUDIO_OUTPUT" tools:node="remove" />
+    <!-- Auto backup stays off: flutter_secure_storage blobs restore without
+         their Keystore master key (undecryptable credentials), the DB plus
+         documents far exceed the backup quota, and the app has its own
+         archive/FTP backup mechanisms. -->
     <application
         android:label="SpeleoLoc"
         android:name="${applicationName}"
-        android:icon="@mipmap/speleo_loc_1">
+        android:icon="@mipmap/speleo_loc_1"
+        android:allowBackup="false"
+        tools:replace="android:allowBackup">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -75,6 +95,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher on Android 11+: resolving https links (website /
+             GitHub entries in the app menu) needs an explicit query. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>
