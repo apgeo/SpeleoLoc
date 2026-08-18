@@ -42,6 +42,12 @@ class SafBridge(private val activity: Activity) : MethodChannel.MethodCallHandle
                     result.error("saf_args", "fileName and sourcePath are required", null)
                     return
                 }
+                // The busy check must precede this assignment, or a rejected
+                // second call would clobber the in-flight save's source path.
+                if (pendingResult != null) {
+                    result.error("saf_busy", "Another SAF operation is in progress", null)
+                    return
+                }
                 pendingSourcePath = sourcePath
                 launchPicker(result, REQUEST_CREATE_DOCUMENT) {
                     Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -81,9 +87,11 @@ class SafBridge(private val activity: Activity) : MethodChannel.MethodCallHandle
                     // Non-persistable provider: the grant still holds for this
                     // session, which is all the import flow needs.
                 }
-                result.success(
+                // The display-name lookup queries the (possibly slow)
+                // DocumentsProvider — keep it off the platform thread.
+                runInBackground(result) {
                     mapOf("treeUri" to uri.toString(), "name" to treeDisplayName(uri))
-                )
+                }
             }
             REQUEST_CREATE_DOCUMENT -> {
                 val sourcePath = pendingSourcePath
@@ -94,9 +102,21 @@ class SafBridge(private val activity: Activity) : MethodChannel.MethodCallHandle
                 }
                 // The archive can be large — stream it off the UI thread.
                 runInBackground(result) {
-                    activity.contentResolver.openOutputStream(uri, "wt")?.use { output ->
-                        FileInputStream(File(sourcePath)).use { input -> input.copyTo(output) }
-                    } ?: throw IllegalStateException("Cannot open output stream for $uri")
+                    try {
+                        activity.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                            FileInputStream(File(sourcePath)).use { input ->
+                                input.copyTo(output)
+                            }
+                        } ?: throw IllegalStateException("Cannot open output stream for $uri")
+                    } catch (e: Exception) {
+                        // Never leave a truncated document at the user-picked
+                        // destination — it would pass for a valid backup later.
+                        try {
+                            DocumentsContract.deleteDocument(activity.contentResolver, uri)
+                        } catch (_: Exception) {
+                        }
+                        throw e
+                    }
                     documentDisplayName(uri) ?: uri.lastPathSegment ?: uri.toString()
                 }
             }
