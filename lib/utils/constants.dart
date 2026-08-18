@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 // Re-export moved ValueNotifiers so existing import of `constants.dart`
 // keeps resolving `debugModeNotifier` / `homePageRefreshNotifier`.
@@ -50,7 +51,8 @@ const bool skipMissingTestDocuments = true;
 
 /// When true, holding the QR scan button for 2.5 s on the home screen opens
 /// a manual QR-code input dialog (for testing without a physical scanner).
-const bool enableQrManualInput = true;
+/// Dev tooling — compiled out of store builds.
+const bool enableQrManualInput = BuildConfig.devToolsEnabled;
 
 /// When `true`, the first-start "Load test data?" prompt uses the legacy
 /// [TestDatabaseLoader] path (loads pre-built sqlite + loose resource files
