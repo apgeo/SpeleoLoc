@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Centralized logging facade.
@@ -38,7 +39,18 @@ class AppLogger {
       if (record.stackTrace != null && record.level >= Level.SEVERE) {
         buf.write('\n${record.stackTrace}');
       }
-      debugPrint(buf.toString());
+      // Console sink: sub-WARNING messages can embed user content
+      // (cave/place names, file paths), so store builds keep them off the
+      // device log unless the user deliberately activates the 9-tap
+      // runtime debug mode for field diagnostics.
+      final consoleAllowed =
+          kDebugMode ||
+          BuildConfig.devToolsEnabled ||
+          debugModeNotifier.value ||
+          record.level >= Level.WARNING;
+      if (consoleAllowed) {
+        debugPrint(buf.toString());
+      }
 
       // Forward WARNING+ to Sentry in release builds so production errors are
       // captured without any changes at call sites. The DSN is injected at

@@ -12,11 +12,13 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 
+// DSN is injected at build time: --dart-define=SENTRY_DSN=https://...
+// An empty DSN means Sentry.init is a no-op, so debug/CI builds without
+// a DSN work normally without any changes here.
+const _sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
 void main() async {
-  // DSN is injected at build time: --dart-define=SENTRY_DSN=https://...
-  // An empty DSN means Sentry.init is a no-op, so debug/CI builds without
-  // a DSN work normally without any changes here.
-  const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+  const sentryDsn = _sentryDsn;
 
   await SentryFlutter.init((options) {
     options.dsn = sentryDsn;
@@ -32,6 +34,14 @@ Future<void> _runApp() async {
   // Initialize unified logging facade before anything else emits output.
   // The AppLogger listener forwards WARNING+ records to Sentry automatically.
   AppLogger.init();
+
+  // A release built without a DSN ships with no crash reporting at all —
+  // surface the omission in the device log so it gets noticed.
+  if (kReleaseMode && _sentryDsn.isEmpty) {
+    AppLogger.of(
+      'Main',
+    ).warning('SENTRY_DSN is empty: crash reporting is disabled');
+  }
 
   // Create the root Riverpod container. The same instance is shared with the
   // widget tree via `UncontrolledProviderScope`, and with imperative services
