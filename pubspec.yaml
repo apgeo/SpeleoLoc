@@ -89,6 +89,23 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.30.1
   build_runner: ^2.10.5
+  # Generates both platforms' launcher icon sets (incl. the Android adaptive
+  # icon and the alpha-flattened iOS marketing icon Apple requires) from
+  # assets/icon/. Re-run with: dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.3
+
+# Sources in assets/icon/ are generator inputs only — not bundled (they are
+# deliberately absent from the flutter.assets list below).
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  android: "speleo_loc_1"
+  # The generator insets the foreground 16% itself, so the full-bleed master
+  # is passed directly (a pre-padded source would shrink the icon twice).
+  adaptive_icon_background: "#107494"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  ios: true
+  # The App Store marketing icon must be opaque (ITMS-90717).
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
