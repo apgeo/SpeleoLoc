@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -453,7 +454,16 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
           }
         }
       } else {
-        final file = File('${picturesDir.path}/$fileName');
+        var targetDir = picturesDir;
+        if (Platform.isAndroid) {
+          // Android 9 and below gate the shared-Pictures write behind the
+          // legacy storage permission; 10+ ignores the request (media
+          // contributions need no permission), so the result is unchecked
+          // and the directory is re-resolved after a possible grant.
+          await Permission.storage.request();
+          targetDir = await _resolvePicturesDirectory();
+        }
+        final file = File('${targetDir.path}/$fileName');
         await file.writeAsBytes(bytes);
         if (context.mounted) {
           SnackBarService.showSuccess(

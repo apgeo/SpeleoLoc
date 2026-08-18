@@ -20,10 +20,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- Legacy shared-storage read/write for Android 12 and below only
-         (maxSdkVersion-capped, auto-granted there). On Android 11+ the bulk
-         document import and all exports go through SAF pickers, which carry
-         their own access grant — no broad storage or media permission. -->
+    <!-- Legacy shared-storage read/write, maxSdkVersion-capped: runtime
+         permissions on Android 6-9, requested only by the QR export-to-
+         Pictures flow. Everything else (bulk document import, all exports)
+         goes through SAF pickers on every version, which carry their own
+         access grant — no broad storage or media permission. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <!-- Merged in by plugin manifests (altbeacon/geolocator) but this app
