@@ -14,6 +14,6 @@ abstract final class BuildConfig {
   /// `DEV_TOOLS=true` on a release-mode build used for internal testing.
   static const bool devToolsEnabled = bool.fromEnvironment(
     'DEV_TOOLS',
-    defaultValue: kDebugMode,
+    defaultValue: kDebugMode || kProfileMode,
   );
 }
