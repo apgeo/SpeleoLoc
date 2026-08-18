@@ -49,5 +49,15 @@
 	<string>SpeleoLoc uses your location to record GPS coordinates of the entrance cave places on demand, and to detect nearby location beacons (iBeacon) placed in caves, only if you use these features.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>SpeleoLoc uses Bluetooth to detect nearby location beacons placed in caves and to read their diagnostics (battery, temperature).</string>
+	<key>NSCameraUsageDescription</key>
+	<string>SpeleoLoc uses the camera to scan cave place QR codes and to photograph cave documentation.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SpeleoLoc uses the microphone to record audio notes attached to cave documentation, only when you start a recording.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SpeleoLoc reads your photo library only when you choose an existing photo to attach to cave documentation or a map.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SpeleoLoc saves an image to your photo library only when you export it there yourself.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
