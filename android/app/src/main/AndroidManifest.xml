@@ -15,19 +15,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- Bulk document import and archive export read/write user-chosen
-         shared-storage folders with dart:io. Scoped storage hides other
-         apps' files and blocks writes without these: READ_MEDIA_* cover
-         photos/video/audio on Android 13+, READ/WRITE_EXTERNAL_STORAGE
-         cover the pre-scoped-storage versions, and MANAGE_EXTERNAL_STORAGE
-         is the user-granted fallback on 11+ for non-media documents and for
-         writing the export archive into an arbitrary folder. -->
+    <!-- Legacy shared-storage read/write for Android 12 and below only
+         (maxSdkVersion-capped, auto-granted there). On Android 11+ the bulk
+         document import and all exports go through SAF pickers, which carry
+         their own access grant — no broad storage or media permission. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <application
         android:label="SpeleoLoc"
         android:name="${applicationName}"
