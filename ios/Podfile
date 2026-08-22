@@ -44,12 +44,16 @@ post_install do |installer|
       # permission_handler compiles every permission group to "denied"
       # unless its macro is set; enable exactly the groups this app
       # requests (camera QR scan, audio notes, GPS, BLE beacons).
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-        '$(inherited)',
-        'PERMISSION_CAMERA=1',
-        'PERMISSION_MICROPHONE=1',
-        'PERMISSION_LOCATION=1',
-        'PERMISSION_BLUETOOTH=1',
+      # Appended rather than assigned with ||=: flutter_additional_ios_build_settings
+      # above may already have populated this key, and ||= would then
+      # silently skip the macros, leaving every permission denied at runtime.
+      existing = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+      existing = [existing] if existing.is_a?(String)
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = existing + %w[
+        PERMISSION_CAMERA=1
+        PERMISSION_MICROPHONE=1
+        PERMISSION_LOCATION=1
+        PERMISSION_BLUETOOTH=1
       ]
     end
   end
