@@ -3,6 +3,11 @@
 # are git-ignored. Back the .jks and its passwords up somewhere safe outside
 # this machine — losing the upload key requires a reset request with Google.
 
+param(
+    # Explicit keytool.exe, for JDK layouts the search below does not cover.
+    [string]$KeytoolPath
+)
+
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -13,15 +18,48 @@ if (Test-Path $keystorePath) {
     Write-Error "Keystore already exists: $keystorePath — refusing to overwrite."
 }
 
-$keytool = 'keytool'
-if (-not (Get-Command $keytool -ErrorAction SilentlyContinue)) {
-    if ($env:JAVA_HOME) {
-        $keytool = Join-Path $env:JAVA_HOME 'bin\keytool.exe'
+# A dev machine that builds this app needs no JAVA_HOME and no Java on PATH:
+# Gradle uses the JDK bundled with Android Studio. Find that same JBR (and
+# the usual standalone JDK layouts) rather than requiring shell setup.
+function Get-KeytoolCandidates {
+    if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\keytool.exe' }
+
+    $onPath = (Get-Command keytool -ErrorAction SilentlyContinue).Source
+    if ($onPath) { $onPath }
+
+    $studioFromRegistry = (
+        Get-ItemProperty 'HKLM:\SOFTWARE\Android Studio' -ErrorAction SilentlyContinue
+    ).Path
+    if ($studioFromRegistry) { Join-Path $studioFromRegistry 'jbr\bin\keytool.exe' }
+
+    $jdkRoots = @()
+    foreach ($drive in [System.IO.DriveInfo]::GetDrives()) {
+        if ($drive.DriveType -ne 'Fixed' -or -not $drive.IsReady) { continue }
+        $programFiles = Join-Path $drive.RootDirectory.FullName 'Program Files'
+        $jdkRoots += Join-Path $programFiles 'Android\Android Studio\jbr'
+        $jdkRoots += Join-Path $programFiles 'Java\*'
+        $jdkRoots += Join-Path $programFiles 'Eclipse Adoptium\*'
+        $jdkRoots += Join-Path $programFiles 'Microsoft\jdk*'
     }
-    if (-not (Test-Path $keytool)) {
-        Write-Error 'keytool not found. Ensure a JDK is on PATH or JAVA_HOME is set.'
+    # JetBrains Toolbox installs Android Studio per-user.
+    $jdkRoots += Join-Path $env:LOCALAPPDATA 'Programs\Android Studio\jbr'
+
+    foreach ($root in $jdkRoots) {
+        Get-Item (Join-Path $root 'bin\keytool.exe') -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.FullName }
     }
 }
+
+$keytool = Get-KeytoolCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $keytool) {
+    Write-Error (
+        "keytool not found. Searched JAVA_HOME, PATH, Android Studio's bundled " +
+        "JBR and the standard JDK install locations on every fixed drive. " +
+        "Install a JDK (or Android Studio), or pass -KeytoolPath " +
+        "'<jdk>\bin\keytool.exe'."
+    )
+}
+Write-Host "Using keytool: $keytool"
 
 $storePassword = Read-Host 'Keystore password (also used as key password)' -AsSecureString
 $plainPassword = [System.Net.NetworkCredential]::new('', $storePassword).Password
