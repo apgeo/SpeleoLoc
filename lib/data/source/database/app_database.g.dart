@@ -13839,6 +13839,798 @@ class ChangeLogFieldCompanion extends UpdateCompanion<ChangeLogFieldData> {
   }
 }
 
+class SilexgisSyncState extends Table
+    with TableInfo<SilexgisSyncState, SilexgisSyncStateData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisSyncState(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  late final GeneratedColumn<String> setId = GeneratedColumn<String>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _cursorMeta = const VerificationMeta('cursor');
+  late final GeneratedColumn<String> cursor = GeneratedColumn<String>(
+    'cursor',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _setRevisionMeta = const VerificationMeta(
+    'setRevision',
+  );
+  late final GeneratedColumn<int> setRevision = GeneratedColumn<int>(
+    'set_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  late final GeneratedColumn<int> lastSyncedAt = GeneratedColumn<int>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    setId,
+    cursor,
+    setRevision,
+    lastSyncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_sync_state';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisSyncStateData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
+    }
+    if (data.containsKey('cursor')) {
+      context.handle(
+        _cursorMeta,
+        cursor.isAcceptableOrUnknown(data['cursor']!, _cursorMeta),
+      );
+    }
+    if (data.containsKey('set_revision')) {
+      context.handle(
+        _setRevisionMeta,
+        setRevision.isAcceptableOrUnknown(
+          data['set_revision']!,
+          _setRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, setId};
+  @override
+  SilexgisSyncStateData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisSyncStateData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_id'],
+      )!,
+      cursor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cursor'],
+      ),
+      setRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}set_revision'],
+      ),
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_synced_at'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisSyncState createAlias(String alias) {
+    return SilexgisSyncState(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, set_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisSyncStateData extends DataClass
+    implements Insertable<SilexgisSyncStateData> {
+  final String profileUuid;
+
+  /// the local server profile, not an account
+  final String setId;
+
+  /// the sync set on that installation
+  final String? cursor;
+  final int? setRevision;
+  final int? lastSyncedAt;
+  const SilexgisSyncStateData({
+    required this.profileUuid,
+    required this.setId,
+    this.cursor,
+    this.setRevision,
+    this.lastSyncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['set_id'] = Variable<String>(setId);
+    if (!nullToAbsent || cursor != null) {
+      map['cursor'] = Variable<String>(cursor);
+    }
+    if (!nullToAbsent || setRevision != null) {
+      map['set_revision'] = Variable<int>(setRevision);
+    }
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt);
+    }
+    return map;
+  }
+
+  SilexgisSyncStateCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisSyncStateCompanion(
+      profileUuid: Value(profileUuid),
+      setId: Value(setId),
+      cursor: cursor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cursor),
+      setRevision: setRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(setRevision),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+    );
+  }
+
+  factory SilexgisSyncStateData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisSyncStateData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      setId: serializer.fromJson<String>(json['set_id']),
+      cursor: serializer.fromJson<String?>(json['cursor']),
+      setRevision: serializer.fromJson<int?>(json['set_revision']),
+      lastSyncedAt: serializer.fromJson<int?>(json['last_synced_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'set_id': serializer.toJson<String>(setId),
+      'cursor': serializer.toJson<String?>(cursor),
+      'set_revision': serializer.toJson<int?>(setRevision),
+      'last_synced_at': serializer.toJson<int?>(lastSyncedAt),
+    };
+  }
+
+  SilexgisSyncStateData copyWith({
+    String? profileUuid,
+    String? setId,
+    Value<String?> cursor = const Value.absent(),
+    Value<int?> setRevision = const Value.absent(),
+    Value<int?> lastSyncedAt = const Value.absent(),
+  }) => SilexgisSyncStateData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    setId: setId ?? this.setId,
+    cursor: cursor.present ? cursor.value : this.cursor,
+    setRevision: setRevision.present ? setRevision.value : this.setRevision,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+  );
+  SilexgisSyncStateData copyWithCompanion(SilexgisSyncStateCompanion data) {
+    return SilexgisSyncStateData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      setId: data.setId.present ? data.setId.value : this.setId,
+      cursor: data.cursor.present ? data.cursor.value : this.cursor,
+      setRevision: data.setRevision.present
+          ? data.setRevision.value
+          : this.setRevision,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisSyncStateData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('cursor: $cursor, ')
+          ..write('setRevision: $setRevision, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(profileUuid, setId, cursor, setRevision, lastSyncedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisSyncStateData &&
+          other.profileUuid == this.profileUuid &&
+          other.setId == this.setId &&
+          other.cursor == this.cursor &&
+          other.setRevision == this.setRevision &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class SilexgisSyncStateCompanion
+    extends UpdateCompanion<SilexgisSyncStateData> {
+  final Value<String> profileUuid;
+  final Value<String> setId;
+  final Value<String?> cursor;
+  final Value<int?> setRevision;
+  final Value<int?> lastSyncedAt;
+  final Value<int> rowid;
+  const SilexgisSyncStateCompanion({
+    this.profileUuid = const Value.absent(),
+    this.setId = const Value.absent(),
+    this.cursor = const Value.absent(),
+    this.setRevision = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisSyncStateCompanion.insert({
+    required String profileUuid,
+    required String setId,
+    this.cursor = const Value.absent(),
+    this.setRevision = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       setId = Value(setId);
+  static Insertable<SilexgisSyncStateData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? setId,
+    Expression<String>? cursor,
+    Expression<int>? setRevision,
+    Expression<int>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (setId != null) 'set_id': setId,
+      if (cursor != null) 'cursor': cursor,
+      if (setRevision != null) 'set_revision': setRevision,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisSyncStateCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? setId,
+    Value<String?>? cursor,
+    Value<int?>? setRevision,
+    Value<int?>? lastSyncedAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisSyncStateCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      setId: setId ?? this.setId,
+      cursor: cursor ?? this.cursor,
+      setRevision: setRevision ?? this.setRevision,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<String>(setId.value);
+    }
+    if (cursor.present) {
+      map['cursor'] = Variable<String>(cursor.value);
+    }
+    if (setRevision.present) {
+      map['set_revision'] = Variable<int>(setRevision.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisSyncStateCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('cursor: $cursor, ')
+          ..write('setRevision: $setRevision, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class SilexgisRowRevision extends Table
+    with TableInfo<SilexgisRowRevision, SilexgisRowRevisionData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisRowRevision(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> entityUuid =
+      GeneratedColumn<Uint8List>(
+        'entity_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisRowRevision.$converterentityUuid);
+  static const VerificationMeta _entityTableMeta = const VerificationMeta(
+    'entityTable',
+  );
+  late final GeneratedColumn<String> entityTable = GeneratedColumn<String>(
+    'entity_table',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  late final GeneratedColumn<String> revision = GeneratedColumn<String>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    entityUuid,
+    entityTable,
+    revision,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_row_revision';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisRowRevisionData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('entity_table')) {
+      context.handle(
+        _entityTableMeta,
+        entityTable.isAcceptableOrUnknown(
+          data['entity_table']!,
+          _entityTableMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_entityTableMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, entityUuid};
+  @override
+  SilexgisRowRevisionData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisRowRevisionData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      entityUuid: SilexgisRowRevision.$converterentityUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}entity_uuid'],
+        )!,
+      ),
+      entityTable: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_table'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}revision'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisRowRevision createAlias(String alias) {
+    return SilexgisRowRevision(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterentityUuid =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, entity_uuid)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisRowRevisionData extends DataClass
+    implements Insertable<SilexgisRowRevisionData> {
+  final String profileUuid;
+  final Uuid entityUuid;
+  final String entityTable;
+
+  /// which local table holds the row
+  final String revision;
+
+  /// the server's `updatedAt`, stored verbatim
+  final int? updatedAt;
+  const SilexgisRowRevisionData({
+    required this.profileUuid,
+    required this.entityUuid,
+    required this.entityTable,
+    required this.revision,
+    this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisRowRevision.$converterentityUuid.toSql(entityUuid),
+      );
+    }
+    map['entity_table'] = Variable<String>(entityTable);
+    map['revision'] = Variable<String>(revision);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    return map;
+  }
+
+  SilexgisRowRevisionCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisRowRevisionCompanion(
+      profileUuid: Value(profileUuid),
+      entityUuid: Value(entityUuid),
+      entityTable: Value(entityTable),
+      revision: Value(revision),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory SilexgisRowRevisionData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisRowRevisionData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      entityUuid: serializer.fromJson<Uuid>(json['entity_uuid']),
+      entityTable: serializer.fromJson<String>(json['entity_table']),
+      revision: serializer.fromJson<String>(json['revision']),
+      updatedAt: serializer.fromJson<int?>(json['updated_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'entity_uuid': serializer.toJson<Uuid>(entityUuid),
+      'entity_table': serializer.toJson<String>(entityTable),
+      'revision': serializer.toJson<String>(revision),
+      'updated_at': serializer.toJson<int?>(updatedAt),
+    };
+  }
+
+  SilexgisRowRevisionData copyWith({
+    String? profileUuid,
+    Uuid? entityUuid,
+    String? entityTable,
+    String? revision,
+    Value<int?> updatedAt = const Value.absent(),
+  }) => SilexgisRowRevisionData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    entityUuid: entityUuid ?? this.entityUuid,
+    entityTable: entityTable ?? this.entityTable,
+    revision: revision ?? this.revision,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
+  SilexgisRowRevisionData copyWithCompanion(SilexgisRowRevisionCompanion data) {
+    return SilexgisRowRevisionData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      entityUuid: data.entityUuid.present
+          ? data.entityUuid.value
+          : this.entityUuid,
+      entityTable: data.entityTable.present
+          ? data.entityTable.value
+          : this.entityTable,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisRowRevisionData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('entityTable: $entityTable, ')
+          ..write('revision: $revision, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(profileUuid, entityUuid, entityTable, revision, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisRowRevisionData &&
+          other.profileUuid == this.profileUuid &&
+          other.entityUuid == this.entityUuid &&
+          other.entityTable == this.entityTable &&
+          other.revision == this.revision &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SilexgisRowRevisionCompanion
+    extends UpdateCompanion<SilexgisRowRevisionData> {
+  final Value<String> profileUuid;
+  final Value<Uuid> entityUuid;
+  final Value<String> entityTable;
+  final Value<String> revision;
+  final Value<int?> updatedAt;
+  final Value<int> rowid;
+  const SilexgisRowRevisionCompanion({
+    this.profileUuid = const Value.absent(),
+    this.entityUuid = const Value.absent(),
+    this.entityTable = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisRowRevisionCompanion.insert({
+    required String profileUuid,
+    required Uuid entityUuid,
+    required String entityTable,
+    required String revision,
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       entityUuid = Value(entityUuid),
+       entityTable = Value(entityTable),
+       revision = Value(revision);
+  static Insertable<SilexgisRowRevisionData> custom({
+    Expression<String>? profileUuid,
+    Expression<Uint8List>? entityUuid,
+    Expression<String>? entityTable,
+    Expression<String>? revision,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (entityUuid != null) 'entity_uuid': entityUuid,
+      if (entityTable != null) 'entity_table': entityTable,
+      if (revision != null) 'revision': revision,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisRowRevisionCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<Uuid>? entityUuid,
+    Value<String>? entityTable,
+    Value<String>? revision,
+    Value<int?>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisRowRevisionCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      entityUuid: entityUuid ?? this.entityUuid,
+      entityTable: entityTable ?? this.entityTable,
+      revision: revision ?? this.revision,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (entityUuid.present) {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisRowRevision.$converterentityUuid.toSql(entityUuid.value),
+      );
+    }
+    if (entityTable.present) {
+      map['entity_table'] = Variable<String>(entityTable.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<String>(revision.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisRowRevisionCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('entityTable: $entityTable, ')
+          ..write('revision: $revision, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -13899,6 +14691,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_change_log_changed_by',
     'CREATE INDEX IF NOT EXISTS idx_change_log_changed_by ON change_log (changed_by_user_uuid)',
   );
+  late final SilexgisSyncState silexgisSyncState = SilexgisSyncState(this);
+  late final SilexgisRowRevision silexgisRowRevision = SilexgisRowRevision(
+    this,
+  );
+  late final Index idxSilexgisRowRevisionTable = Index(
+    'idx_silexgis_row_revision_table',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_row_revision_table ON silexgis_row_revision (profile_uuid, entity_table)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -13932,6 +14732,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxChangeLogEntity,
     idxChangeLogChangedAt,
     idxChangeLogChangedBy,
+    silexgisSyncState,
+    silexgisRowRevision,
+    idxSilexgisRowRevisionTable,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -27250,6 +28053,432 @@ typedef $ChangeLogFieldProcessedTableManager =
       ChangeLogFieldData,
       PrefetchHooks Function({bool changeUuid})
     >;
+typedef $SilexgisSyncStateCreateCompanionBuilder =
+    SilexgisSyncStateCompanion Function({
+      required String profileUuid,
+      required String setId,
+      Value<String?> cursor,
+      Value<int?> setRevision,
+      Value<int?> lastSyncedAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisSyncStateUpdateCompanionBuilder =
+    SilexgisSyncStateCompanion Function({
+      Value<String> profileUuid,
+      Value<String> setId,
+      Value<String?> cursor,
+      Value<int?> setRevision,
+      Value<int?> lastSyncedAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisSyncStateFilterComposer
+    extends Composer<_$AppDatabase, SilexgisSyncState> {
+  $SilexgisSyncStateFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get setRevision => $composableBuilder(
+    column: $table.setRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisSyncStateOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisSyncState> {
+  $SilexgisSyncStateOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get setRevision => $composableBuilder(
+    column: $table.setRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisSyncStateAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisSyncState> {
+  $SilexgisSyncStateAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get setId =>
+      $composableBuilder(column: $table.setId, builder: (column) => column);
+
+  GeneratedColumn<String> get cursor =>
+      $composableBuilder(column: $table.cursor, builder: (column) => column);
+
+  GeneratedColumn<int> get setRevision => $composableBuilder(
+    column: $table.setRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+}
+
+class $SilexgisSyncStateTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisSyncState,
+          SilexgisSyncStateData,
+          $SilexgisSyncStateFilterComposer,
+          $SilexgisSyncStateOrderingComposer,
+          $SilexgisSyncStateAnnotationComposer,
+          $SilexgisSyncStateCreateCompanionBuilder,
+          $SilexgisSyncStateUpdateCompanionBuilder,
+          (
+            SilexgisSyncStateData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisSyncState,
+              SilexgisSyncStateData
+            >,
+          ),
+          SilexgisSyncStateData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisSyncStateTableManager(_$AppDatabase db, SilexgisSyncState table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisSyncStateFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisSyncStateOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisSyncStateAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> setId = const Value.absent(),
+                Value<String?> cursor = const Value.absent(),
+                Value<int?> setRevision = const Value.absent(),
+                Value<int?> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisSyncStateCompanion(
+                profileUuid: profileUuid,
+                setId: setId,
+                cursor: cursor,
+                setRevision: setRevision,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String setId,
+                Value<String?> cursor = const Value.absent(),
+                Value<int?> setRevision = const Value.absent(),
+                Value<int?> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisSyncStateCompanion.insert(
+                profileUuid: profileUuid,
+                setId: setId,
+                cursor: cursor,
+                setRevision: setRevision,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisSyncStateProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisSyncState,
+      SilexgisSyncStateData,
+      $SilexgisSyncStateFilterComposer,
+      $SilexgisSyncStateOrderingComposer,
+      $SilexgisSyncStateAnnotationComposer,
+      $SilexgisSyncStateCreateCompanionBuilder,
+      $SilexgisSyncStateUpdateCompanionBuilder,
+      (
+        SilexgisSyncStateData,
+        BaseReferences<_$AppDatabase, SilexgisSyncState, SilexgisSyncStateData>,
+      ),
+      SilexgisSyncStateData,
+      PrefetchHooks Function()
+    >;
+typedef $SilexgisRowRevisionCreateCompanionBuilder =
+    SilexgisRowRevisionCompanion Function({
+      required String profileUuid,
+      required Uuid entityUuid,
+      required String entityTable,
+      required String revision,
+      Value<int?> updatedAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisRowRevisionUpdateCompanionBuilder =
+    SilexgisRowRevisionCompanion Function({
+      Value<String> profileUuid,
+      Value<Uuid> entityUuid,
+      Value<String> entityTable,
+      Value<String> revision,
+      Value<int?> updatedAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisRowRevisionFilterComposer
+    extends Composer<_$AppDatabase, SilexgisRowRevision> {
+  $SilexgisRowRevisionFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisRowRevisionOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisRowRevision> {
+  $SilexgisRowRevisionOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get entityUuid => $composableBuilder(
+    column: $table.entityUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisRowRevisionAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisRowRevision> {
+  $SilexgisRowRevisionAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $SilexgisRowRevisionTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisRowRevision,
+          SilexgisRowRevisionData,
+          $SilexgisRowRevisionFilterComposer,
+          $SilexgisRowRevisionOrderingComposer,
+          $SilexgisRowRevisionAnnotationComposer,
+          $SilexgisRowRevisionCreateCompanionBuilder,
+          $SilexgisRowRevisionUpdateCompanionBuilder,
+          (
+            SilexgisRowRevisionData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisRowRevision,
+              SilexgisRowRevisionData
+            >,
+          ),
+          SilexgisRowRevisionData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisRowRevisionTableManager(_$AppDatabase db, SilexgisRowRevision table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisRowRevisionFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisRowRevisionOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisRowRevisionAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<Uuid> entityUuid = const Value.absent(),
+                Value<String> entityTable = const Value.absent(),
+                Value<String> revision = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisRowRevisionCompanion(
+                profileUuid: profileUuid,
+                entityUuid: entityUuid,
+                entityTable: entityTable,
+                revision: revision,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required Uuid entityUuid,
+                required String entityTable,
+                required String revision,
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisRowRevisionCompanion.insert(
+                profileUuid: profileUuid,
+                entityUuid: entityUuid,
+                entityTable: entityTable,
+                revision: revision,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisRowRevisionProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisRowRevision,
+      SilexgisRowRevisionData,
+      $SilexgisRowRevisionFilterComposer,
+      $SilexgisRowRevisionOrderingComposer,
+      $SilexgisRowRevisionAnnotationComposer,
+      $SilexgisRowRevisionCreateCompanionBuilder,
+      $SilexgisRowRevisionUpdateCompanionBuilder,
+      (
+        SilexgisRowRevisionData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisRowRevision,
+          SilexgisRowRevisionData
+        >,
+      ),
+      SilexgisRowRevisionData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -27304,4 +28533,8 @@ class $AppDatabaseManager {
       $ChangeLogTableManager(_db, _db.changeLog);
   $ChangeLogFieldTableManager get changeLogField =>
       $ChangeLogFieldTableManager(_db, _db.changeLogField);
+  $SilexgisSyncStateTableManager get silexgisSyncState =>
+      $SilexgisSyncStateTableManager(_db, _db.silexgisSyncState);
+  $SilexgisRowRevisionTableManager get silexgisRowRevision =>
+      $SilexgisRowRevisionTableManager(_db, _db.silexgisRowRevision);
 }

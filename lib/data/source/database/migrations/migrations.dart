@@ -715,6 +715,38 @@ class V17ToV18Migration extends SchemaMigration {
   }
 }
 
+/// v18 → v19.
+///
+/// Adds the two local-only tables the SilexGIS sync feature keeps its position
+/// in: the download cursor per (profile, set), and the server revision of each
+/// row this device has seen on that installation.
+///
+/// Both are local-only in the same sense `configurations` and
+/// `ruuvi_sensor_history` are — absent from the sync-archive registry and from
+/// the archive table configs, so nothing has to remember to skip them. That is
+/// the point rather than an implementation detail: a cursor or a base revision
+/// that travelled to a second device costs that device rows it never learns it
+/// is missing, or loses every upload to a conflict it cannot explain.
+///
+/// Additive, so upgraders get the same statements a fresh install runs from
+/// tables.drift.
+class V18ToV19Migration extends SchemaMigration {
+  const V18ToV19Migration();
+
+  @override
+  int get toVersion => 19;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisSyncState);
+    await migrator.createTable(db.silexgisRowRevision);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_row_revision_table '
+      'ON silexgis_row_revision(profile_uuid, entity_table)',
+    );
+  }
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -733,6 +765,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V15ToV16Migration(),
   V16ToV17Migration(),
   V17ToV18Migration(),
+  V18ToV19Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

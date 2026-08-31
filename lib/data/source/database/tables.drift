@@ -11,7 +11,11 @@
 -- well-known key/value entries.
 --
 -- `configurations` keeps an INTEGER primary key because it is local-only and
--- not synced across devices. It is the ONLY local-only table.
+-- not synced across devices. Local-only means: absent from the sync-archive
+-- table registry and from the archive import/export configs, so no exporter
+-- has to remember to skip it. The other local-only tables are
+-- `ruuvi_sensor_history` and the two `silexgis_*` tables at the end of this
+-- file.
 --
 -- `place_code_identifier` (PCI) and `qr_code_resource_identifier` (QCRI)
 -- are user-facing alphanumeric identifiers on cave_places. PCI is the
@@ -394,3 +398,50 @@ CREATE TABLE IF NOT EXISTS change_log_field (
 CREATE INDEX IF NOT EXISTS idx_change_log_entity        ON change_log(entity_table, entity_uuid);
 CREATE INDEX IF NOT EXISTS idx_change_log_changed_at    ON change_log(changed_at);
 CREATE INDEX IF NOT EXISTS idx_change_log_changed_by    ON change_log(changed_by_user_uuid);
+
+-- Table: silexgis_sync_state
+-- LOCAL ONLY, like `configurations` and `ruuvi_sensor_history`: never
+-- change-logged, never carried by device-to-device sync, never written into
+-- an FTP archive.
+--
+-- The download cursor is a fact about ONE device's conversation with ONE
+-- installation. An archive that carried one to a second device would have
+-- that device send a position issued against data it never read; the server
+-- answers "nothing after this" and the rows in between are never downloaded,
+-- silently, with no error anywhere and nothing to retry.
+--
+-- `cursor` is opaque — store it, send it back, never parse it. `set_revision`
+-- is the counter the last page carried: when it moves, every cursor issued
+-- before it is retired and the set is read from the beginning.
+CREATE TABLE IF NOT EXISTS silexgis_sync_state (
+    profile_uuid    TEXT(36) NOT NULL,   -- the local server profile, not an account
+    set_id          TEXT(36) NOT NULL,   -- the sync set on that installation
+    cursor          TEXT,
+    set_revision    INTEGER,
+    last_synced_at  INTEGER,
+    PRIMARY KEY (profile_uuid, set_id)
+);
+
+-- Table: silexgis_row_revision
+-- LOCAL ONLY, for the same reason and with the same consequence: a base
+-- revision that travelled to a second device makes that device lose every
+-- upload to a conflict it cannot explain.
+--
+-- `entity_uuid` is BOTH the local identity and the server's — the device mints
+-- the identifier and the server adopts it verbatim, and for a row the device
+-- first meets by download it adopts the server's the same way. This is
+-- deliberately NOT a mapping table and must never become one.
+--
+-- A row with an entry here exists on that installation, and the entry is what
+-- its next upload sends as `baseRevision`. A row with no entry is new there.
+CREATE TABLE IF NOT EXISTS silexgis_row_revision (
+    profile_uuid  TEXT(36) NOT NULL,
+    entity_uuid   BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    entity_table  TEXT(80) NOT NULL,  -- which local table holds the row
+    revision      TEXT NOT NULL,      -- the server's `updatedAt`, stored verbatim
+    updated_at    INTEGER,
+    PRIMARY KEY (profile_uuid, entity_uuid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_row_revision_table
+    ON silexgis_row_revision(profile_uuid, entity_table);

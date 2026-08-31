@@ -69,8 +69,13 @@ void main() {
           expect(s.uuid.bytes.length, 16);
         }
 
-        // Drift reports the new schema version.
-        expect(db.schemaVersion, 18);
+        // The migrated file itself is stamped at the current schema — which
+        // is what proves the ladder ran, and does not have to be edited every
+        // time a migration is added.
+        final userVersion = await db
+            .customSelect('PRAGMA user_version')
+            .getSingle();
+        expect(userVersion.data.values.single, db.schemaVersion);
       } finally {
         await db.close();
         await tmpDir.delete(recursive: true);
