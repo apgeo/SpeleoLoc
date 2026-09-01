@@ -30,3 +30,5 @@ that says what it shows. Then add an entry to the gallery for its area, with an
 `<a id="the-file-name"></a>` anchor above the heading, and link that anchor from
 the feature pages it illustrates. Replacing a shot means overwriting the file
 and revising its entry — the name and the anchor stay put, so no link breaks.
+
+The full conventions are in [Contributing to this wiki](../contributing-docs.md).

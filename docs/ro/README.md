@@ -89,6 +89,7 @@ preferați să vedeți aplicația în loc să citiți despre ea.
 
 ### Meta
 
+- [Contribuții la acest wiki](contributing-docs.md)
 - [Lucrul cu o arhivă de test locală](../workflows/local-test-archive.md)
 
 ---
@@ -108,8 +109,6 @@ SpeleoLoc este în stadiul **alpha**. Unele funcții sunt implementate parțial
 sau se pot schimba; acolo unde este cazul, pagina o spune. Consultați
 fișierul [README](../../README.md) al proiectului pentru starea lansărilor.
 
-Acest wiki este în lucru și nu este întotdeauna la zi cu aplicația.
-Convențiile pe care le respectă — structura paginilor, felul în care sunt alese
-numele comenzilor și felul în care cele două ediții lingvistice sunt ținute la
-unison — sunt descrise în ghidul de contribuție al întreținătorilor, care nu
-face încă parte din depozitul public.
+Acest wiki este în lucru și nu este întotdeauna la zi cu aplicația — vedeți
+[Contribuții la acest wiki](contributing-docs.md) pentru convențiile pe care
+le respectă.

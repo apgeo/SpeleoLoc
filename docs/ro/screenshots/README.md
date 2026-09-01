@@ -44,3 +44,6 @@ deasupra titlului, și trimiteți la acea ancoră din paginile de funcționalit�
 pe care le ilustrează. Înlocuirea unei capturi înseamnă suprascrierea
 fișierului și revizuirea intrării — numele și ancora rămân aceleași, deci
 niciun link nu se rupe.
+
+Convențiile complete se află în
+[Contribuții la acest wiki](../contributing-docs.md).
