@@ -1,5 +1,12 @@
 # Local test-archive dev workflow
 
+[← Back to index](../README.md)
+
+> **For maintainers, not for cavers.** Unlike the rest of this wiki, this page
+> is about building and seeding the app rather than using it. If you are
+> looking for how to move real data around, see
+> [Database export, import and backup](../features/database-export-import.md).
+
 Load a full **DataArchive export** (a `.zip` produced by *Settings → Data
 export/import → Export*) as seed data — either automatically on a fresh app
 start, or on demand via *Settings → Data export/import → Import test data*.
