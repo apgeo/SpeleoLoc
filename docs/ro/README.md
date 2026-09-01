@@ -90,7 +90,12 @@ preferați să vedeți aplicația în loc să citiți despre ea.
 ### Meta
 
 - [Contribuții la acest wiki](contributing-docs.md)
-- [Lucrul cu o arhivă de test locală](../workflows/local-test-archive.md)
+
+Pentru întreținători, despre construirea aplicației, nu despre folosirea ei
+(disponibile doar în engleză):
+
+- [Working with a local test archive](../workflows/local-test-archive.md)
+- [Shipping a build with a pre-configured sync profile](../workflows/seeded-sync-profile.md)
 
 ---
 

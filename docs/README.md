@@ -89,7 +89,11 @@ than read about it.
 ### Meta
 
 - [Contributing to this wiki](contributing-docs.md)
+
+For maintainers, about building the app rather than using it:
+
 - [Working with a local test archive](workflows/local-test-archive.md)
+- [Shipping a build with a pre-configured sync profile](workflows/seeded-sync-profile.md)
 
 ---
 

@@ -1,5 +1,12 @@
 # Shipping a build with a pre-configured sync profile
 
+[← Back to index](../README.md)
+
+> **For maintainers, not for cavers.** Like the local test archive, this page
+> is about building the app rather than using it. If you are looking for how to
+> set up sync on a phone you already have, see
+> [FTP / SFTP sync](../features/ftp-sync.md).
+
 Hand-out builds (a caving-congress APK, a club test build) can ship the shared
 FTP/SFTP account already configured, so nobody types a host and a password on
 a phone underground. The endpoint is baked in at build time through
