@@ -33,6 +33,19 @@ class ConfigKey {
   /// `change_log.changed_at` is newer than this timestamp).
   static const String ftpLastUploadAt = 'ftp_last_upload_at';
 
+  // SilexGIS server sync. Its own keys, deliberately not a new member of the
+  // FTP protocol enum: an older build reading a profile whose protocol it does
+  // not recognise falls back to plain FTP, and would try to speak FTP to an
+  // HTTPS server with the caver's stored credential.
+  /// JSON array of [SilexgisProfile] — see
+  /// `lib/services/silexgis/silexgis_profile.dart`. Never a credential: the
+  /// refresh token lives in the platform keystore.
+  static const String silexgisProfiles = 'silexgis_profiles';
+
+  /// UUID of the server profile a one-tap sync uses.
+  static const String silexgisDefaultProfileUuid =
+      'silexgis_default_profile_uuid';
+
   /// Active trip log generation method id (see [TripLogMethod]).
   static const String tripLogMethod = 'trip_log_method';
 
