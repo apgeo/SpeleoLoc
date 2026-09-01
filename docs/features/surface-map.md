@@ -164,12 +164,15 @@ three ways:
 - **Use my location**, which is *not* a single reading. It starts an
   averaged capture: the pin jumps to your position and then keeps moving
   to the running average of every fix that arrives, so the longer you
-  stand still the tighter the position becomes. Tap the button again to
-  stop averaging and keep the averaged point; tapping the map or dragging
-  the pin also stops it and hands control back to you, and confirming
-  freezes whatever the average had reached. Nothing on screen shows that
-  averaging is running or how many fixes it has collected, so stand still
-  for a few seconds before you confirm.
+  stand still the tighter the position becomes. While the capture runs
+  the button reads **Stop averaging**, and the bar shows a live readout —
+  *Samples* so far and the best *Accuracy* reached, with a bar and a word
+  (Excellent, Good, Fair, Poor, Very poor) rating it; before the first
+  fix arrives it reads *Waiting for GPS fix…*. Tap **Stop averaging** to
+  stop and keep the averaged point; tapping the map or dragging the pin
+  also stops it and hands control back to you, and confirming freezes
+  whatever the average had reached. The readout stays on the bar after
+  you stop, so you can check the sample count before you confirm.
 
 Long-press only *starts* a placement. Once the placement bar is up it
 does nothing, and it is switched off entirely while measuring and in

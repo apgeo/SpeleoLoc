@@ -126,20 +126,21 @@ trip" — so your route through the cave builds itself as you scan.
 When a label is damaged, or the camera will not focus on a wet
 surface, you can enter the code by hand:
 
-1. Press and hold the scan button for about two and a half seconds.
-2. **Manual QR code search** opens; type the code into **QR code
+1. Open the cave's places list and tap **Manual QR code search** in its
+   toolbar.
+2. A small search panel opens on the page; type the code into **QR code
    identifier**.
 3. Press **Search place by QR code id**.
 
-The long-press works on the home screen, on a cave's places list, and
-on the scan button of the cave place form. From that point on the app
-behaves exactly as if you had scanned the label.
+From that point on the app behaves exactly as if you had scanned the
+label. Because the panel stays open, it is the convenient one when you
+are working through several hand-written codes in a row.
 
-A cave's places list also has a **Manual QR code search** button in
-its toolbar that opens a small search panel directly on the page,
-with the same **QR code identifier** field and **Search place by QR
-code id** button. Because the panel stays open, it is the convenient
-one when you are working through several hand-written codes in a row.
+Developer builds add a shortcut the released app does not have: press
+and hold the scan button for about two and a half seconds — on the home
+screen, on a cave's places list, or on the scan button of the cave place
+form — and the same **Manual QR code search** opens as a dialog. In the
+released app that long press does nothing.
 
 ### Camera permission
 

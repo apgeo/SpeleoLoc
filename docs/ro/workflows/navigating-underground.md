@@ -93,17 +93,18 @@ continuare — reluați-o înainte să vă bazați pe traseu.
 Etichetele se murdăresc, se rup și se udă, iar camera nu reușește
 întotdeauna să focalizeze pe ele. Orice cod poate fi tastat în schimb:
 
-1. Țineți apăsat butonul de scanare aproximativ două secunde și
-   jumătate.
-2. Se deschide **Căutare manuală cod QR**.
+1. În lista de locuri a peșterii, apăsați **Căutare manuală cod QR**
+   din bara de instrumente.
+2. Sub bara de instrumente se deschide o casetă de căutare.
 3. Tastați codul în **Mod de generare identificatori cod QR** și apăsați
    **Caută loc după id cod QR**.
 
 De acolo, aplicația face exact ce ar fi făcut o scanare reușită.
-Apăsarea lungă funcționează pe pagina principală și în lista de locuri
-a unei peșteri; lista de locuri are în bara ei de instrumente și un
-buton **Căutare manuală cod QR** care deschide aceeași casetă, mai la
-îndemână atunci când lucrați cu mai multe coduri unul după altul.
+Apăsarea lungă care deschidea aceeași casetă din pagina principală nu
+există în aplicația publicată — supraviețuiește doar în versiunile de
+dezvoltare — așa că butonul din bara de instrumente a listei de locuri
+a peșterii este calea de intrare și este oricum mai la îndemână atunci
+când lucrați cu mai multe coduri unul după altul.
 
 Ce tastați este comparat, fără să conteze literele mari și mici, atât cu
 identificatorul codului QR, cât și cu codul de loc lizibil de om, așa că

@@ -76,11 +76,17 @@ de mai jos.
    Ambele sunt active implicit. Dacă le opriți, obțineți o arhivă mult mai
    mică, care duce totuși fiecare înregistrare, dar dispozitivul care o
    primește va afișa substituenți acolo unde ar trebui să fie imaginile.
-3. Apăsați **Exportă arhivă de sincronizare** și alegeți un folder
-   („Alege folderul pentru arhivă”).
-4. Arhiva este scrisă ca un singur `.zip` al cărui nume începe cu
-   `speleo_loc_sync_`, iar calea apare în partea de jos a ecranului, lângă
-   **Arhivă exportată**.
+3. Apăsați **Exportă arhivă de sincronizare**. Pe Android arhiva zip este
+   construită mai întâi, apoi se deschide dialogul de salvare al
+   dispozitivului cu numele ei deja completat, ca să alegeți unde ajunge
+   fișierul; dacă renunțați acolo, nu se salvează nimic. Pe iOS și pe
+   desktop vi se cere mai întâi un folder de destinație („Alege folderul
+   pentru arhivă”).
+4. Arhiva este un singur `.zip` al cărui nume începe cu
+   `speleo_loc_sync_`. După ce este salvată, în partea de jos a ecranului
+   apare **Arhivă exportată**, urmat de numele fișierului salvat pe
+   Android sau de calea lui completă pe iOS și pe desktop. Dacă anulați
+   dialogul de salvare, nu apare nicio astfel de linie.
 
 Trimiteți fișierul cum vă convine — cablu, spațiu de stocare în cloud,
 aplicație de mesagerie. Vezi

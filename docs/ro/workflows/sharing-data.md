@@ -61,8 +61,12 @@ pornește imediat o sincronizare FTP (vezi ruta 2).
    documentație** (fotografii, schițe, notițe) și **Include imagini
    hărți**. Ambele sunt pornite implicit; oprindu-le obțineți un zip mult
    mai mic, care duce totuși fiecare înregistrare.
-3. Apăsați **Exportă arhivă de sincronizare** și alegeți un folder.
-4. Ecranul afișează **Arhivă exportată**, urmat de calea completă.
+3. Apăsați **Exportă arhivă de sincronizare**. Pe Android arhiva zip este
+   construită mai întâi, iar dialogul de salvare al dispozitivului vă
+   întreabă apoi unde să o pună; pe iOS și pe desktop alegeți mai întâi un
+   folder de destinație.
+4. Ecranul afișează **Arhivă exportată**, urmat de numele fișierului
+   salvat pe Android sau de calea lui completă pe iOS și pe desktop.
    Trimiteți acel zip prin ce mijloc vreți — chat, e-mail, folder în
    cloud, cablu.
 
@@ -223,7 +227,10 @@ dispozitivului.
 
    Nu există un selector de peșteri: fiecare export acoperă toată baza de
    date și nu puteți exporta o singură peșteră.
-3. Apăsați **Exportă Arhivă** și alegeți un folder.
+3. Apăsați **Exportă Arhivă**. Pe Android arhiva zip este construită mai
+   întâi, apoi se deschide dialogul de salvare al dispozitivului cu numele
+   ei deja completat și alegeți unde ajunge; pe iOS și pe desktop alegeți
+   mai întâi folderul.
 4. Primiți un singur zip numit după momentul în care a fost făcut —
    `speleo_loc_2026-09-01_14-32-07.zip`, sau `..._diff.zip` pentru un
    export diferențial.
@@ -278,36 +285,41 @@ parte din arhivă nu a ajuns.
 
 ### Descărcarea și încărcarea datelor de test
 
-În partea de jos a aceluiași ecran, o secțiune **Date de test** oferă
-**Descarcă date de test**, care aduce un set de date de probă gata făcut.
-Aceasta este o **înlocuire totală**: tot ce se află pe dispozitiv —
-peșteri, hărți, documente — este șters definitiv întâi, sunteți avertizat
-o dată, iar aplicația repornește. Dacă exemplarul dumneavoastră de
-aplicație nu a fost construit cu o sursă de date de test, secțiunea arată
-în schimb o notificare portocalie și nu există niciun buton. Vezi
+Versiunile pentru dezvoltatori au în partea de jos a aceluiași ecran o
+secțiune **Date de test**, care oferă **Descarcă date de test**, ce aduce
+un set de date de probă gata făcut. Aceasta este o **înlocuire totală**:
+tot ce se află pe dispozitiv — peșteri, hărți, documente — este șters
+definitiv întâi, sunteți avertizat o dată, iar aplicația repornește. O
+versiune pentru dezvoltatori fără o sursă de date de test arată acolo o
+notificare portocalie în locul butonului. Aplicația publicată nu are
+deloc o astfel de secțiune — nici buton, nici notificare. Vezi
 [Lucrul cu o arhivă de test locală](../../workflows/local-test-archive.md).
 
 ## Setări → Baza de date: uneltele brutale
 
 | Acțiune | Ce face |
 |---|---|
-| **Exportă baza de date** | scrie o copie brută `speleo_loc_export.sqlite` într-un folder ales de dumneavoastră. Fără fotografii, fără imagini de hartă — doar un instantaneu pentru același dispozitiv. |
+| **Exportă baza de date** | scrie o copie brută `speleo_loc_export.sqlite` prin dialogul de salvare al dispozitivului (pe iOS, un folder ales de dumneavoastră). Fără fotografii, fără imagini de hartă — doar un instantaneu pentru același dispozitiv. |
 | **Restaurează baza de date din fișier** | înlocuiește baza de date cu un fișier `.sqlite` sau `.db` ales de dumneavoastră, după o singură confirmare, apoi repornește aplicația. Nu poate primi un zip — restaurați o arhivă întreagă din **Export / Import Date**. |
-| **Reinițializează baza de date cu date de test** | șterge tot și umple aplicația cu date de probă. |
 | **Reinițializați baza de date** | șterge tot și lasă aplicația goală. |
 
-Ambele acțiuni de reinițializare sunt **ireversibile**, întreabă de două
-ori și repornesc aplicația după aceea. Ori de câte ori baza de date este
-înlocuită în bloc, telefonul își păstrează propria identitate de
-dispozitiv în loc să o adopte pe cea din fișier.
+Versiunile pentru dezvoltatori adaugă deasupra un buton **Reinițializează
+baza de date cu date de test**, care șterge tot și umple în schimb
+aplicația cu date de probă; aplicația publicată nu îl are.
+
+Reinițializarea este **ireversibilă**, întreabă de două ori și repornește
+aplicația după aceea. Ori de câte ori baza de date este înlocuită în bloc,
+telefonul își păstrează propria identitate de dispozitiv în loc să o
+adopte pe cea din fișier.
 
 Un buton **Deschide executant comenzi SQL** apare în partea de jos a
-acestui ecran doar când modul de depanare este pornit (nouă atingeri
-rapide pe titlul ecranului principal).
-Rulează comenzi brute pe baza de date, fără confirmare și fără anulare;
-este acolo pentru diagnosticarea unei probleme împreună cu un dezvoltator,
-iar o comandă greșit tastată poate distruge date pe care nicio copie de
-siguranță nu le acoperă.
+acestui ecran doar într-o versiune pentru dezvoltatori și, acolo, doar
+când modul de depanare este pornit (nouă atingeri rapide pe titlul
+ecranului principal); aplicația publicată nu îl are. Rulează comenzi brute
+pe baza de date, fără confirmare și fără anulare; este acolo pentru
+diagnosticarea unei probleme împreună cu un dezvoltator, iar o comandă
+greșit tastată poate distruge date pe care nicio copie de siguranță nu le
+acoperă.
 
 ## Ce rută să folosesc?
 

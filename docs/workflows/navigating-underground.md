@@ -86,16 +86,18 @@ route.
 Labels get muddy, torn or wet, and a camera will not always focus on
 them. Every code can be typed instead:
 
-1. Press and hold the scan button for about two and a half seconds.
-2. **Manual QR code search** opens.
+1. In the cave's places list, tap **Manual QR code search** in the
+   toolbar.
+2. A search box opens under the toolbar.
 3. Type the code into **QR code identifier** and tap **Search place by
    QR code id**.
 
 From there the app does exactly what a successful scan would have done.
-The long press works on the home screen and on a cave's places list; the
-places list also carries a **Manual QR code search** button in its
-toolbar that opens the same box, which is the handier one when you are
-working through several codes in a row.
+The long press that used to open the same box from the home screen is
+not in the released app — it survives in development builds only — so
+the toolbar button on the cave's places list is the way in, and it is in
+any case the handier one when you are working through several codes in a
+row.
 
 What you type is matched, ignoring upper and lower case, against both
 the QR code identifier and the human-readable place code, so whichever

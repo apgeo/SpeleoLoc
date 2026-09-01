@@ -34,9 +34,19 @@ nou întregul set de date.
 
 ## Configurarea unui profil de server
 
-**Setări → Sincronizare FTP / SFTP** deschide lista de profiluri. Înainte
-să fi adăugat ceva, ea scrie **Niciun profil FTP**; apăsați **Adaugă
-profil**.
+**Setări → Sincronizare FTP / SFTP** deschide lista de profiluri. Pe o
+versiune instalată de dumneavoastră, ea scrie **Niciun profil FTP** până
+când adăugați unul; apăsați **Adaugă profil**.
+
+Versiunile distribuite la un eveniment sau de către un club pot veni cu
+contul comun deja configurat: un profil este în listă chiar de la prima
+pornire, marcat deja ca implicit, și nu aveți nimic de tastat — cardul de
+sincronizare din meniul aplicației scrie **Sincronizează acum**, nu
+**Configurează FTP pentru sincronizare**. Îl editați ca pe orice alt
+profil, iar modificările dumneavoastră se păstrează, parola inclusă. Dacă
+îl ștergeți, reapare, tot ca implicit, la următoarea pornire a
+aplicației — și la fel după orice operație care înlocuiește întreaga bază
+de date, cum ar fi restaurarea dintr-o copie de siguranță.
 
 > 📷 [Lista profilurilor FTP](../screenshots/06-sync-and-sharing.md#ftp-sync-profile-list) — Ecranul de setări Sincronizare FTP / SFTP, cu profilurile de server configurate.
 

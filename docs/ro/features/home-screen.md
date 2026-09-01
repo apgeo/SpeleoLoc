@@ -75,12 +75,13 @@ ambele cazuri. Reapar numai **Scanează QR**, **Adaugă peșteră nouă** și
 ### Scanează QR și tastarea unui cod cu mâna
 
 Apăsarea pe **Scanează QR** deschide scanerul; un cod recunoscut sare drept
-la locul căruia îi aparține. Ținerea apăsată a aceluiași buton vreo două
-secunde și jumătate deschide în schimb **Căutare manuală cod QR**, unde
-puteți tasta în câmpul **Mod de generare identificatori cod QR**
-identificatorul tipărit pe etichetă și apăsa **Caută loc după id cod QR**.
-Aceasta este calea de intrare când o etichetă este prea deteriorată sau prea
-murdară ca să fie scanată. Este mereu disponibilă și nu are nicio setare.
+la locul căruia îi aparține. Ca să tastați un cod cu mâna — când o etichetă
+este prea deteriorată sau prea murdară ca să fie scanată — deschideți lista
+de locuri a peșterii și folosiți butonul ei **Căutare manuală cod QR**, care
+arată un câmp **Mod de generare identificatori cod QR** cu un buton **Caută
+loc după id cod QR**. (În versiunile de dezvoltare, ținerea apăsată a
+butonului de scanare vreo două secunde și jumătate deschide aceeași căutare
+din pagina principală; acea scurtătură nu este în aplicația publicată.)
 
 ## Lista de peșteri
 
@@ -261,9 +262,11 @@ sertar pentru totdeauna, pe fiecare ecran.
 
 ## Oferta de date de test la prima pornire
 
-La oricare dintre primele patru porniri ale aplicației, dacă nu există încă
-peșteri, aplicația întreabă **Încărcați date de test?** — „Baza de date este
-goală. Doriți să o populați cu peșteri și locuri de test?”
+Într-o versiune de dezvoltare, la oricare dintre primele patru porniri ale
+aplicației și numai când versiunea poartă o sursă de date de test, dacă nu
+există încă peșteri, aplicația întreabă **Încărcați date de test?** — „Baza
+de date este goală. Doriți să o populați cu peșteri și locuri de test?”
+Aplicația publicată nu întreabă niciodată.
 
 Acceptarea este distructivă și nu poate fi anulată: înlocuiește toată baza de
 date locală și fiecare fișier păstrat cu conținutul unei arhive de test gata
@@ -275,8 +278,8 @@ test.” Alegeți **Nu** ca să mergeți mai departe cu o bază de date goală.
 Dacă acceptați, arhiva este adusă — descărcată, când versiunea instalată
 trimite către o adresă web — în spatele unui dialog „Se descarcă arhiva cu
 date de test...”, importată, iar aplicația repornește pe datele de probă.
-Versiunile care nu poartă nicio arhivă de test răspund cu „URL-ul arhivei cu
-date de test nu este configurat (test_archive_url).” și nu schimbă nimic.
+Versiunile care nu poartă nicio arhivă de test nu pun deloc întrebarea — nu
+apare nimic și nu se schimbă nimic.
 
 Vezi [Primii pași](../getting-started.md) și
 [Export și import al bazei de date](database-export-import.md) dacă doriți să
@@ -305,11 +308,12 @@ Oprirea lui cere douăzeci de apăsări. Modul depanare nu este ținut minte —
 este oprit din nou după următoarea pornire a aplicației.
 
 Cât timp este pornit, Setări capătă o secțiune **Informații depanare** (calea
-bazei de date, directorul de date, tabela configurații), **Setări → Baza de
-date** capătă un buton **Deschide executant comenzi SQL**, iar aplicația
-înregistrează jurnale mai amănunțite. Nimic din toate acestea nu este necesar
-pentru folosința obișnuită în peșteră; executantul de comenzi SQL în special
-scrie direct în baza de date și vă poate strica datele.
+bazei de date, directorul de date, tabela configurații), iar aplicația
+înregistrează jurnale mai amănunțite. Într-o versiune de dezvoltare,
+**Setări → Baza de date** capătă în plus un buton **Deschide executant
+comenzi SQL**; aplicația publicată nu îl are deloc. Nimic din toate acestea
+nu este necesar pentru folosința obișnuită în peșteră; executantul de comenzi
+SQL în special scrie direct în baza de date și vă poate strica datele.
 
 ## Vezi și
 

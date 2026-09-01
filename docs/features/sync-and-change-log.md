@@ -71,11 +71,16 @@ below.
    Both are on by default. Turning them off produces a much smaller
    archive that still carries every record, but the receiving device
    will show placeholders where the images should be.
-3. Tap **Export sync archive** and pick a folder ("Select folder for the
+3. Tap **Export sync archive**. On Android the zip is built first and your
+   device's save dialog then opens with its name filled in, so you choose
+   where the file goes; cancelling there saves nothing. On iOS and desktop
+   you are asked for a destination folder first ("Select folder for the
    archive").
-4. The archive is written as a single `.zip` whose name starts with
-   `speleo_loc_sync_`, and the path appears at the bottom of the screen
-   next to **Archive exported**.
+4. The archive is a single `.zip` whose name starts with
+   `speleo_loc_sync_`. Once it is saved, **Archive exported** appears at
+   the bottom of the screen followed by the saved file's name on Android,
+   or its full path on iOS and desktop. Cancel the save dialog and no such
+   line appears.
 
 Send that file however you like — cable, cloud drive, messaging app. See
 [Sharing data between teams](../workflows/sharing-data.md).

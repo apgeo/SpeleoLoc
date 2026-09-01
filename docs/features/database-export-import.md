@@ -53,10 +53,14 @@ exceptions worth knowing before you rely on an archive as a backup.
 
 ### An archive (database plus media)
 
-**Settings → Data Export / Import → Export Archive**. You choose a folder,
-and the app writes a single zip named for the moment you made it, for
-example `speleo_loc_2026-09-01_14-32-07.zip`. Inside are the database,
-the media you asked for, and a small manifest describing the export.
+**Settings → Data Export / Import → Export Archive**. The app builds a
+single zip named for the moment you made it, for example
+`speleo_loc_2026-09-01_14-32-07.zip`. On Android it then opens your
+device's save dialog with that name already filled in, and you say where
+the file goes — if you cancel there, nothing is saved. On iOS and desktop
+you choose the destination folder first instead. Inside the zip are the
+database, the media you asked for, and a small manifest describing the
+export.
 
 Under **Export Settings**, three switches control what goes in; a fourth
 appears only in special builds. The first two are on when you open the
@@ -70,7 +74,9 @@ screen.
 | **Include FTP account passwords** | Special builds only — see the warning below. |
 
 There is no cave picker: every export covers the whole database. On
-Android you may be asked for permission to write to the folder you chose.
+Android the app never asks for a storage permission — it builds the
+archive privately and then opens the system save dialog, where you choose
+the destination and the dialog grants the write itself.
 
 #### What a diff export really is
 
@@ -105,8 +111,9 @@ would trust with your own server login.
 ### A raw database copy
 
 **Settings → Database → Export database**. Writes a copy of the database
-as `speleo_loc_export.sqlite` — on Android and iOS you pick the folder, on
-desktop you pick the file name.
+as `speleo_loc_export.sqlite` — on Android and desktop your device's save
+dialog opens with that name filled in and you choose where it goes; on iOS
+you pick the folder.
 
 It is small and fast, but it contains **no** documentation files and **no**
 raster map images. Restoring it on a device that does not already hold
@@ -256,11 +263,10 @@ not archived.
 
 ## Reinitializing the database
 
-Two buttons at the top of **Settings → Database**, in this order:
-
-- **Reinitialize database with test data** — wipes everything and loads the
-  bundled sample dataset.
-- **Reinitialize database** — wipes everything, leaving an empty database.
+One button at the top of **Settings → Database** — **Reinitialize
+database**, which wipes everything and leaves an empty database. Developer
+builds add a second one above it, **Reinitialize database with test
+data**, which wipes everything and loads the bundled sample dataset.
 
 Each asks twice: a first confirmation, then a bluntly worded second one
 warning that all data will be erased. After that the app restarts. Nothing
@@ -268,26 +274,29 @@ is backed up on your behalf.
 
 ## Loading the ready-made test dataset
 
-The bottom of **Settings → Data Export / Import** has a **Test Data**
-section with a **Download and load test data** button. It fetches a sample
-dataset from wherever this build was pointed at — usually a download over
-the internet — and installs it as a **full replacement**:
-caves, maps and documents currently on the device are permanently deleted
-first. You are warned once — but only if there is something to lose — and
-the app restarts afterwards.
+In a developer build, the bottom of **Settings → Data Export / Import**
+has a **Test Data** section with a **Download and load test data** button.
+It fetches a sample dataset from wherever this build was pointed at —
+usually a download over the internet — and installs it as a **full
+replacement**: caves, maps and documents currently on the device are
+permanently deleted first. You are warned once — but only if there is
+something to lose — and the app restarts afterwards.
 
-If this build was not set up with a test-data source, the section instead
-shows an orange note saying the test data archive URL is not configured,
-and there is no button. That is normal on most builds.
+The released app has no **Test Data** section on this page at all. The
+section exists only in developer builds, where it shows an orange note
+saying the test data archive URL is not configured if that build was given
+no test-data source.
 
 ## The SQL command runner
 
-Only when debug mode is switched on, an extra **Open SQL command runner**
-button appears at the bottom of **Settings → Database**. It sends raw
-commands straight to the database with no confirmation and no safety net.
-It exists for diagnosing a problem with a developer's help. There is
-nothing here a caver needs in normal use, and one mistyped command can
-destroy data that no backup covers.
+In a developer build, and only when debug mode is switched on, an extra
+**Open SQL command runner** button appears at the bottom of
+**Settings → Database**. The released app does not contain it, so turning
+debug mode on will not reveal it. It sends raw commands straight to the
+database with no confirmation and no safety net. It exists for diagnosing
+a problem with a developer's help. There is nothing here a caver needs in
+normal use, and one mistyped command can destroy data that no backup
+covers.
 
 ## Backup habits that work
 

@@ -237,31 +237,32 @@ MBTiles](../workflows/mbtiles-layers.md).
 Uneltele brutale. Tot ce se află aici, în afară de **Exportă baza de
 date**, distruge date care nu sunt salvate în altă parte.
 
-- **Reinițializează baza de date cu date de test** — șterge tot și umple
-  baza de date cu setul de date exemplu inclus în aplicație.
 - **Reinițializați baza de date** — șterge tot și lasă o bază de date
-  goală.
+  goală. (Versiunile pentru dezvoltatori au deasupra un al doilea buton,
+  **Reinițializează baza de date cu date de test**, care șterge tot și
+  umple baza de date cu setul de date exemplu inclus; nu se află în
+  aplicația publicată.)
 - **Restaurează baza de date din fișier** — înlocuiește baza de date
   curentă cu un fișier `.sqlite` sau `.db` ales de dumneavoastră.
 - **Exportă baza de date** — salvează o copie a fișierului bazei de date
-  într-un folder ales de dumneavoastră, cu numele
-  `speleo_loc_export.sqlite`. Este instantaneul rapid pe care să îl
-  faceți înainte de orice operațiune riscantă și este exact ce așteaptă
-  înapoi **Restaurează baza de date din fișier**. Conține doar baza de
-  date: fotografiile, documentele și imaginile hărților nu sunt în ea,
-  așa că pentru o copie de siguranță completă folosiți Export / Import
-  Date.
-- **Deschide executant comenzi SQL** *(doar în modul depanare)* —
-  rulează comenzi SQL direct pe baza de date locală. Nimic de aici nu
-  este verificat și nimic nu se poate anula.
+  prin dialogul de salvare al dispozitivului, propusă cu numele
+  `speleo_loc_export.sqlite` (pe iOS, într-un folder ales de
+  dumneavoastră). Este instantaneul rapid pe care să îl faceți înainte
+  de orice operațiune riscantă și este exact ce așteaptă înapoi
+  **Restaurează baza de date din fișier**. Conține doar baza de date:
+  fotografiile, documentele și imaginile hărților nu sunt în ea, așa că
+  pentru o copie de siguranță completă folosiți Export / Import Date.
+- **Deschide executant comenzi SQL** *(versiuni pentru dezvoltatori, cu
+  modul depanare pornit)* — rulează comenzi SQL direct pe baza de date
+  locală. Nimic de aici nu este verificat și nimic nu se poate anula,
+  iar aplicația publicată nu îl include.
 
-Cele două acțiuni de reinițializare cer confirmarea de **două ori**.
-Restaurarea întreabă **o singură dată** și apoi deschide selectorul de
-fișiere — așa că o restaurare este mai ușor de declanșat decât o
-reinițializare și este la fel de ireversibilă. Prima confirmare a
-fiecăreia dintre aceste acțiuni avertizează că aplicația va fi
-repornită, iar aceasta chiar repornește automat odată ce operațiunea se
-încheie.
+Reinițializarea cere confirmarea de **două ori**. Restaurarea întreabă
+**o singură dată** și apoi deschide selectorul de fișiere — așa că o
+restaurare este mai ușor de declanșat decât o reinițializare și este la
+fel de ireversibilă. Prima confirmare a fiecăreia dintre aceste acțiuni
+avertizează că aplicația va fi repornită, iar aceasta chiar repornește
+automat odată ce operațiunea se încheie.
 
 Vedeți [Export, import și copie de siguranță a bazei de
 date](database-export-import.md).
@@ -310,16 +311,20 @@ Export și import complet al bazei de date, împreună cu fișierele ei.
 - **Setări export** — **Include fișiere documentație**, **Include
   imagini hărți** și **Export diferențial (doar fișiere noi)**, care
   împachetează doar fișierele adăugate de la ultimul export complet.
-  **Exportă Arhivă** cere apoi folderul de destinație. Parolele FTP
+  **Exportă Arhivă** construiește arhiva zip și apoi, pe Android,
+  deschide dialogul de salvare al dispozitivului pentru a o amplasa; pe
+  iOS și pe desktop cere întâi un folder de destinație. Parolele FTP
   salvate nu sunt scrise niciodată într-o arhivă exportată.
 - **Import** — **Importă Arhivă** citește o arhivă înapoi, întrebând
   dacă să înlocuiască sau să îmbine și cerând o decizie la fiecare
   conflict.
-- **Date de test** — **Descarcă date de test** aduce setul de date
-  exemplu și înlocuiește cu el tot ce aveți acum, după o confirmare.
-  Această secțiune face ceva doar în versiunile compilate cu o adresă
-  pentru datele de test; altfel afișează un avertisment că URL-ul
-  arhivei cu date de test nu este configurat.
+
+Aplicația publicată nu are secțiunea **Date de test** în această pagină.
+Versiunile pentru dezvoltatori adaugă una: **Descarcă date de test**
+aduce setul de date exemplu și înlocuiește cu el tot ce aveți acum, după
+o confirmare, și afișează un avertisment că URL-ul arhivei cu date de
+test nu este configurat atunci când versiunea a fost compilată fără o
+adresă pentru datele de test.
 
 Vedeți [Export, import și copie de siguranță a bazei de
 date](database-export-import.md) și [Partajarea
@@ -374,8 +379,9 @@ din nou oprit după repornirea aplicației; oprirea manuală cere douăzeci
 de apăsări.
 
 Cât timp este pornit, în josul Setărilor apare intrarea **Informații
-depanare**, iar în pagina Baza de date apare butonul **Deschide
-executant comenzi SQL**. Informații depanare arată directorul de date al
+depanare**. Într-o versiune pentru dezvoltatori apare, în pagina Baza de
+date, și butonul **Deschide executant comenzi SQL**; aplicația publicată
+nu îl arată niciodată. Informații depanare arată directorul de date al
 aplicației și calea fișierului bazei de date, fiecare cu un buton de
 copiere și, pentru baza de date, dacă fișierul chiar există. Dedesubt
 listează fiecare setare stocată ca o cheie și o valoare: apăsați pe un

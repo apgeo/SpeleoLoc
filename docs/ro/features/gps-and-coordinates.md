@@ -110,8 +110,11 @@ nou.
 **Folosește locația mea** din bara de plasare a hărții funcționează la fel:
 pornește o medie nouă și tot împinge pinul spre ea pe măsură ce sosesc
 citirile. Atingerea hărții sau tragerea pinului oprește medierea, la fel ca
-o a doua apăsare a butonului. Nimic din bară nu arată că medierea încă
-rulează, așa că stați nemișcat câteva secunde înainte de a confirma. Vezi
+o a doua apăsare a butonului — cât timp captura rulează, pe el scrie
+**Oprește medierea**. Bara arată aceleași cifre în timp real ca
+înregistratorul: numărul de mostre și cea mai bună acuratețe atinsă până
+acum, cu bara de calitate și cuvântul alături de ele, așa că puteți urmări
+cum se așază captura înainte de a confirma. Vezi
 [Harta peșterilor](surface-map.md#placing-the-point).
 
 ## Scrierea sau lipirea coordonatelor
@@ -208,8 +211,10 @@ cu o explicație:
 
 Pe harta peșterilor, aceleași două situații arată în schimb un avertisment
 scurt în partea de jos a ecranului — *Serviciile de localizare sunt oprite*
-sau *Permisiune de localizare refuzată* — iar aplicația vă deschide pagina
-de setări potrivită acolo unde asta poate ajuta.
+sau *Permisiune de localizare refuzată*. **Locația mea** din bara de
+instrumente vă deschide și ea pagina de setări potrivită acolo unde asta
+poate ajuta; **Folosește locația mea** din bara de plasare doar arată
+avertismentul, așa că porniți dumneavoastră locația și apăsați din nou.
 
 ## Vezi și
 

@@ -108,9 +108,12 @@ To get a clean average, leave the recorder and open it again.
 **Use my location** in the map's placement bar works the same way: it
 starts a fresh average and keeps nudging the pin toward it while
 readings arrive. Tapping the map or dragging the pin stops the
-averaging, as does tapping the button a second time. Nothing on the bar
-shows that averaging is still running, so stand still for a few seconds
-before you confirm. See [Cave map](surface-map.md#placing-the-point).
+averaging, as does tapping the button a second time — while the capture
+runs it reads **Stop averaging**. The bar shows the same live figures as
+the recorder: the sample count and the best accuracy reached so far,
+with the quality bar and word beside them, so you can watch the capture
+settle before you confirm. See
+[Cave map](surface-map.md#placing-the-point).
 
 ## Typing or pasting coordinates
 
@@ -205,8 +208,10 @@ explanation:
 
 On the cave map the same two conditions show a short warning at the
 bottom of the screen instead — *Location services are off* or *Location
-permission denied* — and the app opens the relevant settings page for
-you where that can help.
+permission denied*. **My location** on the toolbar also opens the
+relevant settings page for you where that can help; **Use my location**
+in the placement bar only shows the warning, so switch location on
+yourself and press it again.
 
 ## See also
 

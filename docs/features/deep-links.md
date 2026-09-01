@@ -17,8 +17,8 @@ it with.
 
 On **iOS the scheme is not registered**, so `sp://` links do nothing
 there — no app claims them. Everything else on this page still works on
-iOS through the app's own scanner and the manual-input dialog; only the
-hand-off from the operating system is missing.
+iOS through the app's own scanner and manual input; only the hand-off
+from the operating system is missing.
 
 ## What the link looks like
 
@@ -54,21 +54,21 @@ There are three ways in, and they behave slightly differently.
 |---|---|
 | **In-app scanner** — the scan button on the home screen or in a cave's places list | The camera reads the label, the app strips the prefix and looks the value up. This is the reliable route underground. |
 | **System camera or a tapped link** (Android only) | The OS asks which app to open the link with. SpeleoLoc jumps to the place when it is **already running**, in the foreground or in the background. A link that has to start SpeleoLoc from cold opens it on the home screen without navigating — once the app is up, tap the link again. |
-| **Manual input** | Press and **hold the scan button for about two and a half seconds** to open the **Manual QR code search** dialog. Type either the bare identifier or a whole `sp://…` value into **QR code identifier** and press **Search place by QR code id**. |
+| **Manual input** | In a cave's places list, tap **Manual QR code search** in the toolbar. Type either the bare identifier or a whole `sp://…` value into **QR code identifier** and press **Search place by QR code id**. (Developer builds can also reach the same search by holding the scan button for about two and a half seconds.) |
 
-The manual dialog is the answer to a label that is muddy, cracked or
-behind a squeeze — read the printed code with your eyes and type it in.
-Started from inside a cave's places list, the search is limited to that
-cave, so it can never be ambiguous. (The same long-press on a cave
-place's own QR field does something different: it fills that place's
-identifier in, rather than searching for a place.)
+Manual input is the answer to a label that is muddy, cracked or behind a
+squeeze — read the printed code with your eyes and type it in. Because
+it always runs from inside a cave's places list, the search is limited to
+that cave, so it can never be ambiguous. (In a developer build, the same
+long-press on a cave place's own QR field does something different: it
+fills that place's identifier in, rather than searching for a place.)
 
 ## What SpeleoLoc does with the value
 
 1. **The `sp://` prefix is removed.** URL wrappers are unwrapped only
-   for codes read by the in-app scanner or typed into the manual-input
-   dialog: an `http://` or `https://` payload is cut back to the text
-   after the last delimiter character — which is how a label printed
+   for codes read by the in-app scanner or typed in by hand: an
+   `http://` or `https://` payload is cut back to the text after the
+   last delimiter character — which is how a label printed
    with your club's landing address still opens the place in the app.
    That behaviour is
    **Settings → QR Code Generation → Strip URL to identifier**, with
@@ -181,7 +181,7 @@ yourself. Hashed QR payloads never contain either character.
   address, check as well that the code itself holds no `/` or `=` — the
   scanner would have cut it short there.
 - **"Invalid QR code"** — nothing was left to search for once the prefix
-  was stripped. From the scanner or the manual dialog this reads
+  was stripped. From the scanner or manual input this reads
   *Invalid QR code (not parsable per rules)* together with the value that
   was read; from a link it appears as a dialog titled **Deep Link**. A
   link that is nothing but `sp://` is discarded without any message at
@@ -196,8 +196,7 @@ yourself. Hashed QR payloads never contain either character.
 - **A tapped link only opened the home screen** — SpeleoLoc was not
   running yet. Tap the link a second time now that it is.
 - **Nothing at all happens on an iPhone** — expected: the `sp://` scheme
-  is not registered on iOS. Use the in-app scanner or the manual-input
-  dialog.
+  is not registered on iOS. Use the in-app scanner or manual input.
 
 ## See also
 

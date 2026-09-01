@@ -42,8 +42,8 @@ date proprii.
 
 ### Oferta de a încărca date de test
 
-Cât timp lista de peșteri este goală, aplicația se oferă să o umple cu un
-exemplu lucrat:
+Cât timp lista de peșteri este goală, o versiune de dezvoltare sau de test
+a SpeleoLoc se oferă să o umple cu un exemplu lucrat:
 
 > **Încărcați date de test?**
 > Baza de date este goală. Doriți să o populați cu peșteri și locuri de
@@ -59,20 +59,25 @@ exemplu lucrat:
 
 Câteva lucruri merită știute înainte de a răspunde:
 
+- Versiunea publicată, cea dată pe mână pentru speologie obișnuită, nu
+  face niciodată această ofertă: uneltele pentru datele de exemplu sunt
+  lăsate în afara ei, așa că o instalare nouă pornește pur și simplu cu o
+  listă de peșteri goală, iar prima peșteră o introduceți dvs.
 - Oferta apare doar cât timp nu există nicio peșteră **și** doar la
   primele patru porniri ale aplicației. După aceea nu mai întreabă.
 - **Da este distructiv.** Dacă dispozitivul conține deja hărți sau
   documente — dintr-un import lăsat la jumătate, de pildă — dialogul
   adaugă un avertisment că acestea vor fi șterse definitiv și înlocuite,
   și chiar așa se întâmplă. Nu există anulare.
-- Încărcarea arhivei poate avea nevoie de conexiune la internet, iar nu
-  toate versiunile aplicației au date de test. Dacă a dvs. nu a primit
-  niciunele, aplicația raportează că URL-ul arhivei cu date de test nu
-  este configurat și nimic nu se schimbă.
+- Încărcarea arhivei are nevoie de conexiune la internet. Dacă versiunea
+  dvs. nu are date de test, nu sunteți întrebat deloc: nu apare niciun
+  dialog și nu se afișează niciun mesaj.
 
-Puteți încărca datele de exemplu și mai târziu, din **Setări → Export /
-Import Date → Descarcă date de test**, sau puteți goli baza de date cu
-**Reinițializați baza de date** din **Setări → Baza de date**. Vedeți
+Puteți goli oricând baza de date cu **Reinițializați baza de date** din
+**Setări → Baza de date**. Reîncărcarea datelor de exemplu din
+**Setări → Export / Import Date** este posibilă doar într-o versiune de
+dezvoltare sau de test; aplicația publicată nu are o secțiune
+**Date de test**. Vedeți
 [Export, import și backup al bazei de date](features/database-export-import.md).
 
 ## Ce permisiuni cere aplicația
@@ -86,12 +91,19 @@ niciodată despre microfon.
 | --- | --- | --- |
 | **Cameră** (Camera) | prima scanare sau fotografie | scanarea etichetelor QR, fotografiere |
 | **Microfon** (Microphone) | prima înregistrare audio | documente de tip notă audio |
-| **Fotografii, videoclipuri și fișiere audio** (Photos, video and audio) | primul import de documente dintr-un folder | vederea fișierelor din folderul pe care îl alegeți |
-| **Acces la toate fișierele** (All files access) | primul export de arhivă sau primul import de documente dintr-un folder | scrierea într-un folder ales de dvs. și citirea din el a fișierelor care nu sunt media |
+| **Stocare** (Storage) | alegeți **Salvează în Imagini** la exportul unei singure imagini QR și doar pe Android 9 sau mai vechi | scrierea fișierului PNG în folderul comun Imagini |
 | **Locație** (Location) | deschideți **Înregistrare punct GPS** sau apăsați **Locația mea** pe harta peșterilor | coordonate GPS pentru intrări și locuri de suprafață |
 | **Bluetooth** (scanare și conectare) plus **Locație** | porniți detectarea beaconurilor sau deschideți un selector care scanează etichete din apropiere | găsirea beaconurilor BLE și a etichetelor Ruuvi |
 | **Notificări** (Notifications) | porniți **Continuă detectarea în fundal** | alerta ridicată când un beacon este detectat cu aplicația nevăzută |
 | **Utilizare nerestricționată a bateriei** (Unrestricted battery usage) | în același moment | ca o scanare să poată rula ore întregi |
+
+Importul în masă de documente și exporturile — arhiva, arhiva de
+sincronizare și copia bazei de date — nu cer nicio permisiune: dialogurile
+de sistem pentru alegerea folderului și cele de **salvare ca** prin care
+treceți poartă cu ele accesul la locul pe care îl alegeți. Folderul ales
+pentru un import poate fi citit în întregime, indiferent dacă fișierele
+lui sunt sau nu fotografii. Nici **Alege locație…** nu cere nimic, iar pe
+Android 10 și mai nou nici **Salvează în Imagini**.
 
 ### Dacă refuzați una
 
@@ -199,13 +211,15 @@ capăt — pornește modul ascuns de depanare al aplicației, confirmat de un
 mesaj *Debug mode activated*. Douăzeci de apăsări îl opresc la loc, iar
 oricum este oprit după următoarea repornire.
 
-Cât timp este activ, apar două lucruri altfel invizibile: o secțiune
-**Informații depanare** în Setări, care arată calea bazei de date,
-directorul de date și tabela de configurații; și un buton **Deschide
-executant comenzi SQL** în **Setări → Baza de date**. Executantul SQL
-scrie direct în datele dvs., fără confirmare și fără anulare — lăsați-l în
-pace dacă nu vă îndrumă cineva printr-o reparație. Modul de depanare face
-de asemenea ca aplicația să înregistreze mult mai multe detalii în jurnal.
+Cât timp este activ, în Setări apare o secțiune **Informații depanare**,
+care arată calea bazei de date, directorul de date și tabela de
+configurații, iar aplicația înregistrează mult mai multe detalii în
+jurnal. Într-o versiune de dezvoltare sau de test, **Setări → Baza de
+date** capătă în plus și un buton **Deschide executant comenzi SQL**;
+aplicația publicată nu îl afișează niciodată, oricum ar fi setat modul de
+depanare. Executantul SQL scrie direct în datele dvs., fără confirmare și
+fără anulare — lăsați-l în pace dacă nu vă îndrumă cineva printr-o
+reparație.
 
 ## Câteva convenții folosite în tot wiki-ul
 

@@ -171,12 +171,16 @@ feluri:
 - **Folosește locația mea**, care *nu* este o singură citire. Pornește o
   captură mediată: pinul sare la poziția dumneavoastră și apoi se mută
   continuu la media curentă a fiecărei fixări care sosește, așa că, cu cât
-  stați mai mult nemișcat, cu atât poziția devine mai strânsă. Apăsați din nou
-  butonul pentru a opri medierea și a păstra punctul mediat; apăsarea hărții
-  sau tragerea pinului o oprește la fel și vă dă înapoi controlul, iar
-  confirmarea îngheață valoarea la care ajunsese media. Nimic pe ecran nu
-  arată că medierea rulează sau câte fixări a adunat, așa că stați nemișcat
-  câteva secunde înainte de a confirma.
+  stați mai mult nemișcat, cu atât poziția devine mai strânsă. Cât timp
+  rulează captura, butonul afișează **Oprește medierea**, iar bara arată o
+  citire în timp real — *Mostre* adunate până acum și cea mai bună *Acuratețe*
+  atinsă, cu o bară și un cuvânt (Excelent, Bun, Acceptabil, Slab, Foarte
+  slab) care o apreciază; înainte să sosească prima fixare, scrie *Aștept fix
+  GPS…*. Apăsați **Oprește medierea** pentru a opri și a păstra punctul
+  mediat; apăsarea hărții sau tragerea pinului o oprește la fel și vă dă
+  înapoi controlul, iar confirmarea îngheață valoarea la care ajunsese media.
+  Citirea rămâne pe bară și după ce opriți, așa că puteți verifica numărul de
+  mostre înainte de a confirma.
 
 Apăsarea lungă doar *pornește* o plasare. Odată ce bara de plasare este
 ridicată, ea nu mai face nimic, iar în timpul măsurării și în modul selector

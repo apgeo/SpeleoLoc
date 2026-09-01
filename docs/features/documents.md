@@ -305,13 +305,18 @@ import into just a few caves.
 
 ### If every folder reports "0 files"
 
-On Android it is common for the importer to list your subfolders
-correctly but show "0 files" in all of them. That is Android hiding
-other apps' files, not an empty folder. When every row scans as empty,
-an orange banner explains this and offers **Allow all-files access**,
-which takes you to the system permission page, and **Rescan** to try
-again once you have granted it. Grant the access, come back, rescan, and
-the counts should appear.
+Sometimes the importer lists your subfolders correctly but shows "0
+files" in all of them. An orange banner then says so — "No files are
+visible inside the subdirectories. Make sure you picked the right
+folder, then rescan." — and offers a single **Rescan** button. There is
+no permission to grant: the folder you chose in the system picker
+already carries its own read access.
+
+It almost always means you picked one level too deep or too shallow.
+The folder you choose must be the parent that *contains* the per-cave
+subfolders, and only files sitting directly inside those subfolders are
+counted. **Rescan** re-reads the same folder; to choose a different one,
+leave the screen and start the import again.
 
 ## Photo size and image compression
 

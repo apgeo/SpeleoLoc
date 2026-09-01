@@ -428,9 +428,11 @@ direct în el un conținut scanat:
 - În modul Identic cu codul locului, când câmpul codului de loc este încă
   gol, valoarea scanată este copiată și în el.
 
-Ținerea apăsată a butonului de scanare aproximativ 2,5 secunde deschide
-în schimb **Căutare manuală cod QR**, pentru a tasta un cod atunci când
-nu există etichetă de scanat.
+În versiunile pentru dezvoltatori, ținerea apăsată a butonului de
+scanare aproximativ 2,5 secunde deschide în schimb **Căutare manuală
+cod QR**, pentru a tasta un cod atunci când nu există etichetă de
+scanat. Aplicația publicată nu are această scurtătură; butonul de
+scanare deschide doar scanerul.
 
 ## Tipărirea etichetelor înainte ca locurile să existe
 

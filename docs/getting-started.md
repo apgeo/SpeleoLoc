@@ -40,8 +40,8 @@ cave list is empty, because the app starts with no data of its own.
 
 ### The offer to load test data
 
-While the cave list is empty, the app offers to fill it with a worked
-example:
+While the cave list is empty, a developer or test build of SpeleoLoc
+offers to fill it with a worked example:
 
 > **Load test data?**
 > The database is empty. Would you like to populate it with sample caves
@@ -57,20 +57,23 @@ example:
 
 A few things are worth knowing before you answer:
 
+- The release build handed out for normal caving never makes this offer:
+  the sample-data tooling is left out of it, so a fresh install simply
+  starts with an empty cave list and you enter your own first cave.
 - The offer appears only while there are no caves **and** only during the
   first four starts of the app. After that it stops asking.
 - **Yes is destructive.** If the device already holds raster maps or
   documents — from a half-finished import, say — the dialog adds a
   warning that they will be permanently deleted and replaced, and they
   will be. There is no undo.
-- Loading the archive may need an internet connection, and not every
-  build carries test data at all. If yours was not given one, the app
-  reports that the test-data archive URL is not configured and nothing
-  changes.
+- Loading the archive needs an internet connection. If your build carries
+  no test data, you are not asked at all: no dialog appears and no message
+  is shown.
 
-You can load the sample data again later from **Settings → Data Export /
-Import → Download and load test data**, or wipe the database back to empty
-with **Reinitialize database** in **Settings → Database**. See
+You can wipe the database back to empty at any time with **Reinitialize
+database** in **Settings → Database**. Reloading the sample data from
+**Settings → Data Export / Import** is possible only in a developer or
+test build; the released app has no **Test Data** section. See
 [Database export, import and backup](features/database-export-import.md).
 
 ## What the app asks permission for
@@ -83,12 +86,18 @@ never records audio is never asked about the microphone.
 | --- | --- | --- |
 | **Camera** | the first scan or photo | scanning QR labels, taking pictures |
 | **Microphone** | the first audio recording | audio note documents |
-| **Photos, video and audio** | the first folder-based document import | seeing the files inside a folder you pick |
-| **All files access** | the first archive export, or folder-based document import | writing into, and reading non-media files out of, a folder you pick |
+| **Storage** | you choose **Save to Pictures** when exporting a single QR image, and only on Android 9 or older | writing the PNG into the shared Pictures folder |
 | **Location** | you open **Record GPS point**, or tap **My location** on the cave map | GPS coordinates for entrances and surface places |
 | **Bluetooth** (scanning and connecting) plus **Location** | you switch on beacon detection, or open a picker that scans for nearby tags | finding BLE beacons and Ruuvi tags |
 | **Notifications** | you switch on **Keep detecting in background** | the alert raised when a beacon is detected with the app out of sight |
 | **Unrestricted battery usage** | the same moment | letting a scan keep running for hours |
+
+Bulk document import and the exports — the archive, the sync archive and
+the database copy — ask for no permission at all: the system folder and
+**save as** dialogs you go through carry their own access to the place you
+pick. The folder you choose for an import is readable in full, whether or
+not its files are photos. **Choose location…** likewise asks for nothing,
+and on Android 10 and newer neither does **Save to Pictures**.
 
 ### If you refuse one
 
@@ -191,13 +200,13 @@ on the app's hidden debug mode, confirmed by a *Debug mode activated*
 message. Twenty taps turn it off again, and it is off anyway after the
 next restart.
 
-While it is on, two things appear that are otherwise invisible: a **Debug
-Info** section in Settings, showing the database path, the data directory
-and the configuration table; and an **Open SQL command runner** button in
-**Settings → Database**. The SQL runner writes straight to your data with
-no confirmation and no undo — leave it alone unless someone is walking
-you through a repair. Debug mode also makes the app record far more
-detail in its log.
+While it is on, a **Debug Info** section appears in Settings, showing the
+database path, the data directory and the configuration table, and the app
+records far more detail in its log. In a developer or test build,
+**Settings → Database** also gains an **Open SQL command runner** button;
+the released app never shows it, whatever debug mode is set to. The SQL
+runner writes straight to your data with no confirmation and no undo —
+leave it alone unless someone is walking you through a repair.
 
 ## A few conventions used throughout the wiki
 

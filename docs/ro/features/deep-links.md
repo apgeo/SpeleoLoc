@@ -19,8 +19,8 @@ telefonului, SpeleoLoc este oferit ca aplicație cu care să fie deschis.
 Pe **iOS schema nu este înregistrată**, așa că linkurile `sp://` nu fac
 nimic acolo — nicio aplicație nu le preia. Tot restul de pe această
 pagină funcționează și pe iOS, prin scanerul propriu al aplicației și
-prin dialogul de introducere manuală; lipsește doar predarea de către
-sistemul de operare.
+prin introducerea manuală; lipsește doar predarea de către sistemul de
+operare.
 
 ## Cum arată linkul
 
@@ -57,22 +57,23 @@ Există trei căi de intrare, iar ele se comportă puțin diferit.
 |---|---|
 | **Scanerul din aplicație** — butonul de scanare de pe pagina principală sau din lista de locuri a unei peșteri | Camera citește eticheta, aplicația elimină prefixul și caută valoarea. Aceasta este calea sigură în subteran. |
 | **Camera sistemului sau un link apăsat** (doar pe Android) | Sistemul de operare întreabă cu ce aplicație să deschidă linkul. SpeleoLoc sare la loc atunci când **rulează deja**, în prim-plan sau în fundal. Un link care trebuie să pornească SpeleoLoc de la rece îl deschide pe pagina principală, fără să navigheze — după ce aplicația a pornit, apăsați linkul din nou. |
-| **Introducere manuală** | Țineți **butonul de scanare apăsat aproximativ două secunde și jumătate** pentru a deschide dialogul **Căutare manuală cod QR**. Scrieți fie identificatorul simplu, fie o valoare `sp://…` întreagă în câmpul **Mod de generare identificatori cod QR** și apăsați **Caută loc după id cod QR**. |
+| **Introducere manuală** | În lista de locuri a unei peșteri, apăsați **Căutare manuală cod QR** din bara de instrumente. Scrieți fie identificatorul simplu, fie o valoare `sp://…` întreagă în câmpul **Mod de generare identificatori cod QR** și apăsați **Caută loc după id cod QR**. (În versiunile pentru dezvoltatori, aceeași căutare se poate deschide și ținând butonul de scanare apăsat aproximativ două secunde și jumătate.) |
 
-Dialogul manual este răspunsul pentru o etichetă acoperită de noroi,
-crăpată sau ajunsă după o strâmtoare — citiți codul tipărit cu ochii și
-scrieți-l. Pornită din lista de locuri a unei peșteri, căutarea este
-limitată la acea peșteră, deci nu poate fi niciodată ambiguă. (Aceeași
-apăsare lungă pe câmpul QR al unui loc din peșteră face altceva:
-completează identificatorul acelui loc, în loc să caute un loc.)
+Introducerea manuală este răspunsul pentru o etichetă acoperită de
+noroi, crăpată sau ajunsă după o strâmtoare — citiți codul tipărit cu
+ochii și scrieți-l. Pentru că rulează întotdeauna din lista de locuri a
+unei peșteri, căutarea este limitată la acea peșteră, deci nu poate fi
+niciodată ambiguă. (Într-o versiune pentru dezvoltatori, aceeași apăsare
+lungă pe câmpul QR al unui loc din peșteră face altceva: completează
+identificatorul acelui loc, în loc să caute un loc.)
 
 ## Ce face SpeleoLoc cu valoarea
 
 1. **Prefixul `sp://` este eliminat.** Ambalajele de tip URL sunt
    desfăcute doar pentru codurile citite de scanerul din aplicație sau
-   scrise în dialogul de introducere manuală: un conținut `http://` sau
-   `https://` este redus la textul de după ultimul caracter delimitator
-   — așa se face că o etichetă tipărită cu adresa de destinație a
+   scrise de mână: un conținut `http://` sau `https://` este redus la
+   textul de după ultimul caracter delimitator — așa se face că o
+   etichetă tipărită cu adresa de destinație a
    clubului dvs. deschide în continuare locul în aplicație. Acest
    comportament este **Setări → Generare grafică cod QR → Extrage
    identificatorul din URL**, cu **Caractere delimitatoare URL** `/` și
@@ -198,8 +199,8 @@ cele două caractere.
   tipărită cu o adresă de destinație, verificați în plus că nici codul în
   sine nu conține `/` sau `=` — acolo scanerul l-ar fi tăiat scurt.
 - **„Cod QR invalid”** — după eliminarea prefixului nu a mai rămas nimic
-  de căutat. Din scaner sau din dialogul manual, mesajul este *Cod QR
-  invalid (nu poate fi interpretat conform regulilor)*, împreună cu
+  de căutat. Din scaner sau din introducerea manuală, mesajul este *Cod
+  QR invalid (nu poate fi interpretat conform regulilor)*, împreună cu
   valoarea citită; dintr-un link, apare ca dialog cu titlul **Link
   direct**. Un link care nu conține decât `sp://` este ignorat fără
   niciun mesaj. Rețineți că o valoare care există, dar este necunoscută,
@@ -214,7 +215,7 @@ cele două caractere.
   rula încă. Apăsați linkul a doua oară, acum că rulează.
 - **Pe iPhone nu se întâmplă absolut nimic** — este de așteptat: schema
   `sp://` nu este înregistrată pe iOS. Folosiți scanerul din aplicație
-  sau dialogul de introducere manuală.
+  sau introducerea manuală.
 
 ## Vezi și
 

@@ -30,8 +30,18 @@ that every upload carries the whole dataset again.
 
 ## Setting up a server profile
 
-**Settings → FTP / SFTP sync** opens the profile list. Before you have
-added anything it reads **No FTP profiles yet**; press **Add profile**.
+**Settings → FTP / SFTP sync** opens the profile list. On a build you
+installed yourself it reads **No FTP profiles yet** until you add one;
+press **Add profile**.
+
+Builds handed out for an event or by a club can arrive with the shared
+account already set up: a profile is in the list from the very first
+start, already marked as the default, and there is nothing to type in —
+the sync card in the app menu reads **Sync now** rather than **Configure
+FTP to enable sync**. Edit it like any other profile and your changes
+stay, password included. Delete it and it comes back, as the default
+again, the next time the app starts — and likewise after anything that
+replaces the whole database, such as restoring from a backup.
 
 > 📷 [The list of FTP profiles](../screenshots/06-sync-and-sharing.md#ftp-sync-profile-list) — The FTP / SFTP sync settings screen listing the configured server profiles.
 

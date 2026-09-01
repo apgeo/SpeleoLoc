@@ -318,13 +318,18 @@ pagina principală dacă vreți să importați doar în câteva peșteri.
 
 ### Dacă fiecare folder raportează „0 fișiere"
 
-Pe Android este obișnuit ca importatorul să vă listeze corect subfolderele,
-dar să arate „0 fișiere" la toate. Acesta este Android-ul care ascunde
-fișierele altor aplicații, nu un folder gol. Când fiecare rând este scanat
-ca gol, un banner portocaliu explică asta și oferă **Permite accesul la
-toate fișierele**, care vă duce la pagina de permisiuni a sistemului, și
-**Rescanează**, pentru a încerca din nou după ce ați acordat accesul.
-Acordați accesul, reveniți, rescanați și numerele ar trebui să apară.
+Uneori importatorul vă listează corect subfolderele, dar arată „0 fișiere"
+la toate. Un banner portocaliu spune atunci exact asta — „Nu sunt vizibile
+fișiere în subdirectoare. Verifică folderul ales, apoi rescanează." — și
+oferă un singur buton, **Rescanează**. Nu există nicio permisiune de
+acordat: folderul ales în selectorul de sistem poartă deja propriul drept de
+citire.
+
+Aproape întotdeauna înseamnă că ați ales folderul cu un nivel mai adânc sau
+mai sus decât trebuie. Folderul ales trebuie să fie părintele care *conține*
+subfolderele pe peșteri, iar la numărătoare intră doar fișierele care stau
+direct în acele subfoldere. **Rescanează** recitește același folder; pentru
+a alege altul, părăsiți pagina și porniți din nou importul.
 
 ## Dimensiunea fotografiilor și comprimarea imaginilor
 

@@ -56,10 +56,12 @@ toolbar: it does not open this screen, it starts an FTP sync immediately
    **Include documentation files** (photos, sketches, notes) and
    **Include raster map images**. Both are on by default; turning them
    off makes a much smaller zip that still carries every record.
-3. Press **Export sync archive** and pick a folder.
-4. The screen prints **Archive exported** followed by the full path.
-   Send that zip by any means you like — chat, email, cloud folder,
-   cable.
+3. Press **Export sync archive**. On Android the zip is built first and
+   your device's save dialog then asks where to put it; on iOS and
+   desktop you pick a destination folder first.
+4. The screen prints **Archive exported** followed by the saved file's
+   name on Android, or its full path on iOS and desktop. Send that zip by
+   any means you like — chat, email, cloud folder, cable.
 
 ### Import
 
@@ -200,7 +202,9 @@ route: a new phone, a handover, an off-device backup.
 
    There is no cave picker: every export covers the whole database, and
    you cannot export a single cave.
-3. Press **Export Archive** and pick a folder.
+3. Press **Export Archive**. On Android the zip is built first, then your
+   device's save dialog opens with its name filled in and you choose
+   where it goes; on iOS and desktop you pick the folder first.
 4. You get one zip named for the moment it was made —
    `speleo_loc_2026-09-01_14-32-07.zip`, or `..._diff.zip` for a diff
    export.
@@ -253,35 +257,37 @@ them: they are the only sign that part of the archive did not land.
 
 ### Download and load test data
 
-At the bottom of the same screen, a **Test Data** section offers
-**Download and load test data**, which fetches a ready-made sample
-dataset. This is a **full replacement**: everything on the device —
-caves, maps, documents — is permanently deleted first, you are warned
-once, and the app restarts. If your copy of the app was not built with a
-test-data source, the section shows an orange notice instead and there
-is no button. See
+Developer builds carry a **Test Data** section at the bottom of the same
+screen, offering **Download and load test data**, which fetches a
+ready-made sample dataset. This is a **full replacement**: everything on
+the device — caves, maps, documents — is permanently deleted first, you
+are warned once, and the app restarts. A developer build with no
+test-data source shows an orange notice there instead of the button. The
+released app has no such section at all — no button and no notice. See
 [Working with a local test archive](local-test-archive.md).
 
 ## Settings → Database: the blunt tools
 
 | Action | What it does |
 |---|---|
-| **Export database** | writes a raw `speleo_loc_export.sqlite` copy to a folder you pick. No photos, no map images — a same-device snapshot only. |
+| **Export database** | writes a raw `speleo_loc_export.sqlite` copy through your device's save dialog (a folder you pick, on iOS). No photos, no map images — a same-device snapshot only. |
 | **Restore database from file** | replaces the database with a `.sqlite` or `.db` file you pick, after one confirmation, then restarts the app. It cannot take a zip — restore a whole archive from **Data Export / Import** instead. |
-| **Reinitialize database with test data** | erases everything and fills the app with sample data. |
 | **Reinitialize database** | erases everything and leaves an empty app. |
 
-Both reinitialize actions are **irreversible**, ask twice, and restart
-the app afterwards. Whenever the database is replaced wholesale, this
-phone keeps its own device identity instead of adopting the one in the
-file.
+Developer builds add a **Reinitialize database with test data** button
+above it, which erases everything and fills the app with sample data
+instead; the released app does not have it.
+
+Reinitializing is **irreversible**, asks twice, and restarts the app
+afterwards. Whenever the database is replaced wholesale, this phone keeps
+its own device identity instead of adopting the one in the file.
 
 An **Open SQL command runner** button appears at the bottom of this
-screen only when debug mode is on (nine quick taps on the home screen
-title).
-It runs raw database commands with no confirmation and no undo; it is
-there for diagnosing a problem with a developer, and a mistyped command
-can destroy data no backup covers.
+screen only in a developer build, and there only when debug mode is on
+(nine quick taps on the home screen title); the released app does not
+have it. It runs raw database commands with no confirmation and no undo;
+it is there for diagnosing a problem with a developer, and a mistyped
+command can destroy data no backup covers.
 
 ## Which route should I use?
 

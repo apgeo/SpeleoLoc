@@ -214,28 +214,29 @@ layers](../workflows/mbtiles-layers.md).
 The blunt tools. Everything here except **Export database** destroys
 data that is not backed up somewhere else.
 
-- **Reinitialize database with test data** — wipes everything and fills
-  the database with the built-in sample dataset.
 - **Reinitialize database** — wipes everything and leaves an empty
-  database.
+  database. (Developer builds have a second button above it,
+  **Reinitialize database with test data**, which wipes everything and
+  fills the database with the bundled sample dataset; it is not in the
+  released app.)
 - **Restore database from file** — replaces the current database with a
   `.sqlite` or `.db` file you pick.
-- **Export database** — saves a copy of the database file to a folder
-  you choose, named `speleo_loc_export.sqlite`. This is the quick
-  snapshot to take before anything risky, and it is exactly what
-  **Restore database from file** expects back. It contains the database
-  only: photos, documents and raster map images are not in it, so for a
-  complete backup use Data Export / Import instead.
-- **Open SQL command runner** *(debug mode only)* — runs SQL commands
-  directly against the local database. Nothing here is checked or
-  undoable.
+- **Export database** — saves a copy of the database file through your
+  device's save dialog, offered as `speleo_loc_export.sqlite` (on iOS,
+  into a folder you choose). This is the quick snapshot to take before
+  anything risky, and it is exactly what **Restore database from file**
+  expects back. It contains the database only: photos, documents and
+  raster map images are not in it, so for a complete backup use Data
+  Export / Import instead.
+- **Open SQL command runner** *(developer builds, with debug mode on)* —
+  runs SQL commands directly against the local database. Nothing here is
+  checked or undoable, and the released app does not include it.
 
-The two Reinitialize actions ask for confirmation **twice**. Restore
-asks **once** and then opens the file picker — so a restore is easier to
-trigger than a reinitialize, and it is just as irreversible. The first
-confirmation of each of these actions warns that the application will be
-restarted, and it does restart automatically once the operation
-finishes.
+Reinitializing asks for confirmation **twice**. Restore asks **once**
+and then opens the file picker — so a restore is easier to trigger than
+a reinitialize, and it is just as irreversible. The first confirmation
+of each of these actions warns that the application will be restarted,
+and it does restart automatically once the operation finishes.
 
 See [Database export, import and backup](database-export-import.md).
 
@@ -279,15 +280,18 @@ Full export and import of the database plus its files.
 - **Export Settings** — **Include documentation files**, **Include
   raster map images**, and **Diff export (only new files)**, which packs
   only the files added since the last full export. **Export Archive**
-  then asks for the destination folder. Saved FTP passwords are never
-  written into an exported archive.
+  builds the zip and then, on Android, opens your device's save dialog
+  for you to place it; on iOS and desktop it asks for a destination
+  folder first. Saved FTP passwords are never written into an exported
+  archive.
 - **Import** — **Import Archive** reads an archive back, asking whether
   to replace or merge, and prompting on each conflict.
-- **Test Data** — **Download and load test data** fetches the sample
-  dataset and replaces everything you currently have with it, after a
-  confirmation. This section only does anything in builds that were
-  compiled with a test-data address; otherwise it shows a warning that
-  the test data archive URL is not configured.
+
+The released app has no **Test Data** section on this page. Developer
+builds add one: **Download and load test data** fetches the sample
+dataset and replaces everything you currently have with it, after a
+confirmation, and shows a warning that the test data archive URL is not
+configured when the build was given no test-data address.
 
 See [Database export, import and backup](database-export-import.md) and
 [Sharing data](../workflows/sharing-data.md).
@@ -337,8 +341,9 @@ resets the count — and a message confirms "Debug mode activated". It is
 not remembered, so it is off again after the app restarts; switching it
 off by hand takes twenty taps.
 
-While it is on, a **Debug Info** entry appears at the bottom of Settings
-and an **Open SQL command runner** button appears on the Database page.
+While it is on, a **Debug Info** entry appears at the bottom of
+Settings. In a developer build an **Open SQL command runner** button
+also appears on the Database page; the released app never shows it.
 Debug Info shows the application data directory and the database file
 path, each with a copy button and, for the database, whether the file is
 actually there. Below that it lists every stored setting as a key and a

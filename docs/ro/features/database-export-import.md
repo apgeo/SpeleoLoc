@@ -57,11 +57,14 @@ siguranță.
 
 ### O arhivă (baza de date plus fișierele media)
 
-**Setări → Export / Import Date → Exportă Arhivă**. Alegeți un dosar, iar
-aplicația scrie un singur zip numit după momentul în care l-ați făcut, de
-exemplu `speleo_loc_2026-09-01_14-32-07.zip`. Înăuntru se află baza de
-date, fișierele media pe care le-ați cerut și un mic manifest care descrie
-exportul.
+**Setări → Export / Import Date → Exportă Arhivă**. Aplicația construiește
+un singur zip numit după momentul în care l-ați făcut, de exemplu
+`speleo_loc_2026-09-01_14-32-07.zip`. Pe Android se deschide apoi dialogul
+de salvare al dispozitivului, cu acel nume deja completat, iar
+dumneavoastră spuneți unde ajunge fișierul — dacă renunțați acolo, nu se
+salvează nimic. Pe iOS și pe desktop alegeți în schimb mai întâi dosarul
+de destinație. Înăuntru se află baza de date, fișierele media pe care
+le-ați cerut și un mic manifest care descrie exportul.
 
 La **Setări export**, trei comutatoare controlează ce intră în arhivă; un
 al patrulea apare doar în versiuni speciale. Primele două sunt pornite
@@ -75,8 +78,10 @@ când deschideți ecranul.
 | **Include parolele conturilor FTP** | Doar în versiuni speciale — vedeți avertismentul de mai jos. |
 
 Nu există un selector de peșteri: fiecare export acoperă toată baza de
-date. Pe Android este posibil să vi se ceară permisiunea de a scrie în
-dosarul ales.
+date. Pe Android aplicația nu cere niciodată o permisiune de stocare —
+construiește arhiva în privat, apoi deschide dialogul de salvare al
+sistemului, unde alegeți destinația, iar dialogul acordă el însuși dreptul
+de scriere.
 
 #### Ce este de fapt un export diferențial
 
@@ -116,8 +121,9 @@ cărora le-ați încredința propriile date de autentificare la server.
 ### O copie brută a bazei de date
 
 **Setări → Baza de date → Exportă baza de date**. Scrie o copie a bazei de
-date ca `speleo_loc_export.sqlite` — pe Android și iOS alegeți dosarul, pe
-desktop alegeți numele fișierului.
+date ca `speleo_loc_export.sqlite` — pe Android și pe desktop se deschide
+dialogul de salvare al dispozitivului cu acel nume deja completat și
+alegeți unde ajunge; pe iOS alegeți dosarul.
 
 Este mică și rapidă, dar nu conține **niciun** fișier de documentație și
 **nicio** imagine de hartă. Restaurarea ei pe un dispozitiv care nu are
@@ -278,13 +284,11 @@ lipsă.
 
 ## Reinițializarea bazei de date
 
-Două butoane în partea de sus a **Setări → Baza de date**, în această
-ordine:
-
-- **Reinițializează baza de date cu date de test** — șterge tot și încarcă
-  setul de date exemplu inclus în aplicație.
-- **Reinițializați baza de date** — șterge tot, lăsând o bază de date
-  goală.
+Un singur buton în partea de sus a **Setări → Baza de date** —
+**Reinițializați baza de date**, care șterge tot și lasă o bază de date
+goală. Versiunile de dezvoltare adaugă deasupra lui un al doilea,
+**Reinițializează baza de date cu date de test**, care șterge tot și
+încarcă setul de date exemplu inclus în aplicație.
 
 Fiecare întreabă de două ori: o primă confirmare, apoi una formulată fără
 menajamente, care avertizează că toate datele vor fi șterse. După aceea
@@ -292,28 +296,31 @@ aplicația repornește. Nimic nu este salvat în locul dumneavoastră.
 
 ## Încărcarea setului de date de test gata făcut
 
-În partea de jos a **Setări → Export / Import Date** se află o secțiune
-**Date de test**, cu butonul **Descarcă date de test**. Acesta aduce un
-set de date exemplu de acolo de unde a fost îndreptată această versiune —
-de obicei o descărcare de pe internet — și îl instalează ca **înlocuire
-completă**: peșterile, hărțile și documentele aflate acum pe dispozitiv
-sunt întâi șterse definitiv. Sunteți avertizat o dată — dar numai dacă
-aveți ceva de pierdut — iar aplicația repornește după aceea.
+Într-o versiune de dezvoltare, în partea de jos a **Setări → Export /
+Import Date** se află o secțiune **Date de test**, cu butonul **Descarcă
+date de test**. Acesta aduce un set de date exemplu de acolo de unde a
+fost îndreptată această versiune — de obicei o descărcare de pe internet —
+și îl instalează ca **înlocuire completă**: peșterile, hărțile și
+documentele aflate acum pe dispozitiv sunt întâi șterse definitiv. Sunteți
+avertizat o dată — dar numai dacă aveți ceva de pierdut — iar aplicația
+repornește după aceea.
 
-Dacă această versiune nu a fost configurată cu o sursă de date de test,
-secțiunea afișează în schimb o notă portocalie care spune că URL-ul
-arhivei cu date de test nu este configurat, și nu există niciun buton.
-Acest lucru este normal pe majoritatea versiunilor.
+Aplicația publicată nu are deloc o secțiune **Date de test** pe această
+pagină. Secțiunea există doar în versiunile de dezvoltare, unde afișează o
+notă portocalie care spune că URL-ul arhivei cu date de test nu este
+configurat, dacă acelei versiuni nu i s-a dat nicio sursă de date de test.
 
 ## Executantul de comenzi SQL
 
-Doar când modul de depanare este pornit, în partea de jos a
-**Setări → Baza de date** apare un buton suplimentar **Deschide executant
-comenzi SQL**. Acesta trimite comenzi brute direct către baza de date,
-fără confirmare și fără plasă de siguranță. Există pentru diagnosticarea
-unei probleme cu ajutorul unui dezvoltator. Nu este nimic aici de care un
-speolog să aibă nevoie în utilizarea normală, iar o singură comandă scrisă
-greșit poate distruge date pe care nicio copie de siguranță nu le acoperă.
+Într-o versiune de dezvoltare și doar când modul de depanare este pornit,
+în partea de jos a **Setări → Baza de date** apare un buton suplimentar
+**Deschide executant comenzi SQL**. Aplicația publicată nu îl conține, așa
+că pornirea modului de depanare nu îl va scoate la iveală. Acesta trimite
+comenzi brute direct către baza de date, fără confirmare și fără plasă de
+siguranță. Există pentru diagnosticarea unei probleme cu ajutorul unui
+dezvoltator. Nu este nimic aici de care un speolog să aibă nevoie în
+utilizarea normală, iar o singură comandă scrisă greșit poate distruge
+date pe care nicio copie de siguranță nu le acoperă.
 
 ## Obiceiuri de copii de siguranță care funcționează
 

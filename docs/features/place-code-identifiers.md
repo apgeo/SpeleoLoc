@@ -400,8 +400,10 @@ a scanned payload straight into it:
 - In Mirror PCI mode, when the place code field is still empty, the
   scanned value is copied into it as well.
 
-Holding the scan button for about 2.5 seconds opens **Manual QR code
-search** instead, for typing a code in when there is no label to scan.
+In developer builds, holding the scan button for about 2.5 seconds opens
+**Manual QR code search** instead, for typing a code in when there is no
+label to scan. The released app does not have this shortcut; the scan
+button only opens the scanner.
 
 ## Printing labels before the places exist
 

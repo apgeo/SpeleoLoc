@@ -70,11 +70,12 @@ sync** reappear, in the top bar.
 ### Scan QR and typing a code by hand
 
 Tapping **Scan QR** opens the scanner; a recognised code jumps straight to
-the place it belongs to. Holding the same button down for about two and a
-half seconds instead opens **Manual QR code search**, where you can type the
-**QR code identifier** printed on the label and tap **Search place by QR
-code id**. This is the way in when a label is too damaged or too dirty to
-scan. It is always available and has no setting.
+the place it belongs to. To type a code in by hand — when a label is too
+damaged or too dirty to scan — open the cave's places list and use its
+**Manual QR code search** button, which shows a **QR code identifier** box
+with a **Search place by QR code id** button. (In developer builds, holding
+the scan button down for about two and a half seconds opens the same search
+from the home screen; that shortcut is not in the released app.)
 
 ## The cave list
 
@@ -244,9 +245,10 @@ drawer for good, on every screen.
 
 ## The first-run offer of test data
 
-On any of the first four app starts, if there are no caves yet, the app asks
+In a developer build, on any of the first four app starts and only when the
+build carries a test-data source, if there are no caves yet the app asks
 **Load test data?** — "The database is empty. Would you like to populate it
-with sample caves and places for testing?"
+with sample caves and places for testing?" The released app never asks.
 
 Accepting is destructive and cannot be undone: it replaces the whole local
 database and every stored file with the contents of a ready-made test
@@ -258,8 +260,8 @@ data." Choose **No** to carry on with an empty database.
 If you accept, the archive is fetched — downloaded, when the installed build
 points at a web address — behind a "Downloading test data archive..."
 dialog, imported, and the app restarts on the sample data. Builds that carry
-no test archive answer with "Test data archive URL is not configured
-(test_archive_url)." and change nothing.
+no test archive do not put the question up at all — nothing appears and
+nothing changes.
 
 See [Getting started](../getting-started.md), and
 [Database export and import](database-export-import.md) if you want to save
@@ -287,10 +289,11 @@ Switching it back off takes twenty taps. Debug mode is not remembered — it
 is off again after the next app start.
 
 While it is on, Settings gains a **Debug Info** section (database path, data
-directory, configuration table), **Settings → Database** gains an **Open SQL
-command runner** button, and the app records more detailed logs. None of it
-is needed for normal caving use; the SQL runner in particular writes
-directly to the database and can damage your data.
+directory, configuration table) and the app records more detailed logs. In a
+developer build **Settings → Database** also gains an **Open SQL command
+runner** button; the released app does not have it at all. None of it is
+needed for normal caving use; the SQL runner in particular writes directly
+to the database and can damage your data.
 
 ## See also
 

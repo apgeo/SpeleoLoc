@@ -131,22 +131,22 @@ singur pe măsură ce scanați.
 Când o etichetă este deteriorată sau camera nu focalizează pe o
 suprafață udă, puteți introduce codul manual:
 
-1. Țineți apăsat butonul de scanare circa două secunde și jumătate.
-2. Se deschide **Căutare manuală cod QR**; tastați codul în câmpul **Mod
-   de generare identificatori cod QR**.
+1. Deschideți lista de locuri a peșterii și apăsați **Căutare manuală
+   cod QR** din bara ei de sus.
+2. Se deschide un mic panou de căutare direct în pagină; tastați codul
+   în câmpul **Mod de generare identificatori cod QR**.
 3. Apăsați **Caută loc după id cod QR**.
 
-Apăsarea lungă funcționează pe ecranul principal, pe lista de locuri a
-unei peșteri și pe butonul de scanare din formularul locului din
-peșteră. De acolo încolo, aplicația se comportă exact ca și cum ați fi
-scanat eticheta.
+De acolo încolo, aplicația se comportă exact ca și cum ați fi scanat
+eticheta. Pentru că panoul rămâne deschis, este varianta comodă când
+lucrați cu mai multe coduri scrise de mână, unul după altul.
 
-Lista de locuri a unei peșteri are și un buton **Căutare manuală cod
-QR** în bara ei de sus, care deschide un mic panou de căutare direct în
-pagină, cu același câmp **Mod de generare identificatori cod QR** și
-același buton **Caută loc după id cod QR**. Pentru că panoul rămâne
-deschis, este varianta comodă când lucrați cu mai multe coduri scrise de
-mână, unul după altul.
+Versiunile de dezvoltare adaugă o scurtătură pe care aplicația publicată
+nu o are: țineți apăsat butonul de scanare circa două secunde și
+jumătate — pe ecranul principal, pe lista de locuri a unei peșteri sau
+pe butonul de scanare din formularul locului din peșteră — și se
+deschide aceeași **Căutare manuală cod QR**, ca dialog. În aplicația
+publicată, apăsarea lungă nu face nimic.
 
 ### Permisiunea pentru cameră
 
