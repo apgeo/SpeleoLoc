@@ -44,8 +44,11 @@ void main() {
     updatedAt: DateTime.utc(2026, 8, 28, 7, 2, 11).millisecondsSinceEpoch,
   );
 
+  /// The property document a row actually puts on the wire. Absent means the
+  /// row states none, which is not the same as stating an empty one.
   Map<String, Object?> propertiesOf(SyncUploadRow row) =>
-      row.toJson()['properties']! as Map<String, Object?>;
+      (row.toJson()['properties'] as Map<String, Object?>?) ??
+      const <String, Object?>{};
 
   group('a cave', () {
     test('never carries a geometry', () {
@@ -245,6 +248,13 @@ void main() {
         expect(properties.values, isNot(contains(1240)));
       });
     }
+
+    test('a cave area states no property document at all', () {
+      // It has nothing of the device's to say. Sending an empty one would be a
+      // statement — that the row's property document is empty — and would
+      // replace whatever the web interface put there.
+      expect(rows['cave area']!.toJson().containsKey('properties'), isFalse);
+    });
 
     test('every key the schema-bearing kinds declare, and no other', () {
       // `cave_place` and `surface_area` declare additionalProperties: false,

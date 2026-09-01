@@ -4,14 +4,25 @@ Written from the app side, for the effort that owns the .NET stack and the speci
 here is fixed here.
 
 Each entry says what was sent, what came back, and what the contract says should have. Reproduced
-against a `node deploy/speleoloc-dev.mjs up` server at `http://127.0.0.1:5205`, contract version 1,
-upstream commit `31868b10`.
+against a `node deploy/speleoloc-dev.mjs up` server at `http://127.0.0.1:5205`, contract version 1.
+
+**All three are fixed as of upstream `3435445e` (2026-09-01).** They are kept rather than deleted:
+each one changed something in this client, and the entry is why. Every entry now opens with what
+the fix settled, and what this side does about it. The reproductions below describe the behaviour of
+`31868b10` and earlier.
 
 ---
 
 ## 1. `name` and `description` are cleared by an upload that does not mention them
 
-**Severity: high — silent data loss in the club's registry, on every row a device edits.**
+**Fixed in `3435445e`.** Both are now applied only when sent, which is what the contract already
+promised twice. The other half of that decision is now written down as well: because an absent
+member and an explicit `null` arrive as the same value, **this generation cannot clear a field at
+all** — `"description": null` leaves the stored description alone, and a device that must empty one
+sends a space. This client still sends both on every row, which is now a choice rather than a
+workaround; see below.
+
+*Originally: high — silent data loss in the club's registry, on every row a device edits.*
 
 ### What the contract says
 
@@ -83,31 +94,30 @@ The shape suggests the two text fields are applied unconditionally from the dese
 an absent JSON member is indistinguishable from an explicit `null`, while the other four are guarded
 by a non-null check.
 
-### What the client does meanwhile, and why it is still worth fixing
+### What this client does, before and after the fix
 
 SpeleoLoc sends `name` and `description` on **every** uploaded row, from its own copy, rather than
-only when they changed. That is not a workaround leaning on the bug: the row carries the
-`baseRevision` the device last read, so the server refuses it outright if anything moved since. The
-device is doing a compare-and-set on the fields it owns, not a blind overwrite, and it stays correct
-after this is fixed. Nothing here is blocked.
+only when they changed. Before the fix that sidestepped the data loss without leaning on it; after
+it, the reason is the limit the fix made explicit.
 
-It is still worth fixing, for two reasons the client cannot reach.
-
-**A client that believed the documents loses data.** The promise is stated twice, in the protocol
-document and again in the standalone rules as something the client "may build on". Sending one
-changed field is the obvious reading and it silently empties the club's description — or its name.
-
-**Deliberate clearing has no shape at all in version 1.** An absent member and an explicit `null`
-are the same bytes to the server, so whatever rule makes omission safe also makes "the caver cleared
-this description" unsendable. If the fix is "apply a text field only when it is non-null", that
-consequence is the other half of the same decision and should be written down rather than
-discovered.
+The row carries the `baseRevision` the device last read, so the server refuses it outright if
+anything moved since. That makes sending them a compare-and-set on the fields the device owns rather
+than a blind overwrite — and it is also the only way the device's text reaches the server at all
+when a caver empties a field, because an omitted member and a null are indistinguishable and neither
+clears anything. A caver who clears a description on the device keeps a stale one on the server
+until a generation whose row shape can say "empty this".
 
 ---
 
 ## 2. Creating any row is refused unless the sync set names a caving group, and nothing says so
 
-**Severity: medium — a client author meets it as an undiagnosable refusal on every row.**
+**Fixed in `3435445e`.** A new row-level code, `sync.set_unbound`, now names the selection's missing
+binding — and only when that is genuinely the cause: the refusal is re-decided against each club the
+caller belongs to, and the general `access.create_forbidden` still stands for an account that holds
+no create right at all, where choosing a club would change nothing. This client maps the new code to
+`surface-to-user` and will offer the caver the clubs their account belongs to.
+
+*Originally: medium — a client author meets it as an undiagnosable refusal on every row.*
 
 ### What happens
 
@@ -163,8 +173,18 @@ choose a caving group, and the app cannot know that from the documents.
 
 ## 3. `altitude` and `positionQuality` do not survive a round trip, and one of them cannot survive at all
 
-**Severity: medium — a column the device fills is silently unsendable, and an
-altitude that is kept is invisible to a client reading the documented fields.**
+**Fixed in `3435445e`.** An altitude is now kept on every kind that carries a point, mirrored into
+the stored point's third ordinate, and `01-protocol.md` §4 now says that a downloaded point may
+carry that ordinate and that it is the altitude. `positionQuality` is documented as write-only in
+this generation. The fix also names a second fault underneath the first, which this side could not
+have seen: comparing two points is a two-dimensional question, so an edit moving nothing but the
+altitude produced a point equal to the stored one and was dropped before it reached the database.
+
+This client already sent the altitude on every kind and already read the third ordinate, so it
+gained the round trip with no change beyond a comment and a test expectation.
+
+*Originally: medium — a column the device fills is silently unsendable, and an
+altitude that is kept is invisible to a client reading the documented fields.*
 
 ### What the contract says
 
@@ -219,6 +239,40 @@ Say in §4 that a point may carry a third ordinate and what it means, and say in
 keep `altitude` and that `positionQuality` is write-only. If a generic kind is meant to keep an
 altitude, that is a fix rather than a documentation change — and the version-1 answer for a device
 is the same either way until it ships.
+
+---
+
+## 4. A new code and two changed behaviours reached a client with no changelog entry
+
+**Open. Severity: low as a defect, high as a habit — the changelog is the only thing a pinned build
+has.**
+
+`3435445e` added `sync.set_unbound`, changed what an upload does with a member it was not sent, and
+changed whether an altitude survives on a generic kind. `contract/speleoloc-sync/v1/CHANGELOG.md` is
+unchanged: its last entry is still `2026-08-29 — contract version 1`.
+
+That file states its own rule, and this is exactly the case it names:
+
+> - any `sync.*` or `qr.*` code that appeared, changed status, or stopped being sent. **A code is
+>   visible to a client even when the version does not move**, and the register of them is
+>   `docs/speleoloc-sync/04-errors.md`.
+
+Nothing here needed a version bump and none is being asked for: a build pinned to 1 keeps working,
+and all three changes are ones a client either benefits from silently or can ignore. The entry is
+what tells that build's author which of those it is, without diffing two repositories.
+
+There is a mechanical consequence too. `manifest.json` covers `CHANGELOG.md` precisely so that a
+copy holding an old changelog cannot match on every digest and call itself current — and because the
+changelog did not change, the roll-up digest did not either. A copy of the recordings taken before
+this commit and one taken after are indistinguishable by the check that exists to distinguish them,
+while the server underneath them behaves differently.
+
+### What would settle it
+
+An entry dated 2026-09-01 saying: contract version unchanged at 1; a build pinned to 1 keeps
+working; no recorded exchange was re-written; `sync.set_unbound` appeared as a row-level `rejected`
+code; an upload no longer writes `name` or `description` it was not sent, and cannot clear either;
+an altitude now survives on every kind that carries a point.
 
 ---
 

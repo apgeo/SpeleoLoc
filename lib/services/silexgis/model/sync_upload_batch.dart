@@ -29,14 +29,22 @@ enum PositionQuality {
 
 /// One row going up.
 ///
-/// **Every row carries [name], [description] and [properties] whether or not
-/// they changed**, and that is a deliberate departure from the partial write
-/// the protocol describes. Two reasons, one of them a defect this server has
-/// today (see `found-defects.md`): omitting a text field clears it. The other
-/// is that sending them is sound regardless — the row states the
-/// [baseRevision] the device last read, so a server that has moved on refuses
-/// the row rather than taking the device's older text. It is a compare-and-set
-/// on the fields the device owns, not a blind overwrite.
+/// **An upload is a partial write: a member this row does not carry is one the
+/// server leaves alone.** That cuts both ways, and the two halves are handled
+/// differently here.
+///
+/// [name] and [description] are stated on every row, whether or not they
+/// changed. The row carries the [baseRevision] the device last read, so a
+/// server that has moved on refuses it rather than taking the device's older
+/// text — a compare-and-set on fields the device owns, not a blind overwrite.
+/// It is also the only way the device's text reaches the server at all, since
+/// an absent member and an explicit `null` are the same value on this wire and
+/// neither clears anything.
+///
+/// [properties] is the opposite case, and the reason it is not simply lumped
+/// in: an **empty** document is a value, and sending one replaces whatever was
+/// stored. So it goes on the wire only when this row actually carries one, and
+/// a row built to change a single field leaves the stored document alone.
 class SyncUploadRow {
   const SyncUploadRow({
     required this.id,
@@ -141,7 +149,10 @@ class SyncUploadRow {
 
     json['name'] = name;
     json['description'] = description;
-    json['properties'] = properties;
+    // Emitted only when there is one to state. An empty map is not "no
+    // opinion" — it is a property document with nothing in it, and it would
+    // replace the codes the row already carries.
+    if (properties.isNotEmpty) json['properties'] = properties;
 
     // Read only on a create, and inert on an update — so sent only where the
     // server will look at them, rather than sent everywhere and ignored.

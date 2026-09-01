@@ -181,9 +181,8 @@ class SilexgisFeatureMapper {
       geometry: latitude == null || longitude == null
           ? null
           : GeoJsonGeometry.point(latitude: latitude, longitude: longitude),
-      // Kept on an entrance only, where the server stores it; on a generic
-      // kind it is accepted and discarded. Sending it regardless costs nothing
-      // and stops being a loss if that is ever fixed.
+      // Its own field going up, and the point's third ordinate coming back:
+      // there is no `altitude` member on a downloaded row.
       altitude: place.altitude,
       properties: _properties(<String, Object?>{
         SpeleolocPropertyKeys.pci: place.placeCodeIdentifier,
@@ -265,8 +264,8 @@ class SilexgisFeatureMapper {
       isEntrance: isEntrance,
       latitude: geometry?.latitude,
       longitude: geometry?.longitude,
-      // The wire row has no altitude member. A point's third ordinate is the
-      // only place one comes back, and only on an entrance.
+      // The wire row has no altitude member; a point's third ordinate is the
+      // only place one comes back.
       altitude: geometry?.altitude,
       placeCodeIdentifier: _string(row.properties[SpeleolocPropertyKeys.pci]),
       qrCodeResourceIdentifier: _string(

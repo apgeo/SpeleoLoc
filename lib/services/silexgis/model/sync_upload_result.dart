@@ -89,6 +89,10 @@ class SyncRowResult {
 
       case SilexgisCodes.idConflict:
       case SilexgisCodes.typeUnknown:
+      // The caver picks a caving group for the selection and the batch is
+      // resent. `access.create_forbidden` stands for an account that holds no
+      // right to create at all, where choosing a club would change nothing.
+      case SilexgisCodes.setUnbound:
         return SilexgisAction.surfaceToUser;
 
       case SilexgisCodes.rowForbidden:

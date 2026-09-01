@@ -17,7 +17,7 @@ is worse than no copy.
 | `docs/integrations/silexgis/*.md` (except this file) | `docs/speleoloc-sync/` |
 | `test_data/silexgis_contract/v1/` | `contract/speleoloc-sync/v1/` |
 
-Copied at upstream commit `31868b10eebe2a8d83541110e6e4a52a4aa06031`, contract version **1**.
+Copied at upstream commit `3435445e2be0f0956fa90a8d50465774862f0739`, contract version **1**.
 
 The recorded traffic is the half that matters most: the tests under `test/services/silexgis/`
 replay those bytes, so a stale or half-applied refresh silently changes what this application is

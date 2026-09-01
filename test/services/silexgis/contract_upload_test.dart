@@ -61,12 +61,11 @@ void main() {
       expectComposes(
         (ours['rows']! as List).single as Map<String, Object?>,
         ((recorded['rows']! as List).single as Map<String, Object?>),
-        // Sent on every row rather than only when they changed: this server
-        // clears a text field an upload does not mention (see
-        // docs/integrations/silexgis/found-defects.md), and stating them is
-        // sound regardless because the row carries the base revision it was
-        // read at.
-        deliberateAdditions: <String>{'description', 'properties'},
+        // Stated on every row rather than only when it changed: the device
+        // owns it, the row carries the base revision it was read at, and an
+        // absent member and an explicit null are the same value here — so
+        // this is the only way the device's text reaches the server at all.
+        deliberateAdditions: <String>{'description'},
       );
       expect(row.isNew, isTrue);
     });
@@ -161,6 +160,50 @@ void main() {
       // gives. A missing echo means "re-read this row", not "an error".
       expect(result.conflictFor(withheld), isNull);
       expect(result.rows[1].action, SilexgisAction.applyAndResubmit);
+    });
+  });
+
+  group('a partial row', () {
+    test('states only what it carries, so the rest is left alone', () {
+      // An upload is a partial write: a member the row does not carry is one
+      // the server leaves alone. A row built to change a single field must not
+      // quietly restate the others.
+      const row = SyncUploadRow(
+        id: '<place>',
+        kind: SyncUploadKind.generic,
+        baseRevision: '<timestamp>',
+        name: 'Renamed',
+      );
+      final json = row.toJson();
+      expect(
+        json.keys,
+        unorderedEquals(<String>[
+          'id',
+          'kind',
+          'baseRevision',
+          'deleted',
+          'isMain',
+          'name',
+          'description',
+        ]),
+      );
+      // An empty property document is a value, not an absence: sending one
+      // would replace the codes the row already carries.
+      expect(json.containsKey('properties'), isFalse);
+      expect(json.containsKey('geometry'), isFalse);
+      expect(json.containsKey('altitude'), isFalse);
+    });
+
+    test('states its property document when it has one', () {
+      const row = SyncUploadRow(
+        id: '<place>',
+        kind: SyncUploadKind.generic,
+        baseRevision: '<timestamp>',
+        properties: <String, Object?>{'speleolocPci': 'AB-0007'},
+      );
+      expect(row.toJson()['properties'], <String, Object?>{
+        'speleolocPci': 'AB-0007',
+      });
     });
   });
 

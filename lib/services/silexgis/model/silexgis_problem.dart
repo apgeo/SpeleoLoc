@@ -61,6 +61,12 @@ class SilexgisCodes {
   static const String rowForbidden = 'sync.row_forbidden';
   static const String rowDeleteForbidden = 'sync.row_delete_forbidden';
   static const String createForbidden = 'access.create_forbidden';
+
+  /// The selection names no caving group, and that is what is standing in the
+  /// way — the same account sending the same row through a selection bound to
+  /// a club it belongs to would have been allowed. The deciding field is on
+  /// the selection, not on the row, so it is not in the request that failed.
+  static const String setUnbound = 'sync.set_unbound';
   static const String parentRequired = 'sync.parent_required';
   static const String parentNotFound = 'sync.parent_not_found';
   static const String parentForbidden = 'sync.parent_forbidden';

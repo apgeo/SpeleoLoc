@@ -26,13 +26,11 @@ class GeoJsonGeometry {
 
   /// The third ordinate of a `Point`, which is where an altitude comes back.
   ///
-  /// **This is the only way an altitude is readable on a downloaded row.** The
-  /// wire row has no `altitude` member — the protocol document's row table,
-  /// which says it is the whole row, does not mention one — so a client that
-  /// reads only the first two ordinates drops every entrance altitude
-  /// silently. A generic row never carries one at all: an altitude sent for a
-  /// cave place is accepted and discarded. Both are recorded in
-  /// `docs/integrations/silexgis/found-defects.md`.
+  /// **This is the only way an altitude is readable on a downloaded row.** A
+  /// downloaded row has no `altitude` member of its own: an upload carries one
+  /// in its own field and the server stores it as the point's third ordinate,
+  /// which is also how it is handed back. A point with no altitude arrives
+  /// two-dimensional, so a null here means none was recorded.
   double? get altitude => _pointOrdinate(2);
 
   double? _pointOrdinate(int index) {

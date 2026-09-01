@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -11,10 +12,9 @@ import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
-import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_feature_mapper.dart';
+import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// End to end against a real SilexGIS installation.
 ///
@@ -234,6 +234,43 @@ void main() {
     );
   });
 
+  group('a selection that names no caving group', () {
+    test('says so, instead of blaming the row', () async {
+      // The deciding field is on the selection, written earlier and absent
+      // from the failing request — so a client author sent to inspect the
+      // row's kind and its container is looking at neither cause.
+      final set = await api.createSet(
+        SyncSetWrite(
+          name: 'live unbound ${DateTime.now().millisecondsSinceEpoch}',
+          rootFeatureIds: const <String>[],
+          settings: const <String, Object?>{},
+        ),
+      );
+      created.add(set.id);
+      expect(set.cavingGroupId, isNull);
+
+      final result = await api.upload(
+        set.id,
+        SyncUploadBatch(
+          batchId: Uuid.v7().toString(),
+          rows: <SyncUploadRow>[
+            const SilexgisFeatureMapper().surfaceAreaRow(
+              SurfaceArea(uuid: Uuid.v7(), title: 'Unbound area'),
+              baseRevision: null,
+            ),
+          ],
+        ),
+      );
+
+      final row = result.rows.single;
+      expect(row.status, SyncRowStatus.rejected);
+      expect(row.code, SilexgisCodes.setUnbound);
+      // A caver picks a club for the selection and the batch is resent; the
+      // client can offer the ones the account belongs to.
+      expect(row.action, SilexgisAction.surfaceToUser);
+    });
+  });
+
   group('rows this application composes', () {
     // A set bound to the caving group, because a set with none refuses every
     // create with `access.create_forbidden` — see found-defects.md.
@@ -404,8 +441,10 @@ void main() {
       expect(place.latitude, 45.602);
       expect(place.depthInCave, 60);
       expect(place.placeCodeIdentifier, 'LV-0002');
-      // Accepted on the way up and discarded there — see found-defects.md.
-      expect(place.altitude, isNull);
+      // An altitude survives on every kind that carries a point, and comes
+      // back as the point's third ordinate — there is no altitude member on a
+      // downloaded row.
+      expect(place.altitude, 1180);
 
       // The cave's own map point is its main entrance's, kept in step by the
       // server rather than written by the device.
@@ -414,6 +453,47 @@ void main() {
       );
       expect(caveRow.geometry?.longitude, 25.501);
       expect(caveRow.kind, SilexgisKinds.cave);
+    });
+
+    test('an upload leaves alone the members it did not send', () async {
+      // The partial write this client relies on for every field it does not
+      // own — and the reason it nonetheless states its own text on every row:
+      // an omitted member and an explicit null are the same value here, so
+      // nothing in this generation can clear a field.
+      final before = await api.download(set.id, pageSize: 500);
+      final stored = before.features.firstWhere(
+        (f) => f.id == entranceUuid.toString(),
+      );
+      expect(stored.description, 'The way in.');
+
+      final result = await api.upload(
+        set.id,
+        SyncUploadBatch(
+          batchId: Uuid.v7().toString(),
+          rows: <SyncUploadRow>[
+            SyncUploadRow(
+              id: entranceUuid.toString(),
+              kind: SyncUploadKind.caveEntrance,
+              baseRevision: stored.updatedAt,
+              name: 'Main entrance (resurveyed)',
+              isMain: true,
+            ),
+          ],
+        ),
+      );
+      expect(result.rows.single.status, SyncRowStatus.updated);
+
+      final after = await api.download(set.id, pageSize: 500);
+      final row = after.features.firstWhere(
+        (f) => f.id == entranceUuid.toString(),
+      );
+      expect(row.name, 'Main entrance (resurveyed)');
+      expect(row.description, 'The way in.');
+      // And the position and the property document, which the same row did
+      // not mention either.
+      expect(row.geometry?.latitude, 45.601);
+      expect(row.geometry?.altitude, 1240);
+      expect(row.properties[SpeleolocPropertyKeys.pci], 'LV-0001');
     });
 
     test(
