@@ -1322,5 +1322,9 @@
   "map_entrance_added": "Entrance added",
   "map_cave_added": "Cave added",
   "gps_service_disabled_short": "Location services are off",
-  "gps_permission_denied_short": "Location permission denied"
+  "gps_permission_denied_short": "Location permission denied",
+
+  "label_url_prefix": "Landing address for printed labels",
+  "label_url_prefix_help": "Leave empty to print sp:// squares, which only this app resolves. Set it to your club server's landing address (https://speo.example.org/q/) and a printed square opens on any phone — and still resolves in this app.",
+  "segment_separator_unscannable": "A / or = here truncates every printed code when it is scanned back."
 }

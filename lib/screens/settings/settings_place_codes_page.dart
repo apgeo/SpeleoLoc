@@ -9,6 +9,7 @@ import 'package:speleoloc/services/place_code/strategies/global_hierarchical_str
 import 'package:speleoloc/services/place_code/strategies/per_area_sequential_strategy.dart';
 import 'package:speleoloc/services/place_code/strategies/per_cave_sequential_strategy.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/qr_label_payload.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -252,7 +253,19 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
               'main_entrance_suffix',
               cfg['main_entrance_suffix'] ?? '0',
             ),
-            _stringField('segment_separator', cfg['segment_separator'] ?? ''),
+            _stringField(
+              'segment_separator',
+              cfg['segment_separator'] ?? '',
+              // The one condition on a printed label that nothing else
+              // enforces. The scanner splits a URL on its last `/` or `=`, so
+              // either character inside a mirror-mode code silently truncates
+              // it — and this field joins every segment of every code
+              // allocated afterwards.
+              validator: (value) =>
+                  QrLabelPayload.isSeparatorScannable(value ?? '')
+                  ? null
+                  : LocServ.inst.t('segment_separator_unscannable'),
+            ),
             SwitchListTile(
               title: Text(LocServ.inst.t('allow_non_digit')),
               value: cfg['allow_non_digit'] == true,
@@ -263,11 +276,19 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
     }
   }
 
-  Widget _stringField(String key, String value) {
+  Widget _stringField(
+    String key,
+    String value, {
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: TextFormField(
         initialValue: value,
+        autovalidateMode: validator == null
+            ? AutovalidateMode.disabled
+            : AutovalidateMode.always,
+        validator: validator,
         decoration: InputDecoration(labelText: LocServ.inst.t(key)),
         onChanged: (v) => _saveStrategyConfigField(key, v),
       ),

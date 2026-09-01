@@ -1321,5 +1321,9 @@
   "map_entrance_added": "Intrare adăugată",
   "map_cave_added": "Peșteră adăugată",
   "gps_service_disabled_short": "Serviciile de localizare sunt oprite",
-  "gps_permission_denied_short": "Permisiune de localizare refuzată"
+  "gps_permission_denied_short": "Permisiune de localizare refuzată",
+
+  "label_url_prefix": "Adresa de destinație pentru etichetele tipărite",
+  "label_url_prefix_help": "Lasă gol pentru pătrate sp://, pe care doar aplicația aceasta le rezolvă. Pune adresa serverului de club (https://speo.example.org/q/) și pătratul tipărit se deschide pe orice telefon — și tot funcționează în aplicație.",
+  "segment_separator_unscannable": "Un / sau = aici trunchiază orice cod tipărit atunci când e scanat."
 }
