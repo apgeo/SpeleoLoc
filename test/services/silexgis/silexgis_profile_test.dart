@@ -70,6 +70,7 @@ void main() {
         'baseUrl',
         'accountEmail',
         'syncSetId',
+        'uploadsNewRoots',
       ]);
     });
   });
@@ -89,6 +90,14 @@ void main() {
         db,
       ).writeString(ConfigKey.silexgisProfiles, '{not json at all');
       expect(await repo.list(), isEmpty);
+    });
+
+    test('does not push a caver\'s own surveys unless they asked', () {
+      // A caver who picked the club's caves to carry would not expect their
+      // survey of an unrelated cave to be published because a profile happens
+      // to be configured.
+      expect(profile.uploadsNewRoots, isFalse);
+      expect(profile.copyWith(uploadsNewRoots: true).uploadsNewRoots, isTrue);
     });
 
     test('a profile with no sync set chosen is configured, not broken', () {

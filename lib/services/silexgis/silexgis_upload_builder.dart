@@ -49,15 +49,24 @@ class SilexgisUploadBuilder {
     required AppDatabase db,
     required SilexgisLocalStateRepository localState,
     required String profileUuid,
+    bool uploadsNewRoots = false,
     SilexgisFeatureMapper mapper = const SilexgisFeatureMapper(),
   }) : _db = db,
        _localState = localState,
        _profileUuid = profileUuid,
+       _uploadsNewRoots = uploadsNewRoots,
        _mapper = mapper;
 
   final AppDatabase _db;
   final SilexgisLocalStateRepository _localState;
   final String _profileUuid;
+
+  /// See [SilexgisProfile.uploadsNewRoots]. Off, what travels is what the
+  /// installation already holds plus what the caver has put inside it; on, a
+  /// cave surveyed somewhere new goes too — which is the only way one ever
+  /// reaches a server, since a selection can only name a root that is already
+  /// there.
+  final bool _uploadsNewRoots;
   final SilexgisFeatureMapper _mapper;
 
   /// Everything this run has to send, in the order to send it.
@@ -72,12 +81,14 @@ class SilexgisUploadBuilder {
 
     for (final area in await _db.select(_db.surfaceAreas).get()) {
       final stored = revisions[area.uuid];
-      // A surface area sits at the top of everything. Only one the server
-      // already holds is updated from here; a new one is a new root.
-      if (stored == null || !_isDirty(area.updatedAt, stored)) continue;
+      // A surface area sits at the top of everything, so a new one is a new
+      // root and only travels when the caver asked for that.
+      if (stored == null && !_uploadsNewRoots) continue;
+      if (stored != null && !_isDirty(area.updatedAt, stored)) continue;
+      known.add(area.uuid);
       pending.add(
         PendingUploadRow(
-          row: _mapper.surfaceAreaRow(area, baseRevision: stored.revision),
+          row: _mapper.surfaceAreaRow(area, baseRevision: stored?.revision),
           entityTable: 'surface_areas',
           entityUuid: area.uuid,
           localUpdatedAt: area.updatedAt,
@@ -90,7 +101,7 @@ class SilexgisUploadBuilder {
       final stored = revisions[cave.uuid];
       final parent = cave.surfaceAreaUuid;
       final containerIsThere = parent != null && known.contains(parent);
-      if (stored == null && !containerIsThere) continue;
+      if (stored == null && !containerIsThere && !_uploadsNewRoots) continue;
 
       sendableCaves[cave.uuid] = cave;
       known.add(cave.uuid);
@@ -241,20 +252,8 @@ class SilexgisUploadBuilder {
     return null;
   }
 
-  /// A row is due to be sent when its own stamp no longer equals the one the
-  /// two sides last agreed about.
-  ///
-  /// An exact comparison rather than one against a clock reading, and that is
-  /// the point: comparing a row's stamp to *when* a revision was stored leaves
-  /// a window at each end — an edit in the same millisecond as an upload is
-  /// missed, and a server whose clock runs ahead makes a freshly downloaded row
-  /// look edited for ever. Two stamps either match or they do not.
-  ///
-  /// A row that has never carried a stamp is treated as due: there is nothing
-  /// to compare, and one `unchanged` answer per run costs less than an edit
-  /// that never leaves the device.
-  bool _isDirty(int? updatedAt, StoredRevision stored) {
-    if (updatedAt == null && stored.localUpdatedAt == null) return true;
-    return updatedAt != stored.localUpdatedAt;
-  }
+  /// A row is due to be sent when it no longer says what the two sides last
+  /// agreed it said. See [StoredRevision.agreesWith].
+  bool _isDirty(int? updatedAt, StoredRevision stored) =>
+      !stored.agreesWith(updatedAt);
 }

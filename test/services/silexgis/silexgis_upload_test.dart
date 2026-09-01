@@ -167,6 +167,25 @@ void main() {
       expect(await builder.build(), isEmpty);
     });
 
+    test('a new cave and its area, once the caver asks for them', () async {
+      // Off by default; on, this is the only way a genuinely new cave ever
+      // reaches a server, because a selection can only name a root that is
+      // already there.
+      await insertArea(updatedAt: clock.nowMs());
+      await insertCave(updatedAt: clock.nowMs());
+      await insertPlace(placeId, title: 'Sala Mare', updatedAt: clock.nowMs());
+
+      final pending = await SilexgisUploadBuilder(
+        db: db,
+        localState: localState,
+        profileUuid: profile,
+        uploadsNewRoots: true,
+      ).build();
+
+      expect(pending.map((p) => p.entityUuid), <Uuid>[areaId, caveId, placeId]);
+      expect(pending.every((p) => p.row.isNew), isTrue);
+    });
+
     test('an unchanged row is not re-sent', () async {
       final t0 = clock.nowMs();
       await insertArea(updatedAt: t0);

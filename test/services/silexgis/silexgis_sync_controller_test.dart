@@ -235,8 +235,8 @@ void main() {
       containsAllInOrder(<SilexgisSyncPhase>[
         SilexgisSyncPhase.authenticating,
         SilexgisSyncPhase.askingCapabilities,
-        SilexgisSyncPhase.downloading,
         SilexgisSyncPhase.uploading,
+        SilexgisSyncPhase.downloading,
         SilexgisSyncPhase.completed,
       ]),
     );

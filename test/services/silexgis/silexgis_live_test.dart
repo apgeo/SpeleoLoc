@@ -3,6 +3,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:drift/native.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
+import 'package:speleoloc/services/cave_place_repository.dart';
+import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -14,6 +20,12 @@ import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_feature_mapper.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
+import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 
 /// End to end against a real SilexGIS installation.
@@ -559,6 +571,273 @@ void main() {
         after.features.map((f) => f.id),
         isNot(contains(placeUuid.toString())),
       );
+    });
+  });
+
+  group('a whole run, through the controller', () {
+    late AppDatabase db;
+    late SilexgisSyncController controller;
+    late SilexgisLocalStateRepository localState;
+    late SilexgisProfileRepository profiles;
+    late SilexgisProfile profile;
+    late CavePlaceRepository placeRepository;
+    late String caveId;
+
+    setUpAll(() async {
+      final group = await _demoCavingGroupId(baseUri, await auth.accessToken());
+      final roots = await _demoCaveFeatureIds(
+        baseUri,
+        await auth.accessToken(),
+      );
+      final set = await api.createSet(
+        SyncSetWrite(
+          name: 'live controller ${DateTime.now().millisecondsSinceEpoch}',
+          cavingGroupId: group,
+          uploadVisibility: SyncVisibility.cavingGroup,
+          rootFeatureIds: roots,
+          settings: const <String, Object?>{'pciStrategy': 'ro-default'},
+        ),
+      );
+      created.add(set.id);
+
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      late ChangeLogger loggerRef;
+      final users = UserRepository(db, () => loggerRef);
+      final currentUser = CurrentUserService(
+        db,
+        users,
+        ConfigurationRepository(db),
+      );
+      await currentUser.initialize();
+      final logger = loggerRef = ChangeLogger(db, currentUser);
+      localState = SilexgisLocalStateRepository(db);
+
+      // The controller builds its own session from the stored credential, so
+      // the token store is seeded by signing in once here — which is what the
+      // settings page does when a caver adds a profile.
+      final tokens = InMemoryRefreshTokenStore();
+      final session = SilexgisAuthService(
+        baseUri: baseUri,
+        profileUuid: 'live',
+        store: tokens,
+      );
+      await session.signIn(email: email, password: password);
+      session.close();
+
+      profiles = SilexgisProfileRepository(
+        ConfigurationRepository(db),
+        tokens,
+        localState,
+      );
+      profile = SilexgisProfile(
+        profileUuid: 'live',
+        displayName: 'Development server',
+        baseUrl: baseUri.toString(),
+        accountEmail: email,
+        syncSetId: set.id,
+        // The demo caves belong to the administrator and this account may read
+        // them but not add to them, so anything this device surveys goes
+        // somewhere of its own — which is what this switch is for.
+        uploadsNewRoots: true,
+      );
+      await profiles.save(profile);
+
+      placeRepository = CavePlaceRepository(db, currentUser, logger);
+      controller = SilexgisSyncController(
+        db: db,
+        profiles: profiles,
+        localState: localState,
+        logger: logger,
+        caves: CaveRepository(db, currentUser, logger),
+        places: placeRepository,
+        tokens: tokens,
+      );
+    });
+
+    tearDownAll(() => db.close());
+
+    test('reads the club\'s caves onto an empty device', () async {
+      await controller.syncDefault();
+
+      expect(
+        controller.progress.phase,
+        SilexgisSyncPhase.completed,
+        reason: controller.progress.message,
+      );
+      // The same eleven rows, now as local caves and cave places.
+      final caves = await db.select(db.caves).get();
+      final places = await db.select(db.cavePlaces).get();
+      expect(caves, hasLength(5));
+      expect(places, hasLength(6));
+      expect(
+        caves.map((c) => c.title),
+        isNot(contains('Avenul Demo Protejat')),
+      );
+      // An import, not a user edit.
+      expect(await db.select(db.changeLog).get(), isEmpty);
+      caveId = caves.first.uuid.toString();
+    });
+
+    test('a second run has nothing to say', () async {
+      await controller.syncDefault();
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(controller.progress.rowsApplied, 0);
+      expect(controller.progress.rowsSent, 0);
+    });
+
+    test('adding to somebody else\'s cave is refused, and says so', () async {
+      // The account may read the club's caves and may not add to them. The
+      // refusal is per row and names its own reason.
+      final theirCave = (await db.select(db.caves).get()).firstWhere(
+        (c) => c.uuid.toString() == caveId,
+      );
+      final refusedId = Uuid.v7();
+      await db
+          .into(db.cavePlaces)
+          .insert(
+            CavePlace(
+              uuid: refusedId,
+              title: 'Not mine to add ${refusedId.toString().substring(0, 8)}',
+              caveUuid: theirCave.uuid,
+              isEntrance: 0,
+              isMainEntrance: 0,
+              updatedAt: DateTime.now().millisecondsSinceEpoch,
+            ),
+          );
+
+      await controller.syncDefault();
+      final refusal = controller.progress.upload!.refusals.firstWhere(
+        (r) => r.entityUuid == refusedId,
+      );
+      expect(refusal.result.code, SilexgisCodes.parentForbidden);
+      expect(refusal.action, SilexgisAction.stop);
+      // The caver's row is still here: the device is the source of truth and a
+      // refusal is about this request, not about the data.
+      expect(
+        await (db.select(
+          db.cavePlaces,
+        )..where((t) => t.uuid.equalsValue(refusedId))).getSingleOrNull(),
+        isNotNull,
+      );
+      await (db.delete(
+        db.cavePlaces,
+      )..where((t) => t.uuid.equalsValue(refusedId))).go();
+    });
+
+    test('a cave surveyed here lands in the club\'s registry', () async {
+      final areaId = Uuid.v7();
+      final newCaveId = Uuid.v7();
+      final placeId = Uuid.v7();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db
+          .into(db.surfaceAreas)
+          .insert(
+            SurfaceArea(
+              uuid: areaId,
+              title: 'Massif ${areaId.toString().substring(0, 8)}',
+              generalAreaIdentifier: 'NW',
+              updatedAt: now,
+            ),
+          );
+      await db
+          .into(db.caves)
+          .insert(
+            Cave(
+              uuid: newCaveId,
+              title: 'Peștera Nouă ${newCaveId.toString().substring(0, 8)}',
+              surfaceAreaUuid: areaId,
+              caveLocalIndex: 'N1',
+              updatedAt: now,
+            ),
+          );
+      await db
+          .into(db.cavePlaces)
+          .insert(
+            CavePlace(
+              uuid: placeId,
+              title: 'Sala Nouă ${placeId.toString().substring(0, 8)}',
+              description: 'Surveyed on this device.',
+              caveUuid: newCaveId,
+              placeCodeIdentifier: 'NEW-0001',
+              latitude: 45.55,
+              longitude: 25.55,
+              altitude: -42,
+              depthInCave: 42,
+              isEntrance: 0,
+              isMainEntrance: 0,
+              updatedAt: now,
+            ),
+          );
+
+      await controller.syncDefault();
+      expect(
+        controller.progress.phase,
+        SilexgisSyncPhase.completed,
+        reason: controller.progress.message,
+      );
+      expect(
+        controller.progress.upload?.refusals,
+        isEmpty,
+        reason: controller.progress.upload?.refusals
+            .map((r) => '${r.entityUuid}: ${r.result.code} ${r.result.detail}')
+            .join('; '),
+      );
+      // The area, the cave and the place, in containment order.
+      expect(controller.progress.rowsSent, 3);
+
+      // Written, but outside the selection: a set names roots, and this
+      // massif is not one of them yet. The rows are on the server and the
+      // download does not carry them back.
+      final before = await api.download(profile.syncSetId!, pageSize: 500);
+      expect(
+        before.features.map((f) => f.id),
+        isNot(contains(placeId.toString())),
+      );
+
+      // Naming the new massif as a root is what makes the device go on
+      // carrying it — and it is only possible now, because the row had to
+      // exist there before a selection could name it.
+      final current = await api.getSet(profile.syncSetId!);
+      await api.replaceSet(
+        profile.syncSetId!,
+        current.toWrite().copyWith(
+          rootFeatureIds: <String>[
+            ...current.rootFeatureIds,
+            areaId.toString(),
+          ],
+        ),
+      );
+
+      final page = await api.download(profile.syncSetId!, pageSize: 500);
+      final stored = page.features.firstWhere(
+        (f) => f.id == placeId.toString(),
+      );
+      // The identifier the device minted is the identifier the server holds.
+      expect(stored.properties[SpeleolocPropertyKeys.pci], 'NEW-0001');
+      expect(stored.geometry?.altitude, -42);
+      expect(await localState.readRevision('live', placeId), stored.updatedAt);
+    });
+
+    test('and removing it here removes it there', () async {
+      final place = (await db.select(db.cavePlaces).get()).firstWhere(
+        (p) => p.placeCodeIdentifier == 'NEW-0001',
+      );
+      await placeRepository.deleteCavePlace(place.uuid);
+
+      await controller.syncDefault();
+      expect(
+        controller.progress.phase,
+        SilexgisSyncPhase.completed,
+        reason: controller.progress.message,
+      );
+
+      final page = await api.download(profile.syncSetId!, pageSize: 500);
+      expect(
+        page.features.map((f) => f.id),
+        isNot(contains(place.uuid.toString())),
+      );
+      // And the revision is forgotten, so the tombstone is not sent for ever.
+      expect(await localState.readRevision('live', place.uuid), isNull);
     });
   });
 }

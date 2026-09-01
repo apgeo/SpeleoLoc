@@ -237,6 +237,22 @@ class StoredRevision {
   /// entrance or a place, and the tombstone still names one. Null for a
   /// revision stored before this was recorded.
   final String? wireKind;
+
+  /// Whether a local row carrying [updatedAt] still says what the two sides
+  /// last agreed it said.
+  ///
+  /// An exact comparison, and that is the point: comparing a row's stamp to
+  /// *when* this entry was written leaves a window at each end — an edit made
+  /// in the same millisecond as an upload is missed, and a server whose clock
+  /// runs ahead makes a freshly downloaded row look edited for ever.
+  ///
+  /// A row that has never carried a stamp is treated as changed: there is
+  /// nothing to compare, and one `unchanged` answer per run costs less than an
+  /// edit that never leaves the device.
+  bool agreesWith(int? updatedAt) {
+    if (updatedAt == null && localUpdatedAt == null) return false;
+    return updatedAt == localUpdatedAt;
+  }
 }
 
 /// One row's revision on one installation.

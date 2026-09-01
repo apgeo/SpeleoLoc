@@ -172,6 +172,29 @@ class SilexgisSyncController extends ChangeNotifier {
       profileUuid: profile.profileUuid,
     );
 
+    // The write goes first, and the order matters twice over. A row the caver
+    // removed here is gone from this database, so a read that ran first would
+    // simply put it back — the removal would be undone by the very run meant
+    // to carry it. And an edit that loses a conflict is answered with the
+    // server's own row while the device still holds its own version, which is
+    // what lets the caver see both.
+    if (capabilities.servesUpload) {
+      _emit(_progress.copyWith(phase: SilexgisSyncPhase.uploading));
+      final report = await SilexgisUploadRunner(
+        api: session.api,
+        builder: SilexgisUploadBuilder(
+          db: _db,
+          localState: _localState,
+          profileUuid: profile.profileUuid,
+          uploadsNewRoots: profile.uploadsNewRoots,
+        ),
+        localState: _localState,
+        profileUuid: profile.profileUuid,
+      ).run(setId, capabilities: capabilities);
+
+      _emit(_progress.copyWith(rowsSent: report.written, upload: report));
+    }
+
     if (capabilities.servesDownload) {
       _emit(_progress.copyWith(phase: SilexgisSyncPhase.downloading));
       final report = await SilexgisDownloadRunner(
@@ -189,22 +212,6 @@ class SilexgisSyncController extends ChangeNotifier {
           download: report,
         ),
       );
-    }
-
-    if (capabilities.servesUpload) {
-      _emit(_progress.copyWith(phase: SilexgisSyncPhase.uploading));
-      final report = await SilexgisUploadRunner(
-        api: session.api,
-        builder: SilexgisUploadBuilder(
-          db: _db,
-          localState: _localState,
-          profileUuid: profile.profileUuid,
-        ),
-        localState: _localState,
-        profileUuid: profile.profileUuid,
-      ).run(setId, capabilities: capabilities);
-
-      _emit(_progress.copyWith(rowsSent: report.written, upload: report));
     }
 
     _emit(

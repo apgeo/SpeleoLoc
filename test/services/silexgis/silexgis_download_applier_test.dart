@@ -253,6 +253,80 @@ void main() {
     });
   });
 
+  group('an unsent local edit is not written over', () {
+    test('the download leaves it alone and says so', () async {
+      // Overwriting would lose the caver's work silently. Sending it produces
+      // an answer they can act on — a conflict, with the server's own row
+      // beside it, when the two have genuinely diverged.
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave()]),
+        setId: setId,
+      );
+      await (db.update(
+        db.caves,
+      )..where((t) => t.uuid.equalsValue(caveId))).write(
+        CavesCompanion(
+          title: const Value('Renamed on this device'),
+          updatedAt: Value(clock.nowMs() + 1000),
+        ),
+      );
+
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[
+          feature(
+            id: caveId.toString(),
+            kind: 'cave',
+            name: 'Renamed on the server',
+            updatedAt: '2026-08-31T09:00:00.000Z',
+          ),
+        ]),
+        setId: setId,
+      );
+
+      expect(report.updated, 0);
+      expect(report.skipped[SilexgisSkipReason.unsentLocalEdit], 1);
+      final cave = await (db.select(
+        db.caves,
+      )..where((t) => t.uuid.equalsValue(caveId))).getSingle();
+      expect(cave.title, 'Renamed on this device');
+    });
+
+    test(
+      'a row this device has never exchanged has no agreement to break',
+      () async {
+        // The download is where it first arrives, so nothing holds it back.
+        final report = await applier.applyPage(
+          page(<Map<String, Object?>>[aCave()]),
+          setId: setId,
+        );
+        expect(report.inserted, 1);
+        expect(report.skipped[SilexgisSkipReason.unsentLocalEdit], isNull);
+      },
+    );
+
+    test(
+      'a row that only arrived is not mistaken for one the caver edited',
+      () async {
+        await applier.applyPage(
+          page(<Map<String, Object?>>[aCave()]),
+          setId: setId,
+        );
+        final report = await applier.applyPage(
+          page(<Map<String, Object?>>[
+            feature(
+              id: caveId.toString(),
+              kind: 'cave',
+              name: 'Renamed on the server',
+              updatedAt: '2026-08-31T09:00:00.000Z',
+            ),
+          ]),
+          setId: setId,
+        );
+        expect(report.updated, 1);
+      },
+    );
+  });
+
   group('a child can arrive before its parent', () {
     test('within one page', () async {
       // The order is the change order and has nothing to do with containment:

@@ -24,6 +24,13 @@ enum SilexgisSkipReason {
   /// wants — two devices that named the same chamber before they ever met. The
   /// local row is kept.
   uniqueCollision,
+
+  /// The local row has an edit that has not reached the server yet, so the
+  /// downloaded version is not written over it. The edit goes up on the next
+  /// write and is answered — with a conflict and the server's own row when the
+  /// two have genuinely diverged, which is a question for the caver rather
+  /// than something to settle by overwriting.
+  unsentLocalEdit,
 }
 
 /// What one page did.
@@ -109,6 +116,9 @@ class SilexgisDownloadApplier {
 
   int get pendingCount => _pending.length;
 
+  /// What the two sides last agreed each local row said, read once per page.
+  Map<Uuid, StoredRevision> _agreed = const <Uuid, StoredRevision>{};
+
   /// Applies one page and stores the position it hands back, in one
   /// transaction: a page that is written but whose cursor is lost would be
   /// re-read, and one whose cursor is stored without the rows would not.
@@ -123,6 +133,7 @@ class SilexgisDownloadApplier {
         // deferred check lets that happen and still fails a genuinely broken
         // edge at commit.
         await _db.customStatement('PRAGMA defer_foreign_keys = ON');
+        _agreed = await _localState.readRevisions(_profileUuid);
         report = await _applyRows(page);
         final deletes = await _applyTombstones(page.tombstones);
         report = SilexgisApplyReport(
@@ -193,6 +204,8 @@ class SilexgisDownloadApplier {
             updated++;
           case _Outcome.collided:
             skip(SilexgisSkipReason.uniqueCollision);
+          case _Outcome.heldBack:
+            skip(SilexgisSkipReason.unsentLocalEdit);
           case _Outcome.deferred:
             continue;
         }
@@ -279,6 +292,7 @@ class SilexgisDownloadApplier {
         ),
       );
     }
+    if (_hasUnsentEdit(uuid, local.updatedAt)) return _Outcome.heldBack;
     return _update(
       _db.surfaceAreas,
       local.copyWith(
@@ -314,6 +328,7 @@ class SilexgisDownloadApplier {
         ),
       );
     }
+    if (_hasUnsentEdit(uuid, local.updatedAt)) return _Outcome.heldBack;
     return _update(
       _db.caves,
       local.copyWith(
@@ -345,6 +360,7 @@ class SilexgisDownloadApplier {
         ),
       );
     }
+    if (_hasUnsentEdit(uuid, local.updatedAt)) return _Outcome.heldBack;
     // Containment is not carried by this contract after a row is created, so
     // an existing row's cave is left where it is.
     return _update(
@@ -407,6 +423,7 @@ class SilexgisDownloadApplier {
       );
     }
 
+    if (_hasUnsentEdit(uuid, local.updatedAt)) return _Outcome.heldBack;
     return _update(
       _db.cavePlaces,
       local.copyWith(
@@ -527,6 +544,17 @@ class SilexgisDownloadApplier {
     return rows.isNotEmpty;
   }
 
+  /// Whether the local row has an edit the server has not been told about.
+  ///
+  /// A row this device has never exchanged has no agreement to break, so it is
+  /// written: the download is where it first arrives. One that was exchanged
+  /// and has moved since is left alone — overwriting it would lose the caver's
+  /// work silently, where sending it produces an answer they can act on.
+  bool _hasUnsentEdit(Uuid uuid, int? localUpdatedAt) {
+    final agreed = _agreed[uuid];
+    return agreed != null && !agreed.agreesWith(localUpdatedAt);
+  }
+
   /// The server's own stamp, as local epoch milliseconds.
   ///
   /// Deliberately not the moment of the import: device-to-device merges are
@@ -538,4 +566,4 @@ class SilexgisDownloadApplier {
   }
 }
 
-enum _Outcome { inserted, updated, collided, deferred }
+enum _Outcome { inserted, updated, collided, heldBack, deferred }
