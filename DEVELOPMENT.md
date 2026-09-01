@@ -13,16 +13,29 @@ libraries, so nothing here needs root beyond `apt-get`, and nothing collides wit
 |---|---|---|---|
 | Flutter SDK (stable) | 3.47.2 | ~1.5 GB after first run | everything |
 | Dart 3.13.2 | bundled with Flutter | — | `dart format`, `dart test` |
-| Linux desktop toolchain | clang, cmake, ninja, GTK 3 headers | ~400 MB | `flutter run -d linux`, host tests |
+| Linux desktop toolchain | clang, cmake, ninja, GTK 3 headers | ~400 MB | host tests (`flutter test`); **not** a runnable desktop build — see below |
 | OpenJDK | 17 | ~350 MB | Android Gradle builds only |
 | Android command-line tools | 22.0 | ~180 MB | Android builds only |
 | Android platform + build-tools | android-36, build-tools 37.0.0 | ~1.5 GB | Android builds only |
 
-**The Android half is optional for most work.** `flutter test` runs on the host, and this project
-has a `linux/` target, so `flutter run -d linux` gives a real running application. The sync engine,
+**The Android half is optional for most work.** `flutter test` runs on the host, so the sync engine,
 HTTP client, database layer and archive logic can all be built and tested without an Android SDK or a
-phone. Install phase 2 when you reach the camera, BLE beacon or GPS code, which cannot be exercised
-on a desktop.
+phone — widget tests included, which is how the screens are checked here. Install phase 2 when you
+reach the camera, BLE beacon or GPS code, which cannot be exercised on a desktop.
+
+⚠️ **`flutter run -d linux` does not work in this project, and an earlier revision of this file said
+it did.** The `linux/` directory exists, but `flutter_sound` ships no Linux implementation and its
+plugin CMake references a target that is never defined, so the build fails at the generate step:
+
+```
+$<TARGET_FILE:flutter_sound_plugin>
+  No target "flutter_sound_plugin"
+```
+
+Nothing short of dropping or replacing that dependency fixes it. Two smaller gaps sit in front of it
+and are worth fixing anyway, because they block the desktop build before it reaches this one — add
+`libsecret-1-dev libjsoncpp-dev` (for `flutter_secure_storage`) and `libcurl4-openssl-dev` (for
+`sentry-native`) to the apt line above if you want to get that far.
 
 ---
 
