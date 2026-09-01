@@ -36,5 +36,11 @@ portret.
 - Barele de stare și barele de navigare ale telefonului sunt decupate; nimic
   din interiorul ferestrei aplicației nu este retușat.
 
-Vedeți [Contribuții la acest wiki](../contributing-docs.md) pentru felul în
-care se adaugă sau se înlocuiește o captură de ecran.
+Pentru a adăuga o captură: fotografiați ecranul pe verticală, decupați barele
+telefonului, redimensionați-o la 640 px lățime și salvați-o ca JPEG în
+[`docs/images/`](../../images/) sub un nume care spune ce arată. Adăugați apoi
+o intrare în galeria ariei respective, cu o ancoră `<a id="numele-fișierului"></a>`
+deasupra titlului, și trimiteți la acea ancoră din paginile de funcționalități
+pe care le ilustrează. Înlocuirea unei capturi înseamnă suprascrierea
+fișierului și revizuirea intrării — numele și ancora rămân aceleași, deci
+niciun link nu se rupe.

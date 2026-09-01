@@ -88,7 +88,6 @@ than read about it.
 
 ### Meta
 
-- [Contributing to this wiki](contributing-docs.md)
 - [Working with a local test archive](workflows/local-test-archive.md)
 
 ---
@@ -107,6 +106,7 @@ SpeleoLoc is in **alpha**. Some features are partially implemented or subject to
 change; where that is the case, the page says so. See the project
 [README](../README.md) for release state.
 
-This wiki is a work in progress and is not always level with the app — see
-[Contributing to this wiki](contributing-docs.md) for the conventions it
-follows.
+This wiki is a work in progress and is not always level with the app. Its
+conventions — page structure, how control names are chosen, and how the two
+language editions are kept in step — are described in the maintainers'
+contributing guide, which is not part of the public repository yet.

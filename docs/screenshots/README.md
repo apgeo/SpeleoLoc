@@ -24,4 +24,9 @@ Every screenshot in this wiki lives here, grouped by area, with a description of
 - File names are stable slugs (`cave-map-measure-distance.jpg`), not capture timestamps, so a link keeps working when a shot is re-taken.
 - Device status bars and navigation bars are cropped away; nothing inside the app window is retouched.
 
-See [Contributing to this wiki](../contributing-docs.md) for how to add or replace a screenshot.
+To add a shot: capture it in portrait, crop the device bars away, scale it to
+640 px wide and save it as a JPEG in [`docs/images/`](../images/) under a name
+that says what it shows. Then add an entry to the gallery for its area, with an
+`<a id="the-file-name"></a>` anchor above the heading, and link that anchor from
+the feature pages it illustrates. Replacing a shot means overwriting the file
+and revising its entry — the name and the anchor stay put, so no link breaks.
