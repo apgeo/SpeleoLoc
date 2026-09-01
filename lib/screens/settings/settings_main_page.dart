@@ -11,6 +11,7 @@ import 'package:speleoloc/screens/settings/settings_map_page.dart';
 import 'package:speleoloc/screens/settings/users_page.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
+import 'package:speleoloc/screens/settings/silexgis_sync_settings_page.dart';
 import 'package:speleoloc/screens/settings/settings_beacons_page.dart';
 import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
@@ -192,6 +193,19 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                   context,
                   MaterialPageRoute(
                     builder: (_) => const FtpSyncSettingsPage(),
+                  ),
+                );
+              },
+            ),
+            _SettingsSection(
+              icon: Icons.dns_outlined,
+              title: LocServ.inst.t('silexgis_title'),
+              subtitle: LocServ.inst.t('silexgis_desc'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SilexgisSyncSettingsPage(),
                   ),
                 );
               },

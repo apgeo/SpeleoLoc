@@ -30,6 +30,12 @@ import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
@@ -116,6 +122,57 @@ final ftpSyncControllerProvider = ChangeNotifierProvider<FtpSyncController>(
     archiveService: ref.watch(syncArchiveServiceProvider),
     currentUserService: ref.watch(currentUserServiceProvider),
   ),
+);
+
+// -----------------------------------------------------------------------------
+// SilexGIS server sync. Entirely optional: with no profile configured every one
+// of these is inert and the application behaves exactly as it does with no
+// server in the world. Deliberately separate from the FTP wiring above — the
+// two channels work independently and neither impersonates the other.
+// -----------------------------------------------------------------------------
+
+/// A server profile's refresh token, in the OS keystore rather than in the
+/// database a plaintext export would carry off.
+final silexgisTokenStoreProvider = Provider<SilexgisRefreshTokenStore>(
+  (ref) => SilexgisSecureTokenStore(),
+);
+
+/// This device's download position and per-row server revisions. Local-only:
+/// none of it leaves the device except back to the installation that issued it.
+final silexgisLocalStateProvider = Provider<SilexgisLocalStateRepository>(
+  (ref) => SilexgisLocalStateRepository(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
+/// The configured SilexGIS installations. Its own configuration key — a server
+/// profile follows the FTP-profile pattern without joining that machinery.
+final silexgisProfileRepositoryProvider = Provider<SilexgisProfileRepository>(
+  (ref) => SilexgisProfileRepository(
+    ref.watch(configurationRepositoryProvider),
+    ref.watch(silexgisTokenStoreProvider),
+    ref.watch(silexgisLocalStateProvider),
+  ),
+);
+
+/// Live progress of one server sync, for the UI to watch.
+final silexgisSyncControllerProvider =
+    ChangeNotifierProvider<SilexgisSyncController>(
+      (ref) => SilexgisSyncController(
+        db: ref.watch(appDatabaseProvider),
+        profiles: ref.watch(silexgisProfileRepositoryProvider),
+        localState: ref.watch(silexgisLocalStateProvider),
+        logger: ref.watch(changeLoggerProvider),
+        caves: ref.watch(caveRepositoryProvider),
+        places: ref.watch(cavePlaceRepositoryProvider),
+        tokens: ref.watch(silexgisTokenStoreProvider),
+      ),
+    );
+
+/// The configured server profiles, re-read whenever the settings page asks.
+final silexgisProfilesProvider = FutureProvider<List<SilexgisProfile>>(
+  (ref) => ref.watch(silexgisProfileRepositoryProvider).list(),
 );
 
 final usersStreamProvider = StreamProvider<List<User>>((ref) {
