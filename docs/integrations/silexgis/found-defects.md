@@ -161,6 +161,67 @@ choose a caving group, and the app cannot know that from the documents.
 
 ---
 
+## 3. `altitude` and `positionQuality` do not survive a round trip, and one of them cannot survive at all
+
+**Severity: medium — a column the device fills is silently unsendable, and an
+altitude that is kept is invisible to a client reading the documented fields.**
+
+### What the contract says
+
+`01-protocol.md` §8.4 lists what a row may carry:
+
+> | `geometry`, `altitude`, `positionQuality` | The position, and how it was obtained |
+
+and `02-field-mapping.md` §0 says coordinates are optional on every row, "not only on the ones
+that usually have them". Neither says what happens to those two fields afterwards. §4 of the
+protocol document, which is the whole of a downloaded row, lists no `altitude` and no
+`positionQuality` — and states that the table "is the whole row".
+
+### What happens
+
+Three different behaviours, none of them written down.
+
+| Sent on | `altitude` | `positionQuality` |
+|---|---|---|
+| `caveEntrance` (and the `cave` that copies it) | kept, and readable **only** as the point's third ordinate | never readable back |
+| `cave_place`, `cave_area`, `surface_area` | accepted and discarded | never readable back |
+
+An entrance created with `"geometry": {"type":"Point","coordinates":[25.60,45.60]}` and
+`"altitude": 1240.0` comes back from the download as
+
+```json
+"geometry": { "type": "Point", "coordinates": [25.6, 45.6, 1240] }
+```
+
+The same upload against a `cave_place` — `[25.61, 45.61]` with `"altitude": -137.5` — comes back
+two-dimensional, and the ordinary feature route confirms the value was not stored anywhere:
+`GET /api/v1/features/{id}` returns the same 2D point and a generic feature record with no altitude
+field of any kind. `"positionQuality": "estimated"` is likewise nowhere in either answer.
+
+### Why it matters
+
+**A client reading the documented row loses every altitude.** §4 says the table it gives is the
+whole row, so a client that reads `geometry.coordinates[0]` and `[1]` — which is what a GeoJSON
+point is — never looks at a third ordinate and drops the entrance altitude on the floor. Nothing in
+the documents suggests looking there.
+
+**A cave place's altitude cannot be carried at all in version 1.** SpeleoLoc stores an altitude on
+every cave place, entrance or not. There is no field for it on a generic row and no legal place to
+put it: `properties` is closed by the `cave_place` schema, and even if it were not,
+`02-field-mapping.md` §4 forbids exactly this — "not a latitude, not a longitude, **and not an
+altitude**". So the honest statement is that the value does not travel, and a second device syncing
+through the server will not have it. This client sends it anyway, because an entrance keeps it and
+nothing is lost by trying, and reads a third ordinate where one is offered.
+
+### What would settle it
+
+Say in §4 that a point may carry a third ordinate and what it means, and say in §8.4 which kinds
+keep `altitude` and that `positionQuality` is write-only. If a generic kind is meant to keep an
+altitude, that is a fix rather than a documentation change — and the version-1 answer for a device
+is the same either way until it ships.
+
+---
+
 ## Confirmed, not defects
 
 Recorded so the next session does not re-derive them, and so a later change can see what it would be
@@ -186,3 +247,31 @@ breaking.
   is not a theoretical case.
 - **`AllowAdministratorRead` is off by default.** `admin@dev.local` reading the member's set by its
   identifier gets `404 sync.set_not_found`.
+
+---
+
+## Questions the documents do not answer
+
+Not defects, and not blocking — but each was decided here on a reading rather than on a statement,
+so a later reader can see what was assumed.
+
+**Where a device's identifiers go on a row that is not a `cave_place` or a `surface_area`.**
+`02-field-mapping.md` §3 names the `speleoloc*` keys for those two kinds only. A device also holds a
+`cave_local_index` on a cave, and a place code and QR reference on an *entrance* — which becomes a
+`caveEntrance`, not a `cave_place`. Both of those kinds are schema-less, so the keys are accepted and
+round-trip verbatim, and `01-protocol.md` §8.4 describes the property document generally as "where
+the device's own identifiers and codes live". This client therefore writes the same keys there.
+Nothing locating goes with them, so rule 11 is untouched. If that is wrong, the schema-bearing kinds
+are where it will be said.
+
+**Whether a cave may be contained by a `surface_area`.** Nothing says so. It works, and it is the
+natural mapping of the device's own `caves.surface_area_uuid` — protection and visibility are
+inherited along containment and along nothing else, so a cave under its massif inherits what the
+massif carries. This client sends the edge on a create.
+
+**How a downloaded entrance says it is its cave's main one.** It does not: there is no `isMain` on a
+downloaded row. What encodes it server-side is that a cave's own map point is a copy of its main
+entrance's, and the row does not restate that. Comparing coordinates to work it out would be
+deriving a rule from what the server happens to do, so this client does not — it keeps whatever the
+device decided locally. Worth a sentence in `01-protocol.md` §4 either way, since a client that
+looks for the field will not find it.

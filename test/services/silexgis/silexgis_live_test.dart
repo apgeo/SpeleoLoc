@@ -5,11 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_mapper.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 
 /// End to end against a real SilexGIS installation.
 ///
@@ -228,6 +233,254 @@ void main() {
       },
     );
   });
+
+  group('rows this application composes', () {
+    // A set bound to the caving group, because a set with none refuses every
+    // create with `access.create_forbidden` — see found-defects.md.
+    const mapper = SilexgisFeatureMapper();
+    late SyncSet set;
+    late Uuid areaUuid;
+    late Uuid caveUuid;
+    late Uuid entranceUuid;
+    late Uuid placeUuid;
+
+    setUpAll(() async {
+      final group = await _demoCavingGroupId(baseUri, await auth.accessToken());
+      set = await api.createSet(
+        SyncSetWrite(
+          name: 'live upload ${DateTime.now().millisecondsSinceEpoch}',
+          cavingGroupId: group,
+          uploadVisibility: SyncVisibility.cavingGroup,
+          rootFeatureIds: const <String>[],
+          settings: const <String, Object?>{'pciStrategy': 'ro-default'},
+        ),
+      );
+      created.add(set.id);
+
+      areaUuid = Uuid.v7();
+      caveUuid = Uuid.v7();
+      entranceUuid = Uuid.v7();
+      placeUuid = Uuid.v7();
+    });
+
+    test('a whole cave, as this application shapes it, is accepted', () async {
+      final area = SurfaceArea(
+        uuid: areaUuid,
+        title: 'Live area ${areaUuid.toString().substring(0, 8)}',
+        generalAreaIdentifier: 'LV',
+      );
+      final cave = Cave(
+        uuid: caveUuid,
+        title: 'Live cave ${caveUuid.toString().substring(0, 8)}',
+        description: 'Written by the mapper.',
+        surfaceAreaUuid: areaUuid,
+        caveLocalIndex: 'C7',
+      );
+      CavePlace place({
+        required Uuid uuid,
+        required String title,
+        required bool entrance,
+      }) => CavePlace(
+        uuid: uuid,
+        title: title,
+        description: entrance ? 'The way in.' : 'A chamber.',
+        caveUuid: caveUuid,
+        placeCodeIdentifier: entrance ? 'LV-0001' : 'LV-0002',
+        qrCodeResourceIdentifier: entrance ? 'aaaa1111' : 'bbbb2222',
+        latitude: entrance ? 45.601 : 45.602,
+        longitude: entrance ? 25.501 : 25.502,
+        altitude: entrance ? 1240 : 1180,
+        depthInCave: entrance ? null : 60,
+        isEntrance: entrance ? 1 : 0,
+        isMainEntrance: entrance ? 1 : 0,
+      );
+
+      // Rows are applied in the order given, so a container is created earlier
+      // in the same batch than the row that hangs under it.
+      final batch = SyncUploadBatch(
+        batchId: Uuid.v7().toString(),
+        rows: <SyncUploadRow>[
+          mapper.surfaceAreaRow(area, baseRevision: null),
+          mapper.caveRow(
+            cave,
+            baseRevision: null,
+            parentSurfaceAreaId: areaUuid.toString(),
+          ),
+          mapper.cavePlaceRow(
+            CavePlaceUpload(
+              place: place(
+                uuid: entranceUuid,
+                title: 'Main entrance',
+                entrance: true,
+              ),
+              caveLocalIndex: 'C7',
+              generalAreaIdentifier: 'LV',
+            ),
+            baseRevision: null,
+            parentId: caveUuid.toString(),
+          ),
+          mapper.cavePlaceRow(
+            CavePlaceUpload(
+              place: place(
+                uuid: placeUuid,
+                title: 'Sala Mare',
+                entrance: false,
+              ),
+              caveLocalIndex: 'C7',
+              generalAreaIdentifier: 'LV',
+            ),
+            baseRevision: null,
+            parentId: caveUuid.toString(),
+          ),
+        ],
+      );
+
+      final result = await api.upload(set.id, batch);
+      for (final row in result.rows) {
+        expect(
+          row.status,
+          SyncRowStatus.created,
+          reason: '${row.id}: ${row.code} ${row.detail}',
+        );
+        // The identifier the device minted is the identifier that came back.
+        expect(row.revision, isNotNull);
+      }
+      expect(result.rows.map((r) => r.id), <String>[
+        areaUuid.toString(),
+        caveUuid.toString(),
+        entranceUuid.toString(),
+        placeUuid.toString(),
+      ]);
+      expect(result.replayed, isFalse);
+      expect(result.written, 4);
+
+      // Replaying the same batch identifier returns the first answer and
+      // writes nothing a second time.
+      final replay = await api.upload(set.id, batch);
+      expect(replay.replayed, isTrue);
+      expect(replay.importBatchId, result.importBatchId);
+      expect(
+        replay.rows.map((r) => r.status),
+        result.rows.map((r) => r.status),
+      );
+    });
+
+    test('and reads back as the same rows', () async {
+      // Put the area in the selection so the download reaches everything under
+      // it, and re-read from the beginning.
+      final current = await api.getSet(set.id);
+      await api.replaceSet(
+        set.id,
+        current.toWrite().copyWith(
+          rootFeatureIds: <String>[areaUuid.toString()],
+        ),
+      );
+
+      final page = await api.download(set.id, pageSize: 500);
+      final byId = <String, MappedFeature>{
+        for (final row in page.features) row.id: mapper.read(row),
+      };
+
+      final area = byId[areaUuid.toString()]! as MappedSurfaceArea;
+      expect(area.generalAreaIdentifier, 'LV');
+
+      final cave = byId[caveUuid.toString()]! as MappedCave;
+      expect(cave.caveLocalIndex, 'C7');
+      expect(cave.description, 'Written by the mapper.');
+      expect(cave.parentUuid, areaUuid);
+
+      final entrance = byId[entranceUuid.toString()]! as MappedCavePlace;
+      expect(entrance.isEntrance, isTrue);
+      expect(entrance.latitude, 45.601);
+      expect(entrance.longitude, 25.501);
+      // The only place an altitude comes back, and only on an entrance.
+      expect(entrance.altitude, 1240);
+      expect(entrance.placeCodeIdentifier, 'LV-0001');
+      expect(entrance.qrCodeResourceIdentifier, 'aaaa1111');
+      expect(entrance.parentUuid, caveUuid);
+
+      final place = byId[placeUuid.toString()]! as MappedCavePlace;
+      expect(place.isEntrance, isFalse);
+      expect(place.latitude, 45.602);
+      expect(place.depthInCave, 60);
+      expect(place.placeCodeIdentifier, 'LV-0002');
+      // Accepted on the way up and discarded there — see found-defects.md.
+      expect(place.altitude, isNull);
+
+      // The cave's own map point is its main entrance's, kept in step by the
+      // server rather than written by the device.
+      final caveRow = page.features.firstWhere(
+        (f) => f.id == caveUuid.toString(),
+      );
+      expect(caveRow.geometry?.longitude, 25.501);
+      expect(caveRow.kind, SilexgisKinds.cave);
+    });
+
+    test(
+      'a stale base revision is refused with the server\'s row attached',
+      () async {
+        final page = await api.download(set.id, pageSize: 500);
+        final stored = page.features.firstWhere(
+          (f) => f.id == placeUuid.toString(),
+        );
+
+        final result = await api.upload(
+          set.id,
+          SyncUploadBatch(
+            batchId: Uuid.v7().toString(),
+            rows: <SyncUploadRow>[
+              SyncUploadRow(
+                id: placeUuid.toString(),
+                kind: SyncUploadKind.generic,
+                baseRevision: '2020-01-01T00:00:00.000Z',
+                name: 'Renamed against a stale revision',
+              ),
+            ],
+          ),
+        );
+
+        final row = result.rows.single;
+        expect(row.status, SyncRowStatus.conflict);
+        expect(row.code, SilexgisCodes.conflict);
+        expect(row.action, SilexgisAction.applyAndResubmit);
+        // The server's own version rides back so the device can merge without a
+        // second round trip.
+        final echo = result.conflictFor(placeUuid.toString())!;
+        expect(echo.name, stored.name);
+        expect(echo.updatedAt, stored.updatedAt);
+      },
+    );
+
+    test('a removal is arbitrated exactly as an edit is', () async {
+      final page = await api.download(set.id, pageSize: 500);
+      final stored = page.features.firstWhere(
+        (f) => f.id == placeUuid.toString(),
+      );
+
+      final result = await api.upload(
+        set.id,
+        SyncUploadBatch(
+          batchId: Uuid.v7().toString(),
+          rows: <SyncUploadRow>[
+            mapper.deleteRow(
+              entityUuid: placeUuid,
+              kind: SyncUploadKind.generic,
+              baseRevision: stored.updatedAt,
+            ),
+          ],
+        ),
+      );
+      expect(result.rows.single.status, SyncRowStatus.deleted);
+
+      // And it comes back as a tombstone, not as a row that stopped appearing.
+      final after = await api.download(set.id, pageSize: 500);
+      expect(after.tombstones.map((t) => t.id), contains(placeUuid.toString()));
+      expect(
+        after.features.map((f) => f.id),
+        isNot(contains(placeUuid.toString())),
+      );
+    });
+  });
 }
 
 /// The six demonstration caves' feature ids, read from the ordinary cave list.
@@ -263,6 +516,28 @@ Future<List<String>> _demoCaveFeatureIds(Uri baseUri, String? token) async {
         .map((c) => c['id'] as String?)
         .whereType<String>()
         .toList(growable: false);
+  } finally {
+    http.close();
+  }
+}
+
+/// The caving group both development accounts belong to.
+///
+/// A sync set has to name one before an account that owns nothing may create
+/// any row through it — which no document says, and which
+/// `docs/integrations/silexgis/found-defects.md` records.
+Future<String> _demoCavingGroupId(Uri baseUri, String? token) async {
+  final http = HttpClient();
+  try {
+    final request = await http.getUrl(
+      baseUri.replace(path: '/api/v1/caving-groups'),
+    );
+    request.headers.set('Authorization', 'Bearer $token');
+    final response = await request.close();
+    final body = await response.transform(const Utf8Decoder()).join();
+    final decoded = jsonDecode(body);
+    final items = decoded is Map ? decoded['items'] as List : decoded as List;
+    return (items.first as Map<String, Object?>)['id']! as String;
   } finally {
     http.close();
   }

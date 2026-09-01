@@ -24,6 +24,17 @@ class GeoJsonGeometry {
   double? get latitude => _pointOrdinate(1);
   double? get longitude => _pointOrdinate(0);
 
+  /// The third ordinate of a `Point`, which is where an altitude comes back.
+  ///
+  /// **This is the only way an altitude is readable on a downloaded row.** The
+  /// wire row has no `altitude` member — the protocol document's row table,
+  /// which says it is the whole row, does not mention one — so a client that
+  /// reads only the first two ordinates drops every entrance altitude
+  /// silently. A generic row never carries one at all: an altitude sent for a
+  /// cave place is accepted and discarded. Both are recorded in
+  /// `docs/integrations/silexgis/found-defects.md`.
+  double? get altitude => _pointOrdinate(2);
+
   double? _pointOrdinate(int index) {
     if (!isPoint) return null;
     final coordinates = _json['coordinates'];
@@ -33,6 +44,10 @@ class GeoJsonGeometry {
   }
 
   /// A point built from the application's own latitude/longitude pair.
+  ///
+  /// The altitude is deliberately **not** folded in as a third ordinate here:
+  /// an upload carries it in its own `altitude` field, and sending both would
+  /// state the same thing twice with no rule saying which wins.
   factory GeoJsonGeometry.point({
     required double latitude,
     required double longitude,
