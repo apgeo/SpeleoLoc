@@ -40,7 +40,7 @@ const int kSyncArchiveVersion = 4;
 /// regardless of the app version that produced it. The import gate accepts
 /// any version in [kSyncArchiveMinImportSchemaVersion, this] (see below),
 /// so raising this to the true schema does not orphan those archives.
-const int kSyncArchiveDbSchemaVersion = 19;
+const int kSyncArchiveDbSchemaVersion = 20;
 
 /// Oldest archive `schema_version` this app still imports. The sync-v2
 /// format has only ever emitted `schema_version >= 9`, and every schema in

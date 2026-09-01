@@ -133,11 +133,20 @@ class SilexgisLocalStateRepository {
   /// Every stored revision for one installation, by row identifier. Read once
   /// per sync run rather than per row: a batch of forty edits would otherwise
   /// be forty queries.
-  Future<Map<Uuid, String>> readRevisions(String profileUuid) async {
+  Future<Map<Uuid, StoredRevision>> readRevisions(String profileUuid) async {
     final rows = await (_db.select(
       _db.silexgisRowRevision,
     )..where((t) => t.profileUuid.equals(profileUuid))).get();
-    return <Uuid, String>{for (final row in rows) row.entityUuid: row.revision};
+    return <Uuid, StoredRevision>{
+      for (final row in rows)
+        row.entityUuid: StoredRevision(
+          revision: row.revision,
+          entityTable: row.entityTable,
+          wireKind: row.wireKind,
+          localUpdatedAt: row.localUpdatedAt,
+          recordedAt: row.updatedAt,
+        ),
+    };
   }
 
   Future<void> writeRevision(
@@ -145,11 +154,15 @@ class SilexgisLocalStateRepository {
     Uuid entityUuid, {
     required String entityTable,
     required String revision,
+    String? wireKind,
+    int? localUpdatedAt,
   }) => writeRevisions(profileUuid, <SilexgisRevisionEntry>[
     SilexgisRevisionEntry(
       entityUuid: entityUuid,
       entityTable: entityTable,
       revision: revision,
+      wireKind: wireKind,
+      localUpdatedAt: localUpdatedAt,
     ),
   ]);
 
@@ -168,7 +181,9 @@ class SilexgisLocalStateRepository {
             profileUuid: profileUuid,
             entityUuid: entry.entityUuid,
             entityTable: entry.entityTable,
+            wireKind: Value(entry.wireKind),
             revision: entry.revision,
+            localUpdatedAt: Value(entry.localUpdatedAt),
             updatedAt: Value(now),
           ),
           mode: InsertMode.insertOrReplace,
@@ -194,12 +209,44 @@ class SilexgisLocalStateRepository {
   }
 }
 
+/// A revision as it is stored: the server's stamp, the local row's own stamp at
+/// the moment the two sides last agreed, and when this device wrote the entry.
+class StoredRevision {
+  const StoredRevision({
+    required this.revision,
+    required this.entityTable,
+    required this.recordedAt,
+    this.wireKind,
+    this.localUpdatedAt,
+  });
+
+  final String revision;
+  final String entityTable;
+
+  /// When this device wrote the entry. Diagnostic only — what decides whether
+  /// a row is due to be sent again is [localUpdatedAt], because comparing a
+  /// row's stamp against a clock reading leaves a window at both ends.
+  final int? recordedAt;
+
+  /// The local row's `updated_at` when the two sides last agreed about it. A
+  /// row whose stamp no longer equals this one has been edited here since.
+  final int? localUpdatedAt;
+
+  /// The `kind` this row travels as, kept because a local delete is physical:
+  /// once the row is gone the device can no longer tell whether it was an
+  /// entrance or a place, and the tombstone still names one. Null for a
+  /// revision stored before this was recorded.
+  final String? wireKind;
+}
+
 /// One row's revision on one installation.
 class SilexgisRevisionEntry {
   const SilexgisRevisionEntry({
     required this.entityUuid,
     required this.entityTable,
     required this.revision,
+    this.wireKind,
+    this.localUpdatedAt,
   });
 
   final Uuid entityUuid;
@@ -211,4 +258,11 @@ class SilexgisRevisionEntry {
 
   /// The server's `updatedAt`, stored exactly as it was sent.
   final String revision;
+
+  /// The wire `kind` — see [StoredRevision.wireKind].
+  final String? wireKind;
+
+  /// The local row's own stamp as exchanged — see
+  /// [StoredRevision.localUpdatedAt].
+  final int? localUpdatedAt;
 }

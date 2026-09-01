@@ -434,12 +434,24 @@ CREATE TABLE IF NOT EXISTS silexgis_sync_state (
 --
 -- A row with an entry here exists on that installation, and the entry is what
 -- its next upload sends as `baseRevision`. A row with no entry is new there.
+--
+-- `wire_kind` is kept because a local delete is physical: once the row is gone
+-- the device can no longer tell whether it was an entrance or a place inside
+-- the cave, and the tombstone it sends still has to name a kind.
+--
+-- `local_updated_at` is the local row's own `updated_at` at the moment the two
+-- sides last agreed about it. A row is due to be sent again when its stamp no
+-- longer equals this one — an exact comparison, with no clock and no window,
+-- so an edit in the same millisecond as an upload is neither missed nor
+-- re-sent for ever.
 CREATE TABLE IF NOT EXISTS silexgis_row_revision (
     profile_uuid  TEXT(36) NOT NULL,
     entity_uuid   BLOB NOT NULL MAPPED BY `const UuidConverter()`,
     entity_table  TEXT(80) NOT NULL,  -- which local table holds the row
-    revision      TEXT NOT NULL,      -- the server's `updatedAt`, stored verbatim
-    updated_at    INTEGER,
+    wire_kind        TEXT(16),        -- the `kind` this row travels as
+    revision         TEXT NOT NULL,   -- the server's `updatedAt`, stored verbatim
+    local_updated_at INTEGER,         -- the local row's own updated_at, as last exchanged
+    updated_at       INTEGER,         -- when this device stored the entry
     PRIMARY KEY (profile_uuid, entity_uuid)
 );
 

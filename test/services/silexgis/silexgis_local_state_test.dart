@@ -176,7 +176,8 @@ void main() {
       ]);
       final all = await repo.readRevisions(profile);
       expect(all, hasLength(3));
-      expect(all[ids.first], 'rev-0');
+      expect(all[ids.first]!.revision, 'rev-0');
+      expect(all[ids.first]!.entityTable, 'cave_places');
     });
 
     test('forgetting one makes the row new there again', () async {

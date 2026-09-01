@@ -14271,6 +14271,17 @@ class SilexgisRowRevision extends Table
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
   );
+  static const VerificationMeta _wireKindMeta = const VerificationMeta(
+    'wireKind',
+  );
+  late final GeneratedColumn<String> wireKind = GeneratedColumn<String>(
+    'wire_kind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _revisionMeta = const VerificationMeta(
     'revision',
   );
@@ -14281,6 +14292,17 @@ class SilexgisRowRevision extends Table
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _localUpdatedAtMeta = const VerificationMeta(
+    'localUpdatedAt',
+  );
+  late final GeneratedColumn<int> localUpdatedAt = GeneratedColumn<int>(
+    'local_updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
   );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
@@ -14298,7 +14320,9 @@ class SilexgisRowRevision extends Table
     profileUuid,
     entityUuid,
     entityTable,
+    wireKind,
     revision,
+    localUpdatedAt,
     updatedAt,
   ];
   @override
@@ -14335,6 +14359,12 @@ class SilexgisRowRevision extends Table
     } else if (isInserting) {
       context.missing(_entityTableMeta);
     }
+    if (data.containsKey('wire_kind')) {
+      context.handle(
+        _wireKindMeta,
+        wireKind.isAcceptableOrUnknown(data['wire_kind']!, _wireKindMeta),
+      );
+    }
     if (data.containsKey('revision')) {
       context.handle(
         _revisionMeta,
@@ -14342,6 +14372,15 @@ class SilexgisRowRevision extends Table
       );
     } else if (isInserting) {
       context.missing(_revisionMeta);
+    }
+    if (data.containsKey('local_updated_at')) {
+      context.handle(
+        _localUpdatedAtMeta,
+        localUpdatedAt.isAcceptableOrUnknown(
+          data['local_updated_at']!,
+          _localUpdatedAtMeta,
+        ),
+      );
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -14375,10 +14414,18 @@ class SilexgisRowRevision extends Table
         DriftSqlType.string,
         data['${effectivePrefix}entity_table'],
       )!,
+      wireKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}wire_kind'],
+      ),
       revision: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}revision'],
       )!,
+      localUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}local_updated_at'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -14408,15 +14455,23 @@ class SilexgisRowRevisionData extends DataClass
   final String entityTable;
 
   /// which local table holds the row
+  final String? wireKind;
+
+  /// the `kind` this row travels as
   final String revision;
 
   /// the server's `updatedAt`, stored verbatim
+  final int? localUpdatedAt;
+
+  /// the local row's own updated_at, as last exchanged
   final int? updatedAt;
   const SilexgisRowRevisionData({
     required this.profileUuid,
     required this.entityUuid,
     required this.entityTable,
+    this.wireKind,
     required this.revision,
+    this.localUpdatedAt,
     this.updatedAt,
   });
   @override
@@ -14429,7 +14484,13 @@ class SilexgisRowRevisionData extends DataClass
       );
     }
     map['entity_table'] = Variable<String>(entityTable);
+    if (!nullToAbsent || wireKind != null) {
+      map['wire_kind'] = Variable<String>(wireKind);
+    }
     map['revision'] = Variable<String>(revision);
+    if (!nullToAbsent || localUpdatedAt != null) {
+      map['local_updated_at'] = Variable<int>(localUpdatedAt);
+    }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<int>(updatedAt);
     }
@@ -14441,7 +14502,13 @@ class SilexgisRowRevisionData extends DataClass
       profileUuid: Value(profileUuid),
       entityUuid: Value(entityUuid),
       entityTable: Value(entityTable),
+      wireKind: wireKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wireKind),
       revision: Value(revision),
+      localUpdatedAt: localUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localUpdatedAt),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -14457,7 +14524,9 @@ class SilexgisRowRevisionData extends DataClass
       profileUuid: serializer.fromJson<String>(json['profile_uuid']),
       entityUuid: serializer.fromJson<Uuid>(json['entity_uuid']),
       entityTable: serializer.fromJson<String>(json['entity_table']),
+      wireKind: serializer.fromJson<String?>(json['wire_kind']),
       revision: serializer.fromJson<String>(json['revision']),
+      localUpdatedAt: serializer.fromJson<int?>(json['local_updated_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
     );
   }
@@ -14468,7 +14537,9 @@ class SilexgisRowRevisionData extends DataClass
       'profile_uuid': serializer.toJson<String>(profileUuid),
       'entity_uuid': serializer.toJson<Uuid>(entityUuid),
       'entity_table': serializer.toJson<String>(entityTable),
+      'wire_kind': serializer.toJson<String?>(wireKind),
       'revision': serializer.toJson<String>(revision),
+      'local_updated_at': serializer.toJson<int?>(localUpdatedAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
     };
   }
@@ -14477,13 +14548,19 @@ class SilexgisRowRevisionData extends DataClass
     String? profileUuid,
     Uuid? entityUuid,
     String? entityTable,
+    Value<String?> wireKind = const Value.absent(),
     String? revision,
+    Value<int?> localUpdatedAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
   }) => SilexgisRowRevisionData(
     profileUuid: profileUuid ?? this.profileUuid,
     entityUuid: entityUuid ?? this.entityUuid,
     entityTable: entityTable ?? this.entityTable,
+    wireKind: wireKind.present ? wireKind.value : this.wireKind,
     revision: revision ?? this.revision,
+    localUpdatedAt: localUpdatedAt.present
+        ? localUpdatedAt.value
+        : this.localUpdatedAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
   SilexgisRowRevisionData copyWithCompanion(SilexgisRowRevisionCompanion data) {
@@ -14497,7 +14574,11 @@ class SilexgisRowRevisionData extends DataClass
       entityTable: data.entityTable.present
           ? data.entityTable.value
           : this.entityTable,
+      wireKind: data.wireKind.present ? data.wireKind.value : this.wireKind,
       revision: data.revision.present ? data.revision.value : this.revision,
+      localUpdatedAt: data.localUpdatedAt.present
+          ? data.localUpdatedAt.value
+          : this.localUpdatedAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -14508,15 +14589,24 @@ class SilexgisRowRevisionData extends DataClass
           ..write('profileUuid: $profileUuid, ')
           ..write('entityUuid: $entityUuid, ')
           ..write('entityTable: $entityTable, ')
+          ..write('wireKind: $wireKind, ')
           ..write('revision: $revision, ')
+          ..write('localUpdatedAt: $localUpdatedAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(profileUuid, entityUuid, entityTable, revision, updatedAt);
+  int get hashCode => Object.hash(
+    profileUuid,
+    entityUuid,
+    entityTable,
+    wireKind,
+    revision,
+    localUpdatedAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -14524,7 +14614,9 @@ class SilexgisRowRevisionData extends DataClass
           other.profileUuid == this.profileUuid &&
           other.entityUuid == this.entityUuid &&
           other.entityTable == this.entityTable &&
+          other.wireKind == this.wireKind &&
           other.revision == this.revision &&
+          other.localUpdatedAt == this.localUpdatedAt &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -14533,14 +14625,18 @@ class SilexgisRowRevisionCompanion
   final Value<String> profileUuid;
   final Value<Uuid> entityUuid;
   final Value<String> entityTable;
+  final Value<String?> wireKind;
   final Value<String> revision;
+  final Value<int?> localUpdatedAt;
   final Value<int?> updatedAt;
   final Value<int> rowid;
   const SilexgisRowRevisionCompanion({
     this.profileUuid = const Value.absent(),
     this.entityUuid = const Value.absent(),
     this.entityTable = const Value.absent(),
+    this.wireKind = const Value.absent(),
     this.revision = const Value.absent(),
+    this.localUpdatedAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -14548,7 +14644,9 @@ class SilexgisRowRevisionCompanion
     required String profileUuid,
     required Uuid entityUuid,
     required String entityTable,
+    this.wireKind = const Value.absent(),
     required String revision,
+    this.localUpdatedAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileUuid = Value(profileUuid),
@@ -14559,7 +14657,9 @@ class SilexgisRowRevisionCompanion
     Expression<String>? profileUuid,
     Expression<Uint8List>? entityUuid,
     Expression<String>? entityTable,
+    Expression<String>? wireKind,
     Expression<String>? revision,
+    Expression<int>? localUpdatedAt,
     Expression<int>? updatedAt,
     Expression<int>? rowid,
   }) {
@@ -14567,7 +14667,9 @@ class SilexgisRowRevisionCompanion
       if (profileUuid != null) 'profile_uuid': profileUuid,
       if (entityUuid != null) 'entity_uuid': entityUuid,
       if (entityTable != null) 'entity_table': entityTable,
+      if (wireKind != null) 'wire_kind': wireKind,
       if (revision != null) 'revision': revision,
+      if (localUpdatedAt != null) 'local_updated_at': localUpdatedAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -14577,7 +14679,9 @@ class SilexgisRowRevisionCompanion
     Value<String>? profileUuid,
     Value<Uuid>? entityUuid,
     Value<String>? entityTable,
+    Value<String?>? wireKind,
     Value<String>? revision,
+    Value<int?>? localUpdatedAt,
     Value<int?>? updatedAt,
     Value<int>? rowid,
   }) {
@@ -14585,7 +14689,9 @@ class SilexgisRowRevisionCompanion
       profileUuid: profileUuid ?? this.profileUuid,
       entityUuid: entityUuid ?? this.entityUuid,
       entityTable: entityTable ?? this.entityTable,
+      wireKind: wireKind ?? this.wireKind,
       revision: revision ?? this.revision,
+      localUpdatedAt: localUpdatedAt ?? this.localUpdatedAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -14605,8 +14711,14 @@ class SilexgisRowRevisionCompanion
     if (entityTable.present) {
       map['entity_table'] = Variable<String>(entityTable.value);
     }
+    if (wireKind.present) {
+      map['wire_kind'] = Variable<String>(wireKind.value);
+    }
     if (revision.present) {
       map['revision'] = Variable<String>(revision.value);
+    }
+    if (localUpdatedAt.present) {
+      map['local_updated_at'] = Variable<int>(localUpdatedAt.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
@@ -14623,7 +14735,9 @@ class SilexgisRowRevisionCompanion
           ..write('profileUuid: $profileUuid, ')
           ..write('entityUuid: $entityUuid, ')
           ..write('entityTable: $entityTable, ')
+          ..write('wireKind: $wireKind, ')
           ..write('revision: $revision, ')
+          ..write('localUpdatedAt: $localUpdatedAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -28268,7 +28382,9 @@ typedef $SilexgisRowRevisionCreateCompanionBuilder =
       required String profileUuid,
       required Uuid entityUuid,
       required String entityTable,
+      Value<String?> wireKind,
       required String revision,
+      Value<int?> localUpdatedAt,
       Value<int?> updatedAt,
       Value<int> rowid,
     });
@@ -28277,7 +28393,9 @@ typedef $SilexgisRowRevisionUpdateCompanionBuilder =
       Value<String> profileUuid,
       Value<Uuid> entityUuid,
       Value<String> entityTable,
+      Value<String?> wireKind,
       Value<String> revision,
+      Value<int?> localUpdatedAt,
       Value<int?> updatedAt,
       Value<int> rowid,
     });
@@ -28307,8 +28425,18 @@ class $SilexgisRowRevisionFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get wireKind => $composableBuilder(
+    column: $table.wireKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get revision => $composableBuilder(
     column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get localUpdatedAt => $composableBuilder(
+    column: $table.localUpdatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -28342,8 +28470,18 @@ class $SilexgisRowRevisionOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get wireKind => $composableBuilder(
+    column: $table.wireKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get revision => $composableBuilder(
     column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get localUpdatedAt => $composableBuilder(
+    column: $table.localUpdatedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -28378,8 +28516,16 @@ class $SilexgisRowRevisionAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get wireKind =>
+      $composableBuilder(column: $table.wireKind, builder: (column) => column);
+
   GeneratedColumn<String> get revision =>
       $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<int> get localUpdatedAt => $composableBuilder(
+    column: $table.localUpdatedAt,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -28423,14 +28569,18 @@ class $SilexgisRowRevisionTableManager
                 Value<String> profileUuid = const Value.absent(),
                 Value<Uuid> entityUuid = const Value.absent(),
                 Value<String> entityTable = const Value.absent(),
+                Value<String?> wireKind = const Value.absent(),
                 Value<String> revision = const Value.absent(),
+                Value<int?> localUpdatedAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisRowRevisionCompanion(
                 profileUuid: profileUuid,
                 entityUuid: entityUuid,
                 entityTable: entityTable,
+                wireKind: wireKind,
                 revision: revision,
+                localUpdatedAt: localUpdatedAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -28439,14 +28589,18 @@ class $SilexgisRowRevisionTableManager
                 required String profileUuid,
                 required Uuid entityUuid,
                 required String entityTable,
+                Value<String?> wireKind = const Value.absent(),
                 required String revision,
+                Value<int?> localUpdatedAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisRowRevisionCompanion.insert(
                 profileUuid: profileUuid,
                 entityUuid: entityUuid,
                 entityTable: entityTable,
+                wireKind: wireKind,
                 revision: revision,
+                localUpdatedAt: localUpdatedAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),

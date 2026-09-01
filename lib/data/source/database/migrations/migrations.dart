@@ -747,6 +747,69 @@ class V18ToV19Migration extends SchemaMigration {
   }
 }
 
+/// v19 → v20.
+///
+/// Records the wire `kind` and the local stamp beside each SilexGIS row
+/// revision.
+///
+/// A local delete is physical, so once a row is gone this device can no longer
+/// tell whether it was an entrance or a place inside the cave — and the
+/// tombstone it has to send still names a kind. Keeping it here is what lets a
+/// removal be composed correctly from a revision alone, rather than from an
+/// assumption about what the server does with the field.
+///
+/// `local_updated_at` is the row's own stamp at the moment the two sides last
+/// agreed about it, which is what decides whether it is due to be sent again.
+/// Comparing stamps exactly, rather than a row's stamp against a clock reading,
+/// leaves no window in which an edit is missed and none in which an untouched
+/// row is re-sent for ever.
+///
+/// Additive and nullable: rows written before this migration have neither, and
+/// a tombstone for one falls back to what the local table implies while a row
+/// with no recorded stamp is treated as due.
+class V19ToV20Migration extends SchemaMigration {
+  const V19ToV20Migration();
+
+  @override
+  int get toVersion => 20;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    // Guarded because the pre-v7 path runs `createAll()` at the *current*
+    // schema and then walks the whole ladder: by the time this step is reached
+    // the table already has both columns, and a bare ADD COLUMN would fail the
+    // upgrade for every legacy dataset. Every step after v7 is an idempotent
+    // backfill for that reason.
+    await _addColumnIfMissing(
+      db,
+      migrator,
+      db.silexgisRowRevision,
+      db.silexgisRowRevision.wireKind,
+    );
+    await _addColumnIfMissing(
+      db,
+      migrator,
+      db.silexgisRowRevision,
+      db.silexgisRowRevision.localUpdatedAt,
+    );
+  }
+}
+
+/// Adds [column] to [table] unless it is already there.
+Future<void> _addColumnIfMissing(
+  AppDatabase db,
+  Migrator migrator,
+  TableInfo<Table, dynamic> table,
+  GeneratedColumn<Object> column,
+) async {
+  final existing = await db
+      .customSelect('PRAGMA table_info(${table.actualTableName})')
+      .get();
+  final names = existing.map((r) => r.read<String>('name')).toSet();
+  if (names.contains(column.name)) return;
+  await migrator.addColumn(table, column);
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -766,6 +829,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V16ToV17Migration(),
   V17ToV18Migration(),
   V18ToV19Migration(),
+  V19ToV20Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
