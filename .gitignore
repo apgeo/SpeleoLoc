@@ -88,6 +88,12 @@ docs/contributing-docs.md
 # Live-integration FTP credentials (opt-in, never committed)
 test_data/ftp_test.json
 
+# Build-settings files that carry a seeded sync account's password
+# (--dart-define-from-file). Machine-local like android/key.properties; see
+# docs/workflows/seeded-sync-profile.md for the keys.
+/build_settings.*.local.json
+/build_settings.congres.json
+
 # Local test-archive dev workflow: the heavy DataArchive zip(s) dropped here
 # are machine-local and never committed; the tracked .gitkeep keeps the
 # bundled-asset directory present on fresh clones. See

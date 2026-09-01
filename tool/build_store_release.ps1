@@ -36,6 +36,11 @@ if ($defines.PSObject.Properties.Name -contains 'test_archive_url' -and
     $defines.test_archive_url) {
     Write-Error "test_archive_url must not be set in $defineFile."
 }
+$seedKeys = $defines.PSObject.Properties.Name | Where-Object { $_ -like 'ftp_seed_*' }
+if ($seedKeys) {
+    Write-Error ("$defineFile sets " + ($seedKeys -join ', ') +
+        " - a store build must not ship a pre-configured sync account.")
+}
 if (-not $defines.SENTRY_DSN -and -not $AllowEmptySentryDsn) {
     Write-Error ("SENTRY_DSN is empty in $defineFile - the release ships " +
         "without crash reporting. Set it, or pass -AllowEmptySentryDsn " +

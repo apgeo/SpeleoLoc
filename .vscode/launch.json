@@ -35,6 +35,13 @@
             "toolArgs": ["--dart-define-from-file=build_settings.store.json"]
         },
         {
+            "name": "speleo_loc (congres hand-out build)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "toolArgs": ["--dart-define-from-file=build_settings.congres.json"]
+        },
+        {
             "name": "speleo_loc_local_archive",
             "request": "launch",
             "type": "dart",

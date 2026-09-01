@@ -6,6 +6,7 @@ import 'package:speleoloc/app.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile_seed.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -85,6 +86,17 @@ Future<void> _runApp() async {
   await container.read(currentUserServiceProvider).initialize();
 
   await container.read(caveTripServiceProvider).initActiveTrip();
+
+  // Builds that bake in a shared sync endpoint install it here; a build
+  // without one does nothing. Failure must not block startup — the user can
+  // always configure the endpoint by hand.
+  try {
+    await ensureSeededFtpProfile(container.read(ftpProfileRepositoryProvider));
+  } catch (e, st) {
+    AppLogger.of(
+      'Main',
+    ).warning('Seeding the built-in FTP profile failed', e, st);
+  }
 
   runApp(
     UncontrolledProviderScope(
