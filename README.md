@@ -15,6 +15,11 @@ Another component of the system is placing QR codes at the entrance of explored 
 ## Current status
 The application is under development, in an early beta stage / alpha - some of the functionality is not tested extensively.
 
+## Building it
+
+Developer setup — Flutter, the Linux desktop target and the optional Android SDK, with the exact
+commands and the traps — is in [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## Docs
 Check [user documentation](docs/README.md) (might not be always up to date).
 

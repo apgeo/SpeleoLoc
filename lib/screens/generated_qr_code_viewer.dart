@@ -165,6 +165,7 @@ class _GeneratedQRCodeViewerState extends ConsumerState<GeneratedQRCodeViewer>
         areaTitle: null,
         caveTitleByCaveUuid: caveTitleByCaveUuid,
         includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,
+        labelUrlPrefix: cfg['labelUrlPrefix'] as String?,
       );
 
       final generator = CavePlaceQRCodePDFGenerator();

@@ -715,6 +715,101 @@ class V17ToV18Migration extends SchemaMigration {
   }
 }
 
+/// v18 → v19.
+///
+/// Adds the two local-only tables the SilexGIS sync feature keeps its position
+/// in: the download cursor per (profile, set), and the server revision of each
+/// row this device has seen on that installation.
+///
+/// Both are local-only in the same sense `configurations` and
+/// `ruuvi_sensor_history` are — absent from the sync-archive registry and from
+/// the archive table configs, so nothing has to remember to skip them. That is
+/// the point rather than an implementation detail: a cursor or a base revision
+/// that travelled to a second device costs that device rows it never learns it
+/// is missing, or loses every upload to a conflict it cannot explain.
+///
+/// Additive, so upgraders get the same statements a fresh install runs from
+/// tables.drift.
+class V18ToV19Migration extends SchemaMigration {
+  const V18ToV19Migration();
+
+  @override
+  int get toVersion => 19;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisSyncState);
+    await migrator.createTable(db.silexgisRowRevision);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_row_revision_table '
+      'ON silexgis_row_revision(profile_uuid, entity_table)',
+    );
+  }
+}
+
+/// v19 → v20.
+///
+/// Records the wire `kind` and the local stamp beside each SilexGIS row
+/// revision.
+///
+/// A local delete is physical, so once a row is gone this device can no longer
+/// tell whether it was an entrance or a place inside the cave — and the
+/// tombstone it has to send still names a kind. Keeping it here is what lets a
+/// removal be composed correctly from a revision alone, rather than from an
+/// assumption about what the server does with the field.
+///
+/// `local_updated_at` is the row's own stamp at the moment the two sides last
+/// agreed about it, which is what decides whether it is due to be sent again.
+/// Comparing stamps exactly, rather than a row's stamp against a clock reading,
+/// leaves no window in which an edit is missed and none in which an untouched
+/// row is re-sent for ever.
+///
+/// Additive and nullable: rows written before this migration have neither, and
+/// a tombstone for one falls back to what the local table implies while a row
+/// with no recorded stamp is treated as due.
+class V19ToV20Migration extends SchemaMigration {
+  const V19ToV20Migration();
+
+  @override
+  int get toVersion => 20;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    // Guarded because the pre-v7 path runs `createAll()` at the *current*
+    // schema and then walks the whole ladder: by the time this step is reached
+    // the table already has both columns, and a bare ADD COLUMN would fail the
+    // upgrade for every legacy dataset. Every step after v7 is an idempotent
+    // backfill for that reason.
+    await _addColumnIfMissing(
+      db,
+      migrator,
+      db.silexgisRowRevision,
+      db.silexgisRowRevision.wireKind,
+    );
+    await _addColumnIfMissing(
+      db,
+      migrator,
+      db.silexgisRowRevision,
+      db.silexgisRowRevision.localUpdatedAt,
+    );
+  }
+}
+
+/// Adds [column] to [table] unless it is already there.
+Future<void> _addColumnIfMissing(
+  AppDatabase db,
+  Migrator migrator,
+  TableInfo<Table, dynamic> table,
+  GeneratedColumn<Object> column,
+) async {
+  final existing = await db
+      .customSelect('PRAGMA table_info(${table.actualTableName})')
+      .get();
+  final names = existing.map((r) => r.read<String>('name')).toSet();
+  if (names.contains(column.name)) return;
+  await migrator.addColumn(table, column);
+}
+
 /// Ordered list of all schema migrations. The engine iterates this list
 /// in order during `onUpgrade`, applying each migration for which
 /// [SchemaMigration.shouldApply] returns true. The original `from`
@@ -733,6 +828,8 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V15ToV16Migration(),
   V16ToV17Migration(),
   V17ToV18Migration(),
+  V18ToV19Migration(),
+  V19ToV20Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

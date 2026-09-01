@@ -11,6 +11,7 @@ import 'package:barcode/barcode.dart' show BarcodeQRCorrectionLevel;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/qr_generation_defaults.dart';
+import 'package:speleoloc/utils/qr_label_payload.dart';
 import 'package:speleoloc/utils/qr_label_template_engine.dart';
 
 // ---------------------------------------------------------------------------
@@ -89,7 +90,23 @@ class GenerationPreferences {
   /// [deepLinkPrefix] (e.g. `sp://`). The stored
   /// `qr_code_resource_identifier` is **not** affected — the prefix
   /// only appears in the encoded image.
+  ///
+  /// Ignored when [labelUrlPrefix] is set, which is the prefix a stranger's
+  /// phone can open.
   final bool includeDeepLinkPrefix;
+
+  /// A club installation's landing address — `https://speo.example.org/q/`.
+  ///
+  /// When set, the square encodes that address followed by the code, which a
+  /// camera app opens in a browser **and** which this application's own
+  /// scanner still resolves, because it strips a URL down to the text after
+  /// its last delimiter. A `sp://` label resolves only in this application,
+  /// and no server can make one resolve anywhere else.
+  ///
+  /// Two labels printed at different times are not interchangeable: an
+  /// installation that has already printed `sp://` squares keeps them working
+  /// through the application and gains nothing here until they are reprinted.
+  final String? labelUrlPrefix;
 
   const GenerationPreferences({
     this.asPdf = true,
@@ -114,6 +131,7 @@ class GenerationPreferences {
     this.areaTitle,
     this.caveTitleByCaveUuid,
     this.includeDeepLinkPrefix = true,
+    this.labelUrlPrefix,
   });
 
   /// Cave title to use for [place]'s label — prefers the per-cave
@@ -270,10 +288,11 @@ class QrImageRenderer {
     final raw =
         place.qrCodeResourceIdentifier ?? place.placeCodeIdentifier ?? '';
     if (raw.isEmpty) return raw;
-    if (prefs?.includeDeepLinkPrefix ?? true) {
-      return '$deepLinkPrefix$raw';
-    }
-    return raw;
+    return QrLabelPayload.compose(
+      raw,
+      urlPrefix: prefs?.labelUrlPrefix,
+      includeDeepLinkPrefix: prefs?.includeDeepLinkPrefix ?? true,
+    );
   }
 }
 

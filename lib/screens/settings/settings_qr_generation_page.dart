@@ -320,6 +320,10 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
       'pdfQrPaddingH': 2.0,
       'pdfQrPaddingV': 2.0,
       'includeDeepLinkPrefix': true,
+      // Empty by default: a label printed with an installation's landing
+      // address opens on a stranger's phone, which is a decision for whoever
+      // runs the club rather than a default.
+      'labelUrlPrefix': null,
     };
   }
 
@@ -332,6 +336,9 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+
+    // Set, it wins over the deep-link toggle: a square carries one prefix.
+    final labelUrlPrefix = (cfg['labelUrlPrefix'] as String?)?.trim();
 
     return Scaffold(
       key: appMenuScaffoldKey,
@@ -523,11 +530,32 @@ class _SettingsQrGenerationPageState extends State<SettingsQrGenerationPage>
             title: Text(LocServ.inst.t('include_deep_link_prefix')),
             subtitle: Text(LocServ.inst.t('include_deep_link_prefix_help')),
             value: cfg['includeDeepLinkPrefix'] ?? true,
-            onChanged: (v) async {
-              cfg['includeDeepLinkPrefix'] = v;
-              await _saveConfig(cfg);
-              if (mounted) setState(() {});
-            },
+            onChanged: (labelUrlPrefix?.isNotEmpty ?? false)
+                ? null
+                : (v) async {
+                    cfg['includeDeepLinkPrefix'] = v;
+                    await _saveConfig(cfg);
+                    if (mounted) setState(() {});
+                  },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextFormField(
+              initialValue: labelUrlPrefix ?? '',
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              decoration: InputDecoration(
+                labelText: LocServ.inst.t('label_url_prefix'),
+                helperText: LocServ.inst.t('label_url_prefix_help'),
+                helperMaxLines: 4,
+              ),
+              onChanged: (v) async {
+                final trimmed = v.trim();
+                cfg['labelUrlPrefix'] = trimmed.isEmpty ? null : trimmed;
+                await _saveConfig(cfg);
+                if (mounted) setState(() {});
+              },
+            ),
           ),
           const SizedBox(height: 8),
           Text(

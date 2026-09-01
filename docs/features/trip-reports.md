@@ -2,121 +2,248 @@
 
 [← Back to index](../README.md)
 
-SpeleoLoc can generate a **trip report** from a trip's data — a
-printable/editable ODT or DOCX document that summarizes the trip,
-lists visited places, embeds the trip log and (optionally) an exported
-map image.
+SpeleoLoc turns a trip into an ODT or DOCX document by taking a
+template you supply and appending the trip's log text to the end of it.
+Everything useful in the report therefore comes from two things: the
+template you wrote, and the trip log.
 
-## How it works
+## What a report actually is
 
-1. You register one or more **trip report templates** (ODT or DOCX
-   files containing placeholder variables).
-2. For any ended trip, you trigger **Export report**, pick a template
-   and an output format.
-3. SpeleoLoc fills the placeholders with trip data and writes the
-   resulting document to a folder of your choice.
+The exported file is an exact copy of your template with the trip log
+added as plain paragraphs at the very end. That is the whole of it:
 
-Template formats supported:
+- There are **no placeholders or variables**. SpeleoLoc does not scan
+  the template for anything and does not substitute values into it.
+- There is **no automatic place list, no trip metadata block and no
+  map image**. Cave name, depths, place-code identifiers and QR
+  identifiers never reach the document by themselves.
+- The **output format always matches the template** — an ODT template
+  produces an ODT, a DOCX template produces a DOCX. You are not asked
+  to choose a format.
 
-- **ODT** (OpenDocument Text) — native LibreOffice / OpenOffice.
-- **DOCX** (Word).
+Anything else you want in the report you either put into the template
+as fixed text, type into the trip log before exporting, or add by hand
+in your word processor after the file is generated.
 
-The app detects the format from the file extension.
+The report is a normal office document. Nothing links it back to the
+template or to SpeleoLoc, so you can edit, print and share it freely.
 
-## Managing templates
+## The trip log
 
-**Home → ⋮ → Trip report templates**. The list shows every registered
-template with size and date. Actions:
+The report is built from the trip log, so the log is where the work
+happens. Open it from a trip's toolbar: **Trip log**.
 
-- **Add** — pick an `.odt` or `.docx` file from the device. It is
-  copied into the app's data directory.
-- **Delete** — permanent, with confirmation.
+### What SpeleoLoc records for you
 
-## Authoring a template
+The log is written for you automatically as the trip runs. It covers:
 
-Create a regular ODT/DOCX document in your word processor. Wherever
-you want data to be injected, use a placeholder variable. The exact
-variable syntax matches the project's template engine; see the
-in-product help when selecting a template, or inspect any sample
-template shipped with the app.
+- the trip **starting**, with the trip title,
+- every **stop** in order — a place you scanned or picked — together
+  with any note attached to that stop (the **Raw** style leaves the
+  notes out),
+- every **document** you create or link while the trip is active,
+  by title,
+- a **restart**, if you restart an ended trip,
+- the trip **ending**.
 
-Typical fields you will want to include:
+**Pauses and resumes are not written to the log.** Pausing simply
+stops new stops and documents from being recorded until you resume; it
+leaves no trace in the text and no gap you can point at afterwards.
 
-- Trip title, start/end timestamp, duration.
-- Cave title, surface area, cave areas traversed.
-- Ordered list of trip points (place title, QR, depth, timestamp).
-- Free-form trip log.
-- An embedded trip map image.
-- Team members (typed into the trip log or a dedicated field).
+Only a document's *title* appears in the log. Its content stays with
+the document itself.
 
-## Trip log format
+The log sentences are written in whatever language the app was set to
+at the moment each line was generated, so a log built on a
+Romanian-language app contains Romanian text. Changing **Settings →
+General → App language** afterwards does not rewrite text that is
+already in the log — only a regeneration (a style switch, or a trip
+restart) rewrites it in the language then in use.
 
-Every trip has a **trip log** — a text record of events (scans, pauses,
-resumes, stops) that is generated automatically as the trip runs.  Four
-rendering styles are available:
+### Editing the log by hand
 
-| Method | Style | Timestamp prefix |
+The trip log page is a plain monospace text editor. Type whatever you
+like into it — team members, weather, equipment, conclusions.
+
+Two things will catch you out:
+
+1. **Nothing is saved until you tap the save icon** in the top bar.
+   Saving shows **Trip log saved** and closes the page. Leaving any
+   other way — back button, a swipe — discards what you typed without
+   asking. Always save before exporting, because the export reads the
+   saved log and not what is on screen.
+2. **Some actions rebuild the log from scratch** and throw your text
+   away. Restarting a trip does it, switching the log style does it,
+   and — with the **Narrative** style only — so does every new event
+   while the trip is still running.
+
+With **Raw**, **Classic** or **Field journal**, a new event is added
+as one more line after whatever is already in the log, so your own
+text survives. **Narrative** has to rebuild the whole thing to keep
+the paragraphs reading properly. If you want to annotate the log of a
+trip that is still running, use one of the other three styles, or wait
+until you have stopped the trip.
+
+### Log styles
+
+Four styles are available, and they change how the whole log reads.
+
+| Style | What it produces | Line prefix |
 |---|---|---|
-| **Raw** | Terse one-liners using short i18n message keys. Retained for backwards compatibility. | `[yyyy/MM/dd HH:mm:ss]` |
-| **Classic** *(default)* | Full-sentence phrasing of every event, one entry per line. | `[yyyy/MM/dd HH:mm:ss]` |
-| **Journal** | Field-journal style with elapsed time from trip start and sequence-aware phrasing ("first stop", "next stop", …). | `[HH:mm · +Δ]` |
-| **Narrative** | Prose paragraphs grouping consecutive movements and summarizing pauses. Suitable for pasting directly into a report. | none |
+| **Raw (timestamps + terse messages)** | Terse one-liners: `Trip started: "Sunday survey"`, `Point: "Entrance"`, `Document added: "Sump photo"`. | `[yyyy/MM/dd HH:mm:ss]` |
+| **Classic (full sentences)** *(default)* | One full sentence per event: `The trip "Sunday survey" has begun.`, `Arrived at "Entrance".`, with any stop note in brackets after it. | `[yyyy/MM/dd HH:mm:ss]` |
+| **Field journal (elapsed time + sequence)** | Sentences aware of their position in the trip: `First stop: "Entrance".`, then `Moved on to "Gallery".`, each stamped with the time elapsed since the start. | `[HH:mm · +Δ]` |
+| **Narrative (paragraphs)** | Prose. An opening sentence with the trip title, date and start time; consecutive stops chained into one sentence carrying the gap between each (`After 15 min, the team reached "Entrance", then continued to "Gallery" (5 min later)`); a sentence for every stop note and every document; and a closing sentence with the finish time and total duration. | none |
 
-### Switching the method
+**Narrative** is the one that reads well when appended to a report.
 
-Open a trip's log page (**View trip → Log** or the log icon on the
-trip screen). Tap the **book icon** (📖) in the app bar to open the
-method picker. Selecting a different method:
+### Switching the style
 
-1. Asks for confirmation (the existing text will be replaced).
-2. Regenerates the log from the trip's stored event sequence using the
-   new method.
-3. Saves the new text immediately.
+1. Open a trip and tap **Trip log**.
+2. Tap the open-book icon in the top bar (**Change log generation
+   method**) and pick a style. A tick marks the one in use.
+3. A **Regenerate trip log?** dialog warns you: *"The trip log will be
+   regenerated from the recorded events using the selected method. Any
+   manual edits will be lost."* Tap **Regenerate** to go ahead.
+4. The log is rewritten in the new style and saved immediately.
 
-The chosen method is stored per-user in the app's configuration and is
-also used for the **next** trip you run — you only need to set it once.
+The style is a **single setting for this device**, not a per-user or
+per-trip one — changing it changes it for everyone who uses the
+device, and it also applies to the next trip you run. You only need to
+set it once.
 
-> **Tip**: If you want a polished report export, switch to **Narrative**
-> before generating the ODT/DOCX report, then switch back to your
-> everyday preference afterwards.
+> **Tip**: **Narrative** gives the most report-ready prose, so choose
+> it *before* you write anything into the log by hand. Do not switch
+> styles back and forth around a log you have already annotated —
+> each switch discards your text. Export first, then edit the finished
+> document in your word processor.
 
-## Generating a report
+## Templates
 
-1. Open a trip (from the cave's **Past trips** list or the active trip
-   banner).
-2. Pick **Export report** (or similar wording — actual label may vary
-   by version).
-3. Choose:
-   - the **template**,
-   - the **output format** (ODT / DOCX — typically matches the
-     template's format),
-   - the **output folder**.
-4. SpeleoLoc writes the document and confirms success.
+A template is an ordinary ODT or DOCX document — your club's
+letterhead, a title page, headings, a fixed "Participants" or
+"Equipment" section, whatever you want above the log. It needs no
+special markup of any kind, because SpeleoLoc only appends text to the
+end of it. Leave the end of the document empty: that is where the log
+lands.
 
-The generated file is a normal ODT/DOCX you can open, edit, print or
-share with any office suite.
+No sample template ships with the app.
 
-## Including a map image
+### Reaching the template screen
 
-To embed a route image in the report:
+Open a trip, tap **Export report**, then **Manage templates** in the
+template dialog. **This is the only way in** — there is no entry for
+templates from the Home screen or from Settings.
 
-1. Open the trip's **map view**.
-2. Select the raster map you want in the report.
-3. Use **Export map as image** to generate a PNG — or let the template
-   engine request it automatically if supported in your version.
-4. If needed, reference the image in the template at the correct
-   placeholder.
+The first time you do this you will have no templates at all, so
+instead of a picker you get **No templates available. Add a template
+first.** with a **Manage templates** button next to **Cancel**. That
+button is the intended route.
+
+The screen is titled **Document Templates**. Each row shows the
+template's name, its format and its file size, for example
+`ODT · 42.7 KB`. An empty list reads *"No templates defined. Tap + to
+add an ODF or DOCX template."*
+
+### Adding a template
+
+1. On **Document Templates**, tap the **+** button.
+2. Pick an `.odt` or `.docx` file from the device. Anything else is
+   refused with **Unsupported format. Please select an ODT or DOCX
+   file.**
+3. An **Add Template** dialog opens with a **Template name** field,
+   pre-filled with the file's name without its extension. This name is
+   what you will see in the template list and when picking a template
+   for a report, so make it recognisable.
+4. Tap **OK**. The confirmation is **Template added**.
+
+The file is copied into SpeleoLoc's own storage, so you can move or
+delete the original afterwards without breaking anything.
+
+If you clear the name field and tap **OK**, nothing is added and no
+message is shown — it simply looks as though the dialog closed.
+
+### Deleting a template
+
+Tap the red delete icon on the row and confirm **Delete template
+"<name>"?** with **Yes**. This removes both the entry and SpeleoLoc's
+stored copy of the document; it cannot be undone from inside the app.
+Your original file, wherever you picked it from, is untouched, and
+reports you already exported are unaffected.
+
+### Templates do not travel between devices
+
+This is the one thing to know before relying on templates in a club.
+
+A template has two parts: an entry in the database and the actual
+`.odt`/`.docx` file inside the app. **Syncing and database export
+carry the entry but not the file.** On a second phone the template
+therefore appears in the list looking perfectly normal, and the export
+then fails with a raw error message containing **Template file not
+found**.
+
+If your club shares one report template, every device has to add the
+file for itself — there is no way to distribute it through sync or an
+archive. The same applies after restoring a backup onto a fresh
+install.
+
+## Exporting a report
+
+**Export report** is on the trip's toolbar and works for **any trip,
+running or ended** — you do not have to stop the trip first.
+
+1. Open the trip: from the cave's places list tap **Past / active
+   trip(s)**, then tap the trip (or **View trip** for the active one).
+2. Tap **Export report**. If the trip's log is empty you get **No trip
+   log to export** and nothing else happens.
+3. **Select a template** appears. Tap the template you want. The
+   dialog also carries a **Manage templates** button if you need to
+   add one first.
+4. Your device's save dialog opens, titled **Export report**, with the
+   file name already filled in as `trip_report_<trip title>.odt` (or
+   `.docx`); spaces and punctuation in the trip title become
+   underscores. Change the name or the destination if you want, then
+   confirm.
+5. SpeleoLoc writes the document, shows **Report exported
+   successfully**, and then hands the file to whatever app on your
+   device opens ODT or DOCX files.
+
+If nothing opens at step 5 the report was still written — your device
+simply has no app registered for that format.
+
+## The trip map image
+
+SpeleoLoc **cannot** put a map image into a report. The map is a
+separate export that you insert by hand afterwards.
+
+The trip's map view has its own **Export map** button, which appears
+only while you are in map view and only when the cave has at least one
+raster map. It saves a PNG of the map exactly as shown — route line,
+direction arrows and numbered stops included — into the app's own
+documents folder, named `trip_map_<trip title>_<timestamp>.png`, and
+shows the full path in a **Trip map exported** message. There is no
+save dialog and no folder choice.
+
+To get that picture into your report: export the map, export the
+report, then open the report in your word processor and insert the
+PNG where you want it.
 
 ## Troubleshooting
 
-- **Template format unsupported** — ensure the file extension is `.odt`
-  or `.docx` and that the file is not password-protected.
-- **Placeholders not replaced** — check variable syntax and that you
-  selected the correct trip type of report.
-- **Images missing** — regenerate the map image and make sure the
-  template references the right placeholder key.
+| Message or symptom | What it means |
+|---|---|
+| **No trip log to export** | The trip's log is empty, and the report is built entirely from the log. Open **Trip log**, put something in it, save, then export again. |
+| An error containing **Template file not found** | The template is listed but its document is missing on this device. Normal on a second device or after restoring a backup: add the file again here. |
+| **Unsupported format. Please select an ODT or DOCX file.** | The picked file is not `.odt` or `.docx`. Save it again from your word processor in one of those two formats. |
+| The report is just the template with text pasted at the end | That is exactly what it is. There is no substitution step. Rearrange things in your word processor after exporting. |
+| Text you typed into the log has vanished | The log was regenerated — by a trip restart, by a style switch, or by a new event while the **Narrative** style was active. |
+| Nothing happened after the export succeeded | The file was written; your device has no app that handles ODT or DOCX. |
 
 ## See also
 
 - [Trips](trips.md)
+- [Documents](documents.md)
 - [Map viewer](map-viewer.md)
+- [Running a trip](../workflows/running-a-trip.md)
+- [Sync and the change log](sync-and-change-log.md)
+- [Database export and import](database-export-import.md)

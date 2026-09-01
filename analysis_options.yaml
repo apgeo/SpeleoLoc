@@ -16,6 +16,13 @@ analyzer:
     - lib/data/source/database/app_database.g.dart
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     avoid_print: ignore
     constant_identifier_names: ignore

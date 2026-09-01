@@ -14,6 +14,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/cave_place_qr_generator.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/qr_label_payload.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/qr_generation_defaults.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -93,6 +94,7 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             cfg['qrErrorCorrectionLevel'] ??
             QrGenerationDefaults.errorCorrectionLevel,
         includeDeepLinkPrefix: cfg['includeDeepLinkPrefix'] ?? true,
+        labelUrlPrefix: cfg['labelUrlPrefix'] as String?,
       );
       if (mounted) {
         setState(() {
@@ -154,7 +156,11 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
   void _showQrInfoDialog(BuildContext context, String qrId) {
     if (_prefs == null) return;
     final prefs = _prefs!;
-    final payload = prefs.includeDeepLinkPrefix ? '$deepLinkPrefix$qrId' : qrId;
+    final payload = QrLabelPayload.compose(
+      qrId,
+      urlPrefix: prefs.labelUrlPrefix,
+      includeDeepLinkPrefix: prefs.includeDeepLinkPrefix,
+    );
     final ecLevelInt = _ecLevel(prefs.qrErrorCorrectionLevel);
 
     // Compute actual QR version and module count using the qr package.
@@ -264,9 +270,11 @@ class _CavePlaceQrPreviewDialogState extends State<CavePlaceQrPreviewDialog> {
             AspectRatio(
               aspectRatio: 1,
               child: QrImageView(
-                data: prefs.includeDeepLinkPrefix
-                    ? '$deepLinkPrefix$qrId'
-                    : '$qrId',
+                data: QrLabelPayload.compose(
+                  qrId,
+                  urlPrefix: prefs.labelUrlPrefix,
+                  includeDeepLinkPrefix: prefs.includeDeepLinkPrefix,
+                ),
                 version: QrVersions.auto,
                 gapless: true,
                 errorCorrectionLevel: _ecLevel(prefs.qrErrorCorrectionLevel),
