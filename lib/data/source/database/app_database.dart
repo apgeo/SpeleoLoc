@@ -173,11 +173,14 @@ class AppDatabase extends _$AppDatabase {
         .getSingleOrNull();
   }
 
+  /// [scannedAt] (epoch ms) overrides the scan time, for points the user
+  /// fills in after the fact; omitted it defaults to now.
   Future<Uuid> insertTripPoint({
     required Uuid tripUuid,
     required Uuid cavePlaceUuid,
     String? notes,
     required Uuid authorUuid,
+    int? scannedAt,
   }) async {
     final uuid = Uuid.v7();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -186,7 +189,7 @@ class AppDatabase extends _$AppDatabase {
         uuid: uuid,
         caveTripUuid: tripUuid,
         cavePlaceUuid: Value(cavePlaceUuid),
-        scannedAt: now,
+        scannedAt: scannedAt ?? now,
         notes: Value(notes),
         createdAt: Value(now),
         updatedAt: Value(now),
@@ -202,6 +205,34 @@ class AppDatabase extends _$AppDatabase {
           ..where((t) => t.caveTripUuid.equalsValue(tripUuid))
           ..orderBy([(t) => OrderingTerm.asc(t.scannedAt)]))
         .get();
+  }
+
+  Future<CaveTripPoint?> getTripPoint(Uuid pointUuid) async {
+    return (select(
+      caveTripPoints,
+    )..where((t) => t.uuid.equalsValue(pointUuid))).getSingleOrNull();
+  }
+
+  Future<void> updateTripPointScannedAt(
+    Uuid pointUuid,
+    int scannedAt, {
+    required Uuid authorUuid,
+  }) async {
+    await (update(
+      caveTripPoints,
+    )..where((t) => t.uuid.equalsValue(pointUuid))).write(
+      CaveTripPointsCompanion(
+        scannedAt: Value(scannedAt),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        lastModifiedByUserUuid: Value(authorUuid),
+      ),
+    );
+  }
+
+  Future<void> deleteTripPoint(Uuid pointUuid) async {
+    await (delete(
+      caveTripPoints,
+    )..where((t) => t.uuid.equalsValue(pointUuid))).go();
   }
 
   Future<List<CaveTrip>> getCaveTrips(Uuid caveUuid) async {

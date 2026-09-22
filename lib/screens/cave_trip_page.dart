@@ -11,6 +11,7 @@ import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_trip/trip_point_actions.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
@@ -76,6 +77,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   bool _navBarShowMaps = true;
   bool _navBarShowPlaces = true;
   Uuid? _selectedPlaceId;
+  late final TripPointActions _pointActions = TripPointActions(ref);
   CavePlaceSortOption _cavePlaceSortOption = const CavePlaceSortOption();
   final RasterMapPlacePointEditorController _editorController =
       RasterMapPlacePointEditorController(
@@ -596,6 +598,31 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     }
   }
 
+  Future<void> _addPoint() async {
+    final trip = _trip;
+    if (trip == null) return;
+    if (await _pointActions.addPoint(context, trip) && mounted) {
+      unawaited(_load());
+    }
+  }
+
+  Future<void> _editPointTime(CaveTripPoint point) async {
+    final trip = _trip;
+    if (trip == null) return;
+    if (await _pointActions.editTime(context, trip, point) && mounted) {
+      unawaited(_load());
+    }
+  }
+
+  Future<void> _deletePoint(CaveTripPoint point, String placeTitle) async {
+    final deleted = await _pointActions.deletePoint(
+      context,
+      point,
+      placeTitle: placeTitle,
+    );
+    if (deleted && mounted) unawaited(_load());
+  }
+
   String _formatDuration(int startMs, int? endMs) {
     final end = endMs != null
         ? DateTime.fromMillisecondsSinceEpoch(endMs)
@@ -655,6 +682,15 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         ),
       );
     }
+
+    buttons.add(
+      _TripToolbarButton(
+        icon: Icons.add_location_alt_outlined,
+        label: LocServ.inst.t('trip_point_add'),
+        color: Colors.teal,
+        onTap: _addPoint,
+      ),
+    );
 
     buttons.add(
       _TripToolbarButton(
@@ -916,6 +952,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             final place = pt.cavePlaceUuid == null
                 ? null
                 : _placesById[pt.cavePlaceUuid!];
+            final title = place?.title ?? '#${pt.cavePlaceUuid}';
             final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
             return ListTile(
               dense: true,
@@ -925,17 +962,22 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
                 radius: 14,
                 child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
               ),
-              title: Text(place?.title ?? '#${pt.cavePlaceUuid}'),
+              title: Text(title),
               subtitle: Text(
                 dateTimeFormat.format(dt),
                 style: const TextStyle(fontSize: 11),
               ),
-              trailing: place?.depthInCave != null
-                  ? Text(
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (place?.depthInCave != null)
+                    Text(
                       '${place!.depthInCave! > 0 ? '+' : ''}${place.depthInCave}m',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    )
-                  : null,
+                    ),
+                  _buildPointMenu(pt, title),
+                ],
+              ),
               onTap: place == null
                   ? null
                   : () => AppRoutes.pushCavePlace(
@@ -945,6 +987,40 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
                     ),
             );
           }),
+      ],
+    );
+  }
+
+  Widget _buildPointMenu(CaveTripPoint point, String placeTitle) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 20),
+      tooltip: LocServ.inst.t('trip_point_actions'),
+      onSelected: (value) {
+        if (value == 'edit_time') {
+          unawaited(_editPointTime(point));
+        } else if (value == 'delete') {
+          unawaited(_deletePoint(point, placeTitle));
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'edit_time',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.schedule),
+            title: Text(LocServ.inst.t('trip_point_edit_time')),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.delete_outline),
+            title: Text(LocServ.inst.t('trip_point_delete')),
+          ),
+        ),
       ],
     );
   }

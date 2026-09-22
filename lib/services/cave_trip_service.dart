@@ -6,6 +6,7 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -149,6 +150,96 @@ class CaveTripService {
       await _appendForNewEvent(id);
     } catch (e, st) {
       log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
+    }
+  }
+
+  /// Adds a point to [tripUuid] at an explicit [at] time — the manual
+  /// equivalent of a scan, for a stop that was missed or scanned late.
+  ///
+  /// Unlike [recordPoint] it addresses a trip by id, so ended trips can be
+  /// corrected too, and it ignores the paused flag (pausing suppresses
+  /// live scanning, not deliberate editing). Throws
+  /// [DuplicateEntryException] when the trip already holds that place at
+  /// that exact millisecond.
+  Future<Uuid> addPointAt({
+    required Uuid tripUuid,
+    required Uuid cavePlaceUuid,
+    required DateTime at,
+    String? notes,
+  }) async {
+    final author = await _currentUser.currentOrSystem();
+    final pointUuid = await _mapUniqueViolation(
+      () => _db.insertTripPoint(
+        tripUuid: tripUuid,
+        cavePlaceUuid: cavePlaceUuid,
+        notes: notes,
+        authorUuid: author,
+        scannedAt: at.millisecondsSinceEpoch,
+      ),
+    );
+    await _logger.logInsert('cave_trip_points', pointUuid);
+    await _regenerateLog(tripUuid);
+    return pointUuid;
+  }
+
+  /// Moves an already-recorded point to [at]. Throws
+  /// [DuplicateEntryException] on a collision with a sibling point at the
+  /// same place. No-op when the point is gone.
+  Future<void> updatePointTime(Uuid pointUuid, DateTime at) async {
+    final old = await _db.getTripPoint(pointUuid);
+    if (old == null) return;
+    final author = await _currentUser.currentOrSystem();
+    final scannedAt = at.millisecondsSinceEpoch;
+    await _mapUniqueViolation(
+      () => _db.updateTripPointScannedAt(
+        pointUuid,
+        scannedAt,
+        authorUuid: author,
+      ),
+    );
+    await _logger.logUpdate(
+      'cave_trip_points',
+      pointUuid,
+      oldValues: {'scanned_at': old.scannedAt},
+      newValues: {'scanned_at': scannedAt},
+    );
+    await _regenerateLog(old.caveTripUuid);
+  }
+
+  /// Removes a recorded point. The tombstone carries the same columns as
+  /// the per-point tombstones written by a whole-trip delete, so peers
+  /// resolve the removal identically. No-op when the point is gone.
+  Future<void> deletePoint(Uuid pointUuid) async {
+    final point = await _db.getTripPoint(pointUuid);
+    if (point == null) return;
+    await _db.deleteTripPoint(pointUuid);
+    await _logger.logDelete(
+      'cave_trip_points',
+      pointUuid,
+      oldValues: {
+        'cave_trip_uuid': point.caveTripUuid,
+        'cave_place_uuid': point.cavePlaceUuid,
+      },
+    );
+    await _regenerateLog(point.caveTripUuid);
+  }
+
+  /// UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at) is the only
+  /// constraint manual point editing can trip. Drift surfaces it as
+  /// message text only, so translate it into the typed exception screens
+  /// already catch.
+  Future<T> _mapUniqueViolation<T>(Future<T> Function() body) async {
+    try {
+      return await body();
+    } catch (e, st) {
+      if (e.toString().contains('UNIQUE constraint failed')) {
+        throw DuplicateEntryException(
+          'A point for this place already exists at that time',
+          cause: e,
+          stackTrace: st,
+        );
+      }
+      rethrow;
     }
   }
 
