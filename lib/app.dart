@@ -19,6 +19,7 @@ import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/system_bars_inset_guard.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart'
@@ -177,7 +178,7 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
       },
       builder: (context, child) => Stack(
         children: [
-          SizedBox.expand(child: child!),
+          SizedBox.expand(child: SystemBarsInsetGuard(child: child!)),
           const AppToastHost(),
         ],
       ),
