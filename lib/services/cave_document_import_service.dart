@@ -9,11 +9,35 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 
+/// What became of one file in a bulk import.
+///
+/// [documentUuid] is set for a stored file *and* for one skipped as a
+/// duplicate — in that case it is the document already attached to the
+/// geofeature that the file matched. Callers that need to reference the
+/// stored document afterwards (the trip-media import binds it to a track
+/// point) need the duplicate's uuid just as much as a fresh one.
+class CaveDocImportFileResult {
+  CaveDocImportFileResult({
+    required this.sourcePath,
+    this.documentUuid,
+    this.wasDuplicate = false,
+    this.failed = false,
+  });
+
+  final String sourcePath;
+  final Uuid? documentUuid;
+  final bool wasDuplicate;
+  final bool failed;
+}
+
 /// Per-directory outcome of a bulk cave-document import.
 class CaveDirImportOutcome {
   int imported = 0;
   int skippedDuplicates = 0;
   int failed = 0;
+
+  /// One entry per file passed in, in call order.
+  final List<CaveDocImportFileResult> files = [];
 
   int get processed => imported + skippedDuplicates + failed;
 }
@@ -47,11 +71,13 @@ class CaveDocumentImportService {
 
     // Snapshot the (size, hash) of documents already attached to this
     // geofeature so repeated imports don't create duplicate rows.
-    final existingKeys = <String>{};
+    final existingKeys = <String, Uuid>{};
     try {
       final existing = await _docRepo.getDocumentationFiles(parentLink: link);
       for (final d in existing) {
-        if (d.fileHash != null) existingKeys.add('${d.fileSize}:${d.fileHash}');
+        if (d.fileHash != null) {
+          existingKeys['${d.fileSize}:${d.fileHash}'] = d.uuid;
+        }
       }
     } catch (e, st) {
       _log.warning(
@@ -86,12 +112,19 @@ class CaveDocumentImportService {
         }
 
         final key = '${info.fileSize}:${info.fileHash}';
-        if (existingKeys.contains(key)) {
+        final duplicateOf = existingKeys[key];
+        if (duplicateOf != null) {
           await _deleteQuietly(info.absolutePath);
           outcome.skippedDuplicates++;
+          outcome.files.add(
+            CaveDocImportFileResult(
+              sourcePath: file.path,
+              documentUuid: duplicateOf,
+              wasDuplicate: true,
+            ),
+          );
           continue;
         }
-        existingKeys.add(key);
 
         final companion =
             DocumentationFilesCompanion.insert(
@@ -110,10 +143,17 @@ class CaveDocumentImportService {
           parentLink: link,
         );
         await _changeLogger.logInsert('documentation_files', docUuid);
+        existingKeys[key] = docUuid;
         outcome.imported++;
+        outcome.files.add(
+          CaveDocImportFileResult(sourcePath: file.path, documentUuid: docUuid),
+        );
       } catch (e, st) {
         _log.warning('Failed to import ${file.path}', e, st);
         outcome.failed++;
+        outcome.files.add(
+          CaveDocImportFileResult(sourcePath: file.path, failed: true),
+        );
       } finally {
         onFileDone?.call();
       }
