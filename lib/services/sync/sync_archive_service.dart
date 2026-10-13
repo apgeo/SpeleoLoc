@@ -40,7 +40,7 @@ const int kSyncArchiveVersion = 4;
 /// regardless of the app version that produced it. The import gate accepts
 /// any version in [kSyncArchiveMinImportSchemaVersion, this] (see below),
 /// so raising this to the true schema does not orphan those archives.
-const int kSyncArchiveDbSchemaVersion = 20;
+const int kSyncArchiveDbSchemaVersion = 21;
 
 /// Oldest archive `schema_version` this app still imports. The sync-v2
 /// format has only ever emitted `schema_version >= 9`, and every schema in
@@ -685,6 +685,8 @@ class SyncArchiveService {
           _deleteIfOlder(_db.documentationFilesToGeofeatures, u, ts),
       'documentation_files_to_cave_trips': (u, ts) =>
           _deleteIfOlder(_db.documentationFilesToCaveTrips, u, ts),
+      'documentation_files_to_cave_trip_points': (u, ts) =>
+          _deleteIfOlder(_db.documentationFilesToCaveTripPoints, u, ts),
       'cave_trip_points': (u, ts) => _deleteIfOlder(_db.caveTripPoints, u, ts),
       'cave_trips': (u, ts) => _deleteIfOlder(_db.caveTrips, u, ts),
       'documentation_files': (u, ts) =>
@@ -735,7 +737,8 @@ class SyncArchiveService {
         .get();
     if (countRows.isEmpty) return 0;
     final localTs = countRows.first.read<int>('ts');
-    if (tombstoneTs < localTs) return 0; // local strictly newer → keep (ties delete)
+    if (tombstoneTs < localTs)
+      return 0; // local strictly newer → keep (ties delete)
     await _db.customStatement(
       'DELETE FROM ${table.actualTableName} WHERE uuid = ?',
       [entityUuid.bytes],

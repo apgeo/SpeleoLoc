@@ -21,7 +21,7 @@ void main() {
     await db.close();
   });
 
-  test('tables() returns the expected 15 handlers in FK order', () {
+  test('tables() returns the expected 16 handlers in FK order', () {
     final names = registry.tables().map((t) => t.name).toList();
     expect(names, const <String>[
       // Parents first.
@@ -38,6 +38,7 @@ void main() {
       'documentation_files',
       'documentation_files_to_geofeatures',
       'documentation_files_to_cave_trips',
+      'documentation_files_to_cave_trip_points',
       'trip_report_templates',
       // Independent key/value table (INTEGER PK, title-keyed sync).
       'configurations',

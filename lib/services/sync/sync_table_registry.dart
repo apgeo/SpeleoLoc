@@ -124,10 +124,10 @@ class SyncTableRegistry {
       upsert: (rows, resolver) async => upsertRows<CavePlaceBeacon>(
         rows,
         // Older archives (schema <= v15) lack beacon_type.
-        (j) => CavePlaceBeacon.fromJson(
-          {'beacon_type': 'ibeacon', ...j},
-          serializer: _serializer,
-        ),
+        (j) => CavePlaceBeacon.fromJson({
+          'beacon_type': 'ibeacon',
+          ...j,
+        }, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
         (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
@@ -257,6 +257,27 @@ class SyncTableRegistry {
             // Link table has no updated_at; LWW falls back to created_at.
             (r) => r.createdAt,
             _db.documentationFilesToCaveTrips,
+            resolver,
+          ),
+    ),
+    SyncTableHandler(
+      name: 'documentation_files_to_cave_trip_points',
+      dump: () async =>
+          (await _db.select(_db.documentationFilesToCaveTripPoints).get())
+              .map((r) => r.toJson(serializer: _serializer))
+              .toList(),
+      upsert: (rows, resolver) async =>
+          upsertRows<DocumentationFilesToCaveTripPoint>(
+            rows,
+            (j) => DocumentationFilesToCaveTripPoint.fromJson(
+              j,
+              serializer: _serializer,
+            ),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.uuid,
+            // Link table has no updated_at; LWW falls back to created_at.
+            (r) => r.createdAt,
+            _db.documentationFilesToCaveTripPoints,
             resolver,
           ),
     ),
