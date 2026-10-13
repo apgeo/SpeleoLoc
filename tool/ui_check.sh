@@ -24,11 +24,13 @@ ANDROID_HOME="${ANDROID_HOME:-$HOME/.local/opt/android-sdk}"
 ADB="$ANDROID_HOME/platform-tools/adb"
 
 WANT_DEVICE=1
+UPDATE_ANALYZE_BASELINE=0
 GOLDEN_ARGS=()
 for arg in "$@"; do
   case "$arg" in
     --no-device) WANT_DEVICE=0 ;;
     --update-goldens) GOLDEN_ARGS+=(--update-goldens) ;;
+    --update-analyze-baseline) UPDATE_ANALYZE_BASELINE=1 ;;
     *) echo "unknown flag: $arg" >&2; exit 64 ;;
   esac
 done
@@ -36,8 +38,35 @@ done
 status=0
 step() { echo; echo "=== $* ==="; }
 
+# The tree carries a known backlog of analyzer infos and warnings, and
+# `flutter analyze` exits non-zero on any of them — so taking its exit code
+# at face value makes this whole check permanently red and its verdict
+# worthless. What a change must not do is ADD to that backlog, so an error
+# always fails and the count is held against a recorded baseline. Lower the
+# baseline when the backlog shrinks:
+#   tool/ui_check.sh --update-analyze-baseline
 step "analyze"
-flutter analyze || status=1
+ANALYZE_BASELINE=tool/analyze_baseline.txt
+analyze_out="$(flutter analyze 2>&1 || true)"
+errors="$(printf '%s\n' "$analyze_out" | grep -cE '^ *error ' || true)"
+count="$(printf '%s\n' "$analyze_out" | sed -nE 's/^([0-9]+) issues? found.*/\1/p' | tail -1)"
+count="${count:-0}"
+if [ "$UPDATE_ANALYZE_BASELINE" = "1" ]; then
+  echo "$count" > "$ANALYZE_BASELINE"
+  echo "analyze baseline set to $count"
+fi
+baseline="$(cat "$ANALYZE_BASELINE" 2>/dev/null || echo 0)"
+if [ "$errors" -gt 0 ]; then
+  printf '%s\n' "$analyze_out" | grep -E '^ *error ' >&2
+  echo "analyze: $errors error(s)" >&2
+  status=1
+elif [ "$count" -gt "$baseline" ]; then
+  echo "analyze: $count issues, up from the baseline of $baseline — this change added some:" >&2
+  echo "  run \`flutter analyze\` and fix what is new" >&2
+  status=1
+else
+  echo "analyze: $count issues, none of them errors (baseline $baseline)"
+fi
 
 step "layout across device profiles"
 flutter test test/widgets/trip_media_layout_test.dart || status=1
