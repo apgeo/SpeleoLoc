@@ -10,6 +10,7 @@ import 'package:speleoloc/services/ruuvi/ruuvi_history_repository.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/cave_document_import_service.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
@@ -28,6 +29,7 @@ import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
@@ -268,6 +270,29 @@ final caveTripServiceProvider = Provider<CaveTripService>(
     ref.watch(currentUserServiceProvider),
     ref.watch(configurationRepositoryProvider),
     clock: ref.watch(clockProvider),
+  ),
+);
+
+/// Bulk file-to-geofeature importer. New call sites take it from here;
+/// the two document screens that predate this provider still build their
+/// own instance.
+final caveDocumentImportServiceProvider = Provider<CaveDocumentImportService>(
+  (ref) => CaveDocumentImportService(
+    ref.watch(documentationRepositoryProvider),
+    ref.watch(changeLoggerProvider),
+  ),
+);
+
+/// Applies the decisions made on the trip-media screen: track points at the
+/// capture times, the stored media, and the links binding each picture to
+/// both its cave place and its track point.
+final tripMediaImportServiceProvider = Provider<TripMediaImportService>(
+  (ref) => TripMediaImportService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(caveTripServiceProvider),
+    ref.watch(caveDocumentImportServiceProvider),
+    ref.watch(changeLoggerProvider),
+    ref.watch(currentUserServiceProvider),
   ),
 );
 
