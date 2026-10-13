@@ -17,6 +17,13 @@ dependencies:
   mobile_scanner: ^7.1.4
   permission_handler: ^12.0.1
   image_picker: ^1.0.4
+  # Device media library for the "trip points from pictures" screen: reads
+  # MediaStore / PHPhotoLibrary directly, which is the only way to page a
+  # 200+ item library, filter it by capture date and get a trustworthy
+  # capture time for videos (image_picker copies the file to a cache dir and
+  # only a JPEG's own EXIF survives). image_picker stays as the fallback for
+  # users who grant selected-photos access instead of the whole library.
+  photo_manager: ^3.12.0
   sqflite: ^2.4.2
   path: ^1.9.1
   drift: ^2.30.1
