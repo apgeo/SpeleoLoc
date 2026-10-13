@@ -224,6 +224,47 @@ class CaveTripService {
     await _regenerateLog(point.caveTripUuid);
   }
 
+  /// Moves the trip's recorded window, for when the media import shows the
+  /// caver entered or left at a different moment than the one recorded.
+  ///
+  /// Only the ends passed are written. Never used to end a live trip —
+  /// `stopTrip` owns that, together with the active-trip config — so an
+  /// [endedAt] for a trip that has not ended is refused rather than
+  /// silently ending it.
+  Future<void> updateTripWindow(
+    Uuid tripUuid, {
+    DateTime? startedAt,
+    DateTime? endedAt,
+  }) async {
+    final old = await _tripRow(tripUuid);
+    if (old == null) return;
+    if (endedAt != null && old.tripEndedAt == null) {
+      throw const ValidationException('Cannot set an end time on a live trip');
+    }
+    await _db.updateCaveTripWindow(
+      tripUuid,
+      startedAt: startedAt?.millisecondsSinceEpoch,
+      endedAt: endedAt?.millisecondsSinceEpoch,
+      authorUuid: await _currentUser.currentOrSystem(),
+    );
+    final updated = await _tripRow(tripUuid);
+    if (updated != null) {
+      await _logger.logUpdate(
+        'cave_trips',
+        tripUuid,
+        oldValues: {
+          'trip_started_at': old.tripStartedAt,
+          'trip_ended_at': old.tripEndedAt,
+        },
+        newValues: {
+          'trip_started_at': updated.tripStartedAt,
+          'trip_ended_at': updated.tripEndedAt,
+        },
+      );
+    }
+    await _regenerateLog(tripUuid);
+  }
+
   /// UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at) is the only
   /// constraint manual point editing can trip. Drift surfaces it as
   /// message text only, so translate it into the typed exception screens

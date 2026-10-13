@@ -155,6 +155,27 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Moves a trip's recorded window. Only the values passed are written, so
+  /// a caller correcting the start cannot accidentally clear the end.
+  Future<void> updateCaveTripWindow(
+    Uuid tripUuid, {
+    int? startedAt,
+    int? endedAt,
+    required Uuid authorUuid,
+  }) async {
+    if (startedAt == null && endedAt == null) return;
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
+      CaveTripsCompanion(
+        tripStartedAt: startedAt == null
+            ? const Value.absent()
+            : Value(startedAt),
+        tripEndedAt: endedAt == null ? const Value.absent() : Value(endedAt),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        lastModifiedByUserUuid: Value(authorUuid),
+      ),
+    );
+  }
+
   Future<CaveTrip?> getActiveTripForCave(Uuid caveUuid) async {
     return (select(caveTrips)
           ..where(
