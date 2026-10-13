@@ -109,6 +109,7 @@ const bool autoRefreshQrAfterSettings = true;
 const String caveTripRoute = '/cave_trip';
 const String caveTripListRoute = '/cave_trip_list';
 const String caveTripLogRoute = '/cave_trip_log';
+const String caveTripMediaPointsRoute = '/cave_trip_media_points';
 const String tripReportTemplatesRoute = '/trip_report_templates';
 
 // Cave trip config key

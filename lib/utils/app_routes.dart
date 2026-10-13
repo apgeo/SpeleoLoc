@@ -90,6 +90,15 @@ class AppRoutes {
   static Future<void> pushCaveTripLog(BuildContext c, Uuid tripUuid) =>
       Navigator.pushNamed<void>(c, caveTripLogRoute, arguments: tripUuid);
 
+  /// Resolves to true when the media import changed the trip, so the trip
+  /// screen knows to reload.
+  static Future<bool?> pushCaveTripMediaPoints(BuildContext c, Uuid tripUuid) =>
+      Navigator.pushNamed<bool>(
+        c,
+        caveTripMediaPointsRoute,
+        arguments: tripUuid,
+      );
+
   static Future<void> pushTripReportTemplates(BuildContext c) =>
       Navigator.pushNamed<void>(c, tripReportTemplatesRoute);
 }

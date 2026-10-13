@@ -125,6 +125,11 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       label: LocServ.inst.t('manage_raster_maps'),
     ),
     AppMenuItem(
+      value: 'media_points',
+      icon: Icons.photo_library_outlined,
+      label: LocServ.inst.t('trip_media_title'),
+    ),
+    AppMenuItem(
       value: 'rename_trip',
       icon: Icons.edit,
       label: LocServ.inst.t('trip_rename'),
@@ -149,6 +154,8 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     } else if (value == 'manage_raster_maps') {
       _editorController.ensureMapsListVisible();
       await _openRasterMapsPage();
+    } else if (value == 'media_points') {
+      await _openMediaPoints();
     } else if (value == 'rename_trip') {
       await _renameTrip();
     } else if (value == 'delete_trip') {
@@ -598,6 +605,16 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     }
   }
 
+  /// Opens the worksheet that turns the device's photos and videos into
+  /// track points at their capture times.
+  Future<void> _openMediaPoints() async {
+    final changed = await AppRoutes.pushCaveTripMediaPoints(
+      context,
+      widget.tripUuid,
+    );
+    if (changed == true && mounted) unawaited(_load());
+  }
+
   Future<void> _addPoint() async {
     final trip = _trip;
     if (trip == null) return;
@@ -689,6 +706,15 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         label: LocServ.inst.t('trip_point_add'),
         color: Colors.teal,
         onTap: _addPoint,
+      ),
+    );
+
+    buttons.add(
+      _TripToolbarButton(
+        icon: Icons.photo_library_outlined,
+        label: LocServ.inst.t('trip_media_toolbar'),
+        color: Colors.indigo,
+        onTap: _openMediaPoints,
       ),
     );
 

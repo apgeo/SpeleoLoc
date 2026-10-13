@@ -8,6 +8,7 @@ import 'package:speleoloc/screens/cave_places_list_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/cave_trip_page.dart';
 import 'package:speleoloc/screens/cave_trip_list_page.dart';
+import 'package:speleoloc/screens/cave_trip/trip_media_points_page.dart';
 import 'package:speleoloc/screens/cave_trip_log_page.dart';
 import 'package:speleoloc/screens/trip_report_templates_page.dart';
 import 'package:speleoloc/screens/map_viewer_page.dart';
@@ -167,6 +168,12 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
             return MaterialPageRoute<void>(
               settings: settings,
               builder: (_) => CaveTripLogPage(tripUuid: args ?? Uuid.zero),
+            );
+          case caveTripMediaPointsRoute:
+            final args = settings.arguments as Uuid?;
+            return MaterialPageRoute<bool>(
+              settings: settings,
+              builder: (_) => TripMediaPointsPage(tripUuid: args ?? Uuid.zero),
             );
           case tripReportTemplatesRoute:
             return MaterialPageRoute<void>(
