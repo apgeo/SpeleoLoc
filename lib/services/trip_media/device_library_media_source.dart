@@ -10,12 +10,54 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// PHPhotoLibrary (iOS).
 ///
 /// This is the path that makes the feature workable on a real trip's worth of
-/// media: the library is paged rather than loaded whole, the date range is
-/// pushed down to the platform query instead of filtering after the fact, and
-/// each asset carries the capture time the camera recorded — including for
-/// videos, which have no EXIF to fall back on.
+/// media: the library is paged rather than loaded whole, the platform query
+/// prunes it before anything is listed, and each asset carries the capture
+/// time the camera recorded — including for videos, which have no EXIF to
+/// fall back on.
+///
+/// The date range is applied in two steps because the platform's own filter
+/// does not mean what its name suggests. On Android the plugin's "create
+/// time" condition tests `DATE_ADDED` — when the file arrived on the device —
+/// while the time it reports per asset is `DATE_TAKEN`. For a picture the
+/// phone took itself the two agree. For one copied over afterwards (a
+/// waterproof camera, a teammate's phone: the usual way cave pictures reach a
+/// phone) they differ by days, and trusting the platform filter alone hides
+/// exactly the pictures a trip-day range is meant to find.
 class DeviceLibraryMediaSource implements TripMediaSource {
   DeviceLibraryMediaSource({int pageSize = 200}) : _pageSize = pageSize;
+
+  /// How far a capture time may run ahead of the file's arrival time and
+  /// still be found. A picture cannot arrive before it is taken, so arrival
+  /// bounds capture from above — except that capture times are local-time
+  /// strings stamped with whatever zone and clock the camera had. A day
+  /// covers any zone offset and an unset-by-hours camera clock.
+  static const Duration arrivalSlack = Duration(days: 1);
+
+  /// The arrival-time window to ask the platform for, given the capture
+  /// range wanted: a superset that is safe to prune by.
+  ///
+  /// Only the lower bound carries over. Anything captured at or after
+  /// [from] arrived at or after it too, but a picture captured inside the
+  /// range may have arrived at any later moment, so the upper bound is
+  /// simply the present.
+  static ({DateTime min, DateTime max}) arrivalWindowFor(
+    DateTime? from, {
+    required DateTime now,
+  }) {
+    return (
+      min: from == null
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : from.subtract(arrivalSlack),
+      max: now.add(arrivalSlack),
+    );
+  }
+
+  /// Whether a capture time falls inside the wanted range, bounds included.
+  static bool isCapturedWithin(DateTime at, DateTime? from, DateTime? to) {
+    if (from != null && at.isBefore(from)) return false;
+    if (to != null && at.isAfter(to)) return false;
+    return true;
+  }
 
   final int _pageSize;
   final _log = AppLogger.of('DeviceLibraryMediaSource');
@@ -32,17 +74,12 @@ class DeviceLibraryMediaSource implements TripMediaSource {
 
   @override
   Future<List<TripMediaItem>> list({DateTime? from, DateTime? to}) async {
+    final window = arrivalWindowFor(from, now: DateTime.now());
     final albums = await PhotoManager.getAssetPathList(
       onlyAll: true,
       type: RequestType.common,
       filterOption: FilterOptionGroup(
-        createTimeCond: DateTimeCond(
-          min: from ?? DateTime.fromMillisecondsSinceEpoch(0),
-          max: to ?? DateTime.now(),
-        ),
-        orders: const [
-          OrderOption(type: OrderOptionType.createDate, asc: false),
-        ],
+        createTimeCond: DateTimeCond(min: window.min, max: window.max),
       ),
     );
     if (albums.isEmpty) return const [];
@@ -54,6 +91,7 @@ class DeviceLibraryMediaSource implements TripMediaSource {
       final assets = await all.getAssetListPaged(page: page, size: _pageSize);
       if (assets.isEmpty) break;
       for (final asset in assets) {
+        if (!isCapturedWithin(asset.createDateTime, from, to)) continue;
         _assets[asset.id] = asset;
         items.add(
           TripMediaItem(
@@ -68,6 +106,9 @@ class DeviceLibraryMediaSource implements TripMediaSource {
         );
       }
     }
+    // Sorted here rather than by the platform, whose "create date" order is
+    // arrival order for the same reason its filter is.
+    items.sort((a, b) => a.capturedAt.compareTo(b.capturedAt));
     return items;
   }
 

@@ -50,7 +50,7 @@ class PickedFilesMediaSource implements TripMediaSource {
       if (to != null && resolved.capturedAt.isAfter(to)) continue;
       items.add(resolved);
     }
-    items.sort((a, b) => b.capturedAt.compareTo(a.capturedAt));
+    items.sort((a, b) => a.capturedAt.compareTo(b.capturedAt));
     return items;
   }
 

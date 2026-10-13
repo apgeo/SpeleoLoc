@@ -20,8 +20,11 @@ abstract class TripMediaSource {
   /// own filtering instead of pretending the range was applied.
   bool get supportsDateRange;
 
-  /// The candidate items, newest first, restricted to [from]..[to] when
-  /// this source [supportsDateRange].
+  /// The candidate items in the order they were taken, restricted to
+  /// [from]..[to] by capture time when this source [supportsDateRange].
+  ///
+  /// Oldest first because the list is a trip being reconstructed: the
+  /// caver reads down it in the order they moved through the cave.
   ///
   /// A source that needs the user to choose (the system picker) prompts on
   /// each call and returns what they selected; one that reads the library
