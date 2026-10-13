@@ -522,73 +522,84 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
         ? LocServ.inst.t('trip_media_any_date')
         : '${_dayFmt.format(_range!.start)} – ${_dayFmt.format(_range!.end)}';
 
-    return Container(
+    // A Material rather than a coloured Container: the switch below is a
+    // ListTile, which paints its ink on the nearest Material ancestor, and a
+    // plain coloured box in between hides it (and trips a debug assertion).
+    return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.date_range, size: 18),
-                  label: Text(
-                    rangeLabel,
-                    style: const TextStyle(fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onPressed: _pickRange,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: LocServ.inst.t('trip_media_reload'),
-                onPressed: _loading ? null : () => unawaited(_loadItems()),
-              ),
-            ],
-          ),
-          if (resolution != null && resolution.access == TripMediaAccess.picker)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                LocServ.inst.t('trip_media_picker_mode'),
-                style: const TextStyle(fontSize: 11, color: Colors.orange),
-              ),
-            ),
-          if (resolution != null &&
-              resolution.access == TripMediaAccess.limited)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                LocServ.inst.t('trip_media_limited_mode'),
-                style: const TextStyle(fontSize: 11, color: Colors.orange),
-              ),
-            ),
-          if (_qrUnsupported)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                LocServ.inst.t('trip_media_qr_unsupported'),
-                style: const TextStyle(fontSize: 11, color: Colors.orange),
-              ),
-            ),
-          SwitchListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            value: _importFiles,
-            title: Text(
-              LocServ.inst.t('trip_media_import_files'),
-              style: const TextStyle(fontSize: 13),
-            ),
-            subtitle: Text(
-              LocServ.inst.t('trip_media_import_files_desc'),
-              style: const TextStyle(fontSize: 11),
-            ),
-            onChanged: (v) => setState(() => _importFiles = v),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: _buildControlsBody(resolution, rangeLabel),
       ),
+    );
+  }
+
+  Widget _buildControlsBody(
+    TripMediaResolution? resolution,
+    String rangeLabel,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextButton.icon(
+                icon: const Icon(Icons.date_range, size: 18),
+                label: Text(
+                  rangeLabel,
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: _pickRange,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: LocServ.inst.t('trip_media_reload'),
+              onPressed: _loading ? null : () => unawaited(_loadItems()),
+            ),
+          ],
+        ),
+        if (resolution != null && resolution.access == TripMediaAccess.picker)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              LocServ.inst.t('trip_media_picker_mode'),
+              style: const TextStyle(fontSize: 11, color: Colors.orange),
+            ),
+          ),
+        if (resolution != null && resolution.access == TripMediaAccess.limited)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              LocServ.inst.t('trip_media_limited_mode'),
+              style: const TextStyle(fontSize: 11, color: Colors.orange),
+            ),
+          ),
+        if (_qrUnsupported)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              LocServ.inst.t('trip_media_qr_unsupported'),
+              style: const TextStyle(fontSize: 11, color: Colors.orange),
+            ),
+          ),
+        SwitchListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          value: _importFiles,
+          title: Text(
+            LocServ.inst.t('trip_media_import_files'),
+            style: const TextStyle(fontSize: 13),
+          ),
+          subtitle: Text(
+            LocServ.inst.t('trip_media_import_files_desc'),
+            style: const TextStyle(fontSize: 11),
+          ),
+          onChanged: (v) => setState(() => _importFiles = v),
+        ),
+      ],
     );
   }
 
