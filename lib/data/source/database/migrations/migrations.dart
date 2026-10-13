@@ -795,6 +795,33 @@ class V19ToV20Migration extends SchemaMigration {
   }
 }
 
+/// v20 → v21.
+///
+/// Adds the document-to-track-point link table behind the "trip points from
+/// pictures" import.
+///
+/// Additive, so upgraders run the same statement a fresh install takes from
+/// tables.drift. `createTable` is `CREATE TABLE IF NOT EXISTS`, which also
+/// makes it a no-op on the pre-v7 path that runs `createAll()` at the current
+/// schema before walking the ladder.
+class V20ToV21Migration extends SchemaMigration {
+  const V20ToV21Migration();
+
+  @override
+  int get toVersion => 21;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.documentationFilesToCaveTripPoints);
+    // The import reads every link of a point when it rebuilds a trip, and
+    // the cascade on point delete looks rows up the same way.
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point '
+      'ON documentation_files_to_cave_trip_points(cave_trip_point_uuid)',
+    );
+  }
+}
+
 /// Adds [column] to [table] unless it is already there.
 Future<void> _addColumnIfMissing(
   AppDatabase db,
@@ -830,6 +857,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V17ToV18Migration(),
   V18ToV19Migration(),
   V19ToV20Migration(),
+  V20ToV21Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

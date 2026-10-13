@@ -278,6 +278,24 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trips (
     UNIQUE(documentation_file_uuid, cave_trip_uuid) ON CONFLICT ROLLBACK
 );
 
+-- Table: documentation_files_to_cave_trip_points
+-- Binds a document (in practice a photo or video) to the individual track
+-- point it was captured at, which the doc-to-trip link cannot express: a
+-- trip visits the same place more than once, and "which stop was this
+-- picture taken at" is the question the media import exists to answer.
+-- Shaped exactly like documentation_files_to_cave_trips (no updated_at, so
+-- sync LWW falls back to created_at).
+CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trip_points (
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    documentation_file_uuid     BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
+    cave_trip_point_uuid        BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_trip_points(uuid),
+    created_at                  INTEGER,
+    deleted_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    UNIQUE(documentation_file_uuid, cave_trip_point_uuid) ON CONFLICT ROLLBACK
+);
+
 -- Table: cave_place_beacons
 -- BLE tag registrations: maps a physical tag to a cave place, the beacon
 -- analogue of a QR label. Two tag kinds share the table, discriminated by

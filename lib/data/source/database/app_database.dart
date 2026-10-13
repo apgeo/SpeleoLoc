@@ -95,7 +95,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -256,6 +256,49 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.uuid.equalsValue(pointUuid))).go();
   }
 
+  /// Binds [docUuid] to the track point it was captured at. Upserts, so a
+  /// re-run of the media import does not duplicate the link.
+  Future<Uuid> linkDocumentToTripPoint(
+    Uuid docUuid,
+    Uuid pointUuid, {
+    required Uuid authorUuid,
+  }) async {
+    final existing =
+        await (select(documentationFilesToCaveTripPoints)..where(
+              (t) =>
+                  t.documentationFileUuid.equalsValue(docUuid) &
+                  t.caveTripPointUuid.equalsValue(pointUuid),
+            ))
+            .getSingleOrNull();
+    if (existing != null) return existing.uuid;
+    final uuid = Uuid.v7();
+    await into(documentationFilesToCaveTripPoints).insert(
+      DocumentationFilesToCaveTripPointsCompanion.insert(
+        uuid: uuid,
+        documentationFileUuid: docUuid,
+        caveTripPointUuid: pointUuid,
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        createdByUserUuid: Value(authorUuid),
+        lastModifiedByUserUuid: Value(authorUuid),
+      ),
+    );
+    return uuid;
+  }
+
+  Future<List<DocumentationFilesToCaveTripPoint>> getTripPointDocumentLinks(
+    Uuid pointUuid,
+  ) async {
+    return (select(
+      documentationFilesToCaveTripPoints,
+    )..where((t) => t.caveTripPointUuid.equalsValue(pointUuid))).get();
+  }
+
+  Future<void> deleteTripPointDocumentLinks(Uuid pointUuid) async {
+    await (delete(
+      documentationFilesToCaveTripPoints,
+    )..where((t) => t.caveTripPointUuid.equalsValue(pointUuid))).go();
+  }
+
   Future<List<CaveTrip>> getCaveTrips(Uuid caveUuid) async {
     return (select(caveTrips)
           ..where((t) => t.caveUuid.equalsValue(caveUuid))
@@ -293,6 +336,13 @@ class AppDatabase extends _$AppDatabase {
       await (delete(
         documentationFilesToCaveTrips,
       )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).go();
+      // Point links reference the points, so they go first.
+      await customStatement(
+        'DELETE FROM documentation_files_to_cave_trip_points '
+        'WHERE cave_trip_point_uuid IN '
+        '(SELECT uuid FROM cave_trip_points WHERE cave_trip_uuid = ?)',
+        [tripUuid.bytes],
+      );
       await (delete(
         caveTripPoints,
       )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).go();
@@ -534,6 +584,9 @@ class AppDatabase extends _$AppDatabase {
       )..where((t) => t.documentationFileUuid.equalsValue(uuid))).go();
       await (delete(
         documentationFilesToCaveTrips,
+      )..where((t) => t.documentationFileUuid.equalsValue(uuid))).go();
+      await (delete(
+        documentationFilesToCaveTripPoints,
       )..where((t) => t.documentationFileUuid.equalsValue(uuid))).go();
       await (delete(
         documentationFiles,

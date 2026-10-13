@@ -10478,6 +10478,562 @@ class DocumentationFilesToCaveTripsCompanion
   }
 }
 
+class DocumentationFilesToCaveTripPoints extends Table
+    with
+        TableInfo<
+          DocumentationFilesToCaveTripPoints,
+          DocumentationFilesToCaveTripPoint
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  DocumentationFilesToCaveTripPoints(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(DocumentationFilesToCaveTripPoints.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List>
+  documentationFileUuid =
+      GeneratedColumn<Uint8List>(
+        'documentation_file_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES documentation_files(uuid)',
+      ).withConverter<Uuid>(
+        DocumentationFilesToCaveTripPoints.$converterdocumentationFileUuid,
+      );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List>
+  caveTripPointUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_trip_point_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES cave_trip_points(uuid)',
+      ).withConverter<Uuid>(
+        DocumentationFilesToCaveTripPoints.$convertercaveTripPointUuid,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  createdByUserUuid =
+      GeneratedColumn<Uint8List>(
+        'created_by_user_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES users(uuid)',
+      ).withConverter<Uuid?>(
+        DocumentationFilesToCaveTripPoints.$convertercreatedByUserUuidn,
+      );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  lastModifiedByUserUuid =
+      GeneratedColumn<Uint8List>(
+        'last_modified_by_user_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES users(uuid)',
+      ).withConverter<Uuid?>(
+        DocumentationFilesToCaveTripPoints.$converterlastModifiedByUserUuidn,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    uuid,
+    documentationFileUuid,
+    caveTripPointUuid,
+    createdAt,
+    deletedAt,
+    createdByUserUuid,
+    lastModifiedByUserUuid,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'documentation_files_to_cave_trip_points';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DocumentationFilesToCaveTripPoint> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {uuid};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {documentationFileUuid, caveTripPointUuid},
+  ];
+  @override
+  DocumentationFilesToCaveTripPoint map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DocumentationFilesToCaveTripPoint(
+      uuid: DocumentationFilesToCaveTripPoints.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      documentationFileUuid: DocumentationFilesToCaveTripPoints
+          .$converterdocumentationFileUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}documentation_file_uuid'],
+            )!,
+          ),
+      caveTripPointUuid: DocumentationFilesToCaveTripPoints
+          .$convertercaveTripPointUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}cave_trip_point_uuid'],
+            )!,
+          ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      createdByUserUuid: DocumentationFilesToCaveTripPoints
+          .$convertercreatedByUserUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}created_by_user_uuid'],
+            ),
+          ),
+      lastModifiedByUserUuid: DocumentationFilesToCaveTripPoints
+          .$converterlastModifiedByUserUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}last_modified_by_user_uuid'],
+            ),
+          ),
+    );
+  }
+
+  @override
+  DocumentationFilesToCaveTripPoints createAlias(String alias) {
+    return DocumentationFilesToCaveTripPoints(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterdocumentationFileUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveTripPointUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercreatedByUserUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercreatedByUserUuidn =
+      NullAwareTypeConverter.wrap($convertercreatedByUserUuid);
+  static TypeConverter<Uuid, Uint8List> $converterlastModifiedByUserUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $converterlastModifiedByUserUuidn =
+      NullAwareTypeConverter.wrap($converterlastModifiedByUserUuid);
+  @override
+  List<String> get customConstraints => const [
+    'UNIQUE(documentation_file_uuid, cave_trip_point_uuid)ON CONFLICT ROLLBACK',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class DocumentationFilesToCaveTripPoint extends DataClass
+    implements Insertable<DocumentationFilesToCaveTripPoint> {
+  final Uuid uuid;
+  final Uuid documentationFileUuid;
+  final Uuid caveTripPointUuid;
+  final int? createdAt;
+  final int? deletedAt;
+  final Uuid? createdByUserUuid;
+  final Uuid? lastModifiedByUserUuid;
+  const DocumentationFilesToCaveTripPoint({
+    required this.uuid,
+    required this.documentationFileUuid,
+    required this.caveTripPointUuid,
+    this.createdAt,
+    this.deletedAt,
+    this.createdByUserUuid,
+    this.lastModifiedByUserUuid,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$converteruuid.toSql(uuid),
+      );
+    }
+    {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$converterdocumentationFileUuid
+            .toSql(documentationFileUuid),
+      );
+    }
+    {
+      map['cave_trip_point_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$convertercaveTripPointUuid.toSql(
+          caveTripPointUuid,
+        ),
+      );
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    if (!nullToAbsent || createdByUserUuid != null) {
+      map['created_by_user_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$convertercreatedByUserUuidn.toSql(
+          createdByUserUuid,
+        ),
+      );
+    }
+    if (!nullToAbsent || lastModifiedByUserUuid != null) {
+      map['last_modified_by_user_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$converterlastModifiedByUserUuidn
+            .toSql(lastModifiedByUserUuid),
+      );
+    }
+    return map;
+  }
+
+  DocumentationFilesToCaveTripPointsCompanion toCompanion(bool nullToAbsent) {
+    return DocumentationFilesToCaveTripPointsCompanion(
+      uuid: Value(uuid),
+      documentationFileUuid: Value(documentationFileUuid),
+      caveTripPointUuid: Value(caveTripPointUuid),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      createdByUserUuid: createdByUserUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdByUserUuid),
+      lastModifiedByUserUuid: lastModifiedByUserUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastModifiedByUserUuid),
+    );
+  }
+
+  factory DocumentationFilesToCaveTripPoint.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DocumentationFilesToCaveTripPoint(
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      documentationFileUuid: serializer.fromJson<Uuid>(
+        json['documentation_file_uuid'],
+      ),
+      caveTripPointUuid: serializer.fromJson<Uuid>(
+        json['cave_trip_point_uuid'],
+      ),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      deletedAt: serializer.fromJson<int?>(json['deleted_at']),
+      createdByUserUuid: serializer.fromJson<Uuid?>(
+        json['created_by_user_uuid'],
+      ),
+      lastModifiedByUserUuid: serializer.fromJson<Uuid?>(
+        json['last_modified_by_user_uuid'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'documentation_file_uuid': serializer.toJson<Uuid>(documentationFileUuid),
+      'cave_trip_point_uuid': serializer.toJson<Uuid>(caveTripPointUuid),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'deleted_at': serializer.toJson<int?>(deletedAt),
+      'created_by_user_uuid': serializer.toJson<Uuid?>(createdByUserUuid),
+      'last_modified_by_user_uuid': serializer.toJson<Uuid?>(
+        lastModifiedByUserUuid,
+      ),
+    };
+  }
+
+  DocumentationFilesToCaveTripPoint copyWith({
+    Uuid? uuid,
+    Uuid? documentationFileUuid,
+    Uuid? caveTripPointUuid,
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> deletedAt = const Value.absent(),
+    Value<Uuid?> createdByUserUuid = const Value.absent(),
+    Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+  }) => DocumentationFilesToCaveTripPoint(
+    uuid: uuid ?? this.uuid,
+    documentationFileUuid: documentationFileUuid ?? this.documentationFileUuid,
+    caveTripPointUuid: caveTripPointUuid ?? this.caveTripPointUuid,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    createdByUserUuid: createdByUserUuid.present
+        ? createdByUserUuid.value
+        : this.createdByUserUuid,
+    lastModifiedByUserUuid: lastModifiedByUserUuid.present
+        ? lastModifiedByUserUuid.value
+        : this.lastModifiedByUserUuid,
+  );
+  DocumentationFilesToCaveTripPoint copyWithCompanion(
+    DocumentationFilesToCaveTripPointsCompanion data,
+  ) {
+    return DocumentationFilesToCaveTripPoint(
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      documentationFileUuid: data.documentationFileUuid.present
+          ? data.documentationFileUuid.value
+          : this.documentationFileUuid,
+      caveTripPointUuid: data.caveTripPointUuid.present
+          ? data.caveTripPointUuid.value
+          : this.caveTripPointUuid,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      createdByUserUuid: data.createdByUserUuid.present
+          ? data.createdByUserUuid.value
+          : this.createdByUserUuid,
+      lastModifiedByUserUuid: data.lastModifiedByUserUuid.present
+          ? data.lastModifiedByUserUuid.value
+          : this.lastModifiedByUserUuid,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentationFilesToCaveTripPoint(')
+          ..write('uuid: $uuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('caveTripPointUuid: $caveTripPointUuid, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('createdByUserUuid: $createdByUserUuid, ')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    uuid,
+    documentationFileUuid,
+    caveTripPointUuid,
+    createdAt,
+    deletedAt,
+    createdByUserUuid,
+    lastModifiedByUserUuid,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DocumentationFilesToCaveTripPoint &&
+          other.uuid == this.uuid &&
+          other.documentationFileUuid == this.documentationFileUuid &&
+          other.caveTripPointUuid == this.caveTripPointUuid &&
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt &&
+          other.createdByUserUuid == this.createdByUserUuid &&
+          other.lastModifiedByUserUuid == this.lastModifiedByUserUuid);
+}
+
+class DocumentationFilesToCaveTripPointsCompanion
+    extends UpdateCompanion<DocumentationFilesToCaveTripPoint> {
+  final Value<Uuid> uuid;
+  final Value<Uuid> documentationFileUuid;
+  final Value<Uuid> caveTripPointUuid;
+  final Value<int?> createdAt;
+  final Value<int?> deletedAt;
+  final Value<Uuid?> createdByUserUuid;
+  final Value<Uuid?> lastModifiedByUserUuid;
+  final Value<int> rowid;
+  const DocumentationFilesToCaveTripPointsCompanion({
+    this.uuid = const Value.absent(),
+    this.documentationFileUuid = const Value.absent(),
+    this.caveTripPointUuid = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.createdByUserUuid = const Value.absent(),
+    this.lastModifiedByUserUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DocumentationFilesToCaveTripPointsCompanion.insert({
+    required Uuid uuid,
+    required Uuid documentationFileUuid,
+    required Uuid caveTripPointUuid,
+    this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.createdByUserUuid = const Value.absent(),
+    this.lastModifiedByUserUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       documentationFileUuid = Value(documentationFileUuid),
+       caveTripPointUuid = Value(caveTripPointUuid);
+  static Insertable<DocumentationFilesToCaveTripPoint> custom({
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? documentationFileUuid,
+    Expression<Uint8List>? caveTripPointUuid,
+    Expression<int>? createdAt,
+    Expression<int>? deletedAt,
+    Expression<Uint8List>? createdByUserUuid,
+    Expression<Uint8List>? lastModifiedByUserUuid,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (uuid != null) 'uuid': uuid,
+      if (documentationFileUuid != null)
+        'documentation_file_uuid': documentationFileUuid,
+      if (caveTripPointUuid != null) 'cave_trip_point_uuid': caveTripPointUuid,
+      if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (createdByUserUuid != null) 'created_by_user_uuid': createdByUserUuid,
+      if (lastModifiedByUserUuid != null)
+        'last_modified_by_user_uuid': lastModifiedByUserUuid,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DocumentationFilesToCaveTripPointsCompanion copyWith({
+    Value<Uuid>? uuid,
+    Value<Uuid>? documentationFileUuid,
+    Value<Uuid>? caveTripPointUuid,
+    Value<int?>? createdAt,
+    Value<int?>? deletedAt,
+    Value<Uuid?>? createdByUserUuid,
+    Value<Uuid?>? lastModifiedByUserUuid,
+    Value<int>? rowid,
+  }) {
+    return DocumentationFilesToCaveTripPointsCompanion(
+      uuid: uuid ?? this.uuid,
+      documentationFileUuid:
+          documentationFileUuid ?? this.documentationFileUuid,
+      caveTripPointUuid: caveTripPointUuid ?? this.caveTripPointUuid,
+      createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      createdByUserUuid: createdByUserUuid ?? this.createdByUserUuid,
+      lastModifiedByUserUuid:
+          lastModifiedByUserUuid ?? this.lastModifiedByUserUuid,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$converteruuid.toSql(uuid.value),
+      );
+    }
+    if (documentationFileUuid.present) {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$converterdocumentationFileUuid
+            .toSql(documentationFileUuid.value),
+      );
+    }
+    if (caveTripPointUuid.present) {
+      map['cave_trip_point_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$convertercaveTripPointUuid.toSql(
+          caveTripPointUuid.value,
+        ),
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    if (createdByUserUuid.present) {
+      map['created_by_user_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$convertercreatedByUserUuidn.toSql(
+          createdByUserUuid.value,
+        ),
+      );
+    }
+    if (lastModifiedByUserUuid.present) {
+      map['last_modified_by_user_uuid'] = Variable<Uint8List>(
+        DocumentationFilesToCaveTripPoints.$converterlastModifiedByUserUuidn
+            .toSql(lastModifiedByUserUuid.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DocumentationFilesToCaveTripPointsCompanion(')
+          ..write('uuid: $uuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('caveTripPointUuid: $caveTripPointUuid, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('createdByUserUuid: $createdByUserUuid, ')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class CavePlaceBeacons extends Table
     with TableInfo<CavePlaceBeacons, CavePlaceBeacon> {
   @override
@@ -14770,6 +15326,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CaveTripPoints caveTripPoints = CaveTripPoints(this);
   late final DocumentationFilesToCaveTrips documentationFilesToCaveTrips =
       DocumentationFilesToCaveTrips(this);
+  late final DocumentationFilesToCaveTripPoints
+  documentationFilesToCaveTripPoints = DocumentationFilesToCaveTripPoints(this);
   late final CavePlaceBeacons cavePlaceBeacons = CavePlaceBeacons(this);
   late final Index idxCavePlaceBeaconsIbeacon = Index(
     'idx_cave_place_beacons_ibeacon',
@@ -14834,6 +15392,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTrips,
     caveTripPoints,
     documentationFilesToCaveTrips,
+    documentationFilesToCaveTripPoints,
     cavePlaceBeacons,
     idxCavePlaceBeaconsIbeacon,
     idxCavePlaceBeaconsRuuvi,
@@ -21954,6 +22513,38 @@ final class $DocumentationFilesReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    DocumentationFilesToCaveTripPoints,
+    List<DocumentationFilesToCaveTripPoint>
+  >
+  _documentationFilesToCaveTripPointsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.documentationFilesToCaveTripPoints,
+    aliasName:
+        'documentation_files__uuid__documentation_files_to_cave_trip_points__documentation_file_uuid',
+  );
+
+  $DocumentationFilesToCaveTripPointsProcessedTableManager
+  get documentationFilesToCaveTripPointsRefs {
+    final manager =
+        $DocumentationFilesToCaveTripPointsTableManager(
+          $_db,
+          $_db.documentationFilesToCaveTripPoints,
+        ).filter(
+          (f) => f.documentationFileUuid.uuid.sqlEquals(
+            $_itemColumn<Uint8List>('uuid')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _documentationFilesToCaveTripPointsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $DocumentationFilesFilterComposer
@@ -22106,6 +22697,35 @@ class $DocumentationFilesFilterComposer
               }) => $DocumentationFilesToCaveTripsFilterComposer(
                 $db: $db,
                 $table: $db.documentationFilesToCaveTrips,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> documentationFilesToCaveTripPointsRefs(
+    Expression<bool> Function(
+      $DocumentationFilesToCaveTripPointsFilterComposer f,
+    )
+    f,
+  ) {
+    final $DocumentationFilesToCaveTripPointsFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.uuid,
+          referencedTable: $db.documentationFilesToCaveTripPoints,
+          getReferencedColumn: (t) => t.documentationFileUuid,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripPointsFilterComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTripPoints,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -22362,6 +22982,35 @@ class $DocumentationFilesAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> documentationFilesToCaveTripPointsRefs<T extends Object>(
+    Expression<T> Function(
+      $DocumentationFilesToCaveTripPointsAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $DocumentationFilesToCaveTripPointsAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.uuid,
+          referencedTable: $db.documentationFilesToCaveTripPoints,
+          getReferencedColumn: (t) => t.documentationFileUuid,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripPointsAnnotationComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTripPoints,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $DocumentationFilesTableManager
@@ -22382,6 +23031,7 @@ class $DocumentationFilesTableManager
             bool lastModifiedByUserUuid,
             bool documentationFilesToGeofeaturesRefs,
             bool documentationFilesToCaveTripsRefs,
+            bool documentationFilesToCaveTripPointsRefs,
           })
         > {
   $DocumentationFilesTableManager(_$AppDatabase db, DocumentationFiles table)
@@ -22469,6 +23119,7 @@ class $DocumentationFilesTableManager
                 lastModifiedByUserUuid = false,
                 documentationFilesToGeofeaturesRefs = false,
                 documentationFilesToCaveTripsRefs = false,
+                documentationFilesToCaveTripPointsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -22477,6 +23128,8 @@ class $DocumentationFilesTableManager
                       db.documentationFilesToGeofeatures,
                     if (documentationFilesToCaveTripsRefs)
                       db.documentationFilesToCaveTrips,
+                    if (documentationFilesToCaveTripPointsRefs)
+                      db.documentationFilesToCaveTripPoints,
                   ],
                   addJoins:
                       <
@@ -22571,6 +23224,27 @@ class $DocumentationFilesTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (documentationFilesToCaveTripPointsRefs)
+                        await $_getPrefetchedData<
+                          DocumentationFile,
+                          DocumentationFiles,
+                          DocumentationFilesToCaveTripPoint
+                        >(
+                          currentTable: table,
+                          referencedTable: $DocumentationFilesReferences
+                              ._documentationFilesToCaveTripPointsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $DocumentationFilesReferences(
+                                db,
+                                table,
+                                p0,
+                              ).documentationFilesToCaveTripPointsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.documentationFileUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -22596,6 +23270,7 @@ typedef $DocumentationFilesProcessedTableManager =
         bool lastModifiedByUserUuid,
         bool documentationFilesToGeofeaturesRefs,
         bool documentationFilesToCaveTripsRefs,
+        bool documentationFilesToCaveTripPointsRefs,
       })
     >;
 typedef $DocumentationFilesToGeofeaturesCreateCompanionBuilder =
@@ -24407,6 +25082,38 @@ final class $CaveTripPointsReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<
+    DocumentationFilesToCaveTripPoints,
+    List<DocumentationFilesToCaveTripPoint>
+  >
+  _documentationFilesToCaveTripPointsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.documentationFilesToCaveTripPoints,
+    aliasName:
+        'cave_trip_points__uuid__documentation_files_to_cave_trip_points__cave_trip_point_uuid',
+  );
+
+  $DocumentationFilesToCaveTripPointsProcessedTableManager
+  get documentationFilesToCaveTripPointsRefs {
+    final manager =
+        $DocumentationFilesToCaveTripPointsTableManager(
+          $_db,
+          $_db.documentationFilesToCaveTripPoints,
+        ).filter(
+          (f) => f.caveTripPointUuid.uuid.sqlEquals(
+            $_itemColumn<Uint8List>('uuid')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _documentationFilesToCaveTripPointsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $CaveTripPointsFilterComposer
@@ -24539,6 +25246,35 @@ class $CaveTripPointsFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> documentationFilesToCaveTripPointsRefs(
+    Expression<bool> Function(
+      $DocumentationFilesToCaveTripPointsFilterComposer f,
+    )
+    f,
+  ) {
+    final $DocumentationFilesToCaveTripPointsFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.uuid,
+          referencedTable: $db.documentationFilesToCaveTripPoints,
+          getReferencedColumn: (t) => t.caveTripPointUuid,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripPointsFilterComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTripPoints,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
   }
 }
 
@@ -24792,6 +25528,35 @@ class $CaveTripPointsAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> documentationFilesToCaveTripPointsRefs<T extends Object>(
+    Expression<T> Function(
+      $DocumentationFilesToCaveTripPointsAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $DocumentationFilesToCaveTripPointsAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.uuid,
+          referencedTable: $db.documentationFilesToCaveTripPoints,
+          getReferencedColumn: (t) => t.caveTripPointUuid,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $DocumentationFilesToCaveTripPointsAnnotationComposer(
+                $db: $db,
+                $table: $db.documentationFilesToCaveTripPoints,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $CaveTripPointsTableManager
@@ -24812,6 +25577,7 @@ class $CaveTripPointsTableManager
             bool cavePlaceUuid,
             bool createdByUserUuid,
             bool lastModifiedByUserUuid,
+            bool documentationFilesToCaveTripPointsRefs,
           })
         > {
   $CaveTripPointsTableManager(_$AppDatabase db, CaveTripPoints table)
@@ -24891,10 +25657,14 @@ class $CaveTripPointsTableManager
                 cavePlaceUuid = false,
                 createdByUserUuid = false,
                 lastModifiedByUserUuid = false,
+                documentationFilesToCaveTripPointsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [],
+                  explicitlyWatchedTables: [
+                    if (documentationFilesToCaveTripPointsRefs)
+                      db.documentationFilesToCaveTripPoints,
+                  ],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -24967,7 +25737,29 @@ class $CaveTripPointsTableManager
                         return state;
                       },
                   getPrefetchedDataCallback: (items) async {
-                    return [];
+                    return [
+                      if (documentationFilesToCaveTripPointsRefs)
+                        await $_getPrefetchedData<
+                          CaveTripPoint,
+                          CaveTripPoints,
+                          DocumentationFilesToCaveTripPoint
+                        >(
+                          currentTable: table,
+                          referencedTable: $CaveTripPointsReferences
+                              ._documentationFilesToCaveTripPointsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $CaveTripPointsReferences(
+                                db,
+                                table,
+                                p0,
+                              ).documentationFilesToCaveTripPointsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.caveTripPointUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
                 );
               },
@@ -24992,6 +25784,7 @@ typedef $CaveTripPointsProcessedTableManager =
         bool cavePlaceUuid,
         bool createdByUserUuid,
         bool lastModifiedByUserUuid,
+        bool documentationFilesToCaveTripPointsRefs,
       })
     >;
 typedef $DocumentationFilesToCaveTripsCreateCompanionBuilder =
@@ -25665,6 +26458,686 @@ typedef $DocumentationFilesToCaveTripsProcessedTableManager =
       PrefetchHooks Function({
         bool documentationFileUuid,
         bool caveTripUuid,
+        bool createdByUserUuid,
+        bool lastModifiedByUserUuid,
+      })
+    >;
+typedef $DocumentationFilesToCaveTripPointsCreateCompanionBuilder =
+    DocumentationFilesToCaveTripPointsCompanion Function({
+      required Uuid uuid,
+      required Uuid documentationFileUuid,
+      required Uuid caveTripPointUuid,
+      Value<int?> createdAt,
+      Value<int?> deletedAt,
+      Value<Uuid?> createdByUserUuid,
+      Value<Uuid?> lastModifiedByUserUuid,
+      Value<int> rowid,
+    });
+typedef $DocumentationFilesToCaveTripPointsUpdateCompanionBuilder =
+    DocumentationFilesToCaveTripPointsCompanion Function({
+      Value<Uuid> uuid,
+      Value<Uuid> documentationFileUuid,
+      Value<Uuid> caveTripPointUuid,
+      Value<int?> createdAt,
+      Value<int?> deletedAt,
+      Value<Uuid?> createdByUserUuid,
+      Value<Uuid?> lastModifiedByUserUuid,
+      Value<int> rowid,
+    });
+
+final class $DocumentationFilesToCaveTripPointsReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          DocumentationFilesToCaveTripPoints,
+          DocumentationFilesToCaveTripPoint
+        > {
+  $DocumentationFilesToCaveTripPointsReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static DocumentationFiles _documentationFileUuidTable(
+    _$AppDatabase db,
+  ) => db.documentationFiles.createAlias(
+    'documentation_files_to_cave_trip_points__documentation_file_uuid__documentation_files__uuid',
+  );
+
+  $DocumentationFilesProcessedTableManager get documentationFileUuid {
+    final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
+
+    final manager = $DocumentationFilesTableManager(
+      $_db,
+      $_db.documentationFiles,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _documentationFileUuidTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static CaveTripPoints _caveTripPointUuidTable(
+    _$AppDatabase db,
+  ) => db.caveTripPoints.createAlias(
+    'documentation_files_to_cave_trip_points__cave_trip_point_uuid__cave_trip_points__uuid',
+  );
+
+  $CaveTripPointsProcessedTableManager get caveTripPointUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_trip_point_uuid')!;
+
+    final manager = $CaveTripPointsTableManager(
+      $_db,
+      $_db.caveTripPoints,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveTripPointUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Users _createdByUserUuidTable(
+    _$AppDatabase db,
+  ) => db.users.createAlias(
+    'documentation_files_to_cave_trip_points__created_by_user_uuid__users__uuid',
+  );
+
+  $UsersProcessedTableManager? get createdByUserUuid {
+    final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
+    if ($_column == null) return null;
+    final manager = $UsersTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByUserUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Users _lastModifiedByUserUuidTable(
+    _$AppDatabase db,
+  ) => db.users.createAlias(
+    'documentation_files_to_cave_trip_points__last_modified_by_user_uuid__users__uuid',
+  );
+
+  $UsersProcessedTableManager? get lastModifiedByUserUuid {
+    final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
+    if ($_column == null) return null;
+    final manager = $UsersTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _lastModifiedByUserUuidTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $DocumentationFilesToCaveTripPointsFilterComposer
+    extends Composer<_$AppDatabase, DocumentationFilesToCaveTripPoints> {
+  $DocumentationFilesToCaveTripPointsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $DocumentationFilesFilterComposer get documentationFileUuid {
+    final $DocumentationFilesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesFilterComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CaveTripPointsFilterComposer get caveTripPointUuid {
+    final $CaveTripPointsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripPointUuid,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsFilterComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersFilterComposer get createdByUserUuid {
+    final $UsersFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersFilterComposer get lastModifiedByUserUuid {
+    final $UsersFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $DocumentationFilesToCaveTripPointsOrderingComposer
+    extends Composer<_$AppDatabase, DocumentationFilesToCaveTripPoints> {
+  $DocumentationFilesToCaveTripPointsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $DocumentationFilesOrderingComposer get documentationFileUuid {
+    final $DocumentationFilesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesOrderingComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CaveTripPointsOrderingComposer get caveTripPointUuid {
+    final $CaveTripPointsOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripPointUuid,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsOrderingComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersOrderingComposer get createdByUserUuid {
+    final $UsersOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersOrderingComposer get lastModifiedByUserUuid {
+    final $UsersOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $DocumentationFilesToCaveTripPointsAnnotationComposer
+    extends Composer<_$AppDatabase, DocumentationFilesToCaveTripPoints> {
+  $DocumentationFilesToCaveTripPointsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $DocumentationFilesAnnotationComposer get documentationFileUuid {
+    final $DocumentationFilesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesAnnotationComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CaveTripPointsAnnotationComposer get caveTripPointUuid {
+    final $CaveTripPointsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveTripPointUuid,
+      referencedTable: $db.caveTripPoints,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveTripPointsAnnotationComposer(
+            $db: $db,
+            $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersAnnotationComposer get createdByUserUuid {
+    final $UsersAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersAnnotationComposer get lastModifiedByUserUuid {
+    final $UsersAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $DocumentationFilesToCaveTripPointsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          DocumentationFilesToCaveTripPoints,
+          DocumentationFilesToCaveTripPoint,
+          $DocumentationFilesToCaveTripPointsFilterComposer,
+          $DocumentationFilesToCaveTripPointsOrderingComposer,
+          $DocumentationFilesToCaveTripPointsAnnotationComposer,
+          $DocumentationFilesToCaveTripPointsCreateCompanionBuilder,
+          $DocumentationFilesToCaveTripPointsUpdateCompanionBuilder,
+          (
+            DocumentationFilesToCaveTripPoint,
+            $DocumentationFilesToCaveTripPointsReferences,
+          ),
+          DocumentationFilesToCaveTripPoint,
+          PrefetchHooks Function({
+            bool documentationFileUuid,
+            bool caveTripPointUuid,
+            bool createdByUserUuid,
+            bool lastModifiedByUserUuid,
+          })
+        > {
+  $DocumentationFilesToCaveTripPointsTableManager(
+    _$AppDatabase db,
+    DocumentationFilesToCaveTripPoints table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $DocumentationFilesToCaveTripPointsFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $DocumentationFilesToCaveTripPointsOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $DocumentationFilesToCaveTripPointsAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> documentationFileUuid = const Value.absent(),
+                Value<Uuid> caveTripPointUuid = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+                Value<Uuid?> createdByUserUuid = const Value.absent(),
+                Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DocumentationFilesToCaveTripPointsCompanion(
+                uuid: uuid,
+                documentationFileUuid: documentationFileUuid,
+                caveTripPointUuid: caveTripPointUuid,
+                createdAt: createdAt,
+                deletedAt: deletedAt,
+                createdByUserUuid: createdByUserUuid,
+                lastModifiedByUserUuid: lastModifiedByUserUuid,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uuid uuid,
+                required Uuid documentationFileUuid,
+                required Uuid caveTripPointUuid,
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+                Value<Uuid?> createdByUserUuid = const Value.absent(),
+                Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DocumentationFilesToCaveTripPointsCompanion.insert(
+                uuid: uuid,
+                documentationFileUuid: documentationFileUuid,
+                caveTripPointUuid: caveTripPointUuid,
+                createdAt: createdAt,
+                deletedAt: deletedAt,
+                createdByUserUuid: createdByUserUuid,
+                lastModifiedByUserUuid: lastModifiedByUserUuid,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $DocumentationFilesToCaveTripPointsReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                documentationFileUuid = false,
+                caveTripPointUuid = false,
+                createdByUserUuid = false,
+                lastModifiedByUserUuid = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (documentationFileUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.documentationFileUuid,
+                                    referencedTable:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._documentationFileUuidTable(db),
+                                    referencedColumn:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._documentationFileUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (caveTripPointUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveTripPointUuid,
+                                    referencedTable:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._caveTripPointUuidTable(db),
+                                    referencedColumn:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._caveTripPointUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (createdByUserUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdByUserUuid,
+                                    referencedTable:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._createdByUserUuidTable(db),
+                                    referencedColumn:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._createdByUserUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (lastModifiedByUserUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.lastModifiedByUserUuid,
+                                    referencedTable:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._lastModifiedByUserUuidTable(db),
+                                    referencedColumn:
+                                        $DocumentationFilesToCaveTripPointsReferences
+                                            ._lastModifiedByUserUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $DocumentationFilesToCaveTripPointsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      DocumentationFilesToCaveTripPoints,
+      DocumentationFilesToCaveTripPoint,
+      $DocumentationFilesToCaveTripPointsFilterComposer,
+      $DocumentationFilesToCaveTripPointsOrderingComposer,
+      $DocumentationFilesToCaveTripPointsAnnotationComposer,
+      $DocumentationFilesToCaveTripPointsCreateCompanionBuilder,
+      $DocumentationFilesToCaveTripPointsUpdateCompanionBuilder,
+      (
+        DocumentationFilesToCaveTripPoint,
+        $DocumentationFilesToCaveTripPointsReferences,
+      ),
+      DocumentationFilesToCaveTripPoint,
+      PrefetchHooks Function({
+        bool documentationFileUuid,
+        bool caveTripPointUuid,
         bool createdByUserUuid,
         bool lastModifiedByUserUuid,
       })
@@ -28676,6 +30149,12 @@ class $AppDatabaseManager {
       $DocumentationFilesToCaveTripsTableManager(
         _db,
         _db.documentationFilesToCaveTrips,
+      );
+  $DocumentationFilesToCaveTripPointsTableManager
+  get documentationFilesToCaveTripPoints =>
+      $DocumentationFilesToCaveTripPointsTableManager(
+        _db,
+        _db.documentationFilesToCaveTripPoints,
       );
   $CavePlaceBeaconsTableManager get cavePlaceBeacons =>
       $CavePlaceBeaconsTableManager(_db, _db.cavePlaceBeacons);
