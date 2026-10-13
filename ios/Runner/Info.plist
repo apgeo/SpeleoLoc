@@ -54,7 +54,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SpeleoLoc uses the microphone to record audio notes attached to cave documentation, only when you start a recording.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SpeleoLoc reads your photo library only when you choose an existing photo to attach to cave documentation or a map.</string>
+	<string>SpeleoLoc reads your photo library when you choose an existing photo to attach to cave documentation or a map, and when you build a trip&apos;s track points from the capture times of your cave photos and videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>SpeleoLoc saves an image to your photo library only when you export it there yourself.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

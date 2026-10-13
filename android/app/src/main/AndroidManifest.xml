@@ -27,6 +27,13 @@
          access grant — no broad storage or media permission. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <!-- Media library read (Android 13+), for building trip track points from
+         the capture times of the caver's own photos and videos. This is the
+         one flow that needs to enumerate and date-filter the whole library,
+         which a SAF picker cannot do; granting only "selected photos" is
+         supported and falls back to the system picker. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- Merged in by plugin manifests (altbeacon/geolocator) but this app
          never starts a location-typed foreground service — background beacon
          scanning runs the connectedDevice-typed service below. Stripped so
