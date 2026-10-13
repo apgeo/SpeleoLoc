@@ -57,6 +57,25 @@ class AppDriver {
     }
   }
 
+  /// Pumps until [condition] holds, failing with [reason] if it never does.
+  ///
+  /// For waits on work the frame loop cannot see finishing — a platform
+  /// call reading the media library, a QR sweep — where `settle` would
+  /// return the moment nothing is animating, long before the result lands.
+  Future<void> pumpUntil(
+    bool Function() condition, {
+    required String reason,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (!condition()) {
+      if (DateTime.now().isAfter(deadline)) {
+        fail('timed out after $timeout waiting for: $reason');
+      }
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+  }
+
   /// Captures the current screen under [name].
   ///
   /// On Android the surface must be converted before it can be read back.
