@@ -4,9 +4,11 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     //
     // The "speleo_loc @ <device>" entries each target one AVD from
-    // tool/android/avd.sh. They need /dev/kvm, which this VM does not have
-    // until nested virtualization is enabled on the Hyper-V host --- run
-    // `tool/android/avd.sh doctor` for the exact commands.
+    // tool/android/avd.sh; `tool/android/avd.sh doctor` says whether this
+    // machine can run them. They launch with build_settings.json, which
+    // loads the real cave register --- fine for working by hand, never to
+    // be used for automated runs or screenshots (see
+    // docs/workflows/android-emulator-and-ui-testing.md).
 
     "version": "0.3.1",
     "configurations": [

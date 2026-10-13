@@ -13,6 +13,7 @@
 #   tool/android/avd.sh list            # what exists now
 #   tool/android/avd.sh start <name>    # boot one, in the background
 #   tool/android/avd.sh boot <name>     # boot one and wait until it is ready
+#                                       # (add --headless for no window)
 #   tool/android/avd.sh stop            # stop every running emulator
 set -euo pipefail
 
@@ -41,19 +42,17 @@ kvm_report() {
   fi
   cat >&2 <<'MSG'
 BLOCKED: this machine has no usable /dev/kvm, so the Android emulator
-cannot run. It is a Hyper-V guest and nested virtualization is not
-exposed to it (no vmx/svm in /proc/cpuinfo).
+cannot run. On a Hyper-V guest that means nested virtualization is not
+exposed to it (check: no vmx/svm in /proc/cpuinfo).
 
-The kernel already ships kvm-intel, so the only missing piece is a
-host-side setting. On the Windows host, with this VM SHUT DOWN:
+The kernel ships kvm-intel, so the only missing piece is host-side. On
+the Windows host, with this VM SHUT DOWN:
 
     Set-VMProcessor -VMName <vm-name> -ExposeVirtualizationExtensions $true
 
-Hyper-V additionally requires Dynamic Memory to be OFF for a VM with
-nested virtualization, so the same change means fixing this VM's RAM at
-a static size instead of the 32-120 GB balloon:
-
-    Set-VMMemory -VMName <vm-name> -DynamicMemoryEnabled $false -StartupBytes 32GB
+Dynamic Memory can stay on. Microsoft's restriction applies while
+Hyper-V itself runs inside the guest, and this guest runs KVM; measured
+here with the balloon still growing under a live emulator.
 
 Then boot the VM and re-run `tool/android/avd.sh doctor`.
 MSG
@@ -69,7 +68,26 @@ cmd_doctor() {
   echo
   "$EMULATOR" -accel-check 2>&1 | sed 's/^/accel-check: /' || true
   echo
-  kvm_report
+  kvm_report || return 1
+  kvm_access_report
+}
+
+# /dev/kvm can be reachable two ways, and they do not fail alike. Group
+# membership holds everywhere. The session ACL is granted by logind to
+# whoever holds the desktop seat, so it covers anything started while that
+# session is up and silently disappears for a systemd service, a CI runner
+# or a container — where the emulator then reports no acceleration at all.
+kvm_access_report() {
+  if id -nG | tr ' ' '\n' | grep -qx kvm; then
+    echo "access:     kvm group membership"
+  else
+    cat <<'MSG'
+access:     desktop-session ACL only — fine from a terminal or an agent
+            while the desktop session is up; before launching emulators
+            from a service, CI or a container, add the user to the group:
+                sudo usermod -aG kvm "$USER"    (then log in again)
+MSG
+  fi
 }
 
 cmd_create() {
@@ -130,21 +148,37 @@ cmd_list() { "$EMULATOR" -list-avds; }
 start_one() {
   local name="$1"; shift
   "$EMULATOR" -list-avds | grep -qx "$name" || die "no such AVD: $name (run: $0 create)"
-  kvm_report || die "refusing to start without KVM — it would fall back to software CPU emulation, which never finishes booting in practice."
+  kvm_report >/dev/null 2>&1 || { kvm_report || true; die "refusing to start without KVM — it would fall back to software CPU emulation, which never finishes booting in practice."; }
+
+  local extra=()
+  for arg in "$@"; do
+    [ "$arg" = "--headless" ] && extra+=(-no-window)
+  done
+  # With no display the windowed emulator dies at startup, so a run from a
+  # service or a bare SSH session goes headless without being asked. A
+  # person at the desktop still gets the window unless they say otherwise.
+  if [ -z "${DISPLAY:-}" ] && [ "${#extra[@]}" -eq 0 ]; then
+    extra+=(-no-window)
+    echo "no DISPLAY — starting headless"
+  fi
+
   # No GPU on this host, so render in software. -no-audio because there is
   # no sound device, -no-boot-anim to shave boot time.
   nohup "$EMULATOR" -avd "$name" \
     -gpu swiftshader_indirect \
     -no-audio -no-boot-anim \
-    "$@" >"/tmp/emulator-$name.log" 2>&1 &
+    "${extra[@]}" >"/tmp/emulator-$name.log" 2>&1 &
   echo "started $name (log: /tmp/emulator-$name.log)"
 }
 
-cmd_start() { start_one "${1:?usage: $0 start <avd>}"; }
+cmd_start() {
+  local name="${1:?usage: $0 start <avd> [--headless]}"; shift
+  start_one "$name" "$@"
+}
 
 cmd_boot() {
-  local name="${1:?usage: $0 boot <avd>}"
-  start_one "$name"
+  local name="${1:?usage: $0 boot <avd> [--headless]}"; shift
+  start_one "$name" "$@"
   echo -n "waiting for boot"
   "$ADB" wait-for-device
   for _ in $(seq 1 180); do
