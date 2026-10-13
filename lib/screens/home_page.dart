@@ -882,8 +882,13 @@ class _HomePageState extends ConsumerState<HomePage>
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
-      child: Align(
-        alignment: Alignment.centerLeft,
+      // Eleven fixed-width buttons do not fit a 411pt phone — they
+      // overflowed by 20px on a Pixel 7 — and the strip grows every time one
+      // is added. Scrolling it sideways is what the trip screen's toolbar
+      // already does, and it keeps every action reachable at any width
+      // instead of clipping the last one off.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
