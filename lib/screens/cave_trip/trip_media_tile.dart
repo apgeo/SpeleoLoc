@@ -10,6 +10,11 @@ import 'package:speleoloc/utils/localization.dart';
 /// One row of the trip-media list: a preview, the capture moment, and the
 /// cave place the item has been assigned to.
 ///
+/// Choosing the place is the row's primary action and so is the row tap
+/// itself; correcting the time and clearing the choice sit behind the
+/// overflow menu. Four side-by-side controls did not fit a 360pt phone —
+/// the width has to go to the place title, which is the part that varies.
+///
 /// The row is only selectable once a place is known — a track point without
 /// a place is not a thing this screen can create — so the checkbox stays
 /// disabled until then.
@@ -49,10 +54,13 @@ class TripMediaTile extends StatelessWidget {
 
     return ListTile(
       dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      contentPadding: const EdgeInsets.only(left: 8, right: 0),
       leading: _buildPreview(context),
+      onTap: onPickPlace,
       title: Text(
         a?.place.title ?? LocServ.inst.t('trip_media_no_place'),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontWeight: a != null ? FontWeight.bold : FontWeight.normal,
           color: a != null ? null : scheme.onSurfaceVariant,
@@ -65,9 +73,13 @@ class TripMediaTile extends StatelessWidget {
             children: [
               Icon(Icons.schedule, size: 12, color: scheme.onSurfaceVariant),
               const SizedBox(width: 4),
-              Text(
-                _timeFmt.format(a?.at ?? item.capturedAt),
-                style: const TextStyle(fontSize: 11),
+              Flexible(
+                child: Text(
+                  _timeFmt.format(a?.at ?? item.capturedAt),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
+                ),
               ),
               if (item.capturedAtSource == MediaTimeSource.fileModified) ...[
                 const SizedBox(width: 4),
@@ -87,9 +99,13 @@ class TripMediaTile extends StatelessWidget {
               children: [
                 const Icon(Icons.qr_code_2, size: 12, color: Colors.green),
                 const SizedBox(width: 4),
-                Text(
-                  LocServ.inst.t('trip_media_from_qr'),
-                  style: const TextStyle(fontSize: 11, color: Colors.green),
+                Flexible(
+                  child: Text(
+                    LocServ.inst.t('trip_media_from_qr'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Colors.green),
+                  ),
                 ),
               ],
             ),
@@ -98,34 +114,68 @@ class TripMediaTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.place_outlined, size: 20),
-            tooltip: LocServ.inst.t('trip_media_pick_place'),
-            visualDensity: VisualDensity.compact,
-            onPressed: onPickPlace,
-          ),
-          if (a != null)
-            IconButton(
-              icon: const Icon(Icons.schedule, size: 20),
-              tooltip: LocServ.inst.t('trip_point_edit_time'),
-              visualDensity: VisualDensity.compact,
-              onPressed: onEditTime,
-            ),
-          if (a != null)
-            IconButton(
-              icon: const Icon(Icons.clear, size: 20),
-              tooltip: LocServ.inst.t('trip_media_clear_place'),
-              visualDensity: VisualDensity.compact,
-              onPressed: onClear,
-            ),
+          _buildMenu(),
           Checkbox(
             value: a?.selected ?? false,
+            visualDensity: VisualDensity.compact,
             onChanged: a == null ? null : (v) => onToggleSelected(v ?? false),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildMenu() {
+    final decided = assignment != null;
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 20),
+      tooltip: LocServ.inst.t('trip_media_row_actions'),
+      padding: EdgeInsets.zero,
+      onSelected: (value) {
+        switch (value) {
+          case 'place':
+            onPickPlace();
+          case 'time':
+            onEditTime();
+          case 'clear':
+            onClear();
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'place',
+          child: _menuRow(
+            Icons.place_outlined,
+            LocServ.inst.t('trip_media_pick_place'),
+          ),
+        ),
+        if (decided)
+          PopupMenuItem(
+            value: 'time',
+            child: _menuRow(
+              Icons.schedule,
+              LocServ.inst.t('trip_point_edit_time'),
+            ),
+          ),
+        if (decided)
+          PopupMenuItem(
+            value: 'clear',
+            child: _menuRow(
+              Icons.clear,
+              LocServ.inst.t('trip_media_clear_place'),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _menuRow(IconData icon, String label) => Row(
+    children: [
+      Icon(icon, size: 18),
+      const SizedBox(width: 8),
+      Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+    ],
+  );
 
   Widget _buildPreview(BuildContext context) {
     const size = 48.0;

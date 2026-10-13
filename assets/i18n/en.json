@@ -670,6 +670,7 @@
   "trip_media_toolbar": "Pictures",
   "trip_media_no_place": "No place chosen",
   "trip_media_pick_place": "Choose the place",
+  "trip_media_row_actions": "Row actions",
   "trip_media_clear_place": "Clear",
   "trip_media_from_qr": "Read from a QR code in the picture",
   "trip_media_time_from_file_hint": "Taken from the file's timestamp — the camera recorded no capture time, so this may be when the file was copied.",
