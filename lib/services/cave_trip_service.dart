@@ -212,7 +212,24 @@ class CaveTripService {
   Future<void> deletePoint(Uuid pointUuid) async {
     final point = await _db.getTripPoint(pointUuid);
     if (point == null) return;
-    await _db.deleteTripPoint(pointUuid);
+    // Snapshot the media links the cascade removes before dropping them:
+    // sync propagates deletes per-uuid, so a link without its own tombstone
+    // survives on peers and fails their deferred-FK check on import.
+    final mediaLinks = await _db.getTripPointDocumentLinks(pointUuid);
+    await _db.transaction(() async {
+      await _db.deleteTripPointDocumentLinks(pointUuid);
+      await _db.deleteTripPoint(pointUuid);
+    });
+    for (final l in mediaLinks) {
+      await _logger.logDelete(
+        'documentation_files_to_cave_trip_points',
+        l.uuid,
+        oldValues: {
+          'documentation_file_uuid': l.documentationFileUuid,
+          'cave_trip_point_uuid': l.caveTripPointUuid,
+        },
+      );
+    }
     await _logger.logDelete(
       'cave_trip_points',
       pointUuid,

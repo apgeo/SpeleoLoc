@@ -121,6 +121,9 @@ class DocumentationRepository implements IDocumentationRepository {
         final tripLinks = await (_database.select(
           _database.documentationFilesToCaveTrips,
         )..where((t) => t.documentationFileUuid.equalsValue(uuid))).get();
+        final pointLinks = await (_database.select(
+          _database.documentationFilesToCaveTripPoints,
+        )..where((t) => t.documentationFileUuid.equalsValue(uuid))).get();
 
         await _database.deleteDocumentationFileByUuid(uuid);
 
@@ -149,6 +152,16 @@ class DocumentationRepository implements IDocumentationRepository {
             oldValues: {
               'documentation_file_uuid': l.documentationFileUuid,
               'cave_trip_uuid': l.caveTripUuid,
+            },
+          );
+        }
+        for (final l in pointLinks) {
+          await _logger.logDelete(
+            'documentation_files_to_cave_trip_points',
+            l.uuid,
+            oldValues: {
+              'documentation_file_uuid': l.documentationFileUuid,
+              'cave_trip_point_uuid': l.caveTripPointUuid,
             },
           );
         }

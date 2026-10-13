@@ -110,6 +110,10 @@ class CaveTripRepository implements ICaveTripRepository {
         final docLinks = await (_database.select(
           _database.documentationFilesToCaveTrips,
         )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).get();
+        final pointLinks = <DocumentationFilesToCaveTripPoint>[];
+        for (final p in points) {
+          pointLinks.addAll(await _database.getTripPointDocumentLinks(p.uuid));
+        }
 
         await _database.deleteCaveTrip(tripUuid);
 
@@ -137,6 +141,16 @@ class CaveTripRepository implements ICaveTripRepository {
             oldValues: {
               'documentation_file_uuid': l.documentationFileUuid,
               'cave_trip_uuid': l.caveTripUuid,
+            },
+          );
+        }
+        for (final l in pointLinks) {
+          await _logger.logDelete(
+            'documentation_files_to_cave_trip_points',
+            l.uuid,
+            oldValues: {
+              'documentation_file_uuid': l.documentationFileUuid,
+              'cave_trip_point_uuid': l.caveTripPointUuid,
             },
           );
         }
