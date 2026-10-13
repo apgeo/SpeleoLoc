@@ -44,10 +44,11 @@ void main(List<String> args) {
   // One photo per place code, through the day, each with its QR label.
   for (var i = 0; i < codes.length; i++) {
     final at = _tripDay.add(Duration(hours: 10 + i, minutes: 7 * (i + 1)));
-    final file = File(
+    _write(
       '${outDir.path}/speleo_qr_${codes[i]}_${_stamp(at)}.jpg',
+      _photo(at: at, qrPayload: codes[i], seed: i),
+      at,
     );
-    file.writeAsBytesSync(_photo(at: at, qrPayload: codes[i], seed: i));
     written++;
   }
 
@@ -55,20 +56,44 @@ void main(List<String> args) {
   // that makes the list long enough to be worth filtering.
   for (var i = 0; i < 6; i++) {
     final at = _tripDay.add(Duration(hours: 10, minutes: 3 + i * 17));
-    final file = File('${outDir.path}/speleo_plain_${_stamp(at)}.jpg');
-    file.writeAsBytesSync(_photo(at: at, qrPayload: null, seed: 100 + i));
+    _write(
+      '${outDir.path}/speleo_plain_${_stamp(at)}.jpg',
+      _photo(at: at, qrPayload: null, seed: 100 + i),
+      at,
+    );
     written++;
   }
 
   // One from the day before, so a date-range filter has something to
   // exclude and can be shown to actually exclude it.
   final dayBefore = _tripDay.subtract(const Duration(days: 1, hours: 4));
-  File('${outDir.path}/speleo_otherday_${_stamp(dayBefore)}.jpg')
-      .writeAsBytesSync(_photo(at: dayBefore, qrPayload: null, seed: 200));
+  _write(
+    '${outDir.path}/speleo_otherday_${_stamp(dayBefore)}.jpg',
+    _photo(at: dayBefore, qrPayload: null, seed: 200),
+    dayBefore,
+  );
   written++;
 
   stdout.writeln('wrote $written file(s) to ${outDir.path}');
-  stdout.writeln('seed them with: tool/android/seed_test_media.sh ${outDir.path}');
+  stdout.writeln(
+    'seed them with: tool/android/seed_test_media.sh ${outDir.path}',
+  );
+}
+
+/// Writes [bytes] to [path] and stamps the file's modification time with
+/// [at].
+///
+/// The mtime is not decoration: Android's media scanner fills
+/// `MediaStore.date_taken` from it, and ignores the EXIF `DateTimeOriginal`
+/// these files also carry — measured on an API 34 emulator, where an
+/// otherwise identical file differing only in mtime was the one that got
+/// the right date. `adb push` preserves mtime, so this is what survives to
+/// the device, and `date_taken` is what `photo_manager` reports as the
+/// capture time. The EXIF is still written because the picked-files
+/// fallback path reads that instead.
+void _write(String path, List<int> bytes, DateTime at) {
+  final file = File(path)..writeAsBytesSync(bytes);
+  file.setLastModifiedSync(at);
 }
 
 String _stamp(DateTime t) =>
@@ -93,7 +118,13 @@ List<int> _photo({
   for (var y = 0; y < h; y++) {
     for (var x = 0; x < w; x++) {
       final base = 40 + ((x * y + seed) % 23) + rnd.nextInt(12);
-      image.setPixelRgb(x, y, base, (base * 0.85).round(), (base * 0.7).round());
+      image.setPixelRgb(
+        x,
+        y,
+        base,
+        (base * 0.85).round(),
+        (base * 0.7).round(),
+      );
     }
   }
 

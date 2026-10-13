@@ -51,19 +51,54 @@ done
 echo "pushed $count file(s) to $REMOTE_DIR"
 
 # MediaStore only learns about a pushed file when something tells it to
-# look. scan_file per path is exact; the MEDIA_MOUNTED broadcast is the
-# fallback for API levels where the scan service is not reachable.
-for f in "$SRC"/*.jpg "$SRC"/*.jpeg; do
-  [ -e "$f" ] || continue
-  base="$(basename "$f")"
-  "$ADB" "${SERIAL_ARG[@]}" shell \
-    "content call --uri content://media/external/file --method scan_file --arg $REMOTE_DIR/$base" \
-    >/dev/null 2>&1 || true
-done
-"$ADB" "${SERIAL_ARG[@]}" shell am broadcast \
-  -a android.intent.action.MEDIA_MOUNTED -d file://$REMOTE_DIR >/dev/null 2>&1 || true
+# look, and the cheap triggers do not always finish the job: on an API 34
+# emulator every `scan_file` variant returned a null URI and left the row
+# `is_pending=1` with no size, width or date. A reboot makes MediaProvider
+# scan the volume properly, so the cheap path is tried first and verified,
+# and the reboot is the fallback rather than the default.
+scan_cheap() {
+  for f in "$SRC"/*.jpg "$SRC"/*.jpeg; do
+    [ -e "$f" ] || continue
+    base="$(basename "$f")"
+    "$ADB" "${SERIAL_ARG[@]}" shell \
+      "content call --uri content://media/external/file --method scan_file --arg $REMOTE_DIR/$base" \
+      >/dev/null 2>&1 || true
+  done
+  "$ADB" "${SERIAL_ARG[@]}" shell am broadcast \
+    -a android.intent.action.MEDIA_MOUNTED -d file://$REMOTE_DIR >/dev/null 2>&1 || true
+}
 
-echo "media store refreshed"
+# Counts seeded rows that the scanner actually completed.
+indexed_count() {
+  "$ADB" "${SERIAL_ARG[@]}" shell \
+    "content query --uri content://media/external/images/media \
+       --projection _display_name \
+       --where \"_display_name LIKE 'speleo_%' AND is_pending=0 AND datetaken IS NOT NULL\"" \
+    2>/dev/null | grep -c '^Row:' || true
+}
+
+wait_for_boot() {
+  "$ADB" "${SERIAL_ARG[@]}" wait-for-device
+  for _ in $(seq 1 90); do
+    [ "$("$ADB" "${SERIAL_ARG[@]}" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && return 0
+    sleep 2
+  done
+  return 1
+}
+
+scan_cheap
+sleep 3
+if [ "$(indexed_count)" -lt "$count" ]; then
+  echo "scan did not complete ($(indexed_count)/$count indexed); rebooting to force a full volume scan"
+  "$ADB" "${SERIAL_ARG[@]}" reboot
+  sleep 5
+  wait_for_boot || die "device did not come back after the reboot"
+  sleep 20
+fi
+
+final="$(indexed_count)"
+echo "media store refreshed — $final/$count indexed with a capture date"
+[ "$final" -ge "$count" ] || echo "WARNING: some files are still not indexed" >&2
 echo
 echo "Grant the app library access without tapping through the dialog:"
 echo "  $ADB ${SERIAL_ARG[*]} shell pm grant <applicationId> android.permission.READ_MEDIA_IMAGES"
