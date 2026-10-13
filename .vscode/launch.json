@@ -2,20 +2,30 @@
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    //
+    // The "speleo_loc @ <device>" entries each target one AVD from
+    // tool/android/avd.sh. They need /dev/kvm, which this VM does not have
+    // until nested virtualization is enabled on the Hyper-V host --- run
+    // `tool/android/avd.sh doctor` for the exact commands.
+
     "version": "0.3.1",
     "configurations": [
         {
             "name": "speleo_loc",
             "request": "launch",
             "type": "dart",
-            "toolArgs": ["--dart-define-from-file=build_settings.json"]
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
         },
         {
             "name": "speleo_loc (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile",
-            "toolArgs": ["--dart-define-from-file=build_settings.json"]
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
         },
         {
             "name": "speleo_loc (release mode)",
@@ -32,20 +42,71 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",
-            "toolArgs": ["--dart-define-from-file=build_settings.store.json"]
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.store.json"
+            ]
         },
         {
             "name": "speleo_loc (congres hand-out build)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",
-            "toolArgs": ["--dart-define-from-file=build_settings.congres.json"]
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.congres.json"
+            ]
         },
         {
             "name": "speleo_loc_local_archive",
             "request": "launch",
             "type": "dart",
-            "toolArgs": ["--dart-define-from-file=build_settings_local_archive.json"]
+            "toolArgs": [
+                "--dart-define-from-file=build_settings_local_archive.json"
+            ]
+        },
+        {
+            "name": "speleo_loc @ Pixel 2 · API 24 (minSdk)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "speleo_api24_pixel2",
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
+        },
+        {
+            "name": "speleo_loc @ Pixel 4 · API 30",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "speleo_api30_pixel4",
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
+        },
+        {
+            "name": "speleo_loc @ Pixel 7 · API 34 (media permissions)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "speleo_api34_pixel7",
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
+        },
+        {
+            "name": "speleo_loc @ Tablet · API 34",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "speleo_api34_tablet",
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
+        },
+        {
+            "name": "speleo_loc @ Pixel 7 Pro · API 36",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "speleo_api36_pixel7pro",
+            "toolArgs": [
+                "--dart-define-from-file=build_settings.json"
+            ]
         }
     ]
 }
