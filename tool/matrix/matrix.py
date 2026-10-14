@@ -470,6 +470,11 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
         report["cells"].append(row)
         if outcome["status"] == "not-run":
             report["not_run"].append({"id": cell["id"], "reason": outcome.get("reason", "")})
+        foreign = out / "foreign_windows.log"
+        if foreign.exists():
+            for line in foreign.read_text().splitlines()[:10]:
+                report.setdefault("notes", []).append(
+                    f"`{cell['id']}` · another app's window took focus and was dismissed: {line}")
         for flow, texts in (data.get("notes") or {}).items():
             for text in texts:
                 report.setdefault("notes", []).append(f"`{cell['id']}` · {flow}: {text}")

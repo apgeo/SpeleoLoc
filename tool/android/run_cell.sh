@@ -175,6 +175,28 @@ fi
 
 # --- drive ------------------------------------------------------------------
 adb_s logcat -c >/dev/null 2>&1 || true
+
+# Another app's window over ours — a Google location-accuracy prompt, a
+# system camera, a permission dialog — waits for a person, and every screen
+# after it is driven behind it. The watcher presses Back on any focused
+# window that is not the app's, the launcher's or the system bar's, and
+# writes down what it dismissed, so the report can say what interrupted.
+foreign_window_watcher() {
+  local focus
+  while true; do
+    focus="$(adb_sh dumpsys window 2>/dev/null | sed -nE 's/.*mCurrentFocus=Window\{[^ ]+ [^ ]+ ([^ }]+).*/\1/p' | head -1)"
+    case "$focus" in
+      ""|"$PKG"*|*launcher*|*Launcher*|StatusBar|NotificationShade|*systemui*) ;;
+      *)
+        echo "$(date +%H:%M:%S) $focus" >> "$OUT/foreign_windows.log"
+        adb_sh input keyevent 4 ;;
+    esac
+    sleep 3
+  done
+}
+foreign_window_watcher &
+watcher=$!
+
 # --keep-app-running leaves the build installed, so the next cell on this
 # device skips the install; the data is replaced by its own seeding step.
 timeout --signal=INT --kill-after=30 "$TIMEOUT" flutter drive \
@@ -184,6 +206,8 @@ timeout --signal=INT --kill-after=30 "$TIMEOUT" flutter drive \
   --target integration_test/suite_test.dart \
   --keep-app-running > "$OUT/drive.log" 2>&1
 code=$?
+kill "$watcher" 2>/dev/null
+wait "$watcher" 2>/dev/null
 
 # What the device itself complained about during the run. Under invented
 # or anonymized data this is safe to read; otherwise the directory's
