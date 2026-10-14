@@ -204,6 +204,17 @@ foreign_window_watcher() {
 foreign_window_watcher &
 watcher=$!
 
+# Beacons for the app's own detection to find: the fixture's iBeacon and
+# Ruuvi tag, advertised into the emulated radio while the drive runs. Every
+# emulator on the machine hears them; a cell without this flow never turns
+# detection on, so to it they are two more advertisers in the room.
+beacons=""
+case ",$FLOWS," in
+  *,beacon_detect,*|,,)
+    dart run tool/android/netsim_beacons.dart > "$OUT/beacons.log" 2>&1 &
+    beacons=$! ;;
+esac
+
 # --keep-app-running leaves the build installed, so the next cell on this
 # device skips the install; the data is replaced by its own seeding step.
 timeout --signal=INT --kill-after=30 "$TIMEOUT" flutter drive \
@@ -213,8 +224,8 @@ timeout --signal=INT --kill-after=30 "$TIMEOUT" flutter drive \
   --target integration_test/suite_test.dart \
   --keep-app-running > "$OUT/drive.log" 2>&1
 code=$?
-kill "$watcher" 2>/dev/null
-wait "$watcher" 2>/dev/null
+kill "$watcher" $beacons 2>/dev/null
+wait "$watcher" $beacons 2>/dev/null
 
 # What the device itself complained about during the run. Under invented
 # or anonymized data this is safe to read; otherwise the directory's
