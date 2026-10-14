@@ -80,7 +80,8 @@
             "sweep_core",
             "trip_media",
             "scanner_live_qr",
-            "ble_scan"
+            "ble_scan",
+            "beacon_detect"
           ],
           "media": true,
           "sample": "cross"
@@ -178,6 +179,7 @@
             "trip_media",
             "scanner_live_qr",
             "ble_scan",
+            "beacon_detect",
             "deep_trip_lifecycle"
           ],
           "media": true,
@@ -344,6 +346,7 @@
             "scanner_live_qr",
             "deep_cave_create",
             "ble_scan",
+            "beacon_detect",
             "deep_trip_lifecycle"
           ],
           "media": true,

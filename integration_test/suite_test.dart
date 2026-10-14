@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'app_smoke_test.dart' as smoke;
+import 'flows/beacon_detect_test.dart' as beacon_detect;
 import 'flows/ble_scan_test.dart' as ble_scan;
 import 'flows/cave_create_test.dart' as cave_create;
 import 'flows/trip_lifecycle_test.dart' as trip_lifecycle;
@@ -22,6 +23,7 @@ void main() {
   trip_media.main();
   scanner.main();
   ble_scan.main();
+  beacon_detect.main();
   // Flows that change the data run after the ones that read it.
   cave_create.main();
   trip_lifecycle.main();

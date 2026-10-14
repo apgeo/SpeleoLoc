@@ -61,7 +61,8 @@ A cell that did not run is listed as NOT RUN and is never counted as a pass.
   `trip_media` (pictures from the device library become trip points),
   `scanner_live_qr` (the live scanner reads a QR label the emulator's camera
   shows), `ble_scan` (the BLE plugin hears the emulated radio's test
-  beacons), `deep_cave_create` (a cave created through the UI gets its
+  beacons), `beacon_detect` (the app's own detection finds the fixture's
+  iBeacon and Ruuvi tag and stamps them as seen), `deep_cave_create` (a cave created through the UI gets its
   entrance), `deep_trip_lifecycle` (a trip started and stopped from the
   trip list is active, then closed), `monkey` (random taps, swipes and
   keys; fails on a crash or an ANR).
@@ -292,9 +293,13 @@ relevant for Flutter Web, which this app does not target.
   read; one centred label was half cropped away by the preview.
 - **Bluetooth.** API 33 and newer images get an emulated radio through
   netsim; the matrix boots them with netsim's test beacons, and the
-  `ble_scan` flow checks the app's BLE plugin hears them. The app's own
-  beacon detection would need advertisers shaped like the tags it knows
-  (iBeacon, Ruuvi), which netsim can create through its control API — not
-  wired up yet. Older images have no radio.
+  `ble_scan` flow checks the app's BLE plugin hears them. For the app's
+  own detection, `tool/android/netsim_beacons.dart` advertises the
+  fixture's iBeacon and Ruuvi tag while a `beacon_detect` cell runs: it
+  connects to netsim's HCI socket as two extra Bluetooth controllers and
+  has them advertise. (netsim's gRPC control API would be the obvious way
+  to add beacons, but the daemon the emulator ships keeps it switched off.)
+  Every emulator on the machine hears these beacons. Older images have no
+  radio.
 - **Battery management and manufacturer builds** of Android only show on
   real phones: use the cloud devices, or the phones you have.
