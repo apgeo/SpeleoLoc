@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'app_smoke_test.dart' as smoke;
+import 'flows/ble_scan_test.dart' as ble_scan;
 import 'flows/cave_create_test.dart' as cave_create;
 import 'flows/scanner_test.dart' as scanner;
 import 'flows/sweep_test.dart' as sweep;
@@ -19,6 +20,7 @@ void main() {
   sweep.main();
   trip_media.main();
   scanner.main();
+  ble_scan.main();
   // Flows that change the data run after the ones that read it.
   cave_create.main();
 

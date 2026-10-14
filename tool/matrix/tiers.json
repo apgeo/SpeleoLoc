@@ -78,7 +78,8 @@
             "smoke",
             "sweep_core",
             "trip_media",
-            "scanner_live_qr"
+            "scanner_live_qr",
+            "ble_scan"
           ],
           "media": true,
           "sample": "cross"
@@ -173,7 +174,8 @@
           ],
           "flows": [
             "trip_media",
-            "scanner_live_qr"
+            "scanner_live_qr",
+            "ble_scan"
           ],
           "media": true,
           "sample": "cross"
@@ -336,7 +338,8 @@
           "flows": [
             "trip_media",
             "scanner_live_qr",
-            "deep_cave_create"
+            "deep_cave_create",
+            "ble_scan"
           ],
           "media": true,
           "sample": "cross"

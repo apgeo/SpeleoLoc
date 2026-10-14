@@ -52,11 +52,19 @@ class Recorder {
 
   void semantics(String shot, String tree) => _semantics[shot] = tree;
 
+  /// A one-line observation from a flow that is worth reading in the
+  /// report even when the flow passed.
+  void note(String flow, String text) =>
+      (_notes[flow] ??= <String>[]).add(text);
+
+  final Map<String, List<String>> _notes = {};
+
   Map<String, Object?> toJson() => {
     'cell': cell,
     'startup_ms': startupMs,
     'flows': _flows,
     'screens': _screens,
+    'notes': _notes,
     'semantics': _semantics,
   };
 

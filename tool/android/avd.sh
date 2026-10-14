@@ -381,6 +381,10 @@ start_one() {
     # the emulator saves on exit would both cost a second snapshot's worth
     # of disk and become what the next run starts from.
     args+=(-no-snapshot-save)
+    # Two simulated BLE advertisers for the emulated radio to hear, so the
+    # Bluetooth flow has something to scan. Images too old for netsim's
+    # Bluetooth ignore it.
+    args+=(-netsim-args "--test-beacons")
     if [ "$BOOT_PRISTINE" = 1 ] && has_snapshot "$name"; then
       args+=(-snapshot "$SNAPSHOT")
     else

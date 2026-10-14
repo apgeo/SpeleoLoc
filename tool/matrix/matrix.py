@@ -466,6 +466,9 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
         report["cells"].append(row)
         if outcome["status"] == "not-run":
             report["not_run"].append({"id": cell["id"], "reason": outcome.get("reason", "")})
+        for flow, texts in (data.get("notes") or {}).items():
+            for text in texts:
+                report.setdefault("notes", []).append(f"`{cell['id']}` · {flow}: {text}")
         for f in flows:
             if f.get("status") == "failed":
                 report["failures"].append({"cell": cell["id"], "flow": f.get("name"),
@@ -599,6 +602,8 @@ def write_report(run_dir: Path, tier: str, about: str, report: dict, notes: dict
         for name, entry in sorted(a11y.items(), key=lambda kv: -sum(kv[1]["a11y"].values())):
             lines.append(f"| `{name}` | " + " | ".join(str(entry["a11y"].get(k, 0)) for k in kinds) + " |")
         lines.append("")
+    if report.get("notes"):
+        lines += ["## Notes from the flows", ""] + [f"- {n}" for n in report["notes"]] + [""]
     lines += ["## Cells", "",
               "| Cell | Result | Time | App start | Flows passed / failed / skipped | Screens ok / busy / failed / skipped |",
               "|---|---|---|---|---|---|"]
