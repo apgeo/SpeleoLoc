@@ -58,6 +58,12 @@ AVDS=(
 )
 
 SNAPSHOT=pristine
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# What every matrix emulator's back camera shows: QR labels, so the live
+# scanner has a code to read. It is part of the emulated hardware, and a
+# snapshot only loads into the hardware it was saved from, so prepare and
+# every run must boot with the same picture.
+MATRIX_CAMERA="$ROOT/build/matrix/camera/qr_a1.png"
 # Below this much free space on the SDK's disk nothing here downloads an
 # image or creates a snapshot: a build needs room too, and a full disk
 # fails in far more confusing ways than a refusal does.
@@ -355,6 +361,14 @@ parse_boot_flags() {
 
 # Starts the emulator process for <name> and prints its serial on stdout.
 # Everything else it says goes to stderr, so a caller can capture the serial.
+matrix_camera() {
+  if [ ! -f "$MATRIX_CAMERA" ]; then
+    (cd "$ROOT" && dart run tool/android/generate_test_media.dart --camera \
+      "$MATRIX_CAMERA" a1 >/dev/null 2>&1) || true
+  fi
+  [ -f "$MATRIX_CAMERA" ] && echo "$MATRIX_CAMERA"
+}
+
 start_one() {
   local name="$1"; shift
   local set
@@ -377,6 +391,7 @@ start_one() {
     args+=(-no-window)
   fi
   if [ "$set" = matrix ]; then
+    [ -n "$BOOT_CAMERA" ] || BOOT_CAMERA="$(matrix_camera)"
     # Never let a run write itself into the AVD: the quick-boot snapshot
     # the emulator saves on exit would both cost a second snapshot's worth
     # of disk and become what the next run starts from.
