@@ -154,25 +154,36 @@ if [ "$MONKEY" -gt 0 ]; then
   adb_sh am start -W -n "$PKG/.MainActivity" >/dev/null
   sleep 15
   seed="$(printf '%s' "$DEVICE$SHAPE$LANG_CODE" | cksum | cut -d' ' -f1)"
+  # Android always lets the home screen start, so some of the input lands
+  # on the launcher, and the Google launcher crashes under it. Only the
+  # app's own crashes and ANRs count; monkey is told to carry on past
+  # anyone's, so one launcher crash does not end the run early, and the
+  # others are reported beside the result.
   timeout "$TIMEOUT" "$ADB" -s "$SERIAL" shell monkey -p "$PKG" \
     --pct-syskeys 0 --pct-appswitch 0 --ignore-security-exceptions \
+    --ignore-crashes --ignore-timeouts \
     --monitor-native-crashes --throttle 150 -s "$seed" -v "$MONKEY" \
     > "$OUT/monkey.log" 2>&1
   adb_s logcat -d -v time 2>/dev/null \
-    | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E AndroidRuntime" \
+    | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E/AndroidRuntime" \
     > "$OUT/logcat.txt" || true
   adb_sh am force-stop "$PKG"
   tool/android/device_profile.sh reset "$SERIAL" >/dev/null 2>&1
-  problem="$(grep -m1 -E '// (CRASH|NOT RESPONDING)' "$OUT/monkey.log" || true)"
-  [ -z "$problem" ] && problem="$(grep -m1 -E 'FATAL EXCEPTION|ANR in' "$OUT/logcat.txt" || true)"
+  problem="$(grep -m1 -E "// (CRASH|NOT RESPONDING): $PKG " "$OUT/monkey.log" || true)"
+  [ -z "$problem" ] && problem="$(grep -m1 -E "ANR in $PKG|Process: $PKG," "$OUT/logcat.txt" || true)"
+  others="$(grep -E '// (CRASH|NOT RESPONDING): ' "$OUT/monkey.log" | grep -vF ": $PKG " \
+    | sed -E 's#.*// (CRASH|NOT RESPONDING): ([^ ]+).*#\2#' | sort -u | paste -sd, || true)"
   sent="$(grep -oE 'Events injected: [0-9]+' "$OUT/monkey.log" | grep -oE '[0-9]+' || echo 0)"
-  python3 - "$OUT/result.json" "$problem" "$sent" "$seed" <<'RESULT'
+  python3 - "$OUT/result.json" "$problem" "$sent" "$seed" "$others" <<'RESULT'
 import json, sys
-out, problem, sent, seed = sys.argv[1:]
+out, problem, sent, seed, others = sys.argv[1:]
+detail = problem or f"{sent} events, seed {seed}, no crash and no ANR"
+if others:
+    detail += f"; under the same input these crashed or hung, not counted: {others}"
 json.dump({"flows": [{
     "name": "monkey",
     "status": "failed" if problem else "passed",
-    "detail": problem or f"{sent} events, seed {seed}, no crash and no ANR",
+    "detail": detail,
 }]}, open(out, "w"), indent=1)
 RESULT
   [ -z "$problem" ] && finish passed 0
