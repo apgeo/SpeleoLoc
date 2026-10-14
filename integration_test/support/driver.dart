@@ -119,6 +119,23 @@ class AppDriver {
     await settle();
   }
 
+  /// Starts the app again over whatever state the last screen left.
+  ///
+  /// After a screen fails, the widget tree it broke can make every screen
+  /// after it fail too — one null check deep in a sliver becomes fifty
+  /// "multiple exceptions". A fresh `runApp` gives the next screen the same
+  /// clean start the first one had, so each failure in a run is its own.
+  Future<void> relaunch() async {
+    app.main();
+    final deadline = DateTime.now().add(const Duration(seconds: 60));
+    while (DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 200));
+      if (find.byType(MaterialApp).evaluate().isNotEmpty) break;
+    }
+    await settle(timeout: const Duration(seconds: 10));
+    tester.takeException();
+  }
+
   /// Renders at [shape] where the surface can be resized from inside the
   /// test. A device is shaped from outside before the app starts, so there
   /// this only reports what it was asked for.

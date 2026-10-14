@@ -102,8 +102,10 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
             );
             final thrown = tester.takeException();
             if (thrown != null) {
-              status = 'error';
               error = _describe(thrown, lastStack, reported);
+              // A map tile that could not be fetched is the normal state of
+              // a phone underground, not a broken screen.
+              status = _networkOnly(reported, error!) ? 'network' : 'error';
             } else if (!idle) {
               // Not a failure: a screen with a spinner or a live reading
               // never goes idle. Worth knowing, because it also means the
@@ -130,8 +132,8 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
           await driver.backToHome().timeout(const Duration(seconds: 30));
           final leftover = tester.takeException();
           if (leftover != null && status == 'ok') {
-            status = 'error';
             error = 'on closing: ${_describe(leftover, lastStack, reported)}';
+            status = _networkOnly(reported, error!) ? 'network' : 'error';
           }
         } catch (e, stack) {
           status = 'error';
@@ -157,6 +159,10 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
         );
         if (failed && known == null && !shape.bestEffort) {
           broken.add('${entry.id} @ ${shape.name}: $error');
+        }
+        if (failed) {
+          await driver.relaunch();
+          reported.clear();
         }
       }
     }
@@ -248,4 +254,15 @@ String _describe(
   }
   final more = reported.length > 3 ? ' (+${reported.length - 3} more)' : '';
   return parts.toSet().join(' || ') + more;
+}
+
+/// Whether everything that went wrong on a screen was a failed network
+/// request, such as a map tile that could not be fetched.
+bool _networkOnly(List<FlutterErrorDetails> reported, String error) {
+  final network = RegExp(
+    r'SocketException|ClientException|HandshakeException|HttpException|'
+    r'Failed host lookup|Connection (refused|reset|closed)',
+  );
+  if (reported.isEmpty) return network.hasMatch(error);
+  return reported.every((d) => network.hasMatch(d.exceptionAsString()));
 }
