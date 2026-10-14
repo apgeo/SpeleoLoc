@@ -42,6 +42,11 @@ endif()
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_14)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
+  # Plugins are compiled with these settings too, and the JSON header that
+  # flutter_secure_storage_linux bundles declares its literal operators in a
+  # form clang 20 and later warn about. Under -Werror that one warning stops
+  # the whole Linux build, in code this project does not own.
+  target_compile_options(${TARGET} PRIVATE -Wno-error=deprecated-literal-operator)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
 endfunction()
@@ -73,6 +78,20 @@ set_target_properties(${BINARY_NAME}
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
+
+# flutter_sound declares a Linux implementation but ships it under its
+# upstream package's name: the CMake target is `taudio_plugin` and the header
+# `taudio/taudio_plugin.h`, while the generated rules above link
+# `flutter_sound_plugin` and the generated registrant includes
+# `flutter_sound/flutter_sound_plugin.h`. Without the alias here and the
+# forwarding header in runner/shims the Linux build cannot be generated at
+# all. The implementation is an empty stub upstream, so nothing audio-related
+# works on Linux either way; this only lets the rest of the app build.
+if(TARGET taudio_plugin AND NOT TARGET flutter_sound_plugin)
+  add_library(flutter_sound_plugin ALIAS taudio_plugin)
+  target_include_directories(${BINARY_NAME} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/runner/shims")
+endif()
 
 
 # === Installation ===
