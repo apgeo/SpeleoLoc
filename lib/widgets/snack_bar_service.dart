@@ -150,6 +150,18 @@ class _ToastHostState extends State<_ToastHost> with TickerProviderStateMixin {
     toast.controller.dispose();
   }
 
+  // A toast still on screen when the host goes away — the app starting
+  // again after an import, say — owns a running animation that nothing else
+  // would ever dispose.
+  @override
+  void dispose() {
+    for (final toast in _toasts) {
+      toast.controller.dispose();
+    }
+    _toasts.clear();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).viewPadding.bottom + 8.0;
