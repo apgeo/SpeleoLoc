@@ -40,7 +40,8 @@
           ],
           "flows": [
             "smoke",
-            "sweep_core"
+            "sweep_core",
+            "deep_cave_create"
           ]
         },
         {
@@ -106,7 +107,8 @@
           ],
           "flows": [
             "smoke",
-            "sweep_all"
+            "sweep_all",
+            "deep_cave_create"
           ]
         },
         {
@@ -247,7 +249,8 @@
           ],
           "flows": [
             "smoke",
-            "sweep_all"
+            "sweep_all",
+            "deep_cave_create"
           ]
         }
       ],
@@ -332,7 +335,8 @@
           ],
           "flows": [
             "trip_media",
-            "scanner_live_qr"
+            "scanner_live_qr",
+            "deep_cave_create"
           ],
           "media": true,
           "sample": "cross"

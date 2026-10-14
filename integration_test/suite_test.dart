@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'app_smoke_test.dart' as smoke;
+import 'flows/cave_create_test.dart' as cave_create;
 import 'flows/scanner_test.dart' as scanner;
 import 'flows/sweep_test.dart' as sweep;
 import 'support/cell.dart';
@@ -18,6 +19,8 @@ void main() {
   sweep.main();
   trip_media.main();
   scanner.main();
+  // Flows that change the data run after the ones that read it.
+  cave_create.main();
 
   // The result has to outlive the test process. On a device it rides back
   // to the host with the driver's response; the desktop build shares a
