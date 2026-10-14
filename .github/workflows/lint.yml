@@ -14,6 +14,10 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Pinned to the version the analyzer baseline and the golden
+          # images were recorded with; a newer SDK brings new lints and
+          # different glyph rasterisation, and both read as regressions.
+          flutter-version: 3.47.2
           channel: stable
           cache: true
 
@@ -21,7 +25,11 @@ jobs:
         run: flutter pub get
 
       - name: Static analysis
-        run: flutter analyze --no-fatal-infos
+        # Held against the recorded backlog rather than zero: errors fail,
+        # and so does any increase in the issue count. A bare
+        # `flutter analyze` fails on the backlog itself and kept this whole
+        # job red, which is how its later steps went unrun.
+        run: bash tool/analyze_check.sh
 
       - name: Format check
         # Repo was bulk-formatted with the Dart 3.10 tall style (commit
