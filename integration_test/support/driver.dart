@@ -97,6 +97,7 @@ class AppDriver {
         pseudoLocalize(english.map((k, v) => MapEntry(k, '$v'))),
       );
     }
+    final started = DateTime.now();
     app.main();
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
@@ -108,6 +109,11 @@ class AppDriver {
       findsOneWidget,
       reason: 'the app did not reach its first frame within $timeout',
     );
+    // A debug build's start-up is slow in absolute terms; compared run to
+    // run on the same device, a jump still means something.
+    Recorder.instance.startupMs ??= DateTime.now()
+        .difference(started)
+        .inMilliseconds;
     await settle();
   }
 

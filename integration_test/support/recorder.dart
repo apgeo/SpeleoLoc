@@ -17,6 +17,9 @@ class Recorder {
   final Map<String, String> _semantics = {};
   Map<String, Object?> cell = {};
 
+  /// From `main()` to the first frame, on the first launch of the run.
+  int? startupMs;
+
   FlowRecord startFlow(String name) {
     final record = FlowRecord._(name);
     _flows.add(record._json);
@@ -51,6 +54,7 @@ class Recorder {
 
   Map<String, Object?> toJson() => {
     'cell': cell,
+    'startup_ms': startupMs,
     'flows': _flows,
     'screens': _screens,
     'semantics': _semantics,
