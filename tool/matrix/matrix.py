@@ -456,6 +456,7 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
                       for s in ("passed", "failed", "skipped")},
             "screens": {s: sum(1 for x in screens if x.get("status") == s)
                         for s in ("ok", "busy", "error", "timeout", "skipped")},
+            "startup_ms": data.get("startup_ms"),
         }
         report["cells"].append(row)
         if outcome["status"] == "not-run":
@@ -579,13 +580,14 @@ def write_report(run_dir: Path, tier: str, about: str, report: dict, notes: dict
             lines.append(f"| `{name}` | " + " | ".join(str(entry["a11y"].get(k, 0)) for k in kinds) + " |")
         lines.append("")
     lines += ["## Cells", "",
-              "| Cell | Result | Time | Flows passed / failed / skipped | Screens ok / busy / failed / skipped |",
-              "|---|---|---|---|---|"]
+              "| Cell | Result | Time | App start | Flows passed / failed / skipped | Screens ok / busy / failed / skipped |",
+              "|---|---|---|---|---|---|"]
     for c in cells:
         f, s = c["flows"], c["screens"]
         result = c["status"] + (" (flaky)" if c.get("flaky") else "")
         lines.append(
             f"| `{c['id']}` | {result} | {c.get('seconds', '–')} s | "
+            f"{(str(c['startup_ms']) + ' ms') if c.get('startup_ms') else '–'} | "
             f"{f['passed']} / {f['failed']} / {f['skipped']} | "
             f"{s['ok']} / {s['busy']} / {s['error'] + s['timeout']} / {s['skipped']} |")
     lines += ["", "## Reading the screenshots", "",
