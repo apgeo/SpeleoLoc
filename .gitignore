@@ -100,3 +100,7 @@ test_data/ftp_test.json
 
 /resource_docs/
 .claude/
+
+# Sentry's native SDK keeps its run database in the working directory when
+# the Linux build runs, which during `flutter test -d linux` is the repo.
+/.sentry-native/
