@@ -444,8 +444,14 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
                     "best_effort": bool(s.get("best_effort")), "error": s.get("error", ""),
                 })
             for finding in s.get("findings", []):
-                if finding.get("kind") == "truncated_text":
+                kind = finding.get("kind")
+                if kind == "truncated_text":
                     entry["truncated"].add(f"{cell['lang']}/{s.get('shape')}")
+                elif "count" in finding:
+                    # Worst shape per screen: the same control counted once
+                    # per shape would only measure how many shapes ran.
+                    a11y = entry.setdefault("a11y", {})
+                    a11y[kind] = max(a11y.get(kind, 0), finding["count"])
         if origin not in READABLE and out.exists():
             report["unreadable_dirs"].append(str(out.relative_to(ROOT)))
         for png in out.glob("*.png") if out.exists() else []:
@@ -457,6 +463,11 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
             report["tokens_reduced"] += visual_tokens(*size, long_edge=1280)
     for entry in report["screens"].values():
         entry["truncated"] = sorted(entry["truncated"])
+    totals = {}
+    for entry in report["screens"].values():
+        for kind, count in entry.get("a11y", {}).items():
+            totals[kind] = totals.get(kind, 0) + count
+    report["a11y_totals"] = totals
     return report
 
 
@@ -513,6 +524,21 @@ def write_report(run_dir: Path, tier: str, about: str, report: dict, notes: dict
                   "| Screen | Language / shape |", "|---|---|"]
         for name, entry in sorted(truncated.items()):
             lines.append(f"| `{name}` | {', '.join(entry['truncated'])} |")
+        lines.append("")
+    a11y = {k: v for k, v in report["screens"].items() if v.get("a11y")}
+    if a11y:
+        kinds = ["tap_target", "unlabeled_tap_target", "text_contrast"]
+        names = {"tap_target": "under 48 dp", "unlabeled_tap_target": "no label",
+                 "text_contrast": "low contrast"}
+        totals = report["a11y_totals"]
+        lines += ["## Accessibility", "",
+                  "Flutter's own guidelines, per screen in its worst shape. Findings, not "
+                  "failures: the count is the thing to watch, and it should only go down. "
+                  "Totals: " + ", ".join(f"{totals.get(k, 0)} {names[k]}" for k in kinds) + ".", "",
+                  "| Screen | " + " | ".join(names[k] for k in kinds) + " |",
+                  "|---|" + "---|" * len(kinds)]
+        for name, entry in sorted(a11y.items(), key=lambda kv: -sum(kv[1]["a11y"].values())):
+            lines.append(f"| `{name}` | " + " | ".join(str(entry["a11y"].get(k, 0)) for k in kinds) + " |")
         lines.append("")
     lines += ["## Cells", "",
               "| Cell | Result | Time | Flows passed / failed / skipped | Screens ok / busy / failed / skipped |",

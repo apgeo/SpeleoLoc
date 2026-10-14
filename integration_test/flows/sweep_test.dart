@@ -214,12 +214,20 @@ String _describe(
     final marker = text.indexOf('The relevant error-causing widget was:');
     var where = '';
     if (marker >= 0) {
-      final after = text.substring(marker).split('\n').skip(1);
+      // The widget's name, then — on its own line or the same one — where
+      // it was created. The location is the useful half.
+      final after = text
+          .substring(marker)
+          .split('\n')
+          .skip(1)
+          .where((l) => l.trim().isNotEmpty)
+          .take(2)
+          .toList();
       final line = after.firstWhere(
-        (l) => l.trim().isNotEmpty,
-        orElse: () => '',
+        (l) => l.contains('file:///'),
+        orElse: () => after.isEmpty ? '' : after.first,
       );
-      where = line.trim().replaceAll(RegExp(r'file:///[^ ]*?/lib/'), 'lib/');
+      where = line.trim().replaceAll(RegExp(r'\S*file:///\S*?/lib/'), 'lib/');
     }
     final part = _brief(summary, details.stack);
     parts.add(where.isEmpty ? part : '$part | widget: $where');
