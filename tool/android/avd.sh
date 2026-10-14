@@ -31,6 +31,7 @@
 #   tool/android/avd.sh start <avd> [flags] # boot one, in the background
 #   tool/android/avd.sh boot <avd> [flags]  # boot one and wait until ready
 #        flags: --headless  --port <even number>  --pristine
+#               --camera <image>  what the back camera shows
 #   tool/android/avd.sh stop [<serial>|<avd>...]   # default: every emulator
 #   tool/android/avd.sh serial <avd>        # serial of a running AVD
 #   tool/android/avd.sh disk                # what the sets cost on disk
@@ -338,12 +339,13 @@ free_port() {
 
 # Parses the flags boot/start share into BOOT_* variables.
 parse_boot_flags() {
-  BOOT_HEADLESS=0 BOOT_PORT="" BOOT_PRISTINE=0 BOOT_EXTRA=()
+  BOOT_HEADLESS=0 BOOT_PORT="" BOOT_PRISTINE=0 BOOT_EXTRA=() BOOT_CAMERA=""
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --headless) BOOT_HEADLESS=1 ;;
       --pristine) BOOT_PRISTINE=1 ;;
       --port) BOOT_PORT="${2:?--port needs a number}"; shift ;;
+      --camera) BOOT_CAMERA="${2:?--camera needs an image}"; shift ;;
       --wipe) BOOT_EXTRA+=(-wipe-data -no-snapshot-load) ;;
       *) die "unknown flag: $1" ;;
     esac
@@ -382,9 +384,20 @@ start_one() {
     if [ "$BOOT_PRISTINE" = 1 ] && has_snapshot "$name"; then
       args+=(-snapshot "$SNAPSHOT")
     else
-      [ "$BOOT_PRISTINE" = 1 ] && echo "$name has no '$SNAPSHOT' snapshot; cold boot" >&2
       args+=(-no-snapshot-load)
+      if [ "$BOOT_PRISTINE" = 1 ]; then
+        # Without a snapshot to return to, the only way to leave the AVD
+        # as it was is to keep this run's writes off it altogether.
+        echo "$name has no '$SNAPSHOT' snapshot; cold boot, read-only" >&2
+        args+=(-read-only)
+      fi
     fi
+  fi
+  # The back camera shows a still image: a QR label, so the live scanner
+  # has something to read. Without it the camera shows a generated scene.
+  if [ -n "$BOOT_CAMERA" ]; then
+    [ -f "$BOOT_CAMERA" ] || die "no camera image at $BOOT_CAMERA"
+    args+=(-camera-back "imagefile:$(realpath "$BOOT_CAMERA")")
   fi
   args+=("${BOOT_EXTRA[@]}")
 
@@ -469,18 +482,22 @@ cmd_serial() { serial_of "${1:?usage: $0 serial <avd>}" || die "$1 is not runnin
 # be waiting on a transition; the rest keeps things that are not the app —
 # a dimmed screen, a lock screen, a heads-up notification, the "swipe to
 # exit full screen" hint — out of the screenshots.
+#
+# Each is allowed to fail: not every Android version has every command
+# (API 24 has no `locksettings`), and a setting that does not exist cannot
+# get in the way either.
 apply_base_settings() {
   local k
   for k in window_animation_scale transition_animation_scale animator_duration_scale; do
-    adb_sh settings put global "$k" 0
+    adb_sh settings put global "$k" 0 || true
   done
-  adb_sh svc power stayon true
-  adb_sh settings put system screen_off_timeout 2147483647
-  adb_sh locksettings set-disabled true >/dev/null
-  adb_sh wm dismiss-keyguard
-  adb_sh settings put global heads_up_notifications_enabled 0
-  adb_sh settings put secure immersive_mode_confirmations confirmed
-  adb_sh settings put system accelerometer_rotation 0
+  adb_sh svc power stayon true || true
+  adb_sh settings put system screen_off_timeout 2147483647 || true
+  adb_sh locksettings set-disabled true >/dev/null || true
+  adb_sh wm dismiss-keyguard || true
+  adb_sh settings put global heads_up_notifications_enabled 0 || true
+  adb_sh settings put secure immersive_mode_confirmations confirmed || true
+  adb_sh settings put system accelerometer_rotation 0 || true
 }
 
 prepare_one() {
@@ -512,7 +529,7 @@ prepare_one() {
   echo -n "          settling" >&2
   local load
   for _ in $(seq 1 36); do
-    load="$(adb_sh cat /proc/loadavg | cut -d' ' -f1)"
+    load="$(adb_sh cat /proc/loadavg | cut -d' ' -f1)" || load=9
     awk "BEGIN{exit !(${load:-9} < 1.0)}" && break
     echo -n "." >&2
     sleep 10
