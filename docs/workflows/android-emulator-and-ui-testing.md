@@ -62,8 +62,17 @@ A cell that did not run is listed as NOT RUN and is never counted as a pass.
   `scanner_live_qr` (the live scanner reads a QR label the emulator's camera
   shows), `ble_scan` (the BLE plugin hears the emulated radio's test
   beacons), `deep_cave_create` (a cave created through the UI gets its
-  entrance), `monkey` (random taps, swipes and keys; fails on a crash or an
-  ANR).
+  entrance), `deep_trip_lifecycle` (a trip started and stopped from the
+  trip list is active, then closed), `monkey` (random taps, swipes and
+  keys; fails on a crash or an ANR).
+- **Skipped screens say why**: a screen that needs hardware the platform
+  lacks, a PDF renderer (none on Linux), or a person to answer a system
+  dialog it opens on arrival (the folder picker of the document import,
+  the system camera of camera capture) is recorded as skipped with that
+  reason. Screens whose only errors are failed network requests (map
+  tiles, normal underground) are recorded as `network`, not as broken.
+  After a broken screen the sweep starts the app again, so one failure
+  does not cascade.
 - **Known issues**: a screen error listed in `tool/matrix/known_issues.json`
   is reported under its own heading and does not fail the run. Remove the
   entry when the bug is fixed.
