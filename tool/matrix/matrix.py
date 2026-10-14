@@ -336,6 +336,16 @@ def avd_tool(*argv, timeout=600):
     return run([str(ROOT / "tool/android/avd.sh"), *argv], timeout=timeout)
 
 
+def boot_failure(avd: str) -> str:
+    """The emulator's own reason for not starting, when it gave one."""
+    log = Path(os.environ.get("TMPDIR", "/tmp")) / f"emulator-{avd}.log"
+    try:
+        fatal = [l for l in log.read_text(errors="replace").splitlines() if "FATAL" in l]
+    except OSError:
+        return ""
+    return fatal[-1].split("|", 1)[-1].strip() if fatal else ""
+
+
 def boot(avd: str) -> str | None:
     # One at a time: emulators that start in the same second can each be
     # told there is no hardware acceleration.
@@ -386,7 +396,9 @@ def android_worker(avd: str, cells: list[dict], run_dir: Path, args, results: di
         out = run_dir / cell["id"]
         started = time.time()
         if serial is None:
-            results[cell["id"]] = {"status": "not-run", "reason": f"{avd} did not boot"}
+            why = boot_failure(avd)
+            results[cell["id"]] = {"status": "not-run",
+                                   "reason": f"{avd} did not boot" + (f": {why}" if why else "")}
             continue
         outcome = run_android_cell(cell, serial, out, run_dir, args)
         retried = False
@@ -702,6 +714,12 @@ def cmd_run(args) -> int:
     latest.symlink_to(run_dir.name)
     started = time.time()
     say(f"{tier_name}: {len(cells)} cell(s) -> {run_dir.relative_to(ROOT)}")
+    free_gb = shutil.disk_usage(ROOT).free // 2**30
+    if free_gb < 15 and any(c["kind"] == "android" for c in cells):
+        # Each running emulator needs scratch space, and the emulator
+        # refuses to start below its own threshold — mid-run, as "did not
+        # boot".
+        say(f"WARNING: only {free_gb} GB free; emulators may refuse to start")
 
     notes = build(cells, run_dir, args)
     results: dict = {}
