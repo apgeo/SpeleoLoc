@@ -285,10 +285,13 @@ class _EditDocumentationFilePageState
               ],
             ),
             const SizedBox(height: 12),
-            Row(
+            // A Wrap, not a Row: the hash is 64 characters with no break in
+            // them, wider than any phone, and goes to a line of its own.
+            Wrap(
+              spacing: 16,
+              runSpacing: 4,
               children: [
                 Text('${LocServ.inst.t('file_size')}: ${_fileSize ?? '-'}'),
-                const SizedBox(width: 16),
                 Text('hash: ${_fileHash ?? '-'}'),
               ],
             ),
