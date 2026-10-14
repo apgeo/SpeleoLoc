@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -163,32 +164,26 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     }
   }
 
+  // Kept from initState rather than read again in dispose: by the time
+  // dispose runs, `ref` can no longer be used, and the read there threw —
+  // leaving this page's listener attached to the long-lived service.
+  late final CaveTripService _tripService;
+
   @override
   void initState() {
     super.initState();
     _editorController.externalNavBarKey = _navBarKey;
     _loadCavePlaceSortOption();
     _load();
-    ref
-        .read(caveTripServiceProvider)
-        .activeTripIdNotifier
-        .addListener(_onTripStateChanged);
-    ref
-        .read(caveTripServiceProvider)
-        .isPausedNotifier
-        .addListener(_onTripStateChanged);
+    _tripService = ref.read(caveTripServiceProvider);
+    _tripService.activeTripIdNotifier.addListener(_onTripStateChanged);
+    _tripService.isPausedNotifier.addListener(_onTripStateChanged);
   }
 
   @override
   void dispose() {
-    ref
-        .read(caveTripServiceProvider)
-        .activeTripIdNotifier
-        .removeListener(_onTripStateChanged);
-    ref
-        .read(caveTripServiceProvider)
-        .isPausedNotifier
-        .removeListener(_onTripStateChanged);
+    _tripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
+    _tripService.isPausedNotifier.removeListener(_onTripStateChanged);
     _playbackController?.dispose();
     _editorController.detach();
     _imageProviderCache.clear();

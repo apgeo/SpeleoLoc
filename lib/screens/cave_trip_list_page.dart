@@ -49,30 +49,24 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
   List<CaveTrip> _endedTrips = [];
   Map<Uuid, int> _pointCounts = {};
 
+  // Kept from initState rather than read again in dispose: by the time
+  // dispose runs, `ref` can no longer be used, and the read there threw —
+  // leaving this page's listener attached to the long-lived service.
+  late final CaveTripService _tripService;
+
   @override
   void initState() {
     super.initState();
     _load();
-    ref
-        .read(caveTripServiceProvider)
-        .activeTripIdNotifier
-        .addListener(_onTripStateChanged);
-    ref
-        .read(caveTripServiceProvider)
-        .isPausedNotifier
-        .addListener(_onTripStateChanged);
+    _tripService = ref.read(caveTripServiceProvider);
+    _tripService.activeTripIdNotifier.addListener(_onTripStateChanged);
+    _tripService.isPausedNotifier.addListener(_onTripStateChanged);
   }
 
   @override
   void dispose() {
-    ref
-        .read(caveTripServiceProvider)
-        .activeTripIdNotifier
-        .removeListener(_onTripStateChanged);
-    ref
-        .read(caveTripServiceProvider)
-        .isPausedNotifier
-        .removeListener(_onTripStateChanged);
+    _tripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
+    _tripService.isPausedNotifier.removeListener(_onTripStateChanged);
     super.dispose();
   }
 

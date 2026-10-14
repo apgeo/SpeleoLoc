@@ -208,11 +208,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     if (range == null || !mounted) return;
     final result = await ref
         .read(rangeCodeGeneratorProvider)
-        .generateCavePlaceCodes(
-          cave: cave,
-          start: range.start,
-          end: range.end,
-        );
+        .generateCavePlaceCodes(cave: cave, start: range.start, end: range.end);
     if (!mounted) return;
     await presentRangeCodeResult(context, result);
   }
@@ -240,14 +236,17 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   bool _showDownArrow = false;
   StreamSubscription<List<CavePlace>>? _cavePlacesSub;
 
+  // Kept from initState rather than read again in dispose: by the time
+  // dispose runs, `ref` can no longer be used, and the read there threw —
+  // leaving this page's listener attached to the long-lived service.
+  late final CaveTripService _tripService;
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    ref
-        .read(caveTripServiceProvider)
-        .activeTripIdNotifier
-        .addListener(_onTripStateChanged);
+    _tripService = ref.read(caveTripServiceProvider);
+    _tripService.activeTripIdNotifier.addListener(_onTripStateChanged);
     _loadCave();
     _loadSurfaceAreas();
     _loadCavePlaces();
@@ -481,10 +480,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     _listController.dispose();
     _qrScanLongPressTimer?.cancel();
     _manualQrSearchController.dispose();
-    ref
-        .read(caveTripServiceProvider)
-        .activeTripIdNotifier
-        .removeListener(_onTripStateChanged);
+    _tripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     super.dispose();
   }
 
