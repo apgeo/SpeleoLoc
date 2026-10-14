@@ -41,7 +41,8 @@
           "flows": [
             "smoke",
             "sweep_core",
-            "deep_cave_create"
+            "deep_cave_create",
+            "deep_trip_lifecycle"
           ]
         },
         {
@@ -109,7 +110,8 @@
           "flows": [
             "smoke",
             "sweep_all",
-            "deep_cave_create"
+            "deep_cave_create",
+            "deep_trip_lifecycle"
           ]
         },
         {
@@ -175,7 +177,8 @@
           "flows": [
             "trip_media",
             "scanner_live_qr",
-            "ble_scan"
+            "ble_scan",
+            "deep_trip_lifecycle"
           ],
           "media": true,
           "sample": "cross"
@@ -252,7 +255,8 @@
           "flows": [
             "smoke",
             "sweep_all",
-            "deep_cave_create"
+            "deep_cave_create",
+            "deep_trip_lifecycle"
           ]
         }
       ],
@@ -339,7 +343,8 @@
             "trip_media",
             "scanner_live_qr",
             "deep_cave_create",
-            "ble_scan"
+            "ble_scan",
+            "deep_trip_lifecycle"
           ],
           "media": true,
           "sample": "cross"
