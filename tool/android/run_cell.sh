@@ -21,6 +21,10 @@
 #   --apk FILE         the test build (default: the debug APK in build/)
 #   --out DIR          where results go (default: build/matrix/manual/<serial>)
 #   --timeout SECONDS  hard limit for the drive (default: 2400)
+#   --monkey EVENTS    instead of the flows, send this many random taps,
+#                      swipes and keys to the app (needs --apk pointing at
+#                      the plain app build, not the test build) and fail on
+#                      a crash or an ANR
 #
 # Exit code: 0 passed, 1 a flow failed, 2 the cell could not be set up,
 # 3 this device cannot represent the cell (e.g. dark mode on API 24).
@@ -31,7 +35,7 @@ cd "$(dirname "$0")/../.."
 . tool/android/lib.sh
 
 SERIAL_ARG="" FLOWS="" SHAPE=native LANG_CODE=ro SETTINGS=default ARCHIVE=""
-JOURNEY="" STATE="" MEDIA="" OUT="" TIMEOUT=2400
+JOURNEY="" STATE="" MEDIA="" OUT="" TIMEOUT=2400 MONKEY=0
 APK=build/app/outputs/flutter-apk/app-debug.apk
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -47,6 +51,7 @@ while [ "$#" -gt 0 ]; do
     --apk) APK="$2"; shift ;;
     --out) OUT="$2"; shift ;;
     --timeout) TIMEOUT="$2"; shift ;;
+    --monkey) MONKEY="$2"; shift ;;
     *) echo "unknown option: $1" >&2; exit 64 ;;
   esac
   shift
@@ -133,6 +138,39 @@ PY
 adb_s push "$OUT/cell.json" /data/local/tmp/matrix_cell.json >/dev/null
 adb_s shell "run-as $PKG cp /data/local/tmp/matrix_cell.json app_flutter/matrix_cell.json" \
   || setup_error "could not hand the cell to the app"
+
+# --- monkey -----------------------------------------------------------------
+# Random input finds what no scripted flow thinks of doing: a back press in
+# the middle of a save, three dialogs opened on top of each other. The seed
+# is fixed per cell so a crash can be replayed with the same events.
+if [ "$MONKEY" -gt 0 ]; then
+  adb_s logcat -c >/dev/null 2>&1 || true
+  seed="$(printf '%s' "$DEVICE$SHAPE$LANG_CODE" | cksum | cut -d' ' -f1)"
+  timeout "$TIMEOUT" "$ADB" -s "$SERIAL" shell monkey -p "$PKG" \
+    --pct-syskeys 0 --pct-appswitch 0 --ignore-security-exceptions \
+    --monitor-native-crashes --throttle 150 -s "$seed" -v "$MONKEY" \
+    > "$OUT/monkey.log" 2>&1
+  adb_s logcat -d -v time 2>/dev/null \
+    | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E AndroidRuntime" \
+    > "$OUT/logcat.txt" || true
+  adb_sh am force-stop "$PKG"
+  tool/android/device_profile.sh reset "$SERIAL" >/dev/null 2>&1
+  problem="$(grep -m1 -E '// (CRASH|NOT RESPONDING)' "$OUT/monkey.log" || true)"
+  [ -z "$problem" ] && problem="$(grep -m1 -E 'FATAL EXCEPTION|ANR in' "$OUT/logcat.txt" || true)"
+  sent="$(grep -oE 'Events injected: [0-9]+' "$OUT/monkey.log" | grep -oE '[0-9]+' || echo 0)"
+  python3 - "$OUT/result.json" "$problem" "$sent" "$seed" <<'RESULT'
+import json, sys
+out, problem, sent, seed = sys.argv[1:]
+json.dump({"flows": [{
+    "name": "monkey",
+    "status": "failed" if problem else "passed",
+    "detail": problem or f"{sent} events, seed {seed}, no crash and no ANR",
+}]}, open(out, "w"), indent=1)
+RESULT
+  [ -z "$problem" ] && finish passed 0
+  echo "$problem" >&2
+  finish failed 1
+fi
 
 # --- drive ------------------------------------------------------------------
 adb_s logcat -c >/dev/null 2>&1 || true

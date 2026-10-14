@@ -198,6 +198,25 @@
             "no_media"
           ],
           "sample": "cross"
+        },
+        {
+          "avds": [
+            "speleo_mx_api33"
+          ],
+          "shapes": [
+            "native"
+          ],
+          "langs": [
+            "en"
+          ],
+          "settings": [
+            "busy"
+          ],
+          "flows": [
+            "monkey"
+          ],
+          "monkey": 1500,
+          "sample": "cross"
         }
       ]
     },
@@ -370,6 +389,28 @@
             "tz_far_east",
             "locale_en"
           ],
+          "sample": "cross"
+        },
+        {
+          "avds": [
+            "speleo_mx_api24",
+            "speleo_mx_api33",
+            "speleo_mx_api34",
+            "speleo_mx_api36_fold"
+          ],
+          "shapes": [
+            "native"
+          ],
+          "langs": [
+            "ro"
+          ],
+          "settings": [
+            "default"
+          ],
+          "flows": [
+            "monkey"
+          ],
+          "monkey": 4000,
           "sample": "cross"
         }
       ]

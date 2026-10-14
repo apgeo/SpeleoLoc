@@ -39,6 +39,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 FIXTURES = ROOT / "build" / "fixtures"
 APK = ROOT / "build" / "app" / "outputs" / "flutter-apk" / "app-debug.apk"
+MONKEY_APK = ROOT / "build" / "matrix" / "apk" / "app-monkey.apk"
 BUNDLED = ROOT / "assets" / "test_archive"
 SETTINGS = "build_settings.automation.json"
 
@@ -149,6 +150,9 @@ def expand(tier: dict, shapes: dict, args) -> list[dict]:
                         "flows": args.flows or group["flows"],
                         "media": bool(group.get("media")),
                     }
+                    if group.get("monkey"):
+                        cell["monkey"] = int(group["monkey"])
+                        cell["flows"] = ["monkey"]
                     if kind:
                         cell[kind] = name
                     cells.append(cell)
@@ -164,6 +168,8 @@ def expand(tier: dict, shapes: dict, args) -> list[dict]:
         parts += [cell[k] for k in ("journey", "state") if k in cell]
         if cell["kind"] == "android" and set(cell["flows"]) == {"trip_media"}:
             parts.append("media")
+        if "monkey" in cell:
+            parts.append("monkey")
         cell["id"] = f"{cell['device']}/{'-'.join(parts)}"
     return unique
 
@@ -213,6 +219,22 @@ def build(cells: list[dict], run_dir: Path, args) -> dict:
                 "bundled into the test build; move it out of assets/test_archive/"
             )
             return notes
+        if any("monkey" in c for c in cells):
+            # Random input needs the app itself, not the test build, whose
+            # entry point is the test suite. Built first and set aside,
+            # because both builds write the same output file.
+            say("build: Android app for the monkey runs")
+            code, _ = run(
+                ["flutter", "build", "apk", "--debug", "--no-pub",
+                 "--target-platform", "android-x64",
+                 f"--dart-define-from-file={SETTINGS}"],
+                log, timeout=3600,
+            )
+            if code == 0:
+                MONKEY_APK.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(APK, MONKEY_APK)
+            else:
+                notes["monkey"] = f"the plain app did not build; see {log.relative_to(ROOT)}"
         say("build: Android test app")
         # x86_64 only: it is what every emulator here runs, and it leaves
         # out two thirds of a build that would otherwise be installed on
@@ -318,6 +340,8 @@ def run_android_cell(cell: dict, serial: str, out: Path, run_dir: Path, args) ->
     for key in ("journey", "state"):
         if key in cell:
             cmd += [f"--{key}", cell[key]]
+    if "monkey" in cell:
+        cmd += ["--monkey", str(cell["monkey"]), "--apk", str(MONKEY_APK)]
     code, text = run(cmd, out / "cell.log", timeout=args.cell_timeout + 600)
     last = text.strip().splitlines()[-1] if text.strip() else ""
     status = last.split("=", 1)[1] if last.startswith("CELL=") else "setup-error"
