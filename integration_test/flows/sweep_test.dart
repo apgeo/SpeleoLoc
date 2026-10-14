@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,10 +8,6 @@ import '../support/fixture.dart';
 import '../support/flow.dart';
 import '../support/probes.dart';
 import '../support/recorder.dart';
-
-/// How long one screen may take to open, settle and be photographed before
-/// the sweep gives up on it and moves to the next.
-const _perScreen = Duration(seconds: 60);
 
 /// Opens every screen in the catalogue, in every shape the cell asks for.
 ///
@@ -95,6 +89,10 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
             );
             continue;
           }
+          // Every step below is bounded on its own. Wrapping them in one
+          // overall timeout looked tidier and was wrong: a timed-out future
+          // keeps running, and its frames then collided with the next
+          // screen's ("Guarded function conflict").
           await () async {
             if (page != null) driver.push(page);
             final idle = await driver.settle(
@@ -114,13 +112,13 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
             }
             findings = [
               ...Probes.truncatedText(tester),
-              ...await Probes.accessibility(tester),
+              ...await Probes.accessibility(
+                tester,
+                contrast: AppDriver.onDesktop,
+              ),
             ];
             await driver.shoot(shot);
-          }().timeout(_perScreen);
-        } on TimeoutException {
-          status = 'timeout';
-          error = 'did not finish within ${_perScreen.inSeconds}s';
+          }();
         } catch (e, stack) {
           status = 'error';
           error = _brief(e, stack);
@@ -129,7 +127,7 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
         try {
           lastStack = null;
           reported.clear();
-          await driver.backToHome().timeout(const Duration(seconds: 30));
+          await driver.backToHome();
           final leftover = tester.takeException();
           if (leftover != null && status == 'ok') {
             error = 'on closing: ${_describe(leftover, lastStack, reported)}';

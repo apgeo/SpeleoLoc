@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,19 +45,22 @@ class Probes {
   /// findings, not test failures: the app has never been held to these, and
   /// a check introduced as a hard gate on day one gets switched off by
   /// day two. The report counts them so the number can only go down.
+  ///
+  /// [contrast] is off on devices: it reads the rendered pixels back,
+  /// which software rendering makes slow, and colours do not depend on the
+  /// platform, so the desktop build's answer stands for both.
   static Future<List<Map<String, Object?>>> accessibility(
-    WidgetTester tester,
-  ) async {
+    WidgetTester tester, {
+    bool contrast = true,
+  }) async {
     final findings = <Map<String, Object?>>[];
     for (final (name, guideline) in [
       ('tap_target', androidTapTargetGuideline),
       ('unlabeled_tap_target', labeledTapTargetGuideline),
-      ('text_contrast', textContrastGuideline),
+      if (contrast) ('text_contrast', textContrastGuideline),
     ]) {
       try {
-        final result = await Future.value(
-          guideline.evaluate(tester),
-        ).timeout(const Duration(seconds: 20));
+        final result = await guideline.evaluate(tester);
         if (result.passed) continue;
         final issues = result.reason!
             .split('\n')
@@ -73,8 +74,6 @@ class Probes {
               line.length > 160 ? '${line.substring(0, 160)}…' : line,
           ],
         });
-      } on TimeoutException {
-        findings.add({'kind': name, 'probe_error': 'timed out'});
       } catch (e) {
         final text = '$e';
         findings.add({
