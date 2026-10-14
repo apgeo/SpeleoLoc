@@ -81,7 +81,7 @@ class MatrixCell {
   /// The known issue [error] on [screen] in [shape] is, if any.
   KnownIssue? known(String screen, String shape, String error) {
     for (final issue in knownIssues) {
-      if (issue.screen == screen &&
+      if ((issue.screen == '*' || issue.screen == screen) &&
           (issue.shape == '*' || issue.shape == shape) &&
           error.contains(issue.contains)) {
         return issue;

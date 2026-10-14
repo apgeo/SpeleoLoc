@@ -35,6 +35,13 @@
       "contains": "overflowed",
       "reason": "same raster map nav bar as the map viewer (lib/widgets/raster_map_nav_bar.dart:694); waits on the same decision.",
       "since": "2026-10-14"
+    },
+    {
+      "screen": "*",
+      "shape": "*",
+      "contains": "HandshakeException",
+      "reason": "Android 7.x cannot verify tile.opentopomap.org: its chain ends at ISRG Root X2, which the Android 7 trust store lacks, so map tiles never load on those phones (minSdk is 24). Fix: give the tile HTTP client a SecurityContext that also trusts the ISRG roots, or use a tile server whose chain Android 7 trusts.",
+      "since": "2026-10-15"
     }
   ]
 }

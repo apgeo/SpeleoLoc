@@ -257,8 +257,11 @@ String _describe(
 /// Whether everything that went wrong on a screen was a failed network
 /// request, such as a map tile that could not be fetched.
 bool _networkOnly(List<FlutterErrorDetails> reported, String error) {
+  // Not HandshakeException: a TLS failure is not the network being away.
+  // It is how Android 7 rejects the tile server's certificate chain, and
+  // counting it as "network" would have hidden that.
   final network = RegExp(
-    r'SocketException|ClientException|HandshakeException|HttpException|'
+    r'SocketException|ClientException|HttpException|'
     r'Failed host lookup|Connection (refused|reset|closed)',
   );
   if (reported.isEmpty) return network.hasMatch(error);
