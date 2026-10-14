@@ -1,0 +1,126 @@
+{
+  "_comment": [
+    "What each tier of the test matrix runs. Read by tool/matrix/matrix.py.",
+    "",
+    "A tier has two halves. `desktop` runs the app's Linux build: no phone",
+    "hardware, but it starts in seconds and reshapes itself, so one process",
+    "walks every listed shape. `android` runs on emulators, where the",
+    "platform is real: one shape per run, applied to the emulator from",
+    "outside.",
+    "",
+    "An android group is expanded over avds x shapes x langs x settings and",
+    "then sampled: `cross` keeps every combination, `pairwise` keeps the",
+    "fewest runs in which every pair of values still meets at least once,",
+    "`rotate` keeps every avd x shape x lang and cycles settings across them.",
+    "Depth and breadth are deliberately not multiplied: the sweep goes wide,",
+    "the flows that exercise a feature run once per Android version."
+  ],
+  "aliases": {
+    "pulse-minimal-avd": "pulse",
+    "ring-medium-avd": "ring",
+    "full-avd": "full"
+  },
+  "tiers": {
+    "pulse": {
+      "about": "Every change. One emulator, the screens people live in, every phone shape on the desktop build.",
+      "desktop": [
+        {
+          "langs": ["ro"], "settings": ["default"],
+          "shapes": ["phone_small", "phone_common", "phone_landscape", "tablet_portrait", "phone_large_text"],
+          "flows": ["smoke", "sweep_core"]
+        },
+        {
+          "langs": ["en"], "settings": ["busy"],
+          "shapes": ["phone_small", "phone_large_text"],
+          "flows": ["sweep_core"]
+        }
+      ],
+      "android": [
+        {
+          "avds": ["speleo_mx_api34"],
+          "shapes": ["native"], "langs": ["ro"], "settings": ["default"],
+          "flows": ["smoke", "sweep_core", "trip_media"], "media": true,
+          "sample": "cross"
+        }
+      ]
+    },
+    "ring": {
+      "about": "A finished feature, or weekly. Every screen in every shape and language on the desktop build; four Android versions and form factors.",
+      "desktop": [
+        {
+          "langs": ["ro", "en"], "settings": ["default", "busy"],
+          "shapes": ["phone_small", "phone_common", "phone_landscape", "tablet_portrait", "tablet_landscape", "phone_large_text"],
+          "flows": ["smoke", "sweep_all"]
+        }
+      ],
+      "android": [
+        {
+          "avds": ["speleo_mx_api24", "speleo_mx_api33", "speleo_mx_api34_tablet", "speleo_mx_api36_fold"],
+          "shapes": ["native", "phone_small", "phone_large_text"],
+          "langs": ["ro", "en"], "settings": ["default", "busy"],
+          "flows": ["smoke", "sweep_all"],
+          "sample": "pairwise"
+        },
+        {
+          "avds": ["speleo_mx_api24", "speleo_mx_api33", "speleo_mx_api34_tablet", "speleo_mx_api36_fold"],
+          "shapes": ["native"], "langs": ["ro"], "settings": ["default"],
+          "flows": ["trip_media"], "media": true,
+          "sample": "cross"
+        },
+        {
+          "avds": ["speleo_mx_api33"],
+          "shapes": ["native"], "langs": ["ro"], "settings": ["default"],
+          "flows": ["sweep_core"],
+          "journeys": ["no_camera", "no_location", "no_bluetooth", "no_notifications", "no_media"],
+          "sample": "cross"
+        }
+      ]
+    },
+    "full": {
+      "about": "A milestone or a release. Everything: all nine emulators, every shape including the largest font sizes, every permission journey and platform state.",
+      "desktop": [
+        {
+          "langs": ["ro", "en"], "settings": ["default", "busy", "tours"],
+          "shapes": ["phone_small", "phone_common", "phone_landscape", "tablet_portrait", "tablet_landscape", "phone_large_text", "phone_max_text_bold"],
+          "flows": ["smoke", "sweep_all"]
+        }
+      ],
+      "android": [
+        {
+          "avds": ["speleo_mx_api24", "speleo_mx_api30", "speleo_mx_api31", "speleo_mx_api33", "speleo_mx_api34", "speleo_mx_api34_aosp", "speleo_mx_api35_16k"],
+          "shapes": ["native", "phone_small", "phone_landscape", "phone_large_text", "phone_max_text_bold", "phone_dark"],
+          "langs": ["ro", "en"], "settings": ["default", "busy", "tours"],
+          "flows": ["smoke", "sweep_all"],
+          "sample": "rotate"
+        },
+        {
+          "avds": ["speleo_mx_api34_tablet", "speleo_mx_api36_fold"],
+          "shapes": ["native", "tablet_landscape", "phone_large_text"],
+          "langs": ["ro", "en"], "settings": ["default", "busy"],
+          "flows": ["smoke", "sweep_all"],
+          "sample": "rotate"
+        },
+        {
+          "avds": ["speleo_mx_api24", "speleo_mx_api30", "speleo_mx_api31", "speleo_mx_api33", "speleo_mx_api34", "speleo_mx_api34_tablet", "speleo_mx_api34_aosp", "speleo_mx_api35_16k", "speleo_mx_api36_fold"],
+          "shapes": ["native"], "langs": ["ro"], "settings": ["default"],
+          "flows": ["trip_media"], "media": true,
+          "sample": "cross"
+        },
+        {
+          "avds": ["speleo_mx_api24", "speleo_mx_api31", "speleo_mx_api33", "speleo_mx_api34", "speleo_mx_api36_fold"],
+          "shapes": ["native"], "langs": ["ro"], "settings": ["default"],
+          "flows": ["sweep_all"],
+          "journeys": ["no_camera", "no_location", "approximate_location", "no_bluetooth", "no_notifications", "no_media", "partial_media", "no_microphone"],
+          "sample": "cross"
+        },
+        {
+          "avds": ["speleo_mx_api34"],
+          "shapes": ["native"], "langs": ["ro"], "settings": ["default"],
+          "flows": ["sweep_core"],
+          "states": ["offline", "battery_saver", "tz_utc", "tz_far_east", "locale_en"],
+          "sample": "cross"
+        }
+      ]
+    }
+  }
+}
