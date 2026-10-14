@@ -84,6 +84,7 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
   bool _saving = false;
 
   List<SurfaceArea> _surfaceAreas = [];
+  bool _surfaceAreasLoaded = false;
   Uuid? _selectedSurfaceAreaId;
 
   @override
@@ -101,7 +102,10 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
   void _loadSurfaceAreas() async {
     final areas = await ref.read(caveRepositoryProvider).getSurfaceAreas();
     if (!mounted) return;
-    setState(() => _surfaceAreas = areas);
+    setState(() {
+      _surfaceAreas = areas;
+      _surfaceAreasLoaded = true;
+    });
   }
 
   @override
@@ -257,7 +261,18 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<Uuid?>(
-                      initialValue: _selectedSurfaceAreaId,
+                      // Until the areas arrive, the cave's own area is not
+                      // among the items, which the dropdown asserts
+                      // against. It is built again once they are in,
+                      // because a form field reads its initial value only
+                      // when it is created.
+                      key: ValueKey(_surfaceAreasLoaded),
+                      initialValue:
+                          _surfaceAreas.any(
+                            (a) => a.uuid == _selectedSurfaceAreaId,
+                          )
+                          ? _selectedSurfaceAreaId
+                          : null,
                       decoration: InputDecoration(
                         labelText: LocServ.inst.t('area_title'),
                       ),
