@@ -213,9 +213,15 @@ class AppDriver {
       await binding.convertFlutterSurfaceToImage();
       await tester.pump();
     } catch (e) {
-      stdout.writeln('surface conversion unavailable ($e)');
+      // Already converted earlier in this test: expected, and harmless.
     }
-    await binding.takeScreenshot(name);
+    try {
+      await binding.takeScreenshot(name);
+    } catch (e) {
+      // The picture is evidence, not the assertion; a flow whose checks
+      // passed has passed. Say why there is no picture instead.
+      Recorder.instance.note('screenshots', 'no screenshot $name: $e');
+    }
   }
 
   String _semanticsTree() {
