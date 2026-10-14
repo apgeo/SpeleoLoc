@@ -6,228 +6,286 @@
 > emulated phones and checking the UI automatically, not about using it
 > underground.
 
-Three layers, cheapest first. Most regressions are caught by the first two,
-which need no device at all and run in seconds.
+## The short version
+
+```bash
+tool/ui_check.sh                       # every change: ~10 minutes
+tool/test_matrix.sh --tier ring        # a finished feature, or weekly
+tool/test_matrix.sh --tier full        # a milestone or a release: hours
+```
+
+Each run leaves `build/matrix/<run>/report.md`; `build/matrix/latest` points
+at the newest.
+
+## Layers, cheapest first
 
 | Layer | What it catches | Cost |
 |---|---|---|
-| Layout checks | Overflow on a narrow phone, a tablet, a landscape phone, a 1.5× system font | ~2 s, no device |
-| Golden images | A screen that still fits but no longer looks the way it was designed | ~2 s, no device, one reviewed PNG per case |
-| On-device tests | Anything involving a real platform: the media library, QR decoding, permissions | Minutes, needs an emulator |
+| Analysis and UI lint | New analyzer issues; user-visible strings that bypass translation; icon buttons with no tooltip | Seconds |
+| Layout and golden widget tests | One widget overflowing on a narrow phone, a tablet, landscape, a 1.5× font; a widget that no longer looks as designed | Seconds |
+| Desktop sweep | Every screen opened in every phone shape and language on the app's Linux build: layout errors, crashes, cut-off text, accessibility | Minutes, no emulator |
+| Emulator cells | The same screens on real Android versions, plus what only a platform has: the media library, permissions, a QR code read out of a photo, random input | Minutes per cell |
+| Release gates | Native libraries that will not load on 16 KB-page phones, a permission a plugin slipped in, test data bundled in a store build | Minutes, once per release |
 
----
+## Tiers
 
-## 1. Layout checks (no device)
+`tool/matrix/tiers.json` says exactly what each tier contains;
+`tool/test_matrix.sh plan --tier <name>` lists its cells without running
+anything.
 
-`test/support/layout_harness.dart` renders a widget at every profile in
-`test/support/device_profiles.dart` and fails if any of them overflows,
-naming every failing profile at once.
+| Tier | Also called | When | What runs |
+|---|---|---|---|
+| `pulse` | `pulse-minimal-avd` | Every change (this is what `tool/ui_check.sh` runs) | Core screens in five shapes on the desktop build, in Romanian and in the pseudo-locale; core screens, smoke and the media flow on one API 34 emulator |
+| `ring` | `ring-medium-avd` | A finished feature; weekly | Every screen, every shape, both languages and the pseudo-locale on the desktop build; four Android versions and form factors (24, 33, tablet, foldable) sampled pairwise over shape, language and settings; permission journeys on API 33; random input |
+| `full` | `full-avd` | A milestone, before a release | Everything on all nine emulators, including the largest font size with bold text, dark system UI, every permission journey, offline / battery saver / other time zone and language, and random input on four versions |
 
-```dart
-testLaysOutEverywhere('a row with a long title', () => myWidget());
-```
+Breadth and depth are not multiplied together. The sweep goes wide —
+every screen, every shape — and stays shallow; the flows that exercise a
+feature run once per Android version.
 
-```bash
-flutter test test/widgets/trip_media_layout_test.dart
-```
-
-The profiles bracket what the app meets rather than enumerating devices: the
-narrowest phone still in use, the common and large phone shapes, the
-landscape phone shape the trip screen has a branch for, a tablet, and a 1.5×
-font scale. **Add a case here whenever you build a row that packs several
-controls beside variable-length text** — that is the shape that breaks.
-
-## 2. Golden images (no device)
-
-```dart
-testGoldenAcrossDevices('the media rows', 'trip_media_rows', () => rows());
-```
-
-Goldens live in `test/widgets/goldens/`. They cover the two profiles that
-break first (narrowest phone, large font) rather than all six, because each
-one is a binary a human has to review.
+Narrower runs:
 
 ```bash
-# compare (what CI does)
-flutter test test/widgets/trip_media_golden_test.dart
-# regenerate after an intentional UI change — then LOOK at the diff
-flutter test --update-goldens test/widgets/trip_media_golden_test.dart
+tool/test_matrix.sh --tier ring --only desktop
+tool/test_matrix.sh --tier ring --avd speleo_mx_api33
+tool/test_matrix.sh --tier pulse --flows smoke
 ```
 
-The harness loads the project's fonts plus the SDK's Roboto and
-MaterialIcons, so goldens are readable rather than a grid of tofu boxes.
-They are generated on Linux; glyph rasterisation differs per platform, so a
-golden produced on another OS will not match.
+Exit code: 0 passed, 1 something failed, 2 part of the tier could not run.
+A cell that did not run is listed as NOT RUN and is never counted as a pass.
 
-## 3. On-device tests
+### What a run checks
+
+- **Flows** (`integration_test/`): `smoke` (the app starts),
+  `sweep_core` / `sweep_all` (open every screen in the catalogue),
+  `trip_media` (pictures from the device library become trip points),
+  `scanner_live_qr` (the live scanner reads a QR label the emulator's camera
+  shows), `ble_scan` (the BLE plugin hears the emulated radio's test
+  beacons), `deep_cave_create` (a cave created through the UI gets its
+  entrance), `monkey` (random taps, swipes and keys; fails on a crash or an
+  ANR).
+- **Known issues**: a screen error listed in `tool/matrix/known_issues.json`
+  is reported under its own heading and does not fail the run. Remove the
+  entry when the bug is fixed.
+- **For every screen the sweep opens**: a build or layout error, with the
+  widget and the file and line it came from; text the framework had to cut
+  off; Flutter's accessibility guidelines — tap targets under 48 dp,
+  tappable things with no label, low-contrast text. Errors fail the run;
+  cut-off text and accessibility are findings, counted in the report so the
+  numbers can only go down.
+- **Shapes** (`tool/matrix/shapes.json`): narrow, common and landscape
+  phone, tablet portrait and landscape, 1.5× font, and — best effort,
+  reported but never failing — 2× font with bold text. The desktop build
+  takes each shape inside one process. An emulator is reshaped from outside
+  (`wm size`, `wm density`, font scale) by `tool/android/device_profile.sh`,
+  with the status bar pinned by demo mode so screenshots compare.
+- **Settings profiles**: `default`, `busy` (every optional toolbar, the
+  compact navigation bar, the widest coordinate format) and `tours` (the
+  first-run tour left on). The app keeps settings in its database, so a
+  profile is a variant of the fixture archive, not a test-only switch.
+- **Languages**: Romanian, English, and a pseudo-locale — English made about
+  40% longer, accented and bracketed — that shows today where a longer
+  future translation would overflow.
+
+### Adding a screen
+
+Add it to `integration_test/catalogue/screens.dart`. A screen missing from
+that list is a screen nothing looks at.
+
+## The desktop build
+
+The sweep's breadth comes from the app's Linux build: it starts in seconds,
+needs no emulator and can take any screen shape. It is given Roboto and the
+Android platform behaviour so it measures text and lays out widgets like a
+phone, and it runs in a private home layout under a virtual display, so it
+never touches the real `~/Documents`. Phone hardware — camera, Bluetooth,
+media library, location — has no Linux plugin, so screens that need it are
+skipped there with the reason and opened on an emulator instead.
+
+Needs `clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev xvfb`.
+
+## The emulators
+
+`tool/android/avd.sh` manages two sets, kept apart on purpose:
+
+| Set | Names | Used for |
+|---|---|---|
+| hand | `speleo_api*` | Working by hand, from a terminal or the VSCode launch configurations. Never wiped by any script. |
+| matrix | `speleo_mx_*` | Owned by the test matrix. `avd.sh prepare` wipes one, boots it once, waits for first-boot work to settle and saves a `pristine` snapshot; every run starts from that and writes nothing back. Do not use them by hand. |
+
+The matrix set brackets where Android changed under the app: 24 (minSdk,
+legacy storage), 30 (scoped storage, one-time permissions), 31 (Bluetooth
+permissions, approximate location), 33 (notification and media permissions),
+34 (partial photo access; also a tablet and an AOSP image without Google
+services), 35 on a 16 KB page-size image (edge-to-edge enforced), and 36 on a
+foldable.
+
+```bash
+tool/android/avd.sh doctor              # can this machine run one?
+tool/android/avd.sh images --install    # download what the sets need
+tool/android/avd.sh prepare matrix      # create and snapshot the matrix set
+tool/android/avd.sh boot speleo_api34_pixel7 --headless
+tool/android/avd.sh disk                # what they cost on disk
+tool/android/avd.sh stop
+```
+
+A prepared AVD with its snapshot takes about 2.5 GB. Installed images are
+made sparse — an unpacked image is mostly empty filesystem — which saves
+several GB each.
 
 ### What the machine needs
 
-The emulator needs `/dev/kvm`. `tool/android/avd.sh doctor` says whether it
-is there and what the access rests on.
-
-On a Hyper-V guest, KVM appears once nested virtualization is exposed to the
-VM — a host-side setting, applied with the VM shut down:
+The emulator needs `/dev/kvm`. On a Hyper-V guest it appears once nested
+virtualization is exposed to the VM — a host-side setting, applied with the
+VM shut down:
 
 ```powershell
 Set-VMProcessor -VMName <vm-name> -ExposeVirtualizationExtensions $true
 ```
 
 **Dynamic Memory can stay on.** Microsoft's restriction applies while
-Hyper-V itself runs inside the guest; this guest runs KVM. Measured on the
-development VM: the setting is accepted with Dynamic Memory enabled, an AVD
-boots in about 35 s, and the balloon keeps growing under memory pressure
-with an emulator live.
+Hyper-V itself runs inside the guest; this guest runs KVM.
 
-Three things to know about running this way:
+**Join the `kvm` group** (`sudo usermod -aG kvm "$USER"`). Without it,
+access to `/dev/kvm` comes from the desktop session, and that moves to the
+login greeter the moment the screen locks or a remote desktop detaches —
+which is exactly when unattended runs happen. A shell started before
+joining picks the group up through `sg`, which the scripts do on their own.
 
-- **The emulator warns that nested virtualization "is not recommended".**
-  That is printed whenever it detects it is inside any VM; it is a caution,
-  not a detected fault. Treat the setup as *works, keep an eye on it*: one
-  good session is not a guarantee about sustained load.
-- **KVM access may rest on a desktop-session ACL rather than group
-  membership.** That covers anything started while the desktop session is
-  up — a terminal, an agent — and silently disappears for a systemd service,
-  a CI runner or a container. Before launching emulators from one of those,
-  `sudo usermod -aG kvm "$USER"` and log in again.
-- **There is no GPU**, so rendering is software (`swiftshader_indirect`).
-  Unrelated to KVM and will not change.
+**There is no GPU**, so rendering is software. An idle emulator costs
+about 60% of one core; three run side by side comfortably.
 
-### The emulators
+### Single cells and device scripts
 
-`tool/android/avd.sh` owns the matrix. It brackets what the app supports —
-`minSdk 24`, the API 33 boundary where photo access moved from
-`READ_EXTERNAL_STORAGE` to `READ_MEDIA_*`, `compileSdk 36` — plus one tablet
-so screen size varies as well as version.
-
-| AVD | API | Device |
-|---|---|---|
-| `speleo_api24_pixel2` | 24 | Pixel 2 (1080×1920, 420 dpi) |
-| `speleo_api30_pixel4` | 30 | Pixel 4 (1080×2280, 440 dpi) |
-| `speleo_api34_pixel7` | 34 | Pixel 7 (1080×2400, 420 dpi) |
-| `speleo_api34_tablet` | 34 | Medium tablet (2560×1600, 320 dpi) |
-| `speleo_api36_pixel7pro` | 36 | Pixel 7 Pro (1440×3120, 560 dpi) |
+`tool/android/run_cell.sh` runs one cell on one booted emulator and is the
+way to reproduce a failure the report names:
 
 ```bash
-tool/android/avd.sh doctor      # can this machine run one?
-tool/android/avd.sh create      # create them all (idempotent)
-tool/android/avd.sh boot speleo_api34_pixel7              # start, wait for boot
-tool/android/avd.sh boot speleo_api34_pixel7 --headless   # the same, no window
-tool/android/avd.sh stop        # stop everything
+tool/android/run_cell.sh --serial emulator-5554 --flows sweep_core \
+  --shape phone_small --lang en --settings busy
 ```
 
-With a display the emulator opens a window on the desktop; with none it goes
-headless on its own. Each uses about 4 GB while running, so several can run
-side by side — but stop them when done rather than leaving a set up.
-VSCode's `speleo_loc @ …` launch configurations target them directly.
+The pieces it uses work on their own too:
+`device_profile.sh <shape>`, `permissions.sh journey <name>` (a permission
+taken away the way a user can on that Android version),
+`platform_state.sh <state>` (offline, battery saver, doze, another time zone
+or system language), `seed_app_data.sh`, `seed_test_media.sh`.
 
-### Which data the app runs on — read this before looking at a screenshot
+## Which data the app runs on — read this before looking at a screenshot
 
 `build_settings.json` points `test_archive_url` at an export of the real
 cave register. A build launched with it shows real data, and so does every
 screenshot of it. **Automated runs therefore never use it.**
 
-They use `build_settings.automation.json` and an **invented** fixture:
+They use `build_settings.automation.json` and an **invented** fixture, built
+through the app's own database class:
 
 ```bash
 flutter test tool/android/generate_fixture_archive.dart
-# -> assets/test_archive/automation_fixture.zip
+FIXTURE_VARIANTS_DIR=build/fixtures flutter test tool/android/generate_fixture_archive.dart
 ```
 
-Three made-up caves with areas, entrances, coded places, and one ended and
-one open trip each. It is built through the app's own database class, so its
-schema is right by construction, and its manifest carries a marker saying it
-is invented. (It runs under `flutter test` rather than `dart run` because
-that class pulls in the Flutter framework.)
+Four made-up caves with areas, entrances with positions in open sea,
+coded places, survey drawings with the places marked on them, documents,
+beacon tags, and trips; one cave title and one place title are long, one
+place title carries every Romanian diacritic. The second command also
+writes one archive per settings profile and language.
 
-`tool/android/seed_app_data.sh` puts an archive on the device **without
-going through the app** — the in-app import ends by restarting the process,
-which would kill a test mid-run. It always wipes the app's data first, so a
-device someone used by hand cannot leak what it held into a run, and it
-records what it seeded in `build/screenshots/.data-origin`:
+Every run records the origin of its data in each output folder, in
+`.data-origin`:
 
-| `DATA_ORIGIN` | Meaning |
+| Origin | Meaning |
 |---|---|
-| `invented` | The archive's manifest carries the fixture marker. Screenshots are safe for anyone, including an agent, to read. |
-| `unmarked` | Anything else. Treated as real data: screenshots are for a person to review, and an agent must not read them into its context. |
+| `invented` | The archive's manifest carries the fixture marker. Safe for anyone, including an agent, to read. |
+| `anonymized` | A real export passed through the anonymizer and its verifier. Safe for an agent to read. |
+| `unmarked` | Anything else. Treated as real data: for a person to review; an agent must not read it. |
 
-#### Using a curated dataset
-
-Drop-in, no code change. Hand the archive to the same script, or to the
-whole check:
+To run on another dataset:
 
 ```bash
-tool/android/seed_app_data.sh /path/to/curated.zip
-SPELEO_TEST_ARCHIVE=/path/to/curated.zip tool/ui_check.sh
+SPELEO_TEST_ARCHIVE=/path/to/archive.zip tool/ui_check.sh
+tool/test_matrix.sh --tier ring --archive /path/to/archive.zip
 ```
 
-Any DataArchive the app can export works. Because it will not carry the
-fixture marker it is reported `unmarked`: only the content-blind smoke test
-runs against it (the fixture flows assert on invented names it will not
-contain), and its screenshots are flagged as not for an agent. If a curated
-set is itself invented and should be readable, add
-`"fixture": "invented …"` to its `manifest.json` — that is the one switch.
+Mind the rule for `assets/test_archive/`: whatever sits there is bundled
+into every build, release included. The matrix refuses to build when an
+archive there is not marked invented or anonymized, and the release gates
+fail when anything but `.gitkeep` is bundled.
 
-Mind the existing rule for `assets/test_archive/`: whatever sits there is
-bundled into every build, release included. Keep a curated archive
-elsewhere and pass its path.
+## Pictures for the device's library
 
-### Pictures for the device's library
-
-The points-from-pictures screen reads the device's own media library, so a
-fresh emulator shows an empty list. Generate invented photos and push them:
+The points-from-pictures screen reads the device's own media library. The
+matrix generates invented photos and pushes them for the cells that need
+them. By hand:
 
 ```bash
-dart run tool/android/generate_test_media.dart /tmp/media a1 a2   # place codes
+dart run tool/android/generate_test_media.dart /tmp/media a1 a2
 tool/android/seed_test_media.sh /tmp/media
 ```
 
-The codes are the fixture's: `a1` is the first cave's entrance, `a2` and
-`a3` chambers in it. The photos are dated on that cave's fixture trip day,
-and one two days earlier, so a date-range filter has something to exclude.
+Measured on an API 34 emulator: the capture time the app sees comes from
+the file's modification time, not its EXIF, and shell-triggered media scans
+do not complete — the script reboots the device when the cheap scan fails.
 
-Two things measured on an API 34 emulator that the scripts now account for:
+## Reviewing a run
 
-- **The capture time the app sees comes from the file's modification time,
-  not its EXIF.** Android's scanner filled `date_taken` from mtime and
-  ignored a well-formed `DateTimeOriginal`. The generator stamps each file's
-  mtime, and `adb push` preserves it.
-- **Shell-triggered media scans do not complete.** Every variant left rows
-  pending with no size or date. The seeding script tries the cheap scan,
-  checks whether it worked, and reboots the device when it did not.
-
-### Running the tests
+The mechanical checks cannot judge whether a screen looks right. For that:
 
 ```bash
-tool/ui_check.sh
+python3 tool/matrix/review.py               # the latest run
+python3 tool/matrix/review.py --accept      # record it as the baseline
 ```
 
-does all of it on the connected device: builds the fixture, builds the test
-app once, installs it, seeds data and pictures, and drives
-`integration_test/suite_test.dart`. The order is forced — seeding needs the
-package installed, and `flutter drive` uninstalls the app when it ends.
-Screenshots land in `build/screenshots/`.
+`review.py` picks the screens that failed, have findings, or changed since
+the accepted baseline, lays each one's shapes side by side on a contact
+sheet, and writes `review/REVIEW.md` with a checklist and the cost of reading
+the sheets. An agent (or a person) reads the brief and the sheets and writes
+`verdicts.md`. Only invented or anonymized output is ever offered.
 
-`integration_test/support/driver.dart` holds the shared plumbing: `launch()`
-starts the real `main()` and polls for the first frame (startup awaits the
-database and i18n bundle, so settling alone is not enough), `settle()`
-tolerates the timers a real screen leaves running, `pumpUntil()` waits on
-work the frame loop cannot see finishing, and `shoot()` captures a
-screenshot.
+## Release gates
 
-### A note on Playwright
+```bash
+tool/matrix/release_gates.sh
+```
+
+Builds a release APK and checks 16 KB alignment of every native library (in
+the zip and in its segments — required by Play for apps targeting Android
+15+), that the merged permission list matches
+`tool/matrix/permissions.allow`, and that no test data is bundled.
+
+## Real phones in the cloud
+
+The emulators are Google images; a manufacturer's build of Android only
+shows on its phones. `tool/android/cloud_ftl.sh` runs the same tests on
+Firebase Test Lab devices, with only the debug test build and the invented
+fixture leaving the machine. The test seeds itself there from the bundled
+fixture. It needs the Google Cloud CLI, a login and a project with Test Lab,
+and says NOT RUN until those exist. `--build-only` builds and checks
+without uploading.
+
+## Continuous integration
+
+On GitHub, `lint.yml` runs analysis against its baseline, the UI lint,
+formatting, guardrails and the unit tests; `ui.yml` runs the desktop half of
+`pulse` on every push; `android-weekly.yml` runs one cell on API 24, 33 and
+34 every Sunday. Nothing local depends on them.
+
+## A note on Playwright
 
 Playwright drives browsers and cannot drive a Flutter app. The equivalent
-here is `integration_test` + `flutter drive`, which is what the section
-above sets up; it runs the same way against an emulator, a physical device
-or the desktop build. Playwright would only become relevant for Flutter Web,
-which this app does not target — `photo_manager`, `mobile_scanner` and the
-beacon plugins have no web implementation.
+here is `integration_test` + `flutter drive`. Playwright would only become
+relevant for Flutter Web, which this app does not target.
 
-### What an emulator still cannot test
+## What the emulators can and cannot stand in for
 
-- **BLE beacons.** The emulator has no usable Bluetooth radio; beacon work
-  needs real hardware.
-- **The camera.** There is no webcam on this host, so live QR scanning falls
-  back to the emulator's synthetic scene. Reading a QR *out of a photo* —
-  what the media import does — works fine, because it analyses a file.
+- **The camera.** Matrix emulators boot with `-camera-back imagefile:` and
+  a picture of six copies of a QR label, so the live scanner has a code to
+  read; one centred label was half cropped away by the preview.
+- **Bluetooth.** API 33 and newer images get an emulated radio through
+  netsim; the matrix boots them with netsim's test beacons, and the
+  `ble_scan` flow checks the app's BLE plugin hears them. The app's own
+  beacon detection would need advertisers shaped like the tags it knows
+  (iBeacon, Ruuvi), which netsim can create through its control API — not
+  wired up yet. Older images have no radio.
+- **Battery management and manufacturer builds** of Android only show on
+  real phones: use the cloud devices, or the phones you have.
