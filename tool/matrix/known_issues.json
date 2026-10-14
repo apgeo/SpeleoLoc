@@ -9,31 +9,17 @@
   ],
   "issues": [
     {
-      "screen": "map_viewer",
-      "shape": "phone_large_text",
-      "contains": "overflowed",
-      "reason": "raster map nav bar (lib/widgets/raster_map_nav_bar.dart:694) is a fixed height; at 1.5× text its place labels overflow. Needs a choice: let the bar grow, or clamp text scaling inside it.",
-      "since": "2026-10-14"
-    },
-    {
-      "screen": "map_viewer",
-      "shape": "phone_landscape",
-      "contains": "overflowed",
-      "reason": "same nav bar, landscape phone: too little height for thumbnails and place chips above the map.",
-      "since": "2026-10-14"
-    },
-    {
       "screen": "raster_map_place_selector",
-      "shape": "phone_large_text",
+      "shape": "*",
       "contains": "overflowed",
-      "reason": "same raster map nav bar as the map viewer (lib/widgets/raster_map_nav_bar.dart:694); waits on the same decision.",
+      "reason": "the raster map nav bar (lib/widgets/raster_map_nav_bar.dart, lines 414 and 694) has a fixed height that its place chips do not fit: 6.8 px over on a 360×640 dp phone at normal text on Android, more at 1.5× text and in landscape. Needs a choice: let the bar grow, or shrink or clamp what is inside it.",
       "since": "2026-10-14"
     },
     {
-      "screen": "raster_map_place_selector",
-      "shape": "phone_landscape",
+      "screen": "map_viewer",
+      "shape": "*",
       "contains": "overflowed",
-      "reason": "same raster map nav bar as the map viewer (lib/widgets/raster_map_nav_bar.dart:694); waits on the same decision.",
+      "reason": "the raster map nav bar (lib/widgets/raster_map_nav_bar.dart, lines 414 and 694) has a fixed height that its place chips do not fit: 6.8 px over on a 360×640 dp phone at normal text on Android, more at 1.5× text and in landscape. Needs a choice: let the bar grow, or shrink or clamp what is inside it.",
       "since": "2026-10-14"
     },
     {
