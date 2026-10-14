@@ -41,15 +41,12 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
   Future<void> _load() async {
     final registry = ref.read(mbTilesRegistryProvider);
     final (configJson, dir, files, cacheEnabledRaw) = await (
-      ref.read(configurationRepositoryProvider).readJson(
-        mapMbtilesConfigKey,
-        defaults: () => <String, dynamic>{},
-      ),
+      ref
+          .read(configurationRepositoryProvider)
+          .readJson(mapMbtilesConfigKey, defaults: () => <String, dynamic>{}),
       registry.ensureDirectory(),
       registry.scan(),
-      ref.read(configurationRepositoryProvider).readString(
-        tileCacheEnabledKey,
-      ),
+      ref.read(configurationRepositoryProvider).readString(tileCacheEnabledKey),
     ).wait;
     _config = MapMbTilesConfig.fromJson(configJson);
     _folderPath = dir.path;
@@ -253,9 +250,7 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
                     icon: const Icon(Icons.copy, size: 20),
                     tooltip: loc.t('map_mbtiles_folder_copy'),
                     onPressed: () async {
-                      await Clipboard.setData(
-                        ClipboardData(text: _folderPath),
-                      );
+                      await Clipboard.setData(ClipboardData(text: _folderPath));
                       SnackBarService.showInfo(
                         loc.t('map_mbtiles_folder_copied'),
                       );
@@ -305,11 +300,15 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
 
   Widget _buildCoordinateFormatTile(LocServ loc) {
     final format = watchCoordinateFormat(ref);
+    // The choice sits under the title rather than beside it: the format
+    // names are long in English, and at a large system font a trailing
+    // dropdown is wider than a tile allows, which breaks the tile's layout.
     return ListTile(
       leading: const Icon(Icons.explore),
       title: Text(loc.t('settings_coordinate_format')),
-      trailing: DropdownButton<CoordinateDisplayFormat>(
+      subtitle: DropdownButton<CoordinateDisplayFormat>(
         value: format,
+        isExpanded: true,
         underline: const SizedBox.shrink(),
         items: [
           for (final f in CoordinateDisplayFormat.values)
@@ -360,9 +359,7 @@ class _SettingsMapPageState extends ConsumerState<SettingsMapPage> {
               ],
               onChanged: (role) {
                 if (role != null) {
-                  unawaited(
-                    _saveConfig(_config.withRole(file.fileName, role)),
-                  );
+                  unawaited(_saveConfig(_config.withRole(file.fileName, role)));
                 }
               },
             )
