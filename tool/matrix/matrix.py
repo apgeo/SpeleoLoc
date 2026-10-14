@@ -40,6 +40,7 @@ HERE = Path(__file__).resolve().parent
 FIXTURES = ROOT / "build" / "fixtures"
 APK = ROOT / "build" / "app" / "outputs" / "flutter-apk" / "app-debug.apk"
 MONKEY_APK = ROOT / "build" / "matrix" / "apk" / "app-monkey.apk"
+CAMERA_IMAGE = ROOT / "build" / "matrix" / "camera" / "qr_a1.png"
 BUNDLED = ROOT / "assets" / "test_archive"
 SETTINGS = "build_settings.automation.json"
 
@@ -201,6 +202,17 @@ def build(cells: list[dict], run_dir: Path, args) -> dict:
     if code != 0:
         raise SystemExit(f"the fixture archives could not be built; see {log}")
 
+    if any(c["kind"] == "android" for c in cells):
+        # What every emulator's back camera shows, so the live scanner has
+        # a label to read.
+        code, _ = run(
+            ["dart", "run", "tool/android/generate_test_media.dart", "--camera",
+             str(CAMERA_IMAGE), "a1"],
+            log, timeout=600,
+        )
+        if code != 0:
+            say("  the camera image could not be made; scanner flows will fail")
+
     if any(c.get("media") for c in cells):
         say("build: media fixtures")
         media = run_dir / "media"
@@ -318,7 +330,8 @@ def boot(avd: str) -> str | None:
     # One at a time: emulators that start in the same second can each be
     # told there is no hardware acceleration.
     with boot_lock:
-        code, out = avd_tool("boot", avd, "--headless", "--pristine", timeout=420)
+        extra = ["--camera", str(CAMERA_IMAGE)] if CAMERA_IMAGE.exists() else []
+        code, out = avd_tool("boot", avd, "--headless", "--pristine", *extra, timeout=420)
         time.sleep(3)
     if code != 0:
         say(f"  {avd}: did not boot — {out.strip().splitlines()[-1] if out.strip() else 'no output'}")

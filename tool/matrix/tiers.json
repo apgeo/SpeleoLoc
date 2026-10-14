@@ -76,7 +76,8 @@
           "flows": [
             "smoke",
             "sweep_core",
-            "trip_media"
+            "trip_media",
+            "scanner_live_qr"
           ],
           "media": true,
           "sample": "cross"
@@ -169,7 +170,8 @@
             "default"
           ],
           "flows": [
-            "trip_media"
+            "trip_media",
+            "scanner_live_qr"
           ],
           "media": true,
           "sample": "cross"
@@ -329,7 +331,8 @@
             "default"
           ],
           "flows": [
-            "trip_media"
+            "trip_media",
+            "scanner_live_qr"
           ],
           "media": true,
           "sample": "cross"

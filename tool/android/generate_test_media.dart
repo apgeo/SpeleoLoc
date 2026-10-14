@@ -10,6 +10,11 @@
 //
 // Usage:
 //   dart run tool/android/generate_test_media.dart <out-dir> [place-code...]
+//   dart run tool/android/generate_test_media.dart --camera <out.png> <code>
+//
+// The second form draws one QR label on a plain background, for an
+// emulator to show through its back camera (`-camera-back imagefile:`), so
+// the live scanner has a code to read.
 //
 // With no place codes the defaults below are used; pass your own to match
 // the codes in the database you are testing against, e.g.
@@ -35,6 +40,14 @@ void main(List<String> args) {
       '<out-dir> [place-code...]',
     );
     exit(64);
+  }
+  if (args.first == '--camera') {
+    if (args.length != 3) {
+      stderr.writeln('usage: ... --camera <out.png> <code>');
+      exit(64);
+    }
+    _writeCameraImage(args[1], args[2]);
+    return;
   }
   final outDir = Directory(args.first)..createSync(recursive: true);
   final codes = args.length > 1 ? args.sublist(1) : _defaultCodes;
@@ -186,4 +199,31 @@ void _drawQr(img.Image image, String payload) {
       );
     }
   }
+}
+
+/// A QR label held up in front of the camera: the code large and centred on
+/// a light, slightly uneven wall, which is about what a phone sees when
+/// pointed at a label underground.
+void _writeCameraImage(String path, String code) {
+  const w = 1280;
+  const h = 960;
+  final image = img.Image(width: w, height: h);
+  final rnd = Random(code.hashCode);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      final base = 150 + ((x ~/ 7 + y ~/ 5) % 9) + rnd.nextInt(10);
+      image.setPixelRgb(
+        x,
+        y,
+        base,
+        (base * 0.95).round(),
+        (base * 0.88).round(),
+      );
+    }
+  }
+  _drawQr(image, code);
+  final file = File(path);
+  file.parent.createSync(recursive: true);
+  file.writeAsBytesSync(img.encodePng(image));
+  stdout.writeln('wrote ${file.path} (QR for "$code")');
 }
