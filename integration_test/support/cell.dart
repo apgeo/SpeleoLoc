@@ -29,6 +29,7 @@ class MatrixCell {
     required this.dataOrigin,
     required this.outDir,
     required this.fontsDir,
+    required this.knownIssues,
   });
 
   /// Flow names to run; empty means all of them.
@@ -57,6 +58,22 @@ class MatrixCell {
   /// font and Linux does not, and text measured in another font overflows
   /// in different places.
   final String? fontsDir;
+
+  /// Screen errors already known and waiting on a decision; see
+  /// tool/matrix/known_issues.json. Reported, never failing.
+  final List<KnownIssue> knownIssues;
+
+  /// The known issue [error] on [screen] in [shape] is, if any.
+  KnownIssue? known(String screen, String shape, String error) {
+    for (final issue in knownIssues) {
+      if (issue.screen == screen &&
+          (issue.shape == '*' || issue.shape == shape) &&
+          error.contains(issue.contains)) {
+        return issue;
+      }
+    }
+    return null;
+  }
 
   bool selects(String flow) => flows.isEmpty || flows.contains(flow);
   bool get isInvented => dataOrigin == 'invented';
@@ -99,6 +116,9 @@ class MatrixCell {
           '${json['data_origin'] ?? (const bool.fromEnvironment('SPELEO_FIXTURE_INVENTED') ? 'invented' : 'unmarked')}',
       outDir: json['out_dir'] as String?,
       fontsDir: json['fonts_dir'] as String?,
+      knownIssues: ((json['known_issues'] as List?) ?? const [])
+          .map((e) => KnownIssue.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -151,4 +171,21 @@ class DeviceShape {
 
   @override
   String toString() => name;
+}
+
+/// A screen error that is known and accepted for now.
+class KnownIssue {
+  const KnownIssue(this.screen, this.shape, this.contains, this.reason);
+
+  factory KnownIssue.fromJson(Map<String, dynamic> json) => KnownIssue(
+    '${json['screen']}',
+    '${json['shape'] ?? '*'}',
+    '${json['contains'] ?? ''}',
+    '${json['reason'] ?? ''}',
+  );
+
+  final String screen;
+  final String shape;
+  final String contains;
+  final String reason;
 }

@@ -133,6 +133,7 @@ json.dump({
     "data_origin": "$ORIGIN",
     "journey": "$JOURNEY",
     "state": "$STATE",
+    "known_issues": json.load(open("tool/matrix/known_issues.json")).get("issues", []),
 }, open(sys.argv[1], "w"), indent=1)
 PY
 adb_s push "$OUT/cell.json" /data/local/tmp/matrix_cell.json >/dev/null

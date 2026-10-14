@@ -267,6 +267,10 @@ def build(cells: list[dict], run_dir: Path, args) -> dict:
 # --- desktop cells ----------------------------------------------------------
 
 
+def known_issues() -> list:
+    return load("known_issues.json").get("issues", [])
+
+
 def flutter_fonts() -> str:
     flutter = shutil.which("flutter") or ""
     return str(Path(flutter).resolve().parents[1] / "bin/cache/artifacts/material_fonts")
@@ -301,6 +305,7 @@ def run_desktop(cell: dict, out: Path, shapes: dict, args) -> dict:
         "language": cell["lang"], "settings": cell["settings"], "theme": "light",
         "device": "linux", "data_origin": origin,
         "out_dir": str(out), "fonts_dir": flutter_fonts(),
+        "known_issues": known_issues(),
     }
     (docs / "matrix_cell.json").write_text(json.dumps(spec, indent=1))
     (out / "cell.json").write_text(json.dumps(spec, indent=1))
@@ -474,7 +479,11 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
             })
         for s in screens:
             entry = report["screens"].setdefault(
-                s["id"], {"area": s.get("area", ""), "runs": 0, "errors": [], "truncated": set()})
+                s["id"], {"area": s.get("area", ""), "runs": 0, "errors": [], "known": [],
+                          "truncated": set()})
+            if s.get("status") == "known":
+                entry["known"].append({"cell": cell["id"], "shape": s.get("shape"),
+                                       "error": s.get("error", "")})
             if s.get("status") != "skipped":
                 entry["runs"] += 1
             if s.get("status") in ("error", "timeout"):
@@ -554,6 +563,17 @@ def write_report(run_dir: Path, tier: str, about: str, report: dict, notes: dict
                 what = " ".join(e["error"].split())[:300].replace("|", "\\|")
                 where = f"{e['cell']} @ {e['shape']}" + (" (best effort)" if e["best_effort"] else "")
                 lines.append(f"| `{name}` | {where} | {what} |")
+        lines.append("")
+    known = {k: v for k, v in report["screens"].items() if v.get("known")}
+    if known:
+        lines += ["## Known issues still present", "",
+                  "Listed in tool/matrix/known_issues.json and so not failing this run. "
+                  "Remove an entry when its bug is fixed.", "",
+                  "| Screen | Where | Why it is known |", "|---|---|---|"]
+        for name, entry in sorted(known.items()):
+            for k in entry["known"]:
+                why = k["error"].split("| known: ", 1)[-1][:240].replace("|", "\\|")
+                lines.append(f"| `{name}` | {k['cell']} @ {k['shape']} | {why} |")
         lines.append("")
     truncated = {k: v for k, v in report["screens"].items() if v["truncated"]}
     if truncated:

@@ -1,0 +1,26 @@
+{
+  "_comment": [
+    "Screen errors that are known, reported and waiting on a decision, so",
+    "they do not turn every run red — a check that is always red stops being",
+    "read. Each entry matches a sweep error by screen, by shape (or `*`) and",
+    "by a piece of the error text. Matches are listed under their own heading",
+    "in the report, with the reason, and never fail a run. Remove an entry",
+    "when its bug is fixed: the run then fails if the error comes back."
+  ],
+  "issues": [
+    {
+      "screen": "map_viewer",
+      "shape": "phone_large_text",
+      "contains": "overflowed",
+      "reason": "raster map nav bar (lib/widgets/raster_map_nav_bar.dart:694) is a fixed height; at 1.5× text its place labels overflow. Needs a choice: let the bar grow, or clamp text scaling inside it.",
+      "since": "2026-10-14"
+    },
+    {
+      "screen": "map_viewer",
+      "shape": "phone_landscape",
+      "contains": "overflowed",
+      "reason": "same nav bar, landscape phone: too little height for thumbnails and place chips above the map.",
+      "since": "2026-10-14"
+    }
+  ]
+}

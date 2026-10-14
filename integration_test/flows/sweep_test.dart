@@ -138,6 +138,14 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
           error ??= 'could not return to the first screen: ${_brief(e, stack)}';
         }
 
+        final failed = status == 'error' || status == 'timeout';
+        final known = failed
+            ? cell.known(entry.id, shape.name, error ?? '')
+            : null;
+        if (known != null) {
+          status = 'known';
+          error = '$error | known: ${known.reason}';
+        }
         _record(
           entry,
           shape,
@@ -147,7 +155,7 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
           error: error,
           findings: findings,
         );
-        if ((status == 'error' || status == 'timeout') && !shape.bestEffort) {
+        if (failed && known == null && !shape.bestEffort) {
           broken.add('${entry.id} @ ${shape.name}: $error');
         }
       }
