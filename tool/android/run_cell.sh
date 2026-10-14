@@ -146,6 +146,13 @@ adb_s shell "run-as $PKG cp /data/local/tmp/matrix_cell.json app_flutter/matrix_
 # is fixed per cell so a crash can be replayed with the same events.
 if [ "$MONKEY" -gt 0 ]; then
   adb_s logcat -c >/dev/null 2>&1 || true
+  # Start the app and let it reach its first screen before any input: a
+  # debug build on a software-rendered emulator takes longer than the five
+  # seconds Android allows a window to appear, and taps sent before that
+  # are reported as the app not responding — a finding about the test,
+  # not the app.
+  adb_sh am start -W -n "$PKG/.MainActivity" >/dev/null
+  sleep 15
   seed="$(printf '%s' "$DEVICE$SHAPE$LANG_CODE" | cksum | cut -d' ' -f1)"
   timeout "$TIMEOUT" "$ADB" -s "$SERIAL" shell monkey -p "$PKG" \
     --pct-syskeys 0 --pct-appswitch 0 --ignore-security-exceptions \
