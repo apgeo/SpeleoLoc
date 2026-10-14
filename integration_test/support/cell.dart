@@ -17,6 +17,11 @@ enum Need {
 
   /// Rendering a PDF on screen; the PDF plugin has no Linux implementation.
   pdf,
+
+  /// Someone to answer a system dialog the screen opens on arrival, such as
+  /// a folder picker. No automated run has that, on any platform: the
+  /// dialog belongs to another process and stays over the app.
+  person,
 }
 
 /// One cell of the test matrix, as seen from inside the app under test.
@@ -137,7 +142,9 @@ class MatrixCell {
   /// radio behind the Bluetooth one — which is the point of opening those
   /// screens there: they have to cope with a phone that cannot scan.
   Set<Need> get capabilities {
-    if (Platform.isAndroid || Platform.isIOS) return Need.values.toSet();
+    if (Platform.isAndroid || Platform.isIOS) {
+      return Need.values.toSet()..remove(Need.person);
+    }
     return {Need.network};
   }
 }

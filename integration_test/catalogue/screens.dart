@@ -109,10 +109,12 @@ final List<ScreenEntry> screenCatalogue = [
   ),
   ScreenEntry('surface_areas', 'home', (fx) => const SurfaceAreasPage()),
   ScreenEntry('csv_caves_import', 'home', (fx) => const CSVCavesImportPage()),
+  // Opens the system folder picker as soon as it appears and waits on it.
   ScreenEntry(
     'cave_document_import',
     'home',
     (fx) => CaveDocumentImportPage(caves: fx.caves),
+    needs: {Need.person},
   ),
 
   // Cave
