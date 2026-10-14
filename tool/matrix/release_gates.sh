@@ -14,8 +14,10 @@
 # The gates:
 #   16k-zip     every native library is stored uncompressed on a 16 KB
 #               boundary in the APK (zipalign -P 16)
-#   16k-elf     every native library's loadable segments are 16 KB aligned —
-#               Google Play requires both for apps targeting Android 15+
+#   16k-elf     every 64-bit native library's loadable segments are 16 KB
+#               aligned — Google Play requires both for apps targeting
+#               Android 15+. 32-bit libraries are not checked: no 32-bit
+#               device uses 16 KB pages, and Play's rule covers 64-bit only.
 #   permissions the permissions the built app declares, after every plugin's
 #               manifest is merged in, match tool/matrix/permissions.allow
 #   no-test-data nothing from assets/test_archive/ besides its .gitkeep is
@@ -44,7 +46,10 @@ OUT=build/matrix/release_gates.md
 
 if [ -z "$APK" ]; then
   echo "building a release APK (signed with the debug key unless key.properties exists)"
-  flutter build apk --release --no-pub \
+  # Not --no-pub: `pub get` is what rewrites the plugin registrant, and the
+  # test builds leave one behind that registers the test-only
+  # integration_test plugin, which a release build cannot compile.
+  flutter build apk --release \
     --dart-define-from-file=build_settings.store.json >/dev/null
   APK=build/app/outputs/flutter-apk/app-release.apk
 fi
@@ -75,11 +80,11 @@ while IFS= read -r so; do
   if [ "$((min))" -lt 16384 ]; then
     misaligned+=("${so#"$work"/} ($min)")
   fi
-done < <(find "$work/lib" -name '*.so' 2>/dev/null)
+done < <(find "$work/lib/arm64-v8a" "$work/lib/x86_64" -name '*.so' 2>/dev/null)
 if [ "$total" -eq 0 ]; then
   pass 16k-elf "no native libraries"
 elif [ "${#misaligned[@]}" -eq 0 ]; then
-  pass 16k-elf "$total native libraries, every LOAD segment 16 KB aligned"
+  pass 16k-elf "$total 64-bit native libraries, every LOAD segment 16 KB aligned"
 else
   fail 16k-elf "${#misaligned[@]} of $total libraries with 4 KB segments: $(printf '%s; ' "${misaligned[@]:0:8}")"
 fi
