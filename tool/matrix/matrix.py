@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fcntl
 import itertools
 import json
 import os
@@ -629,7 +630,28 @@ def cmd_plan(args) -> int:
     return 0
 
 
+def take_run_lock():
+    """One run at a time: runs share the fixture archives they rebuild, the
+    emulators they boot and the `latest` link. A second run waits for none
+    of that to be safe — it stops and says who holds the lock."""
+    path = ROOT / "build" / "matrix" / ".lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.seek(0)
+        holder = handle.read().strip() or "another process"
+        raise SystemExit(f"another matrix run is in progress ({holder}); wait for it to finish")
+    handle.seek(0)
+    handle.truncate()
+    handle.write(f"pid {os.getpid()}, started {dt.datetime.now():%H:%M}")
+    handle.flush()
+    return handle
+
+
 def cmd_run(args) -> int:
+    lock = take_run_lock()  # noqa: F841 — held until the process exits
     tier_name, tier = resolve_tier(args.tier, load("tiers.json"))
     shapes = load("shapes.json")["shapes"]
     cells = expand(tier, shapes, args)
