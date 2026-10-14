@@ -238,7 +238,7 @@ def build(cells: list[dict], run_dir: Path, args) -> dict:
             # because both builds write the same output file.
             say("build: Android app for the monkey runs")
             code, _ = run(
-                ["flutter", "build", "apk", "--debug", "--no-pub",
+                ["flutter", "build", "apk", "--debug",
                  "--target-platform", "android-x64",
                  f"--dart-define-from-file={SETTINGS}"],
                 log, timeout=3600,
@@ -249,11 +249,15 @@ def build(cells: list[dict], run_dir: Path, args) -> dict:
             else:
                 notes["monkey"] = f"the plain app did not build; see {log.relative_to(ROOT)}"
         say("build: Android test app")
+        # Never --no-pub for an APK: `pub get` is what rewrites the plugin
+        # registrant, and a release build leaves one behind without the
+        # test-only integration_test plugin. A test build that reuses it has
+        # no screenshots and crashes its renderer on the next launch.
         # x86_64 only: it is what every emulator here runs, and it leaves
         # out two thirds of a build that would otherwise be installed on
         # each of them.
         code, _ = run(
-            ["flutter", "build", "apk", "--debug", "--no-pub",
+            ["flutter", "build", "apk", "--debug",
              "--target-platform", "android-x64",
              "--target", "integration_test/suite_test.dart",
              f"--dart-define-from-file={SETTINGS}"],
@@ -460,7 +464,7 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
             "flows": {s: sum(1 for f in flows if f.get("status") == s)
                       for s in ("passed", "failed", "skipped")},
             "screens": {s: sum(1 for x in screens if x.get("status") == s)
-                        for s in ("ok", "busy", "error", "timeout", "skipped")},
+                        for s in ("ok", "busy", "error", "timeout", "skipped", "network", "known")},
             "startup_ms": data.get("startup_ms"),
         }
         report["cells"].append(row)

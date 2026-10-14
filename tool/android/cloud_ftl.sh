@@ -87,8 +87,10 @@ defines="$(
     printf ','
   done | sed 's/,$//'
 )"
-# Generates the Gradle-side configuration the next two steps read.
-flutter build apk --debug --no-pub --config-only >/dev/null
+# Generates the Gradle-side configuration the next two steps read, and —
+# because it runs pub — a plugin registrant that includes the test-only
+# integration_test plugin, which a previous release build leaves out.
+flutter build apk --debug --config-only >/dev/null
 (
   cd android
   ./gradlew -q app:assembleAndroidTest
