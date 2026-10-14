@@ -133,4 +133,13 @@ mkdir -p "$(dirname "$OUT")"
   done
 } > "$OUT"
 cat "$OUT"
+
+# Every release that passes is kept by version, so the next one can be
+# checked as an update from it (tool/android/upgrade_check.sh).
+if [ "$status" = 0 ]; then
+  version="$(sed -nE 's/^version: *([^ ]+).*/\1/p' pubspec.yaml)"
+  mkdir -p "build_archive/apk/$version"
+  cp "$APK" "build_archive/apk/$version/app-release.apk"
+  echo "kept: build_archive/apk/$version/app-release.apk"
+fi
 exit "$status"
