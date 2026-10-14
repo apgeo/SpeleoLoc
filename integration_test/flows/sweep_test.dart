@@ -124,9 +124,12 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
           error = _brief(e, stack);
         }
 
+        // What the framework reported is kept from the moment the screen
+        // opened, not cleared here: errors that arrive after the check
+        // above — a map tile failing seconds later — are folded by the
+        // framework into one "Multiple exceptions (30)" that says nothing
+        // on its own. The details are what name them.
         try {
-          lastStack = null;
-          reported.clear();
           await driver.backToHome();
           final leftover = tester.takeException();
           if (leftover != null && status == 'ok') {
@@ -140,7 +143,7 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
 
         final failed = status == 'error' || status == 'timeout';
         final known = failed
-            ? cell.known(entry.id, shape.name, error ?? '')
+            ? _known(cell, entry.id, shape.name, error ?? '', reported)
             : null;
         if (known != null) {
           status = 'known';
@@ -254,16 +257,39 @@ String _describe(
   return parts.toSet().join(' || ') + more;
 }
 
+/// The known issue that explains a failed screen, if one explains all of
+/// it. Matching only the summary would let a known overflow hide a new
+/// error that happened to be reported fourth.
+KnownIssue? _known(
+  MatrixCell cell,
+  String screen,
+  String shape,
+  String error,
+  List<FlutterErrorDetails> reported,
+) {
+  if (reported.isEmpty) return cell.known(screen, shape, error);
+  KnownIssue? first;
+  for (final details in reported) {
+    final text = details.exceptionAsString();
+    if (_networkError.hasMatch(text)) continue;
+    final issue = cell.known(screen, shape, text);
+    if (issue == null) return null;
+    first ??= issue;
+  }
+  return first;
+}
+
 /// Whether everything that went wrong on a screen was a failed network
 /// request, such as a map tile that could not be fetched.
 bool _networkOnly(List<FlutterErrorDetails> reported, String error) {
-  // Not HandshakeException: a TLS failure is not the network being away.
-  // It is how Android 7 rejects the tile server's certificate chain, and
-  // counting it as "network" would have hidden that.
-  final network = RegExp(
-    r'SocketException|ClientException|HttpException|'
-    r'Failed host lookup|Connection (refused|reset|closed)',
-  );
-  if (reported.isEmpty) return network.hasMatch(error);
-  return reported.every((d) => network.hasMatch(d.exceptionAsString()));
+  if (reported.isEmpty) return _networkError.hasMatch(error);
+  return reported.every((d) => _networkError.hasMatch(d.exceptionAsString()));
 }
+
+// Not HandshakeException: a TLS failure is not the network being away. It
+// is how Android 7 rejects the tile server's certificate chain, and counting
+// it as "network" would have hidden that.
+final _networkError = RegExp(
+  r'SocketException|ClientException|HttpException|'
+  r'Failed host lookup|Connection (refused|reset|closed)',
+);
