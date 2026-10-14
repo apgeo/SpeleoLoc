@@ -21,6 +21,20 @@
       "contains": "overflowed",
       "reason": "same nav bar, landscape phone: too little height for thumbnails and place chips above the map.",
       "since": "2026-10-14"
+    },
+    {
+      "screen": "raster_map_place_selector",
+      "shape": "phone_large_text",
+      "contains": "overflowed",
+      "reason": "same raster map nav bar as the map viewer (lib/widgets/raster_map_nav_bar.dart:694); waits on the same decision.",
+      "since": "2026-10-14"
+    },
+    {
+      "screen": "raster_map_place_selector",
+      "shape": "phone_landscape",
+      "contains": "overflowed",
+      "reason": "same raster map nav bar as the map viewer (lib/widgets/raster_map_nav_bar.dart:694); waits on the same decision.",
+      "since": "2026-10-14"
     }
   ]
 }
