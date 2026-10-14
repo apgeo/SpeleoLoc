@@ -1,0 +1,75 @@
+name: android-weekly
+
+# The app on real Android versions, once a week and on demand: the oldest
+# supported (24), the one where media and notification permissions changed
+# (33) and the everyday one (34). A reduced copy of the local `ring` tier,
+# which stays the reference — this exists so the project has a signal even
+# when no development machine has run it lately. Nothing local depends on
+# it.
+#
+# Each runner boots one emulator with KVM and runs one cell of the matrix
+# through the same script a developer uses: tool/android/run_cell.sh.
+on:
+  schedule:
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  emulator:
+    name: API ${{ matrix.api }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      # Every version reports, not just the first to fail.
+      fail-fast: false
+      matrix:
+        api: [24, 33, 34]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+
+      - name: Fixtures and the test app
+        run: |
+          flutter pub get
+          FIXTURE_VARIANTS_DIR=build/fixtures \
+            flutter test tool/android/generate_fixture_archive.dart
+          dart run tool/android/generate_test_media.dart build/media a1 a2
+          flutter build apk --debug --target-platform android-x64 \
+            --target integration_test/suite_test.dart \
+            --dart-define-from-file=build_settings.automation.json
+
+      - name: Run on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: tool/android/run_cell.sh --serial emulator-5554 --flows smoke,sweep_core,trip_media --media build/media --out build/matrix/ci-api${{ matrix.api }}
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-api${{ matrix.api }}
+          path: build/matrix/ci-api${{ matrix.api }}/
+          retention-days: 14

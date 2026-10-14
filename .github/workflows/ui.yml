@@ -1,0 +1,57 @@
+name: ui
+
+# Every screen of the app, opened in every phone shape, on the app's Linux
+# build — the desktop half of the `pulse` tier in tool/matrix/tiers.json.
+# No emulator: the Linux build starts in seconds and can resize itself,
+# which is what makes covering every shape on every push affordable.
+#
+# Nothing local depends on this workflow; `tool/test_matrix.sh --tier pulse`
+# runs the same thing on a development machine. The screenshots it uploads
+# are of the invented fixture only.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  desktop-sweep:
+    name: every screen, every phone shape (Linux build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev libsecret-1-dev liblzma-dev xvfb
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Layout and golden checks
+        run: |
+          flutter test test/widgets/trip_media_layout_test.dart \
+                       test/widgets/trip_media_golden_test.dart
+
+      - name: Sweep on the Linux build
+        run: tool/test_matrix.sh --tier pulse --only desktop
+
+      - name: Keep the report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-desktop-sweep
+          path: |
+            build/matrix/*-pulse/report.md
+            build/matrix/*-pulse/report.json
+            build/matrix/*-pulse/linux/
+          retention-days: 14
