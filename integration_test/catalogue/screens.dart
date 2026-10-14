@@ -349,11 +349,12 @@ final List<ScreenEntry> screenCatalogue = [
     (fx) => fx.cave == null ? null : SoundRecorderPage(caveUuid: fx.cave!.uuid),
     needs: {Need.microphone},
   ),
+  // Hands over to the system camera app as soon as it appears.
   ScreenEntry(
     'camera_capture',
     'documents',
     (fx) => fx.cave == null ? null : CameraCapturePage(caveUuid: fx.cave!.uuid),
-    needs: {Need.camera},
+    needs: {Need.camera, Need.person},
   ),
   ScreenEntry(
     'image_editor',

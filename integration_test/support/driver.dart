@@ -209,6 +209,18 @@ class AppDriver {
       file.writeAsBytesSync(bytes);
       return;
     }
+    // The screenshot plugin copies the window's pixels, and when another
+    // app's activity covers ours — a system camera or picker a screen
+    // opened — the window has no surface and the copy crashes the whole
+    // app, natively, where no test can catch it.
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
+      Recorder.instance.note(
+        'screenshots',
+        'no screenshot $name: the app was not in the foreground ($lifecycle)',
+      );
+      return;
+    }
     try {
       await binding.convertFlutterSurfaceToImage();
       await tester.pump();
