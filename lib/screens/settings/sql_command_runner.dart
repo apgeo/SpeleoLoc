@@ -133,8 +133,10 @@ class _SQLCommandRunnerState extends State<SQLCommandRunner>
                 alignLabelWithHint: true,
               ),
               keyboardType: TextInputType.multiline,
-              minLines: 12,
-              maxLines: 20,
+              // Twelve lines leave no room for the results below them on a
+              // landscape phone; a short screen gets a short editor.
+              minLines: MediaQuery.sizeOf(context).height < 600 ? 3 : 12,
+              maxLines: MediaQuery.sizeOf(context).height < 600 ? 5 : 20,
             ),
             const SizedBox(height: 10),
             Row(
