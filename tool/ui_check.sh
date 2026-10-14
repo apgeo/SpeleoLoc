@@ -44,6 +44,9 @@ step() { echo; echo "=== $* ==="; }
 step "analyze"
 tool/analyze_check.sh "${ANALYZE_ARGS[@]}" || status=1
 
+step "ui lint: hard-coded strings, icon buttons without a tooltip"
+python3 tool/ui_lint.py || status=1
+
 step "layout across device profiles"
 flutter test --no-pub test/widgets/trip_media_layout_test.dart || status=1
 

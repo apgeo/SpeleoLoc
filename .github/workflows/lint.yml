@@ -31,6 +31,11 @@ jobs:
         # job red, which is how its later steps went unrun.
         run: bash tool/analyze_check.sh
 
+      - name: UI lint
+        # Hard-coded user-visible strings and icon buttons without a
+        # tooltip, held against tool/ui_lint_baseline.json like analysis.
+        run: python3 tool/ui_lint.py
+
       - name: Format check
         # Repo was bulk-formatted with the Dart 3.10 tall style (commit
         # c046a93); this keeps it that way. Generated *.g.dart files are
