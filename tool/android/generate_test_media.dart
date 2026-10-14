@@ -201,12 +201,17 @@ void _drawQr(img.Image image, String payload) {
   }
 }
 
-/// A QR label held up in front of the camera: the code large and centred on
-/// a light, slightly uneven wall, which is about what a phone sees when
-/// pointed at a label underground.
+/// QR labels held up in front of the camera: the same code six times over,
+/// on a light, slightly uneven wall.
+///
+/// Six, not one: the emulator turns the picture into camera frames and the
+/// scanner's preview then rotates and crops them to fill a portrait screen,
+/// so a single centred label ended up half outside the part the scanner
+/// looks at. With a grid, whatever the crop, a whole label is in it.
 void _writeCameraImage(String path, String code) {
   const w = 1280;
   const h = 960;
+  const tile = 420;
   final image = img.Image(width: w, height: h);
   final rnd = Random(code.hashCode);
   for (var y = 0; y < h; y++) {
@@ -221,9 +226,21 @@ void _writeCameraImage(String path, String code) {
       );
     }
   }
-  _drawQr(image, code);
+  final label = img.Image(width: tile, height: tile);
+  img.fill(label, color: img.ColorRgb8(255, 255, 255));
+  _drawQr(label, code);
+  for (var row = 0; row < 2; row++) {
+    for (var col = 0; col < 3; col++) {
+      img.compositeImage(
+        image,
+        label,
+        dstX: 10 + col * (tile + 5),
+        dstY: 40 + row * (tile + 20),
+      );
+    }
+  }
   final file = File(path);
   file.parent.createSync(recursive: true);
   file.writeAsBytesSync(img.encodePng(image));
-  stdout.writeln('wrote ${file.path} (QR for "$code")');
+  stdout.writeln('wrote ${file.path} (QR for "$code", six times)');
 }
