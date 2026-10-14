@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -58,6 +59,16 @@ class LocServ {
 
   /// Return list of supported locale codes.
   List<String> supportedLocales() => _strings.keys.toList();
+
+  /// Makes [strings] available as [locale] without an asset behind it.
+  ///
+  /// For the UI tests' pseudo-locale: every English string lengthened and
+  /// accented, so a layout that only fits today's translations shows up
+  /// before a longer language arrives. Nothing in the app calls this.
+  @visibleForTesting
+  void installStrings(String locale, Map<String, String> strings) {
+    _strings[locale] = Map.of(strings);
+  }
 
   /// Translate [key] using the current locale.
   ///

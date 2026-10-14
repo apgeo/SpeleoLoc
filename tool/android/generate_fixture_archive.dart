@@ -93,7 +93,10 @@ const settingsProfiles = <String, Map<String, String>>{
   'tours': {},
 };
 
-const fixtureLanguages = ['ro', 'en'];
+/// `pseudo` is not a language the app ships: the UI tests install it at run
+/// time as lengthened, accented English, to find layouts that will not
+/// survive a longer translation. See integration_test/support/pseudo_locale.dart.
+const fixtureLanguages = ['ro', 'en', 'pseudo'];
 
 void main() {
   test(

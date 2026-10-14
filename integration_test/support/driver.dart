@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -8,9 +9,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:speleoloc/main.dart' as app;
+import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
 
 import 'cell.dart';
+import 'pseudo_locale.dart';
 import 'recorder.dart';
 
 /// Shared plumbing for the end-to-end tests.
@@ -82,6 +85,18 @@ class AppDriver {
   /// i18n bundle, the current user and the active-trip lookup before
   /// `runApp`, so the first frame can arrive long after the test begins.
   Future<void> launch({Duration timeout = const Duration(seconds: 90)}) async {
+    // The pseudo-locale has no asset of its own. Installed before the app
+    // starts, it is there when startup reads the language the seeded data
+    // asks for and switches to it.
+    if (cell.language == 'pseudo') {
+      final english =
+          jsonDecode(await rootBundle.loadString('assets/i18n/en.json'))
+              as Map<String, dynamic>;
+      LocServ.inst.installStrings(
+        'pseudo',
+        pseudoLocalize(english.map((k, v) => MapEntry(k, '$v'))),
+      );
+    }
     app.main();
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
