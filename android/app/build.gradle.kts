@@ -41,6 +41,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // For running the integration tests as an instrumentation on cloud
+        // devices (tool/android/cloud_ftl.sh); unused by ordinary builds.
+        // The runner and rules come with Flutter's integration_test plugin,
+        // which pins their versions for the app's debug build already.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {

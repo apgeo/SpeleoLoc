@@ -14,6 +14,7 @@ import 'package:speleoloc/utils/navigator_key.dart';
 
 import 'cell.dart';
 import 'pseudo_locale.dart';
+import 'self_seed.dart';
 import 'recorder.dart';
 
 /// Shared plumbing for the end-to-end tests.
@@ -97,6 +98,7 @@ class AppDriver {
         pseudoLocalize(english.map((k, v) => MapEntry(k, '$v'))),
       );
     }
+    await seedFromBundleIfAsked();
     final started = DateTime.now();
     app.main();
     final deadline = DateTime.now().add(timeout);

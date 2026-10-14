@@ -37,6 +37,12 @@ Future<void> _sweep(AppDriver driver, {required bool coreOnly}) async {
   final cell = driver.cell;
   await driver.launch();
   final fx = await Fx.load();
+  // An empty device makes every screen with an object to open skip, and a
+  // sweep that skips everything passes. When the fixture was expected, that
+  // is a setup failure, not a pass.
+  if (cell.isInvented && fx.cave == null) {
+    fail('the invented fixture is not on the device: no cave to open');
+  }
   final entries = screenCatalogue.where((e) => !coreOnly || e.core).toList();
   final broken = <String>[];
 

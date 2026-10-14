@@ -81,8 +81,15 @@ class MatrixCell {
     final shapes = ((json['shapes'] as List?) ?? const [])
         .map((e) => DeviceShape.fromJson(e as Map<String, dynamic>))
         .toList();
+    // A build that runs where no cell file can be pushed — a cloud device
+    // lab — can carry its flow list in instead.
+    const builtIn = String.fromEnvironment('SPELEO_FLOWS');
+    final flows = strings('flows').toSet();
+    if (flows.isEmpty && builtIn.isNotEmpty) {
+      flows.addAll(builtIn.split(',').where((f) => f.isNotEmpty));
+    }
     return MatrixCell._(
-      flows: strings('flows').toSet(),
+      flows: flows,
       shapes: shapes.isEmpty ? const [DeviceShape.native] : shapes,
       language: '${json['language'] ?? ''}',
       settings: '${json['settings'] ?? 'default'}',
