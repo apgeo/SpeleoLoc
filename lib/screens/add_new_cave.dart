@@ -224,7 +224,9 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
-      body: Padding(
+      // Scrollable because the form is taller than a landscape phone, and
+      // than any phone once the keyboard takes half the screen.
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
