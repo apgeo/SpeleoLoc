@@ -7,7 +7,17 @@ import 'package:path_provider/path_provider.dart';
 /// What a platform can do for a flow. A flow names what it needs and is
 /// skipped — visibly, with the reason — where that is missing, rather than
 /// failing for a reason that has nothing to do with the app.
-enum Need { media, camera, bluetooth, location, microphone, network }
+enum Need {
+  media,
+  camera,
+  bluetooth,
+  location,
+  microphone,
+  network,
+
+  /// Rendering a PDF on screen; the PDF plugin has no Linux implementation.
+  pdf,
+}
 
 /// One cell of the test matrix, as seen from inside the app under test.
 ///

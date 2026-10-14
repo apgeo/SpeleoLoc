@@ -147,6 +147,7 @@ final List<ScreenEntry> screenCatalogue = [
     (fx) =>
         fx.cave == null ? null : GeneratedQRCodeViewer(caveUuid: fx.cave!.uuid),
     core: true,
+    needs: {Need.pdf},
   ),
   ScreenEntry(
     'cave_documents',
