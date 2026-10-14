@@ -268,7 +268,9 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
           KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
         ],
       ),
-      body: Padding(
+      // Scrollable because the form is taller than a landscape phone, and
+      // than any phone once the keyboard is up.
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
