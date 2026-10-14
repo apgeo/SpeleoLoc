@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "Screen shapes the test matrix renders at. One list, read by the matrix",
+    "runner (which hands the logical size to the desktop build and the",
+    "pixel size to an emulator) so a shape means the same thing everywhere.",
+    "width/height are logical pixels; android.size and android.density are",
+    "what `wm size` and `wm density` are given to produce that on a device.",
+    "best_effort shapes are reported and never fail a run.",
+    "Names match test/support/device_profiles.dart where both have a shape."
+  ],
+  "shapes": {
+    "native": {},
+    "phone_small": {
+      "width": 360, "height": 640, "pixel_ratio": 2.0,
+      "android": {"size": "720x1280", "density": 320}
+    },
+    "phone_common": {
+      "width": 412, "height": 915, "pixel_ratio": 2.625,
+      "android": {"size": "1080x2400", "density": 420}
+    },
+    "phone_landscape": {
+      "width": 915, "height": 412, "pixel_ratio": 2.625,
+      "android": {"size": "1080x2400", "density": 420, "rotation": 1}
+    },
+    "tablet_portrait": {
+      "width": 800, "height": 1280, "pixel_ratio": 2.0,
+      "android": {"size": "1600x2560", "density": 320}
+    },
+    "tablet_landscape": {
+      "width": 1280, "height": 800, "pixel_ratio": 2.0,
+      "android": {"size": "1600x2560", "density": 320, "rotation": 1}
+    },
+    "phone_large_text": {
+      "width": 412, "height": 915, "pixel_ratio": 2.625, "text_scale": 1.5,
+      "android": {"size": "1080x2400", "density": 420, "font_scale": 1.5}
+    },
+    "phone_max_text_bold": {
+      "width": 412, "height": 915, "pixel_ratio": 2.625, "text_scale": 2.0,
+      "best_effort": true,
+      "android": {"size": "1080x2400", "density": 420, "font_scale": 2.0, "bold": true}
+    },
+    "phone_dark": {
+      "desktop": false,
+      "android": {"night": true}
+    }
+  }
+}
