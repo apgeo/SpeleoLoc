@@ -226,6 +226,27 @@ case ",$FLOWS," in
     beacons=$! ;;
 esac
 
+# flutter drive installs the build again although the step above already
+# did: its start path always installs. That takes 2–11 s; once it hung
+# inside adb until the cell's whole time limit was gone. Five minutes
+# after the install begins the watchdog stops the drive, and the cell is a
+# setup error, which the runner retries on a fresh boot.
+install_watchdog() { # drive-pid
+  local waited=0
+  while kill -0 "$1" 2>/dev/null; do
+    grep -qE '^Installing .*[0-9](ms|s)$' "$OUT/drive.log" 2>/dev/null && return
+    if grep -q '^Installing ' "$OUT/drive.log" 2>/dev/null; then
+      waited=$((waited + 10))
+      if [ "$waited" -ge 300 ]; then
+        echo "flutter drive's install of the build hung for ${waited}s" > "$OUT/install_hung"
+        kill -INT "$1" 2>/dev/null
+        return
+      fi
+    fi
+    sleep 10
+  done
+}
+
 # --keep-app-running leaves the build installed, so the next cell on this
 # device skips the install; the data is replaced by its own seeding step.
 timeout --signal=INT --kill-after=30 "$TIMEOUT" flutter drive \
@@ -233,10 +254,14 @@ timeout --signal=INT --kill-after=30 "$TIMEOUT" flutter drive \
   --use-application-binary "$APK" \
   --driver test_driver/integration_test.dart \
   --target integration_test/suite_test.dart \
-  --keep-app-running > "$OUT/drive.log" 2>&1
+  --keep-app-running > "$OUT/drive.log" 2>&1 &
+drive=$!
+install_watchdog "$drive" &
+install_wd=$!
+wait "$drive"
 code=$?
-kill "$watcher" $beacons 2>/dev/null
-wait "$watcher" $beacons 2>/dev/null
+kill "$watcher" "$install_wd" $beacons 2>/dev/null
+wait "$watcher" "$install_wd" $beacons 2>/dev/null
 
 # What the device itself complained about during the run. Under invented
 # or anonymized data this is safe to read; otherwise the directory's
@@ -249,6 +274,7 @@ adb_sh am force-stop "$PKG"
 [ -n "$STATE" ] && tool/android/platform_state.sh reset "$SERIAL" >/dev/null 2>&1
 tool/android/device_profile.sh reset "$SERIAL" >/dev/null 2>&1
 
+[ -f "$OUT/install_hung" ] && setup_error "$(cat "$OUT/install_hung")"
 if [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; then
   echo "the drive did not finish within ${TIMEOUT}s" >> "$OUT/drive.log"
 fi
