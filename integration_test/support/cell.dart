@@ -41,6 +41,7 @@ class MatrixCell {
     required this.settings,
     required this.theme,
     required this.device,
+    required this.api,
     required this.dataOrigin,
     required this.outDir,
     required this.fontsDir,
@@ -61,6 +62,9 @@ class MatrixCell {
   final String theme;
   final String device;
 
+  /// The Android API level of the device, when the runner knows it.
+  final int? api;
+
   /// `invented`, `anonymized` or `unmarked`, as declared by the archive the
   /// device was seeded from.
   final String dataOrigin;
@@ -78,11 +82,13 @@ class MatrixCell {
   /// tool/matrix/known_issues.json. Reported, never failing.
   final List<KnownIssue> knownIssues;
 
-  /// The known issue [error] on [screen] in [shape] is, if any.
+  /// The known issue [error] on [screen] in [shape] is, if any. A flow is
+  /// looked up by its name in place of a screen.
   KnownIssue? known(String screen, String shape, String error) {
     for (final issue in knownIssues) {
       if ((issue.screen == '*' || issue.screen == screen) &&
           (issue.shape == '*' || issue.shape == shape) &&
+          (issue.apiMax == null || (api != null && api! <= issue.apiMax!)) &&
           error.contains(issue.contains)) {
         return issue;
       }
@@ -127,6 +133,7 @@ class MatrixCell {
       settings: '${json['settings'] ?? 'default'}',
       theme: '${json['theme'] ?? 'light'}',
       device: '${json['device'] ?? Platform.operatingSystem}',
+      api: int.tryParse('${json['api'] ?? ''}'),
       dataOrigin:
           '${json['data_origin'] ?? (const bool.fromEnvironment('SPELEO_FIXTURE_INVENTED') ? 'invented' : 'unmarked')}',
       outDir: json['out_dir'] as String?,
@@ -192,17 +199,27 @@ class DeviceShape {
 
 /// A screen error that is known and accepted for now.
 class KnownIssue {
-  const KnownIssue(this.screen, this.shape, this.contains, this.reason);
+  const KnownIssue(
+    this.screen,
+    this.shape,
+    this.contains,
+    this.reason, {
+    this.apiMax,
+  });
 
   factory KnownIssue.fromJson(Map<String, dynamic> json) => KnownIssue(
     '${json['screen']}',
     '${json['shape'] ?? '*'}',
     '${json['contains'] ?? ''}',
     '${json['reason'] ?? ''}',
+    apiMax: (json['api_max'] as num?)?.toInt(),
   );
 
   final String screen;
   final String shape;
   final String contains;
   final String reason;
+
+  /// The newest Android API level the issue shows on; null for all.
+  final int? apiMax;
 }

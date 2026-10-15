@@ -74,9 +74,10 @@ A cell that did not run is listed as NOT RUN and is never counted as a pass.
   tiles, normal underground) are recorded as `network`, not as broken.
   After a broken screen the sweep starts the app again, so one failure
   does not cascade.
-- **Known issues**: a screen error listed in `tool/matrix/known_issues.json`
-  is reported under its own heading and does not fail the run. Remove the
-  entry when the bug is fixed.
+- **Known issues**: a screen error or a flow failure listed in
+  `tool/matrix/known_issues.json` (optionally only up to an Android API
+  level, `api_max`) is reported under its own heading and does not fail
+  the run. Remove the entry when the bug is fixed.
 - **For every screen the sweep opens**: a build or layout error, with the
   widget and the file and line it came from; text the framework had to cut
   off; Flutter's accessibility guidelines — tap targets under 48 dp,

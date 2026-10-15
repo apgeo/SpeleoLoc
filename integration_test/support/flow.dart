@@ -49,8 +49,16 @@ void flow(
       await body(driver);
       record.pass();
     } catch (e) {
-      record.fail(e);
-      rethrow;
+      // Like a known screen in the sweep: a failure already listed in
+      // tool/matrix/known_issues.json is reported, not failed, so the run
+      // keeps saying something about everything else.
+      final shape = cell.shapes.isEmpty ? '' : cell.shapes.first.name;
+      final issue = cell.known(name, shape, '$e');
+      if (issue == null) {
+        record.fail(e);
+        rethrow;
+      }
+      record.known(e, issue.reason);
     } finally {
       await driver.restore();
     }

@@ -99,8 +99,12 @@ class FlowRecord {
 
   void pass() => _end('passed');
   void skip(String reason) => _end('skipped', reason);
-  void fail(Object error) {
-    final text = '$error';
-    _end('failed', text.length > 1500 ? '${text.substring(0, 1500)}…' : text);
-  }
+  void fail(Object error) => _end('failed', _clip('$error'));
+
+  /// Failed in a way tool/matrix/known_issues.json already lists.
+  void known(Object error, String reason) =>
+      _end('known', '${_clip('$error')} | known: $reason');
+
+  static String _clip(String text) =>
+      text.length > 1500 ? '${text.substring(0, 1500)}…' : text;
 }

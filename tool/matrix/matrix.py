@@ -481,7 +481,7 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
             "lang": cell["lang"], "settings": cell["settings"],
             "shapes": cell["shapes"], "origin": origin, **outcome,
             "flows": {s: sum(1 for f in flows if f.get("status") == s)
-                      for s in ("passed", "failed", "skipped")},
+                      for s in ("passed", "failed", "skipped", "known")},
             "screens": {s: sum(1 for x in screens if x.get("status") == s)
                         for s in ("ok", "busy", "error", "timeout", "skipped", "network", "known")},
             "startup_ms": data.get("startup_ms"),
@@ -501,6 +501,12 @@ def collect(run_dir: Path, cells: list[dict], results: dict) -> dict:
             if f.get("status") == "failed":
                 report["failures"].append({"cell": cell["id"], "flow": f.get("name"),
                                            "detail": f.get("detail", "")})
+            if f.get("status") == "known":
+                report["screens"].setdefault(
+                    f"flow {f.get('name')}",
+                    {"area": "", "runs": 0, "errors": [], "known": [], "truncated": set()},
+                )["known"].append({"cell": cell["id"], "shape": "–",
+                                   "error": f.get("detail", "")})
         if outcome["status"] in ("failed", "setup-error") and not any(
             f.get("status") == "failed" for f in flows
         ):
@@ -600,7 +606,7 @@ def write_report(run_dir: Path, tier: str, about: str, report: dict, notes: dict
         lines += ["## Known issues still present", "",
                   "Listed in tool/matrix/known_issues.json and so not failing this run. "
                   "Remove an entry when its bug is fixed.", "",
-                  "| Screen | Where | Why it is known |", "|---|---|---|"]
+                  "| Screen or flow | Where | Why it is known |", "|---|---|---|"]
         for name, entry in sorted(known.items()):
             for k in entry["known"]:
                 why = k["error"].split("| known: ", 1)[-1][:240].replace("|", "\\|")
