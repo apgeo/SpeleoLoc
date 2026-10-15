@@ -57,16 +57,23 @@ scan_cheap() {
     base="$(basename "$f")"
     adb_sh "content call --uri content://media/external/file --method scan_file --arg $REMOTE_DIR/$base" \
       >/dev/null 2>&1 || true
+    # Before Android 10 MediaProvider has no scan_file; the per-file scan
+    # broadcast is what indexes a file there (and is ignored after).
+    adb_sh am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+      -d "file://$REMOTE_DIR/$base" >/dev/null 2>&1 || true
   done
   adb_sh am broadcast \
     -a android.intent.action.MEDIA_MOUNTED -d "file://$REMOTE_DIR" >/dev/null 2>&1 || true
 }
 
-# Counts seeded rows that the scanner actually completed.
+# Counts seeded rows that the scanner actually completed. is_pending only
+# exists from Android 10; asking for it earlier fails the whole query.
+pending=""
+[ "$(adb_sh getprop ro.build.version.sdk | tr -d '\r')" -ge 29 ] && pending="AND is_pending=0"
 indexed_count() {
   adb_sh "content query --uri content://media/external/images/media \
        --projection _display_name \
-       --where \"_display_name LIKE 'speleo_%' AND is_pending=0 AND datetaken IS NOT NULL\"" \
+       --where \"_display_name LIKE 'speleo_%' $pending AND datetaken IS NOT NULL\"" \
     | grep -c '^Row:' || true
 }
 
