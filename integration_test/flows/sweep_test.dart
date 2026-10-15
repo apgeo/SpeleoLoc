@@ -231,7 +231,7 @@ String _describe(
   final parts = <String>[];
   for (final details in reported.take(3)) {
     final summary = details.exceptionAsString().split('\n').first.trim();
-    final text = details.toString();
+    final text = _quietly(details.toString);
     final marker = text.indexOf('The relevant error-causing widget was:');
     var where = '';
     if (marker >= 0) {
@@ -277,6 +277,21 @@ KnownIssue? _known(
     first ??= issue;
   }
   return first;
+}
+
+/// Runs [describe] with error reporting switched off. Rendering an
+/// error's details walks the widget tree to name the code at fault; when
+/// that widget has left the tree since, the walk reports an error of its
+/// own ("Looking up a deactivated widget's ancestor is unsafe"). That one
+/// is the sweep's doing, not the screen's, and must not be judged with it.
+String _quietly(String Function() describe) {
+  final report = FlutterError.onError;
+  FlutterError.onError = (_) {};
+  try {
+    return describe();
+  } finally {
+    FlutterError.onError = report;
+  }
 }
 
 /// Whether everything that went wrong on a screen was a failed network
