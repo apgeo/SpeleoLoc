@@ -267,7 +267,7 @@ wait "$watcher" "$install_wd" $beacons 2>/dev/null
 # or anonymized data this is safe to read; otherwise the directory's
 # data-origin marker says it is not.
 adb_s logcat -d -v time 2>/dev/null \
-  | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E AndroidRuntime" \
+  | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E/AndroidRuntime" \
   > "$OUT/logcat.txt" || true
 
 adb_sh am force-stop "$PKG"
