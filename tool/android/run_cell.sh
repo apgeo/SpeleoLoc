@@ -164,7 +164,7 @@ if [ "$MONKEY" -gt 0 ]; then
     --ignore-crashes --ignore-timeouts \
     --monitor-native-crashes --throttle 150 -s "$seed" -v "$MONKEY" \
     > "$OUT/monkey.log" 2>&1
-  adb_s logcat -d -v time 2>/dev/null \
+  timeout 60 "$ADB" -s "$SERIAL" logcat -d -v time 2>/dev/null \
     | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E/AndroidRuntime" \
     > "$OUT/logcat.txt" || true
   adb_sh am force-stop "$PKG"
@@ -263,16 +263,25 @@ code=$?
 kill "$watcher" "$install_wd" $beacons 2>/dev/null
 wait "$watcher" "$install_wd" $beacons 2>/dev/null
 
+# The emulator can go away in the middle of a run — once it vanished with
+# no crash report while the VM was being given more memory — and adb then
+# waits for it to come back for as long as anyone lets it. So the device is
+# looked for first, and its absence is a setup error, which the runner
+# retries on a fresh boot; every call after that is bounded as well.
+if [ "$(timeout 15 "$ADB" -s "$SERIAL" get-state 2>/dev/null)" != device ]; then
+  setup_error "the emulator went away during the drive; drive.log ends: $(tail -2 "$OUT/drive.log" | tr '\n' ' ' | cut -c1-200)"
+fi
+
 # What the device itself complained about during the run. Under invented
 # or anonymized data this is safe to read; otherwise the directory's
 # data-origin marker says it is not.
-adb_s logcat -d -v time 2>/dev/null \
+timeout 60 "$ADB" -s "$SERIAL" logcat -d -v time 2>/dev/null \
   | grep -E " E/flutter|FATAL EXCEPTION|ANR in $PKG|Fatal signal|E/AndroidRuntime" \
   > "$OUT/logcat.txt" || true
 
-adb_sh am force-stop "$PKG"
-[ -n "$STATE" ] && tool/android/platform_state.sh reset "$SERIAL" >/dev/null 2>&1
-tool/android/device_profile.sh reset "$SERIAL" >/dev/null 2>&1
+timeout 30 "$ADB" -s "$SERIAL" shell am force-stop "$PKG"
+[ -n "$STATE" ] && timeout 120 tool/android/platform_state.sh reset "$SERIAL" >/dev/null 2>&1
+timeout 120 tool/android/device_profile.sh reset "$SERIAL" >/dev/null 2>&1
 
 [ -f "$OUT/install_hung" ] && setup_error "$(cat "$OUT/install_hung")"
 if [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; then

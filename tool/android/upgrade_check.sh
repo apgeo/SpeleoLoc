@@ -52,7 +52,7 @@ start_app() {
   sleep 20
 }
 crashes() {
-  adb_s logcat -d -v time 2>/dev/null \
+  timeout 60 "$ADB" -s "$SERIAL" logcat -d -v time 2>/dev/null \
     | grep -E "FATAL EXCEPTION|ANR in $PKG|E/flutter|Fatal signal" || true
 }
 
