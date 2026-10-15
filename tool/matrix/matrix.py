@@ -168,11 +168,18 @@ def expand(tier: dict, shapes: dict, args) -> list[dict]:
         parts = [cell["lang"], cell["settings"]]
         parts.append(cell["shapes"][0] if cell["kind"] == "android" else "shapes")
         parts += [cell[k] for k in ("journey", "state") if k in cell]
-        if cell["kind"] == "android" and set(cell["flows"]) == {"trip_media"}:
+        if cell["kind"] == "android" and cell.get("media"):
             parts.append("media")
         if "monkey" in cell:
             parts.append("monkey")
         cell["id"] = f"{cell['device']}/{'-'.join(parts)}"
+    # The id names the cell's output directory; two cells under one name
+    # would write over each other's results.
+    taken: dict[str, int] = {}
+    for cell in unique:
+        n = taken[cell["id"]] = taken.get(cell["id"], 0) + 1
+        if n > 1:
+            cell["id"] += f"-{n}"
     return unique
 
 
