@@ -27,6 +27,7 @@ import itertools
 import json
 import os
 import shutil
+import signal
 import struct
 import subprocess
 import sys
@@ -62,16 +63,37 @@ def load(name: str) -> dict:
 def run(cmd, log: Path | None = None, env=None, timeout=None, cwd=ROOT):
     """Runs a command, optionally teeing everything it prints into a file."""
     full_env = {**os.environ, **(env or {})}
+    # Each command gets its own process group, and a timeout ends the whole
+    # group: killing only the direct child once left a cell's script, and
+    # the adb it was stuck in, running for the rest of the run.
+    proc = subprocess.Popen(
+        cmd, cwd=cwd, env=full_env, start_new_session=True,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
     try:
-        proc = subprocess.run(
-            cmd, cwd=cwd, env=full_env, timeout=timeout,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-        )
-        out, code = proc.stdout, proc.returncode
-    except subprocess.TimeoutExpired as e:
-        out = (e.stdout or "") if isinstance(e.stdout, str) else (e.stdout or b"").decode(errors="replace")
-        out += f"\nTIMEOUT after {timeout}s\n"
+        out, _ = proc.communicate(timeout=timeout)
+        code = proc.returncode
+    except subprocess.TimeoutExpired:
+        out = ""
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(proc.pid, sig)
+            except ProcessLookupError:
+                break
+            try:
+                out, _ = proc.communicate(timeout=30)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        out = (out or "") + f"\nTIMEOUT after {timeout}s\n"
         code = 124
+    except BaseException:
+        # Interrupted: the group is out of reach of the terminal's Ctrl-C.
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        raise
     if log is not None:
         log.parent.mkdir(parents=True, exist_ok=True)
         with log.open("a") as f:
