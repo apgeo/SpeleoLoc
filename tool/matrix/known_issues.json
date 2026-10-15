@@ -3,8 +3,10 @@
     "Screen errors that are known, reported and waiting on a decision, so",
     "they do not turn every run red — a check that is always red stops being",
     "read. Each entry matches a sweep error by screen, by shape (or `*`) and",
-    "by a piece of the error text. Matches are listed under their own heading",
-    "in the report, with the reason, and never fail a run. Remove an entry",
+    "by a piece of the error text; a flow's failure matches by the flow's",
+    "name in place of the screen. `api_max` limits an entry to Android API",
+    "levels up to that one. Matches are listed under their own heading in",
+    "the report, with the reason, and never fail a run. Remove an entry",
     "when its bug is fixed: the run then fails if the error comes back."
   ],
   "issues": [
@@ -27,6 +29,14 @@
       "shape": "*",
       "contains": "HandshakeException",
       "reason": "Android 7.x cannot verify tile.opentopomap.org: its chain ends at ISRG Root X2, which the Android 7 trust store lacks, so map tiles never load on those phones (minSdk is 24). Fix: give the tile HTTP client a SecurityContext that also trusts the ISRG roots, or use a tile server whose chain Android 7 trusts.",
+      "since": "2026-10-15"
+    },
+    {
+      "screen": "trip_media",
+      "shape": "*",
+      "api_max": 28,
+      "contains": "the media library to list the seeded pictures",
+      "reason": "Before Android 10 photo_manager reports DATE_ADDED (when the file reached the phone) as an asset's create time, not DATE_TAKEN, so lib/services/trip_media/device_library_media_source.dart filters and sorts pictures copied over after a trip by the copy's time: on Android 7–9 the points-from-pictures screen never offers them. Needs the Android version, to fall back to the photo's EXIF there (device_info_plus, or a small platform channel).",
       "since": "2026-10-15"
     }
   ]
