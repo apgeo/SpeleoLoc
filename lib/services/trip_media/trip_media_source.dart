@@ -37,5 +37,25 @@ abstract class TripMediaSource {
 
   /// The item's bytes on disk, which may be a temporary copy the platform
   /// made. Null when the file cannot be materialised.
+  ///
+  /// Only for what is actually being kept: on Android 10 and on iOS every
+  /// call copies the original into the plugin's cache.
   Future<File?> file(TripMediaItem item);
+
+  /// Runs [use] on a still good enough to look for a QR label in and
+  /// returns its result — null for a video, or an item that cannot be read.
+  ///
+  /// The library hands over a reduced copy, not the original, deleted as
+  /// soon as [use] returns. A sweep over a camera roll would otherwise
+  /// duplicate the roll in the cache on the platforms where an original is
+  /// itself a copy, and decode full-size frames to find a label that a
+  /// fraction of the pixels show just as well.
+  Future<R?> withScanImage<R>(
+    TripMediaItem item,
+    Future<R?> Function(File file) use,
+  );
+
+  /// Frees whatever this source materialised. Call when the screen that
+  /// owns it goes away, after any import has finished.
+  Future<void> release();
 }

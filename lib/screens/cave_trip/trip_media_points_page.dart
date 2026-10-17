@@ -93,6 +93,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
     _disposed = true;
     _qrCancelled = true;
     unawaited(_detector?.dispose());
+    unawaited(_resolution?.source.release());
     super.dispose();
   }
 
@@ -230,23 +231,19 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
         continue;
       }
       try {
-        final file = _files[item.id] ?? await resolution.source.file(item);
-        if (file != null) {
-          _files[item.id] = file;
-          final place = await detector.detectCavePlace(
-            file,
-            caveUuid: trip.caveUuid,
-          );
-          if (place != null && mounted && !_assignments.containsKey(item.id)) {
-            setState(() {
-              _assignments[item.id] = TripMediaAssignment(
-                place: place,
-                at: item.capturedAt,
-                fromQrCode: true,
-              );
-              _qrFound++;
-            });
-          }
+        final place = await resolution.source.withScanImage(
+          item,
+          (file) => detector.detectCavePlace(file, caveUuid: trip.caveUuid),
+        );
+        if (place != null && mounted && !_assignments.containsKey(item.id)) {
+          setState(() {
+            _assignments[item.id] = TripMediaAssignment(
+              place: place,
+              at: item.capturedAt,
+              fromQrCode: true,
+            );
+            _qrFound++;
+          });
         }
       } catch (e, st) {
         log.fine('QR pass failed for ${item.id}', e, st);

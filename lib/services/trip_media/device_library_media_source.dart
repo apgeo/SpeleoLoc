@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:speleoloc/services/trip_media/trip_media_item.dart';
 import 'package:speleoloc/services/trip_media/trip_media_source.dart';
@@ -121,6 +122,66 @@ class DeviceLibraryMediaSource implements TripMediaSource {
     } catch (e, st) {
       _log.fine('thumbnail failed for ${item.id}', e, st);
       return null;
+    }
+  }
+
+  /// Long edge, in pixels, of the still handed to the QR decoder: enough
+  /// for a label filling a tenth of the frame to keep several pixels per
+  /// module, far less than a phone camera's 4000-plus.
+  static const int scanEdge = 2048;
+
+  @override
+  Future<R?> withScanImage<R>(
+    TripMediaItem item,
+    Future<R?> Function(File file) use,
+  ) async {
+    final asset = _assets[item.id];
+    if (asset == null || !item.isPhoto) return null;
+    final Uint8List? bytes;
+    try {
+      bytes = await asset.thumbnailDataWithOption(
+        Platform.isIOS
+            // iOS's default delivery is opportunistic, which can answer with
+            // a quick degraded image first — the wrong input for a decoder.
+            ? ThumbnailOption.ios(
+                size: const ThumbnailSize.square(scanEdge),
+                deliveryMode: DeliveryMode.highQualityFormat,
+                quality: 90,
+              )
+            : const ThumbnailOption(
+                size: ThumbnailSize.square(scanEdge),
+                quality: 90,
+              ),
+      );
+    } catch (e, st) {
+      _log.fine('scan image failed for ${item.id}', e, st);
+      return null;
+    }
+    if (bytes == null) return null;
+
+    final dir = await getTemporaryDirectory();
+    final scan = File('${dir.path}/trip_media_scan_${item.id.hashCode}.jpg');
+    try {
+      await scan.writeAsBytes(bytes, flush: true);
+      return await use(scan);
+    } finally {
+      try {
+        if (await scan.exists()) await scan.delete();
+      } catch (e, st) {
+        _log.fine('could not remove ${scan.path}', e, st);
+      }
+    }
+  }
+
+  @override
+  Future<void> release() async {
+    _assets.clear();
+    try {
+      // Removes the originals the plugin copied for `file` (Android 10,
+      // iOS). Safe once the import that needed them has finished.
+      await PhotoManager.clearFileCache();
+    } catch (e, st) {
+      _log.fine('clearing the photo cache failed', e, st);
     }
   }
 

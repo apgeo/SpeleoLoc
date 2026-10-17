@@ -116,4 +116,20 @@ class PickedFilesMediaSource implements TripMediaSource {
     final f = File(item.id);
     return await f.exists() ? f : null;
   }
+
+  /// A picked file is already a local copy, so it is scanned as it is.
+  @override
+  Future<R?> withScanImage<R>(
+    TripMediaItem item,
+    Future<R?> Function(File file) use,
+  ) async {
+    if (!item.isPhoto) return null;
+    final f = await file(item);
+    return f == null ? null : use(f);
+  }
+
+  /// The picker's copies are left to the platform, which clears its cache
+  /// directory on its own; nothing here was copied by this source.
+  @override
+  Future<void> release() async {}
 }
