@@ -81,6 +81,11 @@ class AppRoutes {
   static Future<void> pushSettings(BuildContext c) =>
       Navigator.pushNamed<void>(c, settingsRoute);
 
+  /// Straight to whether editing points rewrites a trip's log — the setting
+  /// the trip screens' log warnings refer to.
+  static Future<void> pushTripLogSettings(BuildContext c) =>
+      Navigator.pushNamed<void>(c, tripLogSettingsRoute);
+
   static Future<bool?> pushCaveTrip(BuildContext c, Uuid tripUuid) =>
       Navigator.pushNamed<bool>(c, caveTripRoute, arguments: tripUuid);
 

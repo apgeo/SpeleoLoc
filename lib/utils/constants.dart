@@ -31,6 +31,7 @@ const String cavePlaceRoute = '/cave_place';
 const String cavePlaceViewRoute = '/cave_place_view';
 const String rasterMapsRoute = '/raster_maps';
 const String settingsRoute = '/settings';
+const String tripLogSettingsRoute = '/settings/trip_log';
 const double zoomTextThreshold = 2.0;
 
 // Feature flags

@@ -14,6 +14,7 @@ import 'package:speleoloc/screens/trip_report_templates_page.dart';
 import 'package:speleoloc/screens/map_viewer_page.dart';
 import 'package:speleoloc/screens/general_data/raster_maps_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
+import 'package:speleoloc/screens/settings/settings_trip_log_page.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
@@ -150,6 +151,11 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
             return MaterialPageRoute<void>(
               settings: settings,
               builder: (_) => const SettingsMainPage(),
+            );
+          case tripLogSettingsRoute:
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => const SettingsTripLogPage(),
             );
           case caveTripRoute:
             final args = settings.arguments as Uuid?;

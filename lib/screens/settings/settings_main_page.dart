@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/debug_info_page.dart';
 import 'package:speleoloc/screens/settings/settings_general_page.dart';
@@ -85,6 +86,12 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                   setState(() {});
                 }
               },
+            ),
+            _SettingsSection(
+              icon: Icons.history_edu,
+              title: LocServ.inst.t('trip_log_settings_title'),
+              subtitle: LocServ.inst.t('trip_log_settings_desc'),
+              onTap: () => AppRoutes.pushTripLogSettings(context),
             ),
             _SettingsSection(
               icon: Icons.photo_size_select_large,

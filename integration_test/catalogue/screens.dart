@@ -49,6 +49,7 @@ import 'package:speleoloc/screens/settings/settings_map_page.dart';
 import 'package:speleoloc/screens/settings/settings_pdf_output_page.dart';
 import 'package:speleoloc/screens/settings/settings_place_codes_page.dart';
 import 'package:speleoloc/screens/settings/settings_qr_generation_page.dart';
+import 'package:speleoloc/screens/settings/settings_trip_log_page.dart';
 import 'package:speleoloc/screens/settings/silexgis_sync_settings_page.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
@@ -491,6 +492,11 @@ final List<ScreenEntry> screenCatalogue = [
     'settings',
     (fx) => const SettingsGeneralPage(),
     core: true,
+  ),
+  ScreenEntry(
+    'settings_trip_log',
+    'settings',
+    (fx) => const SettingsTripLogPage(),
   ),
   ScreenEntry(
     'settings_database',
