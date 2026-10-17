@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_actions.dart';
+import 'package:speleoloc/screens/cave_trip/trip_point_pictures_sheet.dart';
+import 'package:speleoloc/screens/cave_trip/trip_point_row.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
@@ -66,6 +68,10 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   Cave? _cave;
   List<CaveTripPoint> _points = [];
   Map<Uuid, CavePlace> _placesById = {};
+
+  /// The pictures bound to each point — what the media import attached to
+  /// the stop it created. Points with none are absent.
+  Map<Uuid, List<DocumentationFile>> _pointDocs = {};
 
   // Raster map state for the trip map view
   List<RasterMap> _rasterMaps = [];
@@ -206,6 +212,9 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     final points = await ref
         .read(caveTripRepositoryProvider)
         .getTripPoints(widget.tripUuid);
+    final pointDocs = await ref
+        .read(caveTripRepositoryProvider)
+        .getTripPointDocuments(widget.tripUuid);
     final placeIds = points
         .map((p) => p.cavePlaceUuid)
         .whereType<Uuid>()
@@ -233,6 +242,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         _cave = cave;
         _points = points;
         _placesById = placesById;
+        _pointDocs = pointDocs;
         _rasterMaps = rasterMaps;
       });
       // Load definitions for the first raster map if available
@@ -973,75 +983,37 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             final place = pt.cavePlaceUuid == null
                 ? null
                 : _placesById[pt.cavePlaceUuid!];
-            final title = place?.title ?? '#${pt.cavePlaceUuid}';
-            final dt = DateTime.fromMillisecondsSinceEpoch(pt.scannedAt);
-            return ListTile(
-              dense: true,
-              visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: CircleAvatar(
-                radius: 14,
-                child: Text('${i + 1}', style: const TextStyle(fontSize: 12)),
-              ),
-              title: Text(title),
-              subtitle: Text(
-                dateTimeFormat.format(dt),
-                style: const TextStyle(fontSize: 11),
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (place?.depthInCave != null)
-                    Text(
-                      '${place!.depthInCave! > 0 ? '+' : ''}${place.depthInCave}m',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  _buildPointMenu(pt, title),
-                ],
-              ),
-              onTap: place == null
+            final timeLabel = dateTimeFormat.format(
+              DateTime.fromMillisecondsSinceEpoch(pt.scannedAt),
+            );
+            final row = TripPointRow(
+              ordinal: i + 1,
+              point: pt,
+              place: place,
+              timeLabel: timeLabel,
+              pictureCount: _pointDocs[pt.uuid]?.length ?? 0,
+              onOpenPlace: place == null
                   ? null
                   : () => AppRoutes.pushCavePlace(
                       context,
                       caveUuid: place.caveUuid,
                       cavePlaceUuid: place.uuid,
                     ),
+              onShowPictures: () => unawaited(
+                TripPointPicturesSheet.show(
+                  context,
+                  title: place?.title ?? '#${pt.cavePlaceUuid}',
+                  subtitle: timeLabel,
+                  docs: _pointDocs[pt.uuid] ?? const [],
+                ),
+              ),
+              onEditTime: () => unawaited(_editPointTime(pt)),
+              onDelete: () => unawaited(
+                _deletePoint(pt, place?.title ?? '#${pt.cavePlaceUuid}'),
+              ),
             );
+            return row;
           }),
-      ],
-    );
-  }
-
-  Widget _buildPointMenu(CaveTripPoint point, String placeTitle) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, size: 20),
-      tooltip: LocServ.inst.t('trip_point_actions'),
-      onSelected: (value) {
-        if (value == 'edit_time') {
-          unawaited(_editPointTime(point));
-        } else if (value == 'delete') {
-          unawaited(_deletePoint(point, placeTitle));
-        }
-      },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'edit_time',
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.schedule),
-            title: Text(LocServ.inst.t('trip_point_edit_time')),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.delete_outline),
-            title: Text(LocServ.inst.t('trip_point_delete')),
-          ),
-        ),
       ],
     );
   }

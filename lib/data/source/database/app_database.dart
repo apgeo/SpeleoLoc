@@ -293,6 +293,38 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.caveTripPointUuid.equalsValue(pointUuid))).get();
   }
 
+  /// The documents bound to each track point of [tripUuid], keyed by point,
+  /// in the order they were attached. One query for the whole trip, so the
+  /// trip screen does not ask once per row.
+  Future<Map<Uuid, List<DocumentationFile>>> getTripPointDocuments(
+    Uuid tripUuid,
+  ) async {
+    final links = documentationFilesToCaveTripPoints;
+    final rows =
+        await (select(links).join([
+                innerJoin(
+                  documentationFiles,
+                  documentationFiles.uuid.equalsExp(
+                    links.documentationFileUuid,
+                  ),
+                ),
+                innerJoin(
+                  caveTripPoints,
+                  caveTripPoints.uuid.equalsExp(links.caveTripPointUuid),
+                ),
+              ])
+              ..where(caveTripPoints.caveTripUuid.equalsValue(tripUuid))
+              ..orderBy([OrderingTerm.asc(links.createdAt)]))
+            .get();
+    final byPoint = <Uuid, List<DocumentationFile>>{};
+    for (final row in rows) {
+      byPoint
+          .putIfAbsent(row.readTable(links).caveTripPointUuid, () => [])
+          .add(row.readTable(documentationFiles));
+    }
+    return byPoint;
+  }
+
   Future<void> deleteTripPointDocumentLinks(Uuid pointUuid) async {
     await (delete(
       documentationFilesToCaveTripPoints,

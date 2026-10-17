@@ -652,6 +652,7 @@
   "trip_point_added": "Punct adăugat la tură",
   "trip_point_add": "Adaugă punct",
   "trip_point_actions": "Acțiuni punct",
+  "trip_point_pictures": "Poze la acest punct ({n})",
   "trip_point_edit_time": "Schimbă ora",
   "trip_point_delete": "Șterge punctul",
   "trip_point_delete_confirm": "Elimini punctul „{label}” din această tură?",

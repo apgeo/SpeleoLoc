@@ -653,6 +653,7 @@
   "trip_point_added": "Point added to trip",
   "trip_point_add": "Add point",
   "trip_point_actions": "Point actions",
+  "trip_point_pictures": "Pictures at this point ({n})",
   "trip_point_edit_time": "Change time",
   "trip_point_delete": "Delete point",
   "trip_point_delete_confirm": "Remove the point \"{label}\" from this trip?",

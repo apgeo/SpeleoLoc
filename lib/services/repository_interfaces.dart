@@ -221,6 +221,12 @@ abstract class ICaveTripRepository {
   Future<List<CaveTrip>> getCaveTrips(Uuid caveUuid);
   Future<List<String>> getCaveTripTitles(Uuid caveUuid);
   Future<List<CaveTripPoint>> getTripPoints(Uuid tripUuid);
+
+  /// The documents bound to each of [tripUuid]'s track points, keyed by
+  /// point. A point with none is absent from the map.
+  Future<Map<Uuid, List<DocumentationFile>>> getTripPointDocuments(
+    Uuid tripUuid,
+  );
   Future<List<TripReportTemplate>> getTripReportTemplates();
   Future<void> renameCaveTrip(Uuid tripUuid, String newTitle);
   Future<void> deleteCaveTrip(Uuid tripUuid);

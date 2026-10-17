@@ -65,6 +65,22 @@ class CaveTripRepository implements ICaveTripRepository {
   }
 
   @override
+  Future<Map<Uuid, List<DocumentationFile>>> getTripPointDocuments(
+    Uuid tripUuid,
+  ) async {
+    try {
+      return await _database.getTripPointDocuments(tripUuid);
+    } catch (e, st) {
+      _log.severe('Failed to load trip point documents', e, st);
+      throw DbException(
+        'Failed to load trip point documents',
+        cause: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  @override
   Future<List<TripReportTemplate>> getTripReportTemplates() async {
     try {
       return await _database.getTripReportTemplates();

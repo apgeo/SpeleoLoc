@@ -162,6 +162,47 @@ void main() {
     );
   });
 
+  group('reading a trip\'s point pictures', () {
+    test('groups the documents by the point they are bound to', () async {
+      final fixture = await linkedPoint();
+      final second = await documentFile('second');
+      await db.linkDocumentToTripPoint(
+        second,
+        fixture.point,
+        authorUuid: authorUuid,
+      );
+      final otherPoint = await tripService.addPointAt(
+        tripUuid: fixture.trip,
+        cavePlaceUuid: placeUuid,
+        at: DateTime(2026, 10, 13, 12, 0),
+      );
+
+      final byPoint = await container
+          .read(caveTripRepositoryProvider)
+          .getTripPointDocuments(fixture.trip);
+
+      expect(byPoint.keys, [fixture.point]);
+      expect(byPoint[fixture.point]!.map((d) => d.uuid), [fixture.doc, second]);
+      expect(
+        byPoint.containsKey(otherPoint),
+        isFalse,
+        reason: 'a point with no pictures is absent, not an empty list',
+      );
+    });
+
+    test('leaves out the pictures of other trips', () async {
+      final fixture = await linkedPoint();
+      final otherTrip = await tripService.startTrip(caveUuid, 'Other');
+      await tripService.stopTrip();
+
+      final byPoint = await container
+          .read(caveTripRepositoryProvider)
+          .getTripPointDocuments(otherTrip);
+      expect(byPoint, isEmpty);
+      expect(fixture.link, isNotNull);
+    });
+  });
+
   test('the sync registry actually dumps a link row', () async {
     // A table missing from the registry never leaves the device, which for
     // a link table means peers keep the picture and the point but lose
