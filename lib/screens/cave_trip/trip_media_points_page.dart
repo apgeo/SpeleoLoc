@@ -88,14 +88,27 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
   int _applyDone = 0;
   int _applyTotal = 0;
 
+  static const _access = TripMediaAccessResolver();
+
+  /// True when the user chose the picker although the library could be
+  /// read; with no library access the picker is not a choice.
+  bool _pickerChosen = false;
+
+  /// Set while the user is in the system settings granting library access,
+  /// so that coming back re-checks it.
+  bool _awaitingSettings = false;
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
     unawaited(_bootstrap());
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _disposed = true;
     _qrCancelled = true;
     unawaited(_detector?.dispose());
@@ -140,10 +153,75 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
       );
     });
 
-    final resolution = await const TripMediaAccessResolver().resolve();
+    final resolution = await _access.resolve();
     if (!mounted) return;
     setState(() => _resolution = resolution);
+    // With no library to read, the screen opens on the picker.
+    if (resolution.source.choosesItems) await resolution.source.chooseMore();
+    if (!mounted) return;
     await _loadItems();
+  }
+
+  /// Puts [next] in place of the current source. The old one is released
+  /// first; the assignments made against it go with its list.
+  Future<void> _switchSource(
+    TripMediaResolution next, {
+    required bool pickerChosen,
+  }) async {
+    final previous = _resolution;
+    setState(() {
+      _resolution = next;
+      _pickerChosen = pickerChosen;
+    });
+    unawaited(previous?.source.release());
+    if (next.source.choosesItems) await next.source.chooseMore();
+    if (!mounted) return;
+    await _loadItems();
+  }
+
+  Future<void> _usePicker() async {
+    final current = _resolution;
+    if (current == null) return;
+    await _switchSource(_access.picker(current.access), pickerChosen: true);
+  }
+
+  Future<void> _useLibrary() async {
+    final current = _resolution;
+    if (current == null) return;
+    await _switchSource(_access.library(current.access), pickerChosen: false);
+  }
+
+  Future<void> _addFiles() async {
+    final source = _resolution?.source;
+    if (source == null) return;
+    await source.chooseMore();
+    if (!mounted) return;
+    await _loadItems();
+  }
+
+  Future<void> _chooseMorePhotos() async {
+    await _access.chooseMorePhotos();
+    if (!mounted) return;
+    await _loadItems();
+  }
+
+  Future<void> _openAccessSettings() async {
+    _awaitingSettings = true;
+    await _access.openSystemSettings();
+  }
+
+  /// Coming back from the system settings: if library access was granted
+  /// there, move from the picker to the library without being asked.
+  Future<void> _onResume() async {
+    if (!_awaitingSettings || !mounted) return;
+    _awaitingSettings = false;
+    final checked = await _access.resolve();
+    if (!mounted) return;
+    if (checked.access == TripMediaAccess.picker) {
+      unawaited(checked.source.release());
+      return;
+    }
+    await _switchSource(checked, pickerChosen: false);
   }
 
   static DateTime _startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -579,22 +657,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
             ),
           ],
         ),
-        if (resolution != null && resolution.access == TripMediaAccess.picker)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              LocServ.inst.t('trip_media_picker_mode'),
-              style: const TextStyle(fontSize: 11, color: Colors.orange),
-            ),
-          ),
-        if (resolution != null && resolution.access == TripMediaAccess.limited)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              LocServ.inst.t('trip_media_limited_mode'),
-              style: const TextStyle(fontSize: 11, color: Colors.orange),
-            ),
-          ),
+        if (resolution != null) _buildSourceRow(resolution),
         if (_qrUnsupported)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
@@ -618,6 +681,87 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
           onChanged: (v) => setState(() => _importFiles = v),
         ),
       ],
+    );
+  }
+
+  /// Says where the pictures come from, with the ways to change it. A
+  /// [Wrap] rather than a row so the actions drop to a second line on a
+  /// narrow phone instead of overflowing.
+  Widget _buildSourceRow(TripMediaResolution resolution) {
+    final granted = resolution.access;
+    final onPicker = _pickerChosen || granted == TripMediaAccess.picker;
+    final String label;
+    final bool caution;
+    final actions = <Widget>[];
+
+    TextButton action(String key, VoidCallback onPressed) => TextButton(
+      style: TextButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      onPressed: _loading || _applying ? null : onPressed,
+      child: Text(LocServ.inst.t(key), style: const TextStyle(fontSize: 12)),
+    );
+
+    if (onPicker) {
+      caution = true;
+      label = granted == TripMediaAccess.picker
+          ? LocServ.inst.t('trip_media_picker_mode')
+          : LocServ.inst.t('trip_media_source_picked');
+      actions.add(action('trip_media_add_files', () => unawaited(_addFiles())));
+      if (granted == TripMediaAccess.picker) {
+        actions.add(
+          action(
+            'trip_media_allow_full_access',
+            () => unawaited(_openAccessSettings()),
+          ),
+        );
+      } else {
+        actions.add(
+          action('trip_media_use_library', () => unawaited(_useLibrary())),
+        );
+      }
+    } else if (granted == TripMediaAccess.limited) {
+      caution = true;
+      label = LocServ.inst.t('trip_media_limited_mode');
+      actions
+        ..add(
+          action(
+            'trip_media_choose_more',
+            () => unawaited(_chooseMorePhotos()),
+          ),
+        )
+        ..add(
+          action(
+            'trip_media_pick_files_instead',
+            () => unawaited(_usePicker()),
+          ),
+        );
+    } else {
+      caution = false;
+      label = LocServ.inst.t('trip_media_source_library');
+      actions.add(
+        action('trip_media_pick_files_instead', () => unawaited(_usePicker())),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: caution
+                  ? Colors.orange
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Wrap(spacing: 4, children: actions),
+        ],
+      ),
     );
   }
 

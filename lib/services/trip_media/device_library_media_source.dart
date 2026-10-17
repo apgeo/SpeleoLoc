@@ -124,7 +124,10 @@ class DeviceLibraryMediaSource implements TripMediaSource {
   String get id => 'device_library';
 
   @override
-  bool get supportsDateRange => true;
+  bool get choosesItems => false;
+
+  @override
+  Future<int> chooseMore() async => 0;
 
   @override
   Future<List<TripMediaItem>> list({DateTime? from, DateTime? to}) async {

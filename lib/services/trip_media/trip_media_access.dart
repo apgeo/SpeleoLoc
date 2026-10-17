@@ -29,10 +29,42 @@ class TripMediaResolution {
   final TripMediaSource source;
 }
 
-/// Asks for library access once and hands back whichever source the answer
-/// permits.
+/// Asks for library access and hands back whichever source the answer
+/// permits — and, because the note this screen was built from offers both
+/// ways in as the user's own choice, the other one on request.
 class TripMediaAccessResolver {
   const TripMediaAccessResolver();
+
+  /// The system picker in place of the library: for files the library does
+  /// not hold — a cloud provider, the Files app — or simply a hand-picked
+  /// few. Available whatever access was granted, since it needs none.
+  TripMediaResolution picker(TripMediaAccess granted) =>
+      TripMediaResolution(granted, PickedFilesMediaSource());
+
+  /// Back to the library. Only meaningful when [granted] reaches it.
+  TripMediaResolution library(TripMediaAccess granted) =>
+      TripMediaResolution(granted, DeviceLibraryMediaSource());
+
+  /// Lets the user change which photos a "selected photos" grant covers
+  /// (iOS 14+, Android 14+). On iOS 14 this returns before the user has
+  /// finished choosing; later versions wait for them.
+  Future<void> chooseMorePhotos() async {
+    try {
+      await PhotoManager.presentLimited(type: RequestType.common);
+    } catch (e, st) {
+      _log.info('the limited-selection picker is unavailable', e, st);
+    }
+  }
+
+  /// Opens this app's page in the system settings — the only place a
+  /// denied library permission can be granted again.
+  Future<void> openSystemSettings() async {
+    try {
+      await PhotoManager.openSetting();
+    } catch (e, st) {
+      _log.info('could not open the app settings', e, st);
+    }
+  }
 
   static final _log = AppLogger.of('TripMediaAccessResolver');
 

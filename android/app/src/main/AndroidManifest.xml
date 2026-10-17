@@ -34,6 +34,11 @@
          supported and falls back to the system picker. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Android 14+: lets "select photos" be a real, lasting grant the app
+         is told about and can offer to widen. Without it the system falls
+         back to a temporary grant the app cannot tell from full access,
+         and the selection is gone on the next start. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <!-- Merged in by plugin manifests (altbeacon/geolocator) but this app
          never starts a location-typed foreground service — background beacon
          scanning runs the connectedDevice-typed service below. Stripped so

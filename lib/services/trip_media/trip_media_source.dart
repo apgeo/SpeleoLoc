@@ -15,10 +15,18 @@ abstract class TripMediaSource {
   /// are on.
   String get id;
 
-  /// True when [list] honours its date range itself. The picker cannot —
-  /// the user chooses before any filter is known — so the screen offers its
-  /// own filtering instead of pretending the range was applied.
-  bool get supportsDateRange;
+  /// Whether the items are ones the user picks in a system picker and adds
+  /// to with [chooseMore], rather than whatever the library holds.
+  bool get choosesItems;
+
+  /// Asks the user to pick more items, keeping those picked before, and
+  /// returns how many were added. A cancelled picker adds nothing and loses
+  /// nothing. Returns 0 at once for a source that does not choose.
+  ///
+  /// Separate from [list] so that reloading — after a change of date range,
+  /// say — never re-opens a picker, and never empties the list because the
+  /// user dismissed one.
+  Future<int> chooseMore();
 
   /// The candidate items in the order they were taken, restricted to
   /// [from]..[to] by capture time when this source [supportsDateRange].
@@ -26,9 +34,8 @@ abstract class TripMediaSource {
   /// Oldest first because the list is a trip being reconstructed: the
   /// caver reads down it in the order they moved through the cave.
   ///
-  /// A source that needs the user to choose (the system picker) prompts on
-  /// each call and returns what they selected; one that reads the library
-  /// returns everything it can see.
+  /// Never prompts: a source that [choosesItems] returns what has been
+  /// picked so far, filtered the same way.
   Future<List<TripMediaItem>> list({DateTime? from, DateTime? to});
 
   /// Encoded bytes for a grid thumbnail of [item], or null when none can be

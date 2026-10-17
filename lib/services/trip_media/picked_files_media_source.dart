@@ -25,33 +25,67 @@ class PickedFilesMediaSource implements TripMediaSource {
   final ImagePicker _picker;
   final _log = AppLogger.of('PickedFilesMediaSource');
 
+  /// Everything picked so far, so that picking again adds to the list and
+  /// the places already assigned to it survive.
+  final List<TripMediaItem> _picked = [];
+
+  /// Size and a hash of the head of each picked file. The picker hands
+  /// over a fresh cache copy every time, so the same picture chosen twice
+  /// arrives under two paths — and on iOS under two names as well, so only
+  /// the content recognises it.
+  final Set<String> _pickedKeys = {};
+
+  /// Enough of a file to tell two pictures apart: the header and the first
+  /// stretch of image data.
+  static const int _keyBytes = 64 * 1024;
+
+  static Future<String> _contentKey(File file) async {
+    final head = BytesBuilder(copy: false);
+    await for (final chunk in file.openRead(0, _keyBytes)) {
+      head.add(chunk);
+    }
+    final digest = DocumentationFileHelper.computeSha256(head.takeBytes());
+    return '${await file.length()}:$digest';
+  }
+
   @override
   String get id => 'picked_files';
 
   @override
-  bool get supportsDateRange => false;
+  bool get choosesItems => true;
+
+  @override
+  Future<int> chooseMore() async {
+    final List<XFile> chosen;
+    try {
+      chosen = await _picker.pickMultipleMedia();
+    } catch (e, st) {
+      _log.warning('media picker failed', e, st);
+      return 0;
+    }
+    var added = 0;
+    for (final x in chosen) {
+      final file = File(x.path);
+      if (!await file.exists()) continue;
+      if (!_pickedKeys.add(await _contentKey(file))) continue;
+      final resolved = await _resolve(x);
+      if (resolved == null) continue;
+      _picked.add(resolved);
+      added++;
+    }
+    return added;
+  }
 
   @override
   Future<List<TripMediaItem>> list({DateTime? from, DateTime? to}) async {
-    final List<XFile> picked;
-    try {
-      picked = await _picker.pickMultipleMedia();
-    } catch (e, st) {
-      _log.warning('media picker failed', e, st);
-      return const [];
-    }
-
-    final items = <TripMediaItem>[];
-    for (final x in picked) {
-      final resolved = await _resolve(x);
-      if (resolved == null) continue;
-      // The picker has no date range of its own, so the caller's range is
-      // applied here instead of being silently ignored.
-      if (from != null && resolved.capturedAt.isBefore(from)) continue;
-      if (to != null && resolved.capturedAt.isAfter(to)) continue;
-      items.add(resolved);
-    }
-    items.sort((a, b) => a.capturedAt.compareTo(b.capturedAt));
+    // The picker has no date range of its own, so the caller's range is
+    // applied here instead of being silently ignored.
+    final items = [
+      for (final item in _picked)
+        if ((from == null || !item.capturedAt.isBefore(from)) &&
+            (to == null || !item.capturedAt.isAfter(to)))
+          item,
+    ]..sort((a, b) => a.capturedAt.compareTo(b.capturedAt));
     return items;
   }
 
