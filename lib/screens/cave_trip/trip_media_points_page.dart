@@ -9,6 +9,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/cave_trip/trip_media_assignment.dart';
 import 'package:speleoloc/screens/cave_trip/trip_media_entrance_dialog.dart';
+import 'package:speleoloc/screens/cave_trip/trip_log_update_prompt.dart';
 import 'package:speleoloc/screens/cave_trip/trip_media_tile.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
@@ -467,7 +468,11 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
     }
 
     final resolution = _resolution;
-    if (resolution == null) return;
+    if (resolution == null || !mounted) return;
+
+    // Asked before anything is written, so cancelling here costs nothing.
+    final logUpdate = await TripLogUpdatePrompt.decide(context, ref, trip.uuid);
+    if (logUpdate == null || !mounted) return;
 
     final itemsById = {for (final i in _items) i.id: i};
     final commits = <TripMediaCommit>[];
@@ -512,6 +517,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
           deletePointUuids: deletePointUuids,
           newTripStart: newStart,
           newTripEnd: newEnd,
+          logUpdate: logUpdate,
           onProgress: (done, total) {
             if (mounted) setState(() => _applyDone = done);
           },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/cave_trip/trip_log_update_prompt.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_picker_dialog.dart';
@@ -34,12 +35,23 @@ class TripPointActions {
         : DateTime.now();
 
     final at = await _pickTime(context, trip, initial);
-    if (at == null) return false;
+    if (at == null || !context.mounted) return false;
+    final logUpdate = await TripLogUpdatePrompt.decide(
+      context,
+      _ref,
+      trip.uuid,
+    );
+    if (logUpdate == null) return false;
 
     return _run(() async {
       await _ref
           .read(caveTripServiceProvider)
-          .addPointAt(tripUuid: trip.uuid, cavePlaceUuid: place.uuid, at: at);
+          .addPointAt(
+            tripUuid: trip.uuid,
+            cavePlaceUuid: place.uuid,
+            at: at,
+            logUpdate: logUpdate,
+          );
       SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
     });
   }
@@ -57,9 +69,18 @@ class TripPointActions {
     );
     if (at == null) return false;
     if (at.millisecondsSinceEpoch == point.scannedAt) return false;
+    if (!context.mounted) return false;
+    final logUpdate = await TripLogUpdatePrompt.decide(
+      context,
+      _ref,
+      trip.uuid,
+    );
+    if (logUpdate == null) return false;
 
     return _run(() async {
-      await _ref.read(caveTripServiceProvider).updatePointTime(point.uuid, at);
+      await _ref
+          .read(caveTripServiceProvider)
+          .updatePointTime(point.uuid, at, logUpdate: logUpdate);
       SnackBarService.showSuccess(LocServ.inst.t('trip_point_time_updated'));
     });
   }
@@ -90,10 +111,18 @@ class TripPointActions {
         ],
       ),
     );
-    if (confirmed != true) return false;
+    if (confirmed != true || !context.mounted) return false;
+    final logUpdate = await TripLogUpdatePrompt.decide(
+      context,
+      _ref,
+      point.caveTripUuid,
+    );
+    if (logUpdate == null) return false;
 
     return _run(() async {
-      await _ref.read(caveTripServiceProvider).deletePoint(point.uuid);
+      await _ref
+          .read(caveTripServiceProvider)
+          .deletePoint(point.uuid, logUpdate: logUpdate);
       SnackBarService.showSuccess(LocServ.inst.t('trip_point_deleted'));
     });
   }

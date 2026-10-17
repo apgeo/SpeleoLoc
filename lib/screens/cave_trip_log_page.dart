@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/cave_trip/trip_log_stale_banner.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
+import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -40,6 +44,12 @@ class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
   bool _saving = false;
   TripLogMethod _activeMethod = TripLogMethod.classic;
 
+  /// The trip as last read: carries whether its log has fallen behind.
+  CaveTrip? _trip;
+
+  /// The user's setting, so the page can say what editing points does here.
+  bool _regeneratesOnEdit = false;
+
   @override
   void initState() {
     super.initState();
@@ -59,13 +69,74 @@ class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
     final method = await ref
         .read(currentUserServiceProvider)
         .getTripLogMethod();
+    final regenerates = await ref
+        .read(caveTripServiceProvider)
+        .regeneratesLogOnEdit();
     if (mounted) {
       setState(() {
+        _trip = trip;
         _controller.text = trip?.log ?? '';
         _activeMethod = method;
+        _regeneratesOnEdit = regenerates;
         _loading = false;
       });
     }
+  }
+
+  /// Re-reads the trip and the setting without touching the text, which may
+  /// hold edits not saved yet.
+  Future<void> _refreshStatus() async {
+    final trip = await ref
+        .read(caveTripRepositoryProvider)
+        .findById(widget.tripUuid);
+    final regenerates = await ref
+        .read(caveTripServiceProvider)
+        .regeneratesLogOnEdit();
+    if (mounted) {
+      setState(() {
+        _trip = trip;
+        _regeneratesOnEdit = regenerates;
+      });
+    }
+  }
+
+  Future<void> _openSettings() async {
+    await AppRoutes.pushTripLogSettings(context);
+    await _refreshStatus();
+  }
+
+  /// What editing this trip's points does to this log, and where that is
+  /// decided — always in view, since it decides whether typing here lasts.
+  Widget _buildModeStrip() {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 4, 0),
+      child: Row(
+        children: [
+          Icon(
+            _regeneratesOnEdit ? Icons.sync : Icons.edit_note,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              LocServ.inst.t(
+                _regeneratesOnEdit
+                    ? 'trip_log_mode_regenerates'
+                    : 'trip_log_mode_keeps',
+              ),
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, size: 20),
+            tooltip: LocServ.inst.t('trip_log_settings_link'),
+            onPressed: () => unawaited(_openSettings()),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -114,6 +185,7 @@ class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
           .findById(widget.tripUuid);
       if (mounted) {
         setState(() {
+          _trip = trip;
           _controller.text = trip?.log ?? '';
           _activeMethod = method;
         });
@@ -176,6 +248,16 @@ class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                _buildModeStrip(),
+                if (_trip?.logStaleSince != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: TripLogStaleBanner(
+                      trip: _trip!,
+                      onRegenerated: () => unawaited(_load()),
+                      onKept: () => unawaited(_refreshStatus()),
+                    ),
+                  ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(12),

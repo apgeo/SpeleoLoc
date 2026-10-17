@@ -12,6 +12,7 @@ import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_trip/trip_log_stale_banner.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_actions.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_pictures_sheet.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_row.dart';
@@ -966,6 +967,14 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             ),
           ),
         ),
+        // Says when edits to the points left the log behind, with the way
+        // to regenerate it or accept it, and the setting that decides it.
+        if (trip.logStaleSince != null)
+          TripLogStaleBanner(
+            trip: trip,
+            onRegenerated: () => unawaited(_load()),
+            onKept: () => unawaited(_load()),
+          ),
         const SizedBox(height: 8),
         if (_points.isEmpty)
           Center(
