@@ -5,6 +5,7 @@ import 'package:speleoloc/services/cave_document_import_service.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/trip_log_update.dart';
 import 'package:speleoloc/services/trip_media/trip_media_item.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -79,13 +80,18 @@ class TripMediaImportService {
     List<Uuid> deletePointUuids = const [],
     DateTime? newTripStart,
     DateTime? newTripEnd,
+    TripLogUpdate? logUpdate,
     void Function(int done, int total)? onProgress,
   }) async {
     final outcome = TripMediaImportOutcome();
+    // Every change below leaves the log alone; it is settled once at the
+    // end. A trip of 200 pictures would otherwise be re-rendered 200 times,
+    // or marked stale 200 times over.
+    const perChange = TripLogUpdate.leaveToCaller;
 
     for (final uuid in deletePointUuids) {
       try {
-        await _tripService.deletePoint(uuid);
+        await _tripService.deletePoint(uuid, logUpdate: perChange);
         outcome.pointsDeleted++;
       } catch (e, st) {
         _log.warning('could not delete superseded point $uuid', e, st);
@@ -103,6 +109,7 @@ class TripMediaImportService {
           tripUuid: tripUuid,
           cavePlaceUuid: commit.cavePlaceUuid,
           at: commit.at,
+          logUpdate: perChange,
         );
         pointByItem[commit.item.id] = pointUuid;
         outcome.pointsAdded++;
@@ -135,12 +142,22 @@ class TripMediaImportService {
           tripUuid,
           startedAt: newTripStart,
           endedAt: newTripEnd,
+          logUpdate: perChange,
         );
         outcome.tripWindowChanged = true;
       } catch (e, st) {
         _log.warning('could not move the trip window', e, st);
         outcome.warnings.add('trip_window_failed');
       }
+    }
+
+    if (outcome.pointsAdded > 0 ||
+        outcome.pointsDeleted > 0 ||
+        outcome.tripWindowChanged) {
+      await _tripService.settleLog(
+        tripUuid,
+        await _tripService.resolveLogUpdate(logUpdate),
+      );
     }
 
     return outcome;

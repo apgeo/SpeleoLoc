@@ -6,6 +6,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/trip_log_update.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -112,8 +113,12 @@ void main() {
       at: DateTime(2026, 9, 22, 12, 0),
     );
 
-    // Move the first point past the second: the rendered log must follow.
-    await service.updatePointTime(first, DateTime(2026, 9, 22, 13, 0));
+    // Move the first point past the second: a regenerated log must follow.
+    await service.updatePointTime(
+      first,
+      DateTime(2026, 9, 22, 13, 0),
+      logUpdate: TripLogUpdate.regenerate,
+    );
 
     final moved = await db.getTripPoint(first);
     expect(

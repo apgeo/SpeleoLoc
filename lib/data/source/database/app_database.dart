@@ -429,6 +429,29 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Writes a log rendered from the trip's own points. Such a log matches
+  /// them by definition, so any out-of-date mark goes in the same write.
+  Future<void> writeRenderedTripLog(Uuid tripUuid, String log) async {
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
+      CaveTripsCompanion(
+        log: Value(log),
+        logStaleSince: const Value(null),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  /// Marks the trip's log out of date since [at] (epoch ms), or clears the
+  /// mark when [at] is null.
+  Future<void> setTripLogStaleSince(Uuid tripUuid, int? at) async {
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
+      CaveTripsCompanion(
+        logStaleSince: Value(at),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
   Future<void> updateTripLog(Uuid tripUuid, String log) async {
     await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
       CaveTripsCompanion(

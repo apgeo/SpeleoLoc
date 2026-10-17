@@ -48,6 +48,7 @@ class ConfigKey {
 
   /// Active trip log generation method id (see [TripLogMethod]).
   static const String tripLogMethod = 'trip_log_method';
+  static const String tripLogRegenerateOnEdit = 'trip_log_regenerate_on_edit';
 
   // ----- Place-code identifier (PCI) configuration -----
   /// Selected PCI assignment strategy id (e.g. `global_hierarchical`,
@@ -194,6 +195,15 @@ class CurrentUserService {
   Future<void> setTripLogMethod(TripLogMethod method) async {
     await _writeConfig(ConfigKey.tripLogMethod, method.id);
   }
+
+  /// Whether editing a trip's points regenerates its log. Off unless the
+  /// user turns it on: regenerating replaces text typed into the log, and
+  /// losing that silently is worse than a log that says it is out of date.
+  Future<bool> getTripLogRegenerateOnEdit() async =>
+      await _readConfig(ConfigKey.tripLogRegenerateOnEdit) == 'true';
+
+  Future<void> setTripLogRegenerateOnEdit(bool value) =>
+      _writeConfig(ConfigKey.tripLogRegenerateOnEdit, value.toString());
 
   Future<String?> _readConfig(String title) => _configs.readString(title);
 

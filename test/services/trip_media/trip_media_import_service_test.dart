@@ -10,6 +10,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/trip_log_update.dart';
 import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
 import 'package:speleoloc/services/trip_media/trip_media_item.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -393,6 +394,7 @@ void main() {
         commit(id: 'b', place: chamberUuid, at: DateTime(2026, 10, 13, 10, 0)),
       ],
       importFiles: false,
+      logUpdate: TripLogUpdate.regenerate,
       compressImages: false,
     );
 

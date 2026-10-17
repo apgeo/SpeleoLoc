@@ -6,6 +6,7 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
+import 'package:speleoloc/services/trip_log_update.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -166,6 +167,11 @@ class CaveTripService {
     required Uuid cavePlaceUuid,
     required DateTime at,
     String? notes,
+
+    /// What happens to the trip's log; by default, what the user's setting
+    /// says. [TripLogUpdate.leaveToCaller] when several changes are made in
+    /// a row and the caller settles the log once, with [settleLog].
+    TripLogUpdate? logUpdate,
   }) async {
     final author = await _currentUser.currentOrSystem();
     final pointUuid = await _mapUniqueViolation(
@@ -178,14 +184,22 @@ class CaveTripService {
       ),
     );
     await _logger.logInsert('cave_trip_points', pointUuid);
-    await _regenerateLog(tripUuid);
+    await settleLog(tripUuid, await resolveLogUpdate(logUpdate));
     return pointUuid;
   }
 
   /// Moves an already-recorded point to [at]. Throws
   /// [DuplicateEntryException] on a collision with a sibling point at the
   /// same place. No-op when the point is gone.
-  Future<void> updatePointTime(Uuid pointUuid, DateTime at) async {
+  Future<void> updatePointTime(
+    Uuid pointUuid,
+    DateTime at, {
+
+    /// What happens to the trip's log; by default, what the user's setting
+    /// says. [TripLogUpdate.leaveToCaller] when several changes are made in
+    /// a row and the caller settles the log once, with [settleLog].
+    TripLogUpdate? logUpdate,
+  }) async {
     final old = await _db.getTripPoint(pointUuid);
     if (old == null) return;
     final author = await _currentUser.currentOrSystem();
@@ -203,13 +217,20 @@ class CaveTripService {
       oldValues: {'scanned_at': old.scannedAt},
       newValues: {'scanned_at': scannedAt},
     );
-    await _regenerateLog(old.caveTripUuid);
+    await settleLog(old.caveTripUuid, await resolveLogUpdate(logUpdate));
   }
 
   /// Removes a recorded point. The tombstone carries the same columns as
   /// the per-point tombstones written by a whole-trip delete, so peers
   /// resolve the removal identically. No-op when the point is gone.
-  Future<void> deletePoint(Uuid pointUuid) async {
+  Future<void> deletePoint(
+    Uuid pointUuid, {
+
+    /// What happens to the trip's log; by default, what the user's setting
+    /// says. [TripLogUpdate.leaveToCaller] when several changes are made in
+    /// a row and the caller settles the log once, with [settleLog].
+    TripLogUpdate? logUpdate,
+  }) async {
     final point = await _db.getTripPoint(pointUuid);
     if (point == null) return;
     // Snapshot the media links the cascade removes before dropping them:
@@ -238,7 +259,7 @@ class CaveTripService {
         'cave_place_uuid': point.cavePlaceUuid,
       },
     );
-    await _regenerateLog(point.caveTripUuid);
+    await settleLog(point.caveTripUuid, await resolveLogUpdate(logUpdate));
   }
 
   /// Moves the trip's recorded window, for when the media import shows the
@@ -252,6 +273,11 @@ class CaveTripService {
     Uuid tripUuid, {
     DateTime? startedAt,
     DateTime? endedAt,
+
+    /// What happens to the trip's log; by default, what the user's setting
+    /// says. [TripLogUpdate.leaveToCaller] when several changes are made in
+    /// a row and the caller settles the log once, with [settleLog].
+    TripLogUpdate? logUpdate,
   }) async {
     final old = await _tripRow(tripUuid);
     if (old == null) return;
@@ -279,7 +305,88 @@ class CaveTripService {
         },
       );
     }
+    await settleLog(tripUuid, await resolveLogUpdate(logUpdate));
+  }
+
+  /// Whether editing points regenerates the log — the user's setting.
+  Future<bool> regeneratesLogOnEdit() =>
+      _currentUser.getTripLogRegenerateOnEdit();
+
+  /// [requested], or what the user's setting says when nothing was.
+  Future<TripLogUpdate> resolveLogUpdate(TripLogUpdate? requested) async =>
+      requested ??
+      (await regeneratesLogOnEdit()
+          ? TripLogUpdate.regenerate
+          : TripLogUpdate.markStale);
+
+  /// Whether regenerating [tripUuid]'s log now would change its text: it
+  /// holds something its points would not render — text typed by hand, or
+  /// changes it has fallen behind. Regenerating loses that, so screens ask
+  /// before doing it.
+  Future<bool> regenerationWouldChangeLog(Uuid tripUuid) async {
+    final trip = await _tripRow(tripUuid);
+    if (trip == null) return false;
+    return await _render(tripUuid) != (trip.log ?? '');
+  }
+
+  /// Brings the log in line after its points changed, as [update] says.
+  Future<void> settleLog(Uuid tripUuid, TripLogUpdate update) async {
+    switch (update) {
+      case TripLogUpdate.regenerate:
+        await _regenerateLog(tripUuid);
+      case TripLogUpdate.markStale:
+        await _markLogStale(tripUuid);
+      case TripLogUpdate.leaveToCaller:
+        return;
+    }
+  }
+
+  /// Rewrites the log from the points because the user asked, clearing any
+  /// out-of-date mark. Logged as its own change: nothing else in that turn
+  /// would put it in front of the sync upload gate.
+  Future<void> regenerateLog(Uuid tripUuid) async {
+    final old = await _tripRow(tripUuid);
     await _regenerateLog(tripUuid);
+    final updated = await _tripRow(tripUuid);
+    if (old != null && updated != null) {
+      await _logger.logUpdate(
+        'cave_trips',
+        tripUuid,
+        oldValues: {'log': old.log, 'log_stale_since': old.logStaleSince},
+        newValues: {
+          'log': updated.log,
+          'log_stale_since': updated.logStaleSince,
+        },
+      );
+    }
+  }
+
+  /// Accepts the log as it stands although its points changed: the user has
+  /// brought it up to date by hand, or wants it as written.
+  Future<void> keepLogAsWritten(Uuid tripUuid) async {
+    final old = await _tripRow(tripUuid);
+    if (old == null || old.logStaleSince == null) return;
+    await _db.setTripLogStaleSince(tripUuid, null);
+    await _logger.logUpdate(
+      'cave_trips',
+      tripUuid,
+      oldValues: {'log_stale_since': old.logStaleSince},
+      newValues: {'log_stale_since': null},
+    );
+  }
+
+  Future<void> _markLogStale(Uuid tripUuid) async {
+    final trip = await _tripRow(tripUuid);
+    // Already behind: the moment it first fell behind is the one to keep.
+    if (trip == null || trip.logStaleSince != null) return;
+    final now = _clock.nowMs();
+    await _db.setTripLogStaleSince(tripUuid, now);
+    await _logger.logUpdate(
+      'cave_trips',
+      tripUuid,
+      oldValues: {'log_stale_since': null},
+      newValues: {'log_stale_since': now},
+    );
   }
 
   /// UNIQUE(cave_trip_uuid, cave_place_uuid, scanned_at) is the only
@@ -360,13 +467,17 @@ class CaveTripService {
   /// triggered the regeneration.
   Future<void> _regenerateLog(Uuid tripUuid) async {
     try {
-      final method = await _currentUser.getTripLogMethod();
-      final events = await _renderer.loadEvents(tripUuid);
-      final rendered = _renderer.render(events, method);
-      await _db.updateTripLog(tripUuid, rendered);
+      await _db.writeRenderedTripLog(tripUuid, await _render(tripUuid));
     } catch (e, st) {
       log.warning('regenerateLog failed (trip=$tripUuid)', e, st);
     }
+  }
+
+  /// The log [tripUuid]'s recorded events render to with the active method.
+  Future<String> _render(Uuid tripUuid) async {
+    final method = await _currentUser.getTripLogMethod();
+    final events = await _renderer.loadEvents(tripUuid);
+    return _renderer.render(events, method);
   }
 
   /// Appends the rendered text for the most recently added event to
@@ -423,17 +534,7 @@ class CaveTripService {
     TripLogMethod method,
   ) async {
     await _currentUser.setTripLogMethod(method);
-    final old = await _tripRow(tripUuid);
-    await _regenerateLog(tripUuid);
-    final updated = await _tripRow(tripUuid);
-    if (old != null && updated != null) {
-      await _logger.logUpdate(
-        'cave_trips',
-        tripUuid,
-        oldValues: {'log': old.log},
-        newValues: {'log': updated.log},
-      );
-    }
+    await regenerateLog(tripUuid);
   }
 
   Future<void> _saveConfig(Uuid tripUuid) {
