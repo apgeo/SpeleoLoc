@@ -35,6 +35,10 @@ class SyncTableRegistry {
     'last_pressure_hpa',
     'last_movement_counter',
     'firmware_version',
+    // Two devices that each edit a trip's points mark its log stale at
+    // different moments. That is the same fact, not a conflict to ask about;
+    // last-write-wins still carries it.
+    'log_stale_since',
   };
 
   static const SyncValueSerializer serializer = _serializer;

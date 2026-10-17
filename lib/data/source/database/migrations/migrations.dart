@@ -822,7 +822,40 @@ class V20ToV21Migration extends SchemaMigration {
   }
 }
 
-/// Adds [column] to [table] unless it is already there.
+/// v21 → v22.
+///
+/// Records when a trip's log fell behind its recorded points. Editing points
+/// no longer rewrites the log unless the user asks for that, so a log can now
+/// be out of date — and saying so later, on the log page or another device,
+/// needs the fact stored with the trip rather than remembered by one screen.
+///
+/// Additive and nullable, guarded like the other post-v7 steps because the
+/// pre-v7 path has already created the column through `createAll()`.
+class V21ToV22Migration extends SchemaMigration {
+  const V21ToV22Migration();
+
+  @override
+  int get toVersion => 22;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await _addColumnIfMissing(
+      db,
+      migrator,
+      db.caveTrips,
+      db.caveTrips.logStaleSince,
+    );
+  }
+}
+
+/// Adds [column] to [table] unless it is already there — or unless the
+/// table is not there at all.
+///
+/// Every real database has had every table since v7, so an absent one only
+/// occurs in a deliberately partial one, such as a migration test that builds
+/// just the tables its own step touches. Adding a column there would fail the
+/// whole ladder over a step the test is not about. The table name comes from
+/// generated code, so this cannot hide a misspelling.
 Future<void> _addColumnIfMissing(
   AppDatabase db,
   Migrator migrator,
@@ -832,6 +865,7 @@ Future<void> _addColumnIfMissing(
   final existing = await db
       .customSelect('PRAGMA table_info(${table.actualTableName})')
       .get();
+  if (existing.isEmpty) return;
   final names = existing.map((r) => r.read<String>('name')).toSet();
   if (names.contains(column.name)) return;
   await migrator.addColumn(table, column);
@@ -858,6 +892,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V18ToV19Migration(),
   V19ToV20Migration(),
   V20ToV21Migration(),
+  V21ToV22Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

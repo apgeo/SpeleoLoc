@@ -115,6 +115,7 @@ void main() {
         19,
         20,
         21,
+        22,
       ]);
       expect(appliedFor(6), [
         7,
@@ -131,6 +132,7 @@ void main() {
         19,
         20,
         21,
+        22,
       ]);
 
       // From v7: every migration from v8 onward fires.
@@ -149,19 +151,21 @@ void main() {
         19,
         20,
         21,
+        22,
       ]);
 
       // Mid-ladder upgrade: only the remaining steps fire.
-      expect(appliedFor(10), [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
-      expect(appliedFor(16), [17, 18, 19, 20, 21]);
-      expect(appliedFor(17), [18, 19, 20, 21]);
-      expect(appliedFor(18), [19, 20, 21]);
+      expect(appliedFor(10), [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]);
+      expect(appliedFor(16), [17, 18, 19, 20, 21, 22]);
+      expect(appliedFor(17), [18, 19, 20, 21, 22]);
+      expect(appliedFor(18), [19, 20, 21, 22]);
 
-      expect(appliedFor(19), [20, 21]);
-      expect(appliedFor(20), [21]);
+      expect(appliedFor(19), [20, 21, 22]);
+      expect(appliedFor(20), [21, 22]);
+      expect(appliedFor(21), [22]);
 
       // Already current: nothing fires.
-      expect(appliedFor(21), isEmpty);
+      expect(appliedFor(22), isEmpty);
     });
   });
 }

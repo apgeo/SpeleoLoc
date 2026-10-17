@@ -8525,6 +8525,17 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _logStaleSinceMeta = const VerificationMeta(
+    'logStaleSince',
+  );
+  late final GeneratedColumn<int> logStaleSince = GeneratedColumn<int>(
+    'log_stale_since',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -8594,6 +8605,7 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
     tripStartedAt,
     tripEndedAt,
     log,
+    logStaleSince,
     createdAt,
     updatedAt,
     deletedAt,
@@ -8654,6 +8666,15 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
       context.handle(
         _logMeta,
         log.isAcceptableOrUnknown(data['log']!, _logMeta),
+      );
+    }
+    if (data.containsKey('log_stale_since')) {
+      context.handle(
+        _logStaleSinceMeta,
+        logStaleSince.isAcceptableOrUnknown(
+          data['log_stale_since']!,
+          _logStaleSinceMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -8718,6 +8739,10 @@ class CaveTrips extends Table with TableInfo<CaveTrips, CaveTrip> {
       log: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}log'],
+      ),
+      logStaleSince: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}log_stale_since'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -8789,6 +8814,12 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
   final int tripStartedAt;
   final int? tripEndedAt;
   final String? log;
+
+  /// When the log first fell behind the trip's recorded points: set when
+  /// points change without the log being regenerated, cleared when it is
+  /// regenerated or the user keeps it as written. Null means the log is
+  /// as its points would render it, or has been accepted as it stands.
+  final int? logStaleSince;
   final int? createdAt;
   final int? updatedAt;
   final int? deletedAt;
@@ -8803,6 +8834,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     required this.tripStartedAt,
     this.tripEndedAt,
     this.log,
+    this.logStaleSince,
     this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -8831,6 +8863,9 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     }
     if (!nullToAbsent || log != null) {
       map['log'] = Variable<String>(log);
+    }
+    if (!nullToAbsent || logStaleSince != null) {
+      map['log_stale_since'] = Variable<int>(logStaleSince);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
@@ -8874,6 +8909,9 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
           ? const Value.absent()
           : Value(tripEndedAt),
       log: log == null && nullToAbsent ? const Value.absent() : Value(log),
+      logStaleSince: logStaleSince == null && nullToAbsent
+          ? const Value.absent()
+          : Value(logStaleSince),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -8908,6 +8946,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
       tripStartedAt: serializer.fromJson<int>(json['trip_started_at']),
       tripEndedAt: serializer.fromJson<int?>(json['trip_ended_at']),
       log: serializer.fromJson<String?>(json['log']),
+      logStaleSince: serializer.fromJson<int?>(json['log_stale_since']),
       createdAt: serializer.fromJson<int?>(json['created_at']),
       updatedAt: serializer.fromJson<int?>(json['updated_at']),
       deletedAt: serializer.fromJson<int?>(json['deleted_at']),
@@ -8931,6 +8970,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
       'trip_started_at': serializer.toJson<int>(tripStartedAt),
       'trip_ended_at': serializer.toJson<int?>(tripEndedAt),
       'log': serializer.toJson<String?>(log),
+      'log_stale_since': serializer.toJson<int?>(logStaleSince),
       'created_at': serializer.toJson<int?>(createdAt),
       'updated_at': serializer.toJson<int?>(updatedAt),
       'deleted_at': serializer.toJson<int?>(deletedAt),
@@ -8950,6 +8990,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     int? tripStartedAt,
     Value<int?> tripEndedAt = const Value.absent(),
     Value<String?> log = const Value.absent(),
+    Value<int?> logStaleSince = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<int?> deletedAt = const Value.absent(),
@@ -8964,6 +9005,9 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     tripStartedAt: tripStartedAt ?? this.tripStartedAt,
     tripEndedAt: tripEndedAt.present ? tripEndedAt.value : this.tripEndedAt,
     log: log.present ? log.value : this.log,
+    logStaleSince: logStaleSince.present
+        ? logStaleSince.value
+        : this.logStaleSince,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -8990,6 +9034,9 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
           ? data.tripEndedAt.value
           : this.tripEndedAt,
       log: data.log.present ? data.log.value : this.log,
+      logStaleSince: data.logStaleSince.present
+          ? data.logStaleSince.value
+          : this.logStaleSince,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -9015,6 +9062,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
           ..write('tripStartedAt: $tripStartedAt, ')
           ..write('tripEndedAt: $tripEndedAt, ')
           ..write('log: $log, ')
+          ..write('logStaleSince: $logStaleSince, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -9034,6 +9082,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
     tripStartedAt,
     tripEndedAt,
     log,
+    logStaleSince,
     createdAt,
     updatedAt,
     deletedAt,
@@ -9052,6 +9101,7 @@ class CaveTrip extends DataClass implements Insertable<CaveTrip> {
           other.tripStartedAt == this.tripStartedAt &&
           other.tripEndedAt == this.tripEndedAt &&
           other.log == this.log &&
+          other.logStaleSince == this.logStaleSince &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -9068,6 +9118,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
   final Value<int> tripStartedAt;
   final Value<int?> tripEndedAt;
   final Value<String?> log;
+  final Value<int?> logStaleSince;
   final Value<int?> createdAt;
   final Value<int?> updatedAt;
   final Value<int?> deletedAt;
@@ -9083,6 +9134,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     this.tripStartedAt = const Value.absent(),
     this.tripEndedAt = const Value.absent(),
     this.log = const Value.absent(),
+    this.logStaleSince = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -9099,6 +9151,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     required int tripStartedAt,
     this.tripEndedAt = const Value.absent(),
     this.log = const Value.absent(),
+    this.logStaleSince = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -9118,6 +9171,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     Expression<int>? tripStartedAt,
     Expression<int>? tripEndedAt,
     Expression<String>? log,
+    Expression<int>? logStaleSince,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
@@ -9134,6 +9188,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
       if (tripStartedAt != null) 'trip_started_at': tripStartedAt,
       if (tripEndedAt != null) 'trip_ended_at': tripEndedAt,
       if (log != null) 'log': log,
+      if (logStaleSince != null) 'log_stale_since': logStaleSince,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -9153,6 +9208,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     Value<int>? tripStartedAt,
     Value<int?>? tripEndedAt,
     Value<String?>? log,
+    Value<int?>? logStaleSince,
     Value<int?>? createdAt,
     Value<int?>? updatedAt,
     Value<int?>? deletedAt,
@@ -9169,6 +9225,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
       tripStartedAt: tripStartedAt ?? this.tripStartedAt,
       tripEndedAt: tripEndedAt ?? this.tripEndedAt,
       log: log ?? this.log,
+      logStaleSince: logStaleSince ?? this.logStaleSince,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -9207,6 +9264,9 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
     }
     if (log.present) {
       map['log'] = Variable<String>(log.value);
+    }
+    if (logStaleSince.present) {
+      map['log_stale_since'] = Variable<int>(logStaleSince.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -9250,6 +9310,7 @@ class CaveTripsCompanion extends UpdateCompanion<CaveTrip> {
           ..write('tripStartedAt: $tripStartedAt, ')
           ..write('tripEndedAt: $tripEndedAt, ')
           ..write('log: $log, ')
+          ..write('logStaleSince: $logStaleSince, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -24124,6 +24185,7 @@ typedef $CaveTripsCreateCompanionBuilder =
       required int tripStartedAt,
       Value<int?> tripEndedAt,
       Value<String?> log,
+      Value<int?> logStaleSince,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -24141,6 +24203,7 @@ typedef $CaveTripsUpdateCompanionBuilder =
       Value<int> tripStartedAt,
       Value<int?> tripEndedAt,
       Value<String?> log,
+      Value<int?> logStaleSince,
       Value<int?> createdAt,
       Value<int?> updatedAt,
       Value<int?> deletedAt,
@@ -24294,6 +24357,11 @@ class $CaveTripsFilterComposer extends Composer<_$AppDatabase, CaveTrips> {
 
   ColumnFilters<String> get log => $composableBuilder(
     column: $table.log,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get logStaleSince => $composableBuilder(
+    column: $table.logStaleSince,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -24477,6 +24545,11 @@ class $CaveTripsOrderingComposer extends Composer<_$AppDatabase, CaveTrips> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get logStaleSince => $composableBuilder(
+    column: $table.logStaleSince,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -24598,6 +24671,11 @@ class $CaveTripsAnnotationComposer extends Composer<_$AppDatabase, CaveTrips> {
 
   GeneratedColumn<String> get log =>
       $composableBuilder(column: $table.log, builder: (column) => column);
+
+  GeneratedColumn<int> get logStaleSince => $composableBuilder(
+    column: $table.logStaleSince,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -24777,6 +24855,7 @@ class $CaveTripsTableManager
                 Value<int> tripStartedAt = const Value.absent(),
                 Value<int?> tripEndedAt = const Value.absent(),
                 Value<String?> log = const Value.absent(),
+                Value<int?> logStaleSince = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -24792,6 +24871,7 @@ class $CaveTripsTableManager
                 tripStartedAt: tripStartedAt,
                 tripEndedAt: tripEndedAt,
                 log: log,
+                logStaleSince: logStaleSince,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -24809,6 +24889,7 @@ class $CaveTripsTableManager
                 required int tripStartedAt,
                 Value<int?> tripEndedAt = const Value.absent(),
                 Value<String?> log = const Value.absent(),
+                Value<int?> logStaleSince = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -24824,6 +24905,7 @@ class $CaveTripsTableManager
                 tripStartedAt: tripStartedAt,
                 tripEndedAt: tripEndedAt,
                 log: log,
+                logStaleSince: logStaleSince,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
