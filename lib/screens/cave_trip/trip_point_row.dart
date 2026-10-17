@@ -67,7 +67,10 @@ class TripPointRow extends StatelessWidget {
               onPressed: onShowPictures,
               icon: Badge(
                 label: Text('$pictureCount'),
-                child: const Icon(Icons.photo_library_outlined, size: 20),
+                // Not the photo-library icon: the trip screen's toolbar
+                // uses that for adding points from pictures, and one icon
+                // for two different actions on one screen reads as one.
+                child: const Icon(Icons.image_outlined, size: 20),
               ),
             ),
           if (depth != null)

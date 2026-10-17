@@ -87,7 +87,7 @@ void main() {
       narrow,
       () => row(title: 'Sala Mare', depth: -12, pictures: 3),
     );
-    for (final icon in [Icons.photo_library_outlined, Icons.more_vert]) {
+    for (final icon in [Icons.image_outlined, Icons.more_vert]) {
       final target = tester.getSize(
         find.ancestor(of: find.byIcon(icon), matching: find.byType(IconButton)),
       );
