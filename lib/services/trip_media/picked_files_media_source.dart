@@ -63,11 +63,7 @@ class PickedFilesMediaSource implements TripMediaSource {
     DateTime? captured;
     var source = MediaTimeSource.fileModified;
     if (!isVideo) {
-      try {
-        captured = MediaCaptureTime.fromImageBytes(await file.readAsBytes());
-      } catch (e, st) {
-        _log.fine('could not read ${x.path} for EXIF', e, st);
-      }
+      captured = await MediaCaptureTime.fromImageFile(file);
       if (captured != null) source = MediaTimeSource.exif;
     }
     captured ??= await _modifiedAt(file);

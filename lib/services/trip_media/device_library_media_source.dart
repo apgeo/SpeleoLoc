@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:speleoloc/services/trip_media/media_capture_time.dart';
 import 'package:speleoloc/services/trip_media/trip_media_item.dart';
 import 'package:speleoloc/services/trip_media/trip_media_source.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -53,6 +54,17 @@ class DeviceLibraryMediaSource implements TripMediaSource {
     );
   }
 
+  /// First Android API level at which the plugin reports `DATE_TAKEN` as an
+  /// asset's creation time. Below it the plugin reports `DATE_ADDED` — when
+  /// the file arrived on the phone — so a picture copied over after a trip
+  /// carries the copy's date.
+  static const int firstApiReportingDateTaken = 29;
+
+  /// Whether the plugin's creation time is an arrival time on this device,
+  /// given its Android API level (null off Android).
+  static bool reportsArrivalAsCreation(int? androidApi) =>
+      androidApi != null && androidApi < firstApiReportingDateTaken;
+
   /// Whether a capture time falls inside the wanted range, bounds included.
   static bool isCapturedWithin(DateTime at, DateTime? from, DateTime? to) {
     if (from != null && at.isBefore(from)) return false;
@@ -67,6 +79,47 @@ class DeviceLibraryMediaSource implements TripMediaSource {
   /// platform for an item the list already resolved.
   final Map<String, AssetEntity> _assets = {};
 
+  int? _androidApi;
+  bool _apiRead = false;
+
+  /// The Android API level, read once through the plugin already in use —
+  /// no device-information dependency needed for one integer.
+  Future<int?> _androidApiLevel() async {
+    if (_apiRead) return _androidApi;
+    _apiRead = true;
+    if (!Platform.isAndroid) return null;
+    try {
+      _androidApi = int.tryParse(await PhotoManager.systemVersion());
+    } catch (e, st) {
+      _log.fine('could not read the Android version', e, st);
+    }
+    return _androidApi;
+  }
+
+  /// The capture time of [asset] on a device whose plugin reports arrival
+  /// times. A photo's own EXIF says when it was taken; reading it costs only
+  /// the file's head, and below Android 10 the plugin hands over the real
+  /// path rather than a copy. A video has no EXIF, so it keeps the arrival
+  /// time and is marked as such for the screen to say so.
+  Future<(DateTime, MediaTimeSource)> _captureTimeFromArrivalDevice(
+    AssetEntity asset,
+  ) async {
+    final arrival = asset.createDateTime;
+    if (asset.type != AssetType.image) {
+      return (arrival, MediaTimeSource.fileModified);
+    }
+    try {
+      final file = await asset.originFile;
+      final exif = file == null
+          ? null
+          : await MediaCaptureTime.fromImageFile(file);
+      if (exif != null) return (exif, MediaTimeSource.exif);
+    } catch (e, st) {
+      _log.fine('no EXIF read for ${asset.id}', e, st);
+    }
+    return (arrival, MediaTimeSource.fileModified);
+  }
+
   @override
   String get id => 'device_library';
 
@@ -75,6 +128,7 @@ class DeviceLibraryMediaSource implements TripMediaSource {
 
   @override
   Future<List<TripMediaItem>> list({DateTime? from, DateTime? to}) async {
+    final arrivalOnly = reportsArrivalAsCreation(await _androidApiLevel());
     final window = arrivalWindowFor(from, now: DateTime.now());
     final albums = await PhotoManager.getAssetPathList(
       onlyAll: true,
@@ -92,7 +146,14 @@ class DeviceLibraryMediaSource implements TripMediaSource {
       final assets = await all.getAssetListPaged(page: page, size: _pageSize);
       if (assets.isEmpty) break;
       for (final asset in assets) {
-        if (!isCapturedWithin(asset.createDateTime, from, to)) continue;
+        // The arrival pre-filter above stays valid either way: a picture
+        // cannot arrive before it is taken.
+        var capturedAt = asset.createDateTime;
+        var source = MediaTimeSource.library;
+        if (arrivalOnly) {
+          (capturedAt, source) = await _captureTimeFromArrivalDevice(asset);
+        }
+        if (!isCapturedWithin(capturedAt, from, to)) continue;
         _assets[asset.id] = asset;
         items.add(
           TripMediaItem(
@@ -100,8 +161,8 @@ class DeviceLibraryMediaSource implements TripMediaSource {
             kind: asset.type == AssetType.video
                 ? TripMediaKind.video
                 : TripMediaKind.photo,
-            capturedAt: asset.createDateTime,
-            capturedAtSource: MediaTimeSource.library,
+            capturedAt: capturedAt,
+            capturedAtSource: source,
             displayName: asset.title,
           ),
         );

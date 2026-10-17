@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
@@ -38,6 +39,29 @@ class MediaCaptureTime {
       );
     } catch (e, st) {
       _log.fine('EXIF date out of range: "$raw"', e, st);
+      return null;
+    }
+  }
+
+  /// How much of a file to read for its EXIF. The Exif segment sits right
+  /// after the start-of-image marker, and even with an embedded preview it
+  /// stays under 64 KB; the margin covers cameras that put other segments
+  /// first.
+  static const int headerBytes = 256 * 1024;
+
+  /// Reads only the head of [file] and pulls the capture time out of it.
+  ///
+  /// The whole picture is never loaded: a sweep over a trip's worth of
+  /// 10 MB photos would otherwise read gigabytes to find a few bytes each.
+  static Future<DateTime?> fromImageFile(File file) async {
+    try {
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in file.openRead(0, headerBytes)) {
+        builder.add(chunk);
+      }
+      return fromImageBytes(builder.takeBytes());
+    } catch (e, st) {
+      _log.fine('could not read ${file.path} for EXIF', e, st);
       return null;
     }
   }

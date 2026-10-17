@@ -63,6 +63,35 @@ void main() {
     });
   });
 
+  group('which devices report arrival as creation', () {
+    // Below Android 10 the plugin reads DATE_ADDED, not DATE_TAKEN, so its
+    // creation time is when the file reached the phone. Found by the test
+    // matrix on API 24 and 28: copied-over pictures were never offered.
+    test('Android 7 to 9 do', () {
+      for (final api in [24, 25, 26, 27, 28]) {
+        expect(
+          DeviceLibraryMediaSource.reportsArrivalAsCreation(api),
+          isTrue,
+          reason: 'API $api',
+        );
+      }
+    });
+
+    test('Android 10 and later do not', () {
+      for (final api in [29, 30, 34, 36]) {
+        expect(
+          DeviceLibraryMediaSource.reportsArrivalAsCreation(api),
+          isFalse,
+          reason: 'API $api',
+        );
+      }
+    });
+
+    test('a platform with no Android version does not', () {
+      expect(DeviceLibraryMediaSource.reportsArrivalAsCreation(null), isFalse);
+    });
+  });
+
   group('the capture-time range', () {
     test('keeps a picture taken on the day', () {
       expect(

@@ -7,7 +7,8 @@ enum TripMediaKind { photo, video }
 ///
 /// Surfaced in the UI because the three are not equally trustworthy: the
 /// library's own date is the capture moment, EXIF is the camera's own record
-/// of it, and a filesystem timestamp is frequently the moment the file was
+/// of it, and a filesystem timestamp — or, before Android 10, the library's
+/// record of when the file arrived — is frequently the moment the file was
 /// copied rather than taken.
 enum MediaTimeSource { library, exif, fileModified }
 

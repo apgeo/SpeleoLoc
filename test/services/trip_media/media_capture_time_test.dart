@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +77,63 @@ void main() {
       final bytes = jpegWith((_) {});
       expect(
         MediaCaptureTime.fromImageBytes(Uint8List.fromList(bytes)),
+        isNull,
+      );
+    });
+
+    test(
+      'reads the date from the head of a picture far larger than it',
+      () async {
+        // Noise does not compress, so this lands well past the header read —
+        // the decoder must find the date without the rest of the file.
+        final rnd = Random(7);
+        final image = img.Image(width: 1600, height: 1200);
+        for (var y = 0; y < image.height; y++) {
+          for (var x = 0; x < image.width; x++) {
+            image.setPixelRgb(
+              x,
+              y,
+              rnd.nextInt(256),
+              rnd.nextInt(256),
+              rnd.nextInt(256),
+            );
+          }
+        }
+        image.exif.exifIfd['DateTimeOriginal'] = '2026:10:13 09:15:00';
+        final dir = await Directory.systemTemp.createTemp('capture_time_');
+        addTearDown(() => dir.delete(recursive: true));
+        final file = File('${dir.path}/big.jpg')
+          ..writeAsBytesSync(img.encodeJpg(image, quality: 95));
+        expect(
+          file.lengthSync(),
+          greaterThan(MediaCaptureTime.headerBytes * 2),
+          reason: 'the fixture must be bigger than what is read of it',
+        );
+        expect(
+          await MediaCaptureTime.fromImageFile(file),
+          DateTime(2026, 10, 13, 9, 15),
+        );
+      },
+    );
+
+    test('reads a picture smaller than the header whole', () async {
+      final dir = await Directory.systemTemp.createTemp('capture_time_');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/small.jpg')
+        ..writeAsBytesSync(
+          jpegWith((image) {
+            image.exif.exifIfd['DateTimeOriginal'] = '2026:10:13 09:15:00';
+          }),
+        );
+      expect(
+        await MediaCaptureTime.fromImageFile(file),
+        DateTime(2026, 10, 13, 9, 15),
+      );
+    });
+
+    test('a missing file is no date, not an exception', () async {
+      expect(
+        await MediaCaptureTime.fromImageFile(File('/nonexistent/x.jpg')),
         isNull,
       );
     });
