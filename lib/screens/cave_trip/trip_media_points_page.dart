@@ -61,6 +61,12 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
   bool _importFiles = true;
   bool _loading = true;
 
+  /// Bumped by every reload. The background work a load starts — the
+  /// thumbnails and the QR sweep — checks it on each item and stops once a
+  /// newer list has replaced the one it was started for, so a change of
+  /// date range mid-sweep restarts the sweep instead of being ignored.
+  int _listGeneration = 0;
+
   MediaQrDetector? _detector;
   bool _qrRunning = false;
 
@@ -147,6 +153,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
   Future<void> _loadItems() async {
     final resolution = _resolution;
     if (resolution == null) return;
+    final generation = ++_listGeneration;
     setState(() => _loading = true);
     List<TripMediaItem> items;
     try {
@@ -159,7 +166,8 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
       items = const [];
       if (mounted) SnackBarService.showError(e);
     }
-    if (!mounted) return;
+    // A later load overtook this one; its result is the one to show.
+    if (!mounted || generation != _listGeneration) return;
     setState(() {
       _items = items;
       _loading = false;
@@ -170,15 +178,18 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
       final visible = items.map((i) => i.id).toSet();
       _assignments.removeWhere((id, _) => !visible.contains(id));
     });
-    unawaited(_loadThumbnails());
-    unawaited(_runQrPass());
+    unawaited(_loadThumbnails(generation));
+    unawaited(_runQrPass(generation));
   }
 
-  Future<void> _loadThumbnails() async {
+  bool _isCurrent(int generation) =>
+      mounted && !_disposed && generation == _listGeneration;
+
+  Future<void> _loadThumbnails(int generation) async {
     final resolution = _resolution;
     if (resolution == null) return;
     for (final item in List<TripMediaItem>.from(_items)) {
-      if (!mounted || _disposed) return;
+      if (!_isCurrent(generation)) return;
       if (_thumbnails.containsKey(item.id)) continue;
       final bytes = await resolution.source.thumbnail(item);
       File? file;
@@ -187,7 +198,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
         // file itself instead.
         file = await resolution.source.file(item);
       }
-      if (!mounted) return;
+      if (!_isCurrent(generation)) return;
       setState(() {
         _thumbnails[item.id] = bytes;
         if (file != null) _files[item.id] = file;
@@ -202,20 +213,27 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
   /// the library, which is far too slow to block the first paint on. Items
   /// the user has already decided are skipped so an automatic guess never
   /// overwrites a deliberate choice.
-  Future<void> _runQrPass() async {
+  Future<void> _runQrPass(int generation) async {
     final trip = _trip;
     final resolution = _resolution;
-    if (trip == null || resolution == null || _qrRunning) return;
+    if (trip == null || resolution == null) return;
 
     final photos = _items.where((i) => i.isPhoto).toList();
-    if (photos.isEmpty) return;
+    if (photos.isEmpty) {
+      if (_isCurrent(generation)) setState(() => _qrRunning = false);
+      return;
+    }
 
+    // Loaded before the null check rather than inside it: two sweeps
+    // starting together would otherwise each build a detector, and the
+    // first one's scanner would never be released.
+    final config = await QrScanConfig.load();
     final detector = _detector ??= MediaQrDetector(
       QrCodeLookupService(ref.read(appDatabaseProvider)),
-      config: await QrScanConfig.load(),
+      config: config,
     );
 
-    if (!mounted) return;
+    if (!_isCurrent(generation)) return;
     setState(() {
       _qrRunning = true;
       _qrCancelled = false;
@@ -225,9 +243,9 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
     });
 
     for (final item in photos) {
-      if (!mounted || _disposed || _qrCancelled) break;
+      if (!_isCurrent(generation) || _qrCancelled) break;
       if (_assignments.containsKey(item.id)) {
-        if (mounted) setState(() => _qrDone++);
+        if (_isCurrent(generation)) setState(() => _qrDone++);
         continue;
       }
       try {
@@ -235,7 +253,9 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
           item,
           (file) => detector.detectCavePlace(file, caveUuid: trip.caveUuid),
         );
-        if (place != null && mounted && !_assignments.containsKey(item.id)) {
+        if (place != null &&
+            _isCurrent(generation) &&
+            !_assignments.containsKey(item.id)) {
           setState(() {
             _assignments[item.id] = TripMediaAssignment(
               place: place,
@@ -248,11 +268,12 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
       } catch (e, st) {
         log.fine('QR pass failed for ${item.id}', e, st);
       }
-      if (mounted) setState(() => _qrDone++);
+      if (_isCurrent(generation)) setState(() => _qrDone++);
       if (detector.isUnsupported) break;
     }
 
-    if (mounted) {
+    // A sweep that a newer list replaced leaves the progress to that one.
+    if (_isCurrent(generation)) {
       setState(() {
         _qrRunning = false;
         _qrUnsupported = detector.isUnsupported;
