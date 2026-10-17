@@ -20,7 +20,15 @@ void main() {
     });
 
     test('recognises video extensions', () {
-      for (final n in ['v.mp4', 'v.MOV', 'v.avi', 'v.mkv', 'v.webm']) {
+      for (final n in [
+        'v.mp4',
+        'v.MOV',
+        'v.m4v',
+        'v.3gp',
+        'v.avi',
+        'v.mkv',
+        'v.webm',
+      ]) {
         expect(DocumentationFileHelper.detectFileType(n), 'video', reason: n);
       }
     });

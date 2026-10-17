@@ -25,6 +25,22 @@ class DocumentationFileHelper {
   //  File type detection
   // -----------------------------------------------------------------------
 
+  /// Extensions stored as `video`, without the dot.
+  ///
+  /// The one list: the type detection, the video viewer's registration and
+  /// the media import's picker all read it. They used to keep their own,
+  /// and a phone's `.3gp` or an exported `.m4v` was recognised as a video
+  /// by the picker and then stored as `unknown`.
+  static const Set<String> videoExtensions = {
+    'mp4',
+    'mov',
+    'm4v',
+    '3gp',
+    'avi',
+    'mkv',
+    'webm',
+  };
+
   /// Returns a canonical file-type string (used in `documentation_files.file_type`)
   /// based on the file extension.
   static String detectFileType(String fileName) {
@@ -33,7 +49,7 @@ class DocumentationFileHelper {
     if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'heic'].contains(ext)) {
       return 'photo';
     }
-    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext)) return 'video';
+    if (videoExtensions.contains(ext)) return 'video';
     if (['mp3', 'wav', 'ogg', 'm4a', 'flac'].contains(ext)) return 'audio';
     if (['txt', 'rtf', 'doc', 'docx', 'odt', 'pdf', 'md'].contains(ext)) {
       return 'text_document';

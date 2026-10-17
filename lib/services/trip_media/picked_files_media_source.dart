@@ -6,6 +6,7 @@ import 'package:speleoloc/services/trip_media/media_capture_time.dart';
 import 'package:speleoloc/services/trip_media/trip_media_item.dart';
 import 'package:speleoloc/services/trip_media/trip_media_source.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
 
 /// Fallback source for devices where the library cannot be enumerated —
 /// the user denied access, or the platform only offers the system picker.
@@ -90,16 +91,6 @@ class PickedFilesMediaSource implements TripMediaSource {
     }
   }
 
-  static const _videoExtensions = {
-    '.mp4',
-    '.mov',
-    '.m4v',
-    '.3gp',
-    '.avi',
-    '.mkv',
-    '.webm',
-  };
-
   /// The picker reports a mime type on some platforms and nothing on others,
   /// so the extension is the fallback discriminator.
   static bool _looksLikeVideo(XFile x) {
@@ -108,7 +99,9 @@ class PickedFilesMediaSource implements TripMediaSource {
     final path = x.path.toLowerCase();
     final dot = path.lastIndexOf('.');
     if (dot < 0) return false;
-    return _videoExtensions.contains(path.substring(dot));
+    return DocumentationFileHelper.videoExtensions.contains(
+      path.substring(dot + 1),
+    );
   }
 
   @override

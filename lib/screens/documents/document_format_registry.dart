@@ -10,6 +10,7 @@ import 'package:speleoloc/screens/documents/editors/sound_recorder_page.dart';
 import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
 import 'package:speleoloc/screens/documents/viewers/documentation_file_viewer.dart';
 import 'package:speleoloc/screens/documents/viewers/sound_file_viewer.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 
 typedef DocumentThumbnailBuilder =
@@ -397,7 +398,7 @@ void registerBuiltInDocumentFormats() {
       formatId: 'video',
       label: 'Video',
       icon: Icons.videocam,
-      extensions: {'mp4', 'mov', 'avi', 'mkv', 'webm'},
+      extensions: DocumentationFileHelper.videoExtensions,
       buildThumbnail: _iconThumb(Icons.videocam, tint: Colors.deepOrange),
     ),
   );
