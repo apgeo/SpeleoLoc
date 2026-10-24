@@ -177,17 +177,26 @@ dispozitiv. Cum fiecare este un instantaneu complet, arhivele mai vechi de
 la același dispozitiv sunt de prisos; fila Jurnal le notează ca
 *superseded* și sunt trecute la pierderi abia după ce arhiva cea mai nouă
 a acelui dispozitiv a fost rezolvată, așa că un fișier corupt nu poate
-lăsa pe drum un instantaneu mai vechi, dar bun. Fișierele din folder care
-nu sunt arhive SpeleoLoc sunt ignorate cu totul. Arhivele sunt tratate în
-ordine, de la cea mai veche.
+lăsa pe drum un instantaneu mai vechi, dar bun. Dacă arhiva cea mai nouă
+a unui dispozitiv este una pe care acest dispozitiv o are deja — inclusiv
+una preluată printr-un import **Înlocuire totală** de la acel dispozitiv —
+arhivele lui mai vechi sunt trecute la pierderi fără să fie descărcate.
+Fișierele din folder care nu sunt arhive SpeleoLoc sunt ignorate cu totul.
+Arhivele sunt tratate în ordine, de la cea mai veche.
 
 Fiecare arhivă publicată de o versiune recentă a aplicației are alături un
 fișier însoțitor cu suma de control. După descărcare, SpeleoLoc
 recalculează amprenta și compară: dacă diferă, arhiva este aruncată în loc
-să fie importată, fila Jurnal o spune, iar fișierul rămâne pe server
-pentru o încercare ulterioară. Așa se prind atât deteriorările din
-transport, cât și un fișier stricat pe server. Arhivele mai vechi, care nu
-au fișier însoțitor, sunt importate fără această verificare.
+să fie importată, iar fila Jurnal o spune. Așa se prind atât
+deteriorările din transport, cât și un fișier stricat pe server. Arhivele
+mai vechi, care nu au fișier însoțitor, sunt importate fără această
+verificare.
+
+O arhivă care nu trece de suma de control sau care se dovedește a nu fi
+deloc o arhivă lizibilă — de obicei o încărcare întreruptă la jumătate de
+o versiune mai veche a aplicației — este **sărită cu un avertisment**, iar
+restul rulării merge mai departe ca de obicei. Fișierul rămâne pe server
+și nu mai este descărcat din nou până nu i se schimbă dimensiunea.
 
 ### La urcare
 
@@ -199,6 +208,13 @@ lăsat deoparte — comutatoarele **Include fișiere documentație** și
 export al datelor și se aplică doar arhivelor pe care le exportați de mână
 acolo. O bibliotecă mare de fotografii sau de hărți face, prin urmare,
 fiecare încărcare mare.
+
+Arhiva urcă sub un nume temporar terminat în `.part` și își primește
+numele adevărat abia după ce tot fișierul a ajuns pe server, așa că
+celelalte dispozitive nu preiau niciodată o arhivă încărcată pe jumătate.
+Dacă o încărcare este întreruptă, fișierul `.part` rămâne în urmă; acest
+dispozitiv își șterge propriile resturi la o încărcare ulterioară, după ce
+au trecut mai mult de o oră.
 
 Alături de arhivă, SpeleoLoc încarcă și fișierul ei de sumă de control, ca
 celelalte dispozitive să poată verifica ce descarcă. Dacă acea mică
@@ -235,14 +251,16 @@ dintre:
 Ultima distincție contează când vreți să fiți siguri că munca
 dumneavoastră a ajuns într-adevăr pe server.
 
+O rulare care a sărit arhive ilizibile se încheie tot cu **Sincronizare
+reușită**, cu un banner portocaliu care le enumeră.
+
 O rulare care a dat de necaz se încheie cu **Sincronizare eșuată** și un
 banner roșu care numește prima problemă — chiar dacă cea mai mare parte a
-reușit. O arhivă care nu s-a descărcat, care nu a trecut de suma de
-control sau care nu s-a importat nu oprește restul și nu vă oprește nici
-propria încărcare. Așadar, un rezultat roșu nu înseamnă că nu a mers
-nimic: citiți fila Jurnal ca să vedeți ce a mers. Tot ce a eșuat este
-lăsat dinadins nemarcat, așa că e destul să rulați sincronizarea din nou
-ca să se reîncerce.
+reușit. O arhivă care nu s-a descărcat sau care nu s-a importat nu
+oprește restul și nu vă oprește nici propria încărcare. Așadar, un
+rezultat roșu nu înseamnă că nu a mers nimic: citiți fila Jurnal ca să
+vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că e
+destul să rulați sincronizarea din nou ca să se reîncerce.
 
 La o eșuare de conexiune sau de autentificare, bannerul roșu poartă și un
 buton **Deschide setări**, care sare direct la lista de profiluri.
@@ -330,10 +348,13 @@ aducă de două ori.
   singurul leac este să actualizați aplicația care a produs-o și să lăsați
   acel dispozitiv să sincronizeze din nou. În ambele cazuri, restul
   rulării merge mai departe.
-- **Sumă de control nepotrivită** — arhiva este coruptă pe server sau a
-  fost deteriorată în transport. Este lăsată pe loc și reîncercată data
-  viitoare; dacă tot eșuează, cereți acelui dispozitiv să sincronizeze din
-  nou și ștergeți fișierul stricat din folder.
+- **Sumă de control nepotrivită** sau arhivă ilizibilă (*not a readable
+  sync archive* în fila Jurnal) — arhiva este coruptă pe server, a fost
+  deteriorată în transport sau este o încărcare care nu s-a terminat
+  niciodată. Este sărită cu un avertisment portocaliu și nu mai este
+  descărcată din nou până nu se schimbă. Cereți acelui dispozitiv să
+  sincronizeze din nou — arhiva lui următoare o înlocuiește — și ștergeți
+  fișierul stricat din folder.
 - **Sincronizări lente** — nu există nimic de oprit: o rulare trimite
   mereu fiecare fișier de documentație și fiecare hartă. Sincronizați pe o
   conexiune bună când puteți și mai curățați din când în când arhivele

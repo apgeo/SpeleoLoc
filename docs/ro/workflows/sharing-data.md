@@ -248,40 +248,37 @@ arhivă, suprascriind orice fișier cu același nume, și repornește
 aplicația. Confirmați întâi avertismentul. Telefonul își păstrează propria
 identitate de dispozitiv, în loc să o adopte pe a expeditorului.
 
-**Îmbinare cu datele existente** — parcurge arhiva înregistrare cu
-înregistrare și adaugă ce lipsește:
+**Îmbinare cu datele existente** — îmbină arhiva exact așa cum o face
+[Sinc. man.](../features/sync-and-change-log.md):
 
-1. Înregistrările care nu se lovesc de nimic sunt adăugate.
-2. La o ciocnire — un titlu duplicat, un cod de loc duplicat — un dialog
-   intitulat **Conflict în Peșteri** (sau Locuri din peșteră, Hărți, Ture
-   în peșteră, Documente, …) arată **Existent** și **Importat** una lângă
-   alta și oferă **Omite**, **Suprascrie**, **Omite Tot**, **Suprascrie
-   Tot** sau **Anulează Importul**. **Omite Tot** și **Suprascrie Tot** se
-   aplică fiecărui conflict rămas din tot importul, pe toate tipurile de
-   înregistrări — nu există o setare pe tip.
-3. Fișierele media sunt copiate doar acolo unde nu aveți deja un fișier cu
+1. Înregistrările pe care nu le aveți sunt adăugate. Înregistrările sunt
+   potrivite după identitatea lor ascunsă, nu după titlu, așa că aceeași
+   peșteră trecută de la un telefon la altul este recunoscută, în timp ce
+   două peșteri create separat rămân două.
+2. Acolo unde aveți amândoi o înregistrare și conținutul diferă, un dialog
+   intitulat **Conflict în** *(tipul înregistrării)* arată **Local** și
+   **Din arhivă** una lângă alta și oferă **Păstrează local**, **Folosește
+   din arhivă**, **Păstrează toate local**, **Folosește toate din arhivă**
+   sau **Anulează importul**. Butoanele cu „toate” se aplică fiecărui
+   conflict rămas din tot importul, pe toate tipurile de înregistrări.
+3. Ștergerile făcute pe celălalt telefon sunt aplicate și pe al
+   dumneavoastră.
+4. Fișierele media sunt copiate doar acolo unde nu aveți deja un fișier cu
    acel nume.
 
-> **Anularea unei îmbinări lasă treaba pe jumătate.** Spre deosebire de
-> Sinc. man., **Anulează Importul** de aici se oprește pe loc și tot ce a
-> fost deja importat sau suprascris rămâne în baza dumneavoastră de date.
-> Dacă anulați, fie rulați importul din nou, fie restaurați o copie de
-> siguranță.
-
-O îmbinare acoperă în mod deliberat doar o parte din date. Utilizatorii,
-atribuirile de beacon, șabloanele de raport de tură și istoricul
-modificărilor trec **numai** cu **Înlocuire totală**.
+**Anulează importul** desface toată îmbinarea. Utilizatorii, atribuirile
+de beacon, șabloanele de raport de tură și istoricul modificărilor trec
+toate; istoricul senzorilor Ruuvi nu trece.
 
 ### Sumarul Import Complet
 
 După o îmbinare, un dialog intitulat **Import Complet** raportează
 **Înregistrări importate**, **Înregistrări omise**, **Înregistrări
-suprascrise** și **Fișiere copiate**. Dacă ceva a mers prost — o
-înregistrare care nu a putut fi legată înapoi de peștera ei, un fișier
-care nu s-a copiat, un fel de înregistrare lipsă dintr-o arhivă mai veche
-— dedesubt sunt listate cu portocaliu până la zece **Avertismente**, cu o
-linie „… și N în plus” pentru restul. Citiți-le: sunt singurul semn că o
-parte din arhivă nu a ajuns.
+suprascrise** și **Fișiere copiate**. Dacă ceva a mers prost — un fișier
+care nu s-a copiat, un utilizator potrivit cu unul de-al dumneavoastră
+după numele de utilizator — dedesubt sunt listate cu portocaliu până la
+zece **Avertismente**, cu o linie „… și N în plus” pentru restul.
+Citiți-le.
 
 ### Descărcarea și încărcarea datelor de test
 
@@ -343,7 +340,7 @@ acoperă.
   lăsați sincronizarea FTP să o facă.
 - **Faceți o copie de siguranță înainte de orice Înlocuire sau Îmbinare.**
   Amândouă pot pierde date — Înlocuirea prin felul în care e gândită,
-  Îmbinarea dacă anulați la jumătate.
+  Îmbinarea prin repetarea ștergerilor făcute pe celălalt telefon.
 - **Importați arhive doar de la oameni în care aveți încredere.** O arhivă
   făcută de o copie construită special a aplicației poate conține parolele
   de server FTP sau SFTP ale acelei persoane, iar importarea ei —

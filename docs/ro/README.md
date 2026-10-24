@@ -96,6 +96,7 @@ Pentru întreținători, despre construirea aplicației, nu despre folosirea ei
 
 - [Working with a local test archive](../workflows/local-test-archive.md)
 - [Shipping a build with a pre-configured sync profile](../workflows/seeded-sync-profile.md)
+- [Android emulators and automated UI checks](../workflows/android-emulator-and-ui-testing.md)
 
 ---
 

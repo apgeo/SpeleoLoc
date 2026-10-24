@@ -137,10 +137,7 @@ exact la ce ați renunța.
 
 **Anulează importul** este aici o operațiune sigură: tot importul este dat
 înapoi, iar ecranul raportează *Import anulat — nicio modificare nu a fost
-aplicată*. (Acest lucru **nu** este valabil pentru importul
-**Îmbinare cu datele existente** de pe ecranul Export / Import Date, care
-lasă în urmă tot ce apucase să scrie — vezi
-[Export, import și copie de siguranță a bazei de date](database-export-import.md).)
+aplicată*.
 
 ### Importul vă poate șterge înregistrări
 
@@ -210,10 +207,10 @@ sincronizare, care îmbină înregistrările în loc să schimbe baza de date.
 |  | Arhivă sincronizare (pagina de față) | [Export/import complet al datelor](database-export-import.md) |
 |---|---|---|
 | Ce se află în fișier | Câte o linie pentru fiecare înregistrare | O copie a întregii baze de date, plus fișierele media |
-| Granularitate | Îmbinare înregistrare cu înregistrare | Înlocuirea întregii baze de date sau o îmbinare grosieră, înregistrare cu înregistrare |
-| Tratarea conflictelor | Câștigă modificarea cea mai nouă, sau o întrebare la fiecare înregistrare | Întrebări Omite / Suprascrie la fiecare nume sau cod duplicat |
-| Ștergerile se repetă? | Da, întotdeauna | Nu (un import cu **Înlocuire totală** aruncă pur și simplu tot ce aveați) |
-| Include istoricul modificărilor? | Întotdeauna | Vine cu **Înlocuire totală**, se pierde la **Îmbinare cu datele existente** |
+| Granularitate | Îmbinare înregistrare cu înregistrare | Înlocuirea întregii baze de date sau aceeași îmbinare înregistrare cu înregistrare ca pe pagina de față |
+| Tratarea conflictelor | Câștigă modificarea cea mai nouă, sau o întrebare la fiecare înregistrare | O întrebare la fiecare înregistrare (îmbinare) |
+| Ștergerile se repetă? | Da, întotdeauna | La o îmbinare, da (un import cu **Înlocuire totală** aruncă pur și simplu tot ce aveați) |
+| Include istoricul modificărilor? | Întotdeauna | Întotdeauna |
 | Cel mai potrivit pentru | Actualizări dese de la un dispozitiv la altul, între ture | Copii de siguranță, pregătirea unui dispozitiv nou, mutarea a tot deodată |
 
 <a id="change-log"></a>

@@ -49,9 +49,8 @@ siguranță.
   amândouă. Ca să îl dați cuiva, folosiți **Exportă CSV** din ecranul de
   istoric — vedeți [Senzori Ruuvi](ruuvi-sensors.md).
 - **Înregistrările tagurilor** — care tag este fixat în care loc —
-  călătoresc cu fișierul bazei de date, cu un import **Înlocuire totală**
-  și cu sincronizarea manuală, dar **nu** cu un import de îmbinare. Un loc
-  îmbinat poate ajunge deci fără tagurile lui.
+  călătoresc cu fișierul bazei de date, așa că ajung cu oricare dintre
+  modurile de import și cu sincronizarea manuală.
 
 ## Exportarea
 
@@ -175,58 +174,64 @@ aceea.
 
 ### Îmbinare cu datele existente
 
-Importatorul parcurge înregistrările primite și le adaugă pe cele pe care
-nu le aveți. Când o înregistrare primită se ciocnește cu una de-a
-dumneavoastră, se oprește și afișează un dialog **Conflict în …** care
-numește tipul înregistrării, listează câmpurile conflictuale și arată
-**Existent** și **Importat** unul lângă altul.
+O îmbinare funcționează exact ca importul unei arhive de
+[sincronizare manuală](sync-and-change-log.md): aceleași reguli decid ce
+se adaugă, ce se actualizează și ce se șterge. Înregistrările sunt
+potrivite după identitatea ascunsă pe care o primește fiecare la creare,
+nu după nume — așa că o peșteră care v-a venit mai demult de la un coleg
+este recunoscută ca aceeași peșteră, în timp ce două peșteri create
+separat pe două telefoane rămân două peșteri, chiar dacă au același titlu.
 
-Cinci butoane:
+- O înregistrare pe care nu o aveți este **adăugată**.
+- O înregistrare pe care o aveți amândoi, cu același conținut, este lăsată
+  neatinsă.
+- O înregistrare pe care o aveți amândoi, dar cu conținut diferit, oprește
+  importul cu un dialog **Conflict în …**: câmpurile care diferă, când a
+  modificat fiecare parte înregistrarea ultima dată și un tabel alăturat
+  **Local** / **Din arhivă**.
 
 | Buton | Ce face |
 |---|---|
-| **Omite** | Păstrează înregistrarea pe care o aveți deja. |
-| **Suprascrie** | O înlocuiește cu cea primită. |
-| **Omite Tot** | Păstrează varianta dumneavoastră la fiecare conflict rămas din acest import. |
-| **Suprascrie Tot** | Ia varianta primită la fiecare conflict rămas. |
-| **Anulează Importul** | Oprește imediat — vedeți avertismentul de mai jos. |
+| **Păstrează local** | Păstrează înregistrarea pe care o aveți deja. |
+| **Folosește din arhivă** | O înlocuiește cu cea primită. |
+| **Păstrează toate local** | Păstrează varianta dumneavoastră la fiecare conflict rămas din acest import. |
+| **Folosește toate din arhivă** | Ia varianta primită la fiecare conflict rămas. |
+| **Anulează importul** | Oprește și desface tot importul — vedeți mai jos. |
 
-**Omite Tot** și **Suprascrie Tot** sunt mai largi decât par: se aplică
+**Păstrează toate local** și **Folosește toate din arhivă** se aplică
 fiecărui conflict rămas din tot importul, la toate tipurile de
-înregistrări, nu doar la tipul pe care îl priveați.
+înregistrări. Dacă închideți dialogul fără să alegeți, înregistrarea
+dumneavoastră este păstrată.
 
-Înregistrările sunt potrivite după nume și după ceea ce le conține — o
-peșteră după titlul ei în cadrul ariei de suprafață, un loc după titlul
-lui în cadrul peșterii și al zonei peșteră — nu după vreo identitate
-ascunsă. Așa că același loc creat independent pe două telefoane apare ca
-un conflict în loc să se îmbine tăcut, iar o peșteră cu adevărat diferită
-care se întâmplă să aibă același titlu cu una de-a dumneavoastră din
-aceeași arie de suprafață se va ciocni și ea.
+O înregistrare nouă al cărei nume se ciocnește cu o înregistrare *diferită*
+de-a dumneavoastră — același titlu de loc în aceeași peșteră, creat separat
+pe două telefoane — nu este adăugată: a dumneavoastră este păstrată, iar
+cea primită este numărată ca omisă.
 
-#### Ce nu aduce o îmbinare
+#### O îmbinare și șterge
 
-O îmbinare acoperă o listă fixă de tipuri de înregistrări: arii de
-suprafață și locuri de suprafață, peșteri, zone peșteră, intrări, locuri
-din peșteră, hărți, definiții de puncte de hartă, fișiere de documentație
-și legăturile lor, ture și puncte de tură, plus setările partajate.
+Arhiva duce cu ea ce a șters celălalt dispozitiv, iar o îmbinare repetă
+acele ștergeri: o peșteră pe care colegul dumneavoastră a eliminat-o este
+eliminată și de pe dispozitivul dumneavoastră, cu excepția cazului în care
+ați modificat-o după ce a ștears-o el. Nu sunteți întrebat nimic. Dacă nu
+sunteți sigur de o arhivă, exportați întâi propriile date.
 
-Orice altceva din arhivă este lăsat în urmă în tăcere:
+#### Ce aduce o îmbinare
 
-- **înregistrările tagurilor BLE**,
-- **utilizatorii**,
-- **șabloanele de raport de tură**,
-- **istoricul modificărilor**,
+Tot ce duce [sincronizarea manuală](sync-and-change-log.md): peșteri, zone
+și locuri, înregistrările tagurilor BLE, hărți și puncte de hartă, fișiere
+de documentație și legăturile lor, ture și puncte de tură, utilizatori,
+șabloane de raport de tură, setările partajate și istoricul modificărilor.
+
+Rămân în urmă:
+
 - **istoricul senzorilor Ruuvi**,
 - setările locale ale dispozitivului, cum ar fi peștera pe care o aveați
-  deschisă.
+  deschisă și arhivele FTP pe care acest dispozitiv le-a descărcat deja.
 
-Toate acestea ajung doar cu un import **Înlocuire totală** — sau, pentru
-cele mai multe dintre ele, prin
-[sincronizarea manuală](sync-and-change-log.md).
-
-O îmbinare nu *șterge* niciodată nimic. Dacă un coleg a eliminat o peșteră
-și v-a trimis o arhivă, peștera rămâne pe dispozitivul dumneavoastră.
-Sincronizarea manuală se comportă invers și chiar reia ștergerile lui.
+O arhivă făcută de o versiune *mai nouă* a aplicației este refuzată;
+actualizați întâi aplicația. Una făcută de o versiune mai veche este adusă
+la zi pe parcursul importului.
 
 #### Fișierele media nu sunt niciodată suprascrise de o îmbinare
 
@@ -241,29 +246,20 @@ numărul de la **Fișiere copiate** iese mai mic decât vă așteptați. Doar
 #### Rezumatul Import Complet
 
 Când o îmbinare se termină, un dialog **Import Complet** raportează patru
-numere: **Înregistrări importate**, **Înregistrări omise**,
-**Înregistrări suprascrise** și **Fișiere copiate**. Dacă ceva a mers
-prost pe parcurs — o înregistrare care nu a putut fi reconectată la
-peștera ei, un fișier care nu s-a putut copia, un tip de înregistrare
-lipsă dintr-o arhivă mai veche — dedesubt sunt listate cu portocaliu până
-la zece **Avertismente**, cu un rând „… și N în plus” dacă au fost și
-altele.
+numere: **Înregistrări importate** (adăugate), **Înregistrări omise**
+(neschimbate, păstrate local sau în coliziune), **Înregistrări
+suprascrise** (actualizate) și **Fișiere copiate**. Dacă ceva a mers prost
+pe parcurs — un fișier care nu s-a putut copia, un utilizator potrivit cu
+unul de-al dumneavoastră după numele de utilizator — dedesubt sunt listate
+cu portocaliu până la zece **Avertismente**, cu un rând „… și N în plus”
+dacă au fost și altele.
 
-Citiți-le. Avertismentele de aici sunt singurul semn că o parte din arhivă
-nu a ajuns.
+#### Anularea unei îmbinări
 
-#### Anularea unei îmbinări lasă baza de date pe jumătate îmbinată
-
-**Anulează Importul** oprește îmbinarea acolo unde a ajuns. Tot ce a fost
-deja importat sau suprascris până în acel punct **rămâne în baza
-dumneavoastră de date** și nu este dat înapoi; primiți doar un scurt mesaj
-„Import anulat” și niciun rezumat. Fișierele media nu sunt copiate deloc,
-pentru că acel pas rulează după înregistrări.
-
-Dacă anulați aici o îmbinare, tratați baza de date ca fiind pe jumătate
-îmbinată: rulați din nou același import până la capăt sau restaurați o
-copie de siguranță. (Anularea pe ecranul **Sinc. man.** este sigură prin
-comparație — acel import este desfăcut în întregime și o și spune.)
+**Anulează importul** desface toate modificările de înregistrări pe care
+le făcuse importul; primiți un scurt mesaj „Import anulat” și niciun
+rezumat. Fișierele media și profilurile FTP nu sunt atinse, pentru că acei
+pași rulează după înregistrări.
 
 ## Restaurarea unui fișier brut de bază de date
 
