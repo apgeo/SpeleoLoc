@@ -726,6 +726,21 @@ class SyncArchiveService {
           }
         }
 
+        // An archive is a full snapshot of its source device, so a row it
+        // still carries, and has not soft-deleted, is alive there whatever
+        // its change log says. Such a tombstone is stale — the row was
+        // deleted and later restored with the same uuid — and applying it
+        // would delete on this device what the source still shows. Rows that
+        // keep a creation time in seconds from older data lose every
+        // timestamp comparison, so the check below cannot spare them.
+        final carried = <String>{
+          for (final rows in tableRows.values)
+            for (final r in rows)
+              if (r['uuid'] case final String uuid when r['deleted_at'] == null)
+                uuid,
+        };
+        deleteTargets.removeWhere((uuid, _) => carried.contains(uuid));
+
         // Apply delete tombstones: for every delete entry in the archive,
         // remove the corresponding row from its table locally if the
         // delete was more recent than the local row's updated_at.

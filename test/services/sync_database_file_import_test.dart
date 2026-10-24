@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -94,6 +95,34 @@ void main() {
       expect(await local.caveRepo.getCaves(), hasLength(1));
     },
   );
+
+  test('keeps a row the export still holds despite an old delete', () async {
+    final (source, file) = await buildFileHarness();
+    final cave = await source.caveRepo.addCave('Restored');
+    final row = (await source.caveRepo.getCaves()).single;
+    await source.caveRepo.deleteCave(cave);
+    // Put back with the same uuid and a creation time in seconds, the way
+    // older data carries it, so every timestamp says the delete is newer.
+    await source.db
+        .into(source.db.caves)
+        .insert(
+          row.copyWith(
+            createdAt: Value(row.createdAt! ~/ 1000),
+            updatedAt: const Value(null),
+          ),
+        );
+    await source.db.close();
+
+    final local = await buildHarness(
+      AppDatabase.forTesting(NativeDatabase.memory()),
+    );
+    addTearDown(local.db.close);
+
+    final report = await local.sync.importFromDatabaseFile(file);
+
+    expect(report.deletesApplied, 0);
+    expect((await local.caveRepo.getCaves()).map((c) => c.uuid), [cave]);
+  });
 
   test('carries deletes recorded in the export', () async {
     final (source, file) = await buildFileHarness();
