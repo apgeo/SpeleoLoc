@@ -12,12 +12,14 @@ import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_trip/trip_details_page.dart';
 import 'package:speleoloc/screens/cave_trip/trip_log_stale_banner.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_actions.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_pictures_sheet.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_row.dart';
 import 'package:speleoloc/screens/cave_trip/trip_window_dialog.dart';
 import 'package:speleoloc/screens/cave_trip/trip_log_update_prompt.dart';
+import 'package:speleoloc/services/trip_participants.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
@@ -140,6 +142,11 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       label: LocServ.inst.t('trip_media_title'),
     ),
     AppMenuItem(
+      value: 'trip_details',
+      icon: Icons.group_outlined,
+      label: LocServ.inst.t('trip_details_title'),
+    ),
+    AppMenuItem(
       value: 'edit_trip_times',
       icon: Icons.schedule,
       label: LocServ.inst.t('trip_window_title'),
@@ -171,6 +178,8 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       await _openRasterMapsPage();
     } else if (value == 'media_points') {
       await _openMediaPoints();
+    } else if (value == 'trip_details') {
+      await _openDetails();
     } else if (value == 'edit_trip_times') {
       await _editTripTimes();
     } else if (value == 'rename_trip') {
@@ -630,6 +639,59 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     if (changed == true && mounted) unawaited(_load());
   }
 
+  Future<void> _openDetails() async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TripDetailsPage(tripUuid: widget.tripUuid),
+      ),
+    );
+    if (saved == true && mounted) unawaited(_load());
+  }
+
+  /// Participants and details in the summary card — tappable to edit, and
+  /// an invitation to add them when there are none yet.
+  Widget _buildDetailsSummary(CaveTrip trip) {
+    final names = TripParticipants.parse(trip.participants);
+    final details = trip.description?.trim() ?? '';
+    if (names.isEmpty && details.isEmpty) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+          icon: const Icon(Icons.group_add_outlined, size: 18),
+          label: Text(LocServ.inst.t('trip_details_add')),
+          onPressed: () => unawaited(_openDetails()),
+        ),
+      );
+    }
+    return InkWell(
+      onTap: () => unawaited(_openDetails()),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (names.isNotEmpty)
+              Text(
+                '${LocServ.inst.t('trip_participants')}: ${names.join(', ')}',
+              ),
+            if (details.isNotEmpty)
+              Text(
+                details,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Corrects when the trip started and ended — chiefly for a trip entered
   /// after the fact. Moving either end changes what the log should say, so
   /// it goes through the same log decision as editing a point.
@@ -971,6 +1033,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
                   '${LocServ.inst.t('trip_duration')}: ${_formatDuration(trip.tripStartedAt, trip.tripEndedAt)}',
                 ),
                 Text('${LocServ.inst.t('trip_points')}: ${_points.length}'),
+                _buildDetailsSummary(trip),
                 if (_isActive) ...[
                   const SizedBox(height: 8),
                   Row(

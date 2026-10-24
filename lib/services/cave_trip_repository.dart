@@ -1,6 +1,7 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/trip_participants.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -110,6 +111,45 @@ class CaveTripRepository implements ICaveTripRepository {
     } catch (e, st) {
       _log.severe('Failed to rename cave trip', e, st);
       throw DbException('Failed to rename cave trip', cause: e, stackTrace: st);
+    }
+  }
+
+  @override
+  Future<void> updateTripDetails(
+    Uuid tripUuid, {
+    required String? participants,
+    required String? details,
+  }) async {
+    try {
+      final old = await findById(tripUuid);
+      if (old == null) return;
+      final names = TripParticipants.format(
+        TripParticipants.parse(participants),
+      );
+      final text = (details == null || details.trim().isEmpty)
+          ? null
+          : details.trimRight();
+      await _database.updateCaveTripDetails(
+        tripUuid,
+        participants: names,
+        description: text,
+      );
+      await _logger.logUpdate(
+        'cave_trips',
+        tripUuid,
+        oldValues: {
+          'participants': old.participants,
+          'description': old.description,
+        },
+        newValues: {'participants': names, 'description': text},
+      );
+    } catch (e, st) {
+      _log.severe('Failed to update trip details', e, st);
+      throw DbException(
+        'Failed to update trip details',
+        cause: e,
+        stackTrace: st,
+      );
     }
   }
 

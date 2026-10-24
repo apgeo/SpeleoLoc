@@ -229,6 +229,14 @@ abstract class ICaveTripRepository {
   );
   Future<List<TripReportTemplate>> getTripReportTemplates();
   Future<void> renameCaveTrip(Uuid tripUuid, String newTitle);
+
+  /// Sets who took part in the trip — names separated by commas — and its
+  /// free-text details. Blank values are stored as none.
+  Future<void> updateTripDetails(
+    Uuid tripUuid, {
+    required String? participants,
+    required String? details,
+  });
   Future<void> deleteCaveTrip(Uuid tripUuid);
 
   /// Replaces the persisted log text for [tripUuid]. Stamps `updatedAt`.

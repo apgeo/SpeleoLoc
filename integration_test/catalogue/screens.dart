@@ -7,6 +7,7 @@ import 'package:speleoloc/screens/cave_document_import_page.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_page.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/cave_places_list_page.dart';
+import 'package:speleoloc/screens/cave_trip/trip_details_page.dart';
 import 'package:speleoloc/screens/cave_trip/trip_media_points_page.dart';
 import 'package:speleoloc/screens/cave_trip_list_page.dart';
 import 'package:speleoloc/screens/cave_trip_log_page.dart';
@@ -307,6 +308,13 @@ final List<ScreenEntry> screenCatalogue = [
         ? null
         : CaveTripLogPage(tripUuid: fx.endedTrip!.uuid),
     core: true,
+  ),
+  ScreenEntry(
+    'trip_details',
+    'trip',
+    (fx) => fx.endedTrip == null
+        ? null
+        : TripDetailsPage(tripUuid: fx.endedTrip!.uuid),
   ),
   ScreenEntry(
     'trip_media_points',

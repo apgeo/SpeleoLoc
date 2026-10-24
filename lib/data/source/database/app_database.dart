@@ -176,6 +176,21 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Writes who took part in the trip and its free-text details.
+  Future<void> updateCaveTripDetails(
+    Uuid tripUuid, {
+    required String? participants,
+    required String? description,
+  }) async {
+    await (update(caveTrips)..where((t) => t.uuid.equalsValue(tripUuid))).write(
+      CaveTripsCompanion(
+        participants: Value(participants),
+        description: Value(description),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
   Future<CaveTrip?> getActiveTripForCave(Uuid caveUuid) async {
     return (select(caveTrips)
           ..where(
