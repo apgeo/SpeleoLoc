@@ -94,6 +94,10 @@ class AppDatabase extends _$AppDatabase {
 
   AppDatabase.forTesting(super.executor);
 
+  /// Opens the database stored in [file] rather than the app's own — the
+  /// copy inside an imported data export.
+  AppDatabase.file(File file) : super(NativeDatabase.createInBackground(file));
+
   @override
   int get schemaVersion => 24;
 

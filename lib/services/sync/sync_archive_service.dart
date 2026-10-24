@@ -14,6 +14,7 @@ import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
+import 'package:sqlite3/sqlite3.dart' show OpenMode, sqlite3;
 
 /// Current on-disk sync archive format version. Bump when the layout
 /// changes in a non-backwards-compatible way.
@@ -431,6 +432,63 @@ class SyncArchiveService {
       filesCopied: assetResult.copied,
       filesSkipped: assetResult.skipped,
     );
+  }
+
+  /// Merges a whole database file — the `speleo_loc.sqlite` inside a full
+  /// data export — into the local database with the same last-writer-wins
+  /// rules as [importFromZip]. Asset files are not touched.
+  ///
+  /// The file is opened and migrated in place, so an export made by an older
+  /// app is read in the current schema; pass a copy that may be modified.
+  /// One made by a newer app is refused with
+  /// [SyncArchiveSchemaMismatchException], since its rows cannot be read
+  /// faithfully.
+  Future<SyncImportReport> importFromDatabaseFile(
+    File dbFile, {
+    ConflictResolver? conflictResolver,
+  }) async {
+    final fileSchema = _readSchemaVersion(dbFile);
+    if (fileSchema > _db.schemaVersion) {
+      throw SyncArchiveSchemaMismatchException(
+        archiveSchemaVersion: fileSchema,
+        localSchemaVersion: _db.schemaVersion,
+        archiveAppVersion: null,
+        archiveAppBuildNumber: null,
+        tooNew: true,
+      );
+    }
+
+    final source = AppDatabase.file(dbFile);
+    try {
+      final tableRows = <String, List<Map<String, dynamic>>>{
+        for (final t in SyncTableRegistry(source).tables())
+          t.name: await t.dump(),
+      };
+      final logRows = (await source.select(source.changeLog).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList();
+      final fieldRows = (await source.select(source.changeLogField).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList();
+      return await _mergeRows(
+        tableRows: tableRows,
+        logRows: logRows,
+        fieldRows: fieldRows,
+        conflictResolver: conflictResolver,
+        warnings: <String>[],
+      );
+    } finally {
+      await source.close();
+    }
+  }
+
+  int _readSchemaVersion(File dbFile) {
+    final raw = sqlite3.open(dbFile.path, mode: OpenMode.readOnly);
+    try {
+      return raw.userVersion;
+    } finally {
+      raw.close();
+    }
   }
 
   /// Returns every byte offset in [bytes] where the 4-byte zip End-Of-

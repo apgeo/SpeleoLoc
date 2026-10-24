@@ -12,7 +12,7 @@ import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
 
 import 'package:speleoloc/services/archive/archive_models.dart';
-import 'package:speleoloc/services/archive/archive_table_configs.dart';
+import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
@@ -214,33 +214,39 @@ class DataArchiveService {
   //  IMPORT – MERGE
   // ---------------------------------------------------------------------------
 
-  /// Merges the archive into the existing database, asking [conflictResolver]
-  /// whenever a unique-constraint collision is detected.
-  Future<ImportResult> importArchiveMerge({
+  /// Merges the archive into the existing database through [merger], the
+  /// same last-writer-wins merge FTP and file sync use, so rows are matched by
+  /// uuid and deletes recorded in the archive's change log are applied.
+  /// [conflictResolver] is asked whenever an incoming row would change a
+  /// local one; files are copied only where none exists locally.
+  Future<SyncImportReport> importArchiveMerge({
     required String zipPath,
-    required ConflictResolver conflictResolver,
+    required SyncArchiveService merger,
+    ConflictResolver? conflictResolver,
     ProgressCallback? onProgress,
   }) async {
     onProgress?.call('Extracting archive...');
     final tempDir = await _extractZip(zipPath);
 
     try {
-      final importedDbPath = '${tempDir.path}/speleo_loc.sqlite';
-      if (!await File(importedDbPath).exists()) {
+      final importedDb = File('${tempDir.path}/speleo_loc.sqlite');
+      if (!await importedDb.exists()) {
         throw Exception('No database found in archive');
       }
 
-      final result = await _syncMerge(
-        importedDbPath: importedDbPath,
-        extractDir: tempDir.path,
+      onProgress?.call('Merging data...');
+      final report = await merger.importFromDatabaseFile(
+        importedDb,
         conflictResolver: conflictResolver,
-        onProgress: onProgress,
       );
+
+      onProgress?.call('Copying files...');
+      final filesCopied = await _copyNewFiles(tempDir.path, report.warnings);
 
       // Restore FTP passwords from the archive's ftp_credentials.json.
       await _restoreFtpPasswords(tempDir.path, onProgress: onProgress);
 
-      return result;
+      return report.copyWith(filesCopied: filesCopied);
     } finally {
       try {
         await tempDir.delete(recursive: true);
@@ -248,159 +254,6 @@ class DataArchiveService {
         _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
       }
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  //  Sync engine (merge)
-  // ---------------------------------------------------------------------------
-
-  Future<ImportResult> _syncMerge({
-    required String importedDbPath,
-    required String extractDir,
-    required ConflictResolver conflictResolver,
-    ProgressCallback? onProgress,
-  }) async {
-    // oldId → newId per table.
-    final idMappings = <String, Map<int, int>>{};
-    int imported = 0, skipped = 0, overwritten = 0;
-    final warnings = <String>[];
-
-    await _repo.attachImportedDb(importedDbPath);
-
-    try {
-      for (final cfg in tableConfigs) {
-        onProgress?.call('Syncing ${cfg.humanName}...');
-        idMappings[cfg.name] = {};
-
-        List<Map<String, dynamic>> importedRows;
-        try {
-          importedRows = await _repo.getImportedTableRows(cfg.name);
-        } catch (e) {
-          // Table may not exist in older exports – skip gracefully.
-          warnings.add('Table ${cfg.humanName} not found in archive');
-          continue;
-        }
-
-        for (final row in importedRows) {
-          final oldId = row['id'] as int;
-
-          // Skip device-local configuration keys and any non-synced rows.
-          // Only configurations with is_synced=1 participate in archive sync
-          // (see docs/features/place-code-identifiers.md §8).
-          if (cfg.name == 'configurations') {
-            final title = row['title'] as String?;
-            if (title != null && skipConfigKeys.contains(title)) continue;
-            final isSynced = row['is_synced'];
-            // Older archives (pre-v11) lack the column → treat as not-synced.
-            if (isSynced == null || (isSynced is int && isSynced == 0)) {
-              continue;
-            }
-          }
-
-          // Build a mutable copy without 'id' (auto-generated on insert).
-          final remapped = Map<String, dynamic>.from(row)..remove('id');
-
-          // Remap declared foreign keys.
-          for (final fk in cfg.foreignKeys.entries) {
-            final oldFkId = remapped[fk.key];
-            if (oldFkId != null && oldFkId is int) {
-              final newFkId = idMappings[fk.value]?[oldFkId];
-              if (newFkId == null) {
-                warnings.add(
-                  '${cfg.humanName}: could not remap ${fk.key}=$oldFkId',
-                );
-              }
-              remapped[fk.key] = newFkId;
-            }
-          }
-
-          // Polymorphic FK for documentation_files_to_geofeatures.
-          if (cfg.name == 'documentation_files_to_geofeatures') {
-            final geoType = remapped['geofeature_type'] as String?;
-            final geoId = remapped['geofeature_id'];
-            if (geoType != null && geoId != null && geoId is int) {
-              final refTable = geofeatureTypeToTable(geoType);
-              if (refTable != null) {
-                remapped['geofeature_id'] = idMappings[refTable]?[geoId];
-              }
-            }
-          }
-
-          // Detect conflict.
-          final existing = await _repo.findConflict(
-            cfg.name,
-            cfg.uniqueConstraints,
-            remapped,
-          );
-
-          if (existing != null) {
-            final existingId = existing['id'] as int;
-            final conflict = ImportConflict(
-              tableName: cfg.name,
-              humanTableName: cfg.humanName,
-              existingRecord: existing,
-              importedRecord: remapped,
-              conflictingColumns: _conflictCols(
-                cfg.uniqueConstraints,
-                remapped,
-                existing,
-              ),
-            );
-
-            final action = await conflictResolver(conflict);
-            if (action == null) {
-              // User cancelled import.
-              throw _ImportCancelledException();
-            }
-
-            if (action == ConflictAction.skip) {
-              idMappings[cfg.name]![oldId] = existingId;
-              skipped++;
-            } else {
-              await _repo.updateRow(
-                cfg.name,
-                existingId,
-                cfg.columns,
-                remapped,
-              );
-              idMappings[cfg.name]![oldId] = existingId;
-              overwritten++;
-            }
-          } else {
-            try {
-              final newId = await _repo.insertRow(
-                cfg.name,
-                cfg.columns,
-                remapped,
-              );
-              idMappings[cfg.name]![oldId] = newId;
-              imported++;
-            } catch (e) {
-              warnings.add('${cfg.humanName} insert failed: $e');
-            }
-          }
-        }
-      }
-    } finally {
-      try {
-        await _repo.detachImportedDb();
-      } catch (e, st) {
-        _log.fine('best-effort detachImportedDb failed', e, st);
-      }
-    }
-
-    // Copy binary files that don't already exist locally.
-    onProgress?.call('Copying files...');
-    final filesCopied = await _copyNewFiles(extractDir, warnings);
-
-    return ImportResult(
-      tablesProcessed: tableConfigs.length,
-      recordsImported: imported,
-      recordsSkipped: skipped,
-      recordsOverwritten: overwritten,
-      filesCopied: filesCopied,
-      warnings: warnings,
-    );
   }
 
   // ---------------------------------------------------------------------------
@@ -595,37 +448,4 @@ class DataArchiveService {
   }
 
   static String _pad(int n) => n.toString().padLeft(2, '0');
-
-  /// Identify which unique-constraint columns actually collide between
-  /// [imported] and [existing].
-  static List<String> _conflictCols(
-    List<List<String>> constraints,
-    Map<String, dynamic> imported,
-    Map<String, dynamic> existing,
-  ) {
-    for (final group in constraints) {
-      bool allMatch = true;
-      for (final col in group) {
-        if (imported[col] == null || existing[col] == null) {
-          allMatch = false;
-          break;
-        }
-        if (imported[col].toString() != existing[col].toString()) {
-          allMatch = false;
-          break;
-        }
-      }
-      if (allMatch) return group;
-    }
-    return constraints.isNotEmpty ? constraints.first : [];
-  }
-}
-
-// ---------------------------------------------------------------------------
-//  Internal exception used to signal user-cancellation during merge.
-// ---------------------------------------------------------------------------
-
-class _ImportCancelledException implements Exception {
-  @override
-  String toString() => 'Import cancelled by user';
 }

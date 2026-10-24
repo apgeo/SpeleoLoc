@@ -11,6 +11,7 @@ import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
+import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/test_archive_import_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/build_config.dart';
@@ -20,6 +21,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/sync_conflict_dialog.dart';
 
 /// Full data export / import page.
 ///
@@ -383,36 +385,14 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       ),
     );
 
-    final batchState = _BatchResolverState();
-
-    Future<ConflictAction?> resolver(ImportConflict conflict) async {
-      if (batchState.cancelled) return null;
-      if (batchState.batchAction != null) return batchState.batchAction;
-
-      if (!context.mounted) return null;
-
-      final result = await showDialog<_ConflictDialogResult>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => _ConflictResolutionDialog(conflict: conflict),
-      );
-
-      if (result == null || result.cancelled) {
-        batchState.cancelled = true;
-        return null;
-      }
-
-      if (result.applyToAll) batchState.batchAction = result.action;
-      return result.action;
-    }
-
     try {
       final service = DataArchiveService(
         DataExportImportRepository(ref.read(appDatabaseProvider)),
       );
       final importResult = await service.importArchiveMerge(
         zipPath: zipPath,
-        conflictResolver: resolver,
+        merger: ref.read(syncArchiveServiceProvider),
+        conflictResolver: promptingConflictResolver(context),
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
       );
 
@@ -420,14 +400,15 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
         Navigator.pop(context); // close progress
         _showImportResult(context, importResult);
       }
+    } on SyncImportCancelledException {
+      if (context.mounted) {
+        Navigator.pop(context);
+        SnackBarService.showWarning(LocServ.inst.t('import_cancelled'));
+      }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        if (batchState.cancelled) {
-          SnackBarService.showWarning(LocServ.inst.t('import_cancelled'));
-        } else {
-          SnackBarService.showError('${LocServ.inst.t('import_failed')}: $e');
-        }
+        SnackBarService.showError('${LocServ.inst.t('import_failed')}: $e');
       }
     }
   }
@@ -511,7 +492,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
   //  Import result dialog
   // ---------------------------------------------------------------------------
 
-  void _showImportResult(BuildContext context, ImportResult result) {
+  void _showImportResult(BuildContext context, SyncImportReport result) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -523,15 +504,15 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
             children: [
               _resultRow(
                 LocServ.inst.t('import_records_imported'),
-                result.recordsImported,
+                result.rowsInserted,
               ),
               _resultRow(
                 LocServ.inst.t('import_records_skipped'),
-                result.recordsSkipped,
+                result.rowsSkipped,
               ),
               _resultRow(
                 LocServ.inst.t('import_records_overwritten'),
-                result.recordsOverwritten,
+                result.rowsUpdated,
               ),
               _resultRow(
                 LocServ.inst.t('import_files_copied'),
@@ -615,155 +596,6 @@ class _ProgressDialogState extends State<_ProgressDialog> {
           const SizedBox(height: 16),
           Text(_message),
         ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-//  Conflict resolution dialog
-// =============================================================================
-
-class _BatchResolverState {
-  ConflictAction? batchAction;
-  bool cancelled = false;
-}
-
-class _ConflictDialogResult {
-  final ConflictAction action;
-  final bool applyToAll;
-  final bool cancelled;
-
-  _ConflictDialogResult({required this.action, this.applyToAll = false})
-    : cancelled = false;
-
-  _ConflictDialogResult.cancel()
-    : action = ConflictAction.skip,
-      applyToAll = false,
-      cancelled = true;
-}
-
-class _ConflictResolutionDialog extends StatelessWidget {
-  final ImportConflict conflict;
-
-  const _ConflictResolutionDialog({required this.conflict});
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(
-        LocServ.inst.t('conflict_in', {'table': conflict.humanTableName}),
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${LocServ.inst.t('conflict_columns')}: ${conflict.conflictingColumns.join(', ')}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                LocServ.inst.t('conflict_existing'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              _RecordCard(record: conflict.existingRecord),
-              const SizedBox(height: 8),
-              Text(
-                LocServ.inst.t('conflict_imported'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              _RecordCard(record: conflict.importedRecord),
-            ],
-          ),
-        ),
-      ),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(
-            context,
-            _ConflictDialogResult(action: ConflictAction.skip),
-          ),
-          child: Text(LocServ.inst.t('skip')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(
-            context,
-            _ConflictDialogResult(action: ConflictAction.overwrite),
-          ),
-          child: Text(LocServ.inst.t('overwrite')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(
-            context,
-            _ConflictDialogResult(
-              action: ConflictAction.skip,
-              applyToAll: true,
-            ),
-          ),
-          child: Text(LocServ.inst.t('skip_all')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(
-            context,
-            _ConflictDialogResult(
-              action: ConflictAction.overwrite,
-              applyToAll: true,
-            ),
-          ),
-          child: Text(LocServ.inst.t('overwrite_all')),
-        ),
-        TextButton(
-          onPressed: () =>
-              Navigator.pop(context, _ConflictDialogResult.cancel()),
-          child: Text(
-            LocServ.inst.t('cancel_import'),
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RecordCard extends StatelessWidget {
-  final Map<String, dynamic> record;
-
-  const _RecordCard({required this.record});
-
-  @override
-  Widget build(BuildContext context) {
-    // Show key fields compactly, skipping metadata.
-    final entries = record.entries
-        .where(
-          (e) =>
-              e.key != 'id' &&
-              e.key != 'created_at' &&
-              e.key != 'updated_at' &&
-              e.key != 'deleted_at' &&
-              e.value != null,
-        )
-        .take(8)
-        .toList();
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: entries
-              .map(
-                (e) => Text(
-                  '${e.key}: ${e.value}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              )
-              .toList(),
-        ),
       ),
     );
   }

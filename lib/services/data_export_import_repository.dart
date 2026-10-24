@@ -5,8 +5,8 @@ import 'package:speleoloc/utils/constants.dart';
 
 /// Data access layer for export/import operations.
 ///
-/// All raw database queries (attach, read, insert, update, conflict detection)
-/// are isolated here, keeping business logic in [DataArchiveService].
+/// Raw database queries for export and the import prompts are isolated here,
+/// keeping business logic in [DataArchiveService].
 class DataExportImportRepository {
   final AppDatabase _db;
   final Clock _clock;
@@ -96,128 +96,6 @@ class DataExportImportRepository {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  //  Attached database operations (for merge import)
-  // ---------------------------------------------------------------------------
-
-  Future<void> attachImportedDb(String path) async {
-    // Normalize Windows back-slashes for SQLite.
-    final safePath = path.replaceAll('\\', '/');
-    // Bind the filename as a parameter rather than interpolating it into the
-    // SQL — a path containing a single quote would otherwise break the
-    // statement (or inject) (finding 3.8). SQLite accepts a bound parameter
-    // for the ATTACH filename expression.
-    await _db.customStatement('ATTACH DATABASE ? AS imported', [safePath]);
-  }
-
-  Future<void> detachImportedDb() async {
-    await _db.customStatement('DETACH DATABASE imported');
-  }
-
-  /// Read every row from [tableName] in the attached *imported* database.
-  Future<List<Map<String, dynamic>>> getImportedTableRows(
-    String tableName,
-  ) async {
-    final rows = await _db
-        .customSelect('SELECT * FROM imported.$tableName')
-        .get();
-    return rows.map((r) => r.data).toList();
-  }
-
-  // ---------------------------------------------------------------------------
-  //  Conflict detection
-  // ---------------------------------------------------------------------------
-
-  /// Checks each unique-constraint group in [uniqueConstraints] against the
-  /// local database.  Returns the first matching row, or `null`.
-  Future<Map<String, dynamic>?> findConflict(
-    String tableName,
-    List<List<String>> uniqueConstraints,
-    Map<String, dynamic> row,
-  ) async {
-    for (final constraint in uniqueConstraints) {
-      final conditions = <String>[];
-      final args = <Variable<Object>>[];
-      bool hasNull = false;
-
-      for (final col in constraint) {
-        final val = row[col];
-        if (val == null) {
-          // SQLite treats NULLs as distinct in UNIQUE → no conflict possible.
-          hasNull = true;
-          break;
-        }
-        conditions.add('"$col" = ?');
-        args.add(_toVar(val));
-      }
-
-      if (hasNull || conditions.isEmpty) continue;
-
-      final result = await _db
-          .customSelect(
-            'SELECT * FROM "$tableName" WHERE ${conditions.join(' AND ')} LIMIT 1',
-            variables: args,
-          )
-          .getSingleOrNull();
-
-      if (result != null) return result.data;
-    }
-    return null;
-  }
-
-  // ---------------------------------------------------------------------------
-  //  Row manipulation
-  // ---------------------------------------------------------------------------
-
-  /// Insert a row into [tableName] and return the new auto-generated id.
-  Future<int> insertRow(
-    String tableName,
-    List<String> columns,
-    Map<String, dynamic> values,
-  ) async {
-    final cols = columns.where((c) => values.containsKey(c)).toList();
-    if (cols.isEmpty) return -1;
-
-    final placeholders = cols.map((_) => '?').join(', ');
-    final args = cols.map((c) => values[c]).toList();
-    final quotedCols = cols.map((c) => '"$c"').join(', ');
-
-    await _db.customStatement(
-      'INSERT INTO "$tableName" ($quotedCols) VALUES ($placeholders)',
-      args,
-    );
-
-    final result = await _db
-        .customSelect('SELECT last_insert_rowid() AS id')
-        .getSingle();
-    return result.read<int>('id');
-  }
-
-  /// Overwrite non-id columns of the row with the given [id].
-  Future<void> updateRow(
-    String tableName,
-    int id,
-    List<String> columns,
-    Map<String, dynamic> values,
-  ) async {
-    final setClauses = <String>[];
-    final args = <dynamic>[];
-
-    for (final col in columns) {
-      if (values.containsKey(col)) {
-        setClauses.add('"$col" = ?');
-        args.add(values[col]);
-      }
-    }
-    if (setClauses.isEmpty) return;
-
-    args.add(id);
-    await _db.customStatement(
-      'UPDATE "$tableName" SET ${setClauses.join(', ')} WHERE id = ?',
-      args,
-    );
-  }
-
   /// Whether the local database already contains meaningful data.
   Future<bool> hasData() async {
     final row = await _db
@@ -240,17 +118,5 @@ class DataExportImportRepository {
       if (row.read<int>('cnt') > 0) return true;
     }
     return false;
-  }
-
-  // ---------------------------------------------------------------------------
-  //  Helpers
-  // ---------------------------------------------------------------------------
-
-  static Variable<Object> _toVar(dynamic val) {
-    if (val is int) return Variable.withInt(val);
-    if (val is String) return Variable.withString(val);
-    if (val is double) return Variable.withReal(val);
-    if (val is bool) return Variable.withBool(val);
-    return Variable(val as Object);
   }
 }

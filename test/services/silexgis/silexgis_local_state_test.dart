@@ -1,7 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/archive/archive_table_configs.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -34,12 +33,6 @@ void main() {
       ).tables().map((t) => t.name).toSet();
       expect(exported, isNot(contains('silexgis_sync_state')));
       expect(exported, isNot(contains('silexgis_row_revision')));
-    });
-
-    test('the data archive does not carry them either', () {
-      final configured = tableConfigs.map((c) => c.name).toSet();
-      expect(configured, isNot(contains('silexgis_sync_state')));
-      expect(configured, isNot(contains('silexgis_row_revision')));
     });
 
     test('writing to them logs no change', () async {
