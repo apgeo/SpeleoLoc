@@ -303,6 +303,21 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trip_points (
     UNIQUE(documentation_file_uuid, cave_trip_point_uuid) ON CONFLICT ROLLBACK
 );
 
+-- Table: media_qr_scan_cache (local only, NOT synced)
+-- What reading each device picture for a QR label found, so that opening
+-- the points-from-pictures screen again does not decode the same pictures
+-- again. media_key identifies one version of one picture on this device
+-- (see TripMediaSource.scanKey); qr_payload is the label's whole raw text,
+-- or NULL when the picture was read and holds no code. Only the payload is
+-- kept, never the place it matched: places and their codes can change, so
+-- the match is made afresh each time. Device-specific keys mean nothing
+-- elsewhere, so the table is absent from the sync registry.
+CREATE TABLE IF NOT EXISTS media_qr_scan_cache (
+    media_key                   TEXT PRIMARY KEY NOT NULL,
+    qr_payload                  TEXT,
+    scanned_at                  INTEGER NOT NULL
+);
+
 -- Table: cave_place_beacons
 -- BLE tag registrations: maps a physical tag to a cave place, the beacon
 -- analogue of a QR label. Two tag kinds share the table, discriminated by

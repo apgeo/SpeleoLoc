@@ -869,6 +869,23 @@ class V22ToV23Migration extends SchemaMigration {
   }
 }
 
+/// v23 → v24.
+///
+/// Adds the local cache of what reading device pictures for QR labels found,
+/// so the points-from-pictures screen does not decode the same pictures every
+/// time it opens. Local-only, like the SilexGIS state tables.
+class V23ToV24Migration extends SchemaMigration {
+  const V23ToV24Migration();
+
+  @override
+  int get toVersion => 24;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.mediaQrScanCache);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -915,6 +932,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V20ToV21Migration(),
   V21ToV22Migration(),
   V22ToV23Migration(),
+  V23ToV24Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

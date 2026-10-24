@@ -11151,6 +11151,280 @@ class DocumentationFilesToCaveTripPointsCompanion
   }
 }
 
+class MediaQrScanCache extends Table
+    with TableInfo<MediaQrScanCache, MediaQrScanCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  MediaQrScanCache(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _mediaKeyMeta = const VerificationMeta(
+    'mediaKey',
+  );
+  late final GeneratedColumn<String> mediaKey = GeneratedColumn<String>(
+    'media_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'PRIMARY KEY NOT NULL',
+  );
+  static const VerificationMeta _qrPayloadMeta = const VerificationMeta(
+    'qrPayload',
+  );
+  late final GeneratedColumn<String> qrPayload = GeneratedColumn<String>(
+    'qr_payload',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _scannedAtMeta = const VerificationMeta(
+    'scannedAt',
+  );
+  late final GeneratedColumn<int> scannedAt = GeneratedColumn<int>(
+    'scanned_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [mediaKey, qrPayload, scannedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'media_qr_scan_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MediaQrScanCacheData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('media_key')) {
+      context.handle(
+        _mediaKeyMeta,
+        mediaKey.isAcceptableOrUnknown(data['media_key']!, _mediaKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mediaKeyMeta);
+    }
+    if (data.containsKey('qr_payload')) {
+      context.handle(
+        _qrPayloadMeta,
+        qrPayload.isAcceptableOrUnknown(data['qr_payload']!, _qrPayloadMeta),
+      );
+    }
+    if (data.containsKey('scanned_at')) {
+      context.handle(
+        _scannedAtMeta,
+        scannedAt.isAcceptableOrUnknown(data['scanned_at']!, _scannedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scannedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {mediaKey};
+  @override
+  MediaQrScanCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MediaQrScanCacheData(
+      mediaKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_key'],
+      )!,
+      qrPayload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}qr_payload'],
+      ),
+      scannedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}scanned_at'],
+      )!,
+    );
+  }
+
+  @override
+  MediaQrScanCache createAlias(String alias) {
+    return MediaQrScanCache(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class MediaQrScanCacheData extends DataClass
+    implements Insertable<MediaQrScanCacheData> {
+  final String mediaKey;
+  final String? qrPayload;
+  final int scannedAt;
+  const MediaQrScanCacheData({
+    required this.mediaKey,
+    this.qrPayload,
+    required this.scannedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['media_key'] = Variable<String>(mediaKey);
+    if (!nullToAbsent || qrPayload != null) {
+      map['qr_payload'] = Variable<String>(qrPayload);
+    }
+    map['scanned_at'] = Variable<int>(scannedAt);
+    return map;
+  }
+
+  MediaQrScanCacheCompanion toCompanion(bool nullToAbsent) {
+    return MediaQrScanCacheCompanion(
+      mediaKey: Value(mediaKey),
+      qrPayload: qrPayload == null && nullToAbsent
+          ? const Value.absent()
+          : Value(qrPayload),
+      scannedAt: Value(scannedAt),
+    );
+  }
+
+  factory MediaQrScanCacheData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MediaQrScanCacheData(
+      mediaKey: serializer.fromJson<String>(json['media_key']),
+      qrPayload: serializer.fromJson<String?>(json['qr_payload']),
+      scannedAt: serializer.fromJson<int>(json['scanned_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'media_key': serializer.toJson<String>(mediaKey),
+      'qr_payload': serializer.toJson<String?>(qrPayload),
+      'scanned_at': serializer.toJson<int>(scannedAt),
+    };
+  }
+
+  MediaQrScanCacheData copyWith({
+    String? mediaKey,
+    Value<String?> qrPayload = const Value.absent(),
+    int? scannedAt,
+  }) => MediaQrScanCacheData(
+    mediaKey: mediaKey ?? this.mediaKey,
+    qrPayload: qrPayload.present ? qrPayload.value : this.qrPayload,
+    scannedAt: scannedAt ?? this.scannedAt,
+  );
+  MediaQrScanCacheData copyWithCompanion(MediaQrScanCacheCompanion data) {
+    return MediaQrScanCacheData(
+      mediaKey: data.mediaKey.present ? data.mediaKey.value : this.mediaKey,
+      qrPayload: data.qrPayload.present ? data.qrPayload.value : this.qrPayload,
+      scannedAt: data.scannedAt.present ? data.scannedAt.value : this.scannedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MediaQrScanCacheData(')
+          ..write('mediaKey: $mediaKey, ')
+          ..write('qrPayload: $qrPayload, ')
+          ..write('scannedAt: $scannedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(mediaKey, qrPayload, scannedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MediaQrScanCacheData &&
+          other.mediaKey == this.mediaKey &&
+          other.qrPayload == this.qrPayload &&
+          other.scannedAt == this.scannedAt);
+}
+
+class MediaQrScanCacheCompanion extends UpdateCompanion<MediaQrScanCacheData> {
+  final Value<String> mediaKey;
+  final Value<String?> qrPayload;
+  final Value<int> scannedAt;
+  final Value<int> rowid;
+  const MediaQrScanCacheCompanion({
+    this.mediaKey = const Value.absent(),
+    this.qrPayload = const Value.absent(),
+    this.scannedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MediaQrScanCacheCompanion.insert({
+    required String mediaKey,
+    this.qrPayload = const Value.absent(),
+    required int scannedAt,
+    this.rowid = const Value.absent(),
+  }) : mediaKey = Value(mediaKey),
+       scannedAt = Value(scannedAt);
+  static Insertable<MediaQrScanCacheData> custom({
+    Expression<String>? mediaKey,
+    Expression<String>? qrPayload,
+    Expression<int>? scannedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (mediaKey != null) 'media_key': mediaKey,
+      if (qrPayload != null) 'qr_payload': qrPayload,
+      if (scannedAt != null) 'scanned_at': scannedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MediaQrScanCacheCompanion copyWith({
+    Value<String>? mediaKey,
+    Value<String?>? qrPayload,
+    Value<int>? scannedAt,
+    Value<int>? rowid,
+  }) {
+    return MediaQrScanCacheCompanion(
+      mediaKey: mediaKey ?? this.mediaKey,
+      qrPayload: qrPayload ?? this.qrPayload,
+      scannedAt: scannedAt ?? this.scannedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (mediaKey.present) {
+      map['media_key'] = Variable<String>(mediaKey.value);
+    }
+    if (qrPayload.present) {
+      map['qr_payload'] = Variable<String>(qrPayload.value);
+    }
+    if (scannedAt.present) {
+      map['scanned_at'] = Variable<int>(scannedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MediaQrScanCacheCompanion(')
+          ..write('mediaKey: $mediaKey, ')
+          ..write('qrPayload: $qrPayload, ')
+          ..write('scannedAt: $scannedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class CavePlaceBeacons extends Table
     with TableInfo<CavePlaceBeacons, CavePlaceBeacon> {
   @override
@@ -15445,6 +15719,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       DocumentationFilesToCaveTrips(this);
   late final DocumentationFilesToCaveTripPoints
   documentationFilesToCaveTripPoints = DocumentationFilesToCaveTripPoints(this);
+  late final MediaQrScanCache mediaQrScanCache = MediaQrScanCache(this);
   late final CavePlaceBeacons cavePlaceBeacons = CavePlaceBeacons(this);
   late final Index idxCavePlaceBeaconsIbeacon = Index(
     'idx_cave_place_beacons_ibeacon',
@@ -15510,6 +15785,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTripPoints,
     documentationFilesToCaveTrips,
     documentationFilesToCaveTripPoints,
+    mediaQrScanCache,
     cavePlaceBeacons,
     idxCavePlaceBeaconsIbeacon,
     idxCavePlaceBeaconsRuuvi,
@@ -27301,6 +27577,172 @@ typedef $DocumentationFilesToCaveTripPointsProcessedTableManager =
         bool lastModifiedByUserUuid,
       })
     >;
+typedef $MediaQrScanCacheCreateCompanionBuilder =
+    MediaQrScanCacheCompanion Function({
+      required String mediaKey,
+      Value<String?> qrPayload,
+      required int scannedAt,
+      Value<int> rowid,
+    });
+typedef $MediaQrScanCacheUpdateCompanionBuilder =
+    MediaQrScanCacheCompanion Function({
+      Value<String> mediaKey,
+      Value<String?> qrPayload,
+      Value<int> scannedAt,
+      Value<int> rowid,
+    });
+
+class $MediaQrScanCacheFilterComposer
+    extends Composer<_$AppDatabase, MediaQrScanCache> {
+  $MediaQrScanCacheFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get mediaKey => $composableBuilder(
+    column: $table.mediaKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get qrPayload => $composableBuilder(
+    column: $table.qrPayload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get scannedAt => $composableBuilder(
+    column: $table.scannedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $MediaQrScanCacheOrderingComposer
+    extends Composer<_$AppDatabase, MediaQrScanCache> {
+  $MediaQrScanCacheOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get mediaKey => $composableBuilder(
+    column: $table.mediaKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get qrPayload => $composableBuilder(
+    column: $table.qrPayload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get scannedAt => $composableBuilder(
+    column: $table.scannedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $MediaQrScanCacheAnnotationComposer
+    extends Composer<_$AppDatabase, MediaQrScanCache> {
+  $MediaQrScanCacheAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get mediaKey =>
+      $composableBuilder(column: $table.mediaKey, builder: (column) => column);
+
+  GeneratedColumn<String> get qrPayload =>
+      $composableBuilder(column: $table.qrPayload, builder: (column) => column);
+
+  GeneratedColumn<int> get scannedAt =>
+      $composableBuilder(column: $table.scannedAt, builder: (column) => column);
+}
+
+class $MediaQrScanCacheTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          MediaQrScanCache,
+          MediaQrScanCacheData,
+          $MediaQrScanCacheFilterComposer,
+          $MediaQrScanCacheOrderingComposer,
+          $MediaQrScanCacheAnnotationComposer,
+          $MediaQrScanCacheCreateCompanionBuilder,
+          $MediaQrScanCacheUpdateCompanionBuilder,
+          (
+            MediaQrScanCacheData,
+            BaseReferences<
+              _$AppDatabase,
+              MediaQrScanCache,
+              MediaQrScanCacheData
+            >,
+          ),
+          MediaQrScanCacheData,
+          PrefetchHooks Function()
+        > {
+  $MediaQrScanCacheTableManager(_$AppDatabase db, MediaQrScanCache table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $MediaQrScanCacheFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $MediaQrScanCacheOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $MediaQrScanCacheAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> mediaKey = const Value.absent(),
+                Value<String?> qrPayload = const Value.absent(),
+                Value<int> scannedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MediaQrScanCacheCompanion(
+                mediaKey: mediaKey,
+                qrPayload: qrPayload,
+                scannedAt: scannedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String mediaKey,
+                Value<String?> qrPayload = const Value.absent(),
+                required int scannedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MediaQrScanCacheCompanion.insert(
+                mediaKey: mediaKey,
+                qrPayload: qrPayload,
+                scannedAt: scannedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $MediaQrScanCacheProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      MediaQrScanCache,
+      MediaQrScanCacheData,
+      $MediaQrScanCacheFilterComposer,
+      $MediaQrScanCacheOrderingComposer,
+      $MediaQrScanCacheAnnotationComposer,
+      $MediaQrScanCacheCreateCompanionBuilder,
+      $MediaQrScanCacheUpdateCompanionBuilder,
+      (
+        MediaQrScanCacheData,
+        BaseReferences<_$AppDatabase, MediaQrScanCache, MediaQrScanCacheData>,
+      ),
+      MediaQrScanCacheData,
+      PrefetchHooks Function()
+    >;
 typedef $CavePlaceBeaconsCreateCompanionBuilder =
     CavePlaceBeaconsCompanion Function({
       required Uuid uuid,
@@ -30315,6 +30757,8 @@ class $AppDatabaseManager {
         _db,
         _db.documentationFilesToCaveTripPoints,
       );
+  $MediaQrScanCacheTableManager get mediaQrScanCache =>
+      $MediaQrScanCacheTableManager(_db, _db.mediaQrScanCache);
   $CavePlaceBeaconsTableManager get cavePlaceBeacons =>
       $CavePlaceBeaconsTableManager(_db, _db.cavePlaceBeacons);
   $RuuviSensorHistoryTableManager get ruuviSensorHistory =>
