@@ -174,18 +174,28 @@ written off without being downloaded. Files in the folder that are not
 SpeleoLoc archives are ignored entirely. Archives are handled oldest
 first.
 
-Every archive published by a recent version of the app has a companion
-checksum file beside it. After downloading, SpeleoLoc recomputes the
-fingerprint and compares: if they differ the archive is thrown away
-instead of imported and the Log tab says so. This catches both damage in
-transit and a file that has rotted on the server. Older archives that
-have no companion file are imported without that check.
+Each archive's name ends with the identifier of the device that made it,
+which is how archives are told apart by device. Earlier versions of the
+app wrote only its first 8 characters, which two devices set up within
+the same minute can share; current versions write all 32. An old short
+name is still matched to its device when exactly one device on the
+server has a full identifier starting with it.
 
-An archive that fails its checksum, or turns out not to be a readable
-archive at all — typically an upload that was cut off half-way by an
-older version of the app — is **skipped with a warning**, and the rest of
-the run carries on as normal. The file is left on the server and is not
-downloaded again until its size changes.
+Every archive has a companion checksum file beside it. After
+downloading, SpeleoLoc recomputes the fingerprint and compares: if they
+differ the archive is thrown away instead of imported and the Log tab
+says so. This catches both damage in transit and a file that has rotted
+on the server.
+
+An archive is **skipped with a warning** — the rest of the run carries on
+as normal — when:
+
+- its checksum file is missing or unreadable — nothing is imported
+  unchecked; if the same device has an older archive that does have one,
+  that one is used instead;
+- it fails its checksum, or turns out not to be a readable archive at
+  all, such as an upload that was cut off half-way by an older version of
+  the app. Such a file is not downloaded again until its size changes.
 
 ### Going up
 
@@ -197,16 +207,14 @@ and the data export screen, and apply only to archives you export by
 hand there. A large photo or map library therefore makes every upload
 large.
 
-The archive goes up under a temporary name ending in `.part` and gets its
-real name only once the whole file is on the server, so other devices
-never pick up a half-uploaded archive. If an upload is cut off, the
-`.part` file stays behind; this device removes its own leftovers on a
-later upload, once they are more than an hour old.
-
-Alongside the archive, SpeleoLoc uploads its checksum file so that other
-devices can verify what they download. If that small extra upload fails,
-the archive still stands and the Log tab records that it went up without
-an integrity hash.
+The checksum file goes up first. The archive then goes up under a
+temporary name ending in `.part` and gets its real name only once the
+whole file is on the server, so other devices never pick up a
+half-uploaded archive, nor one whose checksum has not arrived yet. If
+either upload fails the run ends as **Sync failed** and nothing is
+published. A cut-off upload leaves a `.part` file, or a checksum file
+with no archive, behind; this device removes its own leftovers on its
+next upload.
 
 ### When nothing is uploaded
 
@@ -283,9 +291,10 @@ resolution turned on.
 
 ## Housekeeping on the server
 
-SpeleoLoc **never deletes anything** from the remote folder. Every sync
-that uploads adds one archive plus one small checksum file, so the folder
-grows steadily — one pair per device per upload.
+SpeleoLoc never deletes another device's files, nor any finished archive,
+from the remote folder — only the leftovers of its own cut-off uploads.
+Every sync that uploads adds one archive plus one small checksum file, so
+the folder grows steadily — one pair per device per upload.
 
 Tidying up is yours to do, and it is safe: delete old archives (and their
 matching checksum files) from the folder, keeping the newest one from
@@ -332,6 +341,10 @@ already handled — the most recent 500 — so it does not fetch them twice.
   never finished. It is skipped with an orange warning and not downloaded
   again until it changes. Ask that device to sync again — its next
   archive replaces it — and delete the bad file from the folder.
+- **No .sha256 checksum file** — the archive's companion file is missing,
+  so it is skipped with an orange warning on every sync until it appears
+  or the file is removed. Ask that device to sync again, and delete the
+  archive from the folder.
 - **Slow syncs** — there is nothing to switch off: a run always sends
   every documentation file and raster map. Sync over a good connection
   when you can, and clear old archives out of the remote folder from
