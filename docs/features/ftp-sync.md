@@ -167,17 +167,25 @@ Only the **newest** archive from each other device is downloaded. Since
 each one is a full snapshot, older archives from the same device are
 redundant; the Log tab notes them as *superseded* and they are written
 off only once that device's newest archive has been dealt with, so one
-corrupt file cannot strand a good older snapshot. Files in the folder
-that are not SpeleoLoc archives are ignored entirely. Archives are
-handled oldest first.
+corrupt file cannot strand a good older snapshot. If a device's newest
+archive is one this device already has — including one it took over with
+a **Replace all data** import from that device — its older archives are
+written off without being downloaded. Files in the folder that are not
+SpeleoLoc archives are ignored entirely. Archives are handled oldest
+first.
 
 Every archive published by a recent version of the app has a companion
 checksum file beside it. After downloading, SpeleoLoc recomputes the
 fingerprint and compares: if they differ the archive is thrown away
-instead of imported, the Log tab says so, and the file is left on the
-server for a later attempt. This catches both damage in transit and a
-file that has rotted on the server. Older archives that have no
-companion file are imported without that check.
+instead of imported and the Log tab says so. This catches both damage in
+transit and a file that has rotted on the server. Older archives that
+have no companion file are imported without that check.
+
+An archive that fails its checksum, or turns out not to be a readable
+archive at all — typically an upload that was cut off half-way by an
+older version of the app — is **skipped with a warning**, and the rest of
+the run carries on as normal. The file is left on the server and is not
+downloaded again until its size changes.
 
 ### Going up
 
@@ -188,6 +196,12 @@ and **Include raster map images** switches live on the Man. sync screen
 and the data export screen, and apply only to archives you export by
 hand there. A large photo or map library therefore makes every upload
 large.
+
+The archive goes up under a temporary name ending in `.part` and gets its
+real name only once the whole file is on the server, so other devices
+never pick up a half-uploaded archive. If an upload is cut off, the
+`.part` file stays behind; this device removes its own leftovers on a
+later upload, once they are more than an hour old.
 
 Alongside the archive, SpeleoLoc uploads its checksum file so that other
 devices can verify what they download. If that small extra upload fails,
@@ -222,10 +236,13 @@ The last line of the **Log** tab is more precise, and says one of:
 That last distinction matters when you want to be sure your work has
 actually reached the server.
 
+A run that skipped unreadable archives still ends as **Sync complete**,
+with an orange banner listing them.
+
 A run that hit trouble ends as **Sync failed** with a red banner naming
 the first problem — even if most of it succeeded. One archive that
-failed to download, failed its checksum or failed to import does not
-stop the rest, and does not stop your own upload. So a red result does
+failed to download or failed to import does not stop the rest, and does
+not stop your own upload. So a red result does
 not mean nothing worked: read the Log tab to see what did. Everything
 that failed is deliberately left unmarked, so simply running the sync
 again retries it.
@@ -310,10 +327,11 @@ already handled — the most recent 500 — so it does not fetch them twice.
   it is skipped for good on this device, and the only cure is to update
   the app that produced it and let that device sync again. Either way
   the rest of the run carries on.
-- **Checksum mismatch** — the archive is corrupt on the server or was
-  damaged in transit. It is left in place and retried next time; if it
-  keeps failing, ask that device to sync again, and delete the bad file
-  from the folder.
+- **Checksum mismatch** or **not a readable sync archive** — the archive
+  is corrupt on the server, was damaged in transit, or is an upload that
+  never finished. It is skipped with an orange warning and not downloaded
+  again until it changes. Ask that device to sync again — its next
+  archive replaces it — and delete the bad file from the folder.
 - **Slow syncs** — there is nothing to switch off: a run always sends
   every documentation file and raster map. Sync over a good connection
   when you can, and clear old archives out of the remote folder from
