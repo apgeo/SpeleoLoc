@@ -62,6 +62,15 @@ abstract class TripMediaSource {
     Future<R?> Function(File file) use,
   );
 
+  /// A key for this one version of this picture, stable across visits to
+  /// the screen, under which what reading it found is remembered. Null when
+  /// the source cannot tell one picture from another.
+  ///
+  /// Not a hash of the file: hashing means reading every picture in full,
+  /// and on Android 10 and iOS the plugin first copies each original to do
+  /// so — the cost the reduced scan images exist to avoid.
+  Future<String?> scanKey(TripMediaItem item);
+
   /// Frees whatever this source materialised. Call when the screen that
   /// owns it goes away, after any import has finished.
   Future<void> release();

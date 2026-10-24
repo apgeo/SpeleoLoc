@@ -35,6 +35,11 @@ class PickedFilesMediaSource implements TripMediaSource {
   /// the content recognises it.
   final Set<String> _pickedKeys = {};
 
+  /// Each picked item's content key, by item id: a picked file is a fresh
+  /// copy with no stable id of its own, so its content is what identifies
+  /// it from one pick to the next.
+  final Map<String, String> _keyByItem = {};
+
   /// Enough of a file to tell two pictures apart: the header and the first
   /// stretch of image data.
   static const int _keyBytes = 64 * 1024;
@@ -67,10 +72,12 @@ class PickedFilesMediaSource implements TripMediaSource {
     for (final x in chosen) {
       final file = File(x.path);
       if (!await file.exists()) continue;
-      if (!_pickedKeys.add(await _contentKey(file))) continue;
+      final key = await _contentKey(file);
+      if (!_pickedKeys.add(key)) continue;
       final resolved = await _resolve(x);
       if (resolved == null) continue;
       _picked.add(resolved);
+      _keyByItem[resolved.id] = key;
       added++;
     }
     return added;
@@ -156,6 +163,12 @@ class PickedFilesMediaSource implements TripMediaSource {
     if (!item.isPhoto) return null;
     final f = await file(item);
     return f == null ? null : use(f);
+  }
+
+  @override
+  Future<String?> scanKey(TripMediaItem item) async {
+    final key = _keyByItem[item.id];
+    return key == null ? null : 'picked:$key';
   }
 
   /// The picker's copies are left to the platform, which clears its cache

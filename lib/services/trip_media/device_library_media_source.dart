@@ -237,6 +237,31 @@ class DeviceLibraryMediaSource implements TripMediaSource {
     }
   }
 
+  /// The platform's own id for the picture, with what changes when the
+  /// picture does: its modification time, pixel size and name. An edited
+  /// picture gets a new key and is read again; an untouched one is
+  /// recognised without reading a byte of it.
+  static String scanKeyFor({
+    required String id,
+    required int? modifiedSecond,
+    required int width,
+    required int height,
+    required String? title,
+  }) => 'library:$id:${modifiedSecond ?? 0}:${width}x$height:${title ?? ''}';
+
+  @override
+  Future<String?> scanKey(TripMediaItem item) async {
+    final asset = _assets[item.id];
+    if (asset == null) return null;
+    return scanKeyFor(
+      id: asset.id,
+      modifiedSecond: asset.modifiedDateSecond,
+      width: asset.width,
+      height: asset.height,
+      title: asset.title,
+    );
+  }
+
   @override
   Future<void> release() async {
     _assets.clear();
