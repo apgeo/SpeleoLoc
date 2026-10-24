@@ -155,7 +155,7 @@ class _ProgressTab extends StatelessWidget {
         if (progress.phase == FtpSyncPhase.failed &&
             progress.errorMessage != null) ...[
           const SizedBox(height: 12),
-          _ErrorBanner(
+          _MessageBanner(
             message: progress.errorMessage!,
             onOpenSettings:
                 (progress.statusMessage == 'ftp_connection_failed' ||
@@ -167,6 +167,15 @@ class _ProgressTab extends StatelessWidget {
                     ),
                   )
                 : null,
+          ),
+        ],
+        if (progress.phase == FtpSyncPhase.completed &&
+            progress.warningMessage != null) ...[
+          const SizedBox(height: 12),
+          _MessageBanner(
+            message: progress.warningMessage!,
+            color: Colors.orange,
+            icon: Icons.warning_amber_outlined,
           ),
         ],
         if (progress.isPaused) ...[
@@ -488,24 +497,31 @@ class _Metric extends StatelessWidget {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
+class _MessageBanner extends StatelessWidget {
   final String message;
   final VoidCallback? onOpenSettings;
-  const _ErrorBanner({required this.message, this.onOpenSettings});
+  final Color color;
+  final IconData icon;
+  const _MessageBanner({
+    required this.message,
+    this.onOpenSettings,
+    this.color = Colors.red,
+    this.icon = Icons.error_outline,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, color: Colors.red),
+          Icon(icon, color: color),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -520,7 +536,7 @@ class _ErrorBanner extends StatelessWidget {
                     icon: const Icon(Icons.settings, size: 16),
                     label: Text(LocServ.inst.t('open_settings')),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
+                      foregroundColor: color,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -98,6 +98,10 @@ class FtpSyncProgress {
   /// Set when [phase] is [FtpSyncPhase.failed].
   final String? errorMessage;
 
+  /// Set when the run finished but left some peer archives aside — files on
+  /// the server that could not be read. Not a failure of this device's sync.
+  final String? warningMessage;
+
   /// Wall-clock of the [FtpSyncPhase.connecting] transition. Null while
   /// [phase] is [FtpSyncPhase.idle].
   final DateTime? startedAt;
@@ -131,6 +135,7 @@ class FtpSyncProgress {
     required this.archivesTotal,
     required this.statusMessage,
     required this.errorMessage,
+    this.warningMessage,
     required this.startedAt,
     required this.updatedAt,
     required this.log,
@@ -217,6 +222,7 @@ class FtpSyncProgress {
     String? statusMessage,
     String? errorMessage,
     bool clearErrorMessage = false,
+    String? warningMessage,
     DateTime? startedAt,
     DateTime? updatedAt,
     List<FtpSyncLogEntry>? log,
@@ -240,6 +246,7 @@ class FtpSyncProgress {
       errorMessage: clearErrorMessage
           ? null
           : (errorMessage ?? this.errorMessage),
+      warningMessage: warningMessage ?? this.warningMessage,
       startedAt: startedAt ?? this.startedAt,
       updatedAt: updatedAt ?? DateTime.now(),
       log: log ?? this.log,

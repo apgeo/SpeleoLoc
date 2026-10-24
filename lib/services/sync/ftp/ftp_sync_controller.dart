@@ -42,6 +42,7 @@ final RegExp _archiveNameRe = RegExp(
 /// ### Flow (per design answers)
 ///   1. Connect to the configured default profile
 ///   2. List the remote folder, filter out archives already seen locally
+///      and ones that were unreadable and have not changed since
 ///   3. For each unseen archive, oldest-first: download then import (silent
 ///      last-writer-wins — no UI prompts during FTP sync)
 ///   4. Generate a fresh local archive reflecting the merged state
@@ -222,9 +223,28 @@ class FtpSyncController extends ChangeNotifier {
       token.throwIfCancelled();
 
       final seen = await _loadSeenArchives();
+      // Archives that could not be read when last downloaded are not fetched
+      // again until their size changes — an upload still in progress grows,
+      // an abandoned one never does.
+      final unreadable = await _loadUnreadableArchives();
+      final remoteNames = {for (final e in remoteEntries) e.name};
+      unreadable.removeWhere((name, _) => !remoteNames.contains(name));
+      final stillUnreadable = remoteEntries
+          .where((e) => unreadable[e.name] == e.size)
+          .length;
+      if (stillUnreadable > 0) {
+        _appendLog(
+          FtpSyncLogLevel.info,
+          'Ignoring $stillUnreadable archive(s) that could not be read last '
+          'time and have not changed since',
+        );
+      }
       final candidates = remoteEntries
           .where(
-            (e) => _archiveNameRe.hasMatch(e.name) && !seen.contains(e.name),
+            (e) =>
+                _archiveNameRe.hasMatch(e.name) &&
+                !seen.contains(e.name) &&
+                unreadable[e.name] != e.size,
           )
           .toList();
 
@@ -360,6 +380,10 @@ class FtpSyncController extends ChangeNotifier {
       // misleadingly green-ticked `completed`.
       var importErrors = 0;
       String? firstImportError;
+      // Peer archives left aside because the file itself is unusable. That
+      // is the producer's problem, not a failure of this sync, so the run
+      // still completes and only warns.
+      final unreadableNow = <String>[];
 
       for (var i = 0; i < unseen.length; i++) {
         token.throwIfCancelled();
@@ -493,17 +517,15 @@ class FtpSyncController extends ChangeNotifier {
                 '(unexpected content) — proceeding without hash check',
               );
             } else if (expected != actual) {
-              importErrors++;
-              firstImportError ??=
-                  '${entry.name}: SHA-256 mismatch (expected '
-                  '${expected.substring(0, 12)}…, got '
-                  '${actual.substring(0, 12)}…)';
+              unreadableNow.add(entry.name);
+              unreadable[entry.name] = entry.size;
               _appendLog(
-                FtpSyncLogLevel.error,
-                'Skipping ${entry.name}: SHA-256 mismatch — the file '
-                'is corrupt on the server or was damaged in transit. '
-                'Re-export from the source device. Will retry on '
-                'next sync.',
+                FtpSyncLogLevel.warning,
+                'Skipping ${entry.name}: SHA-256 mismatch (expected '
+                '${expected.substring(0, 12)}…, got '
+                '${actual.substring(0, 12)}…) — the file is corrupt on the '
+                'server or was damaged in transit. Re-export from the '
+                'source device.',
               );
               try {
                 await File(localPath).delete();
@@ -588,6 +610,24 @@ class FtpSyncController extends ChangeNotifier {
             _log.fine('best-effort delete failed: $localPath', e, st);
           }
           continue;
+        } on FormatException catch (e) {
+          // Not a readable sync archive: typically an upload cut off before
+          // it finished, which also never got its .sha256 sidecar.
+          unreadableNow.add(entry.name);
+          unreadable[entry.name] = entry.size;
+          _appendLog(
+            FtpSyncLogLevel.warning,
+            'Skipping ${entry.name}: not a readable sync archive '
+            '(${e.message}) — probably an interrupted upload. It is '
+            'ignored until the file changes on the server.',
+          );
+          _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
+          try {
+            await File(localPath).delete();
+          } catch (e, st) {
+            _log.fine('best-effort delete failed: $localPath', e, st);
+          }
+          continue;
         } catch (e) {
           importErrors++;
           firstImportError ??= '${entry.name}: $e';
@@ -636,6 +676,7 @@ class FtpSyncController extends ChangeNotifier {
           ),
         );
         await _saveSeenArchives(seen);
+        await _saveUnreadableArchives(unreadable);
         try {
           await tempDir.delete(recursive: true);
         } catch (e, st) {
@@ -661,6 +702,7 @@ class FtpSyncController extends ChangeNotifier {
           );
           return;
         }
+        final warning = _unreadableSummary(unreadableNow);
         _emit(
           (s) => s.copyWith(
             phase: FtpSyncPhase.completed,
@@ -669,6 +711,7 @@ class FtpSyncController extends ChangeNotifier {
                 : 'ftp_phase_completed_download_only',
             stepProgress: 1.0,
             clearErrorMessage: true,
+            warningMessage: warning,
           ),
         );
         _appendLog(
@@ -798,6 +841,7 @@ class FtpSyncController extends ChangeNotifier {
         ),
       );
       await _saveSeenArchives(seen);
+      await _saveUnreadableArchives(unreadable);
       await _saveLastUploadAt(
         profile.profileUuid,
         DateTime.now().millisecondsSinceEpoch,
@@ -832,12 +876,14 @@ class FtpSyncController extends ChangeNotifier {
         );
         return;
       }
+      final warning = _unreadableSummary(unreadableNow);
       _emit(
         (s) => s.copyWith(
           phase: FtpSyncPhase.completed,
           statusMessage: 'ftp_phase_completed',
           stepProgress: 1.0,
           clearErrorMessage: true,
+          warningMessage: warning,
         ),
       );
       _appendLog(FtpSyncLogLevel.info, 'Sync complete');
@@ -920,6 +966,37 @@ class FtpSyncController extends ChangeNotifier {
       ..sort((a, b) => _timestampOf(b).compareTo(_timestampOf(a)));
     final trimmed = sorted.take(500).toList();
     await _writeConfig(ConfigKey.ftpSeenArchives, trimmed.join('\n'));
+  }
+
+  /// `name<TAB>size` per line: archives that could not be read, with the
+  /// size they had then.
+  Future<Map<String, int>> _loadUnreadableArchives() async {
+    final raw = await _readConfig(ConfigKey.ftpUnreadableArchives);
+    final out = <String, int>{};
+    if (raw == null) return out;
+    for (final line in raw.split('\n')) {
+      final tab = line.lastIndexOf('\t');
+      if (tab <= 0) continue;
+      final size = int.tryParse(line.substring(tab + 1));
+      if (size != null) out[line.substring(0, tab)] = size;
+    }
+    return out;
+  }
+
+  Future<void> _saveUnreadableArchives(Map<String, int> unreadable) =>
+      _writeConfig(
+        ConfigKey.ftpUnreadableArchives,
+        unreadable.entries.map((e) => '${e.key}\t${e.value}').join('\n'),
+      );
+
+  /// One line for the finished run when archives were left aside, or null.
+  String? _unreadableSummary(List<String> names) {
+    if (names.isEmpty) return null;
+    final summary =
+        'Skipped ${names.length} unreadable archive(s) on the server: '
+        '${names.join(', ')}';
+    _appendLog(FtpSyncLogLevel.warning, summary);
+    return summary;
   }
 
   // ---------------------------------------------------------------------

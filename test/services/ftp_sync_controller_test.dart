@@ -775,8 +775,9 @@ void main() {
       await controller.startDefault();
       final end = await _waitForTerminal(controller);
 
-      // Importing the truncated archive would have ended the run failed.
+      // Not even downloaded, so not reported as unreadable either.
       expect(end.phase, FtpSyncPhase.completed, reason: '${end.errorMessage}');
+      expect(end.warningMessage, isNull);
 
       // Marked seen, so the next run does not reconsider it either.
       final seen = await b.db
@@ -789,6 +790,62 @@ void main() {
         seen.read<String>('value').split('\n'),
         contains('speleo_loc_sync_1000_deadbeef.zip'),
       );
+    },
+  );
+
+  test(
+    'an unreadable archive is skipped with a warning, not a failed sync',
+    () async {
+      final peer = await _buildHarness();
+      await peer.caveRepo.addCave('FromPeer');
+      final valid = await peer.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'speleo_loc_sync_1000_cafebabe.zip',
+      );
+
+      final b = await _buildHarness();
+      final (_, fake) = await makeController(
+        b,
+        seedFromHarnessExports: {
+          'speleo_loc_sync_1000_cafebabe.zip': await valid.readAsBytes(),
+          // Another device's upload, cut off part-way.
+          'speleo_loc_sync_2000_deadbeef.zip': <int>[0x50, 0x4b, 3, 4, 0],
+        },
+      );
+      final downloads = <String>[];
+      final controller = FtpSyncController(
+        db: b.db,
+        profileRepository: FtpProfileRepository(b.db),
+        archiveService: b.sync,
+        currentUserService: b.currentUser,
+        transportBuilder: (_) => _OrderTrackingTransport(fake, downloads),
+      );
+
+      await controller.startDefault();
+      final first = await _waitForTerminal(controller);
+
+      expect(first.phase, FtpSyncPhase.completed, reason: first.errorMessage);
+      expect(first.warningMessage, contains('speleo_loc_sync_2000_deadbeef'));
+      expect(
+        (await b.caveRepo.getCaves()).map((c) => c.title),
+        contains('FromPeer'),
+        reason: 'the readable archive still imports',
+      );
+
+      // Unchanged on the server: not downloaded again.
+      downloads.clear();
+      await controller.startDefault();
+      final second = await _waitForTerminal(controller);
+      expect(downloads, isNot(contains('speleo_loc_sync_2000_deadbeef.zip')));
+      expect(second.warningMessage, isNull);
+
+      // Its size changed (the upload went on): tried again.
+      fake.store['speleo_loc_sync_2000_deadbeef.zip'] = <int>[
+        0x50, 0x4b, 3, 4, 0, 0, 0, //
+      ];
+      await controller.startDefault();
+      await _waitForTerminal(controller);
+      expect(downloads, contains('speleo_loc_sync_2000_deadbeef.zip'));
     },
   );
 

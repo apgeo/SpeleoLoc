@@ -255,6 +255,18 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
                     ),
                   ),
               ],
+              if (!isRunning &&
+                  progress.phase == FtpSyncPhase.completed &&
+                  progress.warningMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    progress.warningMessage!,
+                    style: const TextStyle(fontSize: 10, color: Colors.orange),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               if (!isRunning && progress.phase == FtpSyncPhase.failed)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
