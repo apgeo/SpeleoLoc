@@ -836,9 +836,13 @@ class SyncArchiveService {
     final localTs = countRows.first.read<int>('ts');
     if (tombstoneTs < localTs)
       return 0; // local strictly newer → keep (ties delete)
-    await _db.customStatement(
+    // customUpdate rather than customStatement: it tells drift which table
+    // changed, so screens watching it reload after the import.
+    await _db.customUpdate(
       'DELETE FROM ${table.actualTableName} WHERE uuid = ?',
-      [entityUuid.bytes],
+      variables: [Variable<Uint8List>(entityUuid.bytes)],
+      updates: {table},
+      updateKind: UpdateKind.delete,
     );
     return 1;
   }
