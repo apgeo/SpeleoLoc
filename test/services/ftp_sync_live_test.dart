@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ftpconnect/ftpconnect.dart';
 import 'package:path/path.dart' as p;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_repository.dart';
@@ -17,6 +18,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_progress.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_transport_factory.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
@@ -80,109 +82,163 @@ void main() {
           }
           return null;
         });
+
+    // The profile password lives in flutter_secure_storage, which has no
+    // platform side under `flutter test`; keep it in memory instead.
+    const secureChannel = MethodChannel(
+      'plugins.it_nomads.com/flutter_secure_storage',
+    );
+    final secrets = <String, String>{};
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureChannel, (call) async {
+          final args = Map<String, dynamic>.from(call.arguments as Map);
+          final key = args['key'] as String?;
+          switch (call.method) {
+            case 'write':
+              secrets[key!] = args['value'] as String;
+            case 'read':
+              return secrets[key];
+            case 'delete':
+              secrets.remove(key);
+            case 'containsKey':
+              return secrets.containsKey(key);
+            case 'readAll':
+              return Map<String, String>.from(secrets);
+            case 'deleteAll':
+              secrets.clear();
+          }
+          return null;
+        });
   });
 
   tearDownAll(() async {
     try {
       await tempRoot.delete(recursive: true);
     } catch (_) {}
+    // Leave nothing behind on the shared server: the run's files, then its
+    // folder (FTP only — the transports have no folder removal, and SFTP
+    // servers are left as they are).
+    final transport = defaultTransportBuilder(_profileFor(cfg, remoteFolder));
+    try {
+      await transport.connect(password: cfg.password);
+      for (final e in await transport.listFolder()) {
+        if (e.name == '.' || e.name == '..') continue;
+        await transport.deleteFile(e.name);
+      }
+    } finally {
+      await transport.disconnect();
+    }
+    if (cfg.protocol != FtpProtocol.sftp) {
+      final client = FTPConnect(
+        cfg.host,
+        port: cfg.port,
+        user: cfg.username,
+        pass: cfg.password,
+        securityType: cfg.protocol == FtpProtocol.ftps
+            ? SecurityType.ftpes
+            : SecurityType.ftp,
+      );
+      await client.connect();
+      await client.deleteEmptyDirectory(remoteFolder);
+      await client.disconnect();
+    }
   });
 
-  test(
-    'live FTP sync respects the upload-skipping decision matrix',
-    () async {
-      final db = AppDatabase.forTesting(NativeDatabase.memory());
-      late ChangeLogger loggerRef;
-      final userRepo = UserRepository(db, () => loggerRef);
-      final currentUser = CurrentUserService(
-        db,
-        userRepo,
-        ConfigurationRepository(db),
-      );
-      await currentUser.initialize();
-      loggerRef = ChangeLogger(db, currentUser);
-      final caveRepo = CaveRepository(db, currentUser, loggerRef);
-      final assetsDir = await Directory.systemTemp.createTemp(
-        'speleoloc_ftp_live_assets_',
-      );
-      final sync = SyncArchiveService(
-        db,
-        loggerRef,
-        assetsBaseDirResolver: () async => assetsDir,
-      );
+  test('live FTP sync respects the upload-skipping decision matrix', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    late ChangeLogger loggerRef;
+    final userRepo = UserRepository(db, () => loggerRef);
+    final currentUser = CurrentUserService(
+      db,
+      userRepo,
+      ConfigurationRepository(db),
+    );
+    await currentUser.initialize();
+    loggerRef = ChangeLogger(db, currentUser);
+    final caveRepo = CaveRepository(db, currentUser, loggerRef);
+    final assetsDir = await Directory.systemTemp.createTemp(
+      'speleoloc_ftp_live_assets_',
+    );
+    final sync = SyncArchiveService(
+      db,
+      loggerRef,
+      assetsBaseDirResolver: () async => assetsDir,
+    );
 
-      final profileRepo = FtpProfileRepository(db);
-      final profile = FtpProfile(
-        profileUuid: 'live-test-${DateTime.now().millisecondsSinceEpoch}',
-        displayName: 'Live test',
-        protocol: cfg.protocol,
-        host: cfg.host,
-        port: cfg.port,
-        username: cfg.username,
-        remoteFolder: remoteFolder,
-      );
-      await profileRepo.save(profile, password: cfg.password);
-      await profileRepo.setDefaultUuid(profile.profileUuid);
+    final profileRepo = FtpProfileRepository(db);
+    final profile = _profileFor(cfg, remoteFolder);
+    await profileRepo.save(profile, password: cfg.password);
+    await profileRepo.setDefaultUuid(profile.profileUuid);
 
-      final controller = FtpSyncController(
-        db: db,
-        profileRepository: profileRepo,
-        archiveService: sync,
-        currentUserService: currentUser,
-      );
+    final controller = FtpSyncController(
+      db: db,
+      profileRepository: profileRepo,
+      archiveService: sync,
+      currentUserService: currentUser,
+    );
 
-      // Need at least one local entity so the export carries data.
-      await caveRepo.addCave('LiveTestCave');
+    // Need at least one local entity so the export carries data.
+    await caveRepo.addCave('LiveTestCave');
 
-      // Run #1 — first time on this device → should upload.
-      await controller.startDefault();
-      await _waitForTerminal(controller);
-      expect(
-        controller.progress.phase,
-        FtpSyncPhase.completed,
-        reason: _formatLog(controller),
-      );
-      expect(
-        controller.progress.statusMessage,
-        'ftp_phase_completed',
-        reason: 'Run #1 must upload',
-      );
+    // Run #1 — first time on this device → should upload.
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(
+      controller.progress.phase,
+      FtpSyncPhase.completed,
+      reason: _formatLog(controller),
+    );
+    expect(
+      controller.progress.statusMessage,
+      'ftp_phase_completed',
+      reason: 'Run #1 must upload',
+    );
+    // Published as a pair under the full device id, nothing half-done.
+    final deviceId = currentUser.deviceUuid.value!.toString().replaceAll(
+      '-',
+      '',
+    );
+    final probe = defaultTransportBuilder(profile);
+    await probe.connect(password: cfg.password);
+    final names = (await probe.listFolder())
+        .map((e) => e.name)
+        .where((n) => n != '.' && n != '..')
+        .toList();
+    await probe.disconnect();
+    final zip = names.singleWhere((n) => n.endsWith('.zip'));
+    expect(zip, endsWith('_$deviceId.zip'));
+    expect(names, unorderedEquals([zip, '$zip.sha256']));
 
-      // Run #2 — no local mutations → must NOT re-upload.
-      await controller.startDefault();
-      await _waitForTerminal(controller);
-      expect(
-        controller.progress.phase,
-        FtpSyncPhase.completed,
-        reason: _formatLog(controller),
-      );
-      expect(
-        controller.progress.statusMessage,
-        anyOf(
-          'ftp_phase_completed_nothing',
-          'ftp_phase_completed_download_only',
-        ),
-        reason: 'Run #2 must skip the upload',
-      );
+    // Run #2 — no local mutations → must NOT re-upload.
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(
+      controller.progress.phase,
+      FtpSyncPhase.completed,
+      reason: _formatLog(controller),
+    );
+    expect(
+      controller.progress.statusMessage,
+      anyOf('ftp_phase_completed_nothing', 'ftp_phase_completed_download_only'),
+      reason: 'Run #2 must skip the upload',
+    );
 
-      // Run #3 — fresh local change → upload again.
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      await caveRepo.addCave('LiveTestCave2');
-      await controller.startDefault();
-      await _waitForTerminal(controller);
-      expect(
-        controller.progress.phase,
-        FtpSyncPhase.completed,
-        reason: _formatLog(controller),
-      );
-      expect(
-        controller.progress.statusMessage,
-        'ftp_phase_completed',
-        reason: 'Run #3 must upload',
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 3)),
-  );
+    // Run #3 — fresh local change → upload again.
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await caveRepo.addCave('LiveTestCave2');
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+    expect(
+      controller.progress.phase,
+      FtpSyncPhase.completed,
+      reason: _formatLog(controller),
+    );
+    expect(
+      controller.progress.statusMessage,
+      'ftp_phase_completed',
+      reason: 'Run #3 must upload',
+    );
+  }, timeout: const Timeout(Duration(minutes: 3)));
 }
 
 class _LiveConfig {
@@ -219,6 +275,16 @@ class _LiveConfig {
     );
   }
 }
+
+FtpProfile _profileFor(_LiveConfig cfg, String remoteFolder) => FtpProfile(
+  profileUuid: 'live-test',
+  displayName: 'Live test',
+  protocol: cfg.protocol,
+  host: cfg.host,
+  port: cfg.port,
+  username: cfg.username,
+  remoteFolder: remoteFolder,
+);
 
 Future<FtpSyncProgress> _waitForTerminal(FtpSyncController c) async {
   while (c.progress.isRunning || c.progress.isPaused) {
