@@ -282,6 +282,10 @@ class FtpSyncController extends ChangeNotifier {
       // (finding 5.3).
       final supersededByDevice = <String, List<String>>{};
       var supersededCount = 0;
+      // Peer archives left aside because the file is unusable or arrived
+      // without its checksum. That is the producer's problem, not a failure
+      // of this sync, so the run still completes and only warns.
+      final skipped = <String>[];
       // A device's newest archive may already be seen — our own upload, or
       // one adopted with a database taken over from another device. Its
       // unseen older siblings are then subsumed too, and must not be imported
@@ -308,12 +312,34 @@ class FtpSyncController extends ChangeNotifier {
           supersededCount += group.length;
           continue;
         }
-        unseen.add(group.last);
-        if (group.length > 1) {
-          final olders = group
-              .sublist(0, group.length - 1)
-              .map((e) => e.name)
-              .toList();
+        // Every archive is published with its .sha256 sidecar, so one
+        // without it is incomplete or damaged and is never imported
+        // unchecked. Only those newer than the device's usable archive are
+        // reported; older ones are superseded anyway.
+        final usable = group
+            .where((e) => remoteNames.contains('${e.name}$_sha256Suffix'))
+            .toList();
+        final newestUsableTs = usable.isEmpty
+            ? -1
+            : _timestampOf(usable.last.name);
+        for (final e in group) {
+          if (usable.contains(e) || _timestampOf(e.name) < newestUsableTs) {
+            continue;
+          }
+          skipped.add('${e.name} (no .sha256 checksum file)');
+          _appendLog(
+            FtpSyncLogLevel.warning,
+            'Skipping ${e.name}: it has no .sha256 checksum file beside it, '
+            'so it cannot be verified.',
+          );
+        }
+        if (usable.isEmpty) continue;
+        unseen.add(usable.last);
+        final olders = [
+          for (final e in group)
+            if (_timestampOf(e.name) < newestUsableTs) e.name,
+        ];
+        if (olders.isNotEmpty) {
           supersededByDevice[deviceEntry.key] = olders;
           supersededCount += olders.length;
         }
@@ -389,10 +415,6 @@ class FtpSyncController extends ChangeNotifier {
       // misleadingly green-ticked `completed`.
       var importErrors = 0;
       String? firstImportError;
-      // Peer archives left aside because the file itself is unusable. That
-      // is the producer's problem, not a failure of this sync, so the run
-      // still completes and only warns.
-      final unreadableNow = <String>[];
 
       for (var i = 0; i < unseen.length; i++) {
         token.throwIfCancelled();
@@ -496,79 +518,62 @@ class FtpSyncController extends ChangeNotifier {
           '${_formatBytes(localSize)})',
         );
 
-        // SHA-256 verification: if the producer published a sidecar, the
-        // archive must hash to the value in it. This catches transport
-        // corruption (FTP libraries dropping bytes silently on certain
-        // platforms) and corruption-at-rest on the server. Sidecar is
-        // optional for backward compatibility — archives uploaded before
-        // this scheme existed are imported without a hash check.
+        // SHA-256 verification: the archive must hash to the value in its
+        // sidecar. This catches transport corruption (FTP libraries dropping
+        // bytes silently on certain platforms) and corruption-at-rest on the
+        // server. An archive whose sidecar cannot be read is skipped, never
+        // imported unchecked.
         final sidecarName = '${entry.name}$_sha256Suffix';
-        final sidecarRemote = remoteEntries.firstWhere(
-          (e) => e.name == sidecarName,
-          orElse: () => const RemoteFileEntry(name: '', size: 0),
-        );
-        if (sidecarRemote.name.isNotEmpty) {
-          final sidecarPath = p.join(tempDir.path, sidecarName);
-          try {
-            await transport.downloadFile(
-              sidecarName,
-              File(sidecarPath),
-              cancelToken: token,
-            );
-            final expected = (await File(
-              sidecarPath,
-            ).readAsString()).trim().toLowerCase();
-            final actual = await _sha256OfFile(File(localPath));
-            if (expected.isEmpty || expected.length != 64) {
-              _appendLog(
-                FtpSyncLogLevel.warning,
-                'Ignoring malformed sidecar for ${entry.name} '
-                '(unexpected content) — proceeding without hash check',
-              );
-            } else if (expected != actual) {
-              unreadableNow.add(entry.name);
-              unreadable[entry.name] = entry.size;
-              _appendLog(
-                FtpSyncLogLevel.warning,
-                'Skipping ${entry.name}: SHA-256 mismatch (expected '
-                '${expected.substring(0, 12)}…, got '
-                '${actual.substring(0, 12)}…) — the file is corrupt on the '
-                'server or was damaged in transit. Re-export from the '
-                'source device.',
-              );
-              try {
-                await File(localPath).delete();
-              } catch (e, st) {
-                _log.fine('best-effort delete failed: $localPath', e, st);
-              }
-              try {
-                await File(sidecarPath).delete();
-              } catch (e, st) {
-                _log.fine('best-effort delete failed: $sidecarPath', e, st);
-              }
-              _emit(
-                (s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0),
-              );
-              continue;
-            } else {
-              _appendLog(
-                FtpSyncLogLevel.info,
-                'Verified ${entry.name} SHA-256 OK',
-              );
-            }
-            try {
-              await File(sidecarPath).delete();
-            } catch (e, st) {
-              _log.fine('best-effort delete failed: $sidecarPath', e, st);
-            }
-          } catch (e) {
-            _appendLog(
-              FtpSyncLogLevel.warning,
-              'Could not download sidecar for ${entry.name}: $e — '
-              'proceeding without hash check',
-            );
+        final sidecarPath = p.join(tempDir.path, sidecarName);
+        String? rejection;
+        try {
+          await transport.downloadFile(
+            sidecarName,
+            File(sidecarPath),
+            cancelToken: token,
+          );
+          final expected = (await File(
+            sidecarPath,
+          ).readAsString()).trim().toLowerCase();
+          final actual = await _sha256OfFile(File(localPath));
+          if (expected.length != 64) {
+            rejection = 'malformed .sha256 checksum file';
+          } else if (expected != actual) {
+            rejection =
+                'SHA-256 mismatch (expected ${expected.substring(0, 12)}…, '
+                'got ${actual.substring(0, 12)}…)';
+            // The file itself is damaged: not worth downloading again until
+            // it changes.
+            unreadable[entry.name] = entry.size;
           }
+        } on TransferCancelledException {
+          rethrow;
+        } catch (e) {
+          rejection = 'could not read its .sha256 checksum file: $e';
         }
+        try {
+          if (await File(sidecarPath).exists()) {
+            await File(sidecarPath).delete();
+          }
+        } catch (e, st) {
+          _log.fine('best-effort delete failed: $sidecarPath', e, st);
+        }
+        if (rejection != null) {
+          skipped.add('${entry.name} ($rejection)');
+          _appendLog(
+            FtpSyncLogLevel.warning,
+            'Skipping ${entry.name}: $rejection. Re-export from the source '
+            'device.',
+          );
+          try {
+            await File(localPath).delete();
+          } catch (e, st) {
+            _log.fine('best-effort delete failed: $localPath', e, st);
+          }
+          _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
+          continue;
+        }
+        _appendLog(FtpSyncLogLevel.info, 'Verified ${entry.name} SHA-256 OK');
 
         _emit(
           (s) => s.copyWith(
@@ -622,7 +627,7 @@ class FtpSyncController extends ChangeNotifier {
         } on FormatException catch (e) {
           // Not a readable sync archive: typically an upload cut off before
           // it finished, which also never got its .sha256 sidecar.
-          unreadableNow.add(entry.name);
+          skipped.add('${entry.name} (not a readable sync archive)');
           unreadable[entry.name] = entry.size;
           _appendLog(
             FtpSyncLogLevel.warning,
@@ -711,7 +716,7 @@ class FtpSyncController extends ChangeNotifier {
           );
           return;
         }
-        final warning = _unreadableSummary(unreadableNow);
+        final warning = _skippedSummary(skipped);
         _emit(
           (s) => s.copyWith(
             phase: FtpSyncPhase.completed,
@@ -781,7 +786,31 @@ class FtpSyncController extends ChangeNotifier {
           clearStepEta: true,
         ),
       );
-      await _deleteOwnLeftoverParts(transport, remoteEntries, myDeviceId);
+      await _deleteOwnLeftovers(transport, remoteEntries, myDeviceId);
+
+      // The SHA-256 sidecar goes up first: peers refuse an archive without
+      // one, so it must already be there when the archive appears under its
+      // real name. A sidecar without its archive is ignored by everyone.
+      final hash = await _sha256OfFile(archiveFile);
+      final sidecarName = '$archiveName$_sha256Suffix';
+      final sidecarFile = File(p.join(tempDir.path, sidecarName));
+      await sidecarFile.writeAsString('$hash\n', flush: true);
+      await transport.uploadFile(sidecarFile, sidecarName, cancelToken: token);
+      seen.add(sidecarName);
+      _appendLog(
+        FtpSyncLogLevel.info,
+        'Uploaded $sidecarName (${hash.substring(0, 12)}…)',
+      );
+      try {
+        await sidecarFile.delete();
+      } catch (e, st) {
+        _log.fine(
+          'best-effort sidecar delete failed: ${sidecarFile.path}',
+          e,
+          st,
+        );
+      }
+
       final partName = '$archiveName$_partSuffix';
       await transport.uploadFile(
         archiveFile,
@@ -806,42 +835,6 @@ class FtpSyncController extends ChangeNotifier {
       await transport.rename(partName, archiveName);
       seen.add(archiveName);
       _appendLog(FtpSyncLogLevel.info, 'Uploaded $archiveName');
-
-      // Compute and upload a SHA-256 sidecar so peers can detect transport
-      // corruption and corruption-at-rest. Best-effort: a sidecar upload
-      // failure is logged but doesn't fail the whole sync — the archive
-      // itself is already on the server.
-      try {
-        final hash = await _sha256OfFile(archiveFile);
-        final sidecarName = '$archiveName$_sha256Suffix';
-        final sidecarFile = File(p.join(tempDir.path, sidecarName));
-        await sidecarFile.writeAsString('$hash\n', flush: true);
-        await transport.uploadFile(
-          sidecarFile,
-          sidecarName,
-          cancelToken: token,
-        );
-        seen.add(sidecarName);
-        _appendLog(
-          FtpSyncLogLevel.info,
-          'Uploaded $sidecarName (${hash.substring(0, 12)}…)',
-        );
-        try {
-          await sidecarFile.delete();
-        } catch (e, st) {
-          _log.fine(
-            'best-effort sidecar delete failed: ${sidecarFile.path}',
-            e,
-            st,
-          );
-        }
-      } catch (e) {
-        _appendLog(
-          FtpSyncLogLevel.warning,
-          'Sidecar upload failed for $archiveName: $e — '
-          'archive is published without integrity hash',
-        );
-      }
 
       _emit(
         (s) => s.copyWith(
@@ -887,7 +880,7 @@ class FtpSyncController extends ChangeNotifier {
         );
         return;
       }
-      final warning = _unreadableSummary(unreadableNow);
+      final warning = _skippedSummary(skipped);
       _emit(
         (s) => s.copyWith(
           phase: FtpSyncPhase.completed,
@@ -979,17 +972,26 @@ class FtpSyncController extends ChangeNotifier {
     await _writeConfig(ConfigKey.ftpSeenArchives, trimmed.join('\n'));
   }
 
-  /// Removes `.part` files an earlier upload from this device left behind
-  /// when it was cut off. Only one sync runs at a time on a device, so none
-  /// of them can still be in progress. Best-effort.
-  Future<void> _deleteOwnLeftoverParts(
+  /// Removes what an earlier upload from this device left behind when it was
+  /// cut off: `.part` files, and `.sha256` sidecars whose archive never got
+  /// its real name. Only one sync runs at a time on a device, so none of
+  /// them can still be in progress. Best-effort.
+  Future<void> _deleteOwnLeftovers(
     IFtpTransport transport,
     List<RemoteFileEntry> remoteEntries,
     String deviceId,
   ) async {
+    final names = {for (final e in remoteEntries) e.name};
     for (final e in remoteEntries) {
-      if (!e.name.endsWith(_partSuffix)) continue;
-      final archive = e.name.substring(0, e.name.length - _partSuffix.length);
+      final String archive;
+      if (e.name.endsWith(_partSuffix)) {
+        archive = e.name.substring(0, e.name.length - _partSuffix.length);
+      } else if (e.name.endsWith(_sha256Suffix)) {
+        archive = e.name.substring(0, e.name.length - _sha256Suffix.length);
+        if (names.contains(archive)) continue;
+      } else {
+        continue;
+      }
       if (_deviceIdOf(archive) != deviceId) continue;
       try {
         await transport.deleteFile(e.name);
@@ -1025,11 +1027,11 @@ class FtpSyncController extends ChangeNotifier {
       );
 
   /// One line for the finished run when archives were left aside, or null.
-  String? _unreadableSummary(List<String> names) {
-    if (names.isEmpty) return null;
+  String? _skippedSummary(List<String> skipped) {
+    if (skipped.isEmpty) return null;
     final summary =
-        'Skipped ${names.length} unreadable archive(s) on the server: '
-        '${names.join(', ')}';
+        'Skipped ${skipped.length} archive(s) on the server: '
+        '${skipped.join('; ')}';
     _appendLog(FtpSyncLogLevel.warning, summary);
     return summary;
   }
