@@ -29,6 +29,7 @@ import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/trip_media/media_scan_cache.dart';
 import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
@@ -280,6 +281,15 @@ final caveDocumentImportServiceProvider = Provider<CaveDocumentImportService>(
   (ref) => CaveDocumentImportService(
     ref.watch(documentationRepositoryProvider),
     ref.watch(changeLoggerProvider),
+  ),
+);
+
+/// What reading device pictures for QR labels found, remembered on this
+/// device so the points-from-pictures screen does not read them again.
+final mediaScanCacheProvider = Provider<MediaScanCache>(
+  (ref) => MediaScanCache(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
   ),
 );
 

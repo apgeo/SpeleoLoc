@@ -13,6 +13,7 @@ import 'package:speleoloc/screens/cave_trip/trip_log_update_prompt.dart';
 import 'package:speleoloc/screens/cave_trip/trip_media_tile.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
+import 'package:speleoloc/services/trip_media/media_place_finder.dart';
 import 'package:speleoloc/services/trip_media/media_qr_detector.dart';
 import 'package:speleoloc/services/trip_media/trip_media_access.dart';
 import 'package:speleoloc/services/trip_media/trip_media_entrance_plan.dart';
@@ -312,6 +313,9 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
       config: config,
     );
 
+    // Pictures read on an earlier visit are recognised from the cache and
+    // only matched again; the rest are read once and remembered.
+    final finder = MediaPlaceFinder(ref.read(mediaScanCacheProvider), detector);
     if (!_isCurrent(generation)) return;
     setState(() {
       _qrRunning = true;
@@ -328,10 +332,11 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
         continue;
       }
       try {
-        final place = await resolution.source.withScanImage(
+        final place = (await finder.find(
+          resolution.source,
           item,
-          (file) => detector.detectCavePlace(file, caveUuid: trip.caveUuid),
-        );
+          caveUuid: trip.caveUuid,
+        )).place;
         if (place != null &&
             _isCurrent(generation) &&
             !_assignments.containsKey(item.id)) {

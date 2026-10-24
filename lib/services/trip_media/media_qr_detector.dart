@@ -6,6 +6,20 @@ import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
+/// What reading one still for a QR label came to.
+class QrRead {
+  const QrRead.found(String this.payload) : readable = true;
+  const QrRead.none() : payload = null, readable = true;
+  const QrRead.failed() : payload = null, readable = false;
+
+  /// The label's whole raw text, or null when there was none.
+  final String? payload;
+
+  /// False when the picture could not be read at all, which says nothing
+  /// about whether it holds a label.
+  final bool readable;
+}
+
 /// Finds the cave place a photograph was taken at by reading a QR label out
 /// of the picture itself.
 ///
@@ -38,29 +52,12 @@ class MediaQrDetector {
   /// picture as "no code found".
   bool get isUnsupported => _unsupported;
 
-  /// Returns the cave place encoded in [file]'s QR label, or null when the
-  /// picture holds no code, the code is not a known identifier, or the code
-  /// belongs to a different cave than [caveUuid].
-  Future<CavePlace?> detectCavePlace(
-    File file, {
-    required Uuid caveUuid,
-  }) async {
-    if (_unsupported) return null;
-    final raw = await _readPayload(file);
-    if (raw == null || raw.isEmpty) return null;
-
-    final qcri = _scanner.process(raw, config: _config).qcri;
-    if (qcri.isEmpty) return null;
-
-    // Cave-scoped: a photograph can only have been taken in the cave the
-    // trip belongs to, and scoping also removes the cross-cave ambiguity
-    // that the live scanner has to ask the user about.
-    final matches = await _lookup.lookup(qcri, currentCaveId: caveUuid);
-    if (matches.isEmpty) return null;
-    return matches.first.cavePlace;
-  }
-
-  Future<String?> _readPayload(File file) async {
+  /// Reads [file] for a QR label and returns its whole raw text.
+  ///
+  /// Separate from matching it to a place, so the text can be remembered
+  /// and matched again later without decoding the picture again.
+  Future<QrRead> readPayload(File file) async {
+    if (_unsupported) return const QrRead.failed();
     try {
       final capture = await _controller.analyzeImage(
         file.path,
@@ -68,9 +65,10 @@ class MediaQrDetector {
       );
       for (final barcode in capture?.barcodes ?? const <Barcode>[]) {
         final value = barcode.rawValue;
-        if (value != null && value.trim().isNotEmpty) return value;
+        if (value != null && value.trim().isNotEmpty)
+          return QrRead.found(value);
       }
-      return null;
+      return const QrRead.none();
     } catch (e, st) {
       // The plugin documents an UnsupportedError where it has no file
       // analyzer (desktop, iOS Simulator). Tested by type rather than
@@ -78,13 +76,30 @@ class MediaQrDetector {
       if (e is UnsupportedError) {
         _unsupported = true;
         _log.info('image analysis is unsupported on this platform', e, st);
-        return null;
+        return const QrRead.failed();
       }
-      // A picture with no code, or one the decoder chokes on, is the normal
-      // case in a camera roll — not something to surface per file.
-      _log.fine('no QR code read from ${file.path}', e, st);
-      return null;
+      // A decoder failure is not a verdict on the picture, and must not be
+      // remembered as one.
+      _log.fine('could not read ${file.path} for a QR code', e, st);
+      return const QrRead.failed();
     }
+  }
+
+  /// The cave place [payload] names in the cave [caveUuid], or null.
+  ///
+  /// Uses the live-scan payload rules and the current places, so a payload
+  /// read long ago is matched against the cave as it is now.
+  Future<CavePlace?> placeForPayload(
+    String payload, {
+    required Uuid caveUuid,
+  }) async {
+    final qcri = _scanner.process(payload, config: _config).qcri;
+    if (qcri.isEmpty) return null;
+    // Cave-scoped: a photograph can only have been taken in the cave the
+    // trip belongs to, and scoping also removes the cross-cave ambiguity
+    // that the live scanner has to ask the user about.
+    final matches = await _lookup.lookup(qcri, currentCaveId: caveUuid);
+    return matches.isEmpty ? null : matches.first.cavePlace;
   }
 
   /// Releases the scanner's native resources. The controller is created
