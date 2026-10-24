@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -748,6 +749,45 @@ void main() {
         reason:
             'the valid older archive should import once the corrupt '
             'latest is gone',
+      );
+    },
+  );
+
+  test(
+    'an unseen archive older than its device\'s seen one is never imported',
+    () async {
+      // A database taken over from another device carries that device's seen
+      // set: its own latest upload, but not the half-uploaded archive it
+      // left on the server before it.
+      final b = await _buildHarness();
+      await b.db.customStatement(
+        'INSERT INTO configurations (title, value) VALUES (?, ?)',
+        [ConfigKey.ftpSeenArchives, 'speleo_loc_sync_2000_deadbeef.zip'],
+      );
+      final (controller, _) = await makeController(
+        b,
+        seedFromHarnessExports: {
+          'speleo_loc_sync_1000_deadbeef.zip': <int>[0x50, 0x4b, 3, 4, 0],
+          'speleo_loc_sync_2000_deadbeef.zip': <int>[0x50, 0x4b, 3, 4, 1],
+        },
+      );
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      // Importing the truncated archive would have ended the run failed.
+      expect(end.phase, FtpSyncPhase.completed, reason: '${end.errorMessage}');
+
+      // Marked seen, so the next run does not reconsider it either.
+      final seen = await b.db
+          .customSelect(
+            'SELECT value FROM configurations WHERE title = ?',
+            variables: [const Variable<String>(ConfigKey.ftpSeenArchives)],
+          )
+          .getSingle();
+      expect(
+        seen.read<String>('value').split('\n'),
+        contains('speleo_loc_sync_1000_deadbeef.zip'),
       );
     },
   );

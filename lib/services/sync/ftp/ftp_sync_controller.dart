@@ -251,11 +251,32 @@ class FtpSyncController extends ChangeNotifier {
       // (finding 5.3).
       final supersededByDevice = <String, List<String>>{};
       var supersededCount = 0;
+      // A device's newest archive may already be seen — our own upload, or
+      // one adopted with a database taken over from another device. Its
+      // unseen older siblings are then subsumed too, and must not be imported
+      // on their own: one may be an upload cut off half-way, which never
+      // imports and would fail every sync from then on.
+      final newestSeenByDevice = <String, int>{};
+      for (final e in remoteEntries) {
+        if (!seen.contains(e.name)) continue;
+        final deviceId = _deviceIdOf(e.name);
+        if (deviceId == null) continue;
+        final ts = _timestampOf(e.name);
+        if (ts > (newestSeenByDevice[deviceId] ?? -1)) {
+          newestSeenByDevice[deviceId] = ts;
+        }
+      }
       for (final deviceEntry in byDevice.entries) {
         final group = deviceEntry.value
           ..sort(
             (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
           );
+        final newestSeen = newestSeenByDevice[deviceEntry.key];
+        if (newestSeen != null && newestSeen > _timestampOf(group.last.name)) {
+          seen.addAll(group.map((e) => e.name));
+          supersededCount += group.length;
+          continue;
+        }
         unseen.add(group.last);
         if (group.length > 1) {
           final olders = group
