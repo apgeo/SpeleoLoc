@@ -250,6 +250,13 @@ Files brought in with **Add from file** or with the bulk cave-document
 import are attached to the cave or place only. They are never added to
 the trip, even when one is running. See [Trips](trips.md).
 
+The exception is a trip's **Points from pictures** screen: pictures it
+stores are attached to their cave place and bound to the trip point they
+created, and the trip screen shows them behind that point's picture
+icon. On the cave place they are ordinary documents, under the same
+limits as any other. See
+[Trips → Points from pictures](trips.md#points-from-pictures).
+
 ## The all-documents browser
 
 Open it from the home screen **⋮ menu → Documents**, from the

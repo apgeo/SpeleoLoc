@@ -17,7 +17,10 @@ tot:
   șablon și nu înlocuiește valori în el.
 - **Nu există listă automată de locuri, bloc de date despre tură sau
   imagine de hartă.** Numele peșterii, adâncimile, identificatorii cod
-  loc și identificatorii QR nu ajung niciodată singuri în document.
+  loc și identificatorii QR nu ajung niciodată singuri în document —
+  și nici participanții și detaliile turei (**Participanți și
+  detalii**), care sunt păstrate împreună cu tura, dar nu fac parte din
+  jurnalul ei.
 - **Formatul de ieșire este întotdeauna cel al șablonului** — un șablon
   ODT produce un ODT, un șablon DOCX produce un DOCX. Nu vi se cere să
   alegeți un format.
@@ -81,7 +84,10 @@ Două lucruri vă pot păcăli:
 2. **Unele acțiuni reconstruiesc jurnalul de la zero** și vă aruncă
    textul. Repornirea unei ture face asta, schimbarea stilului de
    jurnal face asta și — doar cu stilul **Narativ** — o face și fiecare
-   eveniment nou cât timp tura este încă în desfășurare.
+   eveniment nou cât timp tura este încă în desfășurare. O face și
+   regenerarea după ce punctele turei au fost modificate; dacă asta se
+   întâmplă de la sine depinde de **Setări → Jurnalul turei** — vedeți
+   [Ture → Când se modifică punctele](trips.md#when-the-points-change).
 
 Cu **Brut**, **Clasic** sau **Jurnal de teren**, un eveniment nou se
 adaugă ca încă o linie după ce se află deja în jurnal, așa că textul

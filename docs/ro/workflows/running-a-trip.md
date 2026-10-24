@@ -45,6 +45,10 @@ Cardul turei de acolo conține **Vezi tura**, **Pauză** / **Continuă**
 - Dacă vă veți baza pe beaconuri, porniți detectarea automată înainte de
   a intra — există un comutator rapid în meniul **⋮** al aplicației.
   Vedeți [Beaconuri BLE](../features/ble-beacons.md).
+- Verificați ceasul aparatului foto — al telefonului și al unui aparat
+  rezistent la apă, dacă luați unul. Pozele pot fi transformate ulterior
+  în puncte de tură, la momentele în care au fost făcute, iar un ceas
+  greșit le pune în locul greșit pe traseu.
 - Dacă vreți raportul chiar în aceeași seară, adăugați întâi un șablon
   (vedeți [Exportarea unui raport](#step-6--export-a-report)); ecranul
   cu șabloane se poate deschide doar din fluxul de export.
@@ -87,7 +91,7 @@ această peșteră?”*.
 
 ## Pasul 2 — În subteran
 
-Nu există un buton „adaugă punct”. Punctele se înregistrează singure:
+Punctele se înregistrează singure:
 
 | Ce faceți | Ce se înregistrează |
 |---|---|
@@ -106,6 +110,13 @@ tură”* doar dacă a fost înregistrat un punct.
 Același loc poate fi înregistrat de mai multe ori — fiecare scanare sau
 detectare este un punct propriu, așa că un traseu dus-întors arată
 ambele treceri.
+
+Acolo unde scanarea e incomodă — mănuși, noroi, o etichetă prea sus ca
+să ajungeți la ea cu telefonul — o fotografie a etichetei este o soluție
+de rezervă bună: după tură, **Puncte din poze** citește etichetele din
+fotografiile dumneavoastră și adaugă punctele la momentele în care au
+fost făcute (vedeți
+[Completarea a ceea ce lipsește](#filling-in-what-is-missing)).
 
 ### Documentele făcute în timpul turei
 
@@ -191,6 +202,39 @@ Pe un telefon ținut orizontal, rândul de butoane se reduce doar la
 pictograme și derulează lateral — apăsați lung o pictogramă ca să-i
 vedeți numele.
 
+<a id="filling-in-what-is-missing"></a>
+
+### Completarea a ceea ce lipsește
+
+Înapoi la suprafață, înregistrarea poate fi completată — în ecranul
+turei, fie că tura s-a încheiat, fie că nu:
+
+1. **Cine a fost acolo.** Apăsați **Adaugă participanți și detalii** pe
+   cardul rezumat și scrieți numele, separate prin virgulă, plus orice
+   altceva merită păstrat, în **Detalii**. **Salvează**.
+2. **Puncte din pozele dumneavoastră.** Apăsați **Poze**. Ecranul
+   listează fotografiile și filmările făcute în zilele turei și citește
+   orice etichete QR găsește în ele, completând locul pentru fiecare.
+   Pentru celelalte alegeți locul manual (apăsați rândul), debifați ce
+   nu trebuie să devină punct, lăsați **Salvează și pozele** activată
+   dacă vreți ca pozele să fie atașate locurilor lor și apăsați
+   **Adaugă N**. O poză făcută la o intrare poate muta și începutul sau
+   sfârșitul turei — aplicația întreabă, cu totul dezactivat până când
+   activați dumneavoastră.
+3. **Puncte pe care nu le-a înregistrat nimeni.** **Adaugă punct** cere
+   locul, apoi ora.
+4. **Puncte la ora greșită sau care nu trebuiau să existe.** Meniul
+   **⋮** al fiecărui punct are **Schimbă ora** și **Șterge punctul**.
+5. **Orele turei înseși.** **⋮ → Ora de început și de sfârșit**.
+
+Dacă nu ați activat **Setări → Jurnalul turei → Regenerează jurnalul
+când se modifică punctele**, aceste modificări lasă jurnalul așa cum
+era, iar ecranul turei arată apoi **Jurnalul turei nu mai e la zi**;
+apăsați acolo **Regenerează** înainte de a exporta un raport —
+înlocuiește tot ce ați scris în jurnal. Vedeți
+[Ture](../features/trips.md#correcting-the-points) pentru fiecare
+opțiune în detaliu.
+
 ## Pasul 5 — Jurnalul turei
 
 Jurnalul turei este **scris de aplicație** din evenimentele înregistrate;
@@ -213,11 +257,13 @@ din evenimentele înregistrate. Alegerea se memorează pentru întreaga
 aplicație și se folosește și la turele viitoare.
 
 Textul scris de dumneavoastră dispare și dacă apăsați **Repornește**,
-care reconstruiește jurnalul. Punctele noi adăugate cât timp tura rulează
-sunt *adăugate la sfârșit* în stilurile Brut, Clasic și Jurnal de teren,
-așa că nu deranjează textul deja scris. Narativ este excepția: fiecare
-punct nou reconstruiește tot jurnalul, iar modificările manuale se duc
-odată cu el.
+care reconstruiește jurnalul, și când jurnalul este regenerat după ce ați
+modificat punctele. Așa că completați întâi punctele și scrieți în jurnal
+la urmă. Punctele noi adăugate cât timp tura rulează sunt *adăugate la
+sfârșit* în stilurile Brut, Clasic și Jurnal de teren, așa că nu
+deranjează textul deja scris. Narativ este excepția: fiecare punct nou
+reconstruiește tot jurnalul, iar modificările manuale se duc odată cu
+el.
 
 <a id="step-6--export-a-report"></a>
 
@@ -247,12 +293,13 @@ Vedeți [Rapoarte de tură](../features/trip-reports.md) pentru șabloane
 
 ## Pasul 7 — Trimiteți datele echipei
 
-Turele, punctele lor și legăturile lor către documente sunt înregistrări
-obișnuite: ajung la colegii de echipă printr-o sincronizare sau printr-o
-arhivă exportată, ca orice altceva. Șabloanele de raport sunt excepția:
-ce circulă este intrarea din lista de șabloane, niciodată fișierul ODT
-sau DOCX din spatele ei, așa că fiecare dispozitiv trebuie să-și adauge
-propria copie. Vedeți [Partajarea datelor](sharing-data.md).
+Turele, punctele lor, participanții și detaliile lor și legăturile lor
+către documente și poze sunt înregistrări obișnuite: ajung la colegii
+de echipă printr-o sincronizare sau printr-o arhivă exportată, ca orice
+altceva. Șabloanele de raport sunt excepția: ce circulă este intrarea
+din lista de șabloane, niciodată fișierul ODT sau DOCX din spatele ei,
+așa că fiecare dispozitiv trebuie să-și adauge propria copie. Vedeți
+[Partajarea datelor](sharing-data.md).
 
 ## Repararea greșelilor după aceea
 
@@ -262,9 +309,15 @@ Deschideți tura; acolo unde era butonul roșu de oprire se află acum un
 activă, așa că scanările noi și detectările de beaconuri continuă să
 adauge la același traseu. Două consecințe: ora de început este
 **resetată la momentul repornirii**, așa că **Început** și **Durată** se
-socotesc de acolo, nu de la plecarea inițială; iar jurnalul este
+socotesc de acolo, nu de la plecarea inițială —
+**⋮ → Ora de început și de sfârșit** o readuce; iar jurnalul este
 reconstruit, păstrând punctele anterioare și primind o linie de
 „repornire”, dar pierzând tot ce ați scris de mână.
+
+**Un punct lipsește, este greșit plasat sau nu trebuia să existe.**
+Vedeți [Completarea a ceea ce lipsește](#filling-in-what-is-missing):
+**Adaugă punct**, sau **Schimbă ora** / **Șterge punctul** din meniul
+**⋮** al punctului.
 
 **Titlul nu spune nimic.** Deschideți tura și alegeți
 **⋮ → Redenumește tura**. Funcționează la fel pentru turele în
@@ -276,9 +329,9 @@ regenerarea jurnalului.
 această tură și toate punctele ei?”*. **Operația nu poate fi anulată**,
 iar ștergerea este transmisă colegilor de echipă la următoarea
 sincronizare. Dacă tura ștearsă este cea în desfășurare, ea este oprită
-întâi, lăsându-vă fără nicio tură activă. Documentele care erau legate
-de ea **nu** sunt șterse — rămân la peștera sau la locul lor din peșteră
-și pierd doar legătura cu tura.
+întâi, lăsându-vă fără nicio tură activă. Documentele și pozele care
+erau legate de ea **nu** sunt șterse — rămân la peștera sau la locul lor
+din peșteră și pierd doar legătura cu tura.
 
 **Harta din spatele traseului are nevoie de lucru.** Meniul **⋮** al
 ecranului turei conține și **Filtrare locuri peșteră**, **Sortare locuri

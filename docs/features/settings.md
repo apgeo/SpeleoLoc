@@ -24,6 +24,7 @@ The list mirrors the order shown in the app.
 | Entry | What it covers |
 |---|---|
 | **General** | Language and general preferences |
+| **Trip log** | Whether editing a trip's points rewrites its log |
 | **Image compression** | Compress and resize images on import |
 | **QR Code Generation** | QR code size, colors, error correction |
 | **Place code identifiers** | Strategy, rules, and QCRI mode for cave place codes |
@@ -71,6 +72,21 @@ The list mirrors the order shown in the app.
   guided highlight tour, so the first-visit overlays appear again the
   next time you open each screen. A message confirms: "All help tours
   have been reset".
+
+## Trip log
+
+One switch, **Regenerate the log when points change**, off by default.
+
+- **Off** — adding, moving or deleting a trip point, or correcting a
+  trip's times, leaves the trip log as you wrote it; the trip then says
+  its log is out of date, and you can regenerate it from the trip or
+  from the log.
+- **On** — such a change rewrites the whole log from the points, in the
+  log style chosen on the log page. If that would replace text you
+  typed into the log, you are asked first.
+
+Scans and beacon detections during a running trip are not affected. See
+[Trips → When the points change](trips.md#when-the-points-change).
 
 ## Image compression
 

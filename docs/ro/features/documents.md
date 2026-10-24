@@ -261,6 +261,13 @@ documente în peșteri sunt atașate doar peșterii sau locului. Ele nu sunt
 niciodată adăugate turei, nici măcar când una este pornită. Vedeți
 [Ture](trips.md).
 
+Excepția este ecranul **Puncte din poze** al unei ture: pozele pe care le
+salvează sunt atașate locului lor din peșteră și legate de punctul de
+tură pe care l-au creat, iar ecranul turei le arată în spatele
+pictogramei de poză a acelui punct. La locul din peșteră ele sunt
+documente obișnuite, cu aceleași limite ca oricare altul. Vedeți
+[Ture → Puncte din poze](trips.md#points-from-pictures).
+
 ## Browserul cu toate documentele
 
 Deschideți-l de pe pagina principală din **meniul ⋮ → Documente**, de la

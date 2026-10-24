@@ -3,9 +3,9 @@
 [← Back to index](../README.md)
 
 A **trip** records one caving session in one cave: when it started and
-ended, an ordered list of **trip points** (the places you reached), a
-generated **trip log**, and the documents you made while it was
-running.
+ended, who took part, an ordered list of **trip points** (the places you
+reached), a generated **trip log**, and the documents and pictures that
+go with it.
 
 Trips are optional — you can use SpeleoLoc purely for navigation and
 documentation without ever starting one. But a trip is what a
@@ -30,8 +30,9 @@ Only **one trip** can be active at a time on a device, across all
 caves. While a trip is running in cave A you cannot start one in cave
 B — you have to stop the first.
 
-A stopped trip is **not** locked. You can still rename it, edit its
-log, export a report, delete it, or restart it.
+A stopped trip is **not** locked. You can still rename it, add, move or
+remove its points, correct its start and end times, fill in its
+participants, edit its log, export a report, delete it, or restart it.
 
 ## Starting a trip
 
@@ -57,8 +58,7 @@ clearing the field keeps the suggestion.
 
 ## Trip points
 
-While the trip is running, points are recorded for you. There is no
-button that adds one by hand.
+While the trip is running, points are recorded for you:
 
 - **Scanning a QR code** of a place that belongs to the trip's cave
   adds a trip point (place + current time) and confirms with *"Point
@@ -85,6 +85,12 @@ separate point.
 > Caution: while the trip is **paused** the confirmation message still
 > appears, but no point is stored.
 
+Points do not have to come from scans. You can add, move and remove them
+yourself, during the trip or long after it — see
+[Correcting the points](#correcting-the-points) — and build them from
+the photos and videos you took underground — see
+[Points from pictures](#points-from-pictures).
+
 ## The trip screen
 
 Open a trip from the trip card in the **⋮** end-drawer menu, or by
@@ -94,17 +100,45 @@ phone held in landscape the buttons shrink to icons only — long-press
 one to see its name — and the row scrolls sideways when the buttons do
 not all fit.
 
+| Button | What it does |
+|---|---|
+| **Stop trip** / **Pause** / **Resume trip** | Shown while this trip is the active one. See [Pausing and resuming](#pausing-and-resuming) and [Stopping a trip](#stopping-a-trip). |
+| **Restart trip** | Shown instead once the trip has ended. See [Restarting a finished trip](#restarting-a-finished-trip). |
+| **Add point** | Records a point at a place and time you choose. See [Correcting the points](#correcting-the-points). |
+| **Pictures** | Opens **Points from pictures**. See [Points from pictures](#points-from-pictures). |
+| **Trip log** | Opens the log. See [The trip log](#the-trip-log). |
+| **Export report** | See [Trip reports](trip-reports.md). |
+| **Map view** / **List view** | Only when the cave has at least one raster map. See [Map view](#map-view). |
+
 ### Summary card and point list
 
 The card at the top shows the cave, **Started**, **Ended** (once the
 trip is finished), **Duration** and **Points**, plus a green
 **Active trip** or orange **Trip paused** chip while the trip is live.
+Under the times it shows the trip's **Participants** and the start of
+its details, or an **Add participants and details** button while there
+are none; tap either to edit them — see
+[Participants and details](#participants-and-details).
+
+When points were changed and the log was left as it was, a card under
+the summary says **The trip log is out of date** — see
+[When the points change](#when-the-points-change).
 
 Below it, every point is listed in visit order with a numbered badge
 matching the number on the map, the time it was recorded, and the
 place's depth in the cave on the right when that is known. Tap a row
 to open that cave place. Before the first point the list reads
 *"No points recorded yet"*.
+
+Two more controls sit at the right of a row:
+
+- a **picture icon with a count**, on points that have pictures bound to
+  them (see [Points from pictures](#points-from-pictures)). Tap it for
+  **Pictures at this point**, a sheet of those pictures; tap one to open
+  it. The sheet is for looking only — the same files are attached to the
+  cave place and appear among its documents too;
+- a **⋮** button (**Point actions**) with **Change time** and **Delete
+  point**.
 
 ### Map view
 
@@ -141,8 +175,167 @@ you cannot move place pins from this screen.
 | **Sort cave places list** | Changes the order of that strip. |
 | **Sort maps** | Reorders the raster-map thumbnails. |
 | **Manage maps** | Opens the cave's [raster maps](raster-maps.md) screen, so you can add or fix a map without leaving the trip. |
+| **Points from pictures** | The same screen as the **Pictures** button. See [Points from pictures](#points-from-pictures). |
+| **Participants and details** | See [Participants and details](#participants-and-details). |
+| **Start and end times** | See [Correcting the start and end times](#correcting-the-start-and-end-times). |
 | **Rename trip** | See below. |
 | **Delete trip** | See below. |
+
+## Correcting the points
+
+A missed scan, a label that would not read, a trip written up the
+evening after: every point can be added, moved or removed by hand, on a
+running trip or on one that ended long ago.
+
+- **Add point** in the button row asks you to **Choose a place** from the
+  trip's cave (with a **Search** box), then for the **Point time** —
+  a **Date** and a **Time**. The time starts at the moment of asking on a
+  running trip, and at the trip's end on a finished one. The point is
+  recorded exactly as a scan at that moment would have been, and it is
+  recorded even while the trip is paused.
+- **⋮ → Change time** on a point's row moves it to another moment. The
+  list re-orders itself by time, and the numbers on the map follow.
+- **⋮ → Delete point** asks *"Remove the point "…" from this trip?"*.
+  The pictures bound to that point stay on the cave place.
+
+A time before the trip started or after it ended is allowed, but the
+time dialog says so in orange while you choose it — *"This time is
+before the trip started (…)."* — so that you commit to it knowingly. The
+same place cannot be recorded twice at exactly the same moment: the app
+refuses with *"This place is already recorded at that time"*.
+
+Every one of these changes alters what the log should say. What happens
+to the log then is decided by a setting — see
+[When the points change](#when-the-points-change).
+
+## Correcting the start and end times
+
+**⋮ → Start and end times** shows **Started** and, for a finished trip,
+**Ended**; tap either to pick a new date and time. It exists mainly for
+trips entered after the fact, whose recorded times are the moment you
+typed them in rather than the moment you went underground, and for
+putting back the original start after a **Restart trip**.
+
+- A running trip offers only its start — *"The trip is still running;
+  its end is set when you stop it."*
+- An end before the start is refused: *"The end is before the start."*,
+  and **OK** stays greyed out.
+- If recorded points would fall outside the new times, the dialog counts
+  them — *"N recorded point(s) would fall outside these times. They are
+  kept as they are."* Nothing is moved or deleted for you.
+
+Saving shows **Trip times saved**. The log is treated as for a change to
+the points.
+
+## Participants and details
+
+**⋮ → Participants and details**, or a tap on the participants line of
+the summary card, opens a page with two fields:
+
+- **Participants** — names separated by commas, typed in one go. Each
+  name appears as a chip under the field, showing how the text was
+  understood; the × on a chip takes that name out again. The button at
+  the end of the field (**Add a participant**) asks for a single
+  **Name** instead. A name given twice is kept once.
+- **Details** — free text for anything else worth keeping about the
+  trip: its aim, the weather, the equipment, what was found.
+
+Press **Save** to keep them (*"Trip details saved"*). Both travel to the
+team with the trip. They are not written into the trip log, so they do
+not reach an exported report on their own — copy them into the log or
+the report template if you want them there.
+
+## Points from pictures
+
+Most cavers come out with a camera roll, not a tidy list of scans. The
+**Points from pictures** screen — the **Pictures** button, or
+**⋮ → Points from pictures** — turns the photos and videos on the device
+into trip points at the moments they were taken, and can attach the
+pictures themselves to the places and points they belong to.
+
+The screen is a worksheet: nothing is written until you press the
+**Add N** button at the bottom, so you can work through a few hundred
+pictures and correct them first.
+
+### Which pictures are listed
+
+The date range at the top starts as the trip's own days, from the day it
+started to the day it ended (today, for a running trip). Tap it to
+choose other days; the refresh button (**Reload**) reads the list again.
+Pictures are listed by when they were taken, which for pictures copied
+over from a waterproof camera or a teammate's phone is the camera's own
+capture time, not the day the file arrived — so set the camera's clock
+before the trip.
+
+Where the pictures come from depends on what the phone lets the app see.
+A line under the date range says which case you are in:
+
+| Line | Meaning | Buttons |
+|---|---|---|
+| *Listing the photos and videos on this device.* | Full access to the photo library. | **Pick files instead** |
+| *Only the pictures you allowed access to are listed.* | You gave access to selected photos only. | **Choose more photos**, **Pick files instead** |
+| *No access to the photo library, so only files you pick are listed. …* | No library access: you choose files one batch at a time. | **Add files**, **Allow access to all photos** |
+| *Listing the files you picked.* | You chose files although the library was available. | **Add files**, **Use the photo library** |
+
+For picked files the time comes from the file itself and can be less
+exact. A clock icon beside a picture's time means the camera recorded
+no capture time and the file's own date was used instead — which may be
+when it was copied rather than when it was taken.
+
+### Reading the QR labels in the pictures
+
+If you photographed the QR labels at the places you passed, the app
+reads them for you. Once the list is on screen it goes through the
+photos of the selected days one by one — *"Looking for QR codes on the
+selected days: 12/80 (5 found)"* — and fills in the place wherever it
+finds the label of a place in the trip's cave, marked with a small green
+QR icon. **Stop** ends the search early; whatever it found so far stays.
+Videos are not searched.
+
+The search never overwrites a place you have already chosen yourself.
+What it read is remembered on this device, so opening the screen again
+on the same pictures is quick; the match against places is made afresh
+each time, so a place whose code changed is still found correctly. Some
+devices cannot read codes from saved pictures at all; the screen then
+says *"This device cannot read QR codes from saved pictures — choose the
+places yourself."*
+
+### Choosing places and times by hand
+
+Tap a picture's row (or **⋮ → Choose the place**) to pick its place. The
+row's **⋮** also offers **Change time**, which moves the point that
+picture will create without touching the picture, and **Clear**, which
+removes the place. A row can be ticked only once it has a place, and it
+is ticked as soon as it gets one; untick the ones you do not want.
+
+### Adding the points
+
+**Also store the pictures**, on by default, attaches each ticked picture
+to its cave place and binds it to the track point it creates, so it
+appears behind that point's picture icon on the trip screen. Your
+[image compression](settings.md#image-compression) settings apply. With
+it off, only the points are added.
+
+Press **Add N**. If any ticked picture is at an entrance of the cave,
+an **Entrance pictures** dialog comes first, because a picture at an
+entrance records going in or coming out and may contradict what the
+trip already holds. It can offer to:
+
+- remove the entrance points already on the trip, each one ticked
+  separately;
+- **Move the trip start** to an entrance picture's time;
+- **Move the trip end** likewise, on a finished trip.
+
+Two or more entrance pictures read as "went in at the first, came out at
+the last"; a single one moves whichever end of the trip it is nearer to.
+**Everything in this dialog starts switched off** — press **OK**
+untouched and the points are simply added.
+
+The points are then added, with a progress line, and the screen closes
+with a summary such as *"7 point(s) added · 2 already recorded · 7
+picture(s) stored"*. A picture whose place is already recorded at that
+exact moment adds no second point, but is still bound to the existing
+one. While points are being added the screen cannot be left.
 
 ## Following a running trip from anywhere
 
@@ -214,6 +407,8 @@ your notes as fragile:
 
 - **Restarting** the trip or **changing the log style** rebuilds the
   whole log from the recorded events; your typed text is gone.
+- **Regenerating** after the points were changed does the same — see
+  below.
 - In the **Raw**, **Classic** and **Field journal** styles a new event
   is only appended to the end, so earlier edits survive it. In the
   **Narrative** style every new point or document rewrites the whole
@@ -224,6 +419,39 @@ they matter.
 
 A trip with an empty log cannot be exported as a report: **Export
 report** answers *"No trip log to export"*.
+
+### When the points change
+
+Adding, moving or deleting a point, correcting the trip's times or
+adding points from pictures all change what the log ought to say. What
+happens to the log then is set in **Settings → Trip log → Regenerate the
+log when points change**, which is **off** by default. The log page says
+which way it is set, with a gear button that opens the setting.
+
+- **Off** — the log stays as you wrote it, and the trip is marked as
+  having an out-of-date log. Nothing you typed is lost.
+- **On** — the log is rewritten from the points in the current log
+  style. If it still reads exactly as the points would produce it, that
+  happens silently. If it holds anything else — text you typed, or
+  changes it had fallen behind — the app asks first, in a dialog headed
+  **Regenerating would replace text in the log**: **Regenerate**, **Keep
+  as written** (which marks it out of date instead), or **Cancel**, which
+  abandons the change to the points as well.
+
+While a log is out of date, both the trip screen and the log page show
+a card: **The trip log is out of date** — *"Points have changed since …
+and the log was not regenerated, so it no longer matches them."* It
+offers:
+
+- **Regenerate** — asks **Regenerate the trip log?**, warns that
+  anything typed by hand is replaced, then rewrites the log from the
+  points;
+- **Keep as written** — accepts the log as it is and removes the card;
+  the text is not touched;
+- **Trip log settings** — opens the setting above.
+
+Live scans and beacon detections are not edits: they keep adding to the
+log as described above, whichever way the setting is.
 
 ## Documents created during a trip
 
@@ -238,6 +466,11 @@ by bulk import, are not linked, and nothing is linked while the trip is
 paused. There is no way to link or unlink a document by hand, and the
 trip screens do not list the linked documents — see
 [Documents](documents.md) for browsing them.
+
+Pictures stored through [Points from pictures](#points-from-pictures)
+are bound differently: each one to the **track point** it created, as
+well as to its cave place. Those are the ones the picture icon on a
+point's row shows.
 
 ## Past and active trips
 
@@ -292,6 +525,7 @@ Two consequences:
 - Restarting **resets the trip's start time to the moment you
   restart**, so the **Started** time and **Duration** on the trip
   screen now count from the restart, not from your original descent.
+  **⋮ → Start and end times** puts the original start back.
 - The log is rebuilt at the same time. It keeps the earlier points and
   gains a "restarted" entry between the two runs, but anything you had
   typed into it by hand is lost.
@@ -304,16 +538,19 @@ first, so you are left with no active trip.
 
 **This is irreversible.** The trip, its points and its log are gone,
 and the deletion is passed on to your teammates at the next sync.
-Documents that were linked to the trip are **not** deleted — they stay
-attached to their cave or cave place and simply lose the trip link.
+Documents that were linked to the trip, and pictures bound to its
+points, are **not** deleted — they stay attached to their cave or cave
+place and simply lose the trip link.
 
 ## Where trip data goes
 
-Trips, their points and their logs live in the database like
-everything else, so they are included in archive exports and travel
-over [FTP sync](ftp-sync.md) to the rest of the team. Exported report
-files and exported map images are ordinary files on the device and are
-not synced.
+Trips, their points, their participants and details, their logs and the
+links between pictures and points live in the database like everything
+else, so they are included in archive exports and travel over
+[FTP sync](ftp-sync.md) to the rest of the team. Exported report files
+and exported map images are ordinary files on the device and are not
+synced. Neither is what **Points from pictures** read from your
+pictures' QR labels: that refers to pictures on this device only.
 
 ## See also
 

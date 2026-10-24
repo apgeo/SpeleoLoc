@@ -27,6 +27,7 @@ Lista respectă ordinea din aplicație.
 | Intrare | Ce cuprinde |
 |---|---|
 | **General** | Limba și preferințe generale |
+| **Jurnalul turei** | Dacă modificarea punctelor unei ture îi rescrie jurnalul |
 | **Compresie imagini** | Comprimă și redimensionează imaginile la import |
 | **Generare grafică cod QR** | Dimensiune QR, culori, corecția erorilor |
 | **Identificatori cod loc** | Strategie, reguli și mod generare pentru codurile locurilor din peșteri și coduri QR |
@@ -78,6 +79,25 @@ Lista respectă ordinea din aplicație.
   fiecărui tur de ghidare, astfel încât explicațiile de la prima vizită
   apar din nou data viitoare când deschideți fiecare ecran. Un mesaj
   confirmă: „Toate tururile de ghidare au fost resetate".
+
+## Jurnalul turei
+
+Un singur comutator, **Regenerează jurnalul când se modifică punctele**,
+dezactivat implicit.
+
+- **Dezactivat** — adăugarea, mutarea sau ștergerea unui punct de tură,
+  ori corectarea orelor unei ture, lasă jurnalul turei așa cum l-ați
+  scris; tura arată apoi că jurnalul nu mai e la zi, iar
+  dumneavoastră îl puteți regenera din tură sau din jurnal.
+- **Activat** — o asemenea modificare rescrie tot jurnalul din puncte,
+  în stilul de jurnal ales în pagina jurnalului. Dacă asta ar înlocui
+  text scris de dumneavoastră în jurnal, sunteți întrebat întâi.
+
+Scanările și detectările de beaconuri din timpul unei ture în
+desfășurare nu sunt afectate. Vedeți
+[Ture → Când se modifică punctele](trips.md#when-the-points-change).
+
+<a id="image-compression"></a>
 
 ## Compresie imagini
 

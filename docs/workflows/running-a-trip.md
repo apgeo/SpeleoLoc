@@ -43,6 +43,10 @@ and a red stop button.
 - If you will rely on beacons, switch automatic detection on before you
   go in — there is a quick toggle in the **⋮** app menu. See
   [BLE beacons](../features/ble-beacons.md).
+- Check the camera's clock — the phone's, and a waterproof camera's
+  if you bring one. Pictures can be turned into trip points afterwards,
+  at the moments they were taken, and a wrong clock puts them in the
+  wrong place on the route.
 - If you want a report the same evening, add a template first (see
   [Export a report](#step-6--export-a-report)); the template screen is
   only reachable from the export flow.
@@ -83,7 +87,7 @@ that cave and asks whether to stop its trip; say yes and it then offers
 
 ## Step 2 — Underground
 
-There is no "add point" button. Points record themselves:
+Points record themselves:
 
 | What you do | What is recorded |
 |---|---|
@@ -101,6 +105,12 @@ recorded.
 
 The same place can be recorded several times — every scan or detection
 is its own point, so a there-and-back route shows both passes.
+
+Where scanning is awkward — gloves, mud, a label too high to reach with
+the phone — a photo of the label is a good fallback: after the trip,
+**Points from pictures** reads the labels in your photos and adds the
+points at the moments they were taken (see
+[Filling in what is missing](#filling-in-what-is-missing)).
 
 ### Documents you make during the trip
 
@@ -180,6 +190,35 @@ strip above the image.
 On a phone held in landscape the button row shrinks to icons only and
 scrolls sideways — long-press an icon to see its name.
 
+### Filling in what is missing
+
+Back on the surface, the record can be completed — on the trip screen,
+whether or not the trip has ended:
+
+1. **Who was there.** Tap **Add participants and details** on the
+   summary card and type the names, separated by commas, plus anything
+   else worth keeping in **Details**. **Save**.
+2. **Points from your pictures.** Press **Pictures**. The screen lists
+   the photos and videos taken on the trip's days and reads any QR
+   labels it finds in them, filling in the place for each. Choose the
+   place by hand for the others (tap the row), untick what should not
+   become a point, leave **Also store the pictures** on if you want the
+   pictures attached to their places, and press **Add N**. A picture
+   taken at an entrance can also move the trip's start or end — the app
+   asks, with everything switched off until you turn it on.
+3. **Points nobody recorded.** **Add point** asks for the place, then
+   the time.
+4. **Points at the wrong time, or not at all.** Each point's **⋮** has
+   **Change time** and **Delete point**.
+5. **The trip's own times.** **⋮ → Start and end times**.
+
+Unless you have turned on **Settings → Trip log → Regenerate the log
+when points change**, these edits leave the log as it was and the trip
+screen then says **The trip log is out of date**; press **Regenerate**
+there before exporting a report — it replaces anything you typed into
+the log. See [Trips](../features/trips.md#correcting-the-points) for
+every option in detail.
+
 ## Step 5 — The trip log
 
 The trip log is **written by the app** from the recorded events; it is
@@ -201,10 +240,12 @@ The choice is stored for the app as a whole and is used for future
 trips too.
 
 Your typed text also disappears if you press **Restart trip**, which
-rebuilds the log. New points added while the trip runs are *appended*
-in the Raw, Classic and Field journal styles, so they do not disturb
-text you have already written. Narrative is the exception: every new
-point rebuilds the whole log, and manual edits go with it.
+rebuilds the log, and when the log is regenerated after you edited the
+points. So complete the points first and write in the log last. New
+points added while the trip runs are *appended* in the Raw, Classic and
+Field journal styles, so they do not disturb text you have already
+written. Narrative is the exception: every new point rebuilds the whole
+log, and manual edits go with it.
 
 ## Step 6 — Export a report
 
@@ -231,11 +272,11 @@ detail.
 
 ## Step 7 — Get it to the team
 
-Trips, their points and their document links are ordinary records: they
-travel to teammates through a sync or an exported archive, like
-everything else. Report templates are the exception: what travels is
-the entry in the template list, never the ODT or DOCX file behind it,
-so every device has to add its own copy. See
+Trips, their points, participants and details, and their document and
+picture links are ordinary records: they travel to teammates through a
+sync or an exported archive, like everything else. Report templates are
+the exception: what travels is the entry in the template list, never the
+ODT or DOCX file behind it, so every device has to add its own copy. See
 [Sharing data](sharing-data.md).
 
 ## Fixing mistakes afterwards
@@ -246,8 +287,13 @@ trip**. Pressing it makes that trip the active trip again, so new scans
 and beacon detections keep adding to the same route. Two consequences:
 the start time is **reset to the moment you restart**, so **Started**
 and **Duration** now count from there rather than from your original
-departure; and the log is rebuilt, keeping the earlier points and
-gaining a "restarted" line, but losing anything you typed by hand.
+departure — **⋮ → Start and end times** puts it back; and the log is
+rebuilt, keeping the earlier points and gaining a "restarted" line, but
+losing anything you typed by hand.
+
+**A point is missing, misplaced or should not be there.** See
+[Filling in what is missing](#filling-in-what-is-missing): **Add
+point**, or **Change time** / **Delete point** on the point's **⋮**.
 
 **The title is useless.** Open the trip and choose **⋮ → Rename trip**.
 This works on running and finished trips alike and touches nothing
@@ -258,8 +304,9 @@ the log is regenerated.
 and all its points?"*. **This cannot be undone**, and the deletion is
 passed on to teammates at the next sync. If the trip being deleted is
 the running one, it is stopped first, leaving you with no active trip.
-Documents that were linked to it are **not** deleted — they stay on
-their cave or cave place and simply lose the connection to the trip.
+Documents and pictures that were linked to it are **not** deleted — they
+stay on their cave or cave place and simply lose the connection to the
+trip.
 
 **The map behind the route needs work.** The trip screen's **⋮** menu
 also carries **Filter cave places**, **Sort cave places list**, **Sort

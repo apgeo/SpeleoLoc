@@ -16,7 +16,9 @@ added as plain paragraphs at the very end. That is the whole of it:
   the template for anything and does not substitute values into it.
 - There is **no automatic place list, no trip metadata block and no
   map image**. Cave name, depths, place-code identifiers and QR
-  identifiers never reach the document by themselves.
+  identifiers never reach the document by themselves — nor do the
+  trip's **Participants and details**, which are kept with the trip but
+  are not part of its log.
 - The **output format always matches the template** — an ODT template
   produces an ODT, a DOCX template produces a DOCX. You are not asked
   to choose a format.
@@ -75,7 +77,10 @@ Two things will catch you out:
 2. **Some actions rebuild the log from scratch** and throw your text
    away. Restarting a trip does it, switching the log style does it,
    and — with the **Narrative** style only — so does every new event
-   while the trip is still running.
+   while the trip is still running. Regenerating after the trip's
+   points were edited does it too; whether that happens by itself is
+   up to **Settings → Trip log** — see
+   [Trips → When the points change](trips.md#when-the-points-change).
 
 With **Raw**, **Classic** or **Field journal**, a new event is added
 as one more line after whatever is already in the log, so your own
