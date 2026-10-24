@@ -36,7 +36,8 @@ const String _partSuffix = '.part';
 /// Strict archive filename: `speleo_loc_sync_<timestampMs>_<deviceUuidHex>.zip`.
 /// The device-uuid suffix is mandatory — every archive is the snapshot of a
 /// specific source device, and per-device dedup on listing requires that
-/// origin to be present in the filename.
+/// origin to be present in the filename. It is the full 32-digit uuid; older
+/// apps wrote only its first 8 digits, which [_DeviceKeys] still reads.
 final RegExp _archiveNameRe = RegExp(
   r'^speleo_loc_sync_(\d+)_([a-fA-F0-9]+)\.zip$',
 );
@@ -227,6 +228,12 @@ class FtpSyncController extends ChangeNotifier {
       token.throwIfCancelled();
 
       final seen = await _loadSeenArchives();
+      final myDeviceUuid = _currentUser.deviceUuid.value;
+      final myDeviceId = myDeviceUuid?.toString().replaceAll('-', '');
+      final deviceKeys = _DeviceKeys(
+        remoteEntries.map((e) => _deviceIdOf(e.name)).nonNulls,
+        myDeviceId,
+      );
       // Archives that could not be read when last downloaded are not fetched
       // again until their size changes — an upload still in progress grows,
       // an abandoned one never does.
@@ -258,7 +265,7 @@ class FtpSyncController extends ChangeNotifier {
       // subsumed.
       final byDevice = <String, List<RemoteFileEntry>>{};
       for (final e in candidates) {
-        final deviceId = _deviceIdOf(e.name);
+        final deviceId = deviceKeys.of(_deviceIdOf(e.name));
         if (deviceId == null) {
           // Strict filename pattern is enforced on export; anything
           // non-conforming is an alien file we silently ignore.
@@ -283,7 +290,7 @@ class FtpSyncController extends ChangeNotifier {
       final newestSeenByDevice = <String, int>{};
       for (final e in remoteEntries) {
         if (!seen.contains(e.name)) continue;
-        final deviceId = _deviceIdOf(e.name);
+        final deviceId = deviceKeys.of(_deviceIdOf(e.name));
         if (deviceId == null) continue;
         final ts = _timestampOf(e.name);
         if (ts > (newestSeenByDevice[deviceId] ?? -1)) {
@@ -327,7 +334,7 @@ class FtpSyncController extends ChangeNotifier {
       /// Called only once the device's latest archive has been dealt with
       /// successfully, so a failed import never strands the older ones.
       void markSupersededSeen(String archiveName) {
-        final deviceId = _deviceIdOf(archiveName);
+        final deviceId = deviceKeys.of(_deviceIdOf(archiveName));
         if (deviceId == null) return;
         final olders = supersededByDevice.remove(deviceId);
         if (olders != null) seen.addAll(olders);
@@ -349,12 +356,10 @@ class FtpSyncController extends ChangeNotifier {
       // lastUploadAt because (a) it survives reinstall and (b) it prevents
       // peer-imported change_log entries from causing false positives when
       // the change_log is filtered by device_uuid.
-      final myDeviceUuid = _currentUser.deviceUuid.value;
-      final myDevicePrefix = myDeviceUuid?.toString().substring(0, 8);
       int? serverNewestOwnTs;
-      if (myDevicePrefix != null) {
+      if (myDeviceId != null) {
         final myRemoteTs = remoteEntries
-            .where((e) => _deviceIdOf(e.name) == myDevicePrefix)
+            .where((e) => deviceKeys.of(_deviceIdOf(e.name)) == myDeviceId)
             .map((e) => _timestampOf(e.name));
         if (myRemoteTs.isNotEmpty) {
           serverNewestOwnTs = myRemoteTs.reduce((a, b) => a > b ? a : b);
@@ -740,8 +745,8 @@ class FtpSyncController extends ChangeNotifier {
         ),
       );
       final nowMs = DateTime.now().millisecondsSinceEpoch;
-      // myDeviceUuid / myDevicePrefix were resolved before the import loop.
-      if (myDeviceUuid == null || myDevicePrefix == null) {
+      // myDeviceId was resolved before the import loop.
+      if (myDeviceId == null) {
         // The archive filename embeds the source device id; per-device
         // dedup on listing depends on that, so we refuse to upload an
         // archive that cannot be attributed to a device.
@@ -750,8 +755,7 @@ class FtpSyncController extends ChangeNotifier {
       }
       // Filename embeds the device uuid so peers can identify the source
       // device and perform per-device dedup on listing.
-      final archiveName =
-          '$_archivePrefix${nowMs}_$myDevicePrefix$_archiveSuffix';
+      final archiveName = '$_archivePrefix${nowMs}_$myDeviceId$_archiveSuffix';
       final archiveFile = await _archiveService.exportToZip(
         tempDir.path,
         filenameHint: archiveName,
@@ -777,7 +781,7 @@ class FtpSyncController extends ChangeNotifier {
           clearStepEta: true,
         ),
       );
-      await _deleteOwnLeftoverParts(transport, remoteEntries, myDevicePrefix);
+      await _deleteOwnLeftoverParts(transport, remoteEntries, myDeviceId);
       final partName = '$archiveName$_partSuffix';
       await transport.uploadFile(
         archiveFile,
@@ -976,20 +980,17 @@ class FtpSyncController extends ChangeNotifier {
   }
 
   /// Removes `.part` files an earlier upload from this device left behind
-  /// when it was cut off. Only ones older than an hour: the device prefix is
-  /// short enough that another device can share it, and its upload may be
-  /// the one still running. Best-effort.
+  /// when it was cut off. Only one sync runs at a time on a device, so none
+  /// of them can still be in progress. Best-effort.
   Future<void> _deleteOwnLeftoverParts(
     IFtpTransport transport,
     List<RemoteFileEntry> remoteEntries,
-    String devicePrefix,
+    String deviceId,
   ) async {
-    final cutoff = DateTime.now().millisecondsSinceEpoch - 3600 * 1000;
     for (final e in remoteEntries) {
       if (!e.name.endsWith(_partSuffix)) continue;
       final archive = e.name.substring(0, e.name.length - _partSuffix.length);
-      if (_deviceIdOf(archive) != devicePrefix) continue;
-      if (_timestampOf(archive) > cutoff) continue;
+      if (_deviceIdOf(archive) != deviceId) continue;
       try {
         await transport.deleteFile(e.name);
         _appendLog(FtpSyncLogLevel.info, 'Removed leftover upload ${e.name}');
@@ -1151,12 +1152,12 @@ class FtpSyncController extends ChangeNotifier {
   int timestampOfArchiveName(String archiveName) => _timestampOf(archiveName);
 
   /// Extracts the source-device identifier from an archive filename
-  /// (`speleo_loc_sync_<ts>_<deviceUuidPrefix>.zip`). Returns `null` only
-  /// when the filename does not match the strict pattern (those archives
-  /// are filtered out before this is called).
+  /// (`speleo_loc_sync_<ts>_<deviceId>.zip`), lower-cased. Returns `null`
+  /// only when the filename does not match the strict pattern (those
+  /// archives are filtered out before this is called).
   String? _deviceIdOf(String archiveName) {
     final m = _archiveNameRe.firstMatch(archiveName);
-    return m?.group(2);
+    return m?.group(2)?.toLowerCase();
   }
 
   Future<Directory> _syncWorkspace() async {
@@ -1277,4 +1278,29 @@ class _SpeedSample {
     this.bytesPerSecond,
     this.eta,
   });
+}
+
+/// Groups archive device ids so one device's archives share a key.
+///
+/// Older apps named archives with only the first 8 hex digits of the device
+/// uuid — about a minute of its creation time, so devices set up together
+/// can share them. A short id is therefore merged into a full one only when
+/// exactly one full id in view starts with it; otherwise it stays a key of
+/// its own, as it always was.
+class _DeviceKeys {
+  _DeviceKeys(Iterable<String> ids, String? ownId)
+    : _fullIds = {
+        for (final id in ids)
+          if (id.length > _legacyLength) id,
+        ?ownId,
+      };
+
+  static const _legacyLength = 8;
+  final Set<String> _fullIds;
+
+  String? of(String? id) {
+    if (id == null || id.length != _legacyLength) return id;
+    final matches = _fullIds.where((f) => f.startsWith(id));
+    return matches.length == 1 ? matches.single : id;
+  }
 }

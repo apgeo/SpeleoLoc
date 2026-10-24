@@ -884,7 +884,10 @@ void main() {
     () async {
       final b = await _buildHarness();
       final (controller, fake) = await makeController(b);
-      final mine = b.currentUser.deviceUuid.value!.toString().substring(0, 8);
+      final mine = b.currentUser.deviceUuid.value!.toString().replaceAll(
+        '-',
+        '',
+      );
       final ownLeftover = 'speleo_loc_sync_1000_$mine.zip.part';
       final othersUpload =
           'speleo_loc_sync_${DateTime.now().millisecondsSinceEpoch}'
@@ -903,6 +906,82 @@ void main() {
       expect(fake.store.keys.where((n) => n.endsWith('.part')), [othersUpload]);
     },
   );
+
+  test('names uploads with the full device id', () async {
+    final b = await _buildHarness();
+    final (controller, fake) = await makeController(b);
+    final mine = b.currentUser.deviceUuid.value!.toString().replaceAll('-', '');
+
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+
+    final name = _zipsOnly(fake.uploadedNames).single;
+    expect(mine, hasLength(32));
+    expect(name, endsWith('_$mine.zip'));
+  });
+
+  test('an old short-id archive groups with its device\'s full id', () async {
+    final peer = await _buildHarness();
+    await peer.caveRepo.addCave('FromPeer');
+    const full = '0123456789abcdef0123456789abcdef';
+    final valid = await peer.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'speleo_loc_sync_2000_$full.zip',
+    );
+
+    final b = await _buildHarness();
+    final (controller, _) = await makeController(
+      b,
+      seedFromHarnessExports: {
+        // Written by the same device before it switched to full ids, and
+        // unreadable: it must be treated as superseded, not imported.
+        'speleo_loc_sync_1000_01234567.zip': <int>[0x50, 0x4b, 3, 4, 0],
+        'speleo_loc_sync_2000_$full.zip': await valid.readAsBytes(),
+      },
+    );
+
+    await controller.startDefault();
+    final end = await _waitForTerminal(controller);
+
+    expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+    expect(end.warningMessage, isNull);
+    expect(
+      (await b.caveRepo.getCaves()).map((c) => c.title),
+      contains('FromPeer'),
+    );
+  });
+
+  test('two devices sharing the first 8 digits stay apart', () async {
+    final one = await _buildHarness();
+    await one.caveRepo.addCave('FromOne');
+    final two = await _buildHarness();
+    await two.caveRepo.addCave('FromTwo');
+    final oneZip = await one.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'speleo_loc_sync_1000_01234567aaaaaaaaaaaaaaaaaaaaaaaa.zip',
+    );
+    final twoZip = await two.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'speleo_loc_sync_2000_01234567bbbbbbbbbbbbbbbbbbbbbbbb.zip',
+    );
+
+    final b = await _buildHarness();
+    final (controller, _) = await makeController(
+      b,
+      seedFromHarnessExports: {
+        'speleo_loc_sync_1000_01234567aaaaaaaaaaaaaaaaaaaaaaaa.zip':
+            await oneZip.readAsBytes(),
+        'speleo_loc_sync_2000_01234567bbbbbbbbbbbbbbbbbbbbbbbb.zip':
+            await twoZip.readAsBytes(),
+      },
+    );
+
+    await controller.startDefault();
+    await _waitForTerminal(controller);
+
+    final titles = (await b.caveRepo.getCaves()).map((c) => c.title);
+    expect(titles, containsAll(['FromOne', 'FromTwo']));
+  });
 
   // The "remote unseen + local changed" union case is logically the
   // composition of the two preceding tests; the dual-system-user UNIQUE
