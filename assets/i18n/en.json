@@ -708,7 +708,7 @@
   "trip_media_use_library": "Use the photo library",
   "trip_media_choose_more": "Choose more photos",
   "trip_media_allow_full_access": "Allow access to all photos",
-  "trip_media_qr_progress": "Looking for QR codes: {done}/{total} ({found} found)",
+  "trip_media_qr_progress": "Looking for QR codes on the selected days: {done}/{total} ({found} found)",
   "trip_media_qr_stop": "Stop",
   "trip_media_qr_unsupported": "This device cannot read QR codes from saved pictures — choose the places yourself.",
   "trip_media_apply": "Add {n}",

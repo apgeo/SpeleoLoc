@@ -707,7 +707,7 @@
   "trip_media_use_library": "Folosește galeria",
   "trip_media_choose_more": "Alege mai multe poze",
   "trip_media_allow_full_access": "Permite accesul la toate pozele",
-  "trip_media_qr_progress": "Se caută coduri QR: {done}/{total} ({found} găsite)",
+  "trip_media_qr_progress": "Se caută coduri QR în zilele selectate: {done}/{total} ({found} găsite)",
   "trip_media_qr_stop": "Oprește",
   "trip_media_qr_unsupported": "Acest dispozitiv nu poate citi coduri QR din poze salvate — alege punctele manual.",
   "trip_media_apply": "Adaugă {n}",
