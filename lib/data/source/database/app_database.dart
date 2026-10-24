@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 import 'package:speleoloc/data/source/database/test_data_helper.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -105,6 +106,7 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+      await normalizeLegacyTimestamps(this);
       if (details.hadUpgrade) {
         DatabaseMigrationMonitor.record(
           fromVersion: details.versionBefore ?? 0,

@@ -8,6 +8,7 @@ import 'package:drift/drift.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
@@ -648,6 +649,17 @@ class SyncArchiveService {
     var skipped = 0;
     var deletesApplied = 0;
     var changeLogMerged = 0;
+
+    // A device on an older app can still send timestamps in seconds; store
+    // them the way this device now does.
+    for (final rows in [...tableRows.values, logRows]) {
+      for (final row in rows) {
+        for (final key in legacyTimestampColumns) {
+          final v = row[key];
+          if (v is int) row[key] = timestampToMillis(v);
+        }
+      }
+    }
 
     // Build a remap table for incoming user UUIDs that collide on
     // `username` with a different local user (e.g. the auto-generated
