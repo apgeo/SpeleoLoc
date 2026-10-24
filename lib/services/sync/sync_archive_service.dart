@@ -520,20 +520,7 @@ class SyncArchiveService {
       );
     }
 
-    var inserted = 0;
-    var updated = 0;
-    var skipped = 0;
-    var deletesApplied = 0;
-    var changeLogMerged = 0;
     final warnings = <String>[];
-
-    // Build a remap table for incoming user UUIDs that collide on
-    // `username` with a different local user (e.g. the auto-generated
-    // 'system' user, whose UUID is independently created on each device).
-    // Without this remap the insert would trip the UNIQUE(username)
-    // constraint and every FK from the archive that points at the
-    // incoming user UUID would be orphaned.
-    final userRemap = await _buildUserUuidRemap(archive, warnings);
 
     // ── Phase 1: pre-parse all JSONL data outside the DB transaction ──────
     // Inflating lazy zip entries and decoding JSON are CPU-bound synchronous
@@ -542,9 +529,8 @@ class SyncArchiveService {
     // archives.  We now inflate + parse each table file in turn, yielding to
     // the Flutter engine between tables so it can process frames and input
     // events.  The transaction itself then contains only async DB awaits.
-    final tables = _syncedTables();
     final tableRows = <String, List<Map<String, dynamic>>>{};
-    for (final t in tables) {
+    for (final t in _syncedTables()) {
       // Yield to the event loop before inflating each (potentially large)
       // zip entry so the Flutter engine can process frames / input between
       // table parses.
@@ -554,26 +540,14 @@ class SyncArchiveService {
         warnings.add('archive missing tables/${t.name}.jsonl');
         continue;
       }
-      final rows = _readJsonl(entry);
-      if (userRemap.isNotEmpty) {
-        for (final r in rows) {
-          _applyUserRemapToRow(r, userRemap, t.name);
-        }
-      }
-      tableRows[t.name] = rows;
+      tableRows[t.name] = _readJsonl(entry);
     }
 
     await Future.delayed(Duration.zero);
     final logEntry = archive.findFile('change_log.jsonl');
-    var logRows = <Map<String, dynamic>>[];
-    if (logEntry != null) {
-      logRows = _readJsonl(logEntry);
-      if (userRemap.isNotEmpty) {
-        for (final row in logRows) {
-          _applyUserRemapToChangeLogRow(row, userRemap);
-        }
-      }
-    }
+    final logRows = logEntry != null
+        ? _readJsonl(logEntry)
+        : <Map<String, dynamic>>[];
 
     await Future.delayed(Duration.zero);
     final fieldEntry = archive.findFile('change_log_field.jsonl');
@@ -581,6 +555,64 @@ class SyncArchiveService {
         ? _readJsonl(fieldEntry)
         : <Map<String, dynamic>>[];
 
+    final report = await _mergeRows(
+      tableRows: tableRows,
+      logRows: logRows,
+      fieldRows: fieldRows,
+      conflictResolver: conflictResolver,
+      warnings: warnings,
+    );
+
+    // Collect the asset entry names for the caller to extract after it has
+    // released this archive; file counts are filled in there.
+    final assetEntryNames = [
+      for (final entry in archive.files)
+        if (entry.isFile && entry.name.startsWith(_assetsPrefix)) entry.name,
+    ];
+
+    return (report, assetEntryNames);
+  }
+
+  /// Merges rows read from an archive into the live database: the
+  /// last-writer-wins upsert of every synced table, the change-log replay and
+  /// the delete tombstones it carries. [tableRows] is keyed by table name and
+  /// holds rows in the JSON shape [SyncTableHandler.dump] produces. Asset
+  /// files are left to the caller, so the report's file counts are zero.
+  Future<SyncImportReport> _mergeRows({
+    required Map<String, List<Map<String, dynamic>>> tableRows,
+    required List<Map<String, dynamic>> logRows,
+    required List<Map<String, dynamic>> fieldRows,
+    required ConflictResolver? conflictResolver,
+    required List<String> warnings,
+  }) async {
+    var inserted = 0;
+    var updated = 0;
+    var skipped = 0;
+    var deletesApplied = 0;
+    var changeLogMerged = 0;
+
+    // Build a remap table for incoming user UUIDs that collide on
+    // `username` with a different local user (e.g. the auto-generated
+    // 'system' user, whose UUID is independently created on each device).
+    // Without this remap the insert would trip the UNIQUE(username)
+    // constraint and every FK from the archive that points at the
+    // incoming user UUID would be orphaned.
+    final userRemap = await _buildUserUuidRemap(
+      tableRows['users'] ?? const [],
+      warnings,
+    );
+    if (userRemap.isNotEmpty) {
+      for (final entry in tableRows.entries) {
+        for (final r in entry.value) {
+          _applyUserRemapToRow(r, userRemap, entry.key);
+        }
+      }
+      for (final row in logRows) {
+        _applyUserRemapToChangeLogRow(row, userRemap);
+      }
+    }
+
+    final tables = _syncedTables();
     // ── Phase 2: DB transaction — pure async DB operations only ──────────
     await _logger.runSuspended(() async {
       await _db.transaction(() async {
@@ -645,14 +677,7 @@ class SyncArchiveService {
       });
     });
 
-    // Collect the asset entry names for the caller to extract after it has
-    // released this archive; file counts are filled in there.
-    final assetEntryNames = [
-      for (final entry in archive.files)
-        if (entry.isFile && entry.name.startsWith(_assetsPrefix)) entry.name,
-    ];
-
-    final report = SyncImportReport(
+    return SyncImportReport(
       rowsInserted: inserted,
       rowsUpdated: updated,
       rowsSkipped: skipped,
@@ -662,7 +687,6 @@ class SyncArchiveService {
       filesSkipped: 0,
       warnings: warnings,
     );
-    return (report, assetEntryNames);
   }
 
   /// For each (entityUuid -> deleteTs) mapping, delete the row from whichever
@@ -856,7 +880,7 @@ class SyncArchiveService {
   //  User-UUID remap (collision on username)
   // ---------------------------------------------------------------------------
 
-  /// Inspects `tables/users.jsonl` against the local `users` table and
+  /// Inspects the incoming `users` rows against the local `users` table and
   /// returns a `{incomingUuidStr: localUuidStr}` map for every incoming
   /// user whose `username` already exists locally under a different UUID.
   ///
@@ -868,12 +892,9 @@ class SyncArchiveService {
   /// references to the local UUID and let normal LWW handle the row
   /// itself.
   Future<Map<String, String>> _buildUserUuidRemap(
-    Archive archive,
+    List<Map<String, dynamic>> rows,
     List<String> warnings,
   ) async {
-    final entry = archive.findFile('tables/users.jsonl');
-    if (entry == null) return const <String, String>{};
-    final rows = _readJsonl(entry);
     if (rows.isEmpty) return const <String, String>{};
 
     final localByUsername = <String, String>{};
