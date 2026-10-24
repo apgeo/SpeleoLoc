@@ -29,6 +29,10 @@ const String _archiveSuffix = '.zip';
 /// platforms) and corruption-at-rest on the FTP server.
 const String _sha256Suffix = '.sha256';
 
+/// An archive is uploaded under `<name>.zip.part` and renamed once complete,
+/// so peers never list a half-written archive under a name they would import.
+const String _partSuffix = '.part';
+
 /// Strict archive filename: `speleo_loc_sync_<timestampMs>_<deviceUuidHex>.zip`.
 /// The device-uuid suffix is mandatory — every archive is the snapshot of a
 /// specific source device, and per-device dedup on listing requires that
@@ -46,7 +50,7 @@ final RegExp _archiveNameRe = RegExp(
 ///   3. For each unseen archive, oldest-first: download then import (silent
 ///      last-writer-wins — no UI prompts during FTP sync)
 ///   4. Generate a fresh local archive reflecting the merged state
-///   5. Upload the fresh archive
+///   5. Upload the fresh archive under a `.part` name, then rename it
 ///   6. Persist the seen-archive list (including our own upload so the next
 ///      run skips it) and disconnect
 ///
@@ -773,9 +777,11 @@ class FtpSyncController extends ChangeNotifier {
           clearStepEta: true,
         ),
       );
+      await _deleteOwnLeftoverParts(transport, remoteEntries, myDevicePrefix);
+      final partName = '$archiveName$_partSuffix';
       await transport.uploadFile(
         archiveFile,
-        archiveName,
+        partName,
         onProgress: (bytes, total) {
           if (!isRunning) return;
           final sample = _recordSample(bytes, total);
@@ -793,6 +799,7 @@ class FtpSyncController extends ChangeNotifier {
         },
         cancelToken: token,
       );
+      await transport.rename(partName, archiveName);
       seen.add(archiveName);
       _appendLog(FtpSyncLogLevel.info, 'Uploaded $archiveName');
 
@@ -966,6 +973,33 @@ class FtpSyncController extends ChangeNotifier {
       ..sort((a, b) => _timestampOf(b).compareTo(_timestampOf(a)));
     final trimmed = sorted.take(500).toList();
     await _writeConfig(ConfigKey.ftpSeenArchives, trimmed.join('\n'));
+  }
+
+  /// Removes `.part` files an earlier upload from this device left behind
+  /// when it was cut off. Only ones older than an hour: the device prefix is
+  /// short enough that another device can share it, and its upload may be
+  /// the one still running. Best-effort.
+  Future<void> _deleteOwnLeftoverParts(
+    IFtpTransport transport,
+    List<RemoteFileEntry> remoteEntries,
+    String devicePrefix,
+  ) async {
+    final cutoff = DateTime.now().millisecondsSinceEpoch - 3600 * 1000;
+    for (final e in remoteEntries) {
+      if (!e.name.endsWith(_partSuffix)) continue;
+      final archive = e.name.substring(0, e.name.length - _partSuffix.length);
+      if (_deviceIdOf(archive) != devicePrefix) continue;
+      if (_timestampOf(archive) > cutoff) continue;
+      try {
+        await transport.deleteFile(e.name);
+        _appendLog(FtpSyncLogLevel.info, 'Removed leftover upload ${e.name}');
+      } catch (err) {
+        _appendLog(
+          FtpSyncLogLevel.warning,
+          'Could not remove leftover upload ${e.name}: $err',
+        );
+      }
+    }
   }
 
   /// `name<TAB>size` per line: archives that could not be read, with the

@@ -59,6 +59,13 @@ abstract class IFtpTransport {
     CancelToken? cancelToken,
   });
 
+  /// Renames [fromName] to [toName] inside [profile.remoteFolder]. Used to
+  /// publish an upload only once it is complete.
+  Future<void> rename(String fromName, String toName);
+
+  /// Deletes [remoteName] from [profile.remoteFolder].
+  Future<void> deleteFile(String remoteName);
+
   /// Downloads [remoteName] from [profile.remoteFolder] into [localFile],
   /// with the same progress/cancel semantics as [uploadFile].
   Future<void> downloadFile(

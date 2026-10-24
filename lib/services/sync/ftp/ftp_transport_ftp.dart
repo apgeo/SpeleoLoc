@@ -203,6 +203,34 @@ class FtpTransportFtp implements IFtpTransport {
     }
   }
 
+  @override
+  Future<void> rename(String fromName, String toName) async {
+    _requireConnected();
+    try {
+      if (!await _client!.rename(fromName, toName)) {
+        throw const FtpTransportException('FTP rename returned false');
+      }
+    } on FtpTransportException {
+      rethrow;
+    } catch (e) {
+      throw FtpTransportException('FTP rename failed', e);
+    }
+  }
+
+  @override
+  Future<void> deleteFile(String remoteName) async {
+    _requireConnected();
+    try {
+      if (!await _client!.deleteFile(remoteName)) {
+        throw const FtpTransportException('FTP delete returned false');
+      }
+    } on FtpTransportException {
+      rethrow;
+    } catch (e) {
+      throw FtpTransportException('FTP delete failed', e);
+    }
+  }
+
   void _requireConnected() {
     if (_client == null) {
       throw const FtpTransportException('FTP transport not connected');

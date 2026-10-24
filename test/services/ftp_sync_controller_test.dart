@@ -71,6 +71,22 @@ class _FakeTransport implements IFtpTransport {
     onProgress?.call(bytes.length, bytes.length);
   }
 
+  /// Archives go up under a temporary name; [uploadedNames] records the name
+  /// they are published under.
+  @override
+  Future<void> rename(String fromName, String toName) async {
+    final bytes = store.remove(fromName);
+    if (bytes == null) throw FtpTransportException('missing $fromName');
+    store[toName] = bytes;
+    final i = uploadedNames.lastIndexOf(fromName);
+    if (i >= 0) uploadedNames[i] = toName;
+  }
+
+  @override
+  Future<void> deleteFile(String remoteName) async {
+    store.remove(remoteName);
+  }
+
   @override
   Future<void> downloadFile(
     String remoteName,
@@ -122,6 +138,13 @@ class _OrderTrackingTransport implements IFtpTransport {
     onProgress: onProgress,
     cancelToken: cancelToken,
   );
+
+  @override
+  Future<void> rename(String fromName, String toName) =>
+      _inner.rename(fromName, toName);
+
+  @override
+  Future<void> deleteFile(String remoteName) => _inner.deleteFile(remoteName);
 
   @override
   Future<void> downloadFile(
@@ -180,6 +203,13 @@ class _BlockingTransport implements IFtpTransport {
     onProgress: onProgress,
     cancelToken: cancelToken,
   );
+
+  @override
+  Future<void> rename(String fromName, String toName) =>
+      _inner.rename(fromName, toName);
+
+  @override
+  Future<void> deleteFile(String remoteName) => _inner.deleteFile(remoteName);
 
   @override
   Future<void> downloadFile(
@@ -846,6 +876,31 @@ void main() {
       await controller.startDefault();
       await _waitForTerminal(controller);
       expect(downloads, contains('speleo_loc_sync_2000_deadbeef.zip'));
+    },
+  );
+
+  test(
+    'publishes the archive only once uploaded, and clears own leftovers',
+    () async {
+      final b = await _buildHarness();
+      final (controller, fake) = await makeController(b);
+      final mine = b.currentUser.deviceUuid.value!.toString().substring(0, 8);
+      final ownLeftover = 'speleo_loc_sync_1000_$mine.zip.part';
+      final othersUpload =
+          'speleo_loc_sync_${DateTime.now().millisecondsSinceEpoch}'
+          '_deadbeef.zip.part';
+      fake.seed(ownLeftover, <int>[1, 2, 3]);
+      fake.seed(othersUpload, <int>[1, 2, 3]);
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      final published = _zipsOnly(fake.store.keys).toList();
+      expect(published, hasLength(1));
+      expect(fake.store.keys, isNot(contains(ownLeftover)));
+      expect(fake.store.keys, contains(othersUpload));
+      expect(fake.store.keys.where((n) => n.endsWith('.part')), [othersUpload]);
     },
   );
 

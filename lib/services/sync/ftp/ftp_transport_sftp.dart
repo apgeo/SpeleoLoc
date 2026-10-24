@@ -216,6 +216,26 @@ class FtpTransportSftp implements IFtpTransport {
     }
   }
 
+  @override
+  Future<void> rename(String fromName, String toName) async {
+    final sftp = _requireConnected();
+    try {
+      await sftp.rename(_joinRemote(fromName), _joinRemote(toName));
+    } catch (e) {
+      throw FtpTransportException('SFTP rename failed', e);
+    }
+  }
+
+  @override
+  Future<void> deleteFile(String remoteName) async {
+    final sftp = _requireConnected();
+    try {
+      await sftp.remove(_joinRemote(remoteName));
+    } catch (e) {
+      throw FtpTransportException('SFTP delete failed', e);
+    }
+  }
+
   // ---- internal helpers ----
 
   SftpFileWriter? _activeWriter;
