@@ -16,6 +16,8 @@ import 'package:speleoloc/screens/cave_trip/trip_log_stale_banner.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_actions.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_pictures_sheet.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_row.dart';
+import 'package:speleoloc/screens/cave_trip/trip_window_dialog.dart';
+import 'package:speleoloc/screens/cave_trip/trip_log_update_prompt.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
@@ -138,6 +140,11 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       label: LocServ.inst.t('trip_media_title'),
     ),
     AppMenuItem(
+      value: 'edit_trip_times',
+      icon: Icons.schedule,
+      label: LocServ.inst.t('trip_window_title'),
+    ),
+    AppMenuItem(
       value: 'rename_trip',
       icon: Icons.edit,
       label: LocServ.inst.t('trip_rename'),
@@ -164,6 +171,8 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       await _openRasterMapsPage();
     } else if (value == 'media_points') {
       await _openMediaPoints();
+    } else if (value == 'edit_trip_times') {
+      await _editTripTimes();
     } else if (value == 'rename_trip') {
       await _renameTrip();
     } else if (value == 'delete_trip') {
@@ -619,6 +628,46 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       widget.tripUuid,
     );
     if (changed == true && mounted) unawaited(_load());
+  }
+
+  /// Corrects when the trip started and ended — chiefly for a trip entered
+  /// after the fact. Moving either end changes what the log should say, so
+  /// it goes through the same log decision as editing a point.
+  Future<void> _editTripTimes() async {
+    final trip = _trip;
+    if (trip == null) return;
+    final ended = trip.tripEndedAt;
+    final window = await TripWindowDialog.show(
+      context,
+      start: DateTime.fromMillisecondsSinceEpoch(trip.tripStartedAt),
+      end: ended == null ? null : DateTime.fromMillisecondsSinceEpoch(ended),
+      pointTimes: [
+        for (final p in _points)
+          DateTime.fromMillisecondsSinceEpoch(p.scannedAt),
+      ],
+    );
+    if (window == null || !mounted) return;
+    final startChanged =
+        window.start.millisecondsSinceEpoch != trip.tripStartedAt;
+    final endChanged =
+        window.end != null && window.end!.millisecondsSinceEpoch != ended;
+    if (!startChanged && !endChanged) return;
+    final logUpdate = await TripLogUpdatePrompt.decide(context, ref, trip.uuid);
+    if (logUpdate == null || !mounted) return;
+    try {
+      await ref
+          .read(caveTripServiceProvider)
+          .updateTripWindow(
+            trip.uuid,
+            startedAt: startChanged ? window.start : null,
+            endedAt: endChanged ? window.end : null,
+            logUpdate: logUpdate,
+          );
+      SnackBarService.showSuccess(LocServ.inst.t('trip_window_saved'));
+    } catch (e) {
+      SnackBarService.showError(e);
+    }
+    if (mounted) unawaited(_load());
   }
 
   Future<void> _addPoint() async {

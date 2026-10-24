@@ -284,6 +284,11 @@ class CaveTripService {
     if (endedAt != null && old.tripEndedAt == null) {
       throw const ValidationException('Cannot set an end time on a live trip');
     }
+    final newStart = startedAt?.millisecondsSinceEpoch ?? old.tripStartedAt;
+    final newEnd = endedAt?.millisecondsSinceEpoch ?? old.tripEndedAt;
+    if (newEnd != null && newEnd < newStart) {
+      throw const ValidationException('A trip cannot end before it starts');
+    }
     await _db.updateCaveTripWindow(
       tripUuid,
       startedAt: startedAt?.millisecondsSinceEpoch,

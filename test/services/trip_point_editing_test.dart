@@ -193,4 +193,27 @@ void main() {
       throwsA(isA<DuplicateEntryException>()),
     );
   });
+
+  test('a trip\'s times can be corrected, but never inverted', () async {
+    final tripUuid = await service.startTrip(caveUuid, 'Old trip');
+    await service.stopTrip();
+    final start = DateTime(2025, 7, 4, 8, 30);
+    final end = DateTime(2025, 7, 4, 16, 0);
+
+    await service.updateTripWindow(tripUuid, startedAt: start, endedAt: end);
+    final trip = await container
+        .read(caveTripRepositoryProvider)
+        .findById(tripUuid);
+    expect(trip!.tripStartedAt, start.millisecondsSinceEpoch);
+    expect(trip.tripEndedAt, end.millisecondsSinceEpoch);
+
+    expect(
+      () => service.updateTripWindow(
+        tripUuid,
+        startedAt: DateTime(2025, 7, 4, 17, 0),
+      ),
+      throwsA(isA<ValidationException>()),
+      reason: 'a start moved past the recorded end',
+    );
+  });
 }
