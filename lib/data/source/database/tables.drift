@@ -247,6 +247,8 @@ CREATE TABLE IF NOT EXISTS cave_trips (
     -- regenerated or the user keeps it as written. Null means the log is
     -- as its points would render it, or has been accepted as it stands.
     log_stale_since             INTEGER,
+    -- Who went, as the user typed it: names separated by commas.
+    participants                TEXT,
     created_at                  INTEGER,
     updated_at                  INTEGER,
     deleted_at                  INTEGER,

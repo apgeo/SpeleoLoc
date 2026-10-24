@@ -848,6 +848,27 @@ class V21ToV22Migration extends SchemaMigration {
   }
 }
 
+/// v22 → v23.
+///
+/// Records who took part in a trip. Additive and nullable, guarded like the
+/// other post-v7 steps.
+class V22ToV23Migration extends SchemaMigration {
+  const V22ToV23Migration();
+
+  @override
+  int get toVersion => 23;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await _addColumnIfMissing(
+      db,
+      migrator,
+      db.caveTrips,
+      db.caveTrips.participants,
+    );
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -893,6 +914,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V19ToV20Migration(),
   V20ToV21Migration(),
   V21ToV22Migration(),
+  V22ToV23Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
