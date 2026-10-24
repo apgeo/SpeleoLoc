@@ -19,8 +19,8 @@ most common way a data exchange fails.
 | Made on | **Man. sync → Archive sync**, and by FTP sync | **Data Export / Import** |
 | File name | `speleo_loc_sync_1756738327000.zip` | `speleo_loc_2026-09-01_14-32-07.zip` |
 | Contents | one line per record, each stamped with the time it was last edited, plus the change history | a copy of the whole database, plus the media files |
-| Merging | automatic, **newest edit wins**, no questions asked (unless you ask for them) | asks you about every duplicate name or code |
-| Deletions | **replayed** on your device | none travel in the file — but **Replace all data** wipes what is already on the phone |
+| Merging | automatic, **newest edit wins**, no questions asked (unless you ask for them) | **Merge with existing data** merges the same way, but asks about every record whose contents differ; **Replace all data** swaps the whole database |
+| Deletions | **replayed** on your device | **replayed** by a merge — and **Replace all data** wipes what is already on the phone |
 | Import it on | **Man. sync → Import sync archive** | **Data Export / Import → Import Archive** |
 
 Import each kind on the screen that produced it. A sync archive fed to

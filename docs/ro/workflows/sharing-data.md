@@ -21,8 +21,8 @@ mai frecvent mod în care un schimb de date eșuează.
 | Se face în | **Sinc. man. → Arhivă sincronizare** și prin sincronizare FTP | **Export / Import Date** |
 | Nume fișier | `speleo_loc_sync_1756738327000.zip` | `speleo_loc_2026-09-01_14-32-07.zip` |
 | Conținut | câte o linie pentru fiecare înregistrare, fiecare marcată cu momentul ultimei modificări, plus istoricul modificărilor | o copie a întregii baze de date, plus fișierele media |
-| Îmbinare | automată, **câștigă modificarea cea mai nouă**, fără nicio întrebare (dacă nu le cereți) | vă întreabă la fiecare titlu sau cod duplicat |
-| Ștergeri | **rejucate** pe dispozitivul dumneavoastră | nu călătoresc în fișier — dar **Înlocuire totală** șterge ce se află deja pe telefon |
+| Îmbinare | automată, **câștigă modificarea cea mai nouă**, fără nicio întrebare (dacă nu le cereți) | **Îmbinare cu datele existente** îmbină la fel, dar vă întreabă la fiecare înregistrare al cărei conținut diferă; **Înlocuire totală** schimbă întreaga bază de date |
+| Ștergeri | **rejucate** pe dispozitivul dumneavoastră | **rejucate** de o îmbinare — iar **Înlocuire totală** șterge ce se află deja pe telefon |
 | Se importă în | **Sinc. man. → Importă arhivă de sincronizare** | **Export / Import Date → Importă Arhivă** |
 
 Importați fiecare fel de arhivă pe ecranul care a produs-o. O arhivă de
