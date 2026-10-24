@@ -235,6 +235,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   late ScrollController _scrollController;
   bool _showDownArrow = false;
   StreamSubscription<List<CavePlace>>? _cavePlacesSub;
+  StreamSubscription<void>? _tripChangesSub;
 
   // Kept from initState rather than read again in dispose: by the time
   // dispose runs, `ref` can no longer be used, and the read there threw —
@@ -260,6 +261,12 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
         .listen((_) {
           if (!mounted) return;
           _loadCavePlaces();
+        });
+    _tripChangesSub = ref
+        .read(caveTripRepositoryProvider)
+        .watchTripChanges()
+        .listen((_) {
+          if (mounted) _loadTripCount();
         });
   }
 
@@ -477,6 +484,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _cavePlacesSub?.cancel();
+    _tripChangesSub?.cancel();
     _listController.dispose();
     _qrScanLongPressTimer?.cancel();
     _manualQrSearchController.dispose();

@@ -295,4 +295,49 @@ void main() {
       expect(await b.db.select(b.db.cavePlaceBeacons).get(), isEmpty);
     },
   );
+
+  test('a screen watching trips hears a synced trip arrive and go', () async {
+    final a = await _buildDevice();
+    final b = await _buildDevice();
+    addTearDown(a.db.close);
+    addTearDown(b.db.close);
+
+    final caveUuid = await a.caveRepo.addCave('Watched Cave');
+    final tripUuid = await a.db.insertCaveTrip(
+      caveUuid: caveUuid,
+      title: 'Trip',
+      startedAt: DateTime.now().millisecondsSinceEpoch,
+      authorUuid: a.author,
+    );
+    final added = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'w1.zip',
+      includeDocumentationFiles: false,
+      includeRasterMaps: false,
+    );
+
+    var heard = 0;
+    final sub = b.tripRepo.watchTripChanges().listen((_) => heard++);
+    addTearDown(sub.cancel);
+
+    await b.sync.importFromZip(added.path);
+    await pumpEventQueue();
+    expect(heard, greaterThan(0), reason: 'the import inserted a trip');
+    expect(await b.tripRepo.getCaveTrips(caveUuid), hasLength(1));
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await a.tripRepo.deleteCaveTrip(tripUuid);
+    final removed = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'w2.zip',
+      includeDocumentationFiles: false,
+      includeRasterMaps: false,
+    );
+    heard = 0;
+
+    await b.sync.importFromZip(removed.path);
+    await pumpEventQueue();
+    expect(await b.tripRepo.getCaveTrips(caveUuid), isEmpty);
+    expect(heard, greaterThan(0), reason: 'the tombstone deleted the trip');
+  });
 }

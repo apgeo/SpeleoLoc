@@ -219,6 +219,10 @@ abstract class IDefinitionRepository {
 abstract class ICaveTripRepository {
   Future<CaveTrip?> findById(Uuid uuid);
   Future<List<CaveTrip>> getCaveTrips(Uuid caveUuid);
+
+  /// Emits after any write to trips or their points, from any source —
+  /// a sync import included — so a screen showing them can reload.
+  Stream<void> watchTripChanges();
   Future<List<String>> getCaveTripTitles(Uuid caveUuid);
   Future<List<CaveTripPoint>> getTripPoints(Uuid tripUuid);
 

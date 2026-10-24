@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -40,6 +41,14 @@ class CaveTripRepository implements ICaveTripRepository {
       throw DbException('Failed to load cave trips', cause: e, stackTrace: st);
     }
   }
+
+  @override
+  Stream<void> watchTripChanges() => _database.tableUpdates(
+    TableUpdateQuery.onAllTables([
+      _database.caveTrips,
+      _database.caveTripPoints,
+    ]),
+  );
 
   @override
   Future<List<String>> getCaveTripTitles(Uuid caveUuid) async {

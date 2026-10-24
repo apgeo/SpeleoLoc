@@ -53,11 +53,18 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
   // dispose runs, `ref` can no longer be used, and the read there threw —
   // leaving this page's listener attached to the long-lived service.
   late final CaveTripService _tripService;
+  StreamSubscription<void>? _tripChangesSub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Trips can arrive while this page is open — an FTP sync finishing in
+    // the background — so reload on any trip write, not only our own.
+    _tripChangesSub = ref
+        .read(caveTripRepositoryProvider)
+        .watchTripChanges()
+        .listen((_) => _onTripStateChanged());
     _tripService = ref.read(caveTripServiceProvider);
     _tripService.activeTripIdNotifier.addListener(_onTripStateChanged);
     _tripService.isPausedNotifier.addListener(_onTripStateChanged);
@@ -65,6 +72,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
 
   @override
   void dispose() {
+    _tripChangesSub?.cancel();
     _tripService.activeTripIdNotifier.removeListener(_onTripStateChanged);
     _tripService.isPausedNotifier.removeListener(_onTripStateChanged);
     super.dispose();
