@@ -45,9 +45,8 @@ exceptions worth knowing before you rely on an archive as a backup.
   it. To hand it to someone, use **Export CSV** on the history screen —
   see [Ruuvi sensors](ruuvi-sensors.md).
 - **Tag registrations** — which tag is fixed at which place — travel with
-  the database file, with a **Replace all data** import and with manual
-  sync, but **not** with a merge import. A merged place can therefore
-  arrive without its tags.
+  the database file, so they arrive with either import mode and with
+  manual sync.
 
 ## Exporting
 
@@ -162,54 +161,57 @@ sync from getting confused afterwards.
 
 ### Merge with existing data
 
-The importer walks the incoming records and adds the ones you do not have.
-When an incoming record collides with one of yours, it stops and shows a
-**Conflict in …** dialog naming the record type, listing the conflicting
-fields, and showing **Existing** and **Imported** side by side.
+A merge works exactly like importing a [manual sync](sync-and-change-log.md)
+archive: the same rules decide what is added, what is updated and what is
+deleted. Records are matched by the hidden identity each one is given when
+it is created, not by name — so a cave that came to you from a team-mate
+earlier is recognised as the same cave, while two caves created separately
+on two phones stay two caves, even with the same title.
 
-Five buttons:
+- A record you do not have is **added**.
+- A record you both have, with the same contents, is left alone.
+- A record you both have whose contents differ stops the import with a
+  **Conflict in …** dialog: the fields that differ, when each side last
+  changed the record, and a side-by-side **Local** / **Incoming** table.
 
 | Button | What it does |
 |---|---|
-| **Skip** | Keep the record you already have. |
-| **Overwrite** | Replace it with the incoming one. |
-| **Skip All** | Keep yours for every remaining conflict in this import. |
-| **Overwrite All** | Take the incoming one for every remaining conflict. |
-| **Cancel Import** | Stop immediately — see the warning below. |
+| **Keep local** | Keep the record you already have. |
+| **Use incoming** | Replace it with the incoming one. |
+| **Keep all local** | Keep yours for every remaining conflict in this import. |
+| **Use all incoming** | Take the incoming one for every remaining conflict. |
+| **Cancel import** | Stop and undo the whole import — see below. |
 
-**Skip All** and **Overwrite All** are wider than they look: they apply to
-every remaining conflict in the whole import, across all record types, not
-just the type you were looking at.
+**Keep all local** and **Use all incoming** apply to every remaining
+conflict in the whole import, across all record types. Closing the dialog
+without choosing keeps your record.
 
-Records are matched by name and by what they belong to — a cave by its
-title within its surface area, a place by its title within its cave and
-cave area — not by any hidden identity. So the same place created
-independently on two phones turns up as a conflict rather than merging
-quietly, and a genuinely different cave that happens to share a title with
-one of yours in the same surface area will collide too.
+A new record whose name collides with a *different* record of yours — the
+same place title in the same cave, created separately on two phones — is
+not added: yours is kept and the incoming one is counted as skipped.
 
-#### What a merge does not bring across
+#### A merge also deletes
 
-A merge covers a fixed list of record types: surface areas and surface
-places, caves, cave areas, entrances, cave places, raster maps, map point
-definitions, documentation files and their links, trips and trip points,
-and the shared settings.
+The archive carries what the other device deleted, and a merge replays
+those deletions: a cave your team-mate removed is removed from your
+device too, unless you changed it after they deleted it. Nothing prompts
+for this. If you are unsure about an archive, export your own data first.
 
-Anything else in the archive is silently left behind:
+#### What a merge brings across
 
-- **BLE tag registrations**,
-- **users**,
-- **trip report templates**,
-- **the change history**,
+Everything [manual sync](sync-and-change-log.md) carries: caves, areas and
+places, BLE tag registrations, raster maps and map points, documentation
+files and their links, trips and trip points, users, trip report
+templates, the shared settings and the change history.
+
+Left behind:
+
 - **Ruuvi sensor history**,
-- device-local settings such as which cave you had open.
+- device-local settings such as which cave you had open, and which FTP
+  archives this device has already downloaded.
 
-All of those arrive only with a **Replace all data** import — or, for most
-of them, through [manual sync](sync-and-change-log.md).
-
-A merge also never *deletes* anything. If a team-mate removed a cave and
-sent you an archive, the cave stays on your device. Manual sync behaves
-the opposite way and does replay their deletions.
+An archive made by a *newer* version of the app is refused; update the app
+first. One made by an older version is upgraded on the way in.
 
 #### Media files are never overwritten by a merge
 
@@ -223,27 +225,17 @@ and the **Files copied** count comes out lower than you expected. Only
 #### The Import Complete summary
 
 When a merge finishes, an **Import Complete** dialog reports four numbers:
-**Records imported**, **Records skipped**, **Records overwritten** and
-**Files copied**. If anything went wrong along the way — a record that
-could not be reconnected to its cave, a file that failed to copy, a record
-type missing from an older archive — up to ten **Warnings** are listed
+**Records imported** (added), **Records skipped** (unchanged, kept local or
+colliding), **Records overwritten** (updated) and **Files copied**. If
+anything went wrong along the way — a file that failed to copy, a user
+matched to one of yours by user name — up to ten **Warnings** are listed
 underneath in orange, with a "… and N more" line if there were others.
 
-Read them. Warnings here are the only sign that part of the archive did
-not land.
+#### Cancelling a merge
 
-#### Cancelling a merge leaves the database half-merged
-
-**Cancel Import** stops the merge where it stands. Everything already
-imported or overwritten before that point **stays in your database** and
-is not rolled back; you get only a short "Import cancelled" message and no
-summary. Media files are not copied at all, because that step runs after
-the records.
-
-If you cancel a merge here, treat the database as half-merged: re-run the
-same import to completion, or restore a backup. (Cancelling on the
-**Man. sync** screen is safe by comparison — that import is undone
-entirely and says so.)
+**Cancel import** undoes every record change the import had made; you get
+a short "Import cancelled" message and no summary. Media files and FTP
+profiles are not touched, because those steps run after the records.
 
 ## Restoring a raw database file
 

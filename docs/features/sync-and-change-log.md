@@ -126,11 +126,7 @@ can see exactly what you would be trading away.
 | **Cancel import** | Abandon the whole import. |
 
 **Cancel import** here is safe: the entire import is rolled back and the
-screen reports *Import cancelled — no changes were applied*. (This is
-**not** true of the **Merge with existing data** import on the Data
-Export / Import screen, which leaves behind whatever it had already
-written — see
-[Database export, import and backup](database-export-import.md).)
+screen reports *Import cancelled — no changes were applied*.
 
 ### Importing can delete your records
 
@@ -191,10 +187,10 @@ records rather than swapping the database.
 |  | Archive sync (this page) | [Full data export/import](database-export-import.md) |
 |---|---|---|
 | What is in the file | One line per record | A copy of the whole database plus the media |
-| Granularity | Record-by-record merge | Whole-database replace, or a coarse record-by-record merge |
-| Conflict handling | Newest edit wins, or a prompt per record | Skip / Overwrite prompts per duplicate name or code |
-| Deletions replayed? | Yes, always | No (a **Replace all data** import simply discards everything you had) |
-| Includes change log? | Always | Arrives with **Replace all data**, dropped by **Merge with existing data** |
+| Granularity | Record-by-record merge | Whole-database replace, or the same record-by-record merge as this page |
+| Conflict handling | Newest edit wins, or a prompt per record | A prompt per record (merge) |
+| Deletions replayed? | Yes, always | By a merge, yes (a **Replace all data** import simply discards everything you had) |
+| Includes change log? | Always | Always |
 | Best for | Frequent device-to-device updates between trips | Backups, setting up a new device, moving everything at once |
 
 ## Change log

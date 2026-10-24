@@ -222,38 +222,34 @@ the top, overwriting any file of the same name, and restarts the app.
 Confirm the warning first. Your phone keeps its own device identity
 rather than adopting the sender's.
 
-**Merge with existing data** — walks the archive record by record and
-adds what is missing:
+**Merge with existing data** — merges the archive exactly as
+[Man. sync](../features/sync-and-change-log.md) does:
 
-1. Records that do not clash are added.
-2. On a clash — a duplicate title, a duplicate place code — a dialog
-   headed **Conflict in Caves** (or Cave Places, Raster Maps, Cave
-   Trips, Documentation Files, …) shows **Existing** and **Imported**
-   side by side and offers **Skip**, **Overwrite**, **Skip All**,
-   **Overwrite All** or **Cancel Import**. **Skip All** and **Overwrite
-   All** apply to every remaining conflict in the whole import, across
-   all record types — there is no per-type setting.
-3. Media files are copied only where you do not already have a file of
+1. Records you do not have are added. Records are matched by their hidden
+   identity, not by title, so the same cave passed between phones is
+   recognised, while two caves created separately stay two.
+2. Where you both have a record and the contents differ, a dialog headed
+   **Conflict in** *(record type)* shows **Local** and **Incoming** side
+   by side and offers **Keep local**, **Use incoming**, **Keep all
+   local**, **Use all incoming** or **Cancel import**. The "all" buttons
+   apply to every remaining conflict in the whole import, across all
+   record types.
+3. Deletions made on the other phone are applied to yours.
+4. Media files are copied only where you do not already have a file of
    that name.
 
-> **Cancelling a merge leaves the job half done.** Unlike Man. sync,
-> **Cancel Import** here stops where it stands and everything already
-> imported or overwritten stays in your database. If you cancel, either
-> run the import again or restore a backup.
-
-A merge deliberately covers only part of the data. Users, beacon
-assignments, trip report templates and the change history come across
-**only** with **Replace all data**.
+**Cancel import** undoes the whole merge. Users, beacon assignments, trip
+report templates and the change history all come across; Ruuvi sensor
+history does not.
 
 ### The Import Complete summary
 
 After a merge, a dialog headed **Import Complete** reports
 **Records imported**, **Records skipped**, **Records overwritten** and
-**Files copied**. If anything went wrong — a record that could not be
-linked back to its cave, a file that failed to copy, a kind of record
-missing from an older archive — up to ten **Warnings** are listed
-underneath in orange, with an "… and N more" line for the rest. Read
-them: they are the only sign that part of the archive did not land.
+**Files copied**. If anything went wrong — a file that failed to copy, a
+user matched to one of yours by user name — up to ten **Warnings** are
+listed underneath in orange, with an "… and N more" line for the rest.
+Read them.
 
 ### Download and load test data
 
@@ -309,7 +305,7 @@ command can destroy data no backup covers.
 - **After a trip**, export a sync archive and share it, or let FTP sync
   do it.
 - **Back up before any Replace or Merge.** Both can lose data — Replace
-  by design, Merge if you cancel halfway.
+  by design, Merge by replaying the other phone's deletions.
 - **Only import archives from people you trust.** An archive made by a
   specially built copy of the app can contain that person's FTP or SFTP
   server passwords, and importing it — Replace *or* Merge — writes those
