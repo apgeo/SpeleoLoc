@@ -47,7 +47,10 @@ class ImageCompressor {
       }
     }
 
-    // Encode as JPEG with the configured quality.
+    // Encode as JPEG with the configured quality. The decoded image carries
+    // its EXIF block, so the re-encode keeps it, GPS position included. That
+    // is deliberate: the server decides who may see a location, and the
+    // caver's own copy must not lose it. Do not strip it here.
     return Uint8List.fromList(
       img.encodeJpg(processed, quality: settings.quality),
     );
