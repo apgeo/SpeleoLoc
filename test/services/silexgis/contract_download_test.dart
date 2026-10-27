@@ -29,11 +29,13 @@ void main() {
       ]);
 
       final cave = page.features[0];
-      expect(cave.featureTypeCode, isNull);
+      // A cave is told apart by its kind; since 2026-10-23 it also names the
+      // type bound to that kind.
+      expect(cave.featureTypeCode, 'cave');
       expect(cave.category, 'underground');
       expect(cave.geometry, isNull);
       expect(cave.parents, isEmpty);
-      expect(cave.propertiesSchemaVersion, isNull);
+      expect(cave.propertiesSchemaVersion, 1);
 
       final place = page.features[1];
       expect(place.featureTypeCode, 'cave_place');
