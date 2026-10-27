@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speleoloc/screens/settings/silexgis_review_outcomes_page.dart';
 import 'package:speleoloc/screens/settings/silexgis_sync_settings_page.dart'
     show SilexgisActionLabel;
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
@@ -14,6 +15,9 @@ import 'package:speleoloc/utils/localization.dart';
 /// the answer is to read again rather than to guess. A duplicate report is not
 /// a verdict at all: the row was written, and whether it is the same cave as
 /// the one nearby is a question only a caver can answer.
+///
+/// Rows held for a reviewer are counted here as well, and rows a reviewer
+/// turned down lead to the page where the caver decides what happens to each.
 class SilexgisSyncReportCard extends StatelessWidget {
   const SilexgisSyncReportCard({required this.progress, super.key});
 
@@ -24,6 +28,7 @@ class SilexgisSyncReportCard extends StatelessWidget {
     final refusals = progress.refusals;
     final unresolved = progress.download?.unresolved ?? const [];
     final duplicates = progress.upload?.duplicates ?? const [];
+    final reviews = progress.reviews;
 
     return Card(
       child: Column(
@@ -33,6 +38,35 @@ class SilexgisSyncReportCard extends StatelessWidget {
             leading: const Icon(Icons.rule),
             title: Text(LocServ.inst.t('silexgis_attention')),
           ),
+          if (reviews.toDecide > 0)
+            ListTile(
+              leading: Icon(
+                Icons.rate_review_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                LocServ.inst.t('silexgis_review_to_decide', <String, String>{
+                  'count': '${reviews.toDecide}',
+                }),
+              ),
+              subtitle: Text(LocServ.inst.t('silexgis_review_to_decide_desc')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SilexgisReviewOutcomesPage(),
+                ),
+              ),
+            ),
+          if (reviews.waiting > 0)
+            ListTile(
+              leading: const Icon(Icons.hourglass_empty),
+              title: Text(
+                LocServ.inst.t('silexgis_review_waiting', <String, String>{
+                  'count': '${reviews.waiting}',
+                }),
+              ),
+              subtitle: Text(LocServ.inst.t('silexgis_review_waiting_desc')),
+            ),
           for (final refusal in refusals) _RefusalTile(refusal: refusal),
           if (duplicates.isNotEmpty)
             for (final report in duplicates)

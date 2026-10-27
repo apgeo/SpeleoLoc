@@ -39,6 +39,7 @@ import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
@@ -158,6 +159,19 @@ final silexgisHeldRowsProvider = Provider<SilexgisHeldRowRepository>(
     clock: ref.watch(clockProvider),
   ),
 );
+
+/// What the caver can do about a row a reviewer turned down.
+final silexgisReviewOutcomesServiceProvider =
+    Provider<SilexgisReviewOutcomesService>(
+      (ref) => SilexgisReviewOutcomesService(
+        db: ref.watch(appDatabaseProvider),
+        logger: ref.watch(changeLoggerProvider),
+        localState: ref.watch(silexgisLocalStateProvider),
+        heldRows: ref.watch(silexgisHeldRowsProvider),
+        caves: ref.watch(caveRepositoryProvider),
+        places: ref.watch(cavePlaceRepositoryProvider),
+      ),
+    );
 
 /// The configured SilexGIS installations. Its own configuration key — a server
 /// profile follows the FTP-profile pattern without joining that machinery.

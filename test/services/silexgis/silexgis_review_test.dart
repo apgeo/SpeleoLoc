@@ -1,25 +1,36 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_place_repository.dart';
+import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
+import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
+import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 import 'contract_fixtures.dart';
 import 'scripted_client.dart';
 import 'token_source.dart';
 
-/// What happens after a row is held: the reviewers' decisions.
+/// What happens after a row is held: the reviewers' decisions, and the
+/// caver's choice about a row turned down.
 void main() {
   const setId = 'set-1';
   const profile = SilexgisProfile(
@@ -38,8 +49,12 @@ void main() {
   );
 
   late AppDatabase db;
+  late ChangeLogger logger;
   late SilexgisLocalStateRepository localState;
   late SilexgisHeldRowRepository heldRows;
+  late CaveRepository caves;
+  late CavePlaceRepository places;
+  late SilexgisReviewOutcomesService outcomes;
   late SilexgisUploadBuilder builder;
   final clock = FakeClock(DateTime.utc(2026, 10, 26, 8));
 
@@ -49,8 +64,27 @@ void main() {
   setUp(() async {
     clock.set(DateTime.utc(2026, 10, 26, 8));
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    late ChangeLogger loggerRef;
+    final users = UserRepository(db, () => loggerRef);
+    final currentUser = CurrentUserService(
+      db,
+      users,
+      ConfigurationRepository(db),
+    );
+    await currentUser.initialize();
+    logger = loggerRef = ChangeLogger(db, currentUser, clock: clock);
     localState = SilexgisLocalStateRepository(db, clock: clock);
     heldRows = SilexgisHeldRowRepository(db, clock: clock);
+    caves = CaveRepository(db, currentUser, logger, clock: clock);
+    places = CavePlaceRepository(db, currentUser, logger, clock: clock);
+    outcomes = SilexgisReviewOutcomesService(
+      db: db,
+      logger: logger,
+      localState: localState,
+      heldRows: heldRows,
+      caves: caves,
+      places: places,
+    );
     builder = SilexgisUploadBuilder(
       db: db,
       localState: localState,
@@ -112,6 +146,25 @@ void main() {
       ),
     ]);
     return edited;
+  }
+
+  /// A cave created here, never on the server, and held under [reviewId].
+  Future<int> heldNewCave({String reviewId = 'review-1'}) async {
+    final t0 = clock.nowMs();
+    await db
+        .into(db.caves)
+        .insert(Cave(uuid: caveId, title: 'Proposed cave', updatedAt: t0));
+    await heldRows.recordHeld(profile.profileUuid, <SilexgisHeldEntry>[
+      SilexgisHeldEntry(
+        section: SyncUploadSection.rows,
+        entityUuid: caveId,
+        entityTable: 'caves',
+        wireKind: 'cave',
+        reviewId: reviewId,
+        sentLocalUpdatedAt: t0,
+      ),
+    ]);
+    return t0;
   }
 
   Map<String, String> placeholders({String reviewId = 'review-1'}) =>
@@ -316,6 +369,144 @@ void main() {
         isNull,
       );
       expect(await builder.build(), isEmpty);
+    });
+  });
+
+  group('the caver\'s choice', () {
+    test('21: the server\'s version goes back in place, unlogged', () async {
+      await heldEntranceEdit();
+      await readReviews(<Map<String, Object?>>[
+        recorded('21-reviews-first-page'),
+      ]);
+
+      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      expect(outcome.isNew, isFalse);
+      expect(outcome.hasServerRow, isTrue);
+      expect(outcome.canUseServerVersion, isTrue);
+      expect(outcome.canDelete, isFalse);
+
+      expect(await outcomes.useServerVersion(profile, outcome), isTrue);
+
+      expect((await entrance()).title, 'Intrare');
+      expect(await heldFor(entranceId), isNull);
+      expect(
+        await localState.readRevision(profile.profileUuid, entranceId),
+        decidedAt,
+      );
+      expect(await db.select(db.changeLog).get(), isEmpty);
+      expect(await builder.build(), isEmpty);
+      expect(await outcomes.outcomes(profile.profileUuid), isEmpty);
+    });
+
+    test('22: without the server\'s row, the set is read again', () async {
+      await heldEntranceEdit();
+      await localState.writeSetState(
+        profile.profileUuid,
+        setId,
+        cursor: 'features-c9',
+        setRevision: 1,
+      );
+      await readReviews(<Map<String, Object?>>[
+        recorded('22-reviews-current-withheld'),
+      ]);
+
+      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      expect(outcome.hasServerRow, isFalse);
+      expect(await outcomes.useServerVersion(profile, outcome), isFalse);
+
+      // The feature download starts from the beginning next run …
+      expect(
+        (await localState.readSetState(profile.profileUuid, setId)).cursor,
+        isNull,
+      );
+      // … the caver's edit is not sent …
+      expect(await builder.build(), isEmpty);
+      // … and the row is no longer held back from what that read brings.
+      final applied =
+          await SilexgisDownloadApplier(
+            db: db,
+            logger: logger,
+            localState: localState,
+            heldRows: heldRows,
+            caves: caves,
+            places: places,
+            profileUuid: profile.profileUuid,
+          ).applyPage(
+            SyncDownloadPage.fromJson(<String, Object?>{
+              'setRevision': 1,
+              'features': <Object?>[
+                <String, Object?>{
+                  'id': entranceId.toString(),
+                  'kind': 'caveEntrance',
+                  'name': 'Intrare',
+                  'updatedAt': '2026-10-20T17:03:10.118Z',
+                  'properties': const <String, Object?>{},
+                  'parents': <Object?>[
+                    <String, Object?>{
+                      'parentId': caveId.toString(),
+                      'isPrimary': true,
+                    },
+                  ],
+                },
+              ],
+              'tombstones': const <Object?>[],
+              'nextCursor': 'features-c1',
+              'hasMore': false,
+            }),
+            setId: setId,
+          );
+      expect(applied.updated, 1);
+      expect((await entrance()).title, 'Intrare');
+    });
+
+    test('a turned-down new row stays as a draft until edited', () async {
+      final sentAt = await heldNewCave();
+      await readReviews(<Map<String, Object?>>[
+        reviewsPage(<Map<String, Object?>>[
+          decision('review-1', 'rejected', rowId: caveId),
+        ]),
+      ]);
+
+      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      expect(outcome.isNew, isTrue);
+      expect(outcome.canUseServerVersion, isFalse);
+      expect(outcome.canDelete, isTrue);
+      // Nothing deletes it on its own, and nothing sends it again.
+      expect(await db.select(db.caves).get(), hasLength(1));
+      final sending = SilexgisUploadBuilder(
+        db: db,
+        localState: localState,
+        heldRows: heldRows,
+        profileUuid: profile.profileUuid,
+        uploadsNewRoots: true,
+      );
+      expect(await sending.build(), isEmpty);
+
+      await outcomes.keepMine(profile.profileUuid, outcome);
+      expect(await outcomes.outcomes(profile.profileUuid), isEmpty);
+      expect(await sending.build(), isEmpty);
+
+      // An edit is what sends it again.
+      await (db.update(db.caves)..where((t) => t.uuid.equalsValue(caveId)))
+          .write(CavesCompanion(updatedAt: Value(sentAt + 1)));
+      expect((await sending.build()).map((p) => p.entityUuid), <Uuid>[caveId]);
+    });
+
+    test('a draft the server never had can be deleted', () async {
+      await heldNewCave();
+      await readReviews(<Map<String, Object?>>[
+        reviewsPage(<Map<String, Object?>>[
+          decision('review-1', 'rejected', rowId: caveId),
+        ]),
+      ]);
+      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+
+      await outcomes.deleteDraft(profile.profileUuid, outcome);
+
+      expect(await db.select(db.caves).get(), isEmpty);
+      expect(await heldFor(caveId), isNull);
+      // The caver's own deletion, logged like any other.
+      expect(await db.select(db.changeLog).get(), isNotEmpty);
     });
   });
 }
