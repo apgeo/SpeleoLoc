@@ -16147,6 +16147,1834 @@ class SilexgisStreamCursorCompanion
   }
 }
 
+class SilexgisHeldRow extends Table
+    with TableInfo<SilexgisHeldRow, SilexgisHeldRowData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisHeldRow(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _sectionMeta = const VerificationMeta(
+    'section',
+  );
+  late final GeneratedColumn<String> section = GeneratedColumn<String>(
+    'section',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> entityUuid =
+      GeneratedColumn<Uint8List>(
+        'entity_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisHeldRow.$converterentityUuid);
+  static const VerificationMeta _entityTableMeta = const VerificationMeta(
+    'entityTable',
+  );
+  late final GeneratedColumn<String> entityTable = GeneratedColumn<String>(
+    'entity_table',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _wireKindMeta = const VerificationMeta(
+    'wireKind',
+  );
+  late final GeneratedColumn<String> wireKind = GeneratedColumn<String>(
+    'wire_kind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _reviewIdMeta = const VerificationMeta(
+    'reviewId',
+  );
+  late final GeneratedColumn<String> reviewId = GeneratedColumn<String>(
+    'review_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _isDeleteMeta = const VerificationMeta(
+    'isDelete',
+  );
+  late final GeneratedColumn<bool> isDelete = GeneratedColumn<bool>(
+    'is_delete',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _sentLocalUpdatedAtMeta =
+      const VerificationMeta('sentLocalUpdatedAt');
+  late final GeneratedColumn<int> sentLocalUpdatedAt = GeneratedColumn<int>(
+    'sent_local_updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _heldAtMeta = const VerificationMeta('heldAt');
+  late final GeneratedColumn<int> heldAt = GeneratedColumn<int>(
+    'held_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _outcomeMeta = const VerificationMeta(
+    'outcome',
+  );
+  late final GeneratedColumn<String> outcome = GeneratedColumn<String>(
+    'outcome',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _decidedAtMeta = const VerificationMeta(
+    'decidedAt',
+  );
+  late final GeneratedColumn<String> decidedAt = GeneratedColumn<String>(
+    'decided_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _currentJsonMeta = const VerificationMeta(
+    'currentJson',
+  );
+  late final GeneratedColumn<String> currentJson = GeneratedColumn<String>(
+    'current_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _keptAtMeta = const VerificationMeta('keptAt');
+  late final GeneratedColumn<int> keptAt = GeneratedColumn<int>(
+    'kept_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    section,
+    entityUuid,
+    entityTable,
+    wireKind,
+    reviewId,
+    isDelete,
+    sentLocalUpdatedAt,
+    heldAt,
+    outcome,
+    note,
+    code,
+    decidedAt,
+    currentJson,
+    keptAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_held_row';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisHeldRowData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('section')) {
+      context.handle(
+        _sectionMeta,
+        section.isAcceptableOrUnknown(data['section']!, _sectionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionMeta);
+    }
+    if (data.containsKey('entity_table')) {
+      context.handle(
+        _entityTableMeta,
+        entityTable.isAcceptableOrUnknown(
+          data['entity_table']!,
+          _entityTableMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_entityTableMeta);
+    }
+    if (data.containsKey('wire_kind')) {
+      context.handle(
+        _wireKindMeta,
+        wireKind.isAcceptableOrUnknown(data['wire_kind']!, _wireKindMeta),
+      );
+    }
+    if (data.containsKey('review_id')) {
+      context.handle(
+        _reviewIdMeta,
+        reviewId.isAcceptableOrUnknown(data['review_id']!, _reviewIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reviewIdMeta);
+    }
+    if (data.containsKey('is_delete')) {
+      context.handle(
+        _isDeleteMeta,
+        isDelete.isAcceptableOrUnknown(data['is_delete']!, _isDeleteMeta),
+      );
+    }
+    if (data.containsKey('sent_local_updated_at')) {
+      context.handle(
+        _sentLocalUpdatedAtMeta,
+        sentLocalUpdatedAt.isAcceptableOrUnknown(
+          data['sent_local_updated_at']!,
+          _sentLocalUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('held_at')) {
+      context.handle(
+        _heldAtMeta,
+        heldAt.isAcceptableOrUnknown(data['held_at']!, _heldAtMeta),
+      );
+    }
+    if (data.containsKey('outcome')) {
+      context.handle(
+        _outcomeMeta,
+        outcome.isAcceptableOrUnknown(data['outcome']!, _outcomeMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    }
+    if (data.containsKey('decided_at')) {
+      context.handle(
+        _decidedAtMeta,
+        decidedAt.isAcceptableOrUnknown(data['decided_at']!, _decidedAtMeta),
+      );
+    }
+    if (data.containsKey('current_json')) {
+      context.handle(
+        _currentJsonMeta,
+        currentJson.isAcceptableOrUnknown(
+          data['current_json']!,
+          _currentJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('kept_at')) {
+      context.handle(
+        _keptAtMeta,
+        keptAt.isAcceptableOrUnknown(data['kept_at']!, _keptAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, section, entityUuid};
+  @override
+  SilexgisHeldRowData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisHeldRowData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      section: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}section'],
+      )!,
+      entityUuid: SilexgisHeldRow.$converterentityUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}entity_uuid'],
+        )!,
+      ),
+      entityTable: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_table'],
+      )!,
+      wireKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}wire_kind'],
+      ),
+      reviewId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}review_id'],
+      )!,
+      isDelete: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_delete'],
+      )!,
+      sentLocalUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sent_local_updated_at'],
+      ),
+      heldAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}held_at'],
+      ),
+      outcome: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outcome'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
+      decidedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decided_at'],
+      ),
+      currentJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}current_json'],
+      ),
+      keptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kept_at'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisHeldRow createAlias(String alias) {
+    return SilexgisHeldRow(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterentityUuid =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, section, entity_uuid)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisHeldRowData extends DataClass
+    implements Insertable<SilexgisHeldRowData> {
+  final String profileUuid;
+  final String section;
+
+  /// the upload array the row went in
+  final Uuid entityUuid;
+  final String entityTable;
+
+  /// which local table holds the row
+  final String? wireKind;
+
+  /// the `kind` it travelled as
+  final String reviewId;
+
+  /// the proposal the upload answered with
+  final bool isDelete;
+
+  /// the proposal is a removal
+  final int? sentLocalUpdatedAt;
+
+  /// the row's updated_at as sent
+  final int? heldAt;
+
+  /// when this device was told
+  final String? outcome;
+
+  /// null while waiting
+  final String? note;
+
+  /// what the reviewer wrote
+  final String? code;
+
+  /// why a `failed` row could not be written
+  final String? decidedAt;
+
+  /// the server's stamp, verbatim
+  final String? currentJson;
+
+  /// the server's row, as the stream shapes it
+  final int? keptAt;
+  const SilexgisHeldRowData({
+    required this.profileUuid,
+    required this.section,
+    required this.entityUuid,
+    required this.entityTable,
+    this.wireKind,
+    required this.reviewId,
+    required this.isDelete,
+    this.sentLocalUpdatedAt,
+    this.heldAt,
+    this.outcome,
+    this.note,
+    this.code,
+    this.decidedAt,
+    this.currentJson,
+    this.keptAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['section'] = Variable<String>(section);
+    {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisHeldRow.$converterentityUuid.toSql(entityUuid),
+      );
+    }
+    map['entity_table'] = Variable<String>(entityTable);
+    if (!nullToAbsent || wireKind != null) {
+      map['wire_kind'] = Variable<String>(wireKind);
+    }
+    map['review_id'] = Variable<String>(reviewId);
+    map['is_delete'] = Variable<bool>(isDelete);
+    if (!nullToAbsent || sentLocalUpdatedAt != null) {
+      map['sent_local_updated_at'] = Variable<int>(sentLocalUpdatedAt);
+    }
+    if (!nullToAbsent || heldAt != null) {
+      map['held_at'] = Variable<int>(heldAt);
+    }
+    if (!nullToAbsent || outcome != null) {
+      map['outcome'] = Variable<String>(outcome);
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
+    if (!nullToAbsent || decidedAt != null) {
+      map['decided_at'] = Variable<String>(decidedAt);
+    }
+    if (!nullToAbsent || currentJson != null) {
+      map['current_json'] = Variable<String>(currentJson);
+    }
+    if (!nullToAbsent || keptAt != null) {
+      map['kept_at'] = Variable<int>(keptAt);
+    }
+    return map;
+  }
+
+  SilexgisHeldRowCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisHeldRowCompanion(
+      profileUuid: Value(profileUuid),
+      section: Value(section),
+      entityUuid: Value(entityUuid),
+      entityTable: Value(entityTable),
+      wireKind: wireKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wireKind),
+      reviewId: Value(reviewId),
+      isDelete: Value(isDelete),
+      sentLocalUpdatedAt: sentLocalUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sentLocalUpdatedAt),
+      heldAt: heldAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heldAt),
+      outcome: outcome == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outcome),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
+      decidedAt: decidedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(decidedAt),
+      currentJson: currentJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currentJson),
+      keptAt: keptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(keptAt),
+    );
+  }
+
+  factory SilexgisHeldRowData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisHeldRowData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      section: serializer.fromJson<String>(json['section']),
+      entityUuid: serializer.fromJson<Uuid>(json['entity_uuid']),
+      entityTable: serializer.fromJson<String>(json['entity_table']),
+      wireKind: serializer.fromJson<String?>(json['wire_kind']),
+      reviewId: serializer.fromJson<String>(json['review_id']),
+      isDelete: serializer.fromJson<bool>(json['is_delete']),
+      sentLocalUpdatedAt: serializer.fromJson<int?>(
+        json['sent_local_updated_at'],
+      ),
+      heldAt: serializer.fromJson<int?>(json['held_at']),
+      outcome: serializer.fromJson<String?>(json['outcome']),
+      note: serializer.fromJson<String?>(json['note']),
+      code: serializer.fromJson<String?>(json['code']),
+      decidedAt: serializer.fromJson<String?>(json['decided_at']),
+      currentJson: serializer.fromJson<String?>(json['current_json']),
+      keptAt: serializer.fromJson<int?>(json['kept_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'section': serializer.toJson<String>(section),
+      'entity_uuid': serializer.toJson<Uuid>(entityUuid),
+      'entity_table': serializer.toJson<String>(entityTable),
+      'wire_kind': serializer.toJson<String?>(wireKind),
+      'review_id': serializer.toJson<String>(reviewId),
+      'is_delete': serializer.toJson<bool>(isDelete),
+      'sent_local_updated_at': serializer.toJson<int?>(sentLocalUpdatedAt),
+      'held_at': serializer.toJson<int?>(heldAt),
+      'outcome': serializer.toJson<String?>(outcome),
+      'note': serializer.toJson<String?>(note),
+      'code': serializer.toJson<String?>(code),
+      'decided_at': serializer.toJson<String?>(decidedAt),
+      'current_json': serializer.toJson<String?>(currentJson),
+      'kept_at': serializer.toJson<int?>(keptAt),
+    };
+  }
+
+  SilexgisHeldRowData copyWith({
+    String? profileUuid,
+    String? section,
+    Uuid? entityUuid,
+    String? entityTable,
+    Value<String?> wireKind = const Value.absent(),
+    String? reviewId,
+    bool? isDelete,
+    Value<int?> sentLocalUpdatedAt = const Value.absent(),
+    Value<int?> heldAt = const Value.absent(),
+    Value<String?> outcome = const Value.absent(),
+    Value<String?> note = const Value.absent(),
+    Value<String?> code = const Value.absent(),
+    Value<String?> decidedAt = const Value.absent(),
+    Value<String?> currentJson = const Value.absent(),
+    Value<int?> keptAt = const Value.absent(),
+  }) => SilexgisHeldRowData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    section: section ?? this.section,
+    entityUuid: entityUuid ?? this.entityUuid,
+    entityTable: entityTable ?? this.entityTable,
+    wireKind: wireKind.present ? wireKind.value : this.wireKind,
+    reviewId: reviewId ?? this.reviewId,
+    isDelete: isDelete ?? this.isDelete,
+    sentLocalUpdatedAt: sentLocalUpdatedAt.present
+        ? sentLocalUpdatedAt.value
+        : this.sentLocalUpdatedAt,
+    heldAt: heldAt.present ? heldAt.value : this.heldAt,
+    outcome: outcome.present ? outcome.value : this.outcome,
+    note: note.present ? note.value : this.note,
+    code: code.present ? code.value : this.code,
+    decidedAt: decidedAt.present ? decidedAt.value : this.decidedAt,
+    currentJson: currentJson.present ? currentJson.value : this.currentJson,
+    keptAt: keptAt.present ? keptAt.value : this.keptAt,
+  );
+  SilexgisHeldRowData copyWithCompanion(SilexgisHeldRowCompanion data) {
+    return SilexgisHeldRowData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      section: data.section.present ? data.section.value : this.section,
+      entityUuid: data.entityUuid.present
+          ? data.entityUuid.value
+          : this.entityUuid,
+      entityTable: data.entityTable.present
+          ? data.entityTable.value
+          : this.entityTable,
+      wireKind: data.wireKind.present ? data.wireKind.value : this.wireKind,
+      reviewId: data.reviewId.present ? data.reviewId.value : this.reviewId,
+      isDelete: data.isDelete.present ? data.isDelete.value : this.isDelete,
+      sentLocalUpdatedAt: data.sentLocalUpdatedAt.present
+          ? data.sentLocalUpdatedAt.value
+          : this.sentLocalUpdatedAt,
+      heldAt: data.heldAt.present ? data.heldAt.value : this.heldAt,
+      outcome: data.outcome.present ? data.outcome.value : this.outcome,
+      note: data.note.present ? data.note.value : this.note,
+      code: data.code.present ? data.code.value : this.code,
+      decidedAt: data.decidedAt.present ? data.decidedAt.value : this.decidedAt,
+      currentJson: data.currentJson.present
+          ? data.currentJson.value
+          : this.currentJson,
+      keptAt: data.keptAt.present ? data.keptAt.value : this.keptAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisHeldRowData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('section: $section, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('entityTable: $entityTable, ')
+          ..write('wireKind: $wireKind, ')
+          ..write('reviewId: $reviewId, ')
+          ..write('isDelete: $isDelete, ')
+          ..write('sentLocalUpdatedAt: $sentLocalUpdatedAt, ')
+          ..write('heldAt: $heldAt, ')
+          ..write('outcome: $outcome, ')
+          ..write('note: $note, ')
+          ..write('code: $code, ')
+          ..write('decidedAt: $decidedAt, ')
+          ..write('currentJson: $currentJson, ')
+          ..write('keptAt: $keptAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    section,
+    entityUuid,
+    entityTable,
+    wireKind,
+    reviewId,
+    isDelete,
+    sentLocalUpdatedAt,
+    heldAt,
+    outcome,
+    note,
+    code,
+    decidedAt,
+    currentJson,
+    keptAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisHeldRowData &&
+          other.profileUuid == this.profileUuid &&
+          other.section == this.section &&
+          other.entityUuid == this.entityUuid &&
+          other.entityTable == this.entityTable &&
+          other.wireKind == this.wireKind &&
+          other.reviewId == this.reviewId &&
+          other.isDelete == this.isDelete &&
+          other.sentLocalUpdatedAt == this.sentLocalUpdatedAt &&
+          other.heldAt == this.heldAt &&
+          other.outcome == this.outcome &&
+          other.note == this.note &&
+          other.code == this.code &&
+          other.decidedAt == this.decidedAt &&
+          other.currentJson == this.currentJson &&
+          other.keptAt == this.keptAt);
+}
+
+class SilexgisHeldRowCompanion extends UpdateCompanion<SilexgisHeldRowData> {
+  final Value<String> profileUuid;
+  final Value<String> section;
+  final Value<Uuid> entityUuid;
+  final Value<String> entityTable;
+  final Value<String?> wireKind;
+  final Value<String> reviewId;
+  final Value<bool> isDelete;
+  final Value<int?> sentLocalUpdatedAt;
+  final Value<int?> heldAt;
+  final Value<String?> outcome;
+  final Value<String?> note;
+  final Value<String?> code;
+  final Value<String?> decidedAt;
+  final Value<String?> currentJson;
+  final Value<int?> keptAt;
+  final Value<int> rowid;
+  const SilexgisHeldRowCompanion({
+    this.profileUuid = const Value.absent(),
+    this.section = const Value.absent(),
+    this.entityUuid = const Value.absent(),
+    this.entityTable = const Value.absent(),
+    this.wireKind = const Value.absent(),
+    this.reviewId = const Value.absent(),
+    this.isDelete = const Value.absent(),
+    this.sentLocalUpdatedAt = const Value.absent(),
+    this.heldAt = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.note = const Value.absent(),
+    this.code = const Value.absent(),
+    this.decidedAt = const Value.absent(),
+    this.currentJson = const Value.absent(),
+    this.keptAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisHeldRowCompanion.insert({
+    required String profileUuid,
+    required String section,
+    required Uuid entityUuid,
+    required String entityTable,
+    this.wireKind = const Value.absent(),
+    required String reviewId,
+    this.isDelete = const Value.absent(),
+    this.sentLocalUpdatedAt = const Value.absent(),
+    this.heldAt = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.note = const Value.absent(),
+    this.code = const Value.absent(),
+    this.decidedAt = const Value.absent(),
+    this.currentJson = const Value.absent(),
+    this.keptAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       section = Value(section),
+       entityUuid = Value(entityUuid),
+       entityTable = Value(entityTable),
+       reviewId = Value(reviewId);
+  static Insertable<SilexgisHeldRowData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? section,
+    Expression<Uint8List>? entityUuid,
+    Expression<String>? entityTable,
+    Expression<String>? wireKind,
+    Expression<String>? reviewId,
+    Expression<bool>? isDelete,
+    Expression<int>? sentLocalUpdatedAt,
+    Expression<int>? heldAt,
+    Expression<String>? outcome,
+    Expression<String>? note,
+    Expression<String>? code,
+    Expression<String>? decidedAt,
+    Expression<String>? currentJson,
+    Expression<int>? keptAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (section != null) 'section': section,
+      if (entityUuid != null) 'entity_uuid': entityUuid,
+      if (entityTable != null) 'entity_table': entityTable,
+      if (wireKind != null) 'wire_kind': wireKind,
+      if (reviewId != null) 'review_id': reviewId,
+      if (isDelete != null) 'is_delete': isDelete,
+      if (sentLocalUpdatedAt != null)
+        'sent_local_updated_at': sentLocalUpdatedAt,
+      if (heldAt != null) 'held_at': heldAt,
+      if (outcome != null) 'outcome': outcome,
+      if (note != null) 'note': note,
+      if (code != null) 'code': code,
+      if (decidedAt != null) 'decided_at': decidedAt,
+      if (currentJson != null) 'current_json': currentJson,
+      if (keptAt != null) 'kept_at': keptAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisHeldRowCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? section,
+    Value<Uuid>? entityUuid,
+    Value<String>? entityTable,
+    Value<String?>? wireKind,
+    Value<String>? reviewId,
+    Value<bool>? isDelete,
+    Value<int?>? sentLocalUpdatedAt,
+    Value<int?>? heldAt,
+    Value<String?>? outcome,
+    Value<String?>? note,
+    Value<String?>? code,
+    Value<String?>? decidedAt,
+    Value<String?>? currentJson,
+    Value<int?>? keptAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisHeldRowCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      section: section ?? this.section,
+      entityUuid: entityUuid ?? this.entityUuid,
+      entityTable: entityTable ?? this.entityTable,
+      wireKind: wireKind ?? this.wireKind,
+      reviewId: reviewId ?? this.reviewId,
+      isDelete: isDelete ?? this.isDelete,
+      sentLocalUpdatedAt: sentLocalUpdatedAt ?? this.sentLocalUpdatedAt,
+      heldAt: heldAt ?? this.heldAt,
+      outcome: outcome ?? this.outcome,
+      note: note ?? this.note,
+      code: code ?? this.code,
+      decidedAt: decidedAt ?? this.decidedAt,
+      currentJson: currentJson ?? this.currentJson,
+      keptAt: keptAt ?? this.keptAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (section.present) {
+      map['section'] = Variable<String>(section.value);
+    }
+    if (entityUuid.present) {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisHeldRow.$converterentityUuid.toSql(entityUuid.value),
+      );
+    }
+    if (entityTable.present) {
+      map['entity_table'] = Variable<String>(entityTable.value);
+    }
+    if (wireKind.present) {
+      map['wire_kind'] = Variable<String>(wireKind.value);
+    }
+    if (reviewId.present) {
+      map['review_id'] = Variable<String>(reviewId.value);
+    }
+    if (isDelete.present) {
+      map['is_delete'] = Variable<bool>(isDelete.value);
+    }
+    if (sentLocalUpdatedAt.present) {
+      map['sent_local_updated_at'] = Variable<int>(sentLocalUpdatedAt.value);
+    }
+    if (heldAt.present) {
+      map['held_at'] = Variable<int>(heldAt.value);
+    }
+    if (outcome.present) {
+      map['outcome'] = Variable<String>(outcome.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (decidedAt.present) {
+      map['decided_at'] = Variable<String>(decidedAt.value);
+    }
+    if (currentJson.present) {
+      map['current_json'] = Variable<String>(currentJson.value);
+    }
+    if (keptAt.present) {
+      map['kept_at'] = Variable<int>(keptAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisHeldRowCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('section: $section, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('entityTable: $entityTable, ')
+          ..write('wireKind: $wireKind, ')
+          ..write('reviewId: $reviewId, ')
+          ..write('isDelete: $isDelete, ')
+          ..write('sentLocalUpdatedAt: $sentLocalUpdatedAt, ')
+          ..write('heldAt: $heldAt, ')
+          ..write('outcome: $outcome, ')
+          ..write('note: $note, ')
+          ..write('code: $code, ')
+          ..write('decidedAt: $decidedAt, ')
+          ..write('currentJson: $currentJson, ')
+          ..write('keptAt: $keptAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class SilexgisPerson extends Table
+    with TableInfo<SilexgisPerson, SilexgisPersonData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisPerson(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _caverIdMeta = const VerificationMeta(
+    'caverId',
+  );
+  late final GeneratedColumn<String> caverId = GeneratedColumn<String>(
+    'caver_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _fullNameMeta = const VerificationMeta(
+    'fullName',
+  );
+  late final GeneratedColumn<String> fullName = GeneratedColumn<String>(
+    'full_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _shortNameMeta = const VerificationMeta(
+    'shortName',
+  );
+  late final GeneratedColumn<String> shortName = GeneratedColumn<String>(
+    'short_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _hasAccountMeta = const VerificationMeta(
+    'hasAccount',
+  );
+  late final GeneratedColumn<bool> hasAccount = GeneratedColumn<bool>(
+    'has_account',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _isMeMeta = const VerificationMeta('isMe');
+  late final GeneratedColumn<bool> isMe = GeneratedColumn<bool>(
+    'is_me',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    caverId,
+    fullName,
+    shortName,
+    hasAccount,
+    isMe,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_person';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisPersonData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('caver_id')) {
+      context.handle(
+        _caverIdMeta,
+        caverId.isAcceptableOrUnknown(data['caver_id']!, _caverIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_caverIdMeta);
+    }
+    if (data.containsKey('full_name')) {
+      context.handle(
+        _fullNameMeta,
+        fullName.isAcceptableOrUnknown(data['full_name']!, _fullNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fullNameMeta);
+    }
+    if (data.containsKey('short_name')) {
+      context.handle(
+        _shortNameMeta,
+        shortName.isAcceptableOrUnknown(data['short_name']!, _shortNameMeta),
+      );
+    }
+    if (data.containsKey('has_account')) {
+      context.handle(
+        _hasAccountMeta,
+        hasAccount.isAcceptableOrUnknown(data['has_account']!, _hasAccountMeta),
+      );
+    }
+    if (data.containsKey('is_me')) {
+      context.handle(
+        _isMeMeta,
+        isMe.isAcceptableOrUnknown(data['is_me']!, _isMeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, caverId};
+  @override
+  SilexgisPersonData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisPersonData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      caverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caver_id'],
+      )!,
+      fullName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}full_name'],
+      )!,
+      shortName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}short_name'],
+      ),
+      hasAccount: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_account'],
+      )!,
+      isMe: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_me'],
+      )!,
+    );
+  }
+
+  @override
+  SilexgisPerson createAlias(String alias) {
+    return SilexgisPerson(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, caver_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisPersonData extends DataClass
+    implements Insertable<SilexgisPersonData> {
+  final String profileUuid;
+  final String caverId;
+  final String fullName;
+  final String? shortName;
+  final bool hasAccount;
+  final bool isMe;
+  const SilexgisPersonData({
+    required this.profileUuid,
+    required this.caverId,
+    required this.fullName,
+    this.shortName,
+    required this.hasAccount,
+    required this.isMe,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['caver_id'] = Variable<String>(caverId);
+    map['full_name'] = Variable<String>(fullName);
+    if (!nullToAbsent || shortName != null) {
+      map['short_name'] = Variable<String>(shortName);
+    }
+    map['has_account'] = Variable<bool>(hasAccount);
+    map['is_me'] = Variable<bool>(isMe);
+    return map;
+  }
+
+  SilexgisPersonCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisPersonCompanion(
+      profileUuid: Value(profileUuid),
+      caverId: Value(caverId),
+      fullName: Value(fullName),
+      shortName: shortName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shortName),
+      hasAccount: Value(hasAccount),
+      isMe: Value(isMe),
+    );
+  }
+
+  factory SilexgisPersonData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisPersonData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      caverId: serializer.fromJson<String>(json['caver_id']),
+      fullName: serializer.fromJson<String>(json['full_name']),
+      shortName: serializer.fromJson<String?>(json['short_name']),
+      hasAccount: serializer.fromJson<bool>(json['has_account']),
+      isMe: serializer.fromJson<bool>(json['is_me']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'caver_id': serializer.toJson<String>(caverId),
+      'full_name': serializer.toJson<String>(fullName),
+      'short_name': serializer.toJson<String?>(shortName),
+      'has_account': serializer.toJson<bool>(hasAccount),
+      'is_me': serializer.toJson<bool>(isMe),
+    };
+  }
+
+  SilexgisPersonData copyWith({
+    String? profileUuid,
+    String? caverId,
+    String? fullName,
+    Value<String?> shortName = const Value.absent(),
+    bool? hasAccount,
+    bool? isMe,
+  }) => SilexgisPersonData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    caverId: caverId ?? this.caverId,
+    fullName: fullName ?? this.fullName,
+    shortName: shortName.present ? shortName.value : this.shortName,
+    hasAccount: hasAccount ?? this.hasAccount,
+    isMe: isMe ?? this.isMe,
+  );
+  SilexgisPersonData copyWithCompanion(SilexgisPersonCompanion data) {
+    return SilexgisPersonData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      caverId: data.caverId.present ? data.caverId.value : this.caverId,
+      fullName: data.fullName.present ? data.fullName.value : this.fullName,
+      shortName: data.shortName.present ? data.shortName.value : this.shortName,
+      hasAccount: data.hasAccount.present
+          ? data.hasAccount.value
+          : this.hasAccount,
+      isMe: data.isMe.present ? data.isMe.value : this.isMe,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisPersonData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('caverId: $caverId, ')
+          ..write('fullName: $fullName, ')
+          ..write('shortName: $shortName, ')
+          ..write('hasAccount: $hasAccount, ')
+          ..write('isMe: $isMe')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(profileUuid, caverId, fullName, shortName, hasAccount, isMe);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisPersonData &&
+          other.profileUuid == this.profileUuid &&
+          other.caverId == this.caverId &&
+          other.fullName == this.fullName &&
+          other.shortName == this.shortName &&
+          other.hasAccount == this.hasAccount &&
+          other.isMe == this.isMe);
+}
+
+class SilexgisPersonCompanion extends UpdateCompanion<SilexgisPersonData> {
+  final Value<String> profileUuid;
+  final Value<String> caverId;
+  final Value<String> fullName;
+  final Value<String?> shortName;
+  final Value<bool> hasAccount;
+  final Value<bool> isMe;
+  final Value<int> rowid;
+  const SilexgisPersonCompanion({
+    this.profileUuid = const Value.absent(),
+    this.caverId = const Value.absent(),
+    this.fullName = const Value.absent(),
+    this.shortName = const Value.absent(),
+    this.hasAccount = const Value.absent(),
+    this.isMe = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisPersonCompanion.insert({
+    required String profileUuid,
+    required String caverId,
+    required String fullName,
+    this.shortName = const Value.absent(),
+    this.hasAccount = const Value.absent(),
+    this.isMe = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       caverId = Value(caverId),
+       fullName = Value(fullName);
+  static Insertable<SilexgisPersonData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? caverId,
+    Expression<String>? fullName,
+    Expression<String>? shortName,
+    Expression<bool>? hasAccount,
+    Expression<bool>? isMe,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (caverId != null) 'caver_id': caverId,
+      if (fullName != null) 'full_name': fullName,
+      if (shortName != null) 'short_name': shortName,
+      if (hasAccount != null) 'has_account': hasAccount,
+      if (isMe != null) 'is_me': isMe,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisPersonCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? caverId,
+    Value<String>? fullName,
+    Value<String?>? shortName,
+    Value<bool>? hasAccount,
+    Value<bool>? isMe,
+    Value<int>? rowid,
+  }) {
+    return SilexgisPersonCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      caverId: caverId ?? this.caverId,
+      fullName: fullName ?? this.fullName,
+      shortName: shortName ?? this.shortName,
+      hasAccount: hasAccount ?? this.hasAccount,
+      isMe: isMe ?? this.isMe,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (caverId.present) {
+      map['caver_id'] = Variable<String>(caverId.value);
+    }
+    if (fullName.present) {
+      map['full_name'] = Variable<String>(fullName.value);
+    }
+    if (shortName.present) {
+      map['short_name'] = Variable<String>(shortName.value);
+    }
+    if (hasAccount.present) {
+      map['has_account'] = Variable<bool>(hasAccount.value);
+    }
+    if (isMe.present) {
+      map['is_me'] = Variable<bool>(isMe.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisPersonCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('caverId: $caverId, ')
+          ..write('fullName: $fullName, ')
+          ..write('shortName: $shortName, ')
+          ..write('hasAccount: $hasAccount, ')
+          ..write('isMe: $isMe, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class SilexgisPersonLink extends Table
+    with TableInfo<SilexgisPersonLink, SilexgisPersonLinkData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisPersonLink(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> userUuid =
+      GeneratedColumn<Uint8List>(
+        'user_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisPersonLink.$converteruserUuid);
+  static const VerificationMeta _caverIdMeta = const VerificationMeta(
+    'caverId',
+  );
+  late final GeneratedColumn<String> caverId = GeneratedColumn<String>(
+    'caver_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _linkSourceMeta = const VerificationMeta(
+    'linkSource',
+  );
+  late final GeneratedColumn<String> linkSource = GeneratedColumn<String>(
+    'link_source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _choicePendingMeta = const VerificationMeta(
+    'choicePending',
+  );
+  late final GeneratedColumn<bool> choicePending = GeneratedColumn<bool>(
+    'choice_pending',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _sentNamesHashMeta = const VerificationMeta(
+    'sentNamesHash',
+  );
+  late final GeneratedColumn<String> sentNamesHash = GeneratedColumn<String>(
+    'sent_names_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sentAtMeta = const VerificationMeta('sentAt');
+  late final GeneratedColumn<int> sentAt = GeneratedColumn<int>(
+    'sent_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    userUuid,
+    caverId,
+    linkSource,
+    choicePending,
+    sentNamesHash,
+    sentAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_person_link';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisPersonLinkData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('caver_id')) {
+      context.handle(
+        _caverIdMeta,
+        caverId.isAcceptableOrUnknown(data['caver_id']!, _caverIdMeta),
+      );
+    }
+    if (data.containsKey('link_source')) {
+      context.handle(
+        _linkSourceMeta,
+        linkSource.isAcceptableOrUnknown(data['link_source']!, _linkSourceMeta),
+      );
+    }
+    if (data.containsKey('choice_pending')) {
+      context.handle(
+        _choicePendingMeta,
+        choicePending.isAcceptableOrUnknown(
+          data['choice_pending']!,
+          _choicePendingMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sent_names_hash')) {
+      context.handle(
+        _sentNamesHashMeta,
+        sentNamesHash.isAcceptableOrUnknown(
+          data['sent_names_hash']!,
+          _sentNamesHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sent_at')) {
+      context.handle(
+        _sentAtMeta,
+        sentAt.isAcceptableOrUnknown(data['sent_at']!, _sentAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, userUuid};
+  @override
+  SilexgisPersonLinkData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisPersonLinkData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      userUuid: SilexgisPersonLink.$converteruserUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}user_uuid'],
+        )!,
+      ),
+      caverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caver_id'],
+      ),
+      linkSource: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}link_source'],
+      ),
+      choicePending: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}choice_pending'],
+      )!,
+      sentNamesHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sent_names_hash'],
+      ),
+      sentAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sent_at'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisPersonLink createAlias(String alias) {
+    return SilexgisPersonLink(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converteruserUuid =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, user_uuid)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisPersonLinkData extends DataClass
+    implements Insertable<SilexgisPersonLinkData> {
+  final String profileUuid;
+  final Uuid userUuid;
+  final String? caverId;
+  final String? linkSource;
+  final bool choicePending;
+  final String? sentNamesHash;
+  final int? sentAt;
+  const SilexgisPersonLinkData({
+    required this.profileUuid,
+    required this.userUuid,
+    this.caverId,
+    this.linkSource,
+    required this.choicePending,
+    this.sentNamesHash,
+    this.sentAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    {
+      map['user_uuid'] = Variable<Uint8List>(
+        SilexgisPersonLink.$converteruserUuid.toSql(userUuid),
+      );
+    }
+    if (!nullToAbsent || caverId != null) {
+      map['caver_id'] = Variable<String>(caverId);
+    }
+    if (!nullToAbsent || linkSource != null) {
+      map['link_source'] = Variable<String>(linkSource);
+    }
+    map['choice_pending'] = Variable<bool>(choicePending);
+    if (!nullToAbsent || sentNamesHash != null) {
+      map['sent_names_hash'] = Variable<String>(sentNamesHash);
+    }
+    if (!nullToAbsent || sentAt != null) {
+      map['sent_at'] = Variable<int>(sentAt);
+    }
+    return map;
+  }
+
+  SilexgisPersonLinkCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisPersonLinkCompanion(
+      profileUuid: Value(profileUuid),
+      userUuid: Value(userUuid),
+      caverId: caverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(caverId),
+      linkSource: linkSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkSource),
+      choicePending: Value(choicePending),
+      sentNamesHash: sentNamesHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sentNamesHash),
+      sentAt: sentAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sentAt),
+    );
+  }
+
+  factory SilexgisPersonLinkData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisPersonLinkData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      userUuid: serializer.fromJson<Uuid>(json['user_uuid']),
+      caverId: serializer.fromJson<String?>(json['caver_id']),
+      linkSource: serializer.fromJson<String?>(json['link_source']),
+      choicePending: serializer.fromJson<bool>(json['choice_pending']),
+      sentNamesHash: serializer.fromJson<String?>(json['sent_names_hash']),
+      sentAt: serializer.fromJson<int?>(json['sent_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'user_uuid': serializer.toJson<Uuid>(userUuid),
+      'caver_id': serializer.toJson<String?>(caverId),
+      'link_source': serializer.toJson<String?>(linkSource),
+      'choice_pending': serializer.toJson<bool>(choicePending),
+      'sent_names_hash': serializer.toJson<String?>(sentNamesHash),
+      'sent_at': serializer.toJson<int?>(sentAt),
+    };
+  }
+
+  SilexgisPersonLinkData copyWith({
+    String? profileUuid,
+    Uuid? userUuid,
+    Value<String?> caverId = const Value.absent(),
+    Value<String?> linkSource = const Value.absent(),
+    bool? choicePending,
+    Value<String?> sentNamesHash = const Value.absent(),
+    Value<int?> sentAt = const Value.absent(),
+  }) => SilexgisPersonLinkData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    userUuid: userUuid ?? this.userUuid,
+    caverId: caverId.present ? caverId.value : this.caverId,
+    linkSource: linkSource.present ? linkSource.value : this.linkSource,
+    choicePending: choicePending ?? this.choicePending,
+    sentNamesHash: sentNamesHash.present
+        ? sentNamesHash.value
+        : this.sentNamesHash,
+    sentAt: sentAt.present ? sentAt.value : this.sentAt,
+  );
+  SilexgisPersonLinkData copyWithCompanion(SilexgisPersonLinkCompanion data) {
+    return SilexgisPersonLinkData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      userUuid: data.userUuid.present ? data.userUuid.value : this.userUuid,
+      caverId: data.caverId.present ? data.caverId.value : this.caverId,
+      linkSource: data.linkSource.present
+          ? data.linkSource.value
+          : this.linkSource,
+      choicePending: data.choicePending.present
+          ? data.choicePending.value
+          : this.choicePending,
+      sentNamesHash: data.sentNamesHash.present
+          ? data.sentNamesHash.value
+          : this.sentNamesHash,
+      sentAt: data.sentAt.present ? data.sentAt.value : this.sentAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisPersonLinkData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('userUuid: $userUuid, ')
+          ..write('caverId: $caverId, ')
+          ..write('linkSource: $linkSource, ')
+          ..write('choicePending: $choicePending, ')
+          ..write('sentNamesHash: $sentNamesHash, ')
+          ..write('sentAt: $sentAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    userUuid,
+    caverId,
+    linkSource,
+    choicePending,
+    sentNamesHash,
+    sentAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisPersonLinkData &&
+          other.profileUuid == this.profileUuid &&
+          other.userUuid == this.userUuid &&
+          other.caverId == this.caverId &&
+          other.linkSource == this.linkSource &&
+          other.choicePending == this.choicePending &&
+          other.sentNamesHash == this.sentNamesHash &&
+          other.sentAt == this.sentAt);
+}
+
+class SilexgisPersonLinkCompanion
+    extends UpdateCompanion<SilexgisPersonLinkData> {
+  final Value<String> profileUuid;
+  final Value<Uuid> userUuid;
+  final Value<String?> caverId;
+  final Value<String?> linkSource;
+  final Value<bool> choicePending;
+  final Value<String?> sentNamesHash;
+  final Value<int?> sentAt;
+  final Value<int> rowid;
+  const SilexgisPersonLinkCompanion({
+    this.profileUuid = const Value.absent(),
+    this.userUuid = const Value.absent(),
+    this.caverId = const Value.absent(),
+    this.linkSource = const Value.absent(),
+    this.choicePending = const Value.absent(),
+    this.sentNamesHash = const Value.absent(),
+    this.sentAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisPersonLinkCompanion.insert({
+    required String profileUuid,
+    required Uuid userUuid,
+    this.caverId = const Value.absent(),
+    this.linkSource = const Value.absent(),
+    this.choicePending = const Value.absent(),
+    this.sentNamesHash = const Value.absent(),
+    this.sentAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       userUuid = Value(userUuid);
+  static Insertable<SilexgisPersonLinkData> custom({
+    Expression<String>? profileUuid,
+    Expression<Uint8List>? userUuid,
+    Expression<String>? caverId,
+    Expression<String>? linkSource,
+    Expression<bool>? choicePending,
+    Expression<String>? sentNamesHash,
+    Expression<int>? sentAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (userUuid != null) 'user_uuid': userUuid,
+      if (caverId != null) 'caver_id': caverId,
+      if (linkSource != null) 'link_source': linkSource,
+      if (choicePending != null) 'choice_pending': choicePending,
+      if (sentNamesHash != null) 'sent_names_hash': sentNamesHash,
+      if (sentAt != null) 'sent_at': sentAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisPersonLinkCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<Uuid>? userUuid,
+    Value<String?>? caverId,
+    Value<String?>? linkSource,
+    Value<bool>? choicePending,
+    Value<String?>? sentNamesHash,
+    Value<int?>? sentAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisPersonLinkCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      userUuid: userUuid ?? this.userUuid,
+      caverId: caverId ?? this.caverId,
+      linkSource: linkSource ?? this.linkSource,
+      choicePending: choicePending ?? this.choicePending,
+      sentNamesHash: sentNamesHash ?? this.sentNamesHash,
+      sentAt: sentAt ?? this.sentAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (userUuid.present) {
+      map['user_uuid'] = Variable<Uint8List>(
+        SilexgisPersonLink.$converteruserUuid.toSql(userUuid.value),
+      );
+    }
+    if (caverId.present) {
+      map['caver_id'] = Variable<String>(caverId.value);
+    }
+    if (linkSource.present) {
+      map['link_source'] = Variable<String>(linkSource.value);
+    }
+    if (choicePending.present) {
+      map['choice_pending'] = Variable<bool>(choicePending.value);
+    }
+    if (sentNamesHash.present) {
+      map['sent_names_hash'] = Variable<String>(sentNamesHash.value);
+    }
+    if (sentAt.present) {
+      map['sent_at'] = Variable<int>(sentAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisPersonLinkCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('userUuid: $userUuid, ')
+          ..write('caverId: $caverId, ')
+          ..write('linkSource: $linkSource, ')
+          ..write('choicePending: $choicePending, ')
+          ..write('sentNamesHash: $sentNamesHash, ')
+          ..write('sentAt: $sentAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16221,6 +18049,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final SilexgisStreamCursor silexgisStreamCursor = SilexgisStreamCursor(
     this,
   );
+  late final SilexgisHeldRow silexgisHeldRow = SilexgisHeldRow(this);
+  late final Index idxSilexgisHeldRowReview = Index(
+    'idx_silexgis_held_row_review',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_held_row_review ON silexgis_held_row (profile_uuid, review_id)',
+  );
+  late final SilexgisPerson silexgisPerson = SilexgisPerson(this);
+  late final SilexgisPersonLink silexgisPersonLink = SilexgisPersonLink(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16260,6 +18095,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     silexgisRowRevision,
     idxSilexgisRowRevisionTable,
     silexgisStreamCursor,
+    silexgisHeldRow,
+    idxSilexgisHeldRowReview,
+    silexgisPerson,
+    silexgisPersonLink,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -31401,6 +33240,886 @@ typedef $SilexgisStreamCursorProcessedTableManager =
       SilexgisStreamCursorData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisHeldRowCreateCompanionBuilder =
+    SilexgisHeldRowCompanion Function({
+      required String profileUuid,
+      required String section,
+      required Uuid entityUuid,
+      required String entityTable,
+      Value<String?> wireKind,
+      required String reviewId,
+      Value<bool> isDelete,
+      Value<int?> sentLocalUpdatedAt,
+      Value<int?> heldAt,
+      Value<String?> outcome,
+      Value<String?> note,
+      Value<String?> code,
+      Value<String?> decidedAt,
+      Value<String?> currentJson,
+      Value<int?> keptAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisHeldRowUpdateCompanionBuilder =
+    SilexgisHeldRowCompanion Function({
+      Value<String> profileUuid,
+      Value<String> section,
+      Value<Uuid> entityUuid,
+      Value<String> entityTable,
+      Value<String?> wireKind,
+      Value<String> reviewId,
+      Value<bool> isDelete,
+      Value<int?> sentLocalUpdatedAt,
+      Value<int?> heldAt,
+      Value<String?> outcome,
+      Value<String?> note,
+      Value<String?> code,
+      Value<String?> decidedAt,
+      Value<String?> currentJson,
+      Value<int?> keptAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisHeldRowFilterComposer
+    extends Composer<_$AppDatabase, SilexgisHeldRow> {
+  $SilexgisHeldRowFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get wireKind => $composableBuilder(
+    column: $table.wireKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reviewId => $composableBuilder(
+    column: $table.reviewId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDelete => $composableBuilder(
+    column: $table.isDelete,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sentLocalUpdatedAt => $composableBuilder(
+    column: $table.sentLocalUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get heldAt => $composableBuilder(
+    column: $table.heldAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currentJson => $composableBuilder(
+    column: $table.currentJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get keptAt => $composableBuilder(
+    column: $table.keptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisHeldRowOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisHeldRow> {
+  $SilexgisHeldRowOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get entityUuid => $composableBuilder(
+    column: $table.entityUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get wireKind => $composableBuilder(
+    column: $table.wireKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reviewId => $composableBuilder(
+    column: $table.reviewId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDelete => $composableBuilder(
+    column: $table.isDelete,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sentLocalUpdatedAt => $composableBuilder(
+    column: $table.sentLocalUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get heldAt => $composableBuilder(
+    column: $table.heldAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decidedAt => $composableBuilder(
+    column: $table.decidedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currentJson => $composableBuilder(
+    column: $table.currentJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get keptAt => $composableBuilder(
+    column: $table.keptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisHeldRowAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisHeldRow> {
+  $SilexgisHeldRowAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get section =>
+      $composableBuilder(column: $table.section, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get wireKind =>
+      $composableBuilder(column: $table.wireKind, builder: (column) => column);
+
+  GeneratedColumn<String> get reviewId =>
+      $composableBuilder(column: $table.reviewId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDelete =>
+      $composableBuilder(column: $table.isDelete, builder: (column) => column);
+
+  GeneratedColumn<int> get sentLocalUpdatedAt => $composableBuilder(
+    column: $table.sentLocalUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get heldAt =>
+      $composableBuilder(column: $table.heldAt, builder: (column) => column);
+
+  GeneratedColumn<String> get outcome =>
+      $composableBuilder(column: $table.outcome, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get decidedAt =>
+      $composableBuilder(column: $table.decidedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get currentJson => $composableBuilder(
+    column: $table.currentJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get keptAt =>
+      $composableBuilder(column: $table.keptAt, builder: (column) => column);
+}
+
+class $SilexgisHeldRowTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisHeldRow,
+          SilexgisHeldRowData,
+          $SilexgisHeldRowFilterComposer,
+          $SilexgisHeldRowOrderingComposer,
+          $SilexgisHeldRowAnnotationComposer,
+          $SilexgisHeldRowCreateCompanionBuilder,
+          $SilexgisHeldRowUpdateCompanionBuilder,
+          (
+            SilexgisHeldRowData,
+            BaseReferences<_$AppDatabase, SilexgisHeldRow, SilexgisHeldRowData>,
+          ),
+          SilexgisHeldRowData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisHeldRowTableManager(_$AppDatabase db, SilexgisHeldRow table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisHeldRowFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisHeldRowOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisHeldRowAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> section = const Value.absent(),
+                Value<Uuid> entityUuid = const Value.absent(),
+                Value<String> entityTable = const Value.absent(),
+                Value<String?> wireKind = const Value.absent(),
+                Value<String> reviewId = const Value.absent(),
+                Value<bool> isDelete = const Value.absent(),
+                Value<int?> sentLocalUpdatedAt = const Value.absent(),
+                Value<int?> heldAt = const Value.absent(),
+                Value<String?> outcome = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String?> code = const Value.absent(),
+                Value<String?> decidedAt = const Value.absent(),
+                Value<String?> currentJson = const Value.absent(),
+                Value<int?> keptAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisHeldRowCompanion(
+                profileUuid: profileUuid,
+                section: section,
+                entityUuid: entityUuid,
+                entityTable: entityTable,
+                wireKind: wireKind,
+                reviewId: reviewId,
+                isDelete: isDelete,
+                sentLocalUpdatedAt: sentLocalUpdatedAt,
+                heldAt: heldAt,
+                outcome: outcome,
+                note: note,
+                code: code,
+                decidedAt: decidedAt,
+                currentJson: currentJson,
+                keptAt: keptAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String section,
+                required Uuid entityUuid,
+                required String entityTable,
+                Value<String?> wireKind = const Value.absent(),
+                required String reviewId,
+                Value<bool> isDelete = const Value.absent(),
+                Value<int?> sentLocalUpdatedAt = const Value.absent(),
+                Value<int?> heldAt = const Value.absent(),
+                Value<String?> outcome = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String?> code = const Value.absent(),
+                Value<String?> decidedAt = const Value.absent(),
+                Value<String?> currentJson = const Value.absent(),
+                Value<int?> keptAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisHeldRowCompanion.insert(
+                profileUuid: profileUuid,
+                section: section,
+                entityUuid: entityUuid,
+                entityTable: entityTable,
+                wireKind: wireKind,
+                reviewId: reviewId,
+                isDelete: isDelete,
+                sentLocalUpdatedAt: sentLocalUpdatedAt,
+                heldAt: heldAt,
+                outcome: outcome,
+                note: note,
+                code: code,
+                decidedAt: decidedAt,
+                currentJson: currentJson,
+                keptAt: keptAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisHeldRowProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisHeldRow,
+      SilexgisHeldRowData,
+      $SilexgisHeldRowFilterComposer,
+      $SilexgisHeldRowOrderingComposer,
+      $SilexgisHeldRowAnnotationComposer,
+      $SilexgisHeldRowCreateCompanionBuilder,
+      $SilexgisHeldRowUpdateCompanionBuilder,
+      (
+        SilexgisHeldRowData,
+        BaseReferences<_$AppDatabase, SilexgisHeldRow, SilexgisHeldRowData>,
+      ),
+      SilexgisHeldRowData,
+      PrefetchHooks Function()
+    >;
+typedef $SilexgisPersonCreateCompanionBuilder =
+    SilexgisPersonCompanion Function({
+      required String profileUuid,
+      required String caverId,
+      required String fullName,
+      Value<String?> shortName,
+      Value<bool> hasAccount,
+      Value<bool> isMe,
+      Value<int> rowid,
+    });
+typedef $SilexgisPersonUpdateCompanionBuilder =
+    SilexgisPersonCompanion Function({
+      Value<String> profileUuid,
+      Value<String> caverId,
+      Value<String> fullName,
+      Value<String?> shortName,
+      Value<bool> hasAccount,
+      Value<bool> isMe,
+      Value<int> rowid,
+    });
+
+class $SilexgisPersonFilterComposer
+    extends Composer<_$AppDatabase, SilexgisPerson> {
+  $SilexgisPersonFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get caverId => $composableBuilder(
+    column: $table.caverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fullName => $composableBuilder(
+    column: $table.fullName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shortName => $composableBuilder(
+    column: $table.shortName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasAccount => $composableBuilder(
+    column: $table.hasAccount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isMe => $composableBuilder(
+    column: $table.isMe,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisPersonOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisPerson> {
+  $SilexgisPersonOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get caverId => $composableBuilder(
+    column: $table.caverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fullName => $composableBuilder(
+    column: $table.fullName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shortName => $composableBuilder(
+    column: $table.shortName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasAccount => $composableBuilder(
+    column: $table.hasAccount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isMe => $composableBuilder(
+    column: $table.isMe,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisPersonAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisPerson> {
+  $SilexgisPersonAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get caverId =>
+      $composableBuilder(column: $table.caverId, builder: (column) => column);
+
+  GeneratedColumn<String> get fullName =>
+      $composableBuilder(column: $table.fullName, builder: (column) => column);
+
+  GeneratedColumn<String> get shortName =>
+      $composableBuilder(column: $table.shortName, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasAccount => $composableBuilder(
+    column: $table.hasAccount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isMe =>
+      $composableBuilder(column: $table.isMe, builder: (column) => column);
+}
+
+class $SilexgisPersonTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisPerson,
+          SilexgisPersonData,
+          $SilexgisPersonFilterComposer,
+          $SilexgisPersonOrderingComposer,
+          $SilexgisPersonAnnotationComposer,
+          $SilexgisPersonCreateCompanionBuilder,
+          $SilexgisPersonUpdateCompanionBuilder,
+          (
+            SilexgisPersonData,
+            BaseReferences<_$AppDatabase, SilexgisPerson, SilexgisPersonData>,
+          ),
+          SilexgisPersonData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisPersonTableManager(_$AppDatabase db, SilexgisPerson table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisPersonFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisPersonOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisPersonAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> caverId = const Value.absent(),
+                Value<String> fullName = const Value.absent(),
+                Value<String?> shortName = const Value.absent(),
+                Value<bool> hasAccount = const Value.absent(),
+                Value<bool> isMe = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisPersonCompanion(
+                profileUuid: profileUuid,
+                caverId: caverId,
+                fullName: fullName,
+                shortName: shortName,
+                hasAccount: hasAccount,
+                isMe: isMe,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String caverId,
+                required String fullName,
+                Value<String?> shortName = const Value.absent(),
+                Value<bool> hasAccount = const Value.absent(),
+                Value<bool> isMe = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisPersonCompanion.insert(
+                profileUuid: profileUuid,
+                caverId: caverId,
+                fullName: fullName,
+                shortName: shortName,
+                hasAccount: hasAccount,
+                isMe: isMe,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisPersonProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisPerson,
+      SilexgisPersonData,
+      $SilexgisPersonFilterComposer,
+      $SilexgisPersonOrderingComposer,
+      $SilexgisPersonAnnotationComposer,
+      $SilexgisPersonCreateCompanionBuilder,
+      $SilexgisPersonUpdateCompanionBuilder,
+      (
+        SilexgisPersonData,
+        BaseReferences<_$AppDatabase, SilexgisPerson, SilexgisPersonData>,
+      ),
+      SilexgisPersonData,
+      PrefetchHooks Function()
+    >;
+typedef $SilexgisPersonLinkCreateCompanionBuilder =
+    SilexgisPersonLinkCompanion Function({
+      required String profileUuid,
+      required Uuid userUuid,
+      Value<String?> caverId,
+      Value<String?> linkSource,
+      Value<bool> choicePending,
+      Value<String?> sentNamesHash,
+      Value<int?> sentAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisPersonLinkUpdateCompanionBuilder =
+    SilexgisPersonLinkCompanion Function({
+      Value<String> profileUuid,
+      Value<Uuid> userUuid,
+      Value<String?> caverId,
+      Value<String?> linkSource,
+      Value<bool> choicePending,
+      Value<String?> sentNamesHash,
+      Value<int?> sentAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisPersonLinkFilterComposer
+    extends Composer<_$AppDatabase, SilexgisPersonLink> {
+  $SilexgisPersonLinkFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get userUuid =>
+      $composableBuilder(
+        column: $table.userUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get caverId => $composableBuilder(
+    column: $table.caverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkSource => $composableBuilder(
+    column: $table.linkSource,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get choicePending => $composableBuilder(
+    column: $table.choicePending,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sentNamesHash => $composableBuilder(
+    column: $table.sentNamesHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sentAt => $composableBuilder(
+    column: $table.sentAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisPersonLinkOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisPersonLink> {
+  $SilexgisPersonLinkOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get userUuid => $composableBuilder(
+    column: $table.userUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get caverId => $composableBuilder(
+    column: $table.caverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkSource => $composableBuilder(
+    column: $table.linkSource,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get choicePending => $composableBuilder(
+    column: $table.choicePending,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sentNamesHash => $composableBuilder(
+    column: $table.sentNamesHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sentAt => $composableBuilder(
+    column: $table.sentAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisPersonLinkAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisPersonLink> {
+  $SilexgisPersonLinkAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get userUuid =>
+      $composableBuilder(column: $table.userUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get caverId =>
+      $composableBuilder(column: $table.caverId, builder: (column) => column);
+
+  GeneratedColumn<String> get linkSource => $composableBuilder(
+    column: $table.linkSource,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get choicePending => $composableBuilder(
+    column: $table.choicePending,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sentNamesHash => $composableBuilder(
+    column: $table.sentNamesHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => column);
+}
+
+class $SilexgisPersonLinkTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisPersonLink,
+          SilexgisPersonLinkData,
+          $SilexgisPersonLinkFilterComposer,
+          $SilexgisPersonLinkOrderingComposer,
+          $SilexgisPersonLinkAnnotationComposer,
+          $SilexgisPersonLinkCreateCompanionBuilder,
+          $SilexgisPersonLinkUpdateCompanionBuilder,
+          (
+            SilexgisPersonLinkData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisPersonLink,
+              SilexgisPersonLinkData
+            >,
+          ),
+          SilexgisPersonLinkData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisPersonLinkTableManager(_$AppDatabase db, SilexgisPersonLink table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisPersonLinkFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisPersonLinkOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisPersonLinkAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<Uuid> userUuid = const Value.absent(),
+                Value<String?> caverId = const Value.absent(),
+                Value<String?> linkSource = const Value.absent(),
+                Value<bool> choicePending = const Value.absent(),
+                Value<String?> sentNamesHash = const Value.absent(),
+                Value<int?> sentAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisPersonLinkCompanion(
+                profileUuid: profileUuid,
+                userUuid: userUuid,
+                caverId: caverId,
+                linkSource: linkSource,
+                choicePending: choicePending,
+                sentNamesHash: sentNamesHash,
+                sentAt: sentAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required Uuid userUuid,
+                Value<String?> caverId = const Value.absent(),
+                Value<String?> linkSource = const Value.absent(),
+                Value<bool> choicePending = const Value.absent(),
+                Value<String?> sentNamesHash = const Value.absent(),
+                Value<int?> sentAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisPersonLinkCompanion.insert(
+                profileUuid: profileUuid,
+                userUuid: userUuid,
+                caverId: caverId,
+                linkSource: linkSource,
+                choicePending: choicePending,
+                sentNamesHash: sentNamesHash,
+                sentAt: sentAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisPersonLinkProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisPersonLink,
+      SilexgisPersonLinkData,
+      $SilexgisPersonLinkFilterComposer,
+      $SilexgisPersonLinkOrderingComposer,
+      $SilexgisPersonLinkAnnotationComposer,
+      $SilexgisPersonLinkCreateCompanionBuilder,
+      $SilexgisPersonLinkUpdateCompanionBuilder,
+      (
+        SilexgisPersonLinkData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisPersonLink,
+          SilexgisPersonLinkData
+        >,
+      ),
+      SilexgisPersonLinkData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -31469,4 +34188,10 @@ class $AppDatabaseManager {
       $SilexgisRowRevisionTableManager(_db, _db.silexgisRowRevision);
   $SilexgisStreamCursorTableManager get silexgisStreamCursor =>
       $SilexgisStreamCursorTableManager(_db, _db.silexgisStreamCursor);
+  $SilexgisHeldRowTableManager get silexgisHeldRow =>
+      $SilexgisHeldRowTableManager(_db, _db.silexgisHeldRow);
+  $SilexgisPersonTableManager get silexgisPerson =>
+      $SilexgisPersonTableManager(_db, _db.silexgisPerson);
+  $SilexgisPersonLinkTableManager get silexgisPersonLink =>
+      $SilexgisPersonLinkTableManager(_db, _db.silexgisPersonLink);
 }

@@ -517,3 +517,80 @@ CREATE TABLE IF NOT EXISTS silexgis_stream_cursor (
     last_synced_at  INTEGER,
     PRIMARY KEY (profile_uuid, set_id, stream)
 );
+
+-- Table: silexgis_held_row
+-- LOCAL ONLY, like the other `silexgis_*` tables: a review is a fact about one
+-- account's uploads to one installation, and nothing a second device could act
+-- on.
+--
+-- One entry per local row an installation answered `held` — kept as a proposal
+-- for a reviewer rather than written — keyed by the upload section it went in,
+-- so sections other than feature rows can be held the same way.
+--
+-- `sent_local_updated_at` is the row's own `updated_at` as it was sent. While
+-- the row still carries that stamp it is not sent again: the server would
+-- answer the same review, or, once a reviewer has decided, replace the decision
+-- with a new proposal. An edit moves the stamp, and the edited row is sent.
+--
+-- `outcome` is null while the proposal waits. `rejected` and `failed` are kept,
+-- with the reviewer's `note`, the `code` of a failure and the server's own row
+-- (`current_json`, when it may be handed over), until the caver chooses what
+-- to do; `kept_at` records that they chose to keep their version unsent. An
+-- accepted proposal is not kept: its revision becomes the row's base revision.
+CREATE TABLE IF NOT EXISTS silexgis_held_row (
+    profile_uuid          TEXT(36) NOT NULL,
+    section               TEXT(32) NOT NULL,   -- the upload array the row went in
+    entity_uuid           BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    entity_table          TEXT(80) NOT NULL,   -- which local table holds the row
+    wire_kind             TEXT(16),            -- the `kind` it travelled as
+    review_id             TEXT(36) NOT NULL,   -- the proposal the upload answered with
+    is_delete             BOOLEAN NOT NULL DEFAULT 0,  -- the proposal is a removal
+    sent_local_updated_at INTEGER,             -- the row's updated_at as sent
+    held_at               INTEGER,             -- when this device was told
+    outcome               TEXT(16),            -- null while waiting
+    note                  TEXT,                -- what the reviewer wrote
+    code                  TEXT(80),            -- why a `failed` row could not be written
+    decided_at            TEXT,                -- the server's stamp, verbatim
+    current_json          TEXT,                -- the server's row, as the stream shapes it
+    kept_at               INTEGER,             -- the caver chose to keep their version
+    PRIMARY KEY (profile_uuid, section, entity_uuid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_held_row_review
+    ON silexgis_held_row(profile_uuid, review_id);
+
+-- Table: silexgis_person
+-- LOCAL ONLY. The installation's people directory as this account was last
+-- shown it: the cavers a phone user may be said to be. Names only — the
+-- directory carries no contact details — and replaced whole on every read.
+-- Emptied when the installation stops offering the directory, which is also
+-- what hides the choice of caver.
+CREATE TABLE IF NOT EXISTS silexgis_person (
+    profile_uuid  TEXT(36) NOT NULL,
+    caver_id      TEXT(36) NOT NULL,
+    full_name     TEXT NOT NULL,
+    short_name    TEXT,
+    has_account   BOOLEAN NOT NULL DEFAULT 0,
+    is_me         BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (profile_uuid, caver_id)
+);
+
+-- Table: silexgis_person_link
+-- LOCAL ONLY. Which caver each phone user is on one installation, and what was
+-- last said about the user there.
+--
+-- `caver_id` is the link as it stands: the phone's own choice until a read of
+-- the directory says otherwise, because a link made in the browser wins.
+-- `link_source` says which (`phone` or `server`). `choice_pending` marks a
+-- choice made here and not yet sent. `sent_names_hash` digests the names last
+-- sent, so a renamed user is sent again and an unchanged one is not.
+CREATE TABLE IF NOT EXISTS silexgis_person_link (
+    profile_uuid     TEXT(36) NOT NULL,
+    user_uuid        BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    caver_id         TEXT(36),
+    link_source      TEXT(8),
+    choice_pending   BOOLEAN NOT NULL DEFAULT 0,
+    sent_names_hash  TEXT(64),
+    sent_at          INTEGER,
+    PRIMARY KEY (profile_uuid, user_uuid)
+);

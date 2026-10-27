@@ -35,6 +35,9 @@ void main() {
       expect(exported, isNot(contains('silexgis_sync_state')));
       expect(exported, isNot(contains('silexgis_row_revision')));
       expect(exported, isNot(contains('silexgis_stream_cursor')));
+      expect(exported, isNot(contains('silexgis_held_row')));
+      expect(exported, isNot(contains('silexgis_person')));
+      expect(exported, isNot(contains('silexgis_person_link')));
     });
 
     test('writing to them logs no change', () async {
@@ -308,6 +311,34 @@ void main() {
       cursor: 'd1',
       setRevision: 1,
     );
+    await db
+        .into(db.silexgisHeldRow)
+        .insert(
+          SilexgisHeldRowCompanion.insert(
+            profileUuid: profile,
+            section: 'rows',
+            entityUuid: id,
+            entityTable: 'caves',
+            reviewId: 'review-1',
+          ),
+        );
+    await db
+        .into(db.silexgisPerson)
+        .insert(
+          SilexgisPersonCompanion.insert(
+            profileUuid: profile,
+            caverId: 'caver-1',
+            fullName: 'Invented Caver',
+          ),
+        );
+    await db
+        .into(db.silexgisPersonLink)
+        .insert(
+          SilexgisPersonLinkCompanion.insert(
+            profileUuid: profile,
+            userUuid: Uuid.v7(),
+          ),
+        );
 
     await repo.forgetProfile(profile);
 
@@ -321,6 +352,9 @@ void main() {
       )).cursor,
       isNull,
     );
+    expect(await db.select(db.silexgisHeldRow).get(), isEmpty);
+    expect(await db.select(db.silexgisPerson).get(), isEmpty);
+    expect(await db.select(db.silexgisPersonLink).get(), isEmpty);
     // And leaves the other installation's conversation alone.
     expect((await repo.readSetState(other, setId)).cursor, 'c2');
   });

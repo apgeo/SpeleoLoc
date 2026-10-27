@@ -904,6 +904,30 @@ class V24ToV25Migration extends SchemaMigration {
   }
 }
 
+/// v25 → v26.
+///
+/// Adds the local-only SilexGIS tables for rows an installation holds for a
+/// reviewer, and for its people directory with this device's choice of caver
+/// per phone user. Local only, like the other SilexGIS state tables; nothing is
+/// moved into them.
+class V25ToV26Migration extends SchemaMigration {
+  const V25ToV26Migration();
+
+  @override
+  int get toVersion => 26;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisHeldRow);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_held_row_review '
+      'ON silexgis_held_row(profile_uuid, review_id)',
+    );
+    await migrator.createTable(db.silexgisPerson);
+    await migrator.createTable(db.silexgisPersonLink);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -952,6 +976,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V22ToV23Migration(),
   V23ToV24Migration(),
   V24ToV25Migration(),
+  V25ToV26Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
