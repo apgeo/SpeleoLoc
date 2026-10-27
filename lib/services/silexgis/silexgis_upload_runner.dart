@@ -10,6 +10,7 @@ import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// One row the server would not take, kept for the caver to look at.
@@ -90,17 +91,23 @@ class SilexgisUploadRunner {
     required SilexgisLocalStateRepository localState,
     required SilexgisHeldRowRepository heldRows,
     required String profileUuid,
+    List<SilexgisUploadPart> parts = const <SilexgisUploadPart>[],
   }) : _api = api,
        _builder = builder,
        _localState = localState,
        _heldRows = heldRows,
-       _profileUuid = profileUuid;
+       _profileUuid = profileUuid,
+       _parts = parts;
 
   final SilexgisSyncApi _api;
   final SilexgisUploadBuilder _builder;
   final SilexgisLocalStateRepository _localState;
   final SilexgisHeldRowRepository _heldRows;
   final String _profileUuid;
+
+  /// The sections beside the feature rows, each built and answered by its
+  /// own part. Only the parts the installation serves this run are passed.
+  final List<SilexgisUploadPart> _parts;
   final _log = AppLogger.of('SilexgisUploadRunner');
 
   Future<SilexgisUploadReport> run(
@@ -108,45 +115,90 @@ class SilexgisUploadRunner {
     required SilexgisCapabilities capabilities,
   }) async {
     final pending = await _builder.build();
-    if (pending.isEmpty) return const SilexgisUploadReport.nothingToSend();
+    final items = <SyncUploadSection, List<Object>>{
+      SyncUploadSection.rows: pending,
+      for (final part in _parts) part.section: await part.build(),
+    };
+    if (items.values.every((i) => i.isEmpty)) {
+      return const SilexgisUploadReport.nothingToSend();
+    }
 
+    var batches = 0;
     var written = 0;
     var refused = 0;
     var replayed = 0;
     var held = 0;
     final refusals = <SilexgisRefusal>[];
     final duplicates = <SyncDuplicateReport>[];
-    // A batch above the installation's ceiling is refused whole, before a
-    // single row is looked at, so the split happens here rather than being
-    // discovered from a refusal.
-    final chunks = chunkUploadSections<PendingUploadRow>(
-      <SyncUploadSection, List<PendingUploadRow>>{
-        SyncUploadSection.rows: pending,
-      },
-      capabilities.uploadRowsMax,
-    ).map((c) => c[SyncUploadSection.rows]!).toList(growable: false);
 
-    for (final chunk in chunks) {
-      // Each part is its own attempt and gets its own identifier: a batch
-      // identifier stands for one attempt, and reusing one for different rows
-      // would have the server answer with the wrong stored result.
-      final batch = SyncUploadBatch(
-        batchId: Uuid.v7().toString(),
-        clientFeatures: SilexgisContract.clientFeatures,
-        rows: chunk.map((p) => p.row).toList(growable: false),
+    Future<Map<SyncUploadSection, List<SyncUploadItem>>> send(
+      Map<SyncUploadSection, List<Object>> items, {
+      required bool resent,
+    }) async {
+      final again = <SyncUploadSection, List<SyncUploadItem>>{};
+      // A batch above the installation's ceiling is refused whole, before a
+      // single item is looked at, so the split happens here rather than being
+      // discovered from a refusal. Sections are taken in the server's apply
+      // order, so an item never lands in an earlier batch than one it names.
+      final chunks = chunkUploadSections<Object>(
+        items,
+        capabilities.uploadRowsMax,
       );
-      final result = await _api.upload(setId, batch);
-      if (result.replayed) replayed++;
+      for (final chunk in chunks) {
+        final rows =
+            chunk[SyncUploadSection.rows]?.cast<PendingUploadRow>() ??
+            const <PendingUploadRow>[];
+        // Each part is its own attempt and gets its own identifier: a batch
+        // identifier stands for one attempt, and reusing one for different
+        // items would have the server answer with the wrong stored result.
+        final batch = SyncUploadBatch(
+          batchId: Uuid.v7().toString(),
+          clientFeatures: SilexgisContract.clientFeatures,
+          rows: rows.map((p) => p.row).toList(growable: false),
+          sections: <SyncUploadSection, List<SyncUploadItem>>{
+            for (final part in _parts)
+              if (chunk[part.section] case final sent?)
+                part.section: sent.cast<SyncUploadItem>(),
+          },
+        );
+        final result = await _api.upload(setId, batch);
+        batches++;
+        if (result.replayed) replayed++;
 
-      written += result.written;
-      refused += result.refused;
-      duplicates.addAll(result.duplicates);
-      held += result.rows.where((r) => r.status == SyncRowStatus.held).length;
-      refusals.addAll(await _applyAnswers(chunk, result));
+        written += result.written;
+        refused += result.refused;
+        duplicates.addAll(result.duplicates);
+        if (rows.isNotEmpty) {
+          held += result.rows
+              .where((r) => r.status == SyncRowStatus.held)
+              .length;
+          refusals.addAll(await _applyAnswers(rows, result));
+        }
+        for (final part in _parts) {
+          final sent = batch.sections[part.section];
+          if (sent == null) continue;
+          final answers = await part.apply(
+            sent,
+            result.answersFor(part.section) ?? const <SyncRowResult>[],
+            resent: resent,
+          );
+          held += answers.held;
+          refusals.addAll(answers.refusals);
+          if (answers.resend.isNotEmpty) {
+            (again[part.section] ??= <SyncUploadItem>[]).addAll(answers.resend);
+          }
+        }
+      }
+      return again;
     }
 
+    final again = await send(items, resent: false);
+    // An item answered with what to change goes once more, changed, in this
+    // run. Once: a second refusal is reported rather than looped on.
+    if (again.isNotEmpty) await send(again, resent: true);
+
     return SilexgisUploadReport(
-      batches: chunks.length,
+      batches: batches,
       written: written,
       refused: refused,
       refusals: refusals,
