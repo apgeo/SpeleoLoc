@@ -928,6 +928,33 @@ class V25ToV26Migration extends SchemaMigration {
   }
 }
 
+/// v26 → v27.
+///
+/// Adds the local-only SilexGIS photo and document catalogue, and the register
+/// of which documentation files are copies the server handed down. Local only,
+/// like the other SilexGIS state tables; nothing is moved into them.
+class V26ToV27Migration extends SchemaMigration {
+  const V26ToV27Migration();
+
+  @override
+  int get toVersion => 27;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisDocument);
+    await migrator.createTable(db.silexgisDocumentLink);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_document_link_target '
+      'ON silexgis_document_link(profile_uuid, target_id)',
+    );
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_document_link_document '
+      'ON silexgis_document_link(profile_uuid, document_id)',
+    );
+    await migrator.createTable(db.silexgisFileCopy);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -977,6 +1004,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V23ToV24Migration(),
   V24ToV25Migration(),
   V25ToV26Migration(),
+  V26ToV27Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

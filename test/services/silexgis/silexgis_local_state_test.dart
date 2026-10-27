@@ -38,6 +38,9 @@ void main() {
       expect(exported, isNot(contains('silexgis_held_row')));
       expect(exported, isNot(contains('silexgis_person')));
       expect(exported, isNot(contains('silexgis_person_link')));
+      expect(exported, isNot(contains('silexgis_document')));
+      expect(exported, isNot(contains('silexgis_document_link')));
+      expect(exported, isNot(contains('silexgis_file_copy')));
     });
 
     test('writing to them logs no change', () async {
@@ -340,6 +343,30 @@ void main() {
           ),
         );
 
+    final documentId = Uuid.v7();
+    await db
+        .into(db.silexgisDocument)
+        .insert(
+          SilexgisDocumentCompanion.insert(
+            profileUuid: profile,
+            documentId: documentId,
+            title: 'invented.jpg',
+            fileKind: 'photo',
+            reach: 'original',
+          ),
+        );
+    await db
+        .into(db.silexgisDocumentLink)
+        .insert(
+          SilexgisDocumentLinkCompanion.insert(
+            profileUuid: profile,
+            linkId: 'link-1',
+            documentId: documentId,
+            targetKind: 'feature',
+            targetId: id,
+          ),
+        );
+
     await repo.forgetProfile(profile);
 
     expect((await repo.readSetState(profile, setId)).cursor, isNull);
@@ -355,6 +382,8 @@ void main() {
     expect(await db.select(db.silexgisHeldRow).get(), isEmpty);
     expect(await db.select(db.silexgisPerson).get(), isEmpty);
     expect(await db.select(db.silexgisPersonLink).get(), isEmpty);
+    expect(await db.select(db.silexgisDocument).get(), isEmpty);
+    expect(await db.select(db.silexgisDocumentLink).get(), isEmpty);
     // And leaves the other installation's conversation alone.
     expect((await repo.readSetState(other, setId)).cursor, 'c2');
   });

@@ -594,3 +594,78 @@ CREATE TABLE IF NOT EXISTS silexgis_person_link (
     sent_at          INTEGER,
     PRIMARY KEY (profile_uuid, user_uuid)
 );
+
+-- Table: silexgis_document
+-- LOCAL ONLY. The documents of an installation's photo and document catalogue,
+-- as this account was last shown them: metadata only. Nothing in it means a
+-- file is on this device, and nothing is fetched because a row is here.
+--
+-- `title` is the server's full title. The local `documentation_files.title`
+-- holds 50 characters, so a longer one is cut there; comparing the two is how
+-- an upload tells a title the caver changed from one only the cut changed.
+-- `renditions` lists the picture sizes the server draws, comma-separated,
+-- largest first. `size_bytes` and `sha256` describe the stored file and are
+-- absent where fetching it would hand over other bytes (`reach` locationFree).
+-- `created_by_device_user_id` is the phone user who sent it, where the server
+-- says.
+CREATE TABLE IF NOT EXISTS silexgis_document (
+    profile_uuid              TEXT(36) NOT NULL,
+    document_id               BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    version_id                TEXT(36),
+    title                     TEXT NOT NULL,
+    description               TEXT,
+    file_kind                 TEXT(16) NOT NULL,
+    mime_type                 TEXT(127),
+    size_bytes                INTEGER,
+    sha256                    TEXT(64),
+    reach                     TEXT(16) NOT NULL,
+    renditions                TEXT,
+    captured_at               TEXT,
+    updated_at                TEXT,
+    created_by_device_user_id TEXT(36),
+    PRIMARY KEY (profile_uuid, document_id)
+);
+
+-- Table: silexgis_document_link
+-- LOCAL ONLY. One catalogue row: a document hung on one feature, with the role,
+-- caption and order it has there. A tombstone on the documents stream removes
+-- the row; the document's own row goes with its last link.
+CREATE TABLE IF NOT EXISTS silexgis_document_link (
+    profile_uuid    TEXT(36) NOT NULL,
+    link_id         TEXT(36) NOT NULL,
+    document_id     BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    target_kind     TEXT(16) NOT NULL,
+    target_id       BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    role            TEXT(24),
+    caption         TEXT,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    is_primary      BOOLEAN NOT NULL DEFAULT 0,
+    in_default_set  BOOLEAN NOT NULL DEFAULT 0,
+    revision        TEXT,
+    PRIMARY KEY (profile_uuid, link_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_document_link_target
+    ON silexgis_document_link(profile_uuid, target_id);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_document_link_document
+    ON silexgis_document_link(profile_uuid, document_id);
+
+-- Table: silexgis_file_copy
+-- LOCAL ONLY. What a documentation file on this device is a copy of, for every
+-- file that is not simply the caver's own: `held_as` is `own`, `original` (the
+-- server's stored file, byte for byte), `locationFree` (the whole picture with
+-- its location data removed) or `rendition` (a picture the server drew,
+-- `rendition` pixels across); `origin` is `device`, `archive` or `server`.
+--
+-- A file with no row here is the device's own. A server copy never replaces a
+-- file the device holds, is never sent back up as its original, and a
+-- `locationFree` copy or a rendition stays out of device-to-device archives.
+CREATE TABLE IF NOT EXISTS silexgis_file_copy (
+    document_uuid  BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    version_id     TEXT(36),
+    held_as        TEXT(16) NOT NULL,
+    rendition      INTEGER,
+    origin         TEXT(8) NOT NULL,
+    recorded_at    INTEGER
+);

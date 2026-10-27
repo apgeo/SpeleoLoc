@@ -170,7 +170,10 @@ class SilexgisLocalStateRepository {
           t.stream.equals(stream.routeName);
 
   /// Forgets one installation entirely — every position, every revision, every
-  /// row held for review, and its people directory with this device's links.
+  /// row held for review, its people directory with this device's links, and
+  /// its photo and document catalogue. Files fetched from it stay: they are
+  /// the caver's now, and the register of what each one is a copy of is not
+  /// about any one installation.
   /// Signing a profile out, or deleting it, leaves no trace to be sent back to
   /// a server that no longer knows this device.
   Future<void> forgetProfile(String profileUuid) async {
@@ -192,6 +195,12 @@ class SilexgisLocalStateRepository {
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
         _db.silexgisPersonLink,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
+        _db.silexgisDocumentLink,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
+        _db.silexgisDocument,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
     });
   }

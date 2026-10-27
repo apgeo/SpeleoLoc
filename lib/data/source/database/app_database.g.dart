@@ -17975,6 +17975,1963 @@ class SilexgisPersonLinkCompanion
   }
 }
 
+class SilexgisDocument extends Table
+    with TableInfo<SilexgisDocument, SilexgisDocumentData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisDocument(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> documentId =
+      GeneratedColumn<Uint8List>(
+        'document_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisDocument.$converterdocumentId);
+  static const VerificationMeta _versionIdMeta = const VerificationMeta(
+    'versionId',
+  );
+  late final GeneratedColumn<String> versionId = GeneratedColumn<String>(
+    'version_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _fileKindMeta = const VerificationMeta(
+    'fileKind',
+  );
+  late final GeneratedColumn<String> fileKind = GeneratedColumn<String>(
+    'file_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _reachMeta = const VerificationMeta('reach');
+  late final GeneratedColumn<String> reach = GeneratedColumn<String>(
+    'reach',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _renditionsMeta = const VerificationMeta(
+    'renditions',
+  );
+  late final GeneratedColumn<String> renditions = GeneratedColumn<String>(
+    'renditions',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _capturedAtMeta = const VerificationMeta(
+    'capturedAt',
+  );
+  late final GeneratedColumn<String> capturedAt = GeneratedColumn<String>(
+    'captured_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _createdByDeviceUserIdMeta =
+      const VerificationMeta('createdByDeviceUserId');
+  late final GeneratedColumn<String> createdByDeviceUserId =
+      GeneratedColumn<String>(
+        'created_by_device_user_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    documentId,
+    versionId,
+    title,
+    description,
+    fileKind,
+    mimeType,
+    sizeBytes,
+    sha256,
+    reach,
+    renditions,
+    capturedAt,
+    updatedAt,
+    createdByDeviceUserId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_document';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisDocumentData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('version_id')) {
+      context.handle(
+        _versionIdMeta,
+        versionId.isAcceptableOrUnknown(data['version_id']!, _versionIdMeta),
+      );
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('file_kind')) {
+      context.handle(
+        _fileKindMeta,
+        fileKind.isAcceptableOrUnknown(data['file_kind']!, _fileKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileKindMeta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    }
+    if (data.containsKey('reach')) {
+      context.handle(
+        _reachMeta,
+        reach.isAcceptableOrUnknown(data['reach']!, _reachMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reachMeta);
+    }
+    if (data.containsKey('renditions')) {
+      context.handle(
+        _renditionsMeta,
+        renditions.isAcceptableOrUnknown(data['renditions']!, _renditionsMeta),
+      );
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+        _capturedAtMeta,
+        capturedAt.isAcceptableOrUnknown(data['captured_at']!, _capturedAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('created_by_device_user_id')) {
+      context.handle(
+        _createdByDeviceUserIdMeta,
+        createdByDeviceUserId.isAcceptableOrUnknown(
+          data['created_by_device_user_id']!,
+          _createdByDeviceUserIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, documentId};
+  @override
+  SilexgisDocumentData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisDocumentData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      documentId: SilexgisDocument.$converterdocumentId.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}document_id'],
+        )!,
+      ),
+      versionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}version_id'],
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      fileKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_kind'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      ),
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      ),
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      ),
+      reach: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reach'],
+      )!,
+      renditions: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}renditions'],
+      ),
+      capturedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}captured_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      ),
+      createdByDeviceUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_by_device_user_id'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisDocument createAlias(String alias) {
+    return SilexgisDocument(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterdocumentId =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, document_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisDocumentData extends DataClass
+    implements Insertable<SilexgisDocumentData> {
+  final String profileUuid;
+  final Uuid documentId;
+  final String? versionId;
+  final String title;
+  final String? description;
+  final String fileKind;
+  final String? mimeType;
+  final int? sizeBytes;
+  final String? sha256;
+  final String reach;
+  final String? renditions;
+  final String? capturedAt;
+  final String? updatedAt;
+  final String? createdByDeviceUserId;
+  const SilexgisDocumentData({
+    required this.profileUuid,
+    required this.documentId,
+    this.versionId,
+    required this.title,
+    this.description,
+    required this.fileKind,
+    this.mimeType,
+    this.sizeBytes,
+    this.sha256,
+    required this.reach,
+    this.renditions,
+    this.capturedAt,
+    this.updatedAt,
+    this.createdByDeviceUserId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisDocument.$converterdocumentId.toSql(documentId),
+      );
+    }
+    if (!nullToAbsent || versionId != null) {
+      map['version_id'] = Variable<String>(versionId);
+    }
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['file_kind'] = Variable<String>(fileKind);
+    if (!nullToAbsent || mimeType != null) {
+      map['mime_type'] = Variable<String>(mimeType);
+    }
+    if (!nullToAbsent || sizeBytes != null) {
+      map['size_bytes'] = Variable<int>(sizeBytes);
+    }
+    if (!nullToAbsent || sha256 != null) {
+      map['sha256'] = Variable<String>(sha256);
+    }
+    map['reach'] = Variable<String>(reach);
+    if (!nullToAbsent || renditions != null) {
+      map['renditions'] = Variable<String>(renditions);
+    }
+    if (!nullToAbsent || capturedAt != null) {
+      map['captured_at'] = Variable<String>(capturedAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<String>(updatedAt);
+    }
+    if (!nullToAbsent || createdByDeviceUserId != null) {
+      map['created_by_device_user_id'] = Variable<String>(
+        createdByDeviceUserId,
+      );
+    }
+    return map;
+  }
+
+  SilexgisDocumentCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisDocumentCompanion(
+      profileUuid: Value(profileUuid),
+      documentId: Value(documentId),
+      versionId: versionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(versionId),
+      title: Value(title),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      fileKind: Value(fileKind),
+      mimeType: mimeType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mimeType),
+      sizeBytes: sizeBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sizeBytes),
+      sha256: sha256 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sha256),
+      reach: Value(reach),
+      renditions: renditions == null && nullToAbsent
+          ? const Value.absent()
+          : Value(renditions),
+      capturedAt: capturedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(capturedAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      createdByDeviceUserId: createdByDeviceUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdByDeviceUserId),
+    );
+  }
+
+  factory SilexgisDocumentData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisDocumentData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      documentId: serializer.fromJson<Uuid>(json['document_id']),
+      versionId: serializer.fromJson<String?>(json['version_id']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String?>(json['description']),
+      fileKind: serializer.fromJson<String>(json['file_kind']),
+      mimeType: serializer.fromJson<String?>(json['mime_type']),
+      sizeBytes: serializer.fromJson<int?>(json['size_bytes']),
+      sha256: serializer.fromJson<String?>(json['sha256']),
+      reach: serializer.fromJson<String>(json['reach']),
+      renditions: serializer.fromJson<String?>(json['renditions']),
+      capturedAt: serializer.fromJson<String?>(json['captured_at']),
+      updatedAt: serializer.fromJson<String?>(json['updated_at']),
+      createdByDeviceUserId: serializer.fromJson<String?>(
+        json['created_by_device_user_id'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'document_id': serializer.toJson<Uuid>(documentId),
+      'version_id': serializer.toJson<String?>(versionId),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String?>(description),
+      'file_kind': serializer.toJson<String>(fileKind),
+      'mime_type': serializer.toJson<String?>(mimeType),
+      'size_bytes': serializer.toJson<int?>(sizeBytes),
+      'sha256': serializer.toJson<String?>(sha256),
+      'reach': serializer.toJson<String>(reach),
+      'renditions': serializer.toJson<String?>(renditions),
+      'captured_at': serializer.toJson<String?>(capturedAt),
+      'updated_at': serializer.toJson<String?>(updatedAt),
+      'created_by_device_user_id': serializer.toJson<String?>(
+        createdByDeviceUserId,
+      ),
+    };
+  }
+
+  SilexgisDocumentData copyWith({
+    String? profileUuid,
+    Uuid? documentId,
+    Value<String?> versionId = const Value.absent(),
+    String? title,
+    Value<String?> description = const Value.absent(),
+    String? fileKind,
+    Value<String?> mimeType = const Value.absent(),
+    Value<int?> sizeBytes = const Value.absent(),
+    Value<String?> sha256 = const Value.absent(),
+    String? reach,
+    Value<String?> renditions = const Value.absent(),
+    Value<String?> capturedAt = const Value.absent(),
+    Value<String?> updatedAt = const Value.absent(),
+    Value<String?> createdByDeviceUserId = const Value.absent(),
+  }) => SilexgisDocumentData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    documentId: documentId ?? this.documentId,
+    versionId: versionId.present ? versionId.value : this.versionId,
+    title: title ?? this.title,
+    description: description.present ? description.value : this.description,
+    fileKind: fileKind ?? this.fileKind,
+    mimeType: mimeType.present ? mimeType.value : this.mimeType,
+    sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
+    sha256: sha256.present ? sha256.value : this.sha256,
+    reach: reach ?? this.reach,
+    renditions: renditions.present ? renditions.value : this.renditions,
+    capturedAt: capturedAt.present ? capturedAt.value : this.capturedAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    createdByDeviceUserId: createdByDeviceUserId.present
+        ? createdByDeviceUserId.value
+        : this.createdByDeviceUserId,
+  );
+  SilexgisDocumentData copyWithCompanion(SilexgisDocumentCompanion data) {
+    return SilexgisDocumentData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      versionId: data.versionId.present ? data.versionId.value : this.versionId,
+      title: data.title.present ? data.title.value : this.title,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      fileKind: data.fileKind.present ? data.fileKind.value : this.fileKind,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      reach: data.reach.present ? data.reach.value : this.reach,
+      renditions: data.renditions.present
+          ? data.renditions.value
+          : this.renditions,
+      capturedAt: data.capturedAt.present
+          ? data.capturedAt.value
+          : this.capturedAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      createdByDeviceUserId: data.createdByDeviceUserId.present
+          ? data.createdByDeviceUserId.value
+          : this.createdByDeviceUserId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisDocumentData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('documentId: $documentId, ')
+          ..write('versionId: $versionId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('fileKind: $fileKind, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('reach: $reach, ')
+          ..write('renditions: $renditions, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('createdByDeviceUserId: $createdByDeviceUserId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    documentId,
+    versionId,
+    title,
+    description,
+    fileKind,
+    mimeType,
+    sizeBytes,
+    sha256,
+    reach,
+    renditions,
+    capturedAt,
+    updatedAt,
+    createdByDeviceUserId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisDocumentData &&
+          other.profileUuid == this.profileUuid &&
+          other.documentId == this.documentId &&
+          other.versionId == this.versionId &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.fileKind == this.fileKind &&
+          other.mimeType == this.mimeType &&
+          other.sizeBytes == this.sizeBytes &&
+          other.sha256 == this.sha256 &&
+          other.reach == this.reach &&
+          other.renditions == this.renditions &&
+          other.capturedAt == this.capturedAt &&
+          other.updatedAt == this.updatedAt &&
+          other.createdByDeviceUserId == this.createdByDeviceUserId);
+}
+
+class SilexgisDocumentCompanion extends UpdateCompanion<SilexgisDocumentData> {
+  final Value<String> profileUuid;
+  final Value<Uuid> documentId;
+  final Value<String?> versionId;
+  final Value<String> title;
+  final Value<String?> description;
+  final Value<String> fileKind;
+  final Value<String?> mimeType;
+  final Value<int?> sizeBytes;
+  final Value<String?> sha256;
+  final Value<String> reach;
+  final Value<String?> renditions;
+  final Value<String?> capturedAt;
+  final Value<String?> updatedAt;
+  final Value<String?> createdByDeviceUserId;
+  final Value<int> rowid;
+  const SilexgisDocumentCompanion({
+    this.profileUuid = const Value.absent(),
+    this.documentId = const Value.absent(),
+    this.versionId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.fileKind = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.reach = const Value.absent(),
+    this.renditions = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.createdByDeviceUserId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisDocumentCompanion.insert({
+    required String profileUuid,
+    required Uuid documentId,
+    this.versionId = const Value.absent(),
+    required String title,
+    this.description = const Value.absent(),
+    required String fileKind,
+    this.mimeType = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    required String reach,
+    this.renditions = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.createdByDeviceUserId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       documentId = Value(documentId),
+       title = Value(title),
+       fileKind = Value(fileKind),
+       reach = Value(reach);
+  static Insertable<SilexgisDocumentData> custom({
+    Expression<String>? profileUuid,
+    Expression<Uint8List>? documentId,
+    Expression<String>? versionId,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<String>? fileKind,
+    Expression<String>? mimeType,
+    Expression<int>? sizeBytes,
+    Expression<String>? sha256,
+    Expression<String>? reach,
+    Expression<String>? renditions,
+    Expression<String>? capturedAt,
+    Expression<String>? updatedAt,
+    Expression<String>? createdByDeviceUserId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (documentId != null) 'document_id': documentId,
+      if (versionId != null) 'version_id': versionId,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (fileKind != null) 'file_kind': fileKind,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (sha256 != null) 'sha256': sha256,
+      if (reach != null) 'reach': reach,
+      if (renditions != null) 'renditions': renditions,
+      if (capturedAt != null) 'captured_at': capturedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (createdByDeviceUserId != null)
+        'created_by_device_user_id': createdByDeviceUserId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisDocumentCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<Uuid>? documentId,
+    Value<String?>? versionId,
+    Value<String>? title,
+    Value<String?>? description,
+    Value<String>? fileKind,
+    Value<String?>? mimeType,
+    Value<int?>? sizeBytes,
+    Value<String?>? sha256,
+    Value<String>? reach,
+    Value<String?>? renditions,
+    Value<String?>? capturedAt,
+    Value<String?>? updatedAt,
+    Value<String?>? createdByDeviceUserId,
+    Value<int>? rowid,
+  }) {
+    return SilexgisDocumentCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      documentId: documentId ?? this.documentId,
+      versionId: versionId ?? this.versionId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      fileKind: fileKind ?? this.fileKind,
+      mimeType: mimeType ?? this.mimeType,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      sha256: sha256 ?? this.sha256,
+      reach: reach ?? this.reach,
+      renditions: renditions ?? this.renditions,
+      capturedAt: capturedAt ?? this.capturedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdByDeviceUserId:
+          createdByDeviceUserId ?? this.createdByDeviceUserId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (documentId.present) {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisDocument.$converterdocumentId.toSql(documentId.value),
+      );
+    }
+    if (versionId.present) {
+      map['version_id'] = Variable<String>(versionId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (fileKind.present) {
+      map['file_kind'] = Variable<String>(fileKind.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (reach.present) {
+      map['reach'] = Variable<String>(reach.value);
+    }
+    if (renditions.present) {
+      map['renditions'] = Variable<String>(renditions.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<String>(capturedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (createdByDeviceUserId.present) {
+      map['created_by_device_user_id'] = Variable<String>(
+        createdByDeviceUserId.value,
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisDocumentCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('documentId: $documentId, ')
+          ..write('versionId: $versionId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('fileKind: $fileKind, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('reach: $reach, ')
+          ..write('renditions: $renditions, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('createdByDeviceUserId: $createdByDeviceUserId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class SilexgisDocumentLink extends Table
+    with TableInfo<SilexgisDocumentLink, SilexgisDocumentLinkData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisDocumentLink(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _linkIdMeta = const VerificationMeta('linkId');
+  late final GeneratedColumn<String> linkId = GeneratedColumn<String>(
+    'link_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> documentId =
+      GeneratedColumn<Uint8List>(
+        'document_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisDocumentLink.$converterdocumentId);
+  static const VerificationMeta _targetKindMeta = const VerificationMeta(
+    'targetKind',
+  );
+  late final GeneratedColumn<String> targetKind = GeneratedColumn<String>(
+    'target_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> targetId =
+      GeneratedColumn<Uint8List>(
+        'target_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisDocumentLink.$convertertargetId);
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _captionMeta = const VerificationMeta(
+    'caption',
+  );
+  late final GeneratedColumn<String> caption = GeneratedColumn<String>(
+    'caption',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _isPrimaryMeta = const VerificationMeta(
+    'isPrimary',
+  );
+  late final GeneratedColumn<bool> isPrimary = GeneratedColumn<bool>(
+    'is_primary',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _inDefaultSetMeta = const VerificationMeta(
+    'inDefaultSet',
+  );
+  late final GeneratedColumn<bool> inDefaultSet = GeneratedColumn<bool>(
+    'in_default_set',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  late final GeneratedColumn<String> revision = GeneratedColumn<String>(
+    'revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    linkId,
+    documentId,
+    targetKind,
+    targetId,
+    role,
+    caption,
+    sortOrder,
+    isPrimary,
+    inDefaultSet,
+    revision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_document_link';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisDocumentLinkData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('link_id')) {
+      context.handle(
+        _linkIdMeta,
+        linkId.isAcceptableOrUnknown(data['link_id']!, _linkIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_linkIdMeta);
+    }
+    if (data.containsKey('target_kind')) {
+      context.handle(
+        _targetKindMeta,
+        targetKind.isAcceptableOrUnknown(data['target_kind']!, _targetKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetKindMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    }
+    if (data.containsKey('caption')) {
+      context.handle(
+        _captionMeta,
+        caption.isAcceptableOrUnknown(data['caption']!, _captionMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('is_primary')) {
+      context.handle(
+        _isPrimaryMeta,
+        isPrimary.isAcceptableOrUnknown(data['is_primary']!, _isPrimaryMeta),
+      );
+    }
+    if (data.containsKey('in_default_set')) {
+      context.handle(
+        _inDefaultSetMeta,
+        inDefaultSet.isAcceptableOrUnknown(
+          data['in_default_set']!,
+          _inDefaultSetMeta,
+        ),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, linkId};
+  @override
+  SilexgisDocumentLinkData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisDocumentLinkData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      linkId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}link_id'],
+      )!,
+      documentId: SilexgisDocumentLink.$converterdocumentId.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}document_id'],
+        )!,
+      ),
+      targetKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_kind'],
+      )!,
+      targetId: SilexgisDocumentLink.$convertertargetId.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}target_id'],
+        )!,
+      ),
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      ),
+      caption: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caption'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      isPrimary: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_primary'],
+      )!,
+      inDefaultSet: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}in_default_set'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}revision'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisDocumentLink createAlias(String alias) {
+    return SilexgisDocumentLink(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterdocumentId =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertertargetId =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, link_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisDocumentLinkData extends DataClass
+    implements Insertable<SilexgisDocumentLinkData> {
+  final String profileUuid;
+  final String linkId;
+  final Uuid documentId;
+  final String targetKind;
+  final Uuid targetId;
+  final String? role;
+  final String? caption;
+  final int sortOrder;
+  final bool isPrimary;
+  final bool inDefaultSet;
+  final String? revision;
+  const SilexgisDocumentLinkData({
+    required this.profileUuid,
+    required this.linkId,
+    required this.documentId,
+    required this.targetKind,
+    required this.targetId,
+    this.role,
+    this.caption,
+    required this.sortOrder,
+    required this.isPrimary,
+    required this.inDefaultSet,
+    this.revision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['link_id'] = Variable<String>(linkId);
+    {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisDocumentLink.$converterdocumentId.toSql(documentId),
+      );
+    }
+    map['target_kind'] = Variable<String>(targetKind);
+    {
+      map['target_id'] = Variable<Uint8List>(
+        SilexgisDocumentLink.$convertertargetId.toSql(targetId),
+      );
+    }
+    if (!nullToAbsent || role != null) {
+      map['role'] = Variable<String>(role);
+    }
+    if (!nullToAbsent || caption != null) {
+      map['caption'] = Variable<String>(caption);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['is_primary'] = Variable<bool>(isPrimary);
+    map['in_default_set'] = Variable<bool>(inDefaultSet);
+    if (!nullToAbsent || revision != null) {
+      map['revision'] = Variable<String>(revision);
+    }
+    return map;
+  }
+
+  SilexgisDocumentLinkCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisDocumentLinkCompanion(
+      profileUuid: Value(profileUuid),
+      linkId: Value(linkId),
+      documentId: Value(documentId),
+      targetKind: Value(targetKind),
+      targetId: Value(targetId),
+      role: role == null && nullToAbsent ? const Value.absent() : Value(role),
+      caption: caption == null && nullToAbsent
+          ? const Value.absent()
+          : Value(caption),
+      sortOrder: Value(sortOrder),
+      isPrimary: Value(isPrimary),
+      inDefaultSet: Value(inDefaultSet),
+      revision: revision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revision),
+    );
+  }
+
+  factory SilexgisDocumentLinkData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisDocumentLinkData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      linkId: serializer.fromJson<String>(json['link_id']),
+      documentId: serializer.fromJson<Uuid>(json['document_id']),
+      targetKind: serializer.fromJson<String>(json['target_kind']),
+      targetId: serializer.fromJson<Uuid>(json['target_id']),
+      role: serializer.fromJson<String?>(json['role']),
+      caption: serializer.fromJson<String?>(json['caption']),
+      sortOrder: serializer.fromJson<int>(json['sort_order']),
+      isPrimary: serializer.fromJson<bool>(json['is_primary']),
+      inDefaultSet: serializer.fromJson<bool>(json['in_default_set']),
+      revision: serializer.fromJson<String?>(json['revision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'link_id': serializer.toJson<String>(linkId),
+      'document_id': serializer.toJson<Uuid>(documentId),
+      'target_kind': serializer.toJson<String>(targetKind),
+      'target_id': serializer.toJson<Uuid>(targetId),
+      'role': serializer.toJson<String?>(role),
+      'caption': serializer.toJson<String?>(caption),
+      'sort_order': serializer.toJson<int>(sortOrder),
+      'is_primary': serializer.toJson<bool>(isPrimary),
+      'in_default_set': serializer.toJson<bool>(inDefaultSet),
+      'revision': serializer.toJson<String?>(revision),
+    };
+  }
+
+  SilexgisDocumentLinkData copyWith({
+    String? profileUuid,
+    String? linkId,
+    Uuid? documentId,
+    String? targetKind,
+    Uuid? targetId,
+    Value<String?> role = const Value.absent(),
+    Value<String?> caption = const Value.absent(),
+    int? sortOrder,
+    bool? isPrimary,
+    bool? inDefaultSet,
+    Value<String?> revision = const Value.absent(),
+  }) => SilexgisDocumentLinkData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    linkId: linkId ?? this.linkId,
+    documentId: documentId ?? this.documentId,
+    targetKind: targetKind ?? this.targetKind,
+    targetId: targetId ?? this.targetId,
+    role: role.present ? role.value : this.role,
+    caption: caption.present ? caption.value : this.caption,
+    sortOrder: sortOrder ?? this.sortOrder,
+    isPrimary: isPrimary ?? this.isPrimary,
+    inDefaultSet: inDefaultSet ?? this.inDefaultSet,
+    revision: revision.present ? revision.value : this.revision,
+  );
+  SilexgisDocumentLinkData copyWithCompanion(
+    SilexgisDocumentLinkCompanion data,
+  ) {
+    return SilexgisDocumentLinkData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      linkId: data.linkId.present ? data.linkId.value : this.linkId,
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      targetKind: data.targetKind.present
+          ? data.targetKind.value
+          : this.targetKind,
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
+      role: data.role.present ? data.role.value : this.role,
+      caption: data.caption.present ? data.caption.value : this.caption,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      isPrimary: data.isPrimary.present ? data.isPrimary.value : this.isPrimary,
+      inDefaultSet: data.inDefaultSet.present
+          ? data.inDefaultSet.value
+          : this.inDefaultSet,
+      revision: data.revision.present ? data.revision.value : this.revision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisDocumentLinkData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('linkId: $linkId, ')
+          ..write('documentId: $documentId, ')
+          ..write('targetKind: $targetKind, ')
+          ..write('targetId: $targetId, ')
+          ..write('role: $role, ')
+          ..write('caption: $caption, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isPrimary: $isPrimary, ')
+          ..write('inDefaultSet: $inDefaultSet, ')
+          ..write('revision: $revision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    linkId,
+    documentId,
+    targetKind,
+    targetId,
+    role,
+    caption,
+    sortOrder,
+    isPrimary,
+    inDefaultSet,
+    revision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisDocumentLinkData &&
+          other.profileUuid == this.profileUuid &&
+          other.linkId == this.linkId &&
+          other.documentId == this.documentId &&
+          other.targetKind == this.targetKind &&
+          other.targetId == this.targetId &&
+          other.role == this.role &&
+          other.caption == this.caption &&
+          other.sortOrder == this.sortOrder &&
+          other.isPrimary == this.isPrimary &&
+          other.inDefaultSet == this.inDefaultSet &&
+          other.revision == this.revision);
+}
+
+class SilexgisDocumentLinkCompanion
+    extends UpdateCompanion<SilexgisDocumentLinkData> {
+  final Value<String> profileUuid;
+  final Value<String> linkId;
+  final Value<Uuid> documentId;
+  final Value<String> targetKind;
+  final Value<Uuid> targetId;
+  final Value<String?> role;
+  final Value<String?> caption;
+  final Value<int> sortOrder;
+  final Value<bool> isPrimary;
+  final Value<bool> inDefaultSet;
+  final Value<String?> revision;
+  final Value<int> rowid;
+  const SilexgisDocumentLinkCompanion({
+    this.profileUuid = const Value.absent(),
+    this.linkId = const Value.absent(),
+    this.documentId = const Value.absent(),
+    this.targetKind = const Value.absent(),
+    this.targetId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.caption = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.isPrimary = const Value.absent(),
+    this.inDefaultSet = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisDocumentLinkCompanion.insert({
+    required String profileUuid,
+    required String linkId,
+    required Uuid documentId,
+    required String targetKind,
+    required Uuid targetId,
+    this.role = const Value.absent(),
+    this.caption = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.isPrimary = const Value.absent(),
+    this.inDefaultSet = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       linkId = Value(linkId),
+       documentId = Value(documentId),
+       targetKind = Value(targetKind),
+       targetId = Value(targetId);
+  static Insertable<SilexgisDocumentLinkData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? linkId,
+    Expression<Uint8List>? documentId,
+    Expression<String>? targetKind,
+    Expression<Uint8List>? targetId,
+    Expression<String>? role,
+    Expression<String>? caption,
+    Expression<int>? sortOrder,
+    Expression<bool>? isPrimary,
+    Expression<bool>? inDefaultSet,
+    Expression<String>? revision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (linkId != null) 'link_id': linkId,
+      if (documentId != null) 'document_id': documentId,
+      if (targetKind != null) 'target_kind': targetKind,
+      if (targetId != null) 'target_id': targetId,
+      if (role != null) 'role': role,
+      if (caption != null) 'caption': caption,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (isPrimary != null) 'is_primary': isPrimary,
+      if (inDefaultSet != null) 'in_default_set': inDefaultSet,
+      if (revision != null) 'revision': revision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisDocumentLinkCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? linkId,
+    Value<Uuid>? documentId,
+    Value<String>? targetKind,
+    Value<Uuid>? targetId,
+    Value<String?>? role,
+    Value<String?>? caption,
+    Value<int>? sortOrder,
+    Value<bool>? isPrimary,
+    Value<bool>? inDefaultSet,
+    Value<String?>? revision,
+    Value<int>? rowid,
+  }) {
+    return SilexgisDocumentLinkCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      linkId: linkId ?? this.linkId,
+      documentId: documentId ?? this.documentId,
+      targetKind: targetKind ?? this.targetKind,
+      targetId: targetId ?? this.targetId,
+      role: role ?? this.role,
+      caption: caption ?? this.caption,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isPrimary: isPrimary ?? this.isPrimary,
+      inDefaultSet: inDefaultSet ?? this.inDefaultSet,
+      revision: revision ?? this.revision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (linkId.present) {
+      map['link_id'] = Variable<String>(linkId.value);
+    }
+    if (documentId.present) {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisDocumentLink.$converterdocumentId.toSql(documentId.value),
+      );
+    }
+    if (targetKind.present) {
+      map['target_kind'] = Variable<String>(targetKind.value);
+    }
+    if (targetId.present) {
+      map['target_id'] = Variable<Uint8List>(
+        SilexgisDocumentLink.$convertertargetId.toSql(targetId.value),
+      );
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (caption.present) {
+      map['caption'] = Variable<String>(caption.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (isPrimary.present) {
+      map['is_primary'] = Variable<bool>(isPrimary.value);
+    }
+    if (inDefaultSet.present) {
+      map['in_default_set'] = Variable<bool>(inDefaultSet.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<String>(revision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisDocumentLinkCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('linkId: $linkId, ')
+          ..write('documentId: $documentId, ')
+          ..write('targetKind: $targetKind, ')
+          ..write('targetId: $targetId, ')
+          ..write('role: $role, ')
+          ..write('caption: $caption, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isPrimary: $isPrimary, ')
+          ..write('inDefaultSet: $inDefaultSet, ')
+          ..write('revision: $revision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class SilexgisFileCopy extends Table
+    with TableInfo<SilexgisFileCopy, SilexgisFileCopyData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisFileCopy(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> documentUuid =
+      GeneratedColumn<Uint8List>(
+        'document_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(SilexgisFileCopy.$converterdocumentUuid);
+  static const VerificationMeta _versionIdMeta = const VerificationMeta(
+    'versionId',
+  );
+  late final GeneratedColumn<String> versionId = GeneratedColumn<String>(
+    'version_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _heldAsMeta = const VerificationMeta('heldAs');
+  late final GeneratedColumn<String> heldAs = GeneratedColumn<String>(
+    'held_as',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _renditionMeta = const VerificationMeta(
+    'rendition',
+  );
+  late final GeneratedColumn<int> rendition = GeneratedColumn<int>(
+    'rendition',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _originMeta = const VerificationMeta('origin');
+  late final GeneratedColumn<String> origin = GeneratedColumn<String>(
+    'origin',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  late final GeneratedColumn<int> recordedAt = GeneratedColumn<int>(
+    'recorded_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    documentUuid,
+    versionId,
+    heldAs,
+    rendition,
+    origin,
+    recordedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_file_copy';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisFileCopyData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('version_id')) {
+      context.handle(
+        _versionIdMeta,
+        versionId.isAcceptableOrUnknown(data['version_id']!, _versionIdMeta),
+      );
+    }
+    if (data.containsKey('held_as')) {
+      context.handle(
+        _heldAsMeta,
+        heldAs.isAcceptableOrUnknown(data['held_as']!, _heldAsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_heldAsMeta);
+    }
+    if (data.containsKey('rendition')) {
+      context.handle(
+        _renditionMeta,
+        rendition.isAcceptableOrUnknown(data['rendition']!, _renditionMeta),
+      );
+    }
+    if (data.containsKey('origin')) {
+      context.handle(
+        _originMeta,
+        origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_originMeta);
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {documentUuid};
+  @override
+  SilexgisFileCopyData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisFileCopyData(
+      documentUuid: SilexgisFileCopy.$converterdocumentUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}document_uuid'],
+        )!,
+      ),
+      versionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}version_id'],
+      ),
+      heldAs: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}held_as'],
+      )!,
+      rendition: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rendition'],
+      ),
+      origin: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origin'],
+      )!,
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}recorded_at'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisFileCopy createAlias(String alias) {
+    return SilexgisFileCopy(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterdocumentUuid =
+      const UuidConverter();
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisFileCopyData extends DataClass
+    implements Insertable<SilexgisFileCopyData> {
+  final Uuid documentUuid;
+  final String? versionId;
+  final String heldAs;
+  final int? rendition;
+  final String origin;
+  final int? recordedAt;
+  const SilexgisFileCopyData({
+    required this.documentUuid,
+    this.versionId,
+    required this.heldAs,
+    this.rendition,
+    required this.origin,
+    this.recordedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    {
+      map['document_uuid'] = Variable<Uint8List>(
+        SilexgisFileCopy.$converterdocumentUuid.toSql(documentUuid),
+      );
+    }
+    if (!nullToAbsent || versionId != null) {
+      map['version_id'] = Variable<String>(versionId);
+    }
+    map['held_as'] = Variable<String>(heldAs);
+    if (!nullToAbsent || rendition != null) {
+      map['rendition'] = Variable<int>(rendition);
+    }
+    map['origin'] = Variable<String>(origin);
+    if (!nullToAbsent || recordedAt != null) {
+      map['recorded_at'] = Variable<int>(recordedAt);
+    }
+    return map;
+  }
+
+  SilexgisFileCopyCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisFileCopyCompanion(
+      documentUuid: Value(documentUuid),
+      versionId: versionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(versionId),
+      heldAs: Value(heldAs),
+      rendition: rendition == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rendition),
+      origin: Value(origin),
+      recordedAt: recordedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recordedAt),
+    );
+  }
+
+  factory SilexgisFileCopyData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisFileCopyData(
+      documentUuid: serializer.fromJson<Uuid>(json['document_uuid']),
+      versionId: serializer.fromJson<String?>(json['version_id']),
+      heldAs: serializer.fromJson<String>(json['held_as']),
+      rendition: serializer.fromJson<int?>(json['rendition']),
+      origin: serializer.fromJson<String>(json['origin']),
+      recordedAt: serializer.fromJson<int?>(json['recorded_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'document_uuid': serializer.toJson<Uuid>(documentUuid),
+      'version_id': serializer.toJson<String?>(versionId),
+      'held_as': serializer.toJson<String>(heldAs),
+      'rendition': serializer.toJson<int?>(rendition),
+      'origin': serializer.toJson<String>(origin),
+      'recorded_at': serializer.toJson<int?>(recordedAt),
+    };
+  }
+
+  SilexgisFileCopyData copyWith({
+    Uuid? documentUuid,
+    Value<String?> versionId = const Value.absent(),
+    String? heldAs,
+    Value<int?> rendition = const Value.absent(),
+    String? origin,
+    Value<int?> recordedAt = const Value.absent(),
+  }) => SilexgisFileCopyData(
+    documentUuid: documentUuid ?? this.documentUuid,
+    versionId: versionId.present ? versionId.value : this.versionId,
+    heldAs: heldAs ?? this.heldAs,
+    rendition: rendition.present ? rendition.value : this.rendition,
+    origin: origin ?? this.origin,
+    recordedAt: recordedAt.present ? recordedAt.value : this.recordedAt,
+  );
+  SilexgisFileCopyData copyWithCompanion(SilexgisFileCopyCompanion data) {
+    return SilexgisFileCopyData(
+      documentUuid: data.documentUuid.present
+          ? data.documentUuid.value
+          : this.documentUuid,
+      versionId: data.versionId.present ? data.versionId.value : this.versionId,
+      heldAs: data.heldAs.present ? data.heldAs.value : this.heldAs,
+      rendition: data.rendition.present ? data.rendition.value : this.rendition,
+      origin: data.origin.present ? data.origin.value : this.origin,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisFileCopyData(')
+          ..write('documentUuid: $documentUuid, ')
+          ..write('versionId: $versionId, ')
+          ..write('heldAs: $heldAs, ')
+          ..write('rendition: $rendition, ')
+          ..write('origin: $origin, ')
+          ..write('recordedAt: $recordedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    documentUuid,
+    versionId,
+    heldAs,
+    rendition,
+    origin,
+    recordedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisFileCopyData &&
+          other.documentUuid == this.documentUuid &&
+          other.versionId == this.versionId &&
+          other.heldAs == this.heldAs &&
+          other.rendition == this.rendition &&
+          other.origin == this.origin &&
+          other.recordedAt == this.recordedAt);
+}
+
+class SilexgisFileCopyCompanion extends UpdateCompanion<SilexgisFileCopyData> {
+  final Value<Uuid> documentUuid;
+  final Value<String?> versionId;
+  final Value<String> heldAs;
+  final Value<int?> rendition;
+  final Value<String> origin;
+  final Value<int?> recordedAt;
+  final Value<int> rowid;
+  const SilexgisFileCopyCompanion({
+    this.documentUuid = const Value.absent(),
+    this.versionId = const Value.absent(),
+    this.heldAs = const Value.absent(),
+    this.rendition = const Value.absent(),
+    this.origin = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisFileCopyCompanion.insert({
+    required Uuid documentUuid,
+    this.versionId = const Value.absent(),
+    required String heldAs,
+    this.rendition = const Value.absent(),
+    required String origin,
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : documentUuid = Value(documentUuid),
+       heldAs = Value(heldAs),
+       origin = Value(origin);
+  static Insertable<SilexgisFileCopyData> custom({
+    Expression<Uint8List>? documentUuid,
+    Expression<String>? versionId,
+    Expression<String>? heldAs,
+    Expression<int>? rendition,
+    Expression<String>? origin,
+    Expression<int>? recordedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (documentUuid != null) 'document_uuid': documentUuid,
+      if (versionId != null) 'version_id': versionId,
+      if (heldAs != null) 'held_as': heldAs,
+      if (rendition != null) 'rendition': rendition,
+      if (origin != null) 'origin': origin,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisFileCopyCompanion copyWith({
+    Value<Uuid>? documentUuid,
+    Value<String?>? versionId,
+    Value<String>? heldAs,
+    Value<int?>? rendition,
+    Value<String>? origin,
+    Value<int?>? recordedAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisFileCopyCompanion(
+      documentUuid: documentUuid ?? this.documentUuid,
+      versionId: versionId ?? this.versionId,
+      heldAs: heldAs ?? this.heldAs,
+      rendition: rendition ?? this.rendition,
+      origin: origin ?? this.origin,
+      recordedAt: recordedAt ?? this.recordedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (documentUuid.present) {
+      map['document_uuid'] = Variable<Uint8List>(
+        SilexgisFileCopy.$converterdocumentUuid.toSql(documentUuid.value),
+      );
+    }
+    if (versionId.present) {
+      map['version_id'] = Variable<String>(versionId.value);
+    }
+    if (heldAs.present) {
+      map['held_as'] = Variable<String>(heldAs.value);
+    }
+    if (rendition.present) {
+      map['rendition'] = Variable<int>(rendition.value);
+    }
+    if (origin.present) {
+      map['origin'] = Variable<String>(origin.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<int>(recordedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisFileCopyCompanion(')
+          ..write('documentUuid: $documentUuid, ')
+          ..write('versionId: $versionId, ')
+          ..write('heldAs: $heldAs, ')
+          ..write('rendition: $rendition, ')
+          ..write('origin: $origin, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -18056,6 +20013,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final SilexgisPerson silexgisPerson = SilexgisPerson(this);
   late final SilexgisPersonLink silexgisPersonLink = SilexgisPersonLink(this);
+  late final SilexgisDocument silexgisDocument = SilexgisDocument(this);
+  late final SilexgisDocumentLink silexgisDocumentLink = SilexgisDocumentLink(
+    this,
+  );
+  late final Index idxSilexgisDocumentLinkTarget = Index(
+    'idx_silexgis_document_link_target',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_document_link_target ON silexgis_document_link (profile_uuid, target_id)',
+  );
+  late final Index idxSilexgisDocumentLinkDocument = Index(
+    'idx_silexgis_document_link_document',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_document_link_document ON silexgis_document_link (profile_uuid, document_id)',
+  );
+  late final SilexgisFileCopy silexgisFileCopy = SilexgisFileCopy(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -18099,6 +20069,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxSilexgisHeldRowReview,
     silexgisPerson,
     silexgisPersonLink,
+    silexgisDocument,
+    silexgisDocumentLink,
+    idxSilexgisDocumentLinkTarget,
+    idxSilexgisDocumentLinkDocument,
+    silexgisFileCopy,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -34120,6 +36095,959 @@ typedef $SilexgisPersonLinkProcessedTableManager =
       SilexgisPersonLinkData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisDocumentCreateCompanionBuilder =
+    SilexgisDocumentCompanion Function({
+      required String profileUuid,
+      required Uuid documentId,
+      Value<String?> versionId,
+      required String title,
+      Value<String?> description,
+      required String fileKind,
+      Value<String?> mimeType,
+      Value<int?> sizeBytes,
+      Value<String?> sha256,
+      required String reach,
+      Value<String?> renditions,
+      Value<String?> capturedAt,
+      Value<String?> updatedAt,
+      Value<String?> createdByDeviceUserId,
+      Value<int> rowid,
+    });
+typedef $SilexgisDocumentUpdateCompanionBuilder =
+    SilexgisDocumentCompanion Function({
+      Value<String> profileUuid,
+      Value<Uuid> documentId,
+      Value<String?> versionId,
+      Value<String> title,
+      Value<String?> description,
+      Value<String> fileKind,
+      Value<String?> mimeType,
+      Value<int?> sizeBytes,
+      Value<String?> sha256,
+      Value<String> reach,
+      Value<String?> renditions,
+      Value<String?> capturedAt,
+      Value<String?> updatedAt,
+      Value<String?> createdByDeviceUserId,
+      Value<int> rowid,
+    });
+
+class $SilexgisDocumentFilterComposer
+    extends Composer<_$AppDatabase, SilexgisDocument> {
+  $SilexgisDocumentFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get versionId => $composableBuilder(
+    column: $table.versionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileKind => $composableBuilder(
+    column: $table.fileKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reach => $composableBuilder(
+    column: $table.reach,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get renditions => $composableBuilder(
+    column: $table.renditions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdByDeviceUserId => $composableBuilder(
+    column: $table.createdByDeviceUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisDocumentOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisDocument> {
+  $SilexgisDocumentOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get versionId => $composableBuilder(
+    column: $table.versionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fileKind => $composableBuilder(
+    column: $table.fileKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reach => $composableBuilder(
+    column: $table.reach,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get renditions => $composableBuilder(
+    column: $table.renditions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdByDeviceUserId => $composableBuilder(
+    column: $table.createdByDeviceUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisDocumentAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisDocument> {
+  $SilexgisDocumentAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get versionId =>
+      $composableBuilder(column: $table.versionId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fileKind =>
+      $composableBuilder(column: $table.fileKind, builder: (column) => column);
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<String> get reach =>
+      $composableBuilder(column: $table.reach, builder: (column) => column);
+
+  GeneratedColumn<String> get renditions => $composableBuilder(
+    column: $table.renditions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get createdByDeviceUserId => $composableBuilder(
+    column: $table.createdByDeviceUserId,
+    builder: (column) => column,
+  );
+}
+
+class $SilexgisDocumentTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisDocument,
+          SilexgisDocumentData,
+          $SilexgisDocumentFilterComposer,
+          $SilexgisDocumentOrderingComposer,
+          $SilexgisDocumentAnnotationComposer,
+          $SilexgisDocumentCreateCompanionBuilder,
+          $SilexgisDocumentUpdateCompanionBuilder,
+          (
+            SilexgisDocumentData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisDocument,
+              SilexgisDocumentData
+            >,
+          ),
+          SilexgisDocumentData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisDocumentTableManager(_$AppDatabase db, SilexgisDocument table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisDocumentFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisDocumentOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisDocumentAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<Uuid> documentId = const Value.absent(),
+                Value<String?> versionId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String> fileKind = const Value.absent(),
+                Value<String?> mimeType = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String?> sha256 = const Value.absent(),
+                Value<String> reach = const Value.absent(),
+                Value<String?> renditions = const Value.absent(),
+                Value<String?> capturedAt = const Value.absent(),
+                Value<String?> updatedAt = const Value.absent(),
+                Value<String?> createdByDeviceUserId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisDocumentCompanion(
+                profileUuid: profileUuid,
+                documentId: documentId,
+                versionId: versionId,
+                title: title,
+                description: description,
+                fileKind: fileKind,
+                mimeType: mimeType,
+                sizeBytes: sizeBytes,
+                sha256: sha256,
+                reach: reach,
+                renditions: renditions,
+                capturedAt: capturedAt,
+                updatedAt: updatedAt,
+                createdByDeviceUserId: createdByDeviceUserId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required Uuid documentId,
+                Value<String?> versionId = const Value.absent(),
+                required String title,
+                Value<String?> description = const Value.absent(),
+                required String fileKind,
+                Value<String?> mimeType = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String?> sha256 = const Value.absent(),
+                required String reach,
+                Value<String?> renditions = const Value.absent(),
+                Value<String?> capturedAt = const Value.absent(),
+                Value<String?> updatedAt = const Value.absent(),
+                Value<String?> createdByDeviceUserId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisDocumentCompanion.insert(
+                profileUuid: profileUuid,
+                documentId: documentId,
+                versionId: versionId,
+                title: title,
+                description: description,
+                fileKind: fileKind,
+                mimeType: mimeType,
+                sizeBytes: sizeBytes,
+                sha256: sha256,
+                reach: reach,
+                renditions: renditions,
+                capturedAt: capturedAt,
+                updatedAt: updatedAt,
+                createdByDeviceUserId: createdByDeviceUserId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisDocumentProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisDocument,
+      SilexgisDocumentData,
+      $SilexgisDocumentFilterComposer,
+      $SilexgisDocumentOrderingComposer,
+      $SilexgisDocumentAnnotationComposer,
+      $SilexgisDocumentCreateCompanionBuilder,
+      $SilexgisDocumentUpdateCompanionBuilder,
+      (
+        SilexgisDocumentData,
+        BaseReferences<_$AppDatabase, SilexgisDocument, SilexgisDocumentData>,
+      ),
+      SilexgisDocumentData,
+      PrefetchHooks Function()
+    >;
+typedef $SilexgisDocumentLinkCreateCompanionBuilder =
+    SilexgisDocumentLinkCompanion Function({
+      required String profileUuid,
+      required String linkId,
+      required Uuid documentId,
+      required String targetKind,
+      required Uuid targetId,
+      Value<String?> role,
+      Value<String?> caption,
+      Value<int> sortOrder,
+      Value<bool> isPrimary,
+      Value<bool> inDefaultSet,
+      Value<String?> revision,
+      Value<int> rowid,
+    });
+typedef $SilexgisDocumentLinkUpdateCompanionBuilder =
+    SilexgisDocumentLinkCompanion Function({
+      Value<String> profileUuid,
+      Value<String> linkId,
+      Value<Uuid> documentId,
+      Value<String> targetKind,
+      Value<Uuid> targetId,
+      Value<String?> role,
+      Value<String?> caption,
+      Value<int> sortOrder,
+      Value<bool> isPrimary,
+      Value<bool> inDefaultSet,
+      Value<String?> revision,
+      Value<int> rowid,
+    });
+
+class $SilexgisDocumentLinkFilterComposer
+    extends Composer<_$AppDatabase, SilexgisDocumentLink> {
+  $SilexgisDocumentLinkFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkId => $composableBuilder(
+    column: $table.linkId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get targetKind => $composableBuilder(
+    column: $table.targetKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get targetId =>
+      $composableBuilder(
+        column: $table.targetId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get caption => $composableBuilder(
+    column: $table.caption,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPrimary => $composableBuilder(
+    column: $table.isPrimary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get inDefaultSet => $composableBuilder(
+    column: $table.inDefaultSet,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisDocumentLinkOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisDocumentLink> {
+  $SilexgisDocumentLinkOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkId => $composableBuilder(
+    column: $table.linkId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetKind => $composableBuilder(
+    column: $table.targetKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get targetId => $composableBuilder(
+    column: $table.targetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get caption => $composableBuilder(
+    column: $table.caption,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPrimary => $composableBuilder(
+    column: $table.isPrimary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get inDefaultSet => $composableBuilder(
+    column: $table.inDefaultSet,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisDocumentLinkAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisDocumentLink> {
+  $SilexgisDocumentLinkAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkId =>
+      $composableBuilder(column: $table.linkId, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get targetKind => $composableBuilder(
+    column: $table.targetKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get targetId =>
+      $composableBuilder(column: $table.targetId, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get caption =>
+      $composableBuilder(column: $table.caption, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPrimary =>
+      $composableBuilder(column: $table.isPrimary, builder: (column) => column);
+
+  GeneratedColumn<bool> get inDefaultSet => $composableBuilder(
+    column: $table.inDefaultSet,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+}
+
+class $SilexgisDocumentLinkTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisDocumentLink,
+          SilexgisDocumentLinkData,
+          $SilexgisDocumentLinkFilterComposer,
+          $SilexgisDocumentLinkOrderingComposer,
+          $SilexgisDocumentLinkAnnotationComposer,
+          $SilexgisDocumentLinkCreateCompanionBuilder,
+          $SilexgisDocumentLinkUpdateCompanionBuilder,
+          (
+            SilexgisDocumentLinkData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisDocumentLink,
+              SilexgisDocumentLinkData
+            >,
+          ),
+          SilexgisDocumentLinkData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisDocumentLinkTableManager(
+    _$AppDatabase db,
+    SilexgisDocumentLink table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisDocumentLinkFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisDocumentLinkOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisDocumentLinkAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> linkId = const Value.absent(),
+                Value<Uuid> documentId = const Value.absent(),
+                Value<String> targetKind = const Value.absent(),
+                Value<Uuid> targetId = const Value.absent(),
+                Value<String?> role = const Value.absent(),
+                Value<String?> caption = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isPrimary = const Value.absent(),
+                Value<bool> inDefaultSet = const Value.absent(),
+                Value<String?> revision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisDocumentLinkCompanion(
+                profileUuid: profileUuid,
+                linkId: linkId,
+                documentId: documentId,
+                targetKind: targetKind,
+                targetId: targetId,
+                role: role,
+                caption: caption,
+                sortOrder: sortOrder,
+                isPrimary: isPrimary,
+                inDefaultSet: inDefaultSet,
+                revision: revision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String linkId,
+                required Uuid documentId,
+                required String targetKind,
+                required Uuid targetId,
+                Value<String?> role = const Value.absent(),
+                Value<String?> caption = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isPrimary = const Value.absent(),
+                Value<bool> inDefaultSet = const Value.absent(),
+                Value<String?> revision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisDocumentLinkCompanion.insert(
+                profileUuid: profileUuid,
+                linkId: linkId,
+                documentId: documentId,
+                targetKind: targetKind,
+                targetId: targetId,
+                role: role,
+                caption: caption,
+                sortOrder: sortOrder,
+                isPrimary: isPrimary,
+                inDefaultSet: inDefaultSet,
+                revision: revision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisDocumentLinkProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisDocumentLink,
+      SilexgisDocumentLinkData,
+      $SilexgisDocumentLinkFilterComposer,
+      $SilexgisDocumentLinkOrderingComposer,
+      $SilexgisDocumentLinkAnnotationComposer,
+      $SilexgisDocumentLinkCreateCompanionBuilder,
+      $SilexgisDocumentLinkUpdateCompanionBuilder,
+      (
+        SilexgisDocumentLinkData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisDocumentLink,
+          SilexgisDocumentLinkData
+        >,
+      ),
+      SilexgisDocumentLinkData,
+      PrefetchHooks Function()
+    >;
+typedef $SilexgisFileCopyCreateCompanionBuilder =
+    SilexgisFileCopyCompanion Function({
+      required Uuid documentUuid,
+      Value<String?> versionId,
+      required String heldAs,
+      Value<int?> rendition,
+      required String origin,
+      Value<int?> recordedAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisFileCopyUpdateCompanionBuilder =
+    SilexgisFileCopyCompanion Function({
+      Value<Uuid> documentUuid,
+      Value<String?> versionId,
+      Value<String> heldAs,
+      Value<int?> rendition,
+      Value<String> origin,
+      Value<int?> recordedAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisFileCopyFilterComposer
+    extends Composer<_$AppDatabase, SilexgisFileCopy> {
+  $SilexgisFileCopyFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get documentUuid =>
+      $composableBuilder(
+        column: $table.documentUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get versionId => $composableBuilder(
+    column: $table.versionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get heldAs => $composableBuilder(
+    column: $table.heldAs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rendition => $composableBuilder(
+    column: $table.rendition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origin => $composableBuilder(
+    column: $table.origin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisFileCopyOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisFileCopy> {
+  $SilexgisFileCopyOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get documentUuid => $composableBuilder(
+    column: $table.documentUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get versionId => $composableBuilder(
+    column: $table.versionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get heldAs => $composableBuilder(
+    column: $table.heldAs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rendition => $composableBuilder(
+    column: $table.rendition,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origin => $composableBuilder(
+    column: $table.origin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisFileCopyAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisFileCopy> {
+  $SilexgisFileCopyAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get documentUuid =>
+      $composableBuilder(
+        column: $table.documentUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get versionId =>
+      $composableBuilder(column: $table.versionId, builder: (column) => column);
+
+  GeneratedColumn<String> get heldAs =>
+      $composableBuilder(column: $table.heldAs, builder: (column) => column);
+
+  GeneratedColumn<int> get rendition =>
+      $composableBuilder(column: $table.rendition, builder: (column) => column);
+
+  GeneratedColumn<String> get origin =>
+      $composableBuilder(column: $table.origin, builder: (column) => column);
+
+  GeneratedColumn<int> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+}
+
+class $SilexgisFileCopyTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisFileCopy,
+          SilexgisFileCopyData,
+          $SilexgisFileCopyFilterComposer,
+          $SilexgisFileCopyOrderingComposer,
+          $SilexgisFileCopyAnnotationComposer,
+          $SilexgisFileCopyCreateCompanionBuilder,
+          $SilexgisFileCopyUpdateCompanionBuilder,
+          (
+            SilexgisFileCopyData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisFileCopy,
+              SilexgisFileCopyData
+            >,
+          ),
+          SilexgisFileCopyData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisFileCopyTableManager(_$AppDatabase db, SilexgisFileCopy table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisFileCopyFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisFileCopyOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisFileCopyAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<Uuid> documentUuid = const Value.absent(),
+                Value<String?> versionId = const Value.absent(),
+                Value<String> heldAs = const Value.absent(),
+                Value<int?> rendition = const Value.absent(),
+                Value<String> origin = const Value.absent(),
+                Value<int?> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisFileCopyCompanion(
+                documentUuid: documentUuid,
+                versionId: versionId,
+                heldAs: heldAs,
+                rendition: rendition,
+                origin: origin,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uuid documentUuid,
+                Value<String?> versionId = const Value.absent(),
+                required String heldAs,
+                Value<int?> rendition = const Value.absent(),
+                required String origin,
+                Value<int?> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisFileCopyCompanion.insert(
+                documentUuid: documentUuid,
+                versionId: versionId,
+                heldAs: heldAs,
+                rendition: rendition,
+                origin: origin,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisFileCopyProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisFileCopy,
+      SilexgisFileCopyData,
+      $SilexgisFileCopyFilterComposer,
+      $SilexgisFileCopyOrderingComposer,
+      $SilexgisFileCopyAnnotationComposer,
+      $SilexgisFileCopyCreateCompanionBuilder,
+      $SilexgisFileCopyUpdateCompanionBuilder,
+      (
+        SilexgisFileCopyData,
+        BaseReferences<_$AppDatabase, SilexgisFileCopy, SilexgisFileCopyData>,
+      ),
+      SilexgisFileCopyData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -34194,4 +37122,10 @@ class $AppDatabaseManager {
       $SilexgisPersonTableManager(_db, _db.silexgisPerson);
   $SilexgisPersonLinkTableManager get silexgisPersonLink =>
       $SilexgisPersonLinkTableManager(_db, _db.silexgisPersonLink);
+  $SilexgisDocumentTableManager get silexgisDocument =>
+      $SilexgisDocumentTableManager(_db, _db.silexgisDocument);
+  $SilexgisDocumentLinkTableManager get silexgisDocumentLink =>
+      $SilexgisDocumentLinkTableManager(_db, _db.silexgisDocumentLink);
+  $SilexgisFileCopyTableManager get silexgisFileCopy =>
+      $SilexgisFileCopyTableManager(_db, _db.silexgisFileCopy);
 }
