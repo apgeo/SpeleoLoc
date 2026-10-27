@@ -592,8 +592,11 @@ class AppDatabase extends _$AppDatabase {
   Future<void> insertDocumentationLink({
     required Uuid documentationFileUuid,
     required DocumentationGeofeatureLink link,
+    Uuid? createdByUserUuid,
+    int? createdAt,
   }) async {
     await _assertValidGeofeatureLink(link);
+    final now = createdAt ?? DateTime.now().millisecondsSinceEpoch;
 
     await into(documentationFilesToGeofeatures).insert(
       DocumentationFilesToGeofeaturesCompanion.insert(
@@ -601,10 +604,16 @@ class AppDatabase extends _$AppDatabase {
         geofeatureType: link.type.dbValue,
         documentationFileUuid: documentationFileUuid,
         geofeatureUuid: Value(link.geofeatureUuid),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        createdByUserUuid: Value(createdByUserUuid),
       ),
     );
   }
 
+  /// Inserts the file row and its optional link atomically. The link carries
+  /// the file's author and creation time; a companion that arrives without
+  /// timestamps gets them here, so no insert path leaves them empty.
   Future<Uuid> insertDocumentationFile({
     required DocumentationFilesCompanion companion,
     DocumentationGeofeatureLink? parentLink,
@@ -613,12 +622,26 @@ class AppDatabase extends _$AppDatabase {
       final uuidValue = companion.uuid.present
           ? companion.uuid.value
           : Uuid.v7();
-      final effective = companion.copyWith(uuid: Value(uuidValue));
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final createdAt = companion.createdAt.present
+          ? companion.createdAt.value
+          : null;
+      final effective = companion.copyWith(
+        uuid: Value(uuidValue),
+        createdAt: Value(createdAt ?? now),
+        updatedAt: companion.updatedAt.present
+            ? companion.updatedAt
+            : Value(createdAt ?? now),
+      );
       await into(documentationFiles).insert(effective);
       if (parentLink != null) {
         await insertDocumentationLink(
           documentationFileUuid: uuidValue,
           link: parentLink,
+          createdByUserUuid: companion.createdByUserUuid.present
+              ? companion.createdByUserUuid.value
+              : null,
+          createdAt: createdAt ?? now,
         );
       }
       return uuidValue;

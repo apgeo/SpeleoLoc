@@ -57,7 +57,7 @@ Future<_Device> _buildDevice() async {
     CaveRepository(db, currentUser, logger),
     CavePlaceRepository(db, currentUser, logger),
     CaveTripRepository(db, logger),
-    DocumentationRepository(db, logger),
+    DocumentationRepository(db, logger, currentUser),
     BeaconRepository(db, currentUser, logger),
     SyncArchiveService(
       db,

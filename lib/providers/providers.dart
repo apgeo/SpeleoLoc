@@ -338,6 +338,7 @@ final documentationRepositoryProvider = Provider<IDocumentationRepository>(
   (ref) => DocumentationRepository(
     ref.watch(appDatabaseProvider),
     ref.watch(changeLoggerProvider),
+    ref.watch(currentUserServiceProvider),
   ),
 );
 

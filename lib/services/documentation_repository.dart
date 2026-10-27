@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -13,10 +14,11 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// the existing helper to keep behaviour byte-identical; bigger
 /// migrations of the write paths will land in later PR-2 slices.
 class DocumentationRepository implements IDocumentationRepository {
-  DocumentationRepository(this._database, this._logger);
+  DocumentationRepository(this._database, this._logger, this._currentUser);
 
   final AppDatabase _database;
   final ChangeLogger _logger;
+  final CurrentUserService _currentUser;
   final _log = AppLogger.of('DocumentationRepository');
 
   @override
@@ -61,8 +63,15 @@ class DocumentationRepository implements IDocumentationRepository {
     DocumentationGeofeatureLink? parentLink,
   }) async {
     try {
+      // Every new file records who made it, whichever screen or service
+      // inserted it; a caller that already knows the author keeps its value.
+      final stamped = companion.createdByUserUuid.present
+          ? companion
+          : companion.copyWith(
+              createdByUserUuid: Value(await _currentUser.currentOrSystem()),
+            );
       return await _database.insertDocumentationFile(
-        companion: companion,
+        companion: stamped,
         parentLink: parentLink,
       );
     } catch (e, st) {
