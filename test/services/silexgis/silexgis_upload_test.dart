@@ -6,6 +6,8 @@ import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -23,6 +25,7 @@ void main() {
 
   late AppDatabase db;
   late SilexgisLocalStateRepository localState;
+  late SilexgisHeldRowRepository heldRows;
   late SilexgisUploadBuilder builder;
   final clock = FakeClock(DateTime.utc(2026, 9, 1, 12));
 
@@ -43,9 +46,11 @@ void main() {
     clock.set(DateTime.utc(2026, 9, 1, 12));
     db = AppDatabase.forTesting(NativeDatabase.memory());
     localState = SilexgisLocalStateRepository(db, clock: clock);
+    heldRows = SilexgisHeldRowRepository(db, clock: clock);
     builder = SilexgisUploadBuilder(
       db: db,
       localState: localState,
+      heldRows: heldRows,
       profileUuid: profile,
     );
   });
@@ -178,6 +183,7 @@ void main() {
       final pending = await SilexgisUploadBuilder(
         db: db,
         localState: localState,
+        heldRows: heldRows,
         profileUuid: profile,
         uploadsNewRoots: true,
       ).build();
@@ -345,6 +351,7 @@ void main() {
         ),
         builder: builder,
         localState: localState,
+        heldRows: heldRows,
         profileUuid: profile,
       );
     }
@@ -617,6 +624,153 @@ void main() {
         await localState.readRevision(profile, placeId),
         '2026-09-01T12:05:00.000Z',
       );
+    });
+
+    group('an account under review', () {
+      Map<String, Object?> heldAnswer(Uuid id, String reviewId) =>
+          <String, Object?>{
+            'id': id.toString(),
+            'status': 'held',
+            'revision': null,
+            'code': null,
+            'detail': null,
+            'reviewId': reviewId,
+          };
+
+      Future<void> newPlaceUnderKnownCave() async {
+        final t0 = clock.nowMs();
+        await insertArea(updatedAt: t0);
+        await insertCave(updatedAt: t0);
+        await known(areaId, table: 'surface_areas', localUpdatedAt: t0);
+        await known(caveId, table: 'caves', kind: 'cave', localUpdatedAt: t0);
+        clock.advance(const Duration(minutes: 5));
+        await insertPlace(
+          placeId,
+          title: 'Sala Mare',
+          updatedAt: clock.nowMs(),
+        );
+      }
+
+      test('every upload says the device understands held', () async {
+        await newPlaceUnderKnownCave();
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[heldAnswer(placeId, 'review-1')]),
+        ]);
+
+        await runner.run(setId, capabilities: capabilities);
+        expect(client.sent.single.jsonBody['clientFeatures'], <String>['held']);
+      });
+
+      test(
+        'a held row keeps no revision, and waits under its review',
+        () async {
+          await newPlaceUnderKnownCave();
+          arm(<ScriptedResponse>[
+            answer(<Map<String, Object?>>[heldAnswer(placeId, 'review-1')]),
+          ]);
+
+          final report = await runner.run(setId, capabilities: capabilities);
+          expect(report.held, 1);
+          expect(report.refusals, isEmpty);
+          expect(await localState.readRevision(profile, placeId), isNull);
+
+          final held = (await heldRows.readSection(
+            profile,
+            SyncUploadSection.rows,
+          ))[placeId]!;
+          expect(held.reviewId, 'review-1');
+          expect(held.entityTable, 'cave_places');
+          expect(held.isWaiting, isTrue);
+        },
+      );
+
+      test('an unchanged held row is not sent again', () async {
+        await newPlaceUnderKnownCave();
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[heldAnswer(placeId, 'review-1')]),
+        ]);
+        await runner.run(setId, capabilities: capabilities);
+
+        expect(await builder.build(), isEmpty);
+      });
+
+      test(
+        'an edited held row is sent, and waits under its new review',
+        () async {
+          await newPlaceUnderKnownCave();
+          arm(<ScriptedResponse>[
+            answer(<Map<String, Object?>>[heldAnswer(placeId, 'review-1')]),
+          ]);
+          await runner.run(setId, capabilities: capabilities);
+
+          clock.advance(const Duration(minutes: 5));
+          await (db.update(db.cavePlaces)
+                ..where((t) => t.uuid.equalsValue(placeId)))
+              .write(CavePlacesCompanion(updatedAt: Value(clock.nowMs())));
+          final pending = await builder.build();
+          expect(pending.map((p) => p.entityUuid), <Uuid>[placeId]);
+
+          arm(<ScriptedResponse>[
+            answer(<Map<String, Object?>>[heldAnswer(placeId, 'review-2')]),
+          ]);
+          await runner.run(setId, capabilities: capabilities);
+          final held = (await heldRows.readSection(
+            profile,
+            SyncUploadSection.rows,
+          ))[placeId]!;
+          expect(held.reviewId, 'review-2');
+        },
+      );
+
+      test('a held removal is not sent again', () async {
+        await known(placeId, table: 'cave_places', kind: 'generic');
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[heldAnswer(placeId, 'review-1')]),
+        ]);
+        await runner.run(setId, capabilities: capabilities);
+
+        expect(
+          (await heldRows.readSection(
+            profile,
+            SyncUploadSection.rows,
+          ))[placeId]!.isDelete,
+          isTrue,
+        );
+        expect(await builder.build(), isEmpty);
+        // The removal waits on the server, so the revision stays.
+        expect(await localState.readRevision(profile, placeId), isNotNull);
+      });
+
+      test('any other answer ends the wait', () async {
+        await newPlaceUnderKnownCave();
+        await heldRows.recordHeld(profile, <SilexgisHeldEntry>[
+          SilexgisHeldEntry(
+            section: SyncUploadSection.rows,
+            entityUuid: placeId,
+            entityTable: 'cave_places',
+            reviewId: 'review-0',
+            // Sent at an older stamp, so the edit since is due.
+            sentLocalUpdatedAt: clock.nowMs() - 1,
+          ),
+        ]);
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[
+            <String, Object?>{
+              'id': placeId.toString(),
+              'status': 'created',
+              'revision': '2026-09-01T12:05:00.000Z',
+              'code': null,
+              'detail': null,
+            },
+          ]),
+        ]);
+
+        await runner.run(setId, capabilities: capabilities);
+        expect(
+          await heldRows.readSection(profile, SyncUploadSection.rows),
+          isEmpty,
+        );
+      });
     });
   });
 }

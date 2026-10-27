@@ -12,6 +12,7 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
@@ -39,6 +40,7 @@ void main() {
   late SilexgisProfileRepository profiles;
   late InMemoryRefreshTokenStore tokens;
   late SilexgisLocalStateRepository localState;
+  late SilexgisHeldRowRepository heldRows;
   late ChangeLogger logger;
   late CaveRepository caves;
   late CavePlaceRepository places;
@@ -55,6 +57,7 @@ void main() {
     await currentUser.initialize();
     logger = loggerRef = ChangeLogger(db, currentUser);
     localState = SilexgisLocalStateRepository(db);
+    heldRows = SilexgisHeldRowRepository(db);
     tokens = InMemoryRefreshTokenStore();
     profiles = SilexgisProfileRepository(
       ConfigurationRepository(db),
@@ -71,6 +74,7 @@ void main() {
         db: db,
         profiles: profiles,
         localState: localState,
+        heldRows: heldRows,
         logger: logger,
         caves: caves,
         places: places,

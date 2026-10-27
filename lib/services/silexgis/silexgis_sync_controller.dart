@@ -10,6 +10,7 @@ import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
@@ -46,6 +47,7 @@ class SilexgisSyncController extends ChangeNotifier {
     required AppDatabase db,
     required SilexgisProfileRepository profiles,
     required SilexgisLocalStateRepository localState,
+    required SilexgisHeldRowRepository heldRows,
     required ChangeLogger logger,
     required ICaveRepository caves,
     required ICavePlaceRepository places,
@@ -54,6 +56,7 @@ class SilexgisSyncController extends ChangeNotifier {
   }) : _db = db,
        _profiles = profiles,
        _localState = localState,
+       _heldRows = heldRows,
        _logger = logger,
        _caves = caves,
        _places = places,
@@ -63,6 +66,7 @@ class SilexgisSyncController extends ChangeNotifier {
   final AppDatabase _db;
   final SilexgisProfileRepository _profiles;
   final SilexgisLocalStateRepository _localState;
+  final SilexgisHeldRowRepository _heldRows;
   final ChangeLogger _logger;
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
@@ -168,6 +172,7 @@ class SilexgisSyncController extends ChangeNotifier {
       db: _db,
       logger: _logger,
       localState: _localState,
+      heldRows: _heldRows,
       caves: _caves,
       places: _places,
       profileUuid: profile.profileUuid,
@@ -191,10 +196,12 @@ class SilexgisSyncController extends ChangeNotifier {
           builder: SilexgisUploadBuilder(
             db: _db,
             localState: _localState,
+            heldRows: _heldRows,
             profileUuid: profile.profileUuid,
             uploadsNewRoots: profile.uploadsNewRoots,
           ),
           localState: _localState,
+          heldRows: _heldRows,
           profileUuid: profile.profileUuid,
         ).run(setId, capabilities: capabilities);
       } on SilexgisProblemException catch (e) {

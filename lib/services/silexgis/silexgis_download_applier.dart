@@ -4,7 +4,9 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
 import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_feature_mapper.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -30,6 +32,9 @@ enum SilexgisSkipReason {
   /// write and is answered — with a conflict and the server's own row when the
   /// two have genuinely diverged, which is a question for the caver rather
   /// than something to settle by overwriting.
+  ///
+  /// A row held for a reviewer is one of these too, so the caver keeps seeing
+  /// their own version while it waits.
   unsentLocalEdit,
 }
 
@@ -88,6 +93,7 @@ class SilexgisDownloadApplier {
     required AppDatabase db,
     required ChangeLogger logger,
     required SilexgisLocalStateRepository localState,
+    required SilexgisHeldRowRepository heldRows,
     required ICaveRepository caves,
     required ICavePlaceRepository places,
     required String profileUuid,
@@ -95,6 +101,7 @@ class SilexgisDownloadApplier {
   }) : _db = db,
        _logger = logger,
        _localState = localState,
+       _heldRows = heldRows,
        _caves = caves,
        _places = places,
        _profileUuid = profileUuid,
@@ -103,6 +110,7 @@ class SilexgisDownloadApplier {
   final AppDatabase _db;
   final ChangeLogger _logger;
   final SilexgisLocalStateRepository _localState;
+  final SilexgisHeldRowRepository _heldRows;
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
   final String _profileUuid;
@@ -119,6 +127,9 @@ class SilexgisDownloadApplier {
   /// What the two sides last agreed each local row said, read once per page.
   Map<Uuid, StoredRevision> _agreed = const <Uuid, StoredRevision>{};
 
+  /// Rows held for a reviewer, read once per page with [_agreed].
+  Set<Uuid> _held = const <Uuid>{};
+
   /// Applies one page and stores the position it hands back, in one
   /// transaction: a page that is written but whose cursor is lost would be
   /// re-read, and one whose cursor is stored without the rows would not.
@@ -127,6 +138,38 @@ class SilexgisDownloadApplier {
     required String setId,
   }) async {
     late SilexgisApplyReport report;
+    await _suspendedTransaction(() async {
+      report = await _applyRows(page.features);
+      final deletes = await _applyTombstones(page.tombstones);
+      report = SilexgisApplyReport(
+        inserted: report.inserted,
+        updated: report.updated,
+        deleted: deletes,
+        deferred: _pending.length,
+        skipped: report.skipped,
+      );
+      await _localState.writeSetState(
+        _profileUuid,
+        setId,
+        cursor: page.nextCursor,
+        setRevision: page.setRevision,
+      );
+    });
+    return report;
+  }
+
+  /// Writes rows that did not come on a page — the server's own version of a
+  /// row, handed back with a reviewer's decision — exactly as a page's rows
+  /// are written, and leaves the stream's position alone.
+  Future<SilexgisApplyReport> applyRows(List<SyncFeatureRow> rows) async {
+    late SilexgisApplyReport report;
+    await _suspendedTransaction(() async {
+      report = await _applyRows(rows);
+    });
+    return report;
+  }
+
+  Future<void> _suspendedTransaction(Future<void> Function() body) async {
     await _logger.runSuspended(() async {
       await _db.transaction(() async {
         // A child may be written before its parent within one pass; the
@@ -134,24 +177,13 @@ class SilexgisDownloadApplier {
         // edge at commit.
         await _db.customStatement('PRAGMA defer_foreign_keys = ON');
         _agreed = await _localState.readRevisions(_profileUuid);
-        report = await _applyRows(page);
-        final deletes = await _applyTombstones(page.tombstones);
-        report = SilexgisApplyReport(
-          inserted: report.inserted,
-          updated: report.updated,
-          deleted: deletes,
-          deferred: _pending.length,
-          skipped: report.skipped,
-        );
-        await _localState.writeSetState(
+        _held = (await _heldRows.readSection(
           _profileUuid,
-          setId,
-          cursor: page.nextCursor,
-          setRevision: page.setRevision,
-        );
+          SyncUploadSection.rows,
+        )).keys.toSet();
+        await body();
       });
     });
-    return report;
   }
 
   /// Rows the run never resolved, reported once at the end so a caver is told
@@ -164,7 +196,7 @@ class SilexgisDownloadApplier {
 
   // ------------------------------------------------------------------- rows
 
-  Future<SilexgisApplyReport> _applyRows(SyncDownloadPage page) async {
+  Future<SilexgisApplyReport> _applyRows(List<SyncFeatureRow> features) async {
     var inserted = 0;
     var updated = 0;
     final skipped = <SilexgisSkipReason, int>{};
@@ -173,7 +205,7 @@ class SilexgisDownloadApplier {
 
     final queue = <MappedFeature>[..._pending];
     _pending.clear();
-    for (final row in page.features) {
+    for (final row in features) {
       final mapped = _mapper.read(row);
       if (mapped is UnmappedFeature) {
         // Not an error: an installation's taxonomy grows without a contract
@@ -544,13 +576,15 @@ class SilexgisDownloadApplier {
     return rows.isNotEmpty;
   }
 
-  /// Whether the local row has an edit the server has not been told about.
+  /// Whether the local row has an edit the server has not been told about, or
+  /// has been told about and is holding for a reviewer.
   ///
   /// A row this device has never exchanged has no agreement to break, so it is
   /// written: the download is where it first arrives. One that was exchanged
   /// and has moved since is left alone — overwriting it would lose the caver's
   /// work silently, where sending it produces an answer they can act on.
   bool _hasUnsentEdit(Uuid uuid, int? localUpdatedAt) {
+    if (_held.contains(uuid)) return true;
     final agreed = _agreed[uuid];
     return agreed != null && !agreed.agreesWith(localUpdatedAt);
   }

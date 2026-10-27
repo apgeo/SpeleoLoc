@@ -35,6 +35,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
@@ -149,6 +150,15 @@ final silexgisLocalStateProvider = Provider<SilexgisLocalStateRepository>(
   ),
 );
 
+/// Rows an installation holds for a reviewer, and the decisions on them.
+/// Local-only, like the rest of this device's SilexGIS state.
+final silexgisHeldRowsProvider = Provider<SilexgisHeldRowRepository>(
+  (ref) => SilexgisHeldRowRepository(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
 /// The configured SilexGIS installations. Its own configuration key — a server
 /// profile follows the FTP-profile pattern without joining that machinery.
 final silexgisProfileRepositoryProvider = Provider<SilexgisProfileRepository>(
@@ -166,6 +176,7 @@ final silexgisSyncControllerProvider =
         db: ref.watch(appDatabaseProvider),
         profiles: ref.watch(silexgisProfileRepositoryProvider),
         localState: ref.watch(silexgisLocalStateProvider),
+        heldRows: ref.watch(silexgisHeldRowsProvider),
         logger: ref.watch(changeLoggerProvider),
         caves: ref.watch(caveRepositoryProvider),
         places: ref.watch(cavePlaceRepositoryProvider),

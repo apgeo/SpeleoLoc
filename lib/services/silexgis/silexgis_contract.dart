@@ -76,4 +76,15 @@ class SilexgisContract {
   /// can switch it off, and it is named only to an account that may be told
   /// who people are.
   static const String featurePeople = 'people';
+
+  // ----- client features -----
+
+  /// The device understands the row status `held`: an account whose uploads
+  /// wait for a reviewer has its rows kept as proposals rather than written.
+  static const String clientFeatureHeld = 'held';
+
+  /// Sent on every upload. A name goes in only from the build that handles
+  /// what it unlocks: a build that listed `held` and recorded a held row as
+  /// written would believe an unreviewed edit had landed.
+  static const List<String> clientFeatures = <String>[clientFeatureHeld];
 }

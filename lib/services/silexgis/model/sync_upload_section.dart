@@ -19,6 +19,14 @@ enum SyncUploadSection {
 
   const SyncUploadSection(this.wireName);
   final String wireName;
+
+  /// The section named [wireName], or null for one this build does not know.
+  static SyncUploadSection? tryParse(String? wireName) {
+    for (final value in SyncUploadSection.values) {
+      if (value.wireName == wireName) return value;
+    }
+    return null;
+  }
 }
 
 /// One item of any section, as it goes on the wire.

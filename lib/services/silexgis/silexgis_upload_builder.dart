@@ -1,6 +1,8 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_feature_mapper.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 
 /// One row this device means to send, with the local table it came from.
@@ -41,6 +43,12 @@ class PendingUploadRow {
 /// structure the server derives protection from, which is why a row with no
 /// container that the server already holds has nowhere safe to land.
 ///
+/// A row held for a reviewer is not sent again until the caver edits it: the
+/// same content would be answered with the same review, and once a reviewer
+/// has decided, sending it again would replace the decision with a new
+/// proposal. It still counts as a container for what is sent beneath it — the
+/// server checks a new place against the account's waiting cave.
+///
 /// Live rows come in containment order — surface areas, caves, cave areas,
 /// then places — because a batch is applied in the order it is given and a
 /// container has to exist before the row that hangs under it.
@@ -48,17 +56,20 @@ class SilexgisUploadBuilder {
   SilexgisUploadBuilder({
     required AppDatabase db,
     required SilexgisLocalStateRepository localState,
+    required SilexgisHeldRowRepository heldRows,
     required String profileUuid,
     bool uploadsNewRoots = false,
     SilexgisFeatureMapper mapper = const SilexgisFeatureMapper(),
   }) : _db = db,
        _localState = localState,
+       _heldRows = heldRows,
        _profileUuid = profileUuid,
        _uploadsNewRoots = uploadsNewRoots,
        _mapper = mapper;
 
   final AppDatabase _db;
   final SilexgisLocalStateRepository _localState;
+  final SilexgisHeldRowRepository _heldRows;
   final String _profileUuid;
 
   /// See [SilexgisProfile.uploadsNewRoots]. Off, what travels is what the
@@ -72,6 +83,12 @@ class SilexgisUploadBuilder {
   /// Everything this run has to send, in the order to send it.
   Future<List<PendingUploadRow>> build() async {
     final revisions = await _localState.readRevisions(_profileUuid);
+    final held = await _heldRows.readSection(
+      _profileUuid,
+      SyncUploadSection.rows,
+    );
+    bool awaitsReview(Uuid uuid, int? updatedAt) =>
+        held[uuid]?.stillAsSent(updatedAt) ?? false;
     final pending = <PendingUploadRow>[];
 
     // A row is known to this installation when the device holds a revision for
@@ -86,6 +103,7 @@ class SilexgisUploadBuilder {
       if (stored == null && !_uploadsNewRoots) continue;
       if (stored != null && !_isDirty(area.updatedAt, stored)) continue;
       known.add(area.uuid);
+      if (awaitsReview(area.uuid, area.updatedAt)) continue;
       pending.add(
         PendingUploadRow(
           row: _mapper.surfaceAreaRow(area, baseRevision: stored?.revision),
@@ -106,6 +124,7 @@ class SilexgisUploadBuilder {
       sendableCaves[cave.uuid] = cave;
       known.add(cave.uuid);
       if (stored != null && !_isDirty(cave.updatedAt, stored)) continue;
+      if (awaitsReview(cave.uuid, cave.updatedAt)) continue;
       pending.add(
         PendingUploadRow(
           row: _mapper.caveRow(
@@ -128,6 +147,7 @@ class SilexgisUploadBuilder {
 
       final stored = revisions[area.uuid];
       if (stored != null && !_isDirty(area.updatedAt, stored)) continue;
+      if (awaitsReview(area.uuid, area.updatedAt)) continue;
       pending.add(
         PendingUploadRow(
           row: _mapper.caveAreaRow(
@@ -153,6 +173,7 @@ class SilexgisUploadBuilder {
 
       final stored = revisions[place.uuid];
       if (stored != null && !_isDirty(place.updatedAt, stored)) continue;
+      if (awaitsReview(place.uuid, place.updatedAt)) continue;
 
       // A place hangs under its cave area when it names one, and under the
       // cave otherwise. That edge is what decides what guards it, because
@@ -182,7 +203,12 @@ class SilexgisUploadBuilder {
       );
     }
 
-    pending.addAll(await _tombstones(revisions));
+    pending.addAll(
+      // A removal is never edited again, so a held one waits for its decision.
+      (await _tombstones(
+        revisions,
+      )).where((p) => !(held[p.entityUuid]?.isDelete ?? false)),
+    );
     return pending;
   }
 

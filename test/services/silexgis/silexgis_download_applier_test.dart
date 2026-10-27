@@ -8,7 +8,10 @@ import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
+import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -21,6 +24,7 @@ void main() {
   late AppDatabase db;
   late ChangeLogger logger;
   late SilexgisLocalStateRepository localState;
+  late SilexgisHeldRowRepository heldRows;
   late SilexgisDownloadApplier applier;
 
   final clock = FakeClock(DateTime.utc(2026, 9, 1, 12));
@@ -37,10 +41,12 @@ void main() {
     await currentUser.initialize();
     logger = loggerRef = ChangeLogger(db, currentUser, clock: clock);
     localState = SilexgisLocalStateRepository(db, clock: clock);
+    heldRows = SilexgisHeldRowRepository(db, clock: clock);
     applier = SilexgisDownloadApplier(
       db: db,
       logger: logger,
       localState: localState,
+      heldRows: heldRows,
       caves: CaveRepository(db, currentUser, logger, clock: clock),
       places: CavePlaceRepository(db, currentUser, logger, clock: clock),
       profileUuid: profile,
@@ -323,6 +329,67 @@ void main() {
           setId: setId,
         );
         expect(report.updated, 1);
+      },
+    );
+  });
+
+  group('a row held for a reviewer is not written over', () {
+    Future<void> hold(Uuid uuid, {required int? sentAt}) =>
+        heldRows.recordHeld(profile, <SilexgisHeldEntry>[
+          SilexgisHeldEntry(
+            section: SyncUploadSection.rows,
+            entityUuid: uuid,
+            entityTable: 'caves',
+            wireKind: 'cave',
+            reviewId: 'review-1',
+            sentLocalUpdatedAt: sentAt,
+          ),
+        ]);
+
+    test('even a new row the server never had a revision for', () async {
+      // The caver keeps seeing their own version while it waits. Without the
+      // hold, a row the device never exchanged would be overwritten by the
+      // first version the server hands back.
+      await db
+          .into(db.caves)
+          .insert(
+            Cave(
+              uuid: caveId,
+              title: 'Proposed here',
+              updatedAt: clock.nowMs(),
+            ),
+          );
+      await hold(caveId, sentAt: clock.nowMs());
+
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[aCave()]),
+        setId: setId,
+      );
+
+      expect(report.updated, 0);
+      expect(report.skipped[SilexgisSkipReason.unsentLocalEdit], 1);
+      final cave = await (db.select(
+        db.caves,
+      )..where((t) => t.uuid.equalsValue(caveId))).getSingle();
+      expect(cave.title, 'Proposed here');
+    });
+
+    test(
+      'rows handed over beside a decision leave the position alone',
+      () async {
+        await localState.writeSetState(
+          profile,
+          setId,
+          cursor: 'kept',
+          setRevision: 3,
+        );
+        final report = await applier.applyRows(<SyncFeatureRow>[
+          SyncFeatureRow.fromJson(aCave()),
+        ]);
+
+        expect(report.inserted, 1);
+        expect((await localState.readSetState(profile, setId)).cursor, 'kept');
+        expect(await db.select(db.changeLog).get(), isEmpty);
       },
     );
   });

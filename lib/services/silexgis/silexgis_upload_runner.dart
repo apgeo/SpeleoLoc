@@ -5,6 +5,8 @@ import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
+import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
@@ -47,6 +49,7 @@ class SilexgisUploadReport {
     required this.refusals,
     required this.duplicates,
     required this.replayed,
+    this.held = 0,
   });
 
   const SilexgisUploadReport.nothingToSend()
@@ -55,7 +58,8 @@ class SilexgisUploadReport {
       refused = 0,
       refusals = const <SilexgisRefusal>[],
       duplicates = const <SyncDuplicateReport>[],
-      replayed = 0;
+      replayed = 0,
+      held = 0;
 
   final int batches;
   final int written;
@@ -71,6 +75,10 @@ class SilexgisUploadReport {
   /// answer to the first attempt was lost on the way back.
   final int replayed;
 
+  /// Items this run's upload left waiting for a reviewer. Nothing of them was
+  /// written.
+  final int held;
+
   bool get isEmpty => batches == 0;
 }
 
@@ -80,15 +88,18 @@ class SilexgisUploadRunner {
     required SilexgisSyncApi api,
     required SilexgisUploadBuilder builder,
     required SilexgisLocalStateRepository localState,
+    required SilexgisHeldRowRepository heldRows,
     required String profileUuid,
   }) : _api = api,
        _builder = builder,
        _localState = localState,
+       _heldRows = heldRows,
        _profileUuid = profileUuid;
 
   final SilexgisSyncApi _api;
   final SilexgisUploadBuilder _builder;
   final SilexgisLocalStateRepository _localState;
+  final SilexgisHeldRowRepository _heldRows;
   final String _profileUuid;
   final _log = AppLogger.of('SilexgisUploadRunner');
 
@@ -102,6 +113,7 @@ class SilexgisUploadRunner {
     var written = 0;
     var refused = 0;
     var replayed = 0;
+    var held = 0;
     final refusals = <SilexgisRefusal>[];
     final duplicates = <SyncDuplicateReport>[];
     // A batch above the installation's ceiling is refused whole, before a
@@ -120,6 +132,7 @@ class SilexgisUploadRunner {
       // would have the server answer with the wrong stored result.
       final batch = SyncUploadBatch(
         batchId: Uuid.v7().toString(),
+        clientFeatures: SilexgisContract.clientFeatures,
         rows: chunk.map((p) => p.row).toList(growable: false),
       );
       final result = await _api.upload(setId, batch);
@@ -128,6 +141,7 @@ class SilexgisUploadRunner {
       written += result.written;
       refused += result.refused;
       duplicates.addAll(result.duplicates);
+      held += result.rows.where((r) => r.status == SyncRowStatus.held).length;
       refusals.addAll(await _applyAnswers(chunk, result));
     }
 
@@ -138,6 +152,7 @@ class SilexgisUploadRunner {
       refusals: refusals,
       duplicates: duplicates,
       replayed: replayed,
+      held: held,
     );
   }
 
@@ -155,6 +170,9 @@ class SilexgisUploadRunner {
     final revisions = <SilexgisRevisionEntry>[];
     final forgotten = <Uuid>[];
     final refusals = <SilexgisRefusal>[];
+    final heldNow = <SilexgisHeldEntry>[];
+    // Any other answer is the row's news now, whatever an earlier review said.
+    final answeredOtherwise = <Uuid>[];
 
     for (final answer in result.rows) {
       final sentRow = byId[answer.id];
@@ -166,6 +184,9 @@ class SilexgisUploadRunner {
         continue;
       }
 
+      if (answer.status != SyncRowStatus.held) {
+        answeredOtherwise.add(sentRow.entityUuid);
+      }
       switch (answer.status) {
         case SyncRowStatus.created:
         case SyncRowStatus.updated:
@@ -189,8 +210,24 @@ class SilexgisUploadRunner {
           forgotten.add(sentRow.entityUuid);
         case SyncRowStatus.held:
           // Nothing was written, so the revision stays what it was and the
-          // local edit stays due. Answered only to a device that opted in.
-          break;
+          // local edit stays unsent. What is recorded is the stamp it was sent
+          // at, so it is not sent again until the caver edits it.
+          final reviewId = answer.reviewId;
+          if (reviewId == null) {
+            _log.warning('a held answer named no review: ${answer.id}');
+            break;
+          }
+          heldNow.add(
+            SilexgisHeldEntry(
+              section: SyncUploadSection.rows,
+              entityUuid: sentRow.entityUuid,
+              entityTable: sentRow.entityTable,
+              wireKind: sentRow.row.kind.wireName,
+              reviewId: reviewId,
+              isDelete: sentRow.isDelete,
+              sentLocalUpdatedAt: sentRow.localUpdatedAt,
+            ),
+          );
         case SyncRowStatus.conflict:
         case SyncRowStatus.rejected:
         case null:
@@ -207,6 +244,12 @@ class SilexgisUploadRunner {
 
     await _localState.writeRevisions(_profileUuid, revisions);
     await _localState.forgetRevisions(_profileUuid, forgotten);
+    await _heldRows.clear(
+      _profileUuid,
+      SyncUploadSection.rows,
+      answeredOtherwise,
+    );
+    await _heldRows.recordHeld(_profileUuid, heldNow);
     return refusals;
   }
 }
