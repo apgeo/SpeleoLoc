@@ -87,6 +87,9 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   bool _isPlaying = false;
   bool _isSaving = false;
   String? _recordedPath;
+
+  /// Scratch files of the waveform recorder, removed as soon as it stops.
+  final List<String> _waveformPaths = [];
   Duration _elapsed = Duration.zero;
 
   StreamSubscription<RecordingDisposition>? _recorderProgressSub;
@@ -187,7 +190,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     _recorderProgressSub?.cancel();
     _recorder.closeRecorder();
     _player.closePlayer();
-    _waveController.dispose();
+    unawaited(_disposeWaveform());
     _playerController.dispose();
     _titleCtrl.dispose();
     super.dispose();
@@ -261,7 +264,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
         toFile: _recordedPath,
         codec: Codec.pcm16WAV,
       );
-      await _waveController.record();
+      await _startWaveform();
 
       unawaited(_recorderProgressSub?.cancel());
       _recorderProgressSub = _recorder.onProgress!.listen((event) {
@@ -281,12 +284,56 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     }
   }
 
+  /// Starts the waveform recorder. It exists only to feed the live waveform,
+  /// but the package always records to a file; left to itself it writes an
+  /// `.m4a` into the cache folder (Android) or the app documents folder (iOS)
+  /// that nothing ever reads or deletes. The file goes to a known temporary
+  /// path instead and [_stopWaveform] removes it. The saved recording is
+  /// always the `flutter_sound` WAV.
+  Future<void> _startWaveform() async {
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/wave_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    _waveformPaths.add(path);
+    await _waveController.record(path: path);
+  }
+
+  Future<void> _stopWaveform() async {
+    try {
+      await _waveController.stop();
+    } finally {
+      await _deleteWaveformFiles();
+    }
+  }
+
+  /// A recording abandoned mid-way still has a scratch file; stop the
+  /// recorder and remove it before the controller goes away.
+  Future<void> _disposeWaveform() async {
+    try {
+      await _stopWaveform();
+    } finally {
+      _waveController.dispose();
+    }
+  }
+
+  Future<void> _deleteWaveformFiles() async {
+    for (final path in _waveformPaths) {
+      try {
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      } on FileSystemException catch (e) {
+        log.warning('could not remove waveform scratch file', e);
+      }
+    }
+    _waveformPaths.clear();
+  }
+
   Future<void> _stopRecording() async {
     try {
       unawaited(_recorderProgressSub?.cancel());
       _recorderProgressSub = null;
       await _recorder.stopRecorder();
-      await _waveController.stop();
+      await _stopWaveform();
 
       // If we were recording over an existing WAV (splice), merge the original
       // prefix with the newly recorded tail.
@@ -312,7 +359,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   Future<void> _pauseRecording() async {
     try {
       await _recorder.pauseRecorder();
-      await _waveController.stop();
+      await _stopWaveform();
       setState(() => _isPaused = true);
     } catch (e) {
       log.warning('pause error', e);
@@ -322,7 +369,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   Future<void> _resumeRecording() async {
     try {
       await _recorder.resumeRecorder();
-      await _waveController.record();
+      await _startWaveform();
       setState(() => _isPaused = false);
     } catch (e) {
       log.warning('resume error', e);
