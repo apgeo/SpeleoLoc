@@ -24,6 +24,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/document_thumbnail_widgets.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/silexgis_server_documents_section.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -738,12 +739,21 @@ class _GeofeatureDocumentsPageState
   //  Sliver builders
   // -----------------------------------------------------------------------
 
-  List<Widget> _buildContentSlivers() {
+  List<Widget> _buildContentSlivers({required bool serverSection}) {
     if (_filteredDocs.isEmpty) {
+      final empty = Center(child: Text(LocServ.inst.t('no_documents')));
       return [
-        SliverFillRemaining(
-          child: Center(child: Text(LocServ.inst.t('no_documents'))),
-        ),
+        // With files on the server below, the empty note must not fill the
+        // screen and hide them.
+        if (serverSection)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: empty,
+            ),
+          )
+        else
+          SliverFillRemaining(child: empty),
       ];
     }
 
@@ -934,6 +944,11 @@ class _GeofeatureDocumentsPageState
 
   @override
   Widget build(BuildContext context) {
+    final link = widget.source.geofeatureLink;
+    final hasServerDocs =
+        link != null &&
+        ref.watch(silexgisServerDocumentsProvider(link.geofeatureUuid)).value !=
+            null;
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
@@ -1034,7 +1049,12 @@ class _GeofeatureDocumentsPageState
                               setState(() => _horizontalGridRows = rows),
                         ),
                       ),
-                      ..._buildContentSlivers(),
+                      ..._buildContentSlivers(serverSection: hasServerDocs),
+                      if (link != null)
+                        SilexgisServerDocumentsSection(
+                          featureId: link.geofeatureUuid,
+                          onDownloaded: _loadDocuments,
+                        ),
                     ],
                   ),
                 ),

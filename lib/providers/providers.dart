@@ -36,6 +36,12 @@ import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_downloader.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_importer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_documents_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
@@ -177,6 +183,51 @@ final silexgisDocumentCatalogueProvider =
     Provider<SilexgisDocumentCatalogueRepository>(
       (ref) =>
           SilexgisDocumentCatalogueRepository(ref.watch(appDatabaseProvider)),
+    );
+
+/// What a feature has on the active installation that this device does not,
+/// and fetching it on the caver's say-so.
+final silexgisDocumentsServiceProvider = Provider<SilexgisDocumentsService>((
+  ref,
+) {
+  final db = ref.watch(appDatabaseProvider);
+  final tokens = ref.watch(silexgisTokenStoreProvider);
+  final catalogue = ref.watch(silexgisDocumentCatalogueProvider);
+  final logger = ref.watch(changeLoggerProvider);
+  final localState = ref.watch(silexgisLocalStateProvider);
+  final clock = ref.watch(clockProvider);
+  return SilexgisDocumentsService(
+    profiles: ref.watch(silexgisProfileRepositoryProvider),
+    catalogue: catalogue,
+    documents: ref.watch(documentationRepositoryProvider),
+    sessionBuilder: (profile) => SilexgisSession.signedIn(profile, tokens),
+    downloaderBuilder: (profile, api) => SilexgisDocumentDownloader(
+      db: db,
+      api: api,
+      fetcher: SilexgisFileFetcher(baseUri: profile.baseUri),
+      store: SilexgisDocumentFileStore(
+        baseDir: getApplicationDocumentsDirectory,
+      ),
+      catalogue: catalogue,
+      importer: SilexgisDocumentImporter(
+        db: db,
+        logger: logger,
+        localState: localState,
+        copies: SilexgisFileCopyRepository(db, clock: clock),
+        profileUuid: profile.profileUuid,
+        clock: clock,
+      ),
+      profileUuid: profile.profileUuid,
+    ),
+  );
+});
+
+/// The catalogue entries one feature has on the active installation and not
+/// here, or null when there is no profile or nothing to show.
+final silexgisServerDocumentsProvider = FutureProvider.autoDispose
+    .family<SilexgisServerDocuments?, Uuid>(
+      (ref, featureId) =>
+          ref.watch(silexgisDocumentsServiceProvider).forFeature(featureId),
     );
 
 /// The choice of caver per phone user, for the user screens.
