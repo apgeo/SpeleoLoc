@@ -4,6 +4,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
@@ -103,7 +104,15 @@ class SilexgisUploadRunner {
     var replayed = 0;
     final refusals = <SilexgisRefusal>[];
     final duplicates = <SyncDuplicateReport>[];
-    final chunks = _split(pending, capabilities.uploadRowsMax);
+    // A batch above the installation's ceiling is refused whole, before a
+    // single row is looked at, so the split happens here rather than being
+    // discovered from a refusal.
+    final chunks = chunkUploadSections<PendingUploadRow>(
+      <SyncUploadSection, List<PendingUploadRow>>{
+        SyncUploadSection.rows: pending,
+      },
+      capabilities.uploadRowsMax,
+    ).map((c) => c[SyncUploadSection.rows]!).toList(growable: false);
 
     for (final chunk in chunks) {
       // Each part is its own attempt and gets its own identifier: a batch
@@ -178,6 +187,10 @@ class SilexgisUploadRunner {
           // stops the same tombstone going up again for ever, and makes the
           // identifier new to this installation if the caver recreates it.
           forgotten.add(sentRow.entityUuid);
+        case SyncRowStatus.held:
+          // Nothing was written, so the revision stays what it was and the
+          // local edit stays due. Answered only to a device that opted in.
+          break;
         case SyncRowStatus.conflict:
         case SyncRowStatus.rejected:
         case null:
@@ -195,20 +208,5 @@ class SilexgisUploadRunner {
     await _localState.writeRevisions(_profileUuid, revisions);
     await _localState.forgetRevisions(_profileUuid, forgotten);
     return refusals;
-  }
-
-  /// Splits into parts no larger than the installation's ceiling.
-  ///
-  /// A batch above it is refused whole, before a single row is looked at, so
-  /// the split happens here rather than being discovered from a refusal.
-  static List<List<PendingUploadRow>> _split(
-    List<PendingUploadRow> rows,
-    int max,
-  ) {
-    final limit = max > 0 ? max : rows.length;
-    return <List<PendingUploadRow>>[
-      for (var i = 0; i < rows.length; i += limit)
-        rows.sublist(i, i + limit > rows.length ? rows.length : i + limit),
-    ];
   }
 }

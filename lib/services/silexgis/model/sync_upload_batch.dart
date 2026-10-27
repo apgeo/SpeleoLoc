@@ -1,4 +1,5 @@
 import 'package:speleoloc/services/silexgis/model/geo_json_geometry.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 
 /// The `kind` values an upload may carry.
@@ -45,7 +46,7 @@ enum PositionQuality {
 /// in: an **empty** document is a value, and sending one replaces whatever was
 /// stored. So it goes on the wire only when this row actually carries one, and
 /// a row built to change a single field leaves the stored document alone.
-class SyncUploadRow {
+class SyncUploadRow implements SyncUploadItem {
   const SyncUploadRow({
     required this.id,
     required this.kind,
@@ -137,6 +138,7 @@ class SyncUploadRow {
 
   bool get isNew => baseRevision == null;
 
+  @override
   Map<String, Object?> toJson() {
     final json = <String, Object?>{
       'id': id,
@@ -178,7 +180,12 @@ class SyncUploadRow {
 
 /// One upload attempt.
 class SyncUploadBatch {
-  const SyncUploadBatch({required this.batchId, required this.rows});
+  const SyncUploadBatch({
+    required this.batchId,
+    this.rows = const <SyncUploadRow>[],
+    this.sections = const <SyncUploadSection, List<SyncUploadItem>>{},
+    this.clientFeatures = const <String>[],
+  });
 
   /// Minted by the device, per **attempt**. Sending the same one again returns
   /// the first answer and writes nothing, which is what makes a resend safe
@@ -193,9 +200,43 @@ class SyncUploadBatch {
   /// a batch naming one twice is refused whole.
   final List<SyncUploadRow> rows;
 
-  Map<String, Object?> toJson() => <String, Object?>{
-    'batchId': batchId,
-    'contractVersion': SilexgisContract.version,
-    'rows': rows.map((r) => r.toJson()).toList(growable: false),
-  };
+  /// Every section beside [rows]. An entry for [SyncUploadSection.rows] here
+  /// is ignored: the feature rows are typed and travel in [rows].
+  final Map<SyncUploadSection, List<SyncUploadItem>> sections;
+
+  /// Behaviours beyond the first contract this device understands. A server
+  /// answers only in ways a device opted into here, so a name goes in only
+  /// from the build that handles what it unlocks. Omitted from the wire while
+  /// empty, which keeps a rows-only upload exactly as it was before sections.
+  final List<String> clientFeatures;
+
+  /// Items across every section, which is what `uploadRowsMax` counts.
+  int get itemCount =>
+      rows.length +
+      sections.entries
+          .where((e) => e.key != SyncUploadSection.rows)
+          .fold(0, (sum, e) => sum + e.value.length);
+
+  Map<String, Object?> toJson() {
+    final others = <String, Object?>{
+      for (final section in SyncUploadSection.values)
+        if (section != SyncUploadSection.rows &&
+            (sections[section]?.isNotEmpty ?? false))
+          section.wireName: sections[section]!
+              .map((item) => item.toJson())
+              .toList(growable: false),
+    };
+    return <String, Object?>{
+      'batchId': batchId,
+      'contractVersion': SilexgisContract.version,
+      if (clientFeatures.isNotEmpty) 'clientFeatures': clientFeatures,
+      // Stated whenever nothing else is, so a rows-only upload is the same
+      // bytes a device sent before sections existed.
+      if (rows.isNotEmpty || others.isEmpty)
+        SyncUploadSection.rows.wireName: rows
+            .map((r) => r.toJson())
+            .toList(growable: false),
+      ...others,
+    };
+  }
 }

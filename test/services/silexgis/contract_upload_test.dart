@@ -3,10 +3,11 @@ import 'package:speleoloc/services/silexgis/model/geo_json_geometry.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 
 import 'contract_fixtures.dart';
 
-/// Replays the five recorded writes.
+/// Replays the recorded writes.
 ///
 /// A write is the half this application has to **compose** rather than merely
 /// parse, so each case rebuilds the recorded request from the same inputs and
@@ -57,6 +58,9 @@ void main() {
       expect(ours['batchId'], recorded['batchId']);
       expect(ours['contractVersion'], recorded['contractVersion']);
       expect(ours['contractVersion'], 1);
+      // A rows-only upload is the body a device sent before sections existed:
+      // no `clientFeatures`, no empty arrays beside `rows`, the same order.
+      expect(ours.keys.toList(), recorded.keys.toList());
 
       expectComposes(
         (ours['rows']! as List).single as Map<String, Object?>,
@@ -221,6 +225,7 @@ void main() {
           ),
         ],
       );
+      expect(batch.toJson().keys.toList(), exchange.requestBody.keys.toList());
       expectComposes(
         (batch.toJson()['rows']! as List).single as Map<String, Object?>,
         ((exchange.requestBody['rows']! as List).single
@@ -235,4 +240,150 @@ void main() {
       expect(result.rows.single.action, SilexgisAction.ignore);
     });
   });
+
+  group('16-errors/file-bytes-missing', () {
+    final exchange = ContractExchange('16-errors/file-bytes-missing');
+    late SyncUploadResult result;
+    setUpAll(() => result = SyncUploadResult.fromJson(exchange.responseBody));
+
+    test('a refused item rides a 200, in its own section', () {
+      expect(exchange.status, 200);
+      expect(result.refused, 1);
+      final document = result.answersFor(SyncUploadSection.documents)!.single;
+      expect(document.status, SyncRowStatus.rejected);
+      expect(document.code, 'sync.file_bytes_missing');
+      expect(document.revision, isNull);
+    });
+
+    test('an empty array is present, and an absent one is absent', () {
+      // `rows: []` is the server saying "you sent no rows"; a section it
+      // does not mention at all was not in the upload.
+      expect(result.answersFor(SyncUploadSection.rows), isEmpty);
+      expect(result.answersFor(SyncUploadSection.rows), isNotNull);
+      for (final section in <SyncUploadSection>[
+        SyncUploadSection.people,
+        SyncUploadSection.documentLinks,
+        SyncUploadSection.tripRecordings,
+        SyncUploadSection.tripPoints,
+        SyncUploadSection.rasterMaps,
+        SyncUploadSection.rasterPins,
+      ]) {
+        expect(result.answersFor(section), isNull, reason: section.wireName);
+      }
+    });
+
+    test('an upload with no rows states none', () {
+      final batch = SyncUploadBatch(
+        batchId: '<batch>',
+        sections: <SyncUploadSection, List<SyncUploadItem>>{
+          SyncUploadSection.documents: <SyncUploadItem>[
+            _Recorded(
+              (exchange.requestBody['documents']! as List).single
+                  as Map<String, Object?>,
+            ),
+          ],
+        },
+      );
+      expect(batch.toJson(), exchange.requestBody);
+      expect(batch.itemCount, 1);
+    });
+  });
+
+  group('19-upload-document-and-link', () {
+    final exchange = ContractExchange('19-upload-document-and-link');
+    late SyncUploadResult result;
+    setUpAll(() => result = SyncUploadResult.fromJson(exchange.responseBody));
+
+    test('composes the sections in the recorded order', () {
+      final recorded = exchange.requestBody;
+      Map<String, Object?> only(String key) =>
+          (recorded[key]! as List).single as Map<String, Object?>;
+      // Given out of order on purpose: the wire order is the apply order.
+      final batch = SyncUploadBatch(
+        batchId: '<batch>',
+        sections: <SyncUploadSection, List<SyncUploadItem>>{
+          SyncUploadSection.documentLinks: <SyncUploadItem>[
+            _Recorded(only('documentLinks')),
+          ],
+          SyncUploadSection.documents: <SyncUploadItem>[
+            _Recorded(only('documents')),
+          ],
+        },
+      );
+      final ours = batch.toJson();
+      expect(ours, recorded);
+      expect(ours.keys.toList(), recorded.keys.toList());
+      expect(batch.itemCount, 2);
+    });
+
+    test('answers each section in the array of the same name', () {
+      expect(result.written, 2);
+      expect(result.rows, isEmpty);
+      final document = result.answersFor(SyncUploadSection.documents)!.single;
+      expect(document.id, '<document>');
+      expect(document.status, SyncRowStatus.created);
+      expect(document.revision, isNotNull);
+      // The link is given its identifier by the server.
+      final link = result.answersFor(SyncUploadSection.documentLinks)!.single;
+      expect(link.id, isNot('<document>'));
+      expect(link.status, SyncRowStatus.created);
+      expect(link.action, SilexgisAction.ignore);
+      expect(result.answersFor(SyncUploadSection.people), isNull);
+    });
+  });
+
+  group('20-upload-held', () {
+    final exchange = ContractExchange('20-upload-held');
+
+    test('states clientFeatures where the recording does', () {
+      const batch = SyncUploadBatch(
+        batchId: '<batch>',
+        clientFeatures: <String>['held'],
+        rows: <SyncUploadRow>[
+          SyncUploadRow(
+            id: '<cave>',
+            kind: SyncUploadKind.cave,
+            baseRevision: null,
+            name: 'held cave',
+            caveTypeCode: 'cave',
+          ),
+        ],
+      );
+      final ours = batch.toJson();
+      expect(ours.keys.toList(), exchange.requestBody.keys.toList());
+      expect(ours['clientFeatures'], exchange.requestBody['clientFeatures']);
+    });
+
+    test('a held row carries its review and no revision', () {
+      final result = SyncUploadResult.fromJson(exchange.responseBody);
+      expect(result.written, 0);
+      expect(result.refused, 0);
+      expect(result.rows, hasLength(2));
+      for (final row in result.rows) {
+        expect(row.status, SyncRowStatus.held);
+        expect(row.revision, isNull);
+        expect(row.reviewId, isNotNull);
+        expect(row.isWritten, isFalse);
+        expect(row.action, SilexgisAction.ignore);
+      }
+      expect(result.rows[0].reviewId, isNot(result.rows[1].reviewId));
+    });
+
+    test('an account that is not reviewed is answered with no review', () {
+      final result = SyncUploadResult.fromJson(
+        ContractExchange('11-upload-create').responseBody,
+      );
+      expect(result.rows.single.reviewId, isNull);
+    });
+  });
+}
+
+/// A recorded item, sent back exactly as recorded. Stands in for the typed
+/// items of the sections this build does not compose yet.
+class _Recorded implements SyncUploadItem {
+  const _Recorded(this.json);
+  final Map<String, Object?> json;
+
+  @override
+  Map<String, Object?> toJson() => json;
 }

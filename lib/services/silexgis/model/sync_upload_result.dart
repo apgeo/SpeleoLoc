@@ -1,7 +1,8 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 
-/// What happened to one uploaded row.
+/// What happened to one uploaded item, in any section.
 ///
 /// Arbitration is per row and so is the answer: a device that edited forty
 /// caves offline and lost one to a conflict is told which one, and the other
@@ -20,7 +21,12 @@ enum SyncRowStatus {
   /// version was **not** applied.
   conflict,
 
-  rejected;
+  rejected,
+
+  /// The account's uploads wait for a reviewer: nothing was written, and the
+  /// row is kept as a proposal under a `reviewId`. Only ever answered to a
+  /// device that listed `held` in `clientFeatures`.
+  held;
 
   static SyncRowStatus? tryParse(String? wireName) {
     for (final value in SyncRowStatus.values) {
@@ -30,7 +36,7 @@ enum SyncRowStatus {
   }
 }
 
-/// One row's verdict.
+/// One item's verdict. Every section is answered in this shape.
 class SyncRowResult {
   const SyncRowResult({
     required this.id,
@@ -39,8 +45,11 @@ class SyncRowResult {
     this.revision,
     this.code,
     this.detail,
+    this.reviewId,
   });
 
+  /// The item's identifier — the device's own for a row, a document or a
+  /// recording, and one the server minted for a document link.
   final String id;
 
   /// Null when the server named a status this build has not heard of; the wire
@@ -57,6 +66,11 @@ class SyncRowResult {
   final String? code;
   final String? detail;
 
+  /// The proposal a [SyncRowStatus.held] row is kept under, which the reviews
+  /// stream answers about later. Never present for an account that is not
+  /// reviewed.
+  final String? reviewId;
+
   bool get isWritten =>
       status == SyncRowStatus.created ||
       status == SyncRowStatus.updated ||
@@ -70,6 +84,9 @@ class SyncRowResult {
       case SyncRowStatus.updated:
       case SyncRowStatus.deleted:
       case SyncRowStatus.unchanged:
+      // Not an error: the row stays as it is on the device and is sent again
+      // as usual, and the decision arrives later under its review.
+      case SyncRowStatus.held:
         return SilexgisAction.ignore;
       case SyncRowStatus.conflict:
       case SyncRowStatus.rejected:
@@ -118,6 +135,7 @@ class SyncRowResult {
       revision: json['revision'] as String?,
       code: json['code'] as String?,
       detail: json['detail'] as String?,
+      reviewId: json['reviewId'] as String?,
     );
   }
 }
@@ -186,7 +204,7 @@ class SyncUploadResult {
     required this.replayed,
     required this.written,
     required this.refused,
-    required this.rows,
+    required this.sections,
     required this.conflicts,
     required this.duplicates,
   });
@@ -202,10 +220,24 @@ class SyncUploadResult {
   /// answer is being returned and nothing was written a second time.
   final bool replayed;
 
+  /// Counted over the items of every section together.
   final int written;
   final int refused;
 
-  final List<SyncRowResult> rows;
+  /// Each section's answers, item by item, keyed by the array they came in.
+  ///
+  /// **An array absent from the answer is absent here** rather than empty: the
+  /// server answers a section only when the upload carried it, so an empty
+  /// list and a missing one say different things.
+  final Map<SyncUploadSection, List<SyncRowResult>> sections;
+
+  /// The feature rows' answers, or none.
+  List<SyncRowResult> get rows =>
+      sections[SyncUploadSection.rows] ?? const <SyncRowResult>[];
+
+  /// One section's answers, or null when the answer carried no such array.
+  List<SyncRowResult>? answersFor(SyncUploadSection section) =>
+      sections[section];
 
   /// The server's own version of every row that lost a conflict, shaped
   /// exactly as a download would have delivered it.
@@ -225,26 +257,29 @@ class SyncUploadResult {
     return null;
   }
 
-  static SyncUploadResult fromJson(Map<String, Object?> json) =>
-      SyncUploadResult(
-        batchId: json['batchId']! as String,
-        importBatchId: json['importBatchId'] as String? ?? '',
-        replayed: json['replayed'] as bool? ?? false,
-        written: (json['written'] as num?)?.toInt() ?? 0,
-        refused: (json['refused'] as num?)?.toInt() ?? 0,
-        rows: (json['rows'] as List? ?? const <Object?>[])
-            .whereType<Map>()
-            .map((e) => SyncRowResult.fromJson(Map<String, Object?>.from(e)))
-            .toList(growable: false),
-        conflicts: (json['conflicts'] as List? ?? const <Object?>[])
-            .whereType<Map>()
-            .map((e) => SyncFeatureRow.fromJson(Map<String, Object?>.from(e)))
-            .toList(growable: false),
-        duplicates: (json['duplicates'] as List? ?? const <Object?>[])
-            .whereType<Map>()
-            .map(
-              (e) => SyncDuplicateReport.fromJson(Map<String, Object?>.from(e)),
-            )
-            .toList(growable: false),
-      );
+  static SyncUploadResult fromJson(
+    Map<String, Object?> json,
+  ) => SyncUploadResult(
+    batchId: json['batchId']! as String,
+    importBatchId: json['importBatchId'] as String? ?? '',
+    replayed: json['replayed'] as bool? ?? false,
+    written: (json['written'] as num?)?.toInt() ?? 0,
+    refused: (json['refused'] as num?)?.toInt() ?? 0,
+    sections: <SyncUploadSection, List<SyncRowResult>>{
+      for (final section in SyncUploadSection.values)
+        if (json[section.wireName] is List)
+          section: (json[section.wireName]! as List)
+              .whereType<Map>()
+              .map((e) => SyncRowResult.fromJson(Map<String, Object?>.from(e)))
+              .toList(growable: false),
+    },
+    conflicts: (json['conflicts'] as List? ?? const <Object?>[])
+        .whereType<Map>()
+        .map((e) => SyncFeatureRow.fromJson(Map<String, Object?>.from(e)))
+        .toList(growable: false),
+    duplicates: (json['duplicates'] as List? ?? const <Object?>[])
+        .whereType<Map>()
+        .map((e) => SyncDuplicateReport.fromJson(Map<String, Object?>.from(e)))
+        .toList(growable: false),
+  );
 }
