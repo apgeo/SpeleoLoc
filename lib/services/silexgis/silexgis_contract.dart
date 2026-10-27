@@ -41,6 +41,15 @@ class SilexgisContract {
   static const String peoplePath = '/api/v1/sync/people';
   static const String fileLinksPath = '/api/v1/sync/files/links';
 
+  /// The installation's ordinary resumable transfer routes, which a phone uses
+  /// to stage a file's bytes ahead of the upload that names them.
+  static const String filesConfigPath = '/api/v1/files/config';
+  static const String fileUploadsPath = '/api/v1/files/uploads';
+  static String fileUploadPath(String transferId) =>
+      '$fileUploadsPath/$transferId';
+  static String fileUploadCompletePath(String transferId) =>
+      '${fileUploadPath(transferId)}/complete';
+
   static String setPath(String setId) => '$setsPath/$setId';
   static String downloadPath(String setId) => '${setPath(setId)}/download';
   static String uploadPath(String setId) => '${setPath(setId)}/upload';

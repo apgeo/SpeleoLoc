@@ -104,6 +104,36 @@ class SilexgisCodes {
   /// The server draws no picture of this kind of file.
   static const String renditionUnavailable = 'sync.rendition_unavailable';
 
+  // One document or document link inside a 200.
+
+  /// The row brings content the server does not have and names no staged
+  /// upload this account still holds. Send the bytes, then the row again.
+  static const String fileBytesMissing = 'sync.file_bytes_missing';
+
+  /// The staged upload the row names holds other bytes than the row states.
+  static const String fileHashMismatch = 'sync.file_hash_mismatch';
+
+  /// A link's target is not in the selection, or not readable — one answer
+  /// for every case, so it says nothing about what exists.
+  static const String targetNotFound = 'sync.target_not_found';
+
+  // Sending file bytes ahead of an upload.
+  static const String fileTooLarge = 'file.too_large';
+  static const String fileTypeNotAccepted = 'file.type_not_accepted';
+
+  /// Not enough storage room left; staged bytes already count against it.
+  static const String quotaExceeded = 'file.quota_exceeded';
+
+  /// The piece does not continue the file. Where it should start is asked
+  /// for again rather than read out of the detail.
+  static const String chunkOutOfOrder = 'upload.chunk_out_of_order';
+  static const String sizeMismatch = 'upload.size_mismatch';
+  static const String uploadIncomplete = 'upload.incomplete';
+
+  /// No such transfer for this account any more: withdrawn, expired, or never
+  /// there. The bytes are sent again.
+  static const String sessionNotFound = 'upload.session_not_found';
+
   // The QR landing route.
   static const String qrNotFound = 'qr.not_found';
 }
@@ -187,6 +217,9 @@ class SilexgisProblem {
       case SilexgisCodes.setRevisionRequired:
       case SilexgisCodes.setConflict:
       case SilexgisCodes.batchTooLarge:
+      case SilexgisCodes.chunkOutOfOrder:
+      case SilexgisCodes.uploadIncomplete:
+      case SilexgisCodes.sessionNotFound:
         return SilexgisAction.applyAndResubmit;
 
       case SilexgisCodes.batchConflict:
@@ -204,6 +237,9 @@ class SilexgisProblem {
       case SilexgisCodes.cavingGroupNotFound:
       case SilexgisCodes.cavingGroupForbidden:
       case SilexgisCodes.qrNotFound:
+      case SilexgisCodes.fileTooLarge:
+      case SilexgisCodes.fileTypeNotAccepted:
+      case SilexgisCodes.quotaExceeded:
         return SilexgisAction.surfaceToUser;
     }
 

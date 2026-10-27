@@ -5,11 +5,13 @@ import 'package:http/http.dart' as http;
 
 /// One recorded request the test can assert about after the fact.
 class SentRequest {
-  SentRequest(this.method, this.url, this.headers, this.body);
+  SentRequest(this.method, this.url, this.headers, this.bodyBytes)
+    : body = utf8.decode(bodyBytes, allowMalformed: true);
 
   final String method;
   final Uri url;
   final Map<String, String> headers;
+  final List<int> bodyBytes;
   final String body;
 
   Map<String, Object?> get jsonBody => jsonDecode(body) as Map<String, Object?>;
@@ -31,7 +33,7 @@ class ScriptedClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final body = request is http.Request ? request.body : '';
+    final body = request is http.Request ? request.bodyBytes : const <int>[];
     sent.add(SentRequest(request.method, request.url, request.headers, body));
 
     final index = _script.indexWhere((r) => r.matches(request));
@@ -60,6 +62,7 @@ class ScriptedResponse {
     this.body = '',
     this.headers = const <String, String>{},
     this.headersFor,
+    this.method,
   });
 
   ScriptedResponse.json({
@@ -67,6 +70,7 @@ class ScriptedResponse {
     this.status = 200,
     required Object? json,
     Map<String, String> headers = const <String, String>{},
+    this.method,
   }) : body = jsonEncode(json),
        headersFor = null,
        headers = <String, String>{
@@ -80,6 +84,7 @@ class ScriptedResponse {
     String? code,
     String? title,
     String? detail,
+    this.method,
   }) : body = jsonEncode(<String, Object?>{
          'status': status,
          'title': ?title,
@@ -102,5 +107,10 @@ class ScriptedResponse {
   /// carries the caller's own `state` back.
   final Map<String, String> Function(http.BaseRequest request)? headersFor;
 
-  bool matches(http.BaseRequest request) => request.url.path == path;
+  /// The request method this answers, or any when null. Needed where one
+  /// path answers several methods, as a resumable transfer's does.
+  final String? method;
+
+  bool matches(http.BaseRequest request) =>
+      request.url.path == path && (method == null || request.method == method);
 }

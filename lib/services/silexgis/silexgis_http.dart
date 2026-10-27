@@ -86,14 +86,32 @@ class SilexgisHttp {
     await _send(() => http.Request('DELETE', resolve(path)));
   }
 
+  /// Sends [bytes] as the raw body — one piece of a file in a resumable
+  /// transfer. [timeout] replaces the usual one: a piece is megabytes, and on
+  /// a poor link it legitimately takes longer than a page of rows.
+  Future<Map<String, Object?>> putBytes(
+    String path,
+    List<int> bytes, {
+    Map<String, String>? query,
+    Duration? timeout,
+  }) => _send(() {
+    final request = http.Request('PUT', resolve(path, query))
+      ..headers['Content-Type'] = 'application/octet-stream'
+      ..bodyBytes = bytes;
+    return request;
+  }, timeout: timeout);
+
   /// Sends [build], and on a `401` refreshes the credential and sends it once
   /// more.
   ///
   /// Once, and never in a loop: if the refresh also fails the caver has to
   /// sign in again, and a device that kept retrying would stop syncing within
   /// the access token's fifteen minutes with nothing in the log but retries.
-  Future<Map<String, Object?>> _send(http.Request Function() build) async {
-    var response = await _sendOnce(build);
+  Future<Map<String, Object?>> _send(
+    http.Request Function() build, {
+    Duration? timeout,
+  }) async {
+    var response = await _sendOnce(build, timeout ?? _timeout);
     if (response.statusCode == 401) {
       _log.info('401 — refreshing the credential and retrying once');
       if (!await _tokens.refresh()) {
@@ -101,12 +119,15 @@ class SilexgisHttp {
           const SilexgisProblem(status: 401, title: 'Unauthorized'),
         );
       }
-      response = await _sendOnce(build);
+      response = await _sendOnce(build, timeout ?? _timeout);
     }
     return _decode(response);
   }
 
-  Future<http.Response> _sendOnce(http.Request Function() build) async {
+  Future<http.Response> _sendOnce(
+    http.Request Function() build,
+    Duration timeout,
+  ) async {
     final request = build();
     final token = await _tokens.accessToken();
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
@@ -121,7 +142,7 @@ class SilexgisHttp {
       return await _client
           .send(request)
           .then(http.Response.fromStream)
-          .timeout(_timeout);
+          .timeout(timeout);
     } on SilexgisException {
       rethrow;
     } on Object catch (e, st) {
