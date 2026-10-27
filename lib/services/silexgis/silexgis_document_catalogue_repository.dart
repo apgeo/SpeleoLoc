@@ -16,14 +16,8 @@ class SilexgisCatalogueEntry {
   SyncDocumentReach get reach => SyncDocumentReach.parse(document.reach);
   List<int> get renditions => decodeRenditions(document.renditions);
 
-  /// What the caver may ask for: the file itself when the reach hands it
-  /// over, then each picture size the server draws, largest first.
-  List<SyncRendition> get offered => <SyncRendition>[
-    if (reach.offersOriginal) SyncRendition.original,
-    if (reach != SyncDocumentReach.none)
-      for (final size in renditions)
-        if (SyncRendition.sizes.contains(size)) SyncRendition.picture(size),
-  ];
+  /// What the caver may ask for. See [offeredFor].
+  List<SyncRendition> get offered => offeredFor(document);
 
   /// The size of [rendition] when the catalogue knows it: only the stored
   /// file's, handed over byte for byte.
@@ -31,6 +25,18 @@ class SilexgisCatalogueEntry {
       rendition.isOriginal && reach == SyncDocumentReach.original
       ? document.sizeBytes
       : null;
+
+  /// What may be asked for of [document]: the file itself when the reach
+  /// hands it over, then each picture size the server draws, largest first.
+  static List<SyncRendition> offeredFor(SilexgisDocumentData document) {
+    final reach = SyncDocumentReach.parse(document.reach);
+    return <SyncRendition>[
+      if (reach.offersOriginal) SyncRendition.original,
+      if (reach != SyncDocumentReach.none)
+        for (final size in decodeRenditions(document.renditions))
+          if (SyncRendition.sizes.contains(size)) SyncRendition.picture(size),
+    ];
+  }
 
   static String encodeRenditions(List<int> sizes) => sizes.join(',');
 
