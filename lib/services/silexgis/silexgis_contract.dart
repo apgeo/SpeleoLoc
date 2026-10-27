@@ -39,11 +39,13 @@ class SilexgisContract {
   static const String capabilitiesPath = '/api/v1/sync/capabilities';
   static const String setsPath = '/api/v1/sync/sets';
   static const String peoplePath = '/api/v1/sync/people';
+  static const String fileLinksPath = '/api/v1/sync/files/links';
 
   static String setPath(String setId) => '$setsPath/$setId';
   static String downloadPath(String setId) => '${setPath(setId)}/download';
   static String uploadPath(String setId) => '${setPath(setId)}/upload';
   static String reviewsPath(String setId) => '${setPath(setId)}/reviews';
+  static String documentsPath(String setId) => '${setPath(setId)}/documents';
 
   /// The one anonymous route this integration calls. It carries no cave name
   /// and no coordinate — only which installation a scanned code resolves at.

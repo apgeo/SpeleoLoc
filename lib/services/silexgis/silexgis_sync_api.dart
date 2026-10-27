@@ -1,5 +1,7 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
+import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
+import 'package:speleoloc/services/silexgis/model/sync_file_links.dart';
 import 'package:speleoloc/services/silexgis/model/sync_people.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
@@ -8,7 +10,7 @@ import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 
-/// The eight sync routes, typed.
+/// The sync routes, typed.
 ///
 /// Every one is bearer-only: no sync route joins the anonymous allow-list, and
 /// no capability token ever appears in a sync payload.
@@ -94,6 +96,33 @@ class SilexgisSyncApi {
         if (pageSize != null) 'pageSize': '$pageSize',
       },
     ),
+  );
+
+  /// One page of the photo and document catalogue, on the documents stream's
+  /// own cursor. Metadata only: no file comes with it.
+  Future<SyncDocumentsPage> documents(
+    String setId, {
+    String? cursor,
+    int? pageSize,
+  }) async => SyncDocumentsPage.fromJson(
+    await _http.getJson(
+      SilexgisContract.documentsPath(setId),
+      query: <String, String>{
+        'cursor': ?cursor,
+        if (pageSize != null) 'pageSize': '$pageSize',
+      },
+    ),
+  );
+
+  /// Addresses for between 1 and [SyncFileLinksAnswer.maxItems] files. Every
+  /// item is decided again against the account's rights now; a refused item
+  /// rides the `200` beside the addresses given.
+  Future<SyncFileLinksAnswer> fileLinks(
+    List<SyncFileLinkRequest> items,
+  ) async => SyncFileLinksAnswer.fromJson(
+    await _http.postJson(SilexgisContract.fileLinksPath, <String, Object?>{
+      'items': <Map<String, Object?>>[for (final item in items) item.toJson()],
+    }),
   );
 
   /// The people directory: the cavers a phone user may be said to be, and the

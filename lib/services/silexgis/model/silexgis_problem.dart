@@ -92,6 +92,18 @@ class SilexgisCodes {
   /// account. Nothing about that phone user was written.
   static const String personNotListed = 'sync.person_not_listed';
 
+  // One item of a file-address request, inside a 200.
+
+  /// No such document, deleted, or no longer readable by this account — one
+  /// answer on purpose. The document leaves the device's catalogue copy.
+  static const String documentUnavailable = 'sync.document_unavailable';
+
+  /// The file itself is not handed to this account; pictures of it may be.
+  static const String originalWithheld = 'sync.original_withheld';
+
+  /// The server draws no picture of this kind of file.
+  static const String renditionUnavailable = 'sync.rendition_unavailable';
+
   // The QR landing route.
   static const String qrNotFound = 'qr.not_found';
 }
