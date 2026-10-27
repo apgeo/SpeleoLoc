@@ -9,6 +9,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
+import 'package:speleoloc/utils/image_format_sniffer.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/full_screen_image_viewer.dart';
@@ -115,8 +116,16 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       if (!await subfolder.exists()) {
         await subfolder.create(recursive: true);
       }
-      final fileName = 'raster_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedFile = await File(
+      // The name carries the format the bytes really have; the picker may
+      // hand over a PNG or WebP.
+      final stamp = DateTime.now().millisecondsSinceEpoch;
+      final pickedBytes = await pickedFile.readAsBytes();
+      var ext = ImageFormatSniffer.extensionForPicked(
+        pickedBytes,
+        pickedFile.name,
+      );
+      var fileName = 'raster_$stamp.$ext';
+      var savedFile = await File(
         pickedFile.path,
       ).copy('${subfolder.path}/$fileName');
 
@@ -124,6 +133,14 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       if (kCompressRasterMapImages) {
         final compressionSettings = await ImageCompressionSettings.load();
         await ImageCompressor.compressFile(savedFile, compressionSettings);
+        // Compression re-encodes as JPEG, so the name follows the result.
+        final head = await savedFile.readAsBytes();
+        final afterExt = ImageFormatSniffer.extensionFor(head);
+        if (afterExt != null && afterExt != ext) {
+          ext = afterExt;
+          fileName = 'raster_$stamp.$ext';
+          savedFile = await savedFile.rename('${subfolder.path}/$fileName');
+        }
       }
 
       // Drop any cached decode for this path so viewers re-decode the new
