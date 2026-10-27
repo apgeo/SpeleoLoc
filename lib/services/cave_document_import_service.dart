@@ -7,7 +7,6 @@ import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
-import 'package:speleoloc/utils/image_compressor.dart';
 
 /// What became of one file in a bulk import.
 ///
@@ -104,11 +103,10 @@ class CaveDocumentImportService {
         if (fileType == 'photo' &&
             compressionSettings != null &&
             compressionSettings.enabled) {
-          await ImageCompressor.compressFile(
-            File(info.absolutePath),
+          info = await DocumentationFileHelper.compressStoredPhoto(
+            info,
             compressionSettings,
           );
-          info = await _refreshFileInfo(info);
         }
 
         final key = '${info.fileSize}:${info.fileHash}';
@@ -159,16 +157,6 @@ class CaveDocumentImportService {
       }
     }
     return outcome;
-  }
-
-  Future<SavedFileInfo> _refreshFileInfo(SavedFileInfo info) async {
-    final bytes = await File(info.absolutePath).readAsBytes();
-    return SavedFileInfo(
-      relativePath: info.relativePath,
-      absolutePath: info.absolutePath,
-      fileSize: bytes.length,
-      fileHash: DocumentationFileHelper.computeSha256(bytes),
-    );
   }
 
   Future<void> _deleteQuietly(String absolutePath) async {

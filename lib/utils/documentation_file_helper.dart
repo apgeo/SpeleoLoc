@@ -9,6 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/image_compression_settings.dart';
+import 'package:speleoloc/utils/image_compressor.dart';
 
 /// Shared helper for documentation file storage, hashing, and DB insertion.
 ///
@@ -122,6 +124,51 @@ class DocumentationFileHelper {
       absolutePath: outPath,
       fileSize: fileSize,
       fileHash: fileHash,
+    );
+  }
+
+  /// Compresses the stored copy described by [info] and returns the info of
+  /// what is on disk afterwards.
+  ///
+  /// Only ever pass a file already inside app storage (the result of
+  /// [saveExternalFile]): the caver's original stays as picked. Compression
+  /// writes JPEG, so a copy named `.png` or `.webp` is renamed to `.jpg`;
+  /// otherwise its name would promise a format the bytes no longer have.
+  /// A disabled setting or an undecodable file returns [info] unchanged.
+  static Future<SavedFileInfo> compressStoredPhoto(
+    SavedFileInfo info,
+    ImageCompressionSettings settings,
+  ) async {
+    final file = File(info.absolutePath);
+    final compressed = ImageCompressor.compressBytes(
+      await file.readAsBytes(),
+      settings,
+    );
+    if (compressed == null) return info;
+    await file.writeAsBytes(compressed, flush: true);
+
+    var absolutePath = info.absolutePath;
+    var relativePath = info.relativePath;
+    final dot = absolutePath.lastIndexOf('.');
+    final ext = dot >= 0 ? absolutePath.substring(dot + 1).toLowerCase() : '';
+    if (ext != 'jpg' && ext != 'jpeg') {
+      final stem = dot >= 0 ? absolutePath.substring(0, dot) : absolutePath;
+      var target = '$stem.jpg';
+      var n = 1;
+      while (File(target).existsSync()) {
+        target = '${stem}_$n.jpg';
+        n++;
+      }
+      await file.rename(target);
+      absolutePath = target;
+      relativePath =
+          '$storageSubDir/${target.split(Platform.pathSeparator).last}';
+    }
+    return SavedFileInfo(
+      relativePath: relativePath,
+      absolutePath: absolutePath,
+      fileSize: compressed.length,
+      fileHash: computeSha256(compressed),
     );
   }
 

@@ -7,7 +7,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
-import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -122,16 +121,16 @@ class _EditDocumentationFilePageState
 
     String? fileNameToStore = _storedFileName;
     if (_pickedFile != null) {
-      // Compress images before saving if compression is enabled.
-      final detectedType = DocumentationFileHelper.detectFileType(
-        _pickedFile!.path,
-      );
-      if (detectedType == 'photo') {
+      // Copy first, then compress the copy: the picked original is the
+      // caver's own file and must keep its bytes.
+      var info = await DocumentationFileHelper.saveExternalFile(_pickedFile!);
+      if (DocumentationFileHelper.detectFileType(info.relativePath) ==
+          'photo') {
         final cs = await ImageCompressionSettings.load();
-        await ImageCompressor.compressFile(_pickedFile!, cs);
+        if (cs.enabled) {
+          info = await DocumentationFileHelper.compressStoredPhoto(info, cs);
+        }
       }
-
-      final info = await DocumentationFileHelper.saveExternalFile(_pickedFile!);
       fileNameToStore = info.relativePath;
       _fileSize = info.fileSize;
       _fileHash = info.fileHash;
