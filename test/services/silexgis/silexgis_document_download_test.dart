@@ -18,6 +18,8 @@ import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_reposito
 import 'package:speleoloc/services/silexgis/silexgis_document_downloader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_importer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
@@ -174,6 +176,15 @@ void main() {
           logger: logger,
           localState: localState,
           copies: copies,
+          linker: SilexgisDocumentLinker(
+            db: db,
+            logger: logger,
+            catalogue: catalogue,
+            copies: copies,
+            serverLinks: SilexgisServerLinkRepository(db),
+            profileUuid: profileUuid,
+            clock: clock,
+          ),
           profileUuid: profileUuid,
           clock: clock,
         ),

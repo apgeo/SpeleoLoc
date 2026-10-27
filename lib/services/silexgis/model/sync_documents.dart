@@ -138,6 +138,12 @@ class SyncDocumentLink {
   /// The role of a raster map's picture, which arrives with its map.
   static const String roleMap2d = 'map2d';
 
+  /// The target kinds a link hangs on: a cave, entrance, area or place; a
+  /// trip recording; one scan of a recording.
+  static const String targetFeature = 'feature';
+  static const String targetTripRecording = 'tripRecording';
+  static const String targetTripPoint = 'tripPoint';
+
   static SyncDocumentLink fromJson(Map<String, Object?> json) {
     final target = Map<String, Object?>.from(
       json['target'] as Map? ?? const <String, Object?>{},

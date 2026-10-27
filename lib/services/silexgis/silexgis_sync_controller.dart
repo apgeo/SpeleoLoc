@@ -8,10 +8,12 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
@@ -21,6 +23,7 @@ import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
@@ -49,6 +52,8 @@ class SilexgisSyncController extends ChangeNotifier {
     required ICaveRepository caves,
     required ICavePlaceRepository places,
     required SilexgisRefreshTokenStore tokens,
+    SilexgisFileCopyRepository? copies,
+    SilexgisServerLinkRepository? serverLinks,
     SilexgisSessionBuilder? sessionBuilder,
   }) : _db = db,
        _profiles = profiles,
@@ -60,6 +65,8 @@ class SilexgisSyncController extends ChangeNotifier {
        _caves = caves,
        _places = places,
        _tokens = tokens,
+       _copies = copies ?? SilexgisFileCopyRepository(db),
+       _serverLinks = serverLinks ?? SilexgisServerLinkRepository(db),
        _sessionBuilder = sessionBuilder;
 
   final AppDatabase _db;
@@ -72,6 +79,8 @@ class SilexgisSyncController extends ChangeNotifier {
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
   final SilexgisRefreshTokenStore _tokens;
+  final SilexgisFileCopyRepository _copies;
+  final SilexgisServerLinkRepository _serverLinks;
   final SilexgisSessionBuilder? _sessionBuilder;
   final _log = AppLogger.of('SilexgisSyncController');
 
@@ -277,6 +286,14 @@ class SilexgisSyncController extends ChangeNotifier {
             db: _db,
             logger: _logger,
             localState: _localState,
+            profileUuid: profile.profileUuid,
+          ),
+          linker: SilexgisDocumentLinker(
+            db: _db,
+            logger: _logger,
+            catalogue: _catalogue,
+            copies: _copies,
+            serverLinks: _serverLinks,
             profileUuid: profile.profileUuid,
           ),
           profileUuid: profile.profileUuid,

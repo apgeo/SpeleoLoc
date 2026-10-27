@@ -111,6 +111,14 @@ class SilexgisFileCopyRepository {
     return <Uuid>{for (final row in rows) row.documentUuid};
   }
 
+  /// The documentation files fetched from a server, in whatever form.
+  Future<Set<Uuid>> fetchedFromServer() async {
+    final rows = await (_db.select(
+      _db.silexgisFileCopy,
+    )..where((t) => t.origin.equals(SilexgisCopyOrigin.server.wireName))).get();
+    return <Uuid>{for (final row in rows) row.documentUuid};
+  }
+
   /// Re-registers each server copy that an archive has just replaced.
   ///
   /// [archiveFiles] is the archive's documentation files, as identifier to

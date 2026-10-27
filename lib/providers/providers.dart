@@ -39,6 +39,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_reposito
 import 'package:speleoloc/services/silexgis/silexgis_document_downloader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_importer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
@@ -49,6 +50,7 @@ import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
@@ -185,6 +187,23 @@ final silexgisDocumentCatalogueProvider =
           SilexgisDocumentCatalogueRepository(ref.watch(appDatabaseProvider)),
     );
 
+/// What each documentation file on this device is a copy of, when it came
+/// from a server. About the files here, not about any one installation.
+final silexgisFileCopyRepositoryProvider = Provider<SilexgisFileCopyRepository>(
+  (ref) => SilexgisFileCopyRepository(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
+/// The document links each installation holds. Local-only.
+final silexgisServerLinksProvider = Provider<SilexgisServerLinkRepository>(
+  (ref) => SilexgisServerLinkRepository(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
 /// What a feature has on the active installation that this device does not,
 /// and fetching it on the caver's say-so.
 final silexgisDocumentsServiceProvider = Provider<SilexgisDocumentsService>((
@@ -196,6 +215,8 @@ final silexgisDocumentsServiceProvider = Provider<SilexgisDocumentsService>((
   final logger = ref.watch(changeLoggerProvider);
   final localState = ref.watch(silexgisLocalStateProvider);
   final clock = ref.watch(clockProvider);
+  final copies = ref.watch(silexgisFileCopyRepositoryProvider);
+  final serverLinks = ref.watch(silexgisServerLinksProvider);
   return SilexgisDocumentsService(
     profiles: ref.watch(silexgisProfileRepositoryProvider),
     catalogue: catalogue,
@@ -213,7 +234,16 @@ final silexgisDocumentsServiceProvider = Provider<SilexgisDocumentsService>((
         db: db,
         logger: logger,
         localState: localState,
-        copies: SilexgisFileCopyRepository(db, clock: clock),
+        copies: copies,
+        linker: SilexgisDocumentLinker(
+          db: db,
+          logger: logger,
+          catalogue: catalogue,
+          copies: copies,
+          serverLinks: serverLinks,
+          profileUuid: profile.profileUuid,
+          clock: clock,
+        ),
         profileUuid: profile.profileUuid,
         clock: clock,
       ),
@@ -283,6 +313,8 @@ final silexgisSyncControllerProvider =
         caves: ref.watch(caveRepositoryProvider),
         places: ref.watch(cavePlaceRepositoryProvider),
         tokens: ref.watch(silexgisTokenStoreProvider),
+        copies: ref.watch(silexgisFileCopyRepositoryProvider),
+        serverLinks: ref.watch(silexgisServerLinksProvider),
       ),
     );
 

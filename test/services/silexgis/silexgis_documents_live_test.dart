@@ -19,6 +19,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_reposito
 import 'package:speleoloc/services/silexgis/silexgis_document_downloader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_importer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
@@ -28,6 +29,7 @@ import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
@@ -170,6 +172,14 @@ void main() {
           logger: logger,
           localState: localState,
           copies: copies,
+          linker: SilexgisDocumentLinker(
+            db: db,
+            logger: logger,
+            catalogue: catalogue,
+            copies: copies,
+            serverLinks: SilexgisServerLinkRepository(db),
+            profileUuid: profile.profileUuid,
+          ),
           profileUuid: profile.profileUuid,
         ),
         profileUuid: profile.profileUuid,

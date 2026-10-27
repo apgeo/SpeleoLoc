@@ -10,11 +10,14 @@ import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_title.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -40,6 +43,8 @@ void main() {
   late ChangeLogger logger;
   late SilexgisLocalStateRepository localState;
   late SilexgisDocumentCatalogueRepository catalogue;
+  late SilexgisFileCopyRepository copies;
+  late SilexgisServerLinkRepository serverLinks;
 
   final caveId = Uuid.v7();
   final documentId = Uuid.v7();
@@ -57,6 +62,8 @@ void main() {
     logger = loggerRef = ChangeLogger(db, currentUser, clock: clock);
     localState = SilexgisLocalStateRepository(db, clock: clock);
     catalogue = SilexgisDocumentCatalogueRepository(db);
+    copies = SilexgisFileCopyRepository(db, clock: clock);
+    serverLinks = SilexgisServerLinkRepository(db, clock: clock);
   });
   tearDown(() => db.close());
 
@@ -147,6 +154,15 @@ void main() {
         db: db,
         logger: logger,
         localState: localState,
+        profileUuid: profileUuid,
+        clock: clock,
+      ),
+      linker: SilexgisDocumentLinker(
+        db: db,
+        logger: logger,
+        catalogue: catalogue,
+        copies: copies,
+        serverLinks: serverLinks,
         profileUuid: profileUuid,
         clock: clock,
       ),
@@ -407,5 +423,99 @@ void main() {
     expect(cut.runes.length, 50);
     expect(cut.endsWith('🦇'), isTrue);
     expect(SilexgisDocumentTitle.changedLocally('Other', title), isTrue);
+  });
+
+  group('a fetched document is hung on what the device comes to hold', () {
+    /// A file fetched while the device held none of its features.
+    Future<void> fetchedBeforeItsFeature() async {
+      await db
+          .into(db.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: documentId,
+              title: 'entrance.jpg',
+              fileName: 'documentation_files/srv_entrance.jpg',
+              fileSize: 1024,
+              fileType: 'photo',
+            ),
+          );
+      await copies.register(
+        SilexgisFileCopyEntry(
+          documentUuid: documentId,
+          heldAs: SilexgisHeldAs.original,
+          origin: SilexgisCopyOrigin.server,
+          versionId: 'version-1',
+        ),
+      );
+    }
+
+    Future<List<DocumentationFilesToGeofeature>> links() =>
+        db.select(db.documentationFilesToGeofeatures).get();
+
+    test('on the next catalogue read, unlogged and recorded', () async {
+      await fetchedBeforeItsFeature();
+      await read(<Map<String, Object?>>[
+        page(links: <Map<String, Object?>>[link('link-1')]),
+      ]);
+      expect(await links(), isEmpty);
+
+      // The cave arrives with a later feature download.
+      await db.into(db.caves).insert(Cave(uuid: caveId, title: 'Invented'));
+      final report = await read(<Map<String, Object?>>[page()]);
+
+      expect(report.linked, 1);
+      final hung = (await links()).single;
+      expect(hung.documentationFileUuid, documentId);
+      expect(hung.geofeatureUuid, caveId);
+      expect(hung.geofeatureType, GeofeatureType.cave.dbValue);
+      expect(await db.select(db.changeLog).get(), isEmpty);
+      final held = await serverLinks.readAll(profileUuid);
+      expect(held[(documentId, caveId)]!.linkId, 'link-1');
+
+      // Once.
+      expect((await read(<Map<String, Object?>>[page()])).linked, 0);
+      expect(await links(), hasLength(1));
+    });
+
+    test('a link the caver took down is not hung again', () async {
+      await fetchedBeforeItsFeature();
+      await db.into(db.caves).insert(Cave(uuid: caveId, title: 'Invented'));
+      await read(<Map<String, Object?>>[
+        page(links: <Map<String, Object?>>[link('link-1')]),
+      ]);
+      expect(await links(), hasLength(1));
+
+      await db.delete(db.documentationFilesToGeofeatures).go();
+      final report = await read(<Map<String, Object?>>[page()]);
+
+      expect(report.linked, 0);
+      expect(await links(), isEmpty);
+      // Still held there: the removal is what goes up.
+      expect(
+        (await serverLinks.readAll(profileUuid)).keys,
+        contains((documentId, caveId)),
+      );
+    });
+
+    test('a file of the caver\'s own is not hung by the catalogue', () async {
+      await db
+          .into(db.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: documentId,
+              title: 'Mine',
+              fileName: 'documentation_files/doc_mine.jpg',
+              fileSize: 10,
+              fileType: 'photo',
+            ),
+          );
+      await db.into(db.caves).insert(Cave(uuid: caveId, title: 'Invented'));
+
+      await read(<Map<String, Object?>>[
+        page(links: <Map<String, Object?>>[link('link-1')]),
+      ]);
+
+      expect(await links(), isEmpty);
+    });
   });
 }

@@ -3,6 +3,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
@@ -16,6 +17,7 @@ class SilexgisDocumentsReport {
     this.links = 0,
     this.removed = 0,
     this.renamed = 0,
+    this.linked = 0,
   });
 
   final int pages;
@@ -29,6 +31,9 @@ class SilexgisDocumentsReport {
 
   /// Fetched documents whose title or description followed the server's.
   final int renamed;
+
+  /// Links made from fetched documents to features this device came to hold.
+  final int linked;
 }
 
 /// Reads the photo and document catalogue on the documents stream's own
@@ -41,12 +46,14 @@ class SilexgisDocumentsRunner {
     required SilexgisLocalStateRepository localState,
     required SilexgisDocumentCatalogueRepository catalogue,
     required SilexgisHeldDocumentUpdater heldDocuments,
+    required SilexgisDocumentLinker linker,
     required String profileUuid,
   }) : _db = db,
        _api = api,
        _localState = localState,
        _catalogue = catalogue,
        _heldDocuments = heldDocuments,
+       _linker = linker,
        _profileUuid = profileUuid;
 
   final AppDatabase _db;
@@ -54,6 +61,7 @@ class SilexgisDocumentsRunner {
   final SilexgisLocalStateRepository _localState;
   final SilexgisDocumentCatalogueRepository _catalogue;
   final SilexgisHeldDocumentUpdater _heldDocuments;
+  final SilexgisDocumentLinker _linker;
   final String _profileUuid;
 
   static const int preferredPageSize = 200;
@@ -93,12 +101,17 @@ class SilexgisDocumentsRunner {
       }),
     ).run(fromBeginning: fromBeginning);
 
+    // After the read, and so after this run's feature download too: a file
+    // fetched before its feature arrived is hung on it now.
+    final linked = await _linker.linkFetched();
+
     return SilexgisDocumentsReport(
       pages: read.pages,
       restarted: read.restarted,
       links: links,
       removed: removed,
       renamed: renamed,
+      linked: linked,
     );
   }
 }

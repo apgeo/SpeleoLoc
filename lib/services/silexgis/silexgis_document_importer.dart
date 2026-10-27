@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
-import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_title.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
@@ -50,12 +50,14 @@ class SilexgisDocumentImporter {
     required ChangeLogger logger,
     required SilexgisLocalStateRepository localState,
     required SilexgisFileCopyRepository copies,
+    required SilexgisDocumentLinker linker,
     required String profileUuid,
     Clock clock = const SystemClock(),
   }) : _db = db,
        _logger = logger,
        _localState = localState,
        _copies = copies,
+       _linker = linker,
        _profileUuid = profileUuid,
        _clock = clock;
 
@@ -63,6 +65,7 @@ class SilexgisDocumentImporter {
   final ChangeLogger _logger;
   final SilexgisLocalStateRepository _localState;
   final SilexgisFileCopyRepository _copies;
+  final SilexgisDocumentLinker _linker;
   final String _profileUuid;
   final Clock _clock;
 
@@ -105,30 +108,7 @@ class SilexgisDocumentImporter {
               ),
             );
 
-        final linkedTargets = <Uuid>{};
-        for (final link in fetched.links) {
-          // A raster map's picture arrives with its map, not as a document.
-          if (link.role == SyncDocumentLink.roleMap2d ||
-              link.targetKind != 'feature') {
-            continue;
-          }
-          if (!linkedTargets.add(link.targetId)) continue;
-          final type = await _heldFeatureType(link.targetId);
-          if (type == null) continue;
-          await _db
-              .into(_db.documentationFilesToGeofeatures)
-              .insert(
-                DocumentationFilesToGeofeaturesCompanion.insert(
-                  uuid: Uuid.v7(),
-                  geofeatureType: type.dbValue,
-                  documentationFileUuid: id,
-                  geofeatureUuid: Value(link.targetId),
-                  createdAt: Value(now),
-                  updatedAt: Value(now),
-                ),
-              );
-          linked++;
-        }
+        linked = await _linker.linkDocument(id, fetched.links);
 
         await _copies.register(
           SilexgisFileCopyEntry(
@@ -161,29 +141,5 @@ class SilexgisDocumentImporter {
       _db.users,
     )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
     return user?.uuid;
-  }
-
-  /// Which kind of local feature [id] is, or null when this device does not
-  /// hold it.
-  Future<GeofeatureType?> _heldFeatureType(Uuid id) async {
-    if (await (_db.select(
-          _db.caves,
-        )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull() !=
-        null) {
-      return GeofeatureType.cave;
-    }
-    if (await (_db.select(
-          _db.cavePlaces,
-        )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull() !=
-        null) {
-      return GeofeatureType.cavePlace;
-    }
-    if (await (_db.select(
-          _db.caveAreas,
-        )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull() !=
-        null) {
-      return GeofeatureType.caveArea;
-    }
-    return null;
   }
 }
