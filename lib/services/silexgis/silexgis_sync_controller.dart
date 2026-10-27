@@ -15,6 +15,7 @@ import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
@@ -241,10 +242,25 @@ class SilexgisSyncController extends ChangeNotifier {
       });
     }
 
+    // Last, so that an accepted revision lands on rows already here.
+    if (capabilities.servesReviews) {
+      await _readPart('the review decisions', () async {
+        await SilexgisReviewRunner(
+          db: _db,
+          api: session.api,
+          localState: _localState,
+          heldRows: _heldRows,
+          profileUuid: profile.profileUuid,
+        ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
+      });
+    }
+
+    final reviews = await _heldRows.counts(profile.profileUuid);
     _emit(
       _progress.copyWith(
         phase: SilexgisSyncPhase.completed,
-        message: _summary(),
+        reviews: reviews,
+        message: _summary(reviews),
       ),
     );
   }
@@ -286,11 +302,12 @@ class SilexgisSyncController extends ChangeNotifier {
     );
   }
 
-  String _summary() {
+  String _summary(SilexgisReviewCounts reviews) {
     final parts = <String>[
       if (_progress.rowsApplied > 0) '${_progress.rowsApplied} received',
       if (_progress.rowsDeleted > 0) '${_progress.rowsDeleted} removed',
       if (_progress.rowsSent > 0) '${_progress.rowsSent} sent',
+      if (reviews.waiting > 0) '${reviews.waiting} waiting for review',
     ];
     final summary = parts.isEmpty
         ? 'Already level with the server.'

@@ -42,6 +42,7 @@ class SilexgisContract {
   static String setPath(String setId) => '$setsPath/$setId';
   static String downloadPath(String setId) => '${setPath(setId)}/download';
   static String uploadPath(String setId) => '${setPath(setId)}/upload';
+  static String reviewsPath(String setId) => '${setPath(setId)}/reviews';
 
   /// The one anonymous route this integration calls. It carries no cave name
   /// and no coordinate — only which installation a scanned code resolves at.

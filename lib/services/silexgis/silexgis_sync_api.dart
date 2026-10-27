@@ -1,5 +1,6 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
+import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
@@ -71,6 +72,22 @@ class SilexgisSyncApi {
   }) async => SyncDownloadPage.fromJson(
     await _http.getJson(
       SilexgisContract.downloadPath(setId),
+      query: <String, String>{
+        'cursor': ?cursor,
+        if (pageSize != null) 'pageSize': '$pageSize',
+      },
+    ),
+  );
+
+  /// One page of the decisions on rows this account's phones sent while it
+  /// was under review, oldest first, on the reviews stream's own cursor.
+  Future<SyncReviewsPage> reviews(
+    String setId, {
+    String? cursor,
+    int? pageSize,
+  }) async => SyncReviewsPage.fromJson(
+    await _http.getJson(
+      SilexgisContract.reviewsPath(setId),
       query: <String, String>{
         'cursor': ?cursor,
         if (pageSize != null) 'pageSize': '$pageSize',

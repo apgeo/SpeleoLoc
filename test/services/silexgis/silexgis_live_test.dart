@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +27,8 @@ import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+
+import 'live_server.dart';
 
 /// End to end against a real SilexGIS installation.
 ///
@@ -115,13 +116,10 @@ void main() {
     late SyncSet set;
 
     setUpAll(() async {
-      final roots = await _demoCaveFeatureIds(
-        baseUri,
-        await auth.accessToken(),
-      );
+      final roots = await demoCaveFeatureIds(baseUri, await auth.accessToken());
       expect(
         roots,
-        hasLength(_demoCaveNames.length),
+        hasLength(demoCaveNames.length),
         reason:
             'the demonstration dataset is not seeded — run '
             '`node deploy/speleoloc-dev.mjs reset` then `up`',
@@ -295,7 +293,7 @@ void main() {
     late Uuid placeUuid;
 
     setUpAll(() async {
-      final group = await _demoCavingGroupId(baseUri, await auth.accessToken());
+      final group = await demoCavingGroupId(baseUri, await auth.accessToken());
       set = await api.createSet(
         SyncSetWrite(
           name: 'live upload ${DateTime.now().millisecondsSinceEpoch}',
@@ -584,11 +582,8 @@ void main() {
     late CavePlaceRepository placeRepository;
 
     setUpAll(() async {
-      final group = await _demoCavingGroupId(baseUri, await auth.accessToken());
-      final roots = await _demoCaveFeatureIds(
-        baseUri,
-        await auth.accessToken(),
-      );
+      final group = await demoCavingGroupId(baseUri, await auth.accessToken());
+      final roots = await demoCaveFeatureIds(baseUri, await auth.accessToken());
       final set = await api.createSet(
         SyncSetWrite(
           name: 'live controller ${DateTime.now().millisecondsSinceEpoch}',
@@ -848,66 +843,6 @@ void main() {
   });
 }
 
-/// The six demonstration caves' feature ids, read from the ordinary cave list.
-///
-/// That route is not part of this contract and the client has no reason to
-/// call it; the test does, because a sync set names roots by identifier and
-/// the seeded identifiers differ per installation.
-///
-/// It is also the route that shows the withhold rule bounds this channel and
-/// not the server: `Avenul Demo Protejat` comes back from here with a
-/// grid-snapped point and `approximateLocation: true`, and is absent from the
-/// sync download altogether.
-Future<List<String>> _demoCaveFeatureIds(Uri baseUri, String? token) async {
-  final http = HttpClient();
-  try {
-    final request = await http.getUrl(
-      baseUri.replace(
-        path: '/api/v1/caves',
-        queryParameters: {'pageSize': '50'},
-      ),
-    );
-    request.headers.set('Authorization', 'Bearer $token');
-    final response = await request.close();
-    final body = await response.transform(const Utf8Decoder()).join();
-    final decoded = jsonDecode(body);
-    final items = decoded is Map ? decoded['items'] as List : decoded as List;
-    return items
-        .cast<Map<String, Object?>>()
-        // Only the seeded demonstration caves. A development database that has
-        // been written into by hand holds other caves as well, and the row
-        // counts below are statements about the demo dataset.
-        .where((c) => _demoCaveNames.contains(c['name']))
-        .map((c) => c['id'] as String?)
-        .whereType<String>()
-        .toList(growable: false);
-  } finally {
-    http.close();
-  }
-}
-
-/// The caving group both development accounts belong to.
-///
-/// A sync set has to name one before an account that owns nothing may create
-/// any row through it — which no document says, and which
-/// `docs/integrations/silexgis/found-defects.md` records.
-Future<String> _demoCavingGroupId(Uri baseUri, String? token) async {
-  final http = HttpClient();
-  try {
-    final request = await http.getUrl(
-      baseUri.replace(path: '/api/v1/caving-groups'),
-    );
-    request.headers.set('Authorization', 'Bearer $token');
-    final response = await request.close();
-    final body = await response.transform(const Utf8Decoder()).join();
-    final decoded = jsonDecode(body);
-    final items = decoded is Map ? decoded['items'] as List : decoded as List;
-    return (items.first as Map<String, Object?>)['id']! as String;
-  } finally {
-    http.close();
-  }
-}
-
 /// What `member@dev.local` is handed for a set rooted at all six demonstration
 /// caves, as `docs/integrations/silexgis/07-dev-server.md` §3 tabulates it.
 ///
@@ -938,14 +873,3 @@ abstract final class _MemberView {
   /// the member's to add to.
   static const String foreignCave = 'Peștera Demo Mare';
 }
-
-/// The demonstration dataset, by name. Six caves, of which one is protected
-/// and one is visible only through the caving group.
-const Set<String> _demoCaveNames = <String>{
-  'Peștera Demo Mare',
-  'Avenul Demo Protejat',
-  'Peștera Demo Mică',
-  'Peștera Demo Ursului',
-  'Avenul Demo Vântului',
-  'Peștera Demo Izvorului',
-};

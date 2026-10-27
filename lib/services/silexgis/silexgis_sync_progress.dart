@@ -1,5 +1,6 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 
 /// Where a run has got to.
@@ -54,6 +55,7 @@ class SilexgisSyncProgress {
     this.action,
     this.code,
     this.unavailable = const <SilexgisUnavailablePart>[],
+    this.reviews = const SilexgisReviewCounts(),
   });
 
   const SilexgisSyncProgress.idle() : this(phase: SilexgisSyncPhase.idle);
@@ -86,6 +88,10 @@ class SilexgisSyncProgress {
   /// Parts of this run the installation has switched off.
   final List<SilexgisUnavailablePart> unavailable;
 
+  /// Rows held for a reviewer, and rows turned down that wait for the caver,
+  /// as of the end of the run.
+  final SilexgisReviewCounts reviews;
+
   bool get isRunning =>
       phase != SilexgisSyncPhase.idle &&
       phase != SilexgisSyncPhase.completed &&
@@ -95,12 +101,14 @@ class SilexgisSyncProgress {
   List<SilexgisRefusal> get refusals =>
       upload?.refusals ?? const <SilexgisRefusal>[];
 
-  /// True when the caver has something to decide: a row was refused, a
-  /// conflict needs merging, or something was carried and not stored.
+  /// True when the caver has something to decide or should know about: a row
+  /// was refused, a conflict needs merging, something was carried and not
+  /// stored, or rows wait on a reviewer or on the caver's choice.
   bool get needsAttention =>
       refusals.isNotEmpty ||
       (download?.unresolved.isNotEmpty ?? false) ||
-      (upload?.duplicates.isNotEmpty ?? false);
+      (upload?.duplicates.isNotEmpty ?? false) ||
+      !reviews.isEmpty;
 
   SilexgisSyncProgress copyWith({
     SilexgisSyncPhase? phase,
@@ -114,6 +122,7 @@ class SilexgisSyncProgress {
     SilexgisAction? action,
     String? code,
     List<SilexgisUnavailablePart>? unavailable,
+    SilexgisReviewCounts? reviews,
   }) => SilexgisSyncProgress(
     phase: phase ?? this.phase,
     message: message ?? this.message,
@@ -126,5 +135,6 @@ class SilexgisSyncProgress {
     action: action ?? this.action,
     code: code ?? this.code,
     unavailable: unavailable ?? this.unavailable,
+    reviews: reviews ?? this.reviews,
   );
 }

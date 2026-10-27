@@ -52,3 +52,21 @@ class ContractExchange {
     return int.parse(file.readAsStringSync().trim().split(' ').first);
   }
 }
+
+/// [json] with every string that is exactly a key of [values] replaced by its
+/// value, at any depth.
+///
+/// The recordings name identifiers and stamps by placeholder — `<entrance>`,
+/// `<timestamp>` — so a replay that has to land on real local rows fills them
+/// in first. Strings that merely contain a placeholder are left alone.
+Object? fillPlaceholders(Object? json, Map<String, String> values) =>
+    switch (json) {
+      final String s => values[s] ?? s,
+      final Map<String, Object?> m => <String, Object?>{
+        for (final e in m.entries) e.key: fillPlaceholders(e.value, values),
+      },
+      final List<Object?> l => <Object?>[
+        for (final e in l) fillPlaceholders(e, values),
+      ],
+      _ => json,
+    };

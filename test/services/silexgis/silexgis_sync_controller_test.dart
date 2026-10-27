@@ -11,6 +11,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
@@ -420,6 +421,105 @@ void main() {
       expect(
         client.sent.where((r) => r.url.path.endsWith('/download')),
         hasLength(2),
+      );
+    });
+  });
+
+  group('an account under review', () {
+    test(
+      '20 then 22: rows go up held, and come back decided last in the run',
+      () async {
+        await profiles.save(profile.copyWith(uploadsNewRoots: true));
+        await tokens.write('p-1', 'refresh-1');
+        final caveId = Uuid.v7();
+        final entranceId = Uuid.v7();
+        final stamp = DateTime.utc(2026, 10, 26).millisecondsSinceEpoch;
+        await db
+            .into(db.caves)
+            .insert(Cave(uuid: caveId, title: 'held cave', updatedAt: stamp));
+        await db
+            .into(db.cavePlaces)
+            .insert(
+              CavePlace(
+                uuid: entranceId,
+                title: 'Intrare',
+                caveUuid: caveId,
+                latitude: 45.61,
+                longitude: 22.51,
+                isEntrance: 1,
+                isMainEntrance: 1,
+                updatedAt: stamp,
+              ),
+            );
+        final ids = <String, String>{
+          '<cave>': caveId.toString(),
+          '<entrance>': entranceId.toString(),
+          '<uuid-2>': 'review-cave',
+          '<uuid-3>': 'review-entrance',
+          '<review>': 'review-entrance',
+          '<timestamp>': '2026-10-26T09:12:44.512Z',
+          '<cursor>': 'reviews-c1',
+        };
+        final client = ScriptedClient(<ScriptedResponse>[
+          refreshed(),
+          capabilities(
+            features: const <String>['download', 'upload', 'reviews'],
+          ),
+          ScriptedResponse.json(
+            path: SilexgisContract.uploadPath(setId),
+            json: fillPlaceholders(
+              ContractExchange('20-upload-held').responseBody,
+              ids,
+            ),
+          ),
+          emptyPage(),
+          ScriptedResponse.json(
+            path: SilexgisContract.reviewsPath(setId),
+            json: fillPlaceholders(
+              ContractExchange('22-reviews-current-withheld').responseBody,
+              ids,
+            ),
+          ),
+        ]);
+        final controller = controllerFor(client);
+
+        await controller.syncDefault();
+
+        expect(controller.progress.phase, SilexgisSyncPhase.completed);
+        final upload = client.sent.firstWhere(
+          (r) => r.url.path == SilexgisContract.uploadPath(setId),
+        );
+        expect(upload.jsonBody['clientFeatures'], <String>['held']);
+        expect(controller.progress.upload?.held, 2);
+        expect(client.sent.last.url.path, SilexgisContract.reviewsPath(setId));
+        // The cave still waits; the entrance was turned down.
+        expect(controller.progress.reviews.waiting, 1);
+        expect(controller.progress.reviews.toDecide, 1);
+        expect(controller.progress.needsAttention, isTrue);
+        expect(controller.progress.message, contains('waiting for review'));
+        final held = await heldRows.readSection('p-1', SyncUploadSection.rows);
+        expect(held.keys, unorderedEquals(<Uuid>[caveId, entranceId]));
+        // Nothing was written, so nothing holds a revision.
+        expect(await localState.readRevisions('p-1'), isEmpty);
+      },
+    );
+
+    test('a build without the reviews stream does not ask for it', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(),
+        emptyPage(),
+      ]);
+      final controller = controllerFor(client);
+
+      await controller.syncDefault();
+
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(
+        client.sent.where((r) => r.url.path.endsWith('/reviews')),
+        isEmpty,
       );
     });
   });
