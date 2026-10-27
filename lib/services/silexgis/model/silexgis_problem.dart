@@ -83,6 +83,15 @@ class SilexgisCodes {
   static const String typeUnknown = 'sync.type_unknown';
   static const String kindUnsupported = 'sync.kind_unsupported';
 
+  // The people directory.
+
+  /// The account may not be told who people are. Stops reading the directory.
+  static const String accessForbidden = 'access.forbidden';
+
+  /// A `people` item named a caver the directory does not list for this
+  /// account. Nothing about that phone user was written.
+  static const String personNotListed = 'sync.person_not_listed';
+
   // The QR landing route.
   static const String qrNotFound = 'qr.not_found';
 }
@@ -174,6 +183,7 @@ class SilexgisProblem {
       case SilexgisCodes.contractUnsupported:
       case SilexgisCodes.clientUpdateRequired:
       case SilexgisCodes.featureDisabled:
+      case SilexgisCodes.accessForbidden:
       case SilexgisCodes.validationFailed:
         return SilexgisAction.stop;
 

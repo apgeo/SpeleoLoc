@@ -20,6 +20,7 @@ import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -221,6 +222,7 @@ void main() {
         profiles: profiles,
         localState: localState,
         heldRows: heldRows,
+        people: SilexgisPeopleRepository(db),
         logger: logger,
         caves: CaveRepository(db, currentUser, logger),
         places: CavePlaceRepository(db, currentUser, logger),

@@ -13,12 +13,16 @@ import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -49,6 +53,7 @@ class SilexgisSyncController extends ChangeNotifier {
     required SilexgisProfileRepository profiles,
     required SilexgisLocalStateRepository localState,
     required SilexgisHeldRowRepository heldRows,
+    required SilexgisPeopleRepository people,
     required ChangeLogger logger,
     required ICaveRepository caves,
     required ICavePlaceRepository places,
@@ -58,6 +63,7 @@ class SilexgisSyncController extends ChangeNotifier {
        _profiles = profiles,
        _localState = localState,
        _heldRows = heldRows,
+       _people = people,
        _logger = logger,
        _caves = caves,
        _places = places,
@@ -68,6 +74,7 @@ class SilexgisSyncController extends ChangeNotifier {
   final SilexgisProfileRepository _profiles;
   final SilexgisLocalStateRepository _localState;
   final SilexgisHeldRowRepository _heldRows;
+  final SilexgisPeopleRepository _people;
   final ChangeLogger _logger;
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
@@ -204,6 +211,14 @@ class SilexgisSyncController extends ChangeNotifier {
           localState: _localState,
           heldRows: _heldRows,
           profileUuid: profile.profileUuid,
+          parts: <SilexgisUploadPart>[
+            if (capabilities.servesPeople)
+              SilexgisPeopleUploadPart(
+                db: _db,
+                people: _people,
+                profileUuid: profile.profileUuid,
+              ),
+          ],
         ).run(setId, capabilities: capabilities);
       } on SilexgisProblemException catch (e) {
         if (e.code != SilexgisCodes.clientUpdateRequired) rethrow;
@@ -242,6 +257,22 @@ class SilexgisSyncController extends ChangeNotifier {
       });
     }
 
+    if (capabilities.servesPeople) {
+      await _readPart(
+        'the people directory',
+        () => SilexgisPeopleReader(
+          db: _db,
+          api: session.api,
+          people: _people,
+          profileUuid: profile.profileUuid,
+        ).run(),
+        offCodes: SilexgisPeopleReader.offCodes,
+      );
+    } else {
+      // Not offered this run, so no caver is offered a choice from it.
+      await _people.clearDirectory(profile.profileUuid);
+    }
+
     // Last, so that an accepted revision lands on rows already here.
     if (capabilities.servesReviews) {
       await _readPart('the review decisions', () async {
@@ -271,11 +302,15 @@ class SilexgisSyncController extends ChangeNotifier {
   /// run goes on with the rest: `features` is worked out per request, so a
   /// part named at the start of a run can be gone by the time it is read. The
   /// next run asks the capabilities again.
-  Future<void> _readPart(String part, Future<void> Function() read) async {
+  Future<void> _readPart(
+    String part,
+    Future<void> Function() read, {
+    Set<String> offCodes = const <String>{SilexgisCodes.featureDisabled},
+  }) async {
     try {
       await read();
     } on SilexgisProblemException catch (e) {
-      if (e.code != SilexgisCodes.featureDisabled) rethrow;
+      if (!offCodes.contains(e.code)) rethrow;
       _log.info('$part is switched off on this installation (${e.code})');
       _emit(
         _progress.copyWith(

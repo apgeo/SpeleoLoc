@@ -102,6 +102,11 @@ class SyncRowResult {
       // Resubmittable only if the client can mend the shape; where it cannot,
       // the caller escalates to the caver rather than looping on it.
       case SilexgisCodes.geometryInvalid:
+      // A people item: choose again from a fresh directory, or send the phone
+      // user without a caver. Inside a 200, `sync.feature_disabled` is an
+      // item's answer, not the whole request's.
+      case SilexgisCodes.personNotListed:
+      case SilexgisCodes.featureDisabled:
         return SilexgisAction.applyAndResubmit;
 
       case SilexgisCodes.idConflict:

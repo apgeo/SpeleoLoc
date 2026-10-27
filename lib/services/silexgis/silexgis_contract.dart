@@ -38,6 +38,7 @@ class SilexgisContract {
 
   static const String capabilitiesPath = '/api/v1/sync/capabilities';
   static const String setsPath = '/api/v1/sync/sets';
+  static const String peoplePath = '/api/v1/sync/people';
 
   static String setPath(String setId) => '$setsPath/$setId';
   static String downloadPath(String setId) => '${setPath(setId)}/download';

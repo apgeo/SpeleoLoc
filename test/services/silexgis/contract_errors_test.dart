@@ -183,6 +183,7 @@ void main() {
         SilexgisCodes.batchConflict: SilexgisAction.retry,
         SilexgisCodes.clientUpdateRequired: SilexgisAction.stop,
         SilexgisCodes.featureDisabled: SilexgisAction.stop,
+        SilexgisCodes.accessForbidden: SilexgisAction.stop,
         SilexgisCodes.qrNotFound: SilexgisAction.surfaceToUser,
       };
       for (final entry in expected.entries) {

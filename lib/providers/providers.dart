@@ -37,6 +37,7 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
@@ -160,6 +161,15 @@ final silexgisHeldRowsProvider = Provider<SilexgisHeldRowRepository>(
   ),
 );
 
+/// An installation's people directory and this device's choice of caver per
+/// phone user. Local-only.
+final silexgisPeopleRepositoryProvider = Provider<SilexgisPeopleRepository>(
+  (ref) => SilexgisPeopleRepository(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
 /// What the caver can do about a row a reviewer turned down.
 final silexgisReviewOutcomesServiceProvider =
     Provider<SilexgisReviewOutcomesService>(
@@ -191,6 +201,7 @@ final silexgisSyncControllerProvider =
         profiles: ref.watch(silexgisProfileRepositoryProvider),
         localState: ref.watch(silexgisLocalStateProvider),
         heldRows: ref.watch(silexgisHeldRowsProvider),
+        people: ref.watch(silexgisPeopleRepositoryProvider),
         logger: ref.watch(changeLoggerProvider),
         caves: ref.watch(caveRepositoryProvider),
         places: ref.watch(cavePlaceRepositoryProvider),

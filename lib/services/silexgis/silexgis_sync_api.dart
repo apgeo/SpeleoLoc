@@ -1,5 +1,6 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
+import 'package:speleoloc/services/silexgis/model/sync_people.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
@@ -93,6 +94,15 @@ class SilexgisSyncApi {
         if (pageSize != null) 'pageSize': '$pageSize',
       },
     ),
+  );
+
+  /// The people directory: the cavers a phone user may be said to be, and the
+  /// current link of every phone user this account has sent. Answered
+  /// `409 sync.feature_disabled` while the installation has it switched off,
+  /// and `403 access.forbidden` to an account that may not be told who people
+  /// are; neither is a reason to retry.
+  Future<SyncPeopleDirectory> people() async => SyncPeopleDirectory.fromJson(
+    await _http.getJson(SilexgisContract.peoplePath),
   );
 
   /// Sends one attempt. The same `batchId` sent again returns the first answer

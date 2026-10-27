@@ -11,11 +11,13 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_people.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -76,6 +78,7 @@ void main() {
         profiles: profiles,
         localState: localState,
         heldRows: heldRows,
+        people: SilexgisPeopleRepository(db),
         logger: logger,
         caves: caves,
         places: places,
@@ -521,6 +524,94 @@ void main() {
         client.sent.where((r) => r.url.path.endsWith('/reviews')),
         isEmpty,
       );
+    });
+  });
+
+  group('the people directory', () {
+    ScriptedResponse emptyReviews() => ScriptedResponse.json(
+      path: SilexgisContract.reviewsPath(setId),
+      json: const <String, Object?>{
+        'setRevision': 1,
+        'settings': <String, Object?>{},
+        'reviews': <Object?>[],
+        'nextCursor': null,
+        'hasMore': false,
+      },
+    );
+
+    test('is read after the features and before the reviews', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(
+          features: const <String>['download', 'upload', 'people', 'reviews'],
+        ),
+        emptyPage(),
+        ScriptedResponse.json(
+          path: SilexgisContract.peoplePath,
+          json: ContractExchange('23-people').responseBody,
+        ),
+        emptyReviews(),
+      ]);
+      final controller = controllerFor(client);
+
+      await controller.syncDefault();
+
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(client.sent.skip(2).map((r) => r.url.path).toList(), <String>[
+        SilexgisContract.downloadPath(setId),
+        SilexgisContract.peoplePath,
+        SilexgisContract.reviewsPath(setId),
+      ]);
+      expect(
+        await SilexgisPeopleRepository(db).readDirectory('p-1'),
+        hasLength(3),
+      );
+    });
+
+    test('switched off mid-run stops that part, and the run goes on', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final recorded = ContractExchange('16-errors/feature-disabled');
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(features: const <String>['download', 'upload', 'people']),
+        emptyPage(),
+        ScriptedResponse(
+          path: SilexgisContract.peoplePath,
+          status: recorded.status,
+          body: jsonEncode(recorded.responseBody),
+          headers: const <String, String>{
+            'content-type': 'application/problem+json',
+          },
+        ),
+      ]);
+      final controller = controllerFor(client);
+
+      await controller.syncDefault();
+
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(controller.progress.unavailable.single.part, contains('people'));
+    });
+
+    test('not offered, it is forgotten, so no choice is offered', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final people = SilexgisPeopleRepository(db);
+      await people.replaceDirectory('p-1', const <SyncPerson>[
+        SyncPerson(id: 'caver-1', fullName: 'Invented Caver'),
+      ]);
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(),
+        emptyPage(),
+      ]);
+
+      await controllerFor(client).syncDefault();
+
+      expect(await people.readDirectory('p-1'), isEmpty);
+      expect(client.sent.where((r) => r.url.path.endsWith('/people')), isEmpty);
     });
   });
 }
