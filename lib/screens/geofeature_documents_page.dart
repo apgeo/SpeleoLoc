@@ -75,22 +75,22 @@ class _GeofeatureDocumentsPageState
   final TourKeySet tourKeys = TourKeySet();
   @override
   List<TourStepDef> get tourSteps => [
-    TourStepDef(
+    const TourStepDef(
       keyId: 'toolbar',
       titleLocKey: 'tour_geofeature_docs_toolbar_title',
       bodyLocKey: 'tour_geofeature_docs_toolbar_body',
     ),
-    TourStepDef(
+    const TourStepDef(
       keyId: 'search',
       titleLocKey: 'tour_geofeature_docs_search_title',
       bodyLocKey: 'tour_geofeature_docs_search_body',
     ),
-    TourStepDef(
+    const TourStepDef(
       keyId: 'list',
       titleLocKey: 'tour_geofeature_docs_list_title',
       bodyLocKey: 'tour_geofeature_docs_list_body',
     ),
-    TourStepDef(
+    const TourStepDef(
       keyId: 'menu',
       titleLocKey: 'tour_geofeature_docs_menu_title',
       bodyLocKey: 'tour_geofeature_docs_menu_body',
@@ -876,7 +876,7 @@ class _GeofeatureDocumentsPageState
 
     const double itemWidth = 150;
     const double itemSpacing = 8;
-    final double itemHeight = itemWidth / 0.8; // matches childAspectRatio 0.8
+    const double itemHeight = itemWidth / 0.8; // matches childAspectRatio 0.8
     final double totalHeight =
         itemHeight * _horizontalGridRows +
         itemSpacing * (_horizontalGridRows - 1) +
@@ -1270,14 +1270,11 @@ class _ControlsHeaderDelegate extends SliverPersistentHeaderDelegate {
                     const SizedBox(width: 8),
                     SegmentedButton<int>(
                       showSelectedIcon: false,
-                      style: ButtonStyle(
+                      style: const ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         padding: WidgetStatePropertyAll(
-                          const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 0,
-                          ),
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                         ),
                       ),
                       segments: const [
