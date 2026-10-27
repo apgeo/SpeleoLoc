@@ -14,7 +14,7 @@
 -- not synced across devices. Local-only means: absent from the sync-archive
 -- table registry and from the archive import/export configs, so no exporter
 -- has to remember to skip it. The other local-only tables are
--- `ruuvi_sensor_history` and the two `silexgis_*` tables at the end of this
+-- `ruuvi_sensor_history` and the `silexgis_*` tables at the end of this
 -- file.
 --
 -- `place_code_identifier` (PCI) and `qr_code_resource_identifier` (QCRI)
@@ -497,3 +497,23 @@ CREATE TABLE IF NOT EXISTS silexgis_row_revision (
 
 CREATE INDEX IF NOT EXISTS idx_silexgis_row_revision_table
     ON silexgis_row_revision(profile_uuid, entity_table);
+
+-- Table: silexgis_stream_cursor
+-- LOCAL ONLY, for the same reason as `silexgis_sync_state`: a cursor that
+-- travelled to a second device would have it ask for everything after a
+-- position it never read.
+--
+-- One resume position per stream of a sync set — documents, trips, rasters,
+-- reviews. Each stream's cursor is its own: a position one stream issued is
+-- refused as `sync.cursor_invalid` by every other, so a refusal drops only the
+-- cursor refused. The feature download keeps its position in
+-- `silexgis_sync_state`.
+CREATE TABLE IF NOT EXISTS silexgis_stream_cursor (
+    profile_uuid    TEXT(36) NOT NULL,   -- the local server profile, not an account
+    set_id          TEXT(36) NOT NULL,   -- the sync set on that installation
+    stream          TEXT(32) NOT NULL,   -- the stream's route name
+    cursor          TEXT,                -- opaque; null reads from the beginning
+    set_revision    INTEGER,
+    last_synced_at  INTEGER,
+    PRIMARY KEY (profile_uuid, set_id, stream)
+);

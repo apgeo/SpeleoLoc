@@ -886,6 +886,24 @@ class V23ToV24Migration extends SchemaMigration {
   }
 }
 
+/// v24 → v25.
+///
+/// Adds the local-only table that keeps one SilexGIS resume position per
+/// stream of a sync set. Each stream's cursor is refused by every other
+/// stream, so they cannot share the feature download's single position. Local
+/// only, like the other SilexGIS state tables; nothing is moved into it.
+class V24ToV25Migration extends SchemaMigration {
+  const V24ToV25Migration();
+
+  @override
+  int get toVersion => 25;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisStreamCursor);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -933,6 +951,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V21ToV22Migration(),
   V22ToV23Migration(),
   V23ToV24Migration(),
+  V24ToV25Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

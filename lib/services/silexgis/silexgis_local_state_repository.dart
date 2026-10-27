@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 /// Where this device is in its conversation with one installation's sync set.
@@ -22,8 +23,8 @@ class SilexgisSetState {
 }
 
 /// The device's local-only record of its conversations with SilexGIS
-/// installations: the download cursor per sync set, and the server revision of
-/// every row it has seen.
+/// installations: the download cursor per sync set, one cursor per further
+/// stream of that set, and the server revision of every row it has seen.
 ///
 /// **None of this ever leaves the device except back to the server that issued
 /// it.** It is not a column on any synced row, it is not in the change log, it
@@ -101,13 +102,83 @@ class SilexgisLocalStateRepository {
         .write(const SilexgisSyncStateCompanion(cursor: Value(null)));
   }
 
-  /// Forgets one installation entirely — the position and every revision.
+  // ---------------------------------------------------------- stream positions
+
+  /// Where [stream] of [setId] resumes, or null to read it from the beginning.
+  Future<SilexgisSetState> readStreamCursor(
+    String profileUuid,
+    String setId,
+    SyncStream stream,
+  ) async {
+    final row = await (_db.select(
+      _db.silexgisStreamCursor,
+    )..where(_streamKey(profileUuid, setId, stream))).getSingleOrNull();
+    if (row == null) return SilexgisSetState.fresh;
+    return SilexgisSetState(
+      cursor: row.cursor,
+      setRevision: row.setRevision,
+      lastSyncedAt: row.lastSyncedAt == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(row.lastSyncedAt!, isUtc: true),
+    );
+  }
+
+  /// Records the position a page of [stream] handed back. Called with the
+  /// page's own writes, so the two land together or not at all.
+  Future<void> writeStreamCursor(
+    String profileUuid,
+    String setId,
+    SyncStream stream, {
+    required String? cursor,
+    required int setRevision,
+  }) async {
+    await _db
+        .into(_db.silexgisStreamCursor)
+        .insertOnConflictUpdate(
+          SilexgisStreamCursorCompanion.insert(
+            profileUuid: profileUuid,
+            setId: setId,
+            stream: stream.routeName,
+            cursor: Value(cursor),
+            setRevision: Value(setRevision),
+            lastSyncedAt: Value(_clock.nowMs()),
+          ),
+        );
+  }
+
+  /// Throws away [stream]'s position and no other: each stream's cursor is
+  /// refused by every other stream, so one refusal says nothing about the
+  /// rest.
+  Future<void> dropStreamCursor(
+    String profileUuid,
+    String setId,
+    SyncStream stream,
+  ) async {
+    await (_db.update(_db.silexgisStreamCursor)
+          ..where(_streamKey(profileUuid, setId, stream)))
+        .write(const SilexgisStreamCursorCompanion(cursor: Value(null)));
+  }
+
+  Expression<bool> Function(SilexgisStreamCursor) _streamKey(
+    String profileUuid,
+    String setId,
+    SyncStream stream,
+  ) =>
+      (t) =>
+          t.profileUuid.equals(profileUuid) &
+          t.setId.equals(setId) &
+          t.stream.equals(stream.routeName);
+
+  /// Forgets one installation entirely — every position and every revision.
   /// Signing a profile out, or deleting it, leaves no trace to be sent back to
   /// a server that no longer knows this device.
   Future<void> forgetProfile(String profileUuid) async {
     await _db.transaction(() async {
       await (_db.delete(
         _db.silexgisSyncState,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
+        _db.silexgisStreamCursor,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
         _db.silexgisRowRevision,

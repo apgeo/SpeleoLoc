@@ -15692,6 +15692,461 @@ class SilexgisRowRevisionCompanion
   }
 }
 
+class SilexgisStreamCursor extends Table
+    with TableInfo<SilexgisStreamCursor, SilexgisStreamCursorData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisStreamCursor(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  late final GeneratedColumn<String> setId = GeneratedColumn<String>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _streamMeta = const VerificationMeta('stream');
+  late final GeneratedColumn<String> stream = GeneratedColumn<String>(
+    'stream',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _cursorMeta = const VerificationMeta('cursor');
+  late final GeneratedColumn<String> cursor = GeneratedColumn<String>(
+    'cursor',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _setRevisionMeta = const VerificationMeta(
+    'setRevision',
+  );
+  late final GeneratedColumn<int> setRevision = GeneratedColumn<int>(
+    'set_revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  late final GeneratedColumn<int> lastSyncedAt = GeneratedColumn<int>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    setId,
+    stream,
+    cursor,
+    setRevision,
+    lastSyncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_stream_cursor';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisStreamCursorData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
+    }
+    if (data.containsKey('stream')) {
+      context.handle(
+        _streamMeta,
+        stream.isAcceptableOrUnknown(data['stream']!, _streamMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_streamMeta);
+    }
+    if (data.containsKey('cursor')) {
+      context.handle(
+        _cursorMeta,
+        cursor.isAcceptableOrUnknown(data['cursor']!, _cursorMeta),
+      );
+    }
+    if (data.containsKey('set_revision')) {
+      context.handle(
+        _setRevisionMeta,
+        setRevision.isAcceptableOrUnknown(
+          data['set_revision']!,
+          _setRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, setId, stream};
+  @override
+  SilexgisStreamCursorData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisStreamCursorData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_id'],
+      )!,
+      stream: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stream'],
+      )!,
+      cursor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cursor'],
+      ),
+      setRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}set_revision'],
+      ),
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_synced_at'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisStreamCursor createAlias(String alias) {
+    return SilexgisStreamCursor(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, set_id, stream)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisStreamCursorData extends DataClass
+    implements Insertable<SilexgisStreamCursorData> {
+  final String profileUuid;
+
+  /// the local server profile, not an account
+  final String setId;
+
+  /// the sync set on that installation
+  final String stream;
+
+  /// the stream's route name
+  final String? cursor;
+
+  /// opaque; null reads from the beginning
+  final int? setRevision;
+  final int? lastSyncedAt;
+  const SilexgisStreamCursorData({
+    required this.profileUuid,
+    required this.setId,
+    required this.stream,
+    this.cursor,
+    this.setRevision,
+    this.lastSyncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['set_id'] = Variable<String>(setId);
+    map['stream'] = Variable<String>(stream);
+    if (!nullToAbsent || cursor != null) {
+      map['cursor'] = Variable<String>(cursor);
+    }
+    if (!nullToAbsent || setRevision != null) {
+      map['set_revision'] = Variable<int>(setRevision);
+    }
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt);
+    }
+    return map;
+  }
+
+  SilexgisStreamCursorCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisStreamCursorCompanion(
+      profileUuid: Value(profileUuid),
+      setId: Value(setId),
+      stream: Value(stream),
+      cursor: cursor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cursor),
+      setRevision: setRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(setRevision),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+    );
+  }
+
+  factory SilexgisStreamCursorData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisStreamCursorData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      setId: serializer.fromJson<String>(json['set_id']),
+      stream: serializer.fromJson<String>(json['stream']),
+      cursor: serializer.fromJson<String?>(json['cursor']),
+      setRevision: serializer.fromJson<int?>(json['set_revision']),
+      lastSyncedAt: serializer.fromJson<int?>(json['last_synced_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'set_id': serializer.toJson<String>(setId),
+      'stream': serializer.toJson<String>(stream),
+      'cursor': serializer.toJson<String?>(cursor),
+      'set_revision': serializer.toJson<int?>(setRevision),
+      'last_synced_at': serializer.toJson<int?>(lastSyncedAt),
+    };
+  }
+
+  SilexgisStreamCursorData copyWith({
+    String? profileUuid,
+    String? setId,
+    String? stream,
+    Value<String?> cursor = const Value.absent(),
+    Value<int?> setRevision = const Value.absent(),
+    Value<int?> lastSyncedAt = const Value.absent(),
+  }) => SilexgisStreamCursorData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    setId: setId ?? this.setId,
+    stream: stream ?? this.stream,
+    cursor: cursor.present ? cursor.value : this.cursor,
+    setRevision: setRevision.present ? setRevision.value : this.setRevision,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+  );
+  SilexgisStreamCursorData copyWithCompanion(
+    SilexgisStreamCursorCompanion data,
+  ) {
+    return SilexgisStreamCursorData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      setId: data.setId.present ? data.setId.value : this.setId,
+      stream: data.stream.present ? data.stream.value : this.stream,
+      cursor: data.cursor.present ? data.cursor.value : this.cursor,
+      setRevision: data.setRevision.present
+          ? data.setRevision.value
+          : this.setRevision,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisStreamCursorData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('stream: $stream, ')
+          ..write('cursor: $cursor, ')
+          ..write('setRevision: $setRevision, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    setId,
+    stream,
+    cursor,
+    setRevision,
+    lastSyncedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisStreamCursorData &&
+          other.profileUuid == this.profileUuid &&
+          other.setId == this.setId &&
+          other.stream == this.stream &&
+          other.cursor == this.cursor &&
+          other.setRevision == this.setRevision &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class SilexgisStreamCursorCompanion
+    extends UpdateCompanion<SilexgisStreamCursorData> {
+  final Value<String> profileUuid;
+  final Value<String> setId;
+  final Value<String> stream;
+  final Value<String?> cursor;
+  final Value<int?> setRevision;
+  final Value<int?> lastSyncedAt;
+  final Value<int> rowid;
+  const SilexgisStreamCursorCompanion({
+    this.profileUuid = const Value.absent(),
+    this.setId = const Value.absent(),
+    this.stream = const Value.absent(),
+    this.cursor = const Value.absent(),
+    this.setRevision = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisStreamCursorCompanion.insert({
+    required String profileUuid,
+    required String setId,
+    required String stream,
+    this.cursor = const Value.absent(),
+    this.setRevision = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       setId = Value(setId),
+       stream = Value(stream);
+  static Insertable<SilexgisStreamCursorData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? setId,
+    Expression<String>? stream,
+    Expression<String>? cursor,
+    Expression<int>? setRevision,
+    Expression<int>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (setId != null) 'set_id': setId,
+      if (stream != null) 'stream': stream,
+      if (cursor != null) 'cursor': cursor,
+      if (setRevision != null) 'set_revision': setRevision,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisStreamCursorCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? setId,
+    Value<String>? stream,
+    Value<String?>? cursor,
+    Value<int?>? setRevision,
+    Value<int?>? lastSyncedAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisStreamCursorCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      setId: setId ?? this.setId,
+      stream: stream ?? this.stream,
+      cursor: cursor ?? this.cursor,
+      setRevision: setRevision ?? this.setRevision,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<String>(setId.value);
+    }
+    if (stream.present) {
+      map['stream'] = Variable<String>(stream.value);
+    }
+    if (cursor.present) {
+      map['cursor'] = Variable<String>(cursor.value);
+    }
+    if (setRevision.present) {
+      map['set_revision'] = Variable<int>(setRevision.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisStreamCursorCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('stream: $stream, ')
+          ..write('cursor: $cursor, ')
+          ..write('setRevision: $setRevision, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -15763,6 +16218,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_silexgis_row_revision_table',
     'CREATE INDEX IF NOT EXISTS idx_silexgis_row_revision_table ON silexgis_row_revision (profile_uuid, entity_table)',
   );
+  late final SilexgisStreamCursor silexgisStreamCursor = SilexgisStreamCursor(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -15801,6 +16259,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     silexgisSyncState,
     silexgisRowRevision,
     idxSilexgisRowRevisionTable,
+    silexgisStreamCursor,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -30707,6 +31166,241 @@ typedef $SilexgisRowRevisionProcessedTableManager =
       SilexgisRowRevisionData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisStreamCursorCreateCompanionBuilder =
+    SilexgisStreamCursorCompanion Function({
+      required String profileUuid,
+      required String setId,
+      required String stream,
+      Value<String?> cursor,
+      Value<int?> setRevision,
+      Value<int?> lastSyncedAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisStreamCursorUpdateCompanionBuilder =
+    SilexgisStreamCursorCompanion Function({
+      Value<String> profileUuid,
+      Value<String> setId,
+      Value<String> stream,
+      Value<String?> cursor,
+      Value<int?> setRevision,
+      Value<int?> lastSyncedAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisStreamCursorFilterComposer
+    extends Composer<_$AppDatabase, SilexgisStreamCursor> {
+  $SilexgisStreamCursorFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stream => $composableBuilder(
+    column: $table.stream,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get setRevision => $composableBuilder(
+    column: $table.setRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisStreamCursorOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisStreamCursor> {
+  $SilexgisStreamCursorOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stream => $composableBuilder(
+    column: $table.stream,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get setRevision => $composableBuilder(
+    column: $table.setRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisStreamCursorAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisStreamCursor> {
+  $SilexgisStreamCursorAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get setId =>
+      $composableBuilder(column: $table.setId, builder: (column) => column);
+
+  GeneratedColumn<String> get stream =>
+      $composableBuilder(column: $table.stream, builder: (column) => column);
+
+  GeneratedColumn<String> get cursor =>
+      $composableBuilder(column: $table.cursor, builder: (column) => column);
+
+  GeneratedColumn<int> get setRevision => $composableBuilder(
+    column: $table.setRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+}
+
+class $SilexgisStreamCursorTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisStreamCursor,
+          SilexgisStreamCursorData,
+          $SilexgisStreamCursorFilterComposer,
+          $SilexgisStreamCursorOrderingComposer,
+          $SilexgisStreamCursorAnnotationComposer,
+          $SilexgisStreamCursorCreateCompanionBuilder,
+          $SilexgisStreamCursorUpdateCompanionBuilder,
+          (
+            SilexgisStreamCursorData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisStreamCursor,
+              SilexgisStreamCursorData
+            >,
+          ),
+          SilexgisStreamCursorData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisStreamCursorTableManager(
+    _$AppDatabase db,
+    SilexgisStreamCursor table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisStreamCursorFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisStreamCursorOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisStreamCursorAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> setId = const Value.absent(),
+                Value<String> stream = const Value.absent(),
+                Value<String?> cursor = const Value.absent(),
+                Value<int?> setRevision = const Value.absent(),
+                Value<int?> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisStreamCursorCompanion(
+                profileUuid: profileUuid,
+                setId: setId,
+                stream: stream,
+                cursor: cursor,
+                setRevision: setRevision,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String setId,
+                required String stream,
+                Value<String?> cursor = const Value.absent(),
+                Value<int?> setRevision = const Value.absent(),
+                Value<int?> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisStreamCursorCompanion.insert(
+                profileUuid: profileUuid,
+                setId: setId,
+                stream: stream,
+                cursor: cursor,
+                setRevision: setRevision,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisStreamCursorProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisStreamCursor,
+      SilexgisStreamCursorData,
+      $SilexgisStreamCursorFilterComposer,
+      $SilexgisStreamCursorOrderingComposer,
+      $SilexgisStreamCursorAnnotationComposer,
+      $SilexgisStreamCursorCreateCompanionBuilder,
+      $SilexgisStreamCursorUpdateCompanionBuilder,
+      (
+        SilexgisStreamCursorData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisStreamCursor,
+          SilexgisStreamCursorData
+        >,
+      ),
+      SilexgisStreamCursorData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -30773,4 +31467,6 @@ class $AppDatabaseManager {
       $SilexgisSyncStateTableManager(_db, _db.silexgisSyncState);
   $SilexgisRowRevisionTableManager get silexgisRowRevision =>
       $SilexgisRowRevisionTableManager(_db, _db.silexgisRowRevision);
+  $SilexgisStreamCursorTableManager get silexgisStreamCursor =>
+      $SilexgisStreamCursorTableManager(_db, _db.silexgisStreamCursor);
 }

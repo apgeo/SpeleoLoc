@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -23,7 +24,7 @@ void main() {
   });
   tearDown(() => db.close());
 
-  group('neither table leaves the device', () {
+  group('no SilexGIS state table leaves the device', () {
     test('the sync archive does not carry them', () async {
       // Local-only in the same sense `configurations` and
       // `ruuvi_sensor_history` are: absent from the registry, so no exporter
@@ -33,6 +34,7 @@ void main() {
       ).tables().map((t) => t.name).toSet();
       expect(exported, isNot(contains('silexgis_sync_state')));
       expect(exported, isNot(contains('silexgis_row_revision')));
+      expect(exported, isNot(contains('silexgis_stream_cursor')));
     });
 
     test('writing to them logs no change', () async {
@@ -50,8 +52,104 @@ void main() {
         entityTable: 'cave_places',
         revision: '2026-08-28T09:14:52.113Z',
       );
+      await repo.writeStreamCursor(
+        profile,
+        setId,
+        SyncStream.documents,
+        cursor: 'ZG9jczE=',
+        setRevision: 4,
+      );
       final logged = await db.select(db.changeLog).get();
       expect(logged, isEmpty);
+    });
+  });
+
+  group('a stream position', () {
+    test('is a fresh read when nothing is stored', () async {
+      final state = await repo.readStreamCursor(
+        profile,
+        setId,
+        SyncStream.trips,
+      );
+      expect(state.cursor, isNull);
+      expect(state.setRevision, isNull);
+    });
+
+    test('is kept apart from the feature download\'s', () async {
+      await repo.writeSetState(
+        profile,
+        setId,
+        cursor: 'features',
+        setRevision: 2,
+      );
+      await repo.writeStreamCursor(
+        profile,
+        setId,
+        SyncStream.rasters,
+        cursor: 'rasters',
+        setRevision: 2,
+      );
+      expect((await repo.readSetState(profile, setId)).cursor, 'features');
+      final rasters = await repo.readStreamCursor(
+        profile,
+        setId,
+        SyncStream.rasters,
+      );
+      expect(rasters.cursor, 'rasters');
+      expect(rasters.setRevision, 2);
+      expect(rasters.lastSyncedAt, clock.now());
+    });
+
+    test('is one per stream, and dropping one drops no other', () async {
+      for (final stream in SyncStream.values) {
+        await repo.writeStreamCursor(
+          profile,
+          setId,
+          stream,
+          cursor: 'at-${stream.routeName}',
+          setRevision: 3,
+        );
+      }
+      await repo.dropStreamCursor(profile, setId, SyncStream.trips);
+
+      for (final stream in SyncStream.values) {
+        final state = await repo.readStreamCursor(profile, setId, stream);
+        expect(
+          state.cursor,
+          stream == SyncStream.trips ? isNull : 'at-${stream.routeName}',
+          reason: stream.routeName,
+        );
+        expect(state.setRevision, 3);
+      }
+    });
+
+    test('is per installation and per set', () async {
+      await repo.writeStreamCursor(
+        profile,
+        setId,
+        SyncStream.reviews,
+        cursor: 'c1',
+        setRevision: 1,
+      );
+      await repo.writeStreamCursor(
+        other,
+        setId,
+        SyncStream.reviews,
+        cursor: 'c2',
+        setRevision: 1,
+      );
+      await repo.writeStreamCursor(
+        profile,
+        'set-2',
+        SyncStream.reviews,
+        cursor: 'c3',
+        setRevision: 1,
+      );
+      Future<String?> read(String p, String s) async =>
+          (await repo.readStreamCursor(p, s, SyncStream.reviews)).cursor;
+      expect(await read(profile, setId), 'c1');
+      expect(await read(other, setId), 'c2');
+      expect(await read(profile, 'set-2'), 'c3');
     });
   });
 
@@ -203,11 +301,26 @@ void main() {
     await repo.writeSetState(profile, setId, cursor: 'c1', setRevision: 1);
     await repo.writeRevision(profile, id, entityTable: 'caves', revision: 'r1');
     await repo.writeSetState(other, setId, cursor: 'c2', setRevision: 1);
+    await repo.writeStreamCursor(
+      profile,
+      setId,
+      SyncStream.documents,
+      cursor: 'd1',
+      setRevision: 1,
+    );
 
     await repo.forgetProfile(profile);
 
     expect((await repo.readSetState(profile, setId)).cursor, isNull);
     expect(await repo.readRevision(profile, id), isNull);
+    expect(
+      (await repo.readStreamCursor(
+        profile,
+        setId,
+        SyncStream.documents,
+      )).cursor,
+      isNull,
+    );
     // And leaves the other installation's conversation alone.
     expect((await repo.readSetState(other, setId)).cursor, 'c2');
   });
