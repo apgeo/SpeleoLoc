@@ -97,6 +97,20 @@ class SilexgisFileCopyRepository {
         ),
       );
 
+  /// The documentation files that are server copies other than the file
+  /// itself — see [SilexgisHeldAs.serverOnlyCopies]. They stay out of
+  /// device-to-device archives, with their links and their change history.
+  Future<Set<Uuid>> serverOnlyCopies() async {
+    final rows =
+        await (_db.select(_db.silexgisFileCopy)..where(
+              (t) => t.heldAs.isIn(
+                SilexgisHeldAs.serverOnlyCopies.map((h) => h.wireName),
+              ),
+            ))
+            .get();
+    return <Uuid>{for (final row in rows) row.documentUuid};
+  }
+
   /// The entry for [documentUuid], or null for the caver's own file.
   Future<SilexgisFileCopyEntry?> read(Uuid documentUuid) async {
     final row =

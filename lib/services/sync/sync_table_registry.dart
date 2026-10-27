@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
@@ -42,6 +43,14 @@ class SyncTableRegistry {
   };
 
   static const SyncValueSerializer serializer = _serializer;
+
+  /// Documentation files that are server copies other than the file itself —
+  /// a picture without its location, or one the server drew. They stay on the
+  /// device that fetched them: another device gets the file from the server,
+  /// or not at all, and a copy that travelled could stand in for the original
+  /// there. Read from the database being dumped, which is the one that knows.
+  Future<Set<Uuid>> _serverOnlyCopies() =>
+      SilexgisFileCopyRepository(_db).serverOnlyCopies();
 
   /// All tables exported/imported by the sync archive, in FK order.
   List<SyncTableHandler> tables() => <SyncTableHandler>[
@@ -210,9 +219,13 @@ class SyncTableRegistry {
     ),
     SyncTableHandler(
       name: 'documentation_files',
-      dump: () async => (await _db.select(_db.documentationFiles).get())
-          .map((r) => r.toJson(serializer: _serializer))
-          .toList(),
+      dump: () async {
+        final local = await _serverOnlyCopies();
+        return (await _db.select(_db.documentationFiles).get())
+            .where((r) => !local.contains(r.uuid))
+            .map((r) => r.toJson(serializer: _serializer))
+            .toList();
+      },
       upsert: (rows, resolver) async => upsertRows<DocumentationFile>(
         rows,
         (j) => DocumentationFile.fromJson(j, serializer: _serializer),
@@ -225,10 +238,13 @@ class SyncTableRegistry {
     ),
     SyncTableHandler(
       name: 'documentation_files_to_geofeatures',
-      dump: () async =>
-          (await _db.select(_db.documentationFilesToGeofeatures).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
+      dump: () async {
+        final local = await _serverOnlyCopies();
+        return (await _db.select(_db.documentationFilesToGeofeatures).get())
+            .where((r) => !local.contains(r.documentationFileUuid))
+            .map((r) => r.toJson(serializer: _serializer))
+            .toList();
+      },
       upsert: (rows, resolver) async =>
           upsertRows<DocumentationFilesToGeofeature>(
             rows,
@@ -245,10 +261,13 @@ class SyncTableRegistry {
     ),
     SyncTableHandler(
       name: 'documentation_files_to_cave_trips',
-      dump: () async =>
-          (await _db.select(_db.documentationFilesToCaveTrips).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
+      dump: () async {
+        final local = await _serverOnlyCopies();
+        return (await _db.select(_db.documentationFilesToCaveTrips).get())
+            .where((r) => !local.contains(r.documentationFileUuid))
+            .map((r) => r.toJson(serializer: _serializer))
+            .toList();
+      },
       upsert: (rows, resolver) async =>
           upsertRows<DocumentationFilesToCaveTrip>(
             rows,
@@ -266,10 +285,13 @@ class SyncTableRegistry {
     ),
     SyncTableHandler(
       name: 'documentation_files_to_cave_trip_points',
-      dump: () async =>
-          (await _db.select(_db.documentationFilesToCaveTripPoints).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
+      dump: () async {
+        final local = await _serverOnlyCopies();
+        return (await _db.select(_db.documentationFilesToCaveTripPoints).get())
+            .where((r) => !local.contains(r.documentationFileUuid))
+            .map((r) => r.toJson(serializer: _serializer))
+            .toList();
+      },
       upsert: (rows, resolver) async =>
           upsertRows<DocumentationFilesToCaveTripPoint>(
             rows,

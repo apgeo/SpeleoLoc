@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
@@ -268,14 +269,26 @@ class SyncArchiveService {
     }
 
     // change_log + change_log_field (shipped verbatim; dedup by uuid on
-    // import).
-    final changeLogRows = (await _db.select(_db.changeLog).get())
+    // import). A server copy that stays here keeps its history here too: its
+    // removal, replayed on another device, would remove that device's own
+    // file of the same identifier.
+    final serverOnly = await SilexgisFileCopyRepository(_db).serverOnlyCopies();
+    final keptLog = (await _db.select(_db.changeLog).get())
+        .where(
+          (r) =>
+              !(r.entityTable == 'documentation_files' &&
+                  serverOnly.contains(r.entityUuid)),
+        )
+        .toList();
+    final keptLogIds = <Uuid>{for (final r in keptLog) r.uuid};
+    final changeLogRows = keptLog
         .map((r) => r.toJson(serializer: _serializer))
         .toList();
     final changeLogCount = changeLogRows.length;
     jsonlEntries.add(('change_log.jsonl', _jsonlBytes(changeLogRows)));
 
     final fieldRows = (await _db.select(_db.changeLogField).get())
+        .where((r) => keptLogIds.contains(r.changeUuid))
         .map((r) => r.toJson(serializer: _serializer))
         .toList();
     jsonlEntries.add(('change_log_field.jsonl', _jsonlBytes(fieldRows)));
@@ -290,12 +303,20 @@ class SyncArchiveService {
       _log.warning('assets base dir unavailable, skipping asset files: $e');
     }
     if (baseDir != null) {
+      final serverOnlyKinds = <String>[
+        for (final kind in SilexgisHeldAs.serverOnlyCopies) kind.wireName,
+      ];
       if (includeDocumentationFiles) {
         assetRelPaths.addAll(
           (await _db
                   .customSelect(
                     'SELECT DISTINCT file_name FROM documentation_files '
-                    'WHERE deleted_at IS NULL',
+                    'WHERE deleted_at IS NULL AND uuid NOT IN ('
+                    'SELECT document_uuid FROM silexgis_file_copy '
+                    'WHERE held_as IN (${_placeholders(serverOnlyKinds)}))',
+                    variables: <Variable<Object>>[
+                      for (final kind in serverOnlyKinds) Variable(kind),
+                    ],
                   )
                   .get())
               .map((r) => r.read<String>('file_name')),
@@ -353,6 +374,9 @@ class SyncArchiveService {
     );
     return out;
   }
+
+  static String _placeholders(List<Object> values) =>
+      List<String>.filled(values.length, '?').join(', ');
 
   // ---------------------------------------------------------------------------
   //  IMPORT
