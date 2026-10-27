@@ -35,6 +35,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
@@ -171,6 +172,13 @@ final silexgisPeopleRepositoryProvider = Provider<SilexgisPeopleRepository>(
   ),
 );
 
+/// An installation's photo and document catalogue. Local-only, metadata only.
+final silexgisDocumentCatalogueProvider =
+    Provider<SilexgisDocumentCatalogueRepository>(
+      (ref) =>
+          SilexgisDocumentCatalogueRepository(ref.watch(appDatabaseProvider)),
+    );
+
 /// The choice of caver per phone user, for the user screens.
 final silexgisPeopleServiceProvider = Provider<SilexgisPeopleService>(
   (ref) => SilexgisPeopleService(
@@ -219,6 +227,7 @@ final silexgisSyncControllerProvider =
         localState: ref.watch(silexgisLocalStateProvider),
         heldRows: ref.watch(silexgisHeldRowsProvider),
         people: ref.watch(silexgisPeopleRepositoryProvider),
+        catalogue: ref.watch(silexgisDocumentCatalogueProvider),
         logger: ref.watch(changeLoggerProvider),
         caves: ref.watch(caveRepositoryProvider),
         places: ref.watch(cavePlaceRepositoryProvider),

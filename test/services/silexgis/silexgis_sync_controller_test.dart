@@ -11,9 +11,12 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_people.dart';
+import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
@@ -79,6 +82,7 @@ void main() {
         localState: localState,
         heldRows: heldRows,
         people: SilexgisPeopleRepository(db),
+        catalogue: SilexgisDocumentCatalogueRepository(db),
         logger: logger,
         caves: caves,
         places: places,
@@ -612,6 +616,110 @@ void main() {
 
       expect(await people.readDirectory('p-1'), isEmpty);
       expect(client.sent.where((r) => r.url.path.endsWith('/people')), isEmpty);
+    });
+  });
+
+  group('the documents catalogue', () {
+    test('is read after the people and before the reviews', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(
+          features: const <String>[
+            'download',
+            'upload',
+            'people',
+            'documents',
+            'reviews',
+          ],
+        ),
+        emptyPage(),
+        ScriptedResponse.json(
+          path: SilexgisContract.peoplePath,
+          json: ContractExchange('23-people').responseBody,
+        ),
+        ScriptedResponse.json(
+          path: SilexgisContract.documentsPath(setId),
+          json: fillPlaceholders(
+            ContractExchange('17-documents-first-page').responseBody,
+            <String, String>{
+              '<document>': Uuid.v7().toString(),
+              '<cave>': Uuid.v7().toString(),
+            },
+          ),
+        ),
+        ScriptedResponse.json(
+          path: SilexgisContract.reviewsPath(setId),
+          json: const <String, Object?>{
+            'setRevision': 1,
+            'settings': <String, Object?>{},
+            'reviews': <Object?>[],
+            'nextCursor': null,
+            'hasMore': false,
+          },
+        ),
+      ]);
+      final controller = controllerFor(client);
+
+      await controller.syncDefault();
+
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(client.sent.skip(2).map((r) => r.url.path).toList(), <String>[
+        SilexgisContract.downloadPath(setId),
+        SilexgisContract.peoplePath,
+        SilexgisContract.documentsPath(setId),
+        SilexgisContract.reviewsPath(setId),
+      ]);
+      expect(
+        await SilexgisDocumentCatalogueRepository(db).isEmpty('p-1'),
+        isFalse,
+      );
+      // Metadata only: nothing was fetched.
+      expect(await db.select(db.documentationFiles).get(), isEmpty);
+    });
+
+    test('not offered, it is forgotten with its position', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final catalogue = SilexgisDocumentCatalogueRepository(db);
+      await catalogue.applyPage(
+        'p-1',
+        SyncDocumentsPage.fromJson(
+          fillPlaceholders(
+                ContractExchange('17-documents-first-page').responseBody,
+                <String, String>{
+                  '<document>': Uuid.v7().toString(),
+                  '<cave>': Uuid.v7().toString(),
+                },
+              )!
+              as Map<String, Object?>,
+        ),
+      );
+      await localState.writeStreamCursor(
+        'p-1',
+        setId,
+        SyncStream.documents,
+        cursor: 'documents-c1',
+        setRevision: 1,
+      );
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(),
+        emptyPage(),
+      ]);
+
+      await controllerFor(client).syncDefault();
+
+      expect(await catalogue.isEmpty('p-1'), isTrue);
+      expect(
+        (await localState.readStreamCursor(
+          'p-1',
+          setId,
+          SyncStream.documents,
+        )).cursor,
+        isNull,
+      );
     });
   });
 }

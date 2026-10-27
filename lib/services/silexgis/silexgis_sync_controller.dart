@@ -7,9 +7,12 @@ import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
@@ -54,6 +57,7 @@ class SilexgisSyncController extends ChangeNotifier {
     required SilexgisLocalStateRepository localState,
     required SilexgisHeldRowRepository heldRows,
     required SilexgisPeopleRepository people,
+    required SilexgisDocumentCatalogueRepository catalogue,
     required ChangeLogger logger,
     required ICaveRepository caves,
     required ICavePlaceRepository places,
@@ -64,6 +68,7 @@ class SilexgisSyncController extends ChangeNotifier {
        _localState = localState,
        _heldRows = heldRows,
        _people = people,
+       _catalogue = catalogue,
        _logger = logger,
        _caves = caves,
        _places = places,
@@ -75,6 +80,7 @@ class SilexgisSyncController extends ChangeNotifier {
   final SilexgisLocalStateRepository _localState;
   final SilexgisHeldRowRepository _heldRows;
   final SilexgisPeopleRepository _people;
+  final SilexgisDocumentCatalogueRepository _catalogue;
   final ChangeLogger _logger;
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
@@ -271,6 +277,27 @@ class SilexgisSyncController extends ChangeNotifier {
     } else {
       // Not offered this run, so no caver is offered a choice from it.
       await _people.clearDirectory(profile.profileUuid);
+    }
+
+    if (capabilities.servesDocuments) {
+      await _readPart('the photo and document catalogue', () async {
+        await SilexgisDocumentsRunner(
+          db: _db,
+          api: session.api,
+          localState: _localState,
+          catalogue: _catalogue,
+          heldDocuments: SilexgisHeldDocumentUpdater(
+            db: _db,
+            logger: _logger,
+            localState: _localState,
+            profileUuid: profile.profileUuid,
+          ),
+          profileUuid: profile.profileUuid,
+        ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
+      });
+    } else {
+      // Not offered this run, so nothing is offered to fetch from it.
+      await _catalogue.clear(profile.profileUuid);
     }
 
     // Last, so that an accepted revision lands on rows already here.
