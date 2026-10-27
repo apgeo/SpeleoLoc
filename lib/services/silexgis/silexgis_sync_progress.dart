@@ -28,6 +28,18 @@ enum SilexgisSyncPhase {
   failed,
 }
 
+/// A part of a run the installation answered as switched off. That part
+/// stopped and the rest of the run went on.
+class SilexgisUnavailablePart {
+  const SilexgisUnavailablePart({required this.part, this.detail});
+
+  /// Which part, as the run names it.
+  final String part;
+
+  /// The server's own sentence, when it gave one.
+  final String? detail;
+}
+
 /// An immutable snapshot of a run, emitted on every meaningful change.
 class SilexgisSyncProgress {
   const SilexgisSyncProgress({
@@ -41,6 +53,7 @@ class SilexgisSyncProgress {
     this.upload,
     this.action,
     this.code,
+    this.unavailable = const <SilexgisUnavailablePart>[],
   });
 
   const SilexgisSyncProgress.idle() : this(phase: SilexgisSyncPhase.idle);
@@ -70,6 +83,9 @@ class SilexgisSyncProgress {
   /// `429` carry none, which is why [action] is the thing to branch on.
   final String? code;
 
+  /// Parts of this run the installation has switched off.
+  final List<SilexgisUnavailablePart> unavailable;
+
   bool get isRunning =>
       phase != SilexgisSyncPhase.idle &&
       phase != SilexgisSyncPhase.completed &&
@@ -97,6 +113,7 @@ class SilexgisSyncProgress {
     SilexgisUploadReport? upload,
     SilexgisAction? action,
     String? code,
+    List<SilexgisUnavailablePart>? unavailable,
   }) => SilexgisSyncProgress(
     phase: phase ?? this.phase,
     message: message ?? this.message,
@@ -108,5 +125,6 @@ class SilexgisSyncProgress {
     upload: upload ?? this.upload,
     action: action ?? this.action,
     code: code ?? this.code,
+    unavailable: unavailable ?? this.unavailable,
   );
 }

@@ -53,6 +53,14 @@ class SilexgisCodes {
   static const String batchTooLarge = 'sync.batch_too_large';
   static const String batchConflict = 'sync.batch_conflict';
 
+  /// The account's uploads wait for a reviewer and the request did not say
+  /// this build understands `held`. Nothing was written or kept.
+  static const String clientUpdateRequired = 'sync.client_update_required';
+
+  /// The installation has the part asked for switched off — today the people
+  /// directory. Stops that part only; the next run asks the capabilities again.
+  static const String featureDisabled = 'sync.feature_disabled';
+
   // One row inside a 200.
   static const String conflict = 'sync.conflict';
   static const String rowNotFound = 'sync.row_not_found';
@@ -164,6 +172,8 @@ class SilexgisProblem {
         return SilexgisAction.retry;
 
       case SilexgisCodes.contractUnsupported:
+      case SilexgisCodes.clientUpdateRequired:
+      case SilexgisCodes.featureDisabled:
       case SilexgisCodes.validationFailed:
         return SilexgisAction.stop;
 

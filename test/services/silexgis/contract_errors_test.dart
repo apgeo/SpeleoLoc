@@ -3,7 +3,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 
 import 'contract_fixtures.dart';
 
-/// Replays the three recorded refusals, and pins the two answers that carry no
+/// Replays the recorded refusals, and pins the two answers that carry no
 /// `code` at all.
 void main() {
   group('16-errors/cursor-invalid', () {
@@ -86,6 +86,45 @@ void main() {
     });
   });
 
+  group('16-errors/client-update-required', () {
+    final exchange = ContractExchange('16-errors/client-update-required');
+
+    test('an account under review refuses a build that cannot be told', () {
+      expect(exchange.status, 409);
+      expect(exchange.requestLine, startsWith('POST '));
+      // The refused request is a plain rows-only upload: it does not declare
+      // `held`, which is the whole reason it is refused.
+      expect(exchange.requestBody.containsKey('clientFeatures'), isFalse);
+
+      final problem = SilexgisProblem.tryParse(
+        exchange.status,
+        exchange.responseBody,
+      )!;
+      expect(problem.code, SilexgisCodes.clientUpdateRequired);
+      // The caver is told to update; retrying the same build cannot help.
+      expect(problem.action, SilexgisAction.stop);
+      expect(exchange.responseBody.containsKey('rows'), isFalse);
+    });
+  });
+
+  group('16-errors/feature-disabled', () {
+    final exchange = ContractExchange('16-errors/feature-disabled');
+
+    test('a part switched off is a refusal, not an empty answer', () {
+      expect(exchange.status, 409);
+      expect(exchange.requestTarget, '/api/v1/sync/people');
+
+      final problem = SilexgisProblem.tryParse(
+        exchange.status,
+        exchange.responseBody,
+      )!;
+      expect(problem.code, SilexgisCodes.featureDisabled);
+      // Stop that part, not the run; the next run asks the capabilities
+      // again.
+      expect(problem.action, SilexgisAction.stop);
+    });
+  });
+
   group('the two answers that carry no code', () {
     test('a 401 is re-auth even when the body says nothing useful', () {
       // Produced by authentication before the route runs, so no handler mints
@@ -142,6 +181,8 @@ void main() {
         SilexgisCodes.contractUnsupported: SilexgisAction.stop,
         SilexgisCodes.batchTooLarge: SilexgisAction.applyAndResubmit,
         SilexgisCodes.batchConflict: SilexgisAction.retry,
+        SilexgisCodes.clientUpdateRequired: SilexgisAction.stop,
+        SilexgisCodes.featureDisabled: SilexgisAction.stop,
         SilexgisCodes.qrNotFound: SilexgisAction.surfaceToUser,
       };
       for (final entry in expected.entries) {

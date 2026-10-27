@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
@@ -19,6 +21,7 @@ import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
+import 'contract_fixtures.dart';
 import 'scripted_client.dart';
 
 /// One run, end to end, against a scripted server.
@@ -291,4 +294,105 @@ void main() {
       expect(client.sent, hasLength(3));
     },
   );
+
+  group('a whole-request refusal', () {
+    Future<void> holdALocalCave() => db
+        .into(db.caves)
+        .insert(
+          Cave(
+            uuid: Uuid.v7(),
+            title: 'Invented cave',
+            updatedAt: DateTime.utc(2026, 9, 1).millisecondsSinceEpoch,
+          ),
+        );
+
+    test(
+      'an account under review stops the run and asks for an update',
+      () async {
+        await profiles.save(profile.copyWith(uploadsNewRoots: true));
+        await tokens.write('p-1', 'refresh-1');
+        await holdALocalCave();
+        final recorded = ContractExchange('16-errors/client-update-required');
+        final client = ScriptedClient(<ScriptedResponse>[
+          refreshed(),
+          capabilities(),
+          ScriptedResponse(
+            path: SilexgisContract.uploadPath(setId),
+            status: recorded.status,
+            body: jsonEncode(recorded.responseBody),
+            headers: const <String, String>{
+              'content-type': 'application/problem+json',
+            },
+          ),
+        ]);
+        final controller = controllerFor(client);
+
+        await controller.syncDefault();
+
+        expect(controller.progress.phase, SilexgisSyncPhase.failed);
+        expect(controller.progress.action, SilexgisAction.stop);
+        expect(controller.progress.code, SilexgisCodes.clientUpdateRequired);
+        expect(controller.progress.message, contains('Update the app'));
+        // Nothing is read after a write that did not go: a read would put
+        // back what the caver removed here.
+        expect(
+          client.sent.where((r) => r.url.path.endsWith('/download')),
+          isEmpty,
+        );
+        expect(await db.select(db.caves).get(), hasLength(1));
+      },
+    );
+
+    test('a part switched off stops that part, and the run goes on', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(),
+        ScriptedResponse.problem(
+          path: SilexgisContract.downloadPath(setId),
+          status: 409,
+          code: SilexgisCodes.featureDisabled,
+          detail: 'Switched off here.',
+        ),
+      ]);
+      final controller = controllerFor(client);
+
+      await controller.syncDefault();
+
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(controller.progress.action, isNull);
+      final off = controller.progress.unavailable.single;
+      expect(off.detail, 'Switched off here.');
+      expect(controller.progress.message, contains('does not offer'));
+    });
+
+    test('a part switched off last run is asked about again', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[
+        refreshed(),
+        capabilities(),
+        ScriptedResponse.problem(
+          path: SilexgisContract.downloadPath(setId),
+          status: 409,
+          code: SilexgisCodes.featureDisabled,
+        ),
+        refreshed(),
+        capabilities(),
+        emptyPage(),
+      ]);
+      final controller = controllerFor(client);
+
+      await controller.syncDefault();
+      await controller.syncDefault();
+
+      expect(controller.progress.phase, SilexgisSyncPhase.completed);
+      expect(controller.progress.unavailable, isEmpty);
+      expect(
+        client.sent.where((r) => r.url.path.endsWith('/download')),
+        hasLength(2),
+      );
+    });
+  });
 }

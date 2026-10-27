@@ -137,6 +137,7 @@ class SilexgisSyncController extends ChangeNotifier {
       _progress.copyWith(
         phase: SilexgisSyncPhase.authenticating,
         message: 'Signing in to ${profile.displayName}',
+        unavailable: const <SilexgisUnavailablePart>[],
       ),
     );
     if (!await session.auth.restore()) {
@@ -178,40 +179,59 @@ class SilexgisSyncController extends ChangeNotifier {
     // to carry it. And an edit that loses a conflict is answered with the
     // server's own row while the device still holds its own version, which is
     // what lets the caver see both.
+    //
+    // So any whole refusal of the write stops the run, rather than only the
+    // write: a read after an unsent removal would undo it.
     if (capabilities.servesUpload) {
       _emit(_progress.copyWith(phase: SilexgisSyncPhase.uploading));
-      final report = await SilexgisUploadRunner(
-        api: session.api,
-        builder: SilexgisUploadBuilder(
-          db: _db,
+      final SilexgisUploadReport report;
+      try {
+        report = await SilexgisUploadRunner(
+          api: session.api,
+          builder: SilexgisUploadBuilder(
+            db: _db,
+            localState: _localState,
+            profileUuid: profile.profileUuid,
+            uploadsNewRoots: profile.uploadsNewRoots,
+          ),
           localState: _localState,
           profileUuid: profile.profileUuid,
-          uploadsNewRoots: profile.uploadsNewRoots,
-        ),
-        localState: _localState,
-        profileUuid: profile.profileUuid,
-      ).run(setId, capabilities: capabilities);
+        ).run(setId, capabilities: capabilities);
+      } on SilexgisProblemException catch (e) {
+        if (e.code != SilexgisCodes.clientUpdateRequired) rethrow;
+        _fail(
+          'Uploads from this account wait for a reviewer on '
+          '${profile.displayName}, and this version of the app cannot send '
+          'them for review. Update the app to sync. Nothing was sent, and '
+          'nothing on this device was changed.',
+          action: SilexgisAction.stop,
+          code: e.code,
+        );
+        return;
+      }
 
       _emit(_progress.copyWith(rowsSent: report.written, upload: report));
     }
 
     if (capabilities.servesDownload) {
-      _emit(_progress.copyWith(phase: SilexgisSyncPhase.downloading));
-      final report = await SilexgisDownloadRunner(
-        api: session.api,
-        applier: applier,
-        localState: _localState,
-        profileUuid: profile.profileUuid,
-      ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
+      await _readPart('the caves and places', () async {
+        _emit(_progress.copyWith(phase: SilexgisSyncPhase.downloading));
+        final report = await SilexgisDownloadRunner(
+          api: session.api,
+          applier: applier,
+          localState: _localState,
+          profileUuid: profile.profileUuid,
+        ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
 
-      _emit(
-        _progress.copyWith(
-          pagesRead: report.pages,
-          rowsApplied: report.applied.inserted + report.applied.updated,
-          rowsDeleted: report.applied.deleted,
-          download: report,
-        ),
-      );
+        _emit(
+          _progress.copyWith(
+            pagesRead: report.pages,
+            rowsApplied: report.applied.inserted + report.applied.updated,
+            rowsDeleted: report.applied.deleted,
+            download: report,
+          ),
+        );
+      });
     }
 
     _emit(
@@ -220,6 +240,29 @@ class SilexgisSyncController extends ChangeNotifier {
         message: _summary(),
       ),
     );
+  }
+
+  /// Runs one read part of a run.
+  ///
+  /// A part the installation answers as switched off stops on its own and the
+  /// run goes on with the rest: `features` is worked out per request, so a
+  /// part named at the start of a run can be gone by the time it is read. The
+  /// next run asks the capabilities again.
+  Future<void> _readPart(String part, Future<void> Function() read) async {
+    try {
+      await read();
+    } on SilexgisProblemException catch (e) {
+      if (e.code != SilexgisCodes.featureDisabled) rethrow;
+      _log.info('$part is switched off on this installation (${e.code})');
+      _emit(
+        _progress.copyWith(
+          unavailable: <SilexgisUnavailablePart>[
+            ..._progress.unavailable,
+            SilexgisUnavailablePart(part: part, detail: e.problem.detail),
+          ],
+        ),
+      );
+    }
   }
 
   SilexgisSession _defaultSession(SilexgisProfile profile) {
@@ -242,8 +285,12 @@ class SilexgisSyncController extends ChangeNotifier {
       if (_progress.rowsDeleted > 0) '${_progress.rowsDeleted} removed',
       if (_progress.rowsSent > 0) '${_progress.rowsSent} sent',
     ];
-    if (parts.isEmpty) return 'Already level with the server.';
-    return parts.join(', ');
+    final summary = parts.isEmpty
+        ? 'Already level with the server.'
+        : parts.join(', ');
+    if (_progress.unavailable.isEmpty) return summary;
+    final off = _progress.unavailable.map((u) => u.part).join(', ');
+    return '$summary The server does not offer $off at the moment.';
   }
 
   static String? _codeOf(SilexgisException e) => switch (e) {
