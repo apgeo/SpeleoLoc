@@ -1,4 +1,5 @@
 import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
+import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 
 /// A row that has gone: an identifier and the moment it went, and nothing
 /// else, ever.
@@ -20,7 +21,7 @@ class SyncTombstone {
 }
 
 /// One page of a sync set's download.
-class SyncDownloadPage {
+class SyncDownloadPage implements SyncStreamPage {
   const SyncDownloadPage({
     required this.setRevision,
     required this.settings,
@@ -33,6 +34,7 @@ class SyncDownloadPage {
   /// A counter, not a timestamp: two edits inside one clock tick must still be
   /// distinguishable. It moves only when something about the set actually
   /// changed, and a move retires every cursor issued before it.
+  @override
   final int setRevision;
 
   /// The device's own code-generation configuration, stored and returned
@@ -50,10 +52,12 @@ class SyncDownloadPage {
   /// Opaque. Present whenever the page carried anything, so a device that has
   /// caught up still keeps a watermark to come back with; null only when there
   /// was nothing at or after the position it asked from.
+  @override
   final String? nextCursor;
 
   /// Level with the server as of this read — the signal to stop looping now,
   /// not to stop syncing.
+  @override
   final bool hasMore;
 
   static SyncDownloadPage fromJson(Map<String, Object?> json) =>

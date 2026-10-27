@@ -1,12 +1,10 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
-import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
 import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
-import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
-import 'package:speleoloc/utils/app_logger.dart';
 
 /// What a whole read did.
 class SilexgisDownloadReport {
@@ -33,12 +31,13 @@ class SilexgisDownloadReport {
   final int setRevision;
 }
 
-/// Reads a sync set, a page at a time, and hands each page to the applier.
+/// Reads a sync set's feature rows, a page at a time, and hands each page to
+/// the applier.
 ///
-/// The cursor is the whole of the device's position and the server keeps
-/// nothing between requests, so a lost connection costs the page in flight
-/// rather than the whole read: the position is stored with each page, and the
-/// next run resumes from it.
+/// The paging and the answer to a refused position are the shared stream
+/// runner's; what is particular here is where the position is kept — beside
+/// the set, in `silexgis_sync_state` — and that the applier stores it in the
+/// same transaction as the page.
 class SilexgisDownloadRunner {
   SilexgisDownloadRunner({
     required SilexgisSyncApi api,
@@ -54,7 +53,6 @@ class SilexgisDownloadRunner {
   final SilexgisDownloadApplier _applier;
   final SilexgisLocalStateRepository _localState;
   final String _profileUuid;
-  final _log = AppLogger.of('SilexgisDownloadRunner');
 
   /// A page smaller than the installation's ceiling, because `pageSize` counts
   /// rows and not bytes: a centerline's geometry is a cave's whole survey and
@@ -73,79 +71,45 @@ class SilexgisDownloadRunner {
     required SilexgisCapabilities capabilities,
     bool fromBeginning = false,
   }) async {
-    if (fromBeginning) {
-      await _localState.dropCursor(_profileUuid, setId);
-    }
-
     final pageSize = capabilities.pageSizeMax < preferredPageSize
         ? capabilities.pageSizeMax
         : preferredPageSize;
 
-    var report = const SilexgisApplyReport();
-    var pages = 0;
-    var restarted = false;
-    var setRevision = 0;
-    var cursor = (await _localState.readSetState(_profileUuid, setId)).cursor;
-
-    var more = true;
-    while (more) {
-      final page = await _readPage(
-        setId,
-        cursor: cursor,
-        pageSize: pageSize,
-        onRestart: () {
-          // Two different statuses and codes for one decision on the device:
-          // throw the position away and read the set from the beginning.
-          restarted = true;
-          cursor = null;
-        },
-      );
-      if (page == null) continue; // the cursor was dropped; go round again.
-
-      report = report.plus(await _applier.applyPage(page, setId: setId));
-      pages++;
-      setRevision = page.setRevision;
-      cursor = page.nextCursor;
-      more = page.hasMore;
-    }
+    var applied = const SilexgisApplyReport();
+    final read = await SilexgisPagedStreamRunner<SyncDownloadPage>(
+      name: 'download',
+      cursors: _FeatureCursorStore(_localState, _profileUuid, setId),
+      fetch: (cursor) =>
+          _api.download(setId, cursor: cursor, pageSize: pageSize),
+      apply: (page) async {
+        applied = applied.plus(await _applier.applyPage(page, setId: setId));
+      },
+    ).run(fromBeginning: fromBeginning);
 
     return SilexgisDownloadReport(
-      pages: pages,
-      applied: report,
-      restarted: restarted,
+      pages: read.pages,
+      applied: applied,
+      restarted: read.restarted,
       // A row still held when the read ends is one whose container never
       // arrived, which for this account means it never will.
       unresolved: _applier.takeUnresolved(),
-      setRevision: setRevision,
+      setRevision: read.setRevision,
     );
   }
+}
 
-  /// One page, or null when the stored position was refused and dropped.
-  ///
-  /// A refused cursor is answered once. Retrying the same one never succeeds,
-  /// and the restart that follows starts from no position at all, so there is
-  /// no second refusal to loop on.
-  Future<SyncDownloadPage?> _readPage(
-    String setId, {
-    required String? cursor,
-    required int pageSize,
-    required void Function() onRestart,
-  }) async {
-    try {
-      return await _api.download(setId, cursor: cursor, pageSize: pageSize);
-    } on SilexgisProblemException catch (e) {
-      final refusedPosition =
-          e.code == SilexgisCodes.cursorInvalid ||
-          e.code == SilexgisCodes.cursorStale;
-      if (!refusedPosition || cursor == null) rethrow;
+/// The feature download's position, kept per set beside the set's revision.
+class _FeatureCursorStore implements SilexgisCursorStore {
+  const _FeatureCursorStore(this._localState, this._profileUuid, this._setId);
 
-      _log.info(
-        'the stored resume position was refused (${e.code}); reading the set '
-        'from the beginning',
-      );
-      await _localState.dropCursor(_profileUuid, setId);
-      onRestart();
-      return null;
-    }
-  }
+  final SilexgisLocalStateRepository _localState;
+  final String _profileUuid;
+  final String _setId;
+
+  @override
+  Future<String?> read() async =>
+      (await _localState.readSetState(_profileUuid, _setId)).cursor;
+
+  @override
+  Future<void> drop() => _localState.dropCursor(_profileUuid, _setId);
 }
