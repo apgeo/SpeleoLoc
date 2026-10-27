@@ -182,4 +182,111 @@ void main() {
       expect(await db.select(db.documentationFiles).get(), hasLength(4));
     },
   );
+
+  group('an archive that brings a copy\'s document', () {
+    late Directory otherAssets;
+    late AppDatabase other;
+    late SyncArchiveService otherSync;
+
+    setUp(() async {
+      otherAssets = await Directory.systemTemp.createTemp('speleoloc_other_');
+      other = AppDatabase.forTesting(NativeDatabase.memory());
+      late ChangeLogger loggerRef;
+      final users = UserRepository(other, () => loggerRef);
+      final currentUser = CurrentUserService(
+        other,
+        users,
+        ConfigurationRepository(other),
+      );
+      await currentUser.initialize();
+      loggerRef = ChangeLogger(other, currentUser);
+      otherSync = SyncArchiveService(
+        other,
+        loggerRef,
+        assetsBaseDirResolver: () async => otherAssets,
+      );
+    });
+    tearDown(() async {
+      await other.close();
+      await otherAssets.delete(recursive: true);
+    });
+
+    /// The other device's own file under [id], last written at [updatedAt],
+    /// exported and imported here.
+    Future<void> importOwnFileOf(Uuid id, {required int updatedAt}) async {
+      const relPath = 'documentation_files/doc_1_their_own.jpg';
+      final bytes = utf8.encode('invented original');
+      final asset = File('${otherAssets.path}/$relPath');
+      await asset.parent.create(recursive: true);
+      await asset.writeAsBytes(bytes);
+      await other
+          .into(other.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: id,
+              title: 'their own',
+              fileName: relPath,
+              fileSize: bytes.length,
+              fileType: 'photo',
+              createdAt: Value(updatedAt),
+              updatedAt: Value(updatedAt),
+            ),
+          );
+      final zip = await otherSync.exportToZip(
+        tempDir.path,
+        filenameHint: 'other.zip',
+      );
+      await sync.importFromZip(zip.path);
+    }
+
+    Future<void> ageRow(Uuid id, int updatedAt) =>
+        (db.update(db.documentationFiles)..where((t) => t.uuid.equalsValue(id)))
+            .write(DocumentationFilesCompanion(updatedAt: Value(updatedAt)));
+
+    test('and replaces it records the file as that device\'s own', () async {
+      final id = await file(
+        'location_free.jpg',
+        heldAs: SilexgisHeldAs.locationFree,
+      );
+      await copies.register(
+        SilexgisFileCopyEntry(
+          documentUuid: id,
+          heldAs: SilexgisHeldAs.locationFree,
+          origin: SilexgisCopyOrigin.server,
+          versionId: 'v-1',
+        ),
+      );
+      await ageRow(id, _t0);
+
+      await importOwnFileOf(id, updatedAt: _t0 + 2000);
+
+      final row = await (db.select(
+        db.documentationFiles,
+      )..where((t) => t.uuid.equalsValue(id))).getSingle();
+      expect(row.fileName, 'documentation_files/doc_1_their_own.jpg');
+      final entry = (await copies.read(id))!;
+      expect(entry.heldAs, SilexgisHeldAs.own);
+      expect(entry.origin, SilexgisCopyOrigin.archive);
+      // The server revision this device knew for the document stays.
+      expect(entry.versionId, 'v-1');
+      expect(await copies.serverOnlyCopies(), isNot(contains(id)));
+    });
+
+    test('and loses to the copy leaves the copy registered', () async {
+      final id = await file('rendition.jpg', heldAs: SilexgisHeldAs.rendition);
+      await ageRow(id, _t0 + 3000);
+
+      await importOwnFileOf(id, updatedAt: _t0 + 2000);
+
+      final row = await (db.select(
+        db.documentationFiles,
+      )..where((t) => t.uuid.equalsValue(id))).getSingle();
+      expect(row.fileName, 'documentation_files/rendition.jpg');
+      expect((await copies.read(id))!.heldAs, SilexgisHeldAs.rendition);
+    });
+  });
 }
+
+/// A stamp in milliseconds, as stored; a small number would be read as
+/// seconds from an older device.
+const int _t0 = 1767225600000;

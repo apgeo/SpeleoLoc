@@ -111,6 +111,38 @@ class SilexgisFileCopyRepository {
     return <Uuid>{for (final row in rows) row.documentUuid};
   }
 
+  /// Re-registers each server copy that an archive has just replaced.
+  ///
+  /// [archiveFiles] is the archive's documentation files, as identifier to
+  /// stored file name. Archives never carry a copy without location or a
+  /// drawn picture, so a row that now names the archive's file holds what a
+  /// device made or picked: it is recorded as such, keeping the server
+  /// revision this device last knew for the document. A copy the archive did
+  /// not replace keeps its entry. Returns how many entries changed.
+  Future<int> adoptArchiveFiles(Map<Uuid, String> archiveFiles) async {
+    if (archiveFiles.isEmpty) return 0;
+    var adopted = 0;
+    for (final id in await serverOnlyCopies()) {
+      final archived = archiveFiles[id];
+      if (archived == null) continue;
+      final row = await (_db.select(
+        _db.documentationFiles,
+      )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
+      if (row == null || row.fileName != archived) continue;
+      final entry = await read(id);
+      await register(
+        SilexgisFileCopyEntry(
+          documentUuid: id,
+          heldAs: SilexgisHeldAs.own,
+          origin: SilexgisCopyOrigin.archive,
+          versionId: entry?.versionId,
+        ),
+      );
+      adopted++;
+    }
+    return adopted;
+  }
+
   /// The entry for [documentUuid], or null for the caver's own file.
   Future<SilexgisFileCopyEntry?> read(Uuid documentUuid) async {
     final row =

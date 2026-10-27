@@ -723,6 +723,14 @@ class SyncArchiveService {
           skipped += result.skipped;
         }
 
+        // A server copy the archive's row replaced now holds another
+        // device's file, and has to stop being recorded as the copy.
+        await SilexgisFileCopyRepository(_db).adoptArchiveFiles(<Uuid, String>{
+          for (final r in tableRows['documentation_files'] ?? const [])
+            if (Uuid.tryParse(r['uuid'] as String? ?? '') case final id?)
+              if (r['file_name'] case final String name) id: name,
+        });
+
         // Merge change_log headers first (FK parent) then fields.
         final existingLogUuids = <String>{};
         for (final r in await _db.select(_db.changeLog).get()) {
