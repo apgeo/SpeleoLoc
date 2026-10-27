@@ -141,10 +141,10 @@ void main() {
         final page = await api.download(set.id, pageSize: 500);
         final names = page.features.map((f) => f.name).toList();
 
-        // Eleven rows as this account, and the guarded cave and its entrance are
-        // simply not among them — no row, no geometry, no placeholder, and
-        // nothing anywhere saying one was kept back.
-        expect(page.features, hasLength(11));
+        // Every row this account may place, and the guarded cave and its
+        // entrance are simply not among them — no row, no geometry, no
+        // placeholder, and nothing anywhere saying one was kept back.
+        expect(page.features, hasLength(_MemberView.rows));
         expect(names, isNot(contains('Avenul Demo Protejat')));
         expect(names, isNot(contains('Shaft')));
         expect(page.tombstones, isEmpty);
@@ -196,7 +196,7 @@ void main() {
         }
         cursor = page.nextCursor;
       }
-      expect(seen, hasLength(11));
+      expect(seen, hasLength(_MemberView.rows));
     });
 
     test(
@@ -581,7 +581,6 @@ void main() {
     late SilexgisProfileRepository profiles;
     late SilexgisProfile profile;
     late CavePlaceRepository placeRepository;
-    late String caveId;
 
     setUpAll(() async {
       final group = await _demoCavingGroupId(baseUri, await auth.accessToken());
@@ -664,18 +663,21 @@ void main() {
         SilexgisSyncPhase.completed,
         reason: controller.progress.message,
       );
-      // The same eleven rows, now as local caves and cave places.
+      // The same rows, now as local caves and cave places.
       final caves = await db.select(db.caves).get();
       final places = await db.select(db.cavePlaces).get();
-      expect(caves, hasLength(5));
-      expect(places, hasLength(6));
+      expect(caves, hasLength(_MemberView.localCaves));
+      expect(places, hasLength(_MemberView.localPlaces));
       expect(
         caves.map((c) => c.title),
         isNot(contains('Avenul Demo Protejat')),
       );
+      expect(
+        places.map((p) => p.title),
+        isNot(contains('Demo marker B (protected)')),
+      );
       // An import, not a user edit.
       expect(await db.select(db.changeLog).get(), isEmpty);
-      caveId = caves.first.uuid.toString();
     });
 
     test('a second run has nothing to say', () async {
@@ -686,11 +688,13 @@ void main() {
     });
 
     test('adding to somebody else\'s cave is refused, and says so', () async {
-      // The account may read the club's caves and may not add to them. The
-      // refusal is per row and names its own reason.
-      final theirCave = (await db.select(db.caves).get()).firstWhere(
-        (c) => c.uuid.toString() == caveId,
-      );
+      // The account may read the administrator's caves and may not add to
+      // them. The refusal is per row and names its own reason. Looked up by
+      // name rather than carried over from the first read, so this case stands
+      // on its own when an earlier one fails.
+      final theirCave = await (db.select(
+        db.caves,
+      )..where((t) => t.title.equals(_MemberView.foreignCave))).getSingle();
       final refusedId = Uuid.v7();
       await db
           .into(db.cavePlaces)
@@ -900,6 +904,37 @@ Future<String> _demoCavingGroupId(Uri baseUri, String? token) async {
   } finally {
     http.close();
   }
+}
+
+/// What `member@dev.local` is handed for a set rooted at all six demonstration
+/// caves, as `docs/integrations/silexgis/07-dev-server.md` §3 tabulates it.
+///
+/// Every count in this file is derived from here, so a change to the seed data
+/// is one edit against that table rather than a hunt for magic numbers.
+abstract final class _MemberView {
+  /// Every cave but `Avenul Demo Protejat`, whose exact position is protected
+  /// and which is therefore absent from the sync channel entirely.
+  static const int caves = 5;
+
+  /// Every entrance but that cave's `Shaft`.
+  static const int entrances = 6;
+
+  /// `Demo marker A`. `Demo marker B (protected)` is a protection root of its
+  /// own and is absent.
+  static const int places = 1;
+
+  static const int centrelines = 1;
+
+  static const int rows = caves + entrances + places + centrelines;
+
+  /// A centreline is carried by the download and has no local table to land
+  /// in, so it is not stored.
+  static const int localCaves = caves;
+  static const int localPlaces = entrances + places;
+
+  /// A public cave the administrator owns: readable by the member, and not
+  /// the member's to add to.
+  static const String foreignCave = 'Peștera Demo Mare';
 }
 
 /// The demonstration dataset, by name. Six caves, of which one is protected
