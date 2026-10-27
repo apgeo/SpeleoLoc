@@ -173,6 +173,30 @@ void main() {
     },
   );
 
+  test('a locked account is told to try later, not to sign in', () async {
+    await profiles.save(profile);
+    await tokens.write('p-1', 'refresh-1');
+    final client = ScriptedClient(<ScriptedResponse>[
+      ScriptedResponse.json(
+        path: SilexgisContract.tokenPath,
+        status: 400,
+        json: <String, Object?>{
+          'error': 'invalid_grant',
+          'error_description': 'The account is locked.',
+        },
+      ),
+    ]);
+    final controller = controllerFor(client);
+
+    await controller.syncDefault();
+
+    expect(controller.progress.phase, SilexgisSyncPhase.failed);
+    expect(controller.progress.action, SilexgisAction.retry);
+    expect(controller.progress.message, contains('locked'));
+    expect(controller.progress.message, contains('Try again later'));
+    expect(await tokens.read('p-1'), 'refresh-1');
+  });
+
   test('a server that has moved on is answered, not guessed at', () async {
     await profiles.save(profile);
     await tokens.write('p-1', 'refresh-1');

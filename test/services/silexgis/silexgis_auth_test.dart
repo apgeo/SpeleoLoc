@@ -8,6 +8,8 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_tokens.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 import 'scripted_client.dart';
@@ -355,6 +357,69 @@ void main() {
         // which revokes every token that account holds on every device.
         expect(await store.read(profile), isNull);
         expect(auth.isSignedIn, isFalse);
+      },
+    );
+
+    ScriptedResponse locked() => ScriptedResponse.json(
+      path: SilexgisContract.tokenPath,
+      status: 400,
+      json: <String, Object?>{
+        'error': 'invalid_grant',
+        'error_description': 'The account is locked.',
+      },
+    );
+
+    test('a locked account keeps its tokens and says to try later', () async {
+      final store = InMemoryRefreshTokenStore();
+      await store.write(profile, 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[
+        locked(),
+        tokenOk(access: 'access-2', refresh: 'refresh-2'),
+      ]);
+      final auth = build(client, store: store);
+
+      await expectLater(
+        auth.restore(),
+        throwsA(
+          isA<SilexgisAccountLockedException>()
+              .having((e) => e.code, 'code', 'invalid_grant')
+              .having((e) => e.action, 'action', SilexgisAction.retry)
+              .having((e) => e.message, 'message', contains('locked')),
+        ),
+      );
+      // A lock revokes nothing, so nothing is thrown away and no password
+      // is asked for.
+      expect(await store.read(profile), 'refresh-1');
+
+      // Once the lock lifts, the same token works again.
+      expect(await auth.restore(), isTrue);
+      expect(client.sent.last.formBody['refresh_token'], 'refresh-1');
+      expect(await store.read(profile), 'refresh-2');
+    });
+
+    test(
+      'a lock met mid-request is not mistaken for a lapsed session',
+      () async {
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = ScriptedClient(<ScriptedResponse>[
+          tokenOk(access: 'access-2', refresh: 'refresh-2'),
+          ScriptedResponse.problem(
+            path: SilexgisContract.capabilitiesPath,
+            status: 401,
+          ),
+          locked(),
+        ]);
+        final auth = build(client, store: store);
+        await auth.restore();
+
+        await expectLater(
+          SilexgisSyncApi(
+            SilexgisHttp(baseUri: base, tokens: auth, client: client),
+          ).capabilities(),
+          throwsA(isA<SilexgisAccountLockedException>()),
+        );
+        expect(await store.read(profile), 'refresh-2');
       },
     );
 

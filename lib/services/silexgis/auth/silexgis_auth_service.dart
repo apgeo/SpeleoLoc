@@ -190,6 +190,13 @@ class SilexgisAuthService implements SilexgisTokenSource {
       await _adopt(tokens);
       return true;
     } on SilexgisAuthException catch (e) {
+      if (_isAccountLocked(e)) {
+        // A lock revokes nothing: the same refresh token works again once it
+        // lifts. Dropping it would send the caver to a password prompt they
+        // do not need, and retrying in a loop does not shorten the lock.
+        _log.info('Refresh refused: the account is locked; keeping the tokens');
+        throw SilexgisAccountLockedException(code: e.code, status: e.status);
+      }
       // `invalid_grant` here is spent, expired, replayed — or the account's
       // password was changed or reset, which revokes every token that account
       // holds on every device. All of them mean: ask for a password.
@@ -203,6 +210,14 @@ class SilexgisAuthService implements SilexgisTokenSource {
       rethrow;
     }
   }
+
+  /// The token endpoint tells a locked account apart from every other
+  /// `invalid_grant` only by its description, so that is what is read here.
+  static bool _isAccountLocked(SilexgisAuthException e) =>
+      e.code == _invalidGrant &&
+      e.message.toLowerCase().contains('account is locked');
+
+  static const String _invalidGrant = 'invalid_grant';
 
   /// Stores the new pair **before** anything else uses it. The refresh token
   /// in an answer is a new one and the old is spent, so discarding the
@@ -485,4 +500,19 @@ class TwoFactorRequiredException extends SilexgisAuthException {
       );
 
   final TwoFactorChallenge challenge;
+}
+
+/// The account is locked — suspended, not ended.
+///
+/// Refreshes are refused while the lock lasts, whether it came from failed
+/// passwords or from an administrator, and nothing is revoked: the stored
+/// tokens are kept and work again once it lifts. So the caver is told to try
+/// later rather than asked for a password.
+class SilexgisAccountLockedException extends SilexgisAuthException {
+  const SilexgisAccountLockedException({super.code, super.status})
+    : super(
+        'This account is locked. Try again later; there is no need to sign '
+        'in again.',
+        action: SilexgisAction.retry,
+      );
 }
