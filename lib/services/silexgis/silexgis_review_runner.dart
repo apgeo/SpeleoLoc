@@ -2,6 +2,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
@@ -84,7 +85,7 @@ class SilexgisReviewRunner {
       ),
       apply: (page) => _db.transaction(() async {
         for (final review in page.reviews) {
-          switch (await _apply(review)) {
+          switch (await _apply(setId, review)) {
             case SyncReviewOutcome.accepted:
               accepted++;
             case SyncReviewOutcome.rejected:
@@ -108,13 +109,25 @@ class SilexgisReviewRunner {
   }
 
   /// Records one decision. Returns the outcome when it changed something.
-  Future<SyncReviewOutcome?> _apply(SyncReview review) async {
+  Future<SyncReviewOutcome?> _apply(String setId, SyncReview review) async {
     final held = await _heldRows.byReviewId(_profileUuid, review.reviewId);
     if (held == null) return null;
 
     switch (review.outcome) {
       case SyncReviewOutcome.accepted:
         final revision = review.revision;
+        // A reviewer may accept part of a feature edit, field by field, and
+        // the answer cannot say which part yet. The server's row is then
+        // neither the device's nor what it held before, and an incremental
+        // read would never bring it: the feature stream is read again from
+        // the beginning. A create is accepted whole, and a removal has no row
+        // left to differ.
+        final wasEdit =
+            held.section == SyncUploadSection.rows &&
+            !held.isDelete &&
+            await _localState.readRevision(_profileUuid, held.entityUuid) !=
+                null;
+        if (wasEdit) await _localState.dropCursor(_profileUuid, setId);
         if (held.isDelete) {
           await _localState.forgetRevisions(_profileUuid, <Uuid>[
             held.entityUuid,

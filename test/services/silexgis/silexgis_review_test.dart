@@ -308,6 +308,61 @@ void main() {
       },
     );
 
+    test(
+      'an accepted edit reads the feature stream again from the beginning',
+      () async {
+        // The acceptance may be partial, field by field, and nothing in it
+        // says so yet: only a full read brings the server's row.
+        await heldEntranceEdit();
+        await localState.writeSetState(
+          profile.profileUuid,
+          setId,
+          cursor: 'features-c9',
+          setRevision: 1,
+        );
+
+        await readReviews(<Map<String, Object?>>[
+          reviewsPage(<Map<String, Object?>>[
+            decision('review-1', 'accepted', revision: decidedAt),
+          ]),
+        ]);
+
+        expect(
+          (await localState.readSetState(profile.profileUuid, setId)).cursor,
+          isNull,
+        );
+        expect(
+          (await localState.readStreamCursor(
+            profile.profileUuid,
+            setId,
+            SyncStream.reviews,
+          )).cursor,
+          'reviews-c1',
+        );
+      },
+    );
+
+    test('an accepted create keeps the feature stream\'s position', () async {
+      await heldNewCave();
+      await localState.writeSetState(
+        profile.profileUuid,
+        setId,
+        cursor: 'features-c9',
+        setRevision: 1,
+      );
+
+      await readReviews(<Map<String, Object?>>[
+        reviewsPage(<Map<String, Object?>>[
+          decision('review-1', 'accepted', rowId: caveId, revision: decidedAt),
+        ]),
+      ]);
+
+      expect(
+        (await localState.readSetState(profile.profileUuid, setId)).cursor,
+        'features-c9',
+      );
+    });
+
     test('a decision about an earlier proposal is ignored', () async {
       // The row was sent again with other content and waits under review-2;
       // review-1 is superseded, and nothing said about it concerns the row.
