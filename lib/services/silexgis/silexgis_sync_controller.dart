@@ -14,7 +14,6 @@ import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
-import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
@@ -22,27 +21,15 @@ import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
-import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
-/// Builds the per-installation pieces of a run.
-///
-/// Injected so a test can drive a whole run against a scripted server without
-/// a socket, and so the controller itself never learns how a sign-in works.
-typedef SilexgisSessionBuilder =
-    SilexgisSession Function(SilexgisProfile profile);
-
-/// One installation's client, assembled.
-class SilexgisSession {
-  const SilexgisSession({required this.auth, required this.api});
-
-  final SilexgisAuthService auth;
-  final SilexgisSyncApi api;
-}
+export 'package:speleoloc/services/silexgis/silexgis_session.dart'
+    show SilexgisSession, SilexgisSessionBuilder;
 
 /// Runs one sync against the configured server, and reports what happened.
 ///
@@ -350,19 +337,8 @@ class SilexgisSyncController extends ChangeNotifier {
     }
   }
 
-  SilexgisSession _defaultSession(SilexgisProfile profile) {
-    final auth = SilexgisAuthService(
-      baseUri: profile.baseUri,
-      profileUuid: profile.profileUuid,
-      store: _tokens,
-    );
-    return SilexgisSession(
-      auth: auth,
-      api: SilexgisSyncApi(
-        SilexgisHttp(baseUri: profile.baseUri, tokens: auth),
-      ),
-    );
-  }
+  SilexgisSession _defaultSession(SilexgisProfile profile) =>
+      SilexgisSession.signedIn(profile, _tokens);
 
   String _summary(SilexgisReviewCounts reviews) {
     final parts = <String>[
