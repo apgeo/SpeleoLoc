@@ -669,3 +669,40 @@ CREATE TABLE IF NOT EXISTS silexgis_file_copy (
     origin         TEXT(8) NOT NULL,
     recorded_at    INTEGER
 );
+
+-- Table: silexgis_staged_upload
+-- LOCAL ONLY. The bytes of a documentation file sent ahead of the upload that
+-- names them, per installation: the transfer they travel in, how far they got,
+-- and what became of them. `state` is `sending` while pieces still go,
+-- `staged` once completed and waiting for a document row to adopt them until
+-- `expires_at`, and `adopted` once a row made them the document's file — then
+-- `sha256` is the content the installation holds for the document, and a file
+-- whose hash differs has new bytes to send.
+CREATE TABLE IF NOT EXISTS silexgis_staged_upload (
+    profile_uuid    TEXT(36) NOT NULL,
+    document_uuid   BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    sha256          TEXT(64) NOT NULL,
+    size_bytes      INTEGER NOT NULL,
+    transfer_id     TEXT(36),
+    received_bytes  INTEGER NOT NULL DEFAULT 0,
+    expires_at      TEXT,
+    state           TEXT(16) NOT NULL,
+    updated_at      INTEGER,
+    PRIMARY KEY (profile_uuid, document_uuid)
+);
+
+-- Table: silexgis_server_link
+-- LOCAL ONLY. Each document link an installation holds, as this device knows
+-- it: hung by this device's upload, or read from the catalogue for a file
+-- fetched from it. A link is named by its document and its target together,
+-- so that pair is the key; `link_id` is the installation's own identifier for
+-- it. An entry whose local link row is gone is a removal still to be sent.
+CREATE TABLE IF NOT EXISTS silexgis_server_link (
+    profile_uuid    TEXT(36) NOT NULL,
+    document_uuid   BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    target_kind     TEXT(16) NOT NULL,
+    target_id       BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    link_id         TEXT(36),
+    updated_at      INTEGER,
+    PRIMARY KEY (profile_uuid, document_uuid, target_id)
+);

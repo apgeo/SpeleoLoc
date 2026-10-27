@@ -955,6 +955,24 @@ class V26ToV27Migration extends SchemaMigration {
   }
 }
 
+/// v27 → v28.
+///
+/// Adds the local-only SilexGIS record of file bytes staged for an upload, and
+/// of the document links an installation holds. Local only, like the other
+/// SilexGIS state tables; nothing is moved into them.
+class V27ToV28Migration extends SchemaMigration {
+  const V27ToV28Migration();
+
+  @override
+  int get toVersion => 28;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisStagedUpload);
+    await migrator.createTable(db.silexgisServerLink);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1005,6 +1023,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V24ToV25Migration(),
   V25ToV26Migration(),
   V26ToV27Migration(),
+  V27ToV28Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

@@ -171,7 +171,8 @@ class SilexgisLocalStateRepository {
 
   /// Forgets one installation entirely — every position, every revision, every
   /// row held for review, its people directory with this device's links, and
-  /// its photo and document catalogue. Files fetched from it stay: they are
+  /// its photo and document catalogue, the file bytes staged for it and the
+  /// document links it holds. Files fetched from it stay: they are
   /// the caver's now, and the register of what each one is a copy of is not
   /// about any one installation.
   /// Signing a profile out, or deleting it, leaves no trace to be sent back to
@@ -201,6 +202,12 @@ class SilexgisLocalStateRepository {
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
         _db.silexgisDocument,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
+        _db.silexgisStagedUpload,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
+        _db.silexgisServerLink,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
     });
   }
