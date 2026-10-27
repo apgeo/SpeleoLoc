@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_people.dart';
@@ -12,7 +14,10 @@ import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
@@ -353,5 +358,60 @@ void main() {
         expect(await people.readDirectory(profile), isEmpty);
       });
     }
+  });
+
+  group('the choice on the user screen', () {
+    late SilexgisProfileRepository profiles;
+    late SilexgisPeopleService service;
+
+    setUp(() {
+      profiles = SilexgisProfileRepository(
+        ConfigurationRepository(db),
+        InMemoryRefreshTokenStore(),
+        SilexgisLocalStateRepository(db),
+      );
+      service = SilexgisPeopleService(profiles: profiles, people: people);
+    });
+
+    test('is not offered without a server', () async {
+      expect(await service.choiceFor(ana), isNull);
+    });
+
+    test('is not offered without a directory', () async {
+      await profiles.save(
+        const SilexgisProfile(
+          profileUuid: profile,
+          displayName: 'Clubul Speo Example',
+          baseUrl: 'https://club.example.org',
+          accountEmail: 'caver@example.org',
+        ),
+      );
+      expect(await service.choiceFor(ana), isNull);
+    });
+
+    test('offers the directory and records the choice', () async {
+      await profiles.save(
+        const SilexgisProfile(
+          profileUuid: profile,
+          displayName: 'Clubul Speo Example',
+          baseUrl: 'https://club.example.org',
+          accountEmail: 'caver@example.org',
+        ),
+      );
+      await people.replaceDirectory(profile, const <SyncPerson>[
+        SyncPerson(id: 'caver-1', fullName: 'Invented Caver'),
+      ]);
+
+      final before = (await service.choiceFor(ana))!;
+      expect(before.installation, 'Clubul Speo Example');
+      expect(before.cavers.single.fullName, 'Invented Caver');
+      expect(before.caverId, isNull);
+
+      await service.choose(ana, 'caver-1');
+      final after = (await service.choiceFor(ana))!;
+      expect(after.caverId, 'caver-1');
+      expect(after.pending, isTrue);
+      expect(after.chosenOnServer, isFalse);
+    });
   });
 }

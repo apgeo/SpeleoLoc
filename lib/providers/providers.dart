@@ -38,6 +38,7 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dar
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
@@ -169,6 +170,22 @@ final silexgisPeopleRepositoryProvider = Provider<SilexgisPeopleRepository>(
     clock: ref.watch(clockProvider),
   ),
 );
+
+/// The choice of caver per phone user, for the user screens.
+final silexgisPeopleServiceProvider = Provider<SilexgisPeopleService>(
+  (ref) => SilexgisPeopleService(
+    profiles: ref.watch(silexgisProfileRepositoryProvider),
+    people: ref.watch(silexgisPeopleRepositoryProvider),
+  ),
+);
+
+/// Which caver one phone user is on the active installation, or null when
+/// there is no profile or no directory to choose from.
+final silexgisCaverChoiceProvider = FutureProvider.autoDispose
+    .family<SilexgisCaverChoice?, Uuid>(
+      (ref, userUuid) =>
+          ref.watch(silexgisPeopleServiceProvider).choiceFor(userUuid),
+    );
 
 /// What the caver can do about a row a reviewer turned down.
 final silexgisReviewOutcomesServiceProvider =

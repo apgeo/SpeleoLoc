@@ -4,6 +4,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/silexgis_caver_picker.dart';
 
 /// Settings page for managing the list of known users and selecting the
 /// "current user" — the identity stamped on every new/edited row's audit
@@ -137,6 +138,8 @@ class _UsersPageState extends ConsumerState<UsersPage>
                 ),
                 maxLines: 3,
               ),
+              if (existing != null)
+                SilexgisCaverPicker(userUuid: existing.uuid),
             ],
           ),
         ),
