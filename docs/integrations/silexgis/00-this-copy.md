@@ -45,6 +45,9 @@ manifest does not cover; for those, compare the upstream commit above with upstr
 
 ## Refreshing
 
+`tool/refresh_silexgis_contract.sh <silexgis-commit>` does steps 1 and 2 from that commit (not
+from the checkout's working tree) and runs the manifest guard; steps 3 and 4 stay yours.
+
 1. Copy both trees over, whole. Never file by file — the manifest's own reason for existing is that
    a partial refresh is otherwise invisible.
 2. Update the commit and contract version in the table above.
