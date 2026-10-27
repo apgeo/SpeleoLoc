@@ -15,8 +15,9 @@ class SilexgisSyncApi {
 
   final SilexgisHttp _http;
 
-  /// Ask this first, once per server, and keep the answer. It is also the
-  /// cheapest place to discover that a stored credential has lapsed.
+  /// Ask this first, on every run: which parts are served is worked out per
+  /// request. It is also the cheapest place to discover that a stored
+  /// credential has lapsed.
   Future<SilexgisCapabilities> capabilities() async =>
       SilexgisCapabilities.fromJson(
         await _http.getJson(SilexgisContract.capabilitiesPath),

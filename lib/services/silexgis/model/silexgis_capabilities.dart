@@ -1,9 +1,12 @@
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 
-/// What a server can do, asked once per server and kept.
+/// What a server can do, asked at the start of every run.
 ///
-/// It is also the cheapest place to discover that a stored credential has
-/// lapsed: it answers `401` like every other route in this slice.
+/// [features] is worked out per request rather than fixed for a build — a part
+/// an installation can switch off is named only while it is on — so an answer
+/// kept from an earlier run can offer a part that is gone. It is also the
+/// cheapest place to discover that a stored credential has lapsed: it answers
+/// `401` like every other route in this slice.
 class SilexgisCapabilities {
   const SilexgisCapabilities({
     required this.contractVersion,
@@ -25,12 +28,21 @@ class SilexgisCapabilities {
 
   /// The optional halves of the contract this build actually serves. It is how
   /// a device meets a server that has shipped some of the protocol and not the
-  /// rest, and takes what is there.
+  /// rest, and takes what is there. A name this build does not know is
+  /// ignored.
   final List<String> features;
 
   bool get servesDownload =>
       features.contains(SilexgisContract.featureDownload);
   bool get servesUpload => features.contains(SilexgisContract.featureUpload);
+  bool get servesDocuments =>
+      features.contains(SilexgisContract.featureDocuments);
+  bool get servesDocumentUpload =>
+      features.contains(SilexgisContract.featureDocumentUpload);
+  bool get servesTrips => features.contains(SilexgisContract.featureTrips);
+  bool get servesReviews => features.contains(SilexgisContract.featureReviews);
+  bool get servesRasters => features.contains(SilexgisContract.featureRasters);
+  bool get servesPeople => features.contains(SilexgisContract.featurePeople);
 
   /// True when this build's pinned version and the server's agree. A mismatch
   /// is refused rather than interpreted generously, so it is worth answering

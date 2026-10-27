@@ -54,4 +54,26 @@ class SilexgisContract {
 
   /// Named in the capabilities answer when this build serves the write half.
   static const String featureUpload = 'upload';
+
+  /// The photo and document catalogue and the file-address route.
+  static const String featureDocuments = 'documents';
+
+  /// Staged bytes, and the upload's `documents` and `documentLinks` sections.
+  static const String featureDocumentUpload = 'documentUpload';
+
+  /// The trips stream, and the upload's `tripRecordings` and `tripPoints`
+  /// sections.
+  static const String featureTrips = 'trips';
+
+  /// The reviews stream, and the `held` row status for a device that opts in.
+  static const String featureReviews = 'reviews';
+
+  /// The rasters stream, and the upload's `rasterMaps` and `rasterPins`
+  /// sections.
+  static const String featureRasters = 'rasters';
+
+  /// The people directory and the upload's `people` section. An installation
+  /// can switch it off, and it is named only to an account that may be told
+  /// who people are.
+  static const String featurePeople = 'people';
 }
