@@ -27,7 +27,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
   @override
   final tourKeys = TourKeySet(['toolbar', 'list', 'menu']);
   @override
-  List<TourStepDef> get tourSteps => [
+  List<TourStepDef> get tourSteps => const [
     TourStepDef(
       keyId: 'toolbar',
       titleLocKey: 'tour_cave_trip_list_toolbar_title',
