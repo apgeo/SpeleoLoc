@@ -76,11 +76,12 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
   @override
   Future<List<SyncUploadItem>> build(SilexgisUploadContext context) async {
     final plan = _run.plan = await _planner.plan(context);
-    final base = await _baseDir();
 
     var missing = 0;
     final needBytes = <SilexgisPlannedDocument>[];
+    Directory? base;
     for (final document in plan.documents.where((d) => d.sendsBytes)) {
+      base ??= await _baseDir();
       final file = File('${base.path}/${document.row!.fileName}');
       if (!await file.exists()) {
         _log.warning('a file to send is no longer on this device');
