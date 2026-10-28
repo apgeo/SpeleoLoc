@@ -197,6 +197,7 @@ class SilexgisTripApplier {
       return const SilexgisTripsApplied();
     }
     final (localAuthor, foreignAuthor) = _author(server.createdByDeviceUserId);
+    final foreignCaver = foreignAuthor == null ? null : server.createdByCaverId;
     final stamp = _clock.nowMs();
     final local = await (_db.select(
       _db.caveTrips,
@@ -234,6 +235,7 @@ class SilexgisTripApplier {
           recordingUuid: id,
           received: true,
           authorDeviceUserId: foreignAuthor,
+          authorCaverId: foreignCaver,
         ),
       );
       applied = const SilexgisTripsApplied(recordingsInserted: 1);
@@ -269,6 +271,7 @@ class SilexgisTripApplier {
           authorDeviceUserId: local.createdByUserUuid == null
               ? foreignAuthor
               : null,
+          authorCaverId: local.createdByUserUuid == null ? foreignCaver : null,
         ),
       );
       applied = const SilexgisTripsApplied(recordingsUpdated: 1);
@@ -332,6 +335,7 @@ class SilexgisTripApplier {
       return const SilexgisTripsApplied(scansWithoutPlace: 1);
     }
     final (localAuthor, foreignAuthor) = _author(server.createdByDeviceUserId);
+    final foreignCaver = foreignAuthor == null ? null : server.createdByCaverId;
     final stamp = _clock.nowMs();
     final local = await (_db.select(
       _db.caveTripPoints,
@@ -364,6 +368,7 @@ class SilexgisTripApplier {
           isScan: true,
           received: true,
           authorDeviceUserId: foreignAuthor,
+          authorCaverId: foreignCaver,
         ),
       );
       return const SilexgisTripsApplied(scansInserted: 1);
@@ -399,6 +404,7 @@ class SilexgisTripApplier {
         authorDeviceUserId: local.createdByUserUuid == null
             ? foreignAuthor
             : null,
+        authorCaverId: local.createdByUserUuid == null ? foreignCaver : null,
       ),
     );
     return const SilexgisTripsApplied(scansUpdated: 1);

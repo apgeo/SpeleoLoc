@@ -40,7 +40,7 @@ class SilexgisTripOriginService {
     if (recordings.isEmpty) return null;
     return SilexgisReceivedTrips(
       installation: profile.displayName,
-      recordings: recordings,
+      recordings: recordings.keys.toSet(),
     );
   }
 }

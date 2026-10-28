@@ -227,7 +227,9 @@ void main() {
     final state = (await trips.readAll(profileUuid))[recording.uuid]!;
     expect(state.received, isTrue);
     expect(state.sent, isFalse);
-    expect(await trips.receivedRecordings(profileUuid), <Uuid>{recording.uuid});
+    expect((await trips.receivedRecordings(profileUuid)).keys, <Uuid>[
+      recording.uuid,
+    ]);
     // Nobody on this device is its author.
     expect(recording.createdByUserUuid, isNull);
     expect(await db.select(db.changeLog).get(), isEmpty);

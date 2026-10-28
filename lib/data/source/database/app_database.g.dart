@@ -21039,6 +21039,17 @@ class SilexgisTripEntry extends Table
         requiredDuringInsert: false,
         $customConstraints: '',
       );
+  static const VerificationMeta _authorCaverIdMeta = const VerificationMeta(
+    'authorCaverId',
+  );
+  late final GeneratedColumn<String> authorCaverId = GeneratedColumn<String>(
+    'author_caver_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   @override
   List<GeneratedColumn> get $columns => [
     profileUuid,
@@ -21048,6 +21059,7 @@ class SilexgisTripEntry extends Table
     received,
     sent,
     authorDeviceUserId,
+    authorCaverId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -21099,6 +21111,15 @@ class SilexgisTripEntry extends Table
         ),
       );
     }
+    if (data.containsKey('author_caver_id')) {
+      context.handle(
+        _authorCaverIdMeta,
+        authorCaverId.isAcceptableOrUnknown(
+          data['author_caver_id']!,
+          _authorCaverIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -21140,6 +21161,10 @@ class SilexgisTripEntry extends Table
         DriftSqlType.string,
         data['${effectivePrefix}author_device_user_id'],
       ),
+      authorCaverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_caver_id'],
+      ),
     );
   }
 
@@ -21169,6 +21194,7 @@ class SilexgisTripEntryData extends DataClass
   final bool received;
   final bool sent;
   final String? authorDeviceUserId;
+  final String? authorCaverId;
   const SilexgisTripEntryData({
     required this.profileUuid,
     required this.entityUuid,
@@ -21177,6 +21203,7 @@ class SilexgisTripEntryData extends DataClass
     required this.received,
     required this.sent,
     this.authorDeviceUserId,
+    this.authorCaverId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -21198,6 +21225,9 @@ class SilexgisTripEntryData extends DataClass
     if (!nullToAbsent || authorDeviceUserId != null) {
       map['author_device_user_id'] = Variable<String>(authorDeviceUserId);
     }
+    if (!nullToAbsent || authorCaverId != null) {
+      map['author_caver_id'] = Variable<String>(authorCaverId);
+    }
     return map;
   }
 
@@ -21212,6 +21242,9 @@ class SilexgisTripEntryData extends DataClass
       authorDeviceUserId: authorDeviceUserId == null && nullToAbsent
           ? const Value.absent()
           : Value(authorDeviceUserId),
+      authorCaverId: authorCaverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorCaverId),
     );
   }
 
@@ -21230,6 +21263,7 @@ class SilexgisTripEntryData extends DataClass
       authorDeviceUserId: serializer.fromJson<String?>(
         json['author_device_user_id'],
       ),
+      authorCaverId: serializer.fromJson<String?>(json['author_caver_id']),
     );
   }
   @override
@@ -21243,6 +21277,7 @@ class SilexgisTripEntryData extends DataClass
       'received': serializer.toJson<bool>(received),
       'sent': serializer.toJson<bool>(sent),
       'author_device_user_id': serializer.toJson<String?>(authorDeviceUserId),
+      'author_caver_id': serializer.toJson<String?>(authorCaverId),
     };
   }
 
@@ -21254,6 +21289,7 @@ class SilexgisTripEntryData extends DataClass
     bool? received,
     bool? sent,
     Value<String?> authorDeviceUserId = const Value.absent(),
+    Value<String?> authorCaverId = const Value.absent(),
   }) => SilexgisTripEntryData(
     profileUuid: profileUuid ?? this.profileUuid,
     entityUuid: entityUuid ?? this.entityUuid,
@@ -21264,6 +21300,9 @@ class SilexgisTripEntryData extends DataClass
     authorDeviceUserId: authorDeviceUserId.present
         ? authorDeviceUserId.value
         : this.authorDeviceUserId,
+    authorCaverId: authorCaverId.present
+        ? authorCaverId.value
+        : this.authorCaverId,
   );
   SilexgisTripEntryData copyWithCompanion(SilexgisTripEntryCompanion data) {
     return SilexgisTripEntryData(
@@ -21282,6 +21321,9 @@ class SilexgisTripEntryData extends DataClass
       authorDeviceUserId: data.authorDeviceUserId.present
           ? data.authorDeviceUserId.value
           : this.authorDeviceUserId,
+      authorCaverId: data.authorCaverId.present
+          ? data.authorCaverId.value
+          : this.authorCaverId,
     );
   }
 
@@ -21294,7 +21336,8 @@ class SilexgisTripEntryData extends DataClass
           ..write('isScan: $isScan, ')
           ..write('received: $received, ')
           ..write('sent: $sent, ')
-          ..write('authorDeviceUserId: $authorDeviceUserId')
+          ..write('authorDeviceUserId: $authorDeviceUserId, ')
+          ..write('authorCaverId: $authorCaverId')
           ..write(')'))
         .toString();
   }
@@ -21308,6 +21351,7 @@ class SilexgisTripEntryData extends DataClass
     received,
     sent,
     authorDeviceUserId,
+    authorCaverId,
   );
   @override
   bool operator ==(Object other) =>
@@ -21319,7 +21363,8 @@ class SilexgisTripEntryData extends DataClass
           other.isScan == this.isScan &&
           other.received == this.received &&
           other.sent == this.sent &&
-          other.authorDeviceUserId == this.authorDeviceUserId);
+          other.authorDeviceUserId == this.authorDeviceUserId &&
+          other.authorCaverId == this.authorCaverId);
 }
 
 class SilexgisTripEntryCompanion
@@ -21331,6 +21376,7 @@ class SilexgisTripEntryCompanion
   final Value<bool> received;
   final Value<bool> sent;
   final Value<String?> authorDeviceUserId;
+  final Value<String?> authorCaverId;
   final Value<int> rowid;
   const SilexgisTripEntryCompanion({
     this.profileUuid = const Value.absent(),
@@ -21340,6 +21386,7 @@ class SilexgisTripEntryCompanion
     this.received = const Value.absent(),
     this.sent = const Value.absent(),
     this.authorDeviceUserId = const Value.absent(),
+    this.authorCaverId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SilexgisTripEntryCompanion.insert({
@@ -21350,6 +21397,7 @@ class SilexgisTripEntryCompanion
     this.received = const Value.absent(),
     this.sent = const Value.absent(),
     this.authorDeviceUserId = const Value.absent(),
+    this.authorCaverId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileUuid = Value(profileUuid),
        entityUuid = Value(entityUuid),
@@ -21362,6 +21410,7 @@ class SilexgisTripEntryCompanion
     Expression<bool>? received,
     Expression<bool>? sent,
     Expression<String>? authorDeviceUserId,
+    Expression<String>? authorCaverId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -21373,6 +21422,7 @@ class SilexgisTripEntryCompanion
       if (sent != null) 'sent': sent,
       if (authorDeviceUserId != null)
         'author_device_user_id': authorDeviceUserId,
+      if (authorCaverId != null) 'author_caver_id': authorCaverId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -21385,6 +21435,7 @@ class SilexgisTripEntryCompanion
     Value<bool>? received,
     Value<bool>? sent,
     Value<String?>? authorDeviceUserId,
+    Value<String?>? authorCaverId,
     Value<int>? rowid,
   }) {
     return SilexgisTripEntryCompanion(
@@ -21395,6 +21446,7 @@ class SilexgisTripEntryCompanion
       received: received ?? this.received,
       sent: sent ?? this.sent,
       authorDeviceUserId: authorDeviceUserId ?? this.authorDeviceUserId,
+      authorCaverId: authorCaverId ?? this.authorCaverId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -21427,6 +21479,9 @@ class SilexgisTripEntryCompanion
     if (authorDeviceUserId.present) {
       map['author_device_user_id'] = Variable<String>(authorDeviceUserId.value);
     }
+    if (authorCaverId.present) {
+      map['author_caver_id'] = Variable<String>(authorCaverId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -21443,6 +21498,7 @@ class SilexgisTripEntryCompanion
           ..write('received: $received, ')
           ..write('sent: $sent, ')
           ..write('authorDeviceUserId: $authorDeviceUserId, ')
+          ..write('authorCaverId: $authorCaverId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -40104,6 +40160,7 @@ typedef $SilexgisTripEntryCreateCompanionBuilder =
       Value<bool> received,
       Value<bool> sent,
       Value<String?> authorDeviceUserId,
+      Value<String?> authorCaverId,
       Value<int> rowid,
     });
 typedef $SilexgisTripEntryUpdateCompanionBuilder =
@@ -40115,6 +40172,7 @@ typedef $SilexgisTripEntryUpdateCompanionBuilder =
       Value<bool> received,
       Value<bool> sent,
       Value<String?> authorDeviceUserId,
+      Value<String?> authorCaverId,
       Value<int> rowid,
     });
 
@@ -40163,6 +40221,11 @@ class $SilexgisTripEntryFilterComposer
     column: $table.authorDeviceUserId,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get authorCaverId => $composableBuilder(
+    column: $table.authorCaverId,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $SilexgisTripEntryOrderingComposer
@@ -40208,6 +40271,11 @@ class $SilexgisTripEntryOrderingComposer
     column: $table.authorDeviceUserId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get authorCaverId => $composableBuilder(
+    column: $table.authorCaverId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $SilexgisTripEntryAnnotationComposer
@@ -40247,6 +40315,11 @@ class $SilexgisTripEntryAnnotationComposer
 
   GeneratedColumn<String> get authorDeviceUserId => $composableBuilder(
     column: $table.authorDeviceUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get authorCaverId => $composableBuilder(
+    column: $table.authorCaverId,
     builder: (column) => column,
   );
 }
@@ -40293,6 +40366,7 @@ class $SilexgisTripEntryTableManager
                 Value<bool> received = const Value.absent(),
                 Value<bool> sent = const Value.absent(),
                 Value<String?> authorDeviceUserId = const Value.absent(),
+                Value<String?> authorCaverId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisTripEntryCompanion(
                 profileUuid: profileUuid,
@@ -40302,6 +40376,7 @@ class $SilexgisTripEntryTableManager
                 received: received,
                 sent: sent,
                 authorDeviceUserId: authorDeviceUserId,
+                authorCaverId: authorCaverId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -40313,6 +40388,7 @@ class $SilexgisTripEntryTableManager
                 Value<bool> received = const Value.absent(),
                 Value<bool> sent = const Value.absent(),
                 Value<String?> authorDeviceUserId = const Value.absent(),
+                Value<String?> authorCaverId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisTripEntryCompanion.insert(
                 profileUuid: profileUuid,
@@ -40322,6 +40398,7 @@ class $SilexgisTripEntryTableManager
                 received: received,
                 sent: sent,
                 authorDeviceUserId: authorDeviceUserId,
+                authorCaverId: authorCaverId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

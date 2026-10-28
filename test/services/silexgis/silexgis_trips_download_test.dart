@@ -135,6 +135,7 @@ void main() {
     Uuid id, {
     String title = 'Trip',
     String? author,
+    String? caver,
     String rev = revision,
     List<Map<String, Object?>> points = const <Map<String, Object?>>[],
   }) => <String, Object?>{
@@ -146,6 +147,7 @@ void main() {
     'startedAt': '2026-10-27T08:00:00Z',
     'endedAt': '2026-10-27T12:00:00Z',
     'createdByDeviceUserId': author,
+    'createdByCaverId': caver,
     'revision': rev,
     'points': points,
   };
@@ -155,12 +157,15 @@ void main() {
     Uuid? place,
     String scannedAt = '2026-10-27T09:00:00Z',
     String notes = 'from the server',
+    String? author,
+    String? caver,
   }) => <String, Object?>{
     'id': id.toString(),
     'placeId': (place ?? placeId).toString(),
     'scannedAt': scannedAt,
     'notes': notes,
-    'createdByDeviceUserId': null,
+    'createdByDeviceUserId': author,
+    'createdByCaverId': caver,
     'revision': revision,
   };
 
@@ -264,6 +269,75 @@ void main() {
         (await trips.readAll(profile))[recording]!.authorDeviceUserId,
         isNull,
       );
+    });
+  });
+
+  group('the caver the installation names', () {
+    test(
+      'is kept beside another phone\'s author, recording and scan',
+      () async {
+        final recording = Uuid.v7();
+        final scan = Uuid.v7();
+        final foreign = Uuid.v7().toString();
+        const caver = 'caver-1';
+
+        await applier.applyPage(
+          page(<Map<String, Object?>>[
+            recordingJson(
+              recording,
+              author: foreign,
+              caver: caver,
+              points: <Map<String, Object?>>[
+                pointJson(scan, author: foreign, caver: caver),
+              ],
+            ),
+          ]),
+        );
+
+        final states = await trips.readAll(profile);
+        expect(states[recording]!.authorCaverId, caver);
+        expect(states[scan]!.authorCaverId, caver);
+        expect(await trips.receivedRecordings(profile), <Uuid, String?>{
+          recording: caver,
+        });
+      },
+    );
+
+    test('goes when a later read names none', () async {
+      final recording = Uuid.v7();
+      final foreign = Uuid.v7().toString();
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          recordingJson(recording, author: foreign, caver: 'caver-1'),
+        ]),
+      );
+
+      // The directory was switched off, or no longer lists that caver.
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          recordingJson(recording, author: foreign, rev: 'r2'),
+        ]),
+      );
+
+      final state = (await trips.readAll(profile))[recording]!;
+      expect(state.authorDeviceUserId, foreign);
+      expect(state.authorCaverId, isNull);
+    });
+
+    test('is not kept for an author this device has', () async {
+      final recording = Uuid.v7();
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          recordingJson(
+            recording,
+            author: localUser.toString(),
+            caver: 'caver-1',
+          ),
+        ]),
+      );
+
+      expect((await tripRow(recording))!.createdByUserUuid, localUser);
+      expect((await trips.readAll(profile))[recording]!.authorCaverId, isNull);
     });
   });
 

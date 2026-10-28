@@ -12,6 +12,7 @@ class SilexgisTripState implements SilexgisItemHistory {
     this.received = false,
     this.sent = false,
     this.authorDeviceUserId,
+    this.authorCaverId,
   });
 
   final Uuid entityUuid;
@@ -29,6 +30,9 @@ class SilexgisTripState implements SilexgisItemHistory {
   /// The author the installation names, when no user on this device is that
   /// one.
   final String? authorDeviceUserId;
+
+  /// The caver the installation says that author is, when it lists one.
+  final String? authorCaverId;
 }
 
 /// The device's local-only record of the trip recordings and scans an
@@ -48,8 +52,9 @@ class SilexgisTripStateRepository {
     };
   }
 
-  /// The recordings this device received from [profileUuid] and did not make.
-  Future<Set<Uuid>> receivedRecordings(String profileUuid) async {
+  /// The recordings this device received from [profileUuid] and did not make,
+  /// each with the caver the installation last said recorded it.
+  Future<Map<Uuid, String?>> receivedRecordings(String profileUuid) async {
     final rows =
         await (_db.select(_db.silexgisTripEntry)..where(
               (t) =>
@@ -58,7 +63,9 @@ class SilexgisTripStateRepository {
                   t.received.equals(true),
             ))
             .get();
-    return <Uuid>{for (final row in rows) row.entityUuid};
+    return <Uuid, String?>{
+      for (final row in rows) row.entityUuid: row.authorCaverId,
+    };
   }
 
   /// Records that this device sent these rows. Whatever was known of where
@@ -104,10 +111,12 @@ class SilexgisTripStateRepository {
             isScan: Value(entry.isScan),
             received: Value(entry.received),
             authorDeviceUserId: Value(entry.authorDeviceUserId),
+            authorCaverId: Value(entry.authorCaverId),
           ),
           onConflict: DoUpdate(
             (_) => SilexgisTripEntryCompanion(
               authorDeviceUserId: Value(entry.authorDeviceUserId),
+              authorCaverId: Value(entry.authorCaverId),
             ),
           ),
         );
@@ -145,5 +154,6 @@ class SilexgisTripStateRepository {
         received: row.received,
         sent: row.sent,
         authorDeviceUserId: row.authorDeviceUserId,
+        authorCaverId: row.authorCaverId,
       );
 }

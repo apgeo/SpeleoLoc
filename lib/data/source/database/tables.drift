@@ -732,6 +732,10 @@ CREATE TABLE IF NOT EXISTS silexgis_server_link (
 -- author when no user on this device is that one. The row's own foreign key
 -- stays null, and the id is kept here rather than sent back, so an edit never
 -- states a different author.
+-- `author_caver_id` is the caver the installation says that phone user is,
+-- as the last read of the row named it: given only while the people
+-- directory lists that caver for this account, so it is shown only through
+-- the directory copy, never as a name of its own.
 CREATE TABLE IF NOT EXISTS silexgis_trip_entry (
     profile_uuid           TEXT(36) NOT NULL,
     entity_uuid            BLOB NOT NULL MAPPED BY `const UuidConverter()`,
@@ -740,6 +744,7 @@ CREATE TABLE IF NOT EXISTS silexgis_trip_entry (
     received               BOOLEAN NOT NULL DEFAULT 0,
     sent                   BOOLEAN NOT NULL DEFAULT 0,
     author_device_user_id  TEXT(36),
+    author_caver_id        TEXT(36),
     PRIMARY KEY (profile_uuid, entity_uuid)
 );
 

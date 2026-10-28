@@ -1070,6 +1070,26 @@ class V31ToV32Migration extends SchemaMigration {
   }
 }
 
+/// v32 → v33.
+///
+/// Records which caver the installation says recorded another phone's
+/// recording or scan. Additive and nullable on a local-only table; an existing
+/// row learns it when the installation next sends the row.
+class V32ToV33Migration extends SchemaMigration {
+  const V32ToV33Migration();
+
+  @override
+  int get toVersion => 33;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) => _addColumnIfMissing(
+    db,
+    migrator,
+    db.silexgisTripEntry,
+    db.silexgisTripEntry.authorCaverId,
+  );
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1125,6 +1145,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V29ToV30Migration(),
   V30ToV31Migration(),
   V31ToV32Migration(),
+  V32ToV33Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

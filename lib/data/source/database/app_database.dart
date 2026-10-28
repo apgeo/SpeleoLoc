@@ -100,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.file(File file) : super(NativeDatabase.createInBackground(file));
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
