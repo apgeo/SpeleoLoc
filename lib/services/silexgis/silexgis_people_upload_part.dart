@@ -14,9 +14,12 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// The `people` section: the phone users this run has something to say about.
 ///
 /// A user goes up when the caver chose a caver for them here and has not sent
-/// it yet, or when the names sent before have changed since. A user nothing
-/// was ever said about stays on the phone: being on this device is not a
-/// reason for an installation to keep a record of somebody.
+/// it yet, when the names sent before have changed since, or when something
+/// this run sends names them as its author and the installation has not been
+/// told who they are. Any other user stays on the phone: being on this device
+/// is not a reason for an installation to keep a record of somebody.
+///
+/// Built after the parts whose items name authors, so it is given them.
 ///
 /// Only the user's own identifier and names travel, and a caver only when one
 /// was chosen here — absent means "nothing to say about the link", so a link
@@ -61,11 +64,14 @@ class SilexgisPeopleUploadPart implements SilexgisUploadPart {
     final items = <SyncUploadItem>[];
     for (final user in users) {
       final link = links[user.uuid];
-      if (link == null) continue;
+      final authorUnsent =
+          context.authors.contains(user.uuid) && link?.sentNamesHash == null;
+      if (link == null && !authorUnsent) continue;
       final hash = namesHash(user);
-      final choice = link.choicePending ? link.caverId : null;
-      final renamed = link.sentNamesHash != null && link.sentNamesHash != hash;
-      if (choice == null && !renamed) continue;
+      final choice = (link?.choicePending ?? false) ? link?.caverId : null;
+      final sentHash = link?.sentNamesHash;
+      final renamed = sentHash != null && sentHash != hash;
+      if (choice == null && !renamed && !authorUnsent) continue;
 
       final id = user.uuid.toString();
       _hashes[id] = hash;

@@ -22,14 +22,23 @@ class SilexgisPartAnswers {
   final int held;
 }
 
-/// What the feature rows of this run are, for a part whose items depend on
-/// them — a document goes up when it hangs on a feature the server holds or
-/// one this run sends.
+/// What this run sends, for a part whose items depend on it — a recording
+/// goes up when its cave is on the server or goes now, and a document when it
+/// hangs on something that is or does.
+///
+/// Parts are built in the order the runner was given them, and a part adds
+/// what it sends here as it is built, so a part built later can depend on it.
 class SilexgisUploadContext {
-  const SilexgisUploadContext({this.rowsSent = const <Uuid>{}});
+  SilexgisUploadContext({this.rowsSent = const <Uuid>{}});
 
   /// The rows this run creates or edits — not the removals.
   final Set<Uuid> rowsSent;
+
+  /// The recordings and scans this run creates or edits.
+  final Set<Uuid> tripsSent = <Uuid>{};
+
+  /// The phone users named as the author of something this run sends.
+  final Set<Uuid> authors = <Uuid>{};
 }
 
 /// One section of an upload beside the feature rows: what goes in it, and what

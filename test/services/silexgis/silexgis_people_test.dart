@@ -7,6 +7,7 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dar
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_people.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
@@ -166,14 +167,14 @@ void main() {
         };
 
     test('says nothing about a user nothing was chosen or sent for', () async {
-      expect(await part.build(const SilexgisUploadContext()), isEmpty);
+      expect(await part.build(SilexgisUploadContext()), isEmpty);
     });
 
     test('sends a chosen caver, once', () async {
       await people.choose(profile, ana, 'caver-1');
 
       final items = (await part.build(
-        const SilexgisUploadContext(),
+        SilexgisUploadContext(),
       )).cast<SyncUploadPerson>();
       expect(items.single.deviceUserId, ana.toString());
       expect(items.single.caverId, 'caver-1');
@@ -187,7 +188,7 @@ void main() {
       expect(link.choicePending, isFalse);
       expect(link.sentNamesHash, isNotNull);
       // Nothing changed since, so nothing goes next time.
-      expect(await part.build(const SilexgisUploadContext()), isEmpty);
+      expect(await part.build(SilexgisUploadContext()), isEmpty);
     });
 
     test(
@@ -201,7 +202,7 @@ void main() {
             .write(const UsersCompanion(lastName: Value('Pop')));
 
         final items = (await part.build(
-          const SilexgisUploadContext(),
+          SilexgisUploadContext(),
         )).cast<SyncUploadPerson>();
         expect(items.single.lastName, 'Pop');
         expect(items.single.caverId, isNull);
@@ -269,9 +270,25 @@ void main() {
       },
     );
 
+    test('describes an author of what the run sends, once', () async {
+      final context = SilexgisUploadContext()..authors.add(ana);
+      final items = (await part.build(context)).cast<SyncUploadPerson>();
+      expect(items.single.deviceUserId, ana.toString());
+      // Nothing was chosen, so nothing is said about the link.
+      expect(items.single.toJson().containsKey('caverId'), isFalse);
+
+      await part.apply(items, <SyncRowResult>[
+        SyncRowResult(id: ana.toString(), status: SyncRowStatus.created),
+      ], resent: false);
+      expect(
+        await part.build(SilexgisUploadContext()..authors.add(ana)),
+        isEmpty,
+      );
+    });
+
     test('never names the device or the user signed in on it', () async {
       await people.choose(profile, ana, 'caver-1');
-      final items = await part.build(const SilexgisUploadContext());
+      final items = await part.build(SilexgisUploadContext());
       expect(items.single.toJson().keys.toSet(), <String>{
         'deviceUserId',
         'username',
