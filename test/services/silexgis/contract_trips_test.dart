@@ -40,6 +40,8 @@ void main() {
       expect(recording.log, 'entered; turned back at the sump');
       expect(recording.endedAt, '<timestamp>');
       expect(recording.createdByDeviceUserId, '<uuid-1>');
+      // Named only while the directory lists that caver for the reader.
+      expect(recording.createdByCaverId, isNull);
       expect(recording.revision, '<timestamp>');
 
       expect(recording.points.map((p) => p.id), <String>[
@@ -51,6 +53,7 @@ void main() {
       // A scan may name no place, and then names no author either here.
       expect(recording.points.last.placeId, isNull);
       expect(recording.points.last.createdByDeviceUserId, isNull);
+      expect(recording.points.first.createdByCaverId, isNull);
     });
 
     test('a page without the member reads as one that does not name scans', () {
@@ -85,6 +88,7 @@ void main() {
           'scannedAt',
           'notes',
           'createdByDeviceUserId',
+          'createdByCaverId',
           'revision',
         });
       }

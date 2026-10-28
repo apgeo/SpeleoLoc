@@ -12,6 +12,7 @@ class SyncTripPoint {
     this.placeId,
     this.notes,
     this.createdByDeviceUserId,
+    this.createdByCaverId,
     this.revision,
   });
 
@@ -25,6 +26,10 @@ class SyncTripPoint {
   /// The phone user who made the scan, which may be a user of another phone.
   final String? createdByDeviceUserId;
 
+  /// The caver that phone user is, as the installation's people directory
+  /// lists it for this account, or null when it lists none.
+  final String? createdByCaverId;
+
   /// The scan's own revision, sent back as its `baseRevision`.
   final String? revision;
 
@@ -34,6 +39,7 @@ class SyncTripPoint {
     scannedAt: json['scannedAt']! as String,
     notes: json['notes'] as String?,
     createdByDeviceUserId: json['createdByDeviceUserId'] as String?,
+    createdByCaverId: json['createdByCaverId'] as String?,
     revision: json['revision'] as String?,
   );
 }
@@ -72,6 +78,7 @@ class SyncTripRecording {
     this.log,
     this.endedAt,
     this.createdByDeviceUserId,
+    this.createdByCaverId,
     this.revision,
     this.points = const <SyncTripPoint>[],
   });
@@ -88,6 +95,11 @@ class SyncTripRecording {
 
   /// The phone user who started it, which may be a user of another phone.
   final String? createdByDeviceUserId;
+
+  /// The caver that phone user is, as the installation's people directory
+  /// lists it for this account, or null when it lists none. Read when the
+  /// recording last changed, so a link made since is not here yet.
+  final String? createdByCaverId;
 
   /// The recording's own revision, sent back as its `baseRevision`.
   final String? revision;
@@ -107,6 +119,7 @@ class SyncTripRecording {
         startedAt: json['startedAt']! as String,
         endedAt: json['endedAt'] as String?,
         createdByDeviceUserId: json['createdByDeviceUserId'] as String?,
+        createdByCaverId: json['createdByCaverId'] as String?,
         revision: json['revision'] as String?,
         points: (json['points'] as List? ?? const <Object?>[])
             .whereType<Map>()
