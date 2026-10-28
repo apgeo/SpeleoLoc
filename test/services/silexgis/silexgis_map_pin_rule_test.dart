@@ -79,6 +79,32 @@ void main() {
       expect(turned(270, mirrored: true).place(100, 50), (x: 25.0, y: 50.0));
     });
 
+    test('lands the contract\'s own example where it says', () {
+      // A 4000 × 3000 picture with orientation code 6, drawn 900 × 1200, and
+      // once more after a further quarter turn, drawn 1200 × 900.
+      const frame = SilexgisPictureFrame(
+        width: 4000,
+        height: 3000,
+        mirrored: false,
+        turn: 90,
+      );
+      final once = onRendition(frame, 900, 1200).place(120, 80);
+      expect(once.x, closeTo(875.7, 1e-9));
+      expect(once.y, closeTo(36, 1e-9));
+      final twice = onRendition(
+        const SilexgisPictureFrame(
+          width: 4000,
+          height: 3000,
+          mirrored: false,
+          turn: 180,
+        ),
+        1200,
+        900,
+      ).place(120, 80);
+      expect(twice.x, closeTo(1163.7, 1e-9));
+      expect(twice.y, closeTo(875.7, 1e-9));
+    });
+
     test('shows the pins but takes none', () {
       for (final turn in <int>[0, 90, 180, 270]) {
         final placement = turned(turn);
