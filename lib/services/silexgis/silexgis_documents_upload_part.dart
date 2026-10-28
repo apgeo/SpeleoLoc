@@ -168,6 +168,12 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
         continue;
       }
       _planned[row.id] = document;
+      // Named as its author, so the people part describes them in this run.
+      if (row.createdByDeviceUserId != null) {
+        if (document.row?.createdByUserUuid case final author?) {
+          context.authors.add(author);
+        }
+      }
       items.add(row);
     }
     return items;

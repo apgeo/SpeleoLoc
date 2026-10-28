@@ -21,6 +21,8 @@ import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -251,6 +253,7 @@ void main() {
   Future<(SilexgisUploadReport, SilexgisDocumentUploadRun)> run(
     ScriptedClient client, {
     SilexgisFileSendingGate gate = const SilexgisFilesAlwaysGo(),
+    bool withPeople = false,
   }) async {
     final http = SilexgisHttp(
       baseUri: Uri.parse('https://club.example.org'),
@@ -301,6 +304,12 @@ void main() {
           heldRows: heldRows,
           profileUuid: profile,
         ),
+        if (withPeople)
+          SilexgisPeopleUploadPart(
+            db: db,
+            people: SilexgisPeopleRepository(db, clock: clock),
+            profileUuid: profile,
+          ),
       ],
     ).run(setId, capabilities: capabilities);
     return (report, documents);
@@ -319,6 +328,51 @@ void main() {
       client.sent.any((r) => r.url.path.startsWith('/api/v1/files/'));
 
   group('a photo of the caver\'s own', () {
+    test('goes with a description of the phone user who took it', () async {
+      final author = Uuid.v7();
+      await db
+          .into(db.users)
+          .insert(UsersCompanion.insert(uuid: author, username: 'invented'));
+      final (id, bytes) = await photo('IMG_0002.jpg');
+      await (db.update(db.documentationFiles)
+            ..where((t) => t.uuid.equalsValue(id)))
+          .write(DocumentationFilesCompanion(createdByUserUuid: Value(author)));
+      final client = ScriptedClient(<ScriptedResponse>[
+        config(),
+        ...staging(bytes),
+        ScriptedResponse.json(
+          path: uploadPath,
+          json: <String, Object?>{
+            'batchId': 'b',
+            'importBatchId': 'i',
+            'replayed': false,
+            'written': 0,
+            'refused': 0,
+            'rows': const <Object?>[],
+            'conflicts': const <Object?>[],
+            'duplicates': const <Object?>[],
+            'people': <Map<String, Object?>>[
+              verdict(author.toString(), 'created'),
+            ],
+            'documents': <Map<String, Object?>>[
+              verdict(id.toString(), 'created'),
+            ],
+            'documentLinks': <Map<String, Object?>>[
+              verdict('link-9', 'created'),
+            ],
+          },
+        ),
+      ]);
+
+      await run(client, withPeople: true);
+
+      final document = sentSection(client, SyncUploadSection.documents).single;
+      expect(document['createdByDeviceUserId'], author.toString());
+      final person = sentSection(client, SyncUploadSection.people).single;
+      expect(person['deviceUserId'], author.toString());
+      expect(person.containsKey('caverId'), isFalse);
+    });
+
     test('goes up with its bytes and its link, and is kept as sent', () async {
       final (id, bytes) = await photo('IMG_0001.jpg', description: 'Shaft');
       final client = ScriptedClient(<ScriptedResponse>[
