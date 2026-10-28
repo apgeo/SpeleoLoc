@@ -1,4 +1,5 @@
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
@@ -56,6 +57,7 @@ class SilexgisSyncProgress {
     this.code,
     this.unavailable = const <SilexgisUnavailablePart>[],
     this.reviews = const SilexgisReviewCounts(),
+    this.files = const SilexgisFilesReport(),
   });
 
   const SilexgisSyncProgress.idle() : this(phase: SilexgisSyncPhase.idle);
@@ -92,6 +94,9 @@ class SilexgisSyncProgress {
   /// as of the end of the run.
   final SilexgisReviewCounts reviews;
 
+  /// What became of the files this run meant to send.
+  final SilexgisFilesReport files;
+
   bool get isRunning =>
       phase != SilexgisSyncPhase.idle &&
       phase != SilexgisSyncPhase.completed &&
@@ -103,12 +108,13 @@ class SilexgisSyncProgress {
 
   /// True when the caver has something to decide or should know about: a row
   /// was refused, a conflict needs merging, something was carried and not
-  /// stored, or rows wait on a reviewer or on the caver's choice.
+  /// stored, rows wait on a reviewer or on the caver's choice, or files wait.
   bool get needsAttention =>
       refusals.isNotEmpty ||
       (download?.unresolved.isNotEmpty ?? false) ||
       (upload?.duplicates.isNotEmpty ?? false) ||
-      !reviews.isEmpty;
+      !reviews.isEmpty ||
+      files.held > 0;
 
   SilexgisSyncProgress copyWith({
     SilexgisSyncPhase? phase,
@@ -123,6 +129,7 @@ class SilexgisSyncProgress {
     String? code,
     List<SilexgisUnavailablePart>? unavailable,
     SilexgisReviewCounts? reviews,
+    SilexgisFilesReport? files,
   }) => SilexgisSyncProgress(
     phase: phase ?? this.phase,
     message: message ?? this.message,
@@ -136,5 +143,6 @@ class SilexgisSyncProgress {
     code: code ?? this.code,
     unavailable: unavailable ?? this.unavailable,
     reviews: reviews ?? this.reviews,
+    files: files ?? this.files,
   );
 }

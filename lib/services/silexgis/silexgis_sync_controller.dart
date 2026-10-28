@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -11,6 +13,13 @@ import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_reposito
 import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
+import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_sending_gate.dart';
+import 'package:speleoloc/services/silexgis/silexgis_documents_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_links_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
@@ -54,6 +63,9 @@ class SilexgisSyncController extends ChangeNotifier {
     required SilexgisRefreshTokenStore tokens,
     SilexgisFileCopyRepository? copies,
     SilexgisServerLinkRepository? serverLinks,
+    SilexgisStagedUploadRepository? staged,
+    Future<Directory> Function() documentsDir =
+        getApplicationDocumentsDirectory,
     SilexgisSessionBuilder? sessionBuilder,
   }) : _db = db,
        _profiles = profiles,
@@ -67,6 +79,8 @@ class SilexgisSyncController extends ChangeNotifier {
        _tokens = tokens,
        _copies = copies ?? SilexgisFileCopyRepository(db),
        _serverLinks = serverLinks ?? SilexgisServerLinkRepository(db),
+       _staged = staged ?? SilexgisStagedUploadRepository(db),
+       _documentsDir = documentsDir,
        _sessionBuilder = sessionBuilder;
 
   final AppDatabase _db;
@@ -81,6 +95,10 @@ class SilexgisSyncController extends ChangeNotifier {
   final SilexgisRefreshTokenStore _tokens;
   final SilexgisFileCopyRepository _copies;
   final SilexgisServerLinkRepository _serverLinks;
+  final SilexgisStagedUploadRepository _staged;
+
+  /// The folder documentation files are stored relative to.
+  final Future<Directory> Function() _documentsDir;
   final SilexgisSessionBuilder? _sessionBuilder;
   final _log = AppLogger.of('SilexgisSyncController');
 
@@ -199,6 +217,7 @@ class SilexgisSyncController extends ChangeNotifier {
     // write: a read after an unsent removal would undo it.
     if (capabilities.servesUpload) {
       _emit(_progress.copyWith(phase: SilexgisSyncPhase.uploading));
+      final documents = SilexgisDocumentUploadRun();
       final SilexgisUploadReport report;
       try {
         report = await SilexgisUploadRunner(
@@ -220,6 +239,8 @@ class SilexgisSyncController extends ChangeNotifier {
                 people: _people,
                 profileUuid: profile.profileUuid,
               ),
+            if (capabilities.servesDocumentUpload)
+              ..._documentParts(profile, session, documents),
           ],
         ).run(setId, capabilities: capabilities);
       } on SilexgisProblemException catch (e) {
@@ -235,7 +256,13 @@ class SilexgisSyncController extends ChangeNotifier {
         return;
       }
 
-      _emit(_progress.copyWith(rowsSent: report.written, upload: report));
+      _emit(
+        _progress.copyWith(
+          rowsSent: report.written,
+          upload: report,
+          files: documents.files,
+        ),
+      );
     }
 
     if (capabilities.servesDownload) {
@@ -326,6 +353,45 @@ class SilexgisSyncController extends ChangeNotifier {
       ),
     );
   }
+
+  /// The two document sections, sharing one plan: `documents` first, so a
+  /// link waits with a document whose bytes wait.
+  List<SilexgisUploadPart> _documentParts(
+    SilexgisProfile profile,
+    SilexgisSession session,
+    SilexgisDocumentUploadRun run,
+  ) => <SilexgisUploadPart>[
+    SilexgisDocumentsUploadPart(
+      planner: SilexgisDocumentUploadPlanner(
+        db: _db,
+        localState: _localState,
+        heldRows: _heldRows,
+        copies: _copies,
+        staged: _staged,
+        catalogue: _catalogue,
+        serverLinks: _serverLinks,
+        profileUuid: profile.profileUuid,
+      ),
+      run: run,
+      stager: SilexgisFileStager(
+        api: session.transfers,
+        staged: _staged,
+        profileUuid: profile.profileUuid,
+      ),
+      gate: const SilexgisFilesAlwaysGo(),
+      staged: _staged,
+      localState: _localState,
+      heldRows: _heldRows,
+      baseDir: _documentsDir,
+      profileUuid: profile.profileUuid,
+    ),
+    SilexgisDocumentLinksUploadPart(
+      run: run,
+      serverLinks: _serverLinks,
+      heldRows: _heldRows,
+      profileUuid: profile.profileUuid,
+    ),
+  ];
 
   /// Runs one read part of a run.
   ///

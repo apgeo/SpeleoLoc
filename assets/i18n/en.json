@@ -1516,5 +1516,12 @@
   "segment_separator_unscannable": "A / or = here truncates every printed code when it is scanned back.",
   "choose": "Choose",
   "email": "Email",
-  "password": "Password"
+  "password": "Password",
+  "silexgis_files_waiting": "{count} photos and documents were not sent",
+  "silexgis_files_wifi": "{count} wait for Wi-Fi",
+  "silexgis_files_quota": "{count} need more storage room than the server has left for you",
+  "silexgis_files_too_large": "{count} are larger than the server accepts",
+  "silexgis_files_type": "{count} are of a type the server does not accept",
+  "silexgis_files_missing": "{count} are no longer on this device",
+  "silexgis_files_failed": "{count} were interrupted; the next sync carries on"
 }

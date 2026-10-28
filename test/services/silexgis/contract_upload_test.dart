@@ -1,9 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/services/silexgis/model/geo_json_geometry.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_row_composer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
 
 import 'contract_fixtures.dart';
 
@@ -273,19 +277,27 @@ void main() {
     });
 
     test('an upload with no rows states none', () {
-      final batch = SyncUploadBatch(
+      const batch = SyncUploadBatch(
         batchId: '<batch>',
         sections: <SyncUploadSection, List<SyncUploadItem>>{
           SyncUploadSection.documents: <SyncUploadItem>[
-            _Recorded(
-              (exchange.requestBody['documents']! as List).single
-                  as Map<String, Object?>,
+            SyncUploadDocument(
+              id: '<document>',
+              title: 'Never staged',
+              fileName: 'IMG_0102.jpg',
+              sha256: '<sha256>',
             ),
           ],
         },
       );
       expect(batch.toJson(), exchange.requestBody);
       expect(batch.itemCount, 1);
+    });
+
+    test('names the bytes to send again before the row', () {
+      final document = result.answersFor(SyncUploadSection.documents)!.single;
+      expect(document.action, SilexgisAction.applyAndResubmit);
+      expect(document.isWritten, isFalse);
     });
   });
 
@@ -296,17 +308,25 @@ void main() {
 
     test('composes the sections in the recorded order', () {
       final recorded = exchange.requestBody;
-      Map<String, Object?> only(String key) =>
-          (recorded[key]! as List).single as Map<String, Object?>;
       // Given out of order on purpose: the wire order is the apply order.
-      final batch = SyncUploadBatch(
+      const batch = SyncUploadBatch(
         batchId: '<batch>',
         sections: <SyncUploadSection, List<SyncUploadItem>>{
           SyncUploadSection.documentLinks: <SyncUploadItem>[
-            _Recorded(only('documentLinks')),
+            SyncUploadDocumentLink(
+              documentId: '<document>',
+              targetKind: 'feature',
+              targetId: '<cave>',
+            ),
           ],
           SyncUploadSection.documents: <SyncUploadItem>[
-            _Recorded(only('documents')),
+            SyncUploadDocument(
+              id: '<document>',
+              title: 'Shaft entrance',
+              fileName: 'photo.jpg',
+              sha256: '<sha256>',
+              stagedUploadId: '<staged-upload>',
+            ),
           ],
         },
       );
@@ -314,6 +334,49 @@ void main() {
       expect(ours, recorded);
       expect(ours.keys.toList(), recorded.keys.toList());
       expect(batch.itemCount, 2);
+    });
+
+    test('a new photo of the caver\'s own composes the recorded row', () {
+      final recorded =
+          (exchange.requestBody['documents']! as List).single
+              as Map<String, Object?>;
+      final row = const SilexgisDocumentRowComposer().compose(
+        SilexgisPlannedDocument(
+          id: Uuid.v7(),
+          row: DocumentationFile(
+            uuid: Uuid.v7(),
+            title: 'Shaft entrance',
+            fileName: 'documentation_files/doc_1761000000000_photo.jpg',
+            fileSize: 2048,
+            fileType: 'photo',
+            createdAt: 1761000000000,
+            updatedAt: 1761000000000,
+          ),
+          sendsBytes: true,
+        ),
+        content: const SilexgisStagedContent(
+          transferId: '<staged-upload>',
+          sha256: '<sha256>',
+          sizeBytes: 2048,
+        ),
+      )!;
+      final ours = <String, Object?>{...row.toJson(), 'id': '<document>'};
+      expectComposes(
+        ours,
+        recorded,
+        // Stated because the device knows them: the size is checked against
+        // the staged bytes, the capture time stands only where the file
+        // states none, and the edit time is provenance.
+        deliberateAdditions: <String>{
+          'sizeBytes',
+          'capturedAt',
+          'clientUpdatedAt',
+        },
+      );
+      // No base revision and no removal flag: absent says "new" and "not
+      // removed" exactly as the recording does.
+      expect(ours.containsKey('baseRevision'), isFalse);
+      expect(ours.containsKey('deleted'), isFalse);
     });
 
     test('answers each section in the array of the same name', () {
@@ -376,14 +439,4 @@ void main() {
       expect(result.rows.single.reviewId, isNull);
     });
   });
-}
-
-/// A recorded item, sent back exactly as recorded. Stands in for the typed
-/// items of the sections this build does not compose yet.
-class _Recorded implements SyncUploadItem {
-  const _Recorded(this.json);
-  final Map<String, Object?> json;
-
-  @override
-  Map<String, Object?> toJson() => json;
 }

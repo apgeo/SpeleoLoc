@@ -1515,5 +1515,12 @@
   "segment_separator_unscannable": "Un / sau = aici trunchiază orice cod tipărit atunci când e scanat.",
   "choose": "Alege",
   "email": "E-mail",
-  "password": "Parolă"
+  "password": "Parolă",
+  "silexgis_files_waiting": "{count} fotografii și documente nu au fost trimise",
+  "silexgis_files_wifi": "{count} așteaptă Wi-Fi",
+  "silexgis_files_quota": "{count} au nevoie de mai mult spațiu decât ți-a rămas pe server",
+  "silexgis_files_too_large": "{count} sunt mai mari decât acceptă serverul",
+  "silexgis_files_type": "{count} sunt de un tip pe care serverul nu îl acceptă",
+  "silexgis_files_missing": "{count} nu mai sunt pe acest dispozitiv",
+  "silexgis_files_failed": "{count} au fost întrerupte; următoarea sincronizare continuă"
 }

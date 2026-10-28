@@ -107,6 +107,9 @@ class SyncRowResult {
       // item's answer, not the whole request's.
       case SilexgisCodes.personNotListed:
       case SilexgisCodes.featureDisabled:
+      // A document: send its bytes again, then the row naming them.
+      case SilexgisCodes.fileBytesMissing:
+      case SilexgisCodes.fileHashMismatch:
         return SilexgisAction.applyAndResubmit;
 
       case SilexgisCodes.idConflict:
@@ -123,6 +126,12 @@ class SyncRowResult {
       case SilexgisCodes.parentForbidden:
       case SilexgisCodes.locationForbidden:
       case SilexgisCodes.kindUnsupported:
+      // Inside a 200 these are one document's or one link's. A link whose
+      // document is unavailable has it sent first in the same upload already,
+      // so what is left of that refusal is its `stop`.
+      case SilexgisCodes.cavingGroupForbidden:
+      case SilexgisCodes.documentUnavailable:
+      case SilexgisCodes.targetNotFound:
         return SilexgisAction.stop;
     }
     // A write-service code passed through from the shared write service — a

@@ -5,6 +5,7 @@ import 'package:speleoloc/screens/settings/silexgis_sync_settings_page.dart'
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/silexgis_files_waiting_tile.dart';
 
 /// What a run left for a caver to decide.
 ///
@@ -67,6 +68,8 @@ class SilexgisSyncReportCard extends StatelessWidget {
               ),
               subtitle: Text(LocServ.inst.t('silexgis_review_waiting_desc')),
             ),
+          if (progress.files.held > 0)
+            SilexgisFilesWaitingTile(files: progress.files),
           for (final refusal in refusals) _RefusalTile(refusal: refusal),
           if (duplicates.isNotEmpty)
             for (final report in duplicates)
