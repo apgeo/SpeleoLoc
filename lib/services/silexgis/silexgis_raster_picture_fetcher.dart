@@ -12,6 +12,7 @@ import 'package:speleoloc/services/silexgis/silexgis_fetched_copy.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_picture_frame.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -43,8 +44,9 @@ class SilexgisMapPicturesReport {
 /// is never made a documentation file: the picture belongs to its map.
 ///
 /// A picture is fetched when the map has none yet, or when the catalogue names
-/// a newer revision than the one held and the caver has not changed the map
-/// since. A picture this device sent is taken to be the revision the
+/// a newer revision than the one held, or the held picture is one the server
+/// drew and the map now comes with another flip or turn, and the caver has
+/// not changed the map since. A picture this device sent is taken to be the revision the
 /// catalogue names when it first names one.
 class SilexgisRasterPictureFetcher {
   SilexgisRasterPictureFetcher({
@@ -100,8 +102,8 @@ class SilexgisRasterPictureFetcher {
       final version = document?.versionId;
 
       if (state.pictureSha256 != null) {
-        if (version == null || version == state.pictureVersion) continue;
-        if (state.pictureVersion == null) {
+        final newer = version != null && version != state.pictureVersion;
+        if (newer && state.pictureVersion == null) {
           // Bytes this device sent: the revision the catalogue names first.
           await _rasters.recordPicture(
             _profileUuid,
@@ -111,8 +113,10 @@ class SilexgisRasterPictureFetcher {
           );
           continue;
         }
-        // A newer picture there, unless the caver changed the map here since:
-        // their picture is the one to send, not to replace.
+        if (!newer && !await _drawnOtherwise(state, documentId)) continue;
+        // A newer picture there, or one drawn another way, unless the caver
+        // changed the map here since: their picture is the one to send, not
+        // to replace.
         final agreed = revisions[map.uuid];
         if (agreed == null ||
             !agreed.agreesWith(map.updatedAt) ||
@@ -121,7 +125,7 @@ class SilexgisRasterPictureFetcher {
         }
       }
 
-      if (await _fetch(map, documentId, document)) {
+      if (await _fetch(map, documentId, document, state.pictureFrame)) {
         fetched++;
       } else {
         notFetched++;
@@ -135,6 +139,7 @@ class SilexgisRasterPictureFetcher {
     RasterMap map,
     Uuid documentId,
     SilexgisDocumentData? document,
+    SilexgisPictureFrame frame,
   ) async {
     final rendition = _wanted(document);
     if (rendition == null) {
@@ -241,8 +246,36 @@ class SilexgisRasterPictureFetcher {
       map.uuid,
       sha256: arrived.sha256,
       version: document?.versionId,
+      fetchedUnder: frame,
     );
     return true;
+  }
+
+  /// Whether the held picture is one the server drew and the map now comes
+  /// with another flip or turn than the picture was drawn under. A server's
+  /// drawing carries the orientation of its time, while the version of the
+  /// document does not change when the picture is turned in the browser. The
+  /// file itself, the copy without location and the caver's own picture are
+  /// not drawn from the turn; and with either side unknown there is nothing
+  /// to say that the picture is stale.
+  Future<bool> _drawnOtherwise(
+    SilexgisRasterState state,
+    Uuid documentId,
+  ) async {
+    final was = (mirrored: state.fetchedMirrored, turn: state.fetchedTurn);
+    final now = (
+      mirrored: state.pictureFrame.mirrored,
+      turn: state.pictureFrame.turn,
+    );
+    if (was.mirrored == null ||
+        was.turn == null ||
+        now.mirrored == null ||
+        now.turn == null ||
+        was == now) {
+      return false;
+    }
+    final heldAs = (await _copies.read(documentId))?.heldAs;
+    return heldAs == SilexgisHeldAs.rendition;
   }
 
   /// The file itself where the reach hands it over, else the largest picture

@@ -153,6 +153,8 @@ void main() {
     String mapType = 'planView',
     Uuid? document,
     String? area,
+    bool? mirrored,
+    int? turn,
     List<Map<String, Object?>> pins = const <Map<String, Object?>>[],
   }) => <String, Object?>{
     'id': id.toString(),
@@ -163,6 +165,8 @@ void main() {
     'sortOrder': 1,
     'documentId': (document ?? Uuid.v7()).toString(),
     'revision': revision,
+    'pictureMirrored': ?mirrored,
+    'pictureTurn': ?turn,
     'pins': pins,
   };
 
@@ -871,6 +875,215 @@ void main() {
 
       expect(report.notFetched, 1);
       expect((await rasters.readAll(profile))[map]!.pictureSha256, isNull);
+    });
+  });
+
+  group('a picture turned in the browser', () {
+    final first = <int>[
+      ...'RIFF'.codeUnits,
+      1,
+      2,
+      3,
+      4,
+      ...'WEBP'.codeUnits,
+      1,
+    ];
+    final turned = <int>[
+      ...'RIFF'.codeUnits,
+      5,
+      6,
+      7,
+      8,
+      ...'WEBP'.codeUnits,
+      2,
+    ];
+
+    late _Files files;
+    late ScriptedClient api;
+
+    SilexgisRasterPictureFetcher fetcher(List<ScriptedResponse> script) {
+      files = _Files();
+      api = ScriptedClient(script);
+      return SilexgisRasterPictureFetcher(
+        db: db,
+        logger: logger,
+        api: SilexgisSyncApi(
+          SilexgisHttp(
+            baseUri: baseUri,
+            tokens: FixedTokenSource(),
+            client: api,
+          ),
+        ),
+        fetcher: SilexgisFileFetcher(baseUri: baseUri, client: files),
+        localState: localState,
+        catalogue: catalogue,
+        copies: copies,
+        rasters: rasters,
+        baseDir: () async => base,
+        profileUuid: profile,
+      );
+    }
+
+    ScriptedResponse address(Uuid document, Object rendition) =>
+        ScriptedResponse.json(
+          path: SilexgisContract.fileLinksPath,
+          json: <String, Object?>{
+            'links': <Object?>[
+              <String, Object?>{
+                'documentId': document.toString(),
+                'rendition': rendition,
+                'url': '/api/v1/files/f-$document/content?token=t1',
+                'expiresAt': '2026-10-28T13:00:00Z',
+                'sizeBytes': null,
+                'sha256': null,
+              },
+            ],
+            'refused': const <Object?>[],
+          },
+        );
+
+    /// A map whose picture was fetched while it came with [turn], held as
+    /// what [reach] hands over.
+    Future<(Uuid, Uuid)> heldUnder(
+      int? turn, {
+      String reach = 'renditions',
+    }) async {
+      final map = Uuid.v7();
+      final document = Uuid.v7();
+      await catalogued(document, mimeType: 'image/webp', reach: reach);
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          mapJson(
+            map,
+            document: document,
+            mirrored: turn == null ? null : false,
+            turn: turn,
+          ),
+        ]),
+      );
+      final pictures = fetcher(<ScriptedResponse>[
+        address(document, reach == 'renditions' ? 2400 : 'original'),
+      ]);
+      files.serve('/api/v1/files/f-$document/content', first, 'image/webp');
+      expect((await pictures.fetchPending()).fetched, 1);
+      return (map, document);
+    }
+
+    /// The server now states [turn] for the map, its document unchanged.
+    Future<void> turnedTo(Uuid map, Uuid document, int turn) =>
+        applier.applyPage(
+          page(<Map<String, Object?>>[
+            mapJson(map, document: document, mirrored: false, turn: turn),
+          ]),
+        );
+
+    Future<int> fetchAgain(Uuid map, Uuid document) async {
+      final pictures = fetcher(<ScriptedResponse>[address(document, 2400)]);
+      files.serve('/api/v1/files/f-$document/content', turned, 'image/webp');
+      return (await pictures.fetchPending()).fetched;
+    }
+
+    Future<List<int>> held(Uuid map) async =>
+        File('${base.path}/${(await mapRow(map))!.fileName}').readAsBytes();
+
+    test('records the flip and turn the picture was fetched under', () async {
+      final (map, _) = await heldUnder(90);
+
+      final state = (await rasters.readAll(profile))[map]!;
+      expect(state.fetchedMirrored, isFalse);
+      expect(state.fetchedTurn, 90);
+    });
+
+    test('a rendition is fetched again under the new turn', () async {
+      final (map, document) = await heldUnder(0);
+      await turnedTo(map, document, 90);
+
+      expect(await fetchAgain(map, document), 1);
+
+      expect(await held(map), turned);
+      final row = (await mapRow(map))!;
+      expect(row.fileHash, sha256.convert(turned).toString());
+      final state = (await rasters.readAll(profile))[map]!;
+      expect(state.pictureSha256, row.fileHash);
+      expect(state.fetchedTurn, 90);
+      expect((await copies.read(document))!.heldAs, SilexgisHeldAs.rendition);
+      // Drawn that way now: the next run has nothing to do.
+      expect(await fetchAgain(map, document), 0);
+    });
+
+    test('a rendition under the same turn is left alone', () async {
+      final (map, document) = await heldUnder(90);
+      await turnedTo(map, document, 90);
+
+      expect(await fetchAgain(map, document), 0);
+      expect(api.sent, isEmpty);
+      expect(await held(map), first);
+    });
+
+    test(
+      'a picture fetched before the server stated turns is left alone',
+      () async {
+        final (map, document) = await heldUnder(null);
+        await turnedTo(map, document, 90);
+
+        expect(await fetchAgain(map, document), 0);
+        expect(await held(map), first);
+      },
+    );
+
+    test('a turn the server stops stating is no reason to fetch', () async {
+      final (map, document) = await heldUnder(90);
+      await applier.applyPage(
+        page(<Map<String, Object?>>[mapJson(map, document: document)]),
+      );
+
+      expect(await fetchAgain(map, document), 0);
+    });
+
+    test('the file itself is not drawn from the turn', () async {
+      final (map, document) = await heldUnder(0, reach: 'original');
+      await turnedTo(map, document, 90);
+
+      expect(await fetchAgain(map, document), 0);
+      expect(await held(map), first);
+    });
+
+    test('a copy without location data is not drawn from the turn', () async {
+      final (map, document) = await heldUnder(0, reach: 'locationFree');
+      await turnedTo(map, document, 90);
+
+      expect(await fetchAgain(map, document), 0);
+    });
+
+    test('a picture the caver changed is not replaced', () async {
+      final (map, document) = await heldUnder(0);
+      await turnedTo(map, document, 90);
+      await (db.update(db.rasterMaps)..where((t) => t.uuid.equalsValue(map)))
+          .write(const RasterMapsCompanion(fileHash: Value('ab12')));
+
+      expect(await fetchAgain(map, document), 0);
+      expect(await held(map), first);
+    });
+
+    test('a picture this device sent is not replaced', () async {
+      final map = Uuid.v7();
+      final document = Uuid.v7();
+      await catalogued(document, reach: 'renditions');
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          mapJson(map, document: document, mirrored: false, turn: 0),
+        ]),
+      );
+      await rasters.recordSent(profile, <SilexgisRasterState>[
+        SilexgisRasterState(
+          entityUuid: map,
+          mapUuid: map,
+          pictureSha256: 'ab12',
+        ),
+      ]);
+      await turnedTo(map, document, 90);
+
+      expect(await fetchAgain(map, document), 0);
     });
   });
 
