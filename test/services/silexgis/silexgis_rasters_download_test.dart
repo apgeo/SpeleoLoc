@@ -21,6 +21,7 @@ import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_picture_frame.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_picture_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
@@ -274,11 +275,47 @@ void main() {
       expect(states[map]!.received, isTrue);
       expect(states[map]!.documentId, document);
       expect(states[map]!.pictureSha256, isNull);
+      // The frame the pins are in; the recording does not say how the
+      // renditions are turned.
+      expect(
+        states[map]!.pictureFrame,
+        const SilexgisPictureFrame(width: 64, height: 48),
+      );
       expect(states[pin]!.mapUuid, map);
+      expect(states[pin]!.pictureFrame, const SilexgisPictureFrame());
       // An import, not a caver's edit: nothing to carry to other devices.
       expect(await db.select(db.changeLog).get(), isEmpty);
       // The picture's catalogue entry is no documentation file.
       expect(await db.select(db.documentationFiles).get(), isEmpty);
+    });
+
+    test('a map read again keeps what the server now says of its '
+        'picture', () async {
+      final map = Uuid.v7();
+      final document = Uuid.v7();
+      await applier.applyPage(
+        recorded25(map: map, pin: Uuid.v7(), document: document),
+      );
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          <String, Object?>{
+            ...mapJson(map, document: document),
+            'pictureWidth': 300,
+            'pictureHeight': 200,
+            'pictureMirrored': true,
+            'pictureTurn': 90,
+          },
+        ]),
+      );
+      expect(
+        (await rasters.readAll(profile))[map]!.pictureFrame,
+        const SilexgisPictureFrame(
+          width: 300,
+          height: 200,
+          mirrored: true,
+          turn: 90,
+        ),
+      );
     });
 
     test('a picture the catalogue does not describe is named jpg', () async {

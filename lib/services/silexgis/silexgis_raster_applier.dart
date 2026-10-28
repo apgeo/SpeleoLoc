@@ -9,6 +9,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_missing_item_rule.dart';
+import 'package:speleoloc/services/silexgis/silexgis_picture_frame.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -231,6 +232,7 @@ class SilexgisRasterApplier {
           received: true,
           documentId: document,
           areaId: foreignArea,
+          pictureFrame: SilexgisPictureFrame.of(server),
         ),
       );
       applied = const SilexgisRastersApplied(mapsInserted: 1);
@@ -264,6 +266,7 @@ class SilexgisRasterApplier {
           mapUuid: id,
           documentId: document,
           areaId: foreignArea,
+          pictureFrame: SilexgisPictureFrame.of(server),
         ),
       );
       applied = const SilexgisRastersApplied(mapsUpdated: 1);

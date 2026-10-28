@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/silexgis_missing_item_rule.dart';
+import 'package:speleoloc/services/silexgis/silexgis_picture_frame.dart';
 
 /// The local tables the raster sections come from.
 abstract final class SilexgisRasterTables {
@@ -21,6 +22,7 @@ class SilexgisRasterState implements SilexgisItemHistory {
     this.pictureVersion,
     this.pictureSha256,
     this.areaId,
+    this.pictureFrame = const SilexgisPictureFrame(),
   });
 
   final Uuid entityUuid;
@@ -47,6 +49,9 @@ class SilexgisRasterState implements SilexgisItemHistory {
 
   /// An area the installation names that this device does not hold.
   final Uuid? areaId;
+
+  /// What the installation says of a map's picture as it stores it.
+  final SilexgisPictureFrame pictureFrame;
 }
 
 /// The device's local-only record of the raster maps and pins an
@@ -102,13 +107,15 @@ class SilexgisRasterStateRepository {
   }
 
   /// Records a row the installation handed down: [SilexgisRasterState.received]
-  /// when this device first met it there, the picture's document and an area
-  /// it does not hold. A row already recorded keeps whether it was received or
-  /// sent, and which picture it holds.
+  /// when this device first met it there, the picture's document with what
+  /// the installation says of it, and an area it does not hold. A row already
+  /// recorded keeps whether it was received or sent, and which picture it
+  /// holds.
   Future<void> recordDownloaded(
     String profileUuid,
     SilexgisRasterState entry,
   ) async {
+    final frame = entry.pictureFrame;
     await _db
         .into(_db.silexgisRasterEntry)
         .insert(
@@ -120,11 +127,20 @@ class SilexgisRasterStateRepository {
             received: Value(entry.received),
             documentId: Value(entry.documentId),
             areaId: Value(entry.areaId),
+          ).copyWith(
+            pictureWidth: Value(frame.width),
+            pictureHeight: Value(frame.height),
+            pictureMirrored: Value(frame.mirrored),
+            pictureTurn: Value(frame.turn),
           ),
           onConflict: DoUpdate(
             (_) => SilexgisRasterEntryCompanion(
               documentId: Value(entry.documentId),
               areaId: Value(entry.areaId),
+              pictureWidth: Value(frame.width),
+              pictureHeight: Value(frame.height),
+              pictureMirrored: Value(frame.mirrored),
+              pictureTurn: Value(frame.turn),
             ),
           ),
         );
@@ -186,5 +202,11 @@ class SilexgisRasterStateRepository {
         pictureVersion: row.pictureVersion,
         pictureSha256: row.pictureSha256,
         areaId: row.areaId,
+        pictureFrame: SilexgisPictureFrame(
+          width: row.pictureWidth,
+          height: row.pictureHeight,
+          mirrored: row.pictureMirrored,
+          turn: row.pictureTurn,
+        ),
       );
 }

@@ -1019,6 +1019,32 @@ class V29ToV30Migration extends SchemaMigration {
   }
 }
 
+/// v30 → v31.
+///
+/// Records, per map an installation holds, the size of its picture as stored
+/// and how the server's renditions are turned from it, so pins can be drawn
+/// on a rendition. Additive and nullable on a local-only table; an existing
+/// row learns the values on the map's next read.
+class V30ToV31Migration extends SchemaMigration {
+  const V30ToV31Migration();
+
+  @override
+  int get toVersion => 31;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    final table = db.silexgisRasterEntry;
+    for (final column in <GeneratedColumn<Object>>[
+      table.pictureWidth,
+      table.pictureHeight,
+      table.pictureMirrored,
+      table.pictureTurn,
+    ]) {
+      await _addColumnIfMissing(db, migrator, table, column);
+    }
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1072,6 +1098,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V27ToV28Migration(),
   V28ToV29Migration(),
   V29ToV30Migration(),
+  V30ToV31Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

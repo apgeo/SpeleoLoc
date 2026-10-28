@@ -21556,6 +21556,50 @@ class SilexgisRasterEntry extends Table
         requiredDuringInsert: false,
         $customConstraints: '',
       ).withConverter<Uuid?>(SilexgisRasterEntry.$converterareaIdn);
+  static const VerificationMeta _pictureWidthMeta = const VerificationMeta(
+    'pictureWidth',
+  );
+  late final GeneratedColumn<int> pictureWidth = GeneratedColumn<int>(
+    'picture_width',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _pictureHeightMeta = const VerificationMeta(
+    'pictureHeight',
+  );
+  late final GeneratedColumn<int> pictureHeight = GeneratedColumn<int>(
+    'picture_height',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _pictureMirroredMeta = const VerificationMeta(
+    'pictureMirrored',
+  );
+  late final GeneratedColumn<bool> pictureMirrored = GeneratedColumn<bool>(
+    'picture_mirrored',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _pictureTurnMeta = const VerificationMeta(
+    'pictureTurn',
+  );
+  late final GeneratedColumn<int> pictureTurn = GeneratedColumn<int>(
+    'picture_turn',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   @override
   List<GeneratedColumn> get $columns => [
     profileUuid,
@@ -21568,6 +21612,10 @@ class SilexgisRasterEntry extends Table
     pictureVersion,
     pictureSha256,
     areaId,
+    pictureWidth,
+    pictureHeight,
+    pictureMirrored,
+    pictureTurn,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -21625,6 +21673,42 @@ class SilexgisRasterEntry extends Table
         pictureSha256.isAcceptableOrUnknown(
           data['picture_sha256']!,
           _pictureSha256Meta,
+        ),
+      );
+    }
+    if (data.containsKey('picture_width')) {
+      context.handle(
+        _pictureWidthMeta,
+        pictureWidth.isAcceptableOrUnknown(
+          data['picture_width']!,
+          _pictureWidthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('picture_height')) {
+      context.handle(
+        _pictureHeightMeta,
+        pictureHeight.isAcceptableOrUnknown(
+          data['picture_height']!,
+          _pictureHeightMeta,
+        ),
+      );
+    }
+    if (data.containsKey('picture_mirrored')) {
+      context.handle(
+        _pictureMirroredMeta,
+        pictureMirrored.isAcceptableOrUnknown(
+          data['picture_mirrored']!,
+          _pictureMirroredMeta,
+        ),
+      );
+    }
+    if (data.containsKey('picture_turn')) {
+      context.handle(
+        _pictureTurnMeta,
+        pictureTurn.isAcceptableOrUnknown(
+          data['picture_turn']!,
+          _pictureTurnMeta,
         ),
       );
     }
@@ -21688,6 +21772,22 @@ class SilexgisRasterEntry extends Table
           data['${effectivePrefix}area_id'],
         ),
       ),
+      pictureWidth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}picture_width'],
+      ),
+      pictureHeight: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}picture_height'],
+      ),
+      pictureMirrored: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}picture_mirrored'],
+      ),
+      pictureTurn: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}picture_turn'],
+      ),
     );
   }
 
@@ -21728,6 +21828,10 @@ class SilexgisRasterEntryData extends DataClass
   final String? pictureVersion;
   final String? pictureSha256;
   final Uuid? areaId;
+  final int? pictureWidth;
+  final int? pictureHeight;
+  final bool? pictureMirrored;
+  final int? pictureTurn;
   const SilexgisRasterEntryData({
     required this.profileUuid,
     required this.entityUuid,
@@ -21739,6 +21843,10 @@ class SilexgisRasterEntryData extends DataClass
     this.pictureVersion,
     this.pictureSha256,
     this.areaId,
+    this.pictureWidth,
+    this.pictureHeight,
+    this.pictureMirrored,
+    this.pictureTurn,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -21773,6 +21881,18 @@ class SilexgisRasterEntryData extends DataClass
         SilexgisRasterEntry.$converterareaIdn.toSql(areaId),
       );
     }
+    if (!nullToAbsent || pictureWidth != null) {
+      map['picture_width'] = Variable<int>(pictureWidth);
+    }
+    if (!nullToAbsent || pictureHeight != null) {
+      map['picture_height'] = Variable<int>(pictureHeight);
+    }
+    if (!nullToAbsent || pictureMirrored != null) {
+      map['picture_mirrored'] = Variable<bool>(pictureMirrored);
+    }
+    if (!nullToAbsent || pictureTurn != null) {
+      map['picture_turn'] = Variable<int>(pictureTurn);
+    }
     return map;
   }
 
@@ -21796,6 +21916,18 @@ class SilexgisRasterEntryData extends DataClass
       areaId: areaId == null && nullToAbsent
           ? const Value.absent()
           : Value(areaId),
+      pictureWidth: pictureWidth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pictureWidth),
+      pictureHeight: pictureHeight == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pictureHeight),
+      pictureMirrored: pictureMirrored == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pictureMirrored),
+      pictureTurn: pictureTurn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pictureTurn),
     );
   }
 
@@ -21815,6 +21947,10 @@ class SilexgisRasterEntryData extends DataClass
       pictureVersion: serializer.fromJson<String?>(json['picture_version']),
       pictureSha256: serializer.fromJson<String?>(json['picture_sha256']),
       areaId: serializer.fromJson<Uuid?>(json['area_id']),
+      pictureWidth: serializer.fromJson<int?>(json['picture_width']),
+      pictureHeight: serializer.fromJson<int?>(json['picture_height']),
+      pictureMirrored: serializer.fromJson<bool?>(json['picture_mirrored']),
+      pictureTurn: serializer.fromJson<int?>(json['picture_turn']),
     );
   }
   @override
@@ -21831,6 +21967,10 @@ class SilexgisRasterEntryData extends DataClass
       'picture_version': serializer.toJson<String?>(pictureVersion),
       'picture_sha256': serializer.toJson<String?>(pictureSha256),
       'area_id': serializer.toJson<Uuid?>(areaId),
+      'picture_width': serializer.toJson<int?>(pictureWidth),
+      'picture_height': serializer.toJson<int?>(pictureHeight),
+      'picture_mirrored': serializer.toJson<bool?>(pictureMirrored),
+      'picture_turn': serializer.toJson<int?>(pictureTurn),
     };
   }
 
@@ -21845,6 +21985,10 @@ class SilexgisRasterEntryData extends DataClass
     Value<String?> pictureVersion = const Value.absent(),
     Value<String?> pictureSha256 = const Value.absent(),
     Value<Uuid?> areaId = const Value.absent(),
+    Value<int?> pictureWidth = const Value.absent(),
+    Value<int?> pictureHeight = const Value.absent(),
+    Value<bool?> pictureMirrored = const Value.absent(),
+    Value<int?> pictureTurn = const Value.absent(),
   }) => SilexgisRasterEntryData(
     profileUuid: profileUuid ?? this.profileUuid,
     entityUuid: entityUuid ?? this.entityUuid,
@@ -21860,6 +22004,14 @@ class SilexgisRasterEntryData extends DataClass
         ? pictureSha256.value
         : this.pictureSha256,
     areaId: areaId.present ? areaId.value : this.areaId,
+    pictureWidth: pictureWidth.present ? pictureWidth.value : this.pictureWidth,
+    pictureHeight: pictureHeight.present
+        ? pictureHeight.value
+        : this.pictureHeight,
+    pictureMirrored: pictureMirrored.present
+        ? pictureMirrored.value
+        : this.pictureMirrored,
+    pictureTurn: pictureTurn.present ? pictureTurn.value : this.pictureTurn,
   );
   SilexgisRasterEntryData copyWithCompanion(SilexgisRasterEntryCompanion data) {
     return SilexgisRasterEntryData(
@@ -21883,6 +22035,18 @@ class SilexgisRasterEntryData extends DataClass
           ? data.pictureSha256.value
           : this.pictureSha256,
       areaId: data.areaId.present ? data.areaId.value : this.areaId,
+      pictureWidth: data.pictureWidth.present
+          ? data.pictureWidth.value
+          : this.pictureWidth,
+      pictureHeight: data.pictureHeight.present
+          ? data.pictureHeight.value
+          : this.pictureHeight,
+      pictureMirrored: data.pictureMirrored.present
+          ? data.pictureMirrored.value
+          : this.pictureMirrored,
+      pictureTurn: data.pictureTurn.present
+          ? data.pictureTurn.value
+          : this.pictureTurn,
     );
   }
 
@@ -21898,7 +22062,11 @@ class SilexgisRasterEntryData extends DataClass
           ..write('documentId: $documentId, ')
           ..write('pictureVersion: $pictureVersion, ')
           ..write('pictureSha256: $pictureSha256, ')
-          ..write('areaId: $areaId')
+          ..write('areaId: $areaId, ')
+          ..write('pictureWidth: $pictureWidth, ')
+          ..write('pictureHeight: $pictureHeight, ')
+          ..write('pictureMirrored: $pictureMirrored, ')
+          ..write('pictureTurn: $pictureTurn')
           ..write(')'))
         .toString();
   }
@@ -21915,6 +22083,10 @@ class SilexgisRasterEntryData extends DataClass
     pictureVersion,
     pictureSha256,
     areaId,
+    pictureWidth,
+    pictureHeight,
+    pictureMirrored,
+    pictureTurn,
   );
   @override
   bool operator ==(Object other) =>
@@ -21929,7 +22101,11 @@ class SilexgisRasterEntryData extends DataClass
           other.documentId == this.documentId &&
           other.pictureVersion == this.pictureVersion &&
           other.pictureSha256 == this.pictureSha256 &&
-          other.areaId == this.areaId);
+          other.areaId == this.areaId &&
+          other.pictureWidth == this.pictureWidth &&
+          other.pictureHeight == this.pictureHeight &&
+          other.pictureMirrored == this.pictureMirrored &&
+          other.pictureTurn == this.pictureTurn);
 }
 
 class SilexgisRasterEntryCompanion
@@ -21944,6 +22120,10 @@ class SilexgisRasterEntryCompanion
   final Value<String?> pictureVersion;
   final Value<String?> pictureSha256;
   final Value<Uuid?> areaId;
+  final Value<int?> pictureWidth;
+  final Value<int?> pictureHeight;
+  final Value<bool?> pictureMirrored;
+  final Value<int?> pictureTurn;
   final Value<int> rowid;
   const SilexgisRasterEntryCompanion({
     this.profileUuid = const Value.absent(),
@@ -21956,6 +22136,10 @@ class SilexgisRasterEntryCompanion
     this.pictureVersion = const Value.absent(),
     this.pictureSha256 = const Value.absent(),
     this.areaId = const Value.absent(),
+    this.pictureWidth = const Value.absent(),
+    this.pictureHeight = const Value.absent(),
+    this.pictureMirrored = const Value.absent(),
+    this.pictureTurn = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SilexgisRasterEntryCompanion.insert({
@@ -21969,6 +22153,10 @@ class SilexgisRasterEntryCompanion
     this.pictureVersion = const Value.absent(),
     this.pictureSha256 = const Value.absent(),
     this.areaId = const Value.absent(),
+    this.pictureWidth = const Value.absent(),
+    this.pictureHeight = const Value.absent(),
+    this.pictureMirrored = const Value.absent(),
+    this.pictureTurn = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileUuid = Value(profileUuid),
        entityUuid = Value(entityUuid),
@@ -21984,6 +22172,10 @@ class SilexgisRasterEntryCompanion
     Expression<String>? pictureVersion,
     Expression<String>? pictureSha256,
     Expression<Uint8List>? areaId,
+    Expression<int>? pictureWidth,
+    Expression<int>? pictureHeight,
+    Expression<bool>? pictureMirrored,
+    Expression<int>? pictureTurn,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -21997,6 +22189,10 @@ class SilexgisRasterEntryCompanion
       if (pictureVersion != null) 'picture_version': pictureVersion,
       if (pictureSha256 != null) 'picture_sha256': pictureSha256,
       if (areaId != null) 'area_id': areaId,
+      if (pictureWidth != null) 'picture_width': pictureWidth,
+      if (pictureHeight != null) 'picture_height': pictureHeight,
+      if (pictureMirrored != null) 'picture_mirrored': pictureMirrored,
+      if (pictureTurn != null) 'picture_turn': pictureTurn,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -22012,6 +22208,10 @@ class SilexgisRasterEntryCompanion
     Value<String?>? pictureVersion,
     Value<String?>? pictureSha256,
     Value<Uuid?>? areaId,
+    Value<int?>? pictureWidth,
+    Value<int?>? pictureHeight,
+    Value<bool?>? pictureMirrored,
+    Value<int?>? pictureTurn,
     Value<int>? rowid,
   }) {
     return SilexgisRasterEntryCompanion(
@@ -22025,6 +22225,10 @@ class SilexgisRasterEntryCompanion
       pictureVersion: pictureVersion ?? this.pictureVersion,
       pictureSha256: pictureSha256 ?? this.pictureSha256,
       areaId: areaId ?? this.areaId,
+      pictureWidth: pictureWidth ?? this.pictureWidth,
+      pictureHeight: pictureHeight ?? this.pictureHeight,
+      pictureMirrored: pictureMirrored ?? this.pictureMirrored,
+      pictureTurn: pictureTurn ?? this.pictureTurn,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -22070,6 +22274,18 @@ class SilexgisRasterEntryCompanion
         SilexgisRasterEntry.$converterareaIdn.toSql(areaId.value),
       );
     }
+    if (pictureWidth.present) {
+      map['picture_width'] = Variable<int>(pictureWidth.value);
+    }
+    if (pictureHeight.present) {
+      map['picture_height'] = Variable<int>(pictureHeight.value);
+    }
+    if (pictureMirrored.present) {
+      map['picture_mirrored'] = Variable<bool>(pictureMirrored.value);
+    }
+    if (pictureTurn.present) {
+      map['picture_turn'] = Variable<int>(pictureTurn.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -22089,6 +22305,10 @@ class SilexgisRasterEntryCompanion
           ..write('pictureVersion: $pictureVersion, ')
           ..write('pictureSha256: $pictureSha256, ')
           ..write('areaId: $areaId, ')
+          ..write('pictureWidth: $pictureWidth, ')
+          ..write('pictureHeight: $pictureHeight, ')
+          ..write('pictureMirrored: $pictureMirrored, ')
+          ..write('pictureTurn: $pictureTurn, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -40031,6 +40251,10 @@ typedef $SilexgisRasterEntryCreateCompanionBuilder =
       Value<String?> pictureVersion,
       Value<String?> pictureSha256,
       Value<Uuid?> areaId,
+      Value<int?> pictureWidth,
+      Value<int?> pictureHeight,
+      Value<bool?> pictureMirrored,
+      Value<int?> pictureTurn,
       Value<int> rowid,
     });
 typedef $SilexgisRasterEntryUpdateCompanionBuilder =
@@ -40045,6 +40269,10 @@ typedef $SilexgisRasterEntryUpdateCompanionBuilder =
       Value<String?> pictureVersion,
       Value<String?> pictureSha256,
       Value<Uuid?> areaId,
+      Value<int?> pictureWidth,
+      Value<int?> pictureHeight,
+      Value<bool?> pictureMirrored,
+      Value<int?> pictureTurn,
       Value<int> rowid,
     });
 
@@ -40110,6 +40338,26 @@ class $SilexgisRasterEntryFilterComposer
         column: $table.areaId,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<int> get pictureWidth => $composableBuilder(
+    column: $table.pictureWidth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pictureHeight => $composableBuilder(
+    column: $table.pictureHeight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pictureMirrored => $composableBuilder(
+    column: $table.pictureMirrored,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pictureTurn => $composableBuilder(
+    column: $table.pictureTurn,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $SilexgisRasterEntryOrderingComposer
@@ -40170,6 +40418,26 @@ class $SilexgisRasterEntryOrderingComposer
     column: $table.areaId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get pictureWidth => $composableBuilder(
+    column: $table.pictureWidth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pictureHeight => $composableBuilder(
+    column: $table.pictureHeight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pictureMirrored => $composableBuilder(
+    column: $table.pictureMirrored,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pictureTurn => $composableBuilder(
+    column: $table.pictureTurn,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $SilexgisRasterEntryAnnotationComposer
@@ -40222,6 +40490,26 @@ class $SilexgisRasterEntryAnnotationComposer
 
   GeneratedColumnWithTypeConverter<Uuid?, Uint8List> get areaId =>
       $composableBuilder(column: $table.areaId, builder: (column) => column);
+
+  GeneratedColumn<int> get pictureWidth => $composableBuilder(
+    column: $table.pictureWidth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pictureHeight => $composableBuilder(
+    column: $table.pictureHeight,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get pictureMirrored => $composableBuilder(
+    column: $table.pictureMirrored,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pictureTurn => $composableBuilder(
+    column: $table.pictureTurn,
+    builder: (column) => column,
+  );
 }
 
 class $SilexgisRasterEntryTableManager
@@ -40269,6 +40557,10 @@ class $SilexgisRasterEntryTableManager
                 Value<String?> pictureVersion = const Value.absent(),
                 Value<String?> pictureSha256 = const Value.absent(),
                 Value<Uuid?> areaId = const Value.absent(),
+                Value<int?> pictureWidth = const Value.absent(),
+                Value<int?> pictureHeight = const Value.absent(),
+                Value<bool?> pictureMirrored = const Value.absent(),
+                Value<int?> pictureTurn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisRasterEntryCompanion(
                 profileUuid: profileUuid,
@@ -40281,6 +40573,10 @@ class $SilexgisRasterEntryTableManager
                 pictureVersion: pictureVersion,
                 pictureSha256: pictureSha256,
                 areaId: areaId,
+                pictureWidth: pictureWidth,
+                pictureHeight: pictureHeight,
+                pictureMirrored: pictureMirrored,
+                pictureTurn: pictureTurn,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -40295,6 +40591,10 @@ class $SilexgisRasterEntryTableManager
                 Value<String?> pictureVersion = const Value.absent(),
                 Value<String?> pictureSha256 = const Value.absent(),
                 Value<Uuid?> areaId = const Value.absent(),
+                Value<int?> pictureWidth = const Value.absent(),
+                Value<int?> pictureHeight = const Value.absent(),
+                Value<bool?> pictureMirrored = const Value.absent(),
+                Value<int?> pictureTurn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisRasterEntryCompanion.insert(
                 profileUuid: profileUuid,
@@ -40307,6 +40607,10 @@ class $SilexgisRasterEntryTableManager
                 pictureVersion: pictureVersion,
                 pictureSha256: pictureSha256,
                 areaId: areaId,
+                pictureWidth: pictureWidth,
+                pictureHeight: pictureHeight,
+                pictureMirrored: pictureMirrored,
+                pictureTurn: pictureTurn,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

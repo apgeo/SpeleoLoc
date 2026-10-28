@@ -767,6 +767,11 @@ CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording
 -- `area_id` is the area the installation names when this device holds no
 -- such area: the row's own column stays null, and the id is sent back so an
 -- edit never clears it there.
+-- `picture_width` and `picture_height` are the pixel size of the map's
+-- picture as the installation stores it — the frame its pins are measured
+-- in — and `picture_mirrored` and `picture_turn` (clockwise degrees, after
+-- the flip) how its upright renditions are drawn from it. Each is null when
+-- the installation does not say; a pin row leaves them null.
 CREATE TABLE IF NOT EXISTS silexgis_raster_entry (
     profile_uuid     TEXT(36) NOT NULL,
     entity_uuid      BLOB NOT NULL MAPPED BY `const UuidConverter()`,
@@ -778,6 +783,10 @@ CREATE TABLE IF NOT EXISTS silexgis_raster_entry (
     picture_version  TEXT(36),
     picture_sha256   TEXT(64),
     area_id          BLOB MAPPED BY `const UuidConverter()`,
+    picture_width    INTEGER,
+    picture_height   INTEGER,
+    picture_mirrored BOOLEAN,
+    picture_turn     INTEGER,
     PRIMARY KEY (profile_uuid, entity_uuid)
 );
 
