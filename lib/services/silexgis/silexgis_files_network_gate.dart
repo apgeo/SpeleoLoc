@@ -50,6 +50,10 @@ SilexgisFilesVerdict silexgisFilesVerdict(
 
 /// The profile's "only over Wi-Fi" setting, applied once per run.
 ///
+/// One gate serves every part of a run that sends bytes — photos, documents
+/// and map pictures — and decides once: the first part's answer stands for
+/// the rest, so the caver is never asked twice in one run.
+///
 /// An answer the caver asks to remember is written to the profile: "send"
 /// turns "only over Wi-Fi" off, "wait" stops the asking and lets files wait
 /// for Wi-Fi from then on.
@@ -68,9 +72,13 @@ class SilexgisFilesNetworkGate implements SilexgisFileSendingGate {
   final SilexgisProfileRepository _profiles;
   final NetworkKindProbe _probe;
   final SilexgisMobileDataDecider? _decider;
+  Future<bool>? _decided;
 
   @override
-  Future<bool> mayFilesGo({required int files, required int bytes}) async {
+  Future<bool> mayFilesGo({required int files, required int bytes}) =>
+      _decided ??= _decide(files: files, bytes: bytes);
+
+  Future<bool> _decide({required int files, required int bytes}) async {
     final verdict = silexgisFilesVerdict(
       _profile,
       _profile.filesOnlyOverWifi ? await _probe.current() : NetworkKind.unknown,

@@ -159,6 +159,20 @@ void main() {
       );
     });
 
+    test('one run asks once, whichever part sends bytes next', () async {
+      final no = _Decider(const SilexgisMobileDataAnswer(send: false));
+      final gate = SilexgisFilesNetworkGate(
+        profile: base,
+        profiles: profiles,
+        probe: const _Probe(NetworkKind.mobile),
+        decider: no,
+      );
+      expect(await gate.mayFilesGo(files: 2, bytes: 10), isFalse);
+      // The map pictures after the photos: the answer stands.
+      expect(await gate.mayFilesGo(files: 1, bytes: 20), isFalse);
+      expect(no.asked, 1);
+    });
+
     test('when not to be asked, nobody is', () async {
       final decider = _Decider(const SilexgisMobileDataAnswer(send: true));
       expect(
