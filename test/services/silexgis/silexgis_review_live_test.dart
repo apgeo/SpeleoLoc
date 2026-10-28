@@ -11,6 +11,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
@@ -33,11 +34,11 @@ import 'live_server.dart';
 
 /// An account whose uploads wait for a reviewer, against a real installation.
 ///
-/// Covers the held half of the cycle: a build that cannot be told is refused,
-/// one that can has its rows held, and the reviews stream has nothing to say
-/// until somebody decides. A decision is made by a person in the browser, and
-/// the development server has no scripted way to make one yet, so the cycle
-/// stops there.
+/// Covers the whole cycle: a build that cannot be told is refused, one that
+/// can has its rows held, the reviews stream has nothing to say until somebody
+/// decides, and a run after the decision makes an accepted row the
+/// installation's and leaves a turned-down one with the caver. The test makes
+/// the decisions itself, through the routes the browser's review screens call.
 ///
 /// Off by default, like every live test. To run it:
 ///
@@ -62,10 +63,14 @@ void main() {
   // signs in with the member's password.
   const email = 'review@dev.local';
   const password = 'dev-member-pass-1';
+  const adminEmail = 'admin@dev.local';
+  const adminPassword = 'dev-admin-pass-1';
 
   late SilexgisAuthService auth;
   late SilexgisSyncApi api;
   late SyncSet set;
+  late SilexgisAuthService admin;
+  final heldId = Uuid.v7();
 
   setUpAll(() async {
     auth = SilexgisAuthService(
@@ -75,6 +80,12 @@ void main() {
     );
     await auth.signIn(email: email, password: password);
     api = SilexgisSyncApi(SilexgisHttp(baseUri: baseUri, tokens: auth));
+    admin = SilexgisAuthService(
+      baseUri: baseUri,
+      profileUuid: 'review-live-admin',
+      store: InMemoryRefreshTokenStore(),
+    );
+    await admin.signIn(email: adminEmail, password: adminPassword);
 
     final token = await auth.accessToken();
     final roots = await demoCaveFeatureIds(
@@ -103,6 +114,7 @@ void main() {
   tearDownAll(() async {
     await api.deleteSet(set.id);
     auth.close();
+    admin.close();
   });
 
   SyncUploadBatch newCave(
@@ -143,7 +155,7 @@ void main() {
   test(
     'with held, the row waits under a review and nothing is written',
     () async {
-      final id = Uuid.v7();
+      final id = heldId;
       final first = await api.upload(
         set.id,
         newCave(id, clientFeatures: SilexgisContract.clientFeatures),
@@ -169,14 +181,16 @@ void main() {
   );
 
   test('the reviews stream has nothing until somebody decides', () async {
+    // The stream is the account's, not the set's, so an earlier run against
+    // the same server has left decisions on it.
     final page = await api.reviews(set.id);
-    expect(page.reviews, isEmpty);
-    expect(page.hasMore, isFalse);
+    expect(page.reviews.map((r) => r.rowId), isNot(contains('$heldId')));
   });
 
   group('a whole run, through the controller', () {
     late AppDatabase db;
     late SilexgisHeldRowRepository heldRows;
+    late SilexgisLocalStateRepository localState;
     late SilexgisSyncController controller;
     final caveId = Uuid.v7();
     late Directory files;
@@ -195,7 +209,7 @@ void main() {
       );
       await currentUser.initialize();
       final logger = loggerRef = ChangeLogger(db, currentUser);
-      final localState = SilexgisLocalStateRepository(db);
+      localState = SilexgisLocalStateRepository(db);
       heldRows = SilexgisHeldRowRepository(db);
 
       final tokens = InMemoryRefreshTokenStore();
@@ -282,6 +296,82 @@ void main() {
       );
       expect(controller.progress.upload?.isEmpty, isTrue);
       expect(controller.progress.reviews.waiting, 1);
+    });
+
+    Future<SilexgisHeldItem?> heldCave(Uuid id) async =>
+        (await heldRows.readSection('review-live', SyncUploadSection.rows))[id];
+
+    Future<void> runOnce() async {
+      await controller.syncDefault();
+      expect(
+        controller.progress.phase,
+        SilexgisSyncPhase.completed,
+        reason: controller.progress.message,
+      );
+    }
+
+    test(
+      'accepted by a reviewer, it is the installation\'s after the next run',
+      () async {
+        final waiting = await heldCave(caveId);
+        await decideReview(
+          baseUri,
+          await admin.accessToken(),
+          waiting!.reviewId,
+          accept: true,
+        );
+
+        await runOnce();
+
+        expect(controller.progress.reviews.isEmpty, isTrue);
+        expect(await heldCave(caveId), isNull);
+        expect(await localState.readRevision('review-live', caveId), isNotNull);
+        // A new cave is the installation's now, but not in this set: a set
+        // names its roots, and nothing here asked for the cave to be one.
+        final decided = (await api.reviews(
+          set.id,
+        )).reviews.where((r) => r.rowId == caveId.toString());
+        expect(decided.single.outcome, SyncReviewOutcome.accepted);
+        expect(decided.single.revision, isNotNull);
+      },
+    );
+
+    test('turned down, it stays here as the caver\'s draft', () async {
+      final draftId = Uuid.v7();
+      await db
+          .into(db.caves)
+          .insert(
+            Cave(
+              uuid: draftId,
+              title: 'Draft ${draftId.toString().substring(0, 8)}',
+              updatedAt: DateTime.now().millisecondsSinceEpoch,
+            ),
+          );
+      await runOnce();
+      final waiting = await heldCave(draftId);
+      expect(waiting?.isWaiting, isTrue);
+
+      await decideReview(
+        baseUri,
+        await admin.accessToken(),
+        waiting!.reviewId,
+        accept: false,
+        note: 'Not this one',
+      );
+      await runOnce();
+
+      final decided = await heldCave(draftId);
+      expect(decided?.outcome, SyncReviewOutcome.rejected);
+      expect(decided?.note, 'Not this one');
+      expect(decided?.awaitsCaver, isTrue);
+      expect(controller.progress.reviews.toDecide, 1);
+      expect(
+        await (db.select(
+          db.caves,
+        )..where((t) => t.uuid.equalsValue(draftId))).getSingleOrNull(),
+        isNotNull,
+      );
+      expect(await localState.readRevision('review-live', draftId), isNull);
     });
   });
 }

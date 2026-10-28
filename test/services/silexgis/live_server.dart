@@ -80,3 +80,36 @@ const Set<String> demoCaveNames = <String>{
   'Avenul Demo Vântului',
   'Peștera Demo Izvorului',
 };
+
+/// Decides one held row as a reviewer would in the browser.
+///
+/// The review routes are not part of this contract and the client never calls
+/// them; the test stands in for the person who decides. [adminToken] is the
+/// administrator's, since only a reviewer may decide.
+Future<void> decideReview(
+  Uri baseUri,
+  String? adminToken,
+  String reviewId, {
+  required bool accept,
+  String? note,
+}) async {
+  final http = HttpClient();
+  try {
+    final request = await http.postUrl(
+      baseUri.replace(
+        path: '/api/v1/review/items/$reviewId/${accept ? 'accept' : 'reject'}',
+      ),
+    );
+    request.headers
+      ..set('Authorization', 'Bearer $adminToken')
+      ..contentType = ContentType.json;
+    request.write(jsonEncode(<String, Object?>{'note': ?note}));
+    final response = await request.close();
+    final body = await response.transform(const Utf8Decoder()).join();
+    if (response.statusCode >= 300) {
+      throw HttpException('review $reviewId: ${response.statusCode} $body');
+    }
+  } finally {
+    http.close();
+  }
+}
