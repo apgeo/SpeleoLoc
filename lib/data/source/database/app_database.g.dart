@@ -20961,6 +20961,494 @@ class SilexgisServerLinkCompanion
   }
 }
 
+class SilexgisTripEntry extends Table
+    with TableInfo<SilexgisTripEntry, SilexgisTripEntryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisTripEntry(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> entityUuid =
+      GeneratedColumn<Uint8List>(
+        'entity_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisTripEntry.$converterentityUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> recordingUuid =
+      GeneratedColumn<Uint8List>(
+        'recording_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisTripEntry.$converterrecordingUuid);
+  static const VerificationMeta _isScanMeta = const VerificationMeta('isScan');
+  late final GeneratedColumn<bool> isScan = GeneratedColumn<bool>(
+    'is_scan',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _receivedMeta = const VerificationMeta(
+    'received',
+  );
+  late final GeneratedColumn<bool> received = GeneratedColumn<bool>(
+    'received',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _sentMeta = const VerificationMeta('sent');
+  late final GeneratedColumn<bool> sent = GeneratedColumn<bool>(
+    'sent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _authorDeviceUserIdMeta =
+      const VerificationMeta('authorDeviceUserId');
+  late final GeneratedColumn<String> authorDeviceUserId =
+      GeneratedColumn<String>(
+        'author_device_user_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    entityUuid,
+    recordingUuid,
+    isScan,
+    received,
+    sent,
+    authorDeviceUserId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_trip_entry';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisTripEntryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('is_scan')) {
+      context.handle(
+        _isScanMeta,
+        isScan.isAcceptableOrUnknown(data['is_scan']!, _isScanMeta),
+      );
+    }
+    if (data.containsKey('received')) {
+      context.handle(
+        _receivedMeta,
+        received.isAcceptableOrUnknown(data['received']!, _receivedMeta),
+      );
+    }
+    if (data.containsKey('sent')) {
+      context.handle(
+        _sentMeta,
+        sent.isAcceptableOrUnknown(data['sent']!, _sentMeta),
+      );
+    }
+    if (data.containsKey('author_device_user_id')) {
+      context.handle(
+        _authorDeviceUserIdMeta,
+        authorDeviceUserId.isAcceptableOrUnknown(
+          data['author_device_user_id']!,
+          _authorDeviceUserIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, entityUuid};
+  @override
+  SilexgisTripEntryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisTripEntryData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      entityUuid: SilexgisTripEntry.$converterentityUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}entity_uuid'],
+        )!,
+      ),
+      recordingUuid: SilexgisTripEntry.$converterrecordingUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}recording_uuid'],
+        )!,
+      ),
+      isScan: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_scan'],
+      )!,
+      received: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}received'],
+      )!,
+      sent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}sent'],
+      )!,
+      authorDeviceUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author_device_user_id'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisTripEntry createAlias(String alias) {
+    return SilexgisTripEntry(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterentityUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterrecordingUuid =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, entity_uuid)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisTripEntryData extends DataClass
+    implements Insertable<SilexgisTripEntryData> {
+  final String profileUuid;
+  final Uuid entityUuid;
+  final Uuid recordingUuid;
+  final bool isScan;
+  final bool received;
+  final bool sent;
+  final String? authorDeviceUserId;
+  const SilexgisTripEntryData({
+    required this.profileUuid,
+    required this.entityUuid,
+    required this.recordingUuid,
+    required this.isScan,
+    required this.received,
+    required this.sent,
+    this.authorDeviceUserId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisTripEntry.$converterentityUuid.toSql(entityUuid),
+      );
+    }
+    {
+      map['recording_uuid'] = Variable<Uint8List>(
+        SilexgisTripEntry.$converterrecordingUuid.toSql(recordingUuid),
+      );
+    }
+    map['is_scan'] = Variable<bool>(isScan);
+    map['received'] = Variable<bool>(received);
+    map['sent'] = Variable<bool>(sent);
+    if (!nullToAbsent || authorDeviceUserId != null) {
+      map['author_device_user_id'] = Variable<String>(authorDeviceUserId);
+    }
+    return map;
+  }
+
+  SilexgisTripEntryCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisTripEntryCompanion(
+      profileUuid: Value(profileUuid),
+      entityUuid: Value(entityUuid),
+      recordingUuid: Value(recordingUuid),
+      isScan: Value(isScan),
+      received: Value(received),
+      sent: Value(sent),
+      authorDeviceUserId: authorDeviceUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(authorDeviceUserId),
+    );
+  }
+
+  factory SilexgisTripEntryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisTripEntryData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      entityUuid: serializer.fromJson<Uuid>(json['entity_uuid']),
+      recordingUuid: serializer.fromJson<Uuid>(json['recording_uuid']),
+      isScan: serializer.fromJson<bool>(json['is_scan']),
+      received: serializer.fromJson<bool>(json['received']),
+      sent: serializer.fromJson<bool>(json['sent']),
+      authorDeviceUserId: serializer.fromJson<String?>(
+        json['author_device_user_id'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'entity_uuid': serializer.toJson<Uuid>(entityUuid),
+      'recording_uuid': serializer.toJson<Uuid>(recordingUuid),
+      'is_scan': serializer.toJson<bool>(isScan),
+      'received': serializer.toJson<bool>(received),
+      'sent': serializer.toJson<bool>(sent),
+      'author_device_user_id': serializer.toJson<String?>(authorDeviceUserId),
+    };
+  }
+
+  SilexgisTripEntryData copyWith({
+    String? profileUuid,
+    Uuid? entityUuid,
+    Uuid? recordingUuid,
+    bool? isScan,
+    bool? received,
+    bool? sent,
+    Value<String?> authorDeviceUserId = const Value.absent(),
+  }) => SilexgisTripEntryData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    entityUuid: entityUuid ?? this.entityUuid,
+    recordingUuid: recordingUuid ?? this.recordingUuid,
+    isScan: isScan ?? this.isScan,
+    received: received ?? this.received,
+    sent: sent ?? this.sent,
+    authorDeviceUserId: authorDeviceUserId.present
+        ? authorDeviceUserId.value
+        : this.authorDeviceUserId,
+  );
+  SilexgisTripEntryData copyWithCompanion(SilexgisTripEntryCompanion data) {
+    return SilexgisTripEntryData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      entityUuid: data.entityUuid.present
+          ? data.entityUuid.value
+          : this.entityUuid,
+      recordingUuid: data.recordingUuid.present
+          ? data.recordingUuid.value
+          : this.recordingUuid,
+      isScan: data.isScan.present ? data.isScan.value : this.isScan,
+      received: data.received.present ? data.received.value : this.received,
+      sent: data.sent.present ? data.sent.value : this.sent,
+      authorDeviceUserId: data.authorDeviceUserId.present
+          ? data.authorDeviceUserId.value
+          : this.authorDeviceUserId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisTripEntryData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('recordingUuid: $recordingUuid, ')
+          ..write('isScan: $isScan, ')
+          ..write('received: $received, ')
+          ..write('sent: $sent, ')
+          ..write('authorDeviceUserId: $authorDeviceUserId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    entityUuid,
+    recordingUuid,
+    isScan,
+    received,
+    sent,
+    authorDeviceUserId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisTripEntryData &&
+          other.profileUuid == this.profileUuid &&
+          other.entityUuid == this.entityUuid &&
+          other.recordingUuid == this.recordingUuid &&
+          other.isScan == this.isScan &&
+          other.received == this.received &&
+          other.sent == this.sent &&
+          other.authorDeviceUserId == this.authorDeviceUserId);
+}
+
+class SilexgisTripEntryCompanion
+    extends UpdateCompanion<SilexgisTripEntryData> {
+  final Value<String> profileUuid;
+  final Value<Uuid> entityUuid;
+  final Value<Uuid> recordingUuid;
+  final Value<bool> isScan;
+  final Value<bool> received;
+  final Value<bool> sent;
+  final Value<String?> authorDeviceUserId;
+  final Value<int> rowid;
+  const SilexgisTripEntryCompanion({
+    this.profileUuid = const Value.absent(),
+    this.entityUuid = const Value.absent(),
+    this.recordingUuid = const Value.absent(),
+    this.isScan = const Value.absent(),
+    this.received = const Value.absent(),
+    this.sent = const Value.absent(),
+    this.authorDeviceUserId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisTripEntryCompanion.insert({
+    required String profileUuid,
+    required Uuid entityUuid,
+    required Uuid recordingUuid,
+    this.isScan = const Value.absent(),
+    this.received = const Value.absent(),
+    this.sent = const Value.absent(),
+    this.authorDeviceUserId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       entityUuid = Value(entityUuid),
+       recordingUuid = Value(recordingUuid);
+  static Insertable<SilexgisTripEntryData> custom({
+    Expression<String>? profileUuid,
+    Expression<Uint8List>? entityUuid,
+    Expression<Uint8List>? recordingUuid,
+    Expression<bool>? isScan,
+    Expression<bool>? received,
+    Expression<bool>? sent,
+    Expression<String>? authorDeviceUserId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (entityUuid != null) 'entity_uuid': entityUuid,
+      if (recordingUuid != null) 'recording_uuid': recordingUuid,
+      if (isScan != null) 'is_scan': isScan,
+      if (received != null) 'received': received,
+      if (sent != null) 'sent': sent,
+      if (authorDeviceUserId != null)
+        'author_device_user_id': authorDeviceUserId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisTripEntryCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<Uuid>? entityUuid,
+    Value<Uuid>? recordingUuid,
+    Value<bool>? isScan,
+    Value<bool>? received,
+    Value<bool>? sent,
+    Value<String?>? authorDeviceUserId,
+    Value<int>? rowid,
+  }) {
+    return SilexgisTripEntryCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      entityUuid: entityUuid ?? this.entityUuid,
+      recordingUuid: recordingUuid ?? this.recordingUuid,
+      isScan: isScan ?? this.isScan,
+      received: received ?? this.received,
+      sent: sent ?? this.sent,
+      authorDeviceUserId: authorDeviceUserId ?? this.authorDeviceUserId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (entityUuid.present) {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisTripEntry.$converterentityUuid.toSql(entityUuid.value),
+      );
+    }
+    if (recordingUuid.present) {
+      map['recording_uuid'] = Variable<Uint8List>(
+        SilexgisTripEntry.$converterrecordingUuid.toSql(recordingUuid.value),
+      );
+    }
+    if (isScan.present) {
+      map['is_scan'] = Variable<bool>(isScan.value);
+    }
+    if (received.present) {
+      map['received'] = Variable<bool>(received.value);
+    }
+    if (sent.present) {
+      map['sent'] = Variable<bool>(sent.value);
+    }
+    if (authorDeviceUserId.present) {
+      map['author_device_user_id'] = Variable<String>(authorDeviceUserId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisTripEntryCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('recordingUuid: $recordingUuid, ')
+          ..write('isScan: $isScan, ')
+          ..write('received: $received, ')
+          ..write('sent: $sent, ')
+          ..write('authorDeviceUserId: $authorDeviceUserId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -21059,6 +21547,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final SilexgisServerLink silexgisServerLink = SilexgisServerLink(this);
+  late final SilexgisTripEntry silexgisTripEntry = SilexgisTripEntry(this);
+  late final Index idxSilexgisTripEntryRecording = Index(
+    'idx_silexgis_trip_entry_recording',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording ON silexgis_trip_entry (profile_uuid, recording_uuid)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -21109,6 +21602,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     silexgisFileCopy,
     silexgisStagedUpload,
     silexgisServerLink,
+    silexgisTripEntry,
+    idxSilexgisTripEntryRecording,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -38615,6 +39110,260 @@ typedef $SilexgisServerLinkProcessedTableManager =
       SilexgisServerLinkData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisTripEntryCreateCompanionBuilder =
+    SilexgisTripEntryCompanion Function({
+      required String profileUuid,
+      required Uuid entityUuid,
+      required Uuid recordingUuid,
+      Value<bool> isScan,
+      Value<bool> received,
+      Value<bool> sent,
+      Value<String?> authorDeviceUserId,
+      Value<int> rowid,
+    });
+typedef $SilexgisTripEntryUpdateCompanionBuilder =
+    SilexgisTripEntryCompanion Function({
+      Value<String> profileUuid,
+      Value<Uuid> entityUuid,
+      Value<Uuid> recordingUuid,
+      Value<bool> isScan,
+      Value<bool> received,
+      Value<bool> sent,
+      Value<String?> authorDeviceUserId,
+      Value<int> rowid,
+    });
+
+class $SilexgisTripEntryFilterComposer
+    extends Composer<_$AppDatabase, SilexgisTripEntry> {
+  $SilexgisTripEntryFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get recordingUuid =>
+      $composableBuilder(
+        column: $table.recordingUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<bool> get isScan => $composableBuilder(
+    column: $table.isScan,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get received => $composableBuilder(
+    column: $table.received,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get sent => $composableBuilder(
+    column: $table.sent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get authorDeviceUserId => $composableBuilder(
+    column: $table.authorDeviceUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisTripEntryOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisTripEntry> {
+  $SilexgisTripEntryOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get entityUuid => $composableBuilder(
+    column: $table.entityUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get recordingUuid => $composableBuilder(
+    column: $table.recordingUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isScan => $composableBuilder(
+    column: $table.isScan,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get received => $composableBuilder(
+    column: $table.received,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get sent => $composableBuilder(
+    column: $table.sent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get authorDeviceUserId => $composableBuilder(
+    column: $table.authorDeviceUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisTripEntryAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisTripEntry> {
+  $SilexgisTripEntryAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get recordingUuid =>
+      $composableBuilder(
+        column: $table.recordingUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<bool> get isScan =>
+      $composableBuilder(column: $table.isScan, builder: (column) => column);
+
+  GeneratedColumn<bool> get received =>
+      $composableBuilder(column: $table.received, builder: (column) => column);
+
+  GeneratedColumn<bool> get sent =>
+      $composableBuilder(column: $table.sent, builder: (column) => column);
+
+  GeneratedColumn<String> get authorDeviceUserId => $composableBuilder(
+    column: $table.authorDeviceUserId,
+    builder: (column) => column,
+  );
+}
+
+class $SilexgisTripEntryTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisTripEntry,
+          SilexgisTripEntryData,
+          $SilexgisTripEntryFilterComposer,
+          $SilexgisTripEntryOrderingComposer,
+          $SilexgisTripEntryAnnotationComposer,
+          $SilexgisTripEntryCreateCompanionBuilder,
+          $SilexgisTripEntryUpdateCompanionBuilder,
+          (
+            SilexgisTripEntryData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisTripEntry,
+              SilexgisTripEntryData
+            >,
+          ),
+          SilexgisTripEntryData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisTripEntryTableManager(_$AppDatabase db, SilexgisTripEntry table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisTripEntryFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisTripEntryOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisTripEntryAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<Uuid> entityUuid = const Value.absent(),
+                Value<Uuid> recordingUuid = const Value.absent(),
+                Value<bool> isScan = const Value.absent(),
+                Value<bool> received = const Value.absent(),
+                Value<bool> sent = const Value.absent(),
+                Value<String?> authorDeviceUserId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisTripEntryCompanion(
+                profileUuid: profileUuid,
+                entityUuid: entityUuid,
+                recordingUuid: recordingUuid,
+                isScan: isScan,
+                received: received,
+                sent: sent,
+                authorDeviceUserId: authorDeviceUserId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required Uuid entityUuid,
+                required Uuid recordingUuid,
+                Value<bool> isScan = const Value.absent(),
+                Value<bool> received = const Value.absent(),
+                Value<bool> sent = const Value.absent(),
+                Value<String?> authorDeviceUserId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisTripEntryCompanion.insert(
+                profileUuid: profileUuid,
+                entityUuid: entityUuid,
+                recordingUuid: recordingUuid,
+                isScan: isScan,
+                received: received,
+                sent: sent,
+                authorDeviceUserId: authorDeviceUserId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisTripEntryProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisTripEntry,
+      SilexgisTripEntryData,
+      $SilexgisTripEntryFilterComposer,
+      $SilexgisTripEntryOrderingComposer,
+      $SilexgisTripEntryAnnotationComposer,
+      $SilexgisTripEntryCreateCompanionBuilder,
+      $SilexgisTripEntryUpdateCompanionBuilder,
+      (
+        SilexgisTripEntryData,
+        BaseReferences<_$AppDatabase, SilexgisTripEntry, SilexgisTripEntryData>,
+      ),
+      SilexgisTripEntryData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -38699,4 +39448,6 @@ class $AppDatabaseManager {
       $SilexgisStagedUploadTableManager(_db, _db.silexgisStagedUpload);
   $SilexgisServerLinkTableManager get silexgisServerLink =>
       $SilexgisServerLinkTableManager(_db, _db.silexgisServerLink);
+  $SilexgisTripEntryTableManager get silexgisTripEntry =>
+      $SilexgisTripEntryTableManager(_db, _db.silexgisTripEntry);
 }

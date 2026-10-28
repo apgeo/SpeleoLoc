@@ -43,6 +43,7 @@ void main() {
       expect(exported, isNot(contains('silexgis_file_copy')));
       expect(exported, isNot(contains('silexgis_staged_upload')));
       expect(exported, isNot(contains('silexgis_server_link')));
+      expect(exported, isNot(contains('silexgis_trip_entry')));
     });
 
     test('writing to them logs no change', () async {
@@ -389,6 +390,15 @@ void main() {
             targetId: id,
           ),
         );
+    await db
+        .into(db.silexgisTripEntry)
+        .insert(
+          SilexgisTripEntryCompanion.insert(
+            profileUuid: profile,
+            entityUuid: id,
+            recordingUuid: id,
+          ),
+        );
 
     await repo.forgetProfile(profile);
 
@@ -409,6 +419,7 @@ void main() {
     expect(await db.select(db.silexgisDocumentLink).get(), isEmpty);
     expect(await db.select(db.silexgisStagedUpload).get(), isEmpty);
     expect(await db.select(db.silexgisServerLink).get(), isEmpty);
+    expect(await db.select(db.silexgisTripEntry).get(), isEmpty);
     // And leaves the other installation's conversation alone.
     expect((await repo.readSetState(other, setId)).cursor, 'c2');
   });

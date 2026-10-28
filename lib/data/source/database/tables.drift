@@ -706,3 +706,35 @@ CREATE TABLE IF NOT EXISTS silexgis_server_link (
     updated_at      INTEGER,
     PRIMARY KEY (profile_uuid, document_uuid, target_id)
 );
+
+-- Table: silexgis_trip_entry
+-- LOCAL ONLY. What this device knows about a trip recording or one of its
+-- scans on one installation, beyond the revision `silexgis_row_revision`
+-- keeps.
+--
+-- `recording_uuid` is the recording itself for a recording, and the scan's
+-- recording for a scan — kept because a local delete is physical, and a scan's
+-- removal still has to name its recording once the row is gone.
+-- `received` marks a row first met by download. Another phone made it, not
+-- this device, which is how the trips list tells the installation's
+-- recordings from this device's own.
+-- `sent` marks a row this device has sent. A scan missing from its
+-- recording's list is removed here only when it was received and never sent,
+-- because a scan of a withheld place is missing exactly as a removed one is.
+-- `author_device_user_id` is the phone user the installation names as the
+-- author when no user on this device is that one. The row's own foreign key
+-- stays null, and the id is kept here rather than sent back, so an edit never
+-- states a different author.
+CREATE TABLE IF NOT EXISTS silexgis_trip_entry (
+    profile_uuid           TEXT(36) NOT NULL,
+    entity_uuid            BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    recording_uuid         BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    is_scan                BOOLEAN NOT NULL DEFAULT 0,
+    received               BOOLEAN NOT NULL DEFAULT 0,
+    sent                   BOOLEAN NOT NULL DEFAULT 0,
+    author_device_user_id  TEXT(36),
+    PRIMARY KEY (profile_uuid, entity_uuid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording
+    ON silexgis_trip_entry(profile_uuid, recording_uuid);

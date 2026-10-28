@@ -973,6 +973,29 @@ class V27ToV28Migration extends SchemaMigration {
   }
 }
 
+/// v28 → v29.
+///
+/// Adds the local-only SilexGIS record of the trip recordings and scans an
+/// installation holds: which recording a scan belongs to, whether a row came
+/// from the installation or was sent from here, and an author no user on this
+/// device is. Local only, like the other SilexGIS state tables; nothing is
+/// moved into it.
+class V28ToV29Migration extends SchemaMigration {
+  const V28ToV29Migration();
+
+  @override
+  int get toVersion => 29;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisTripEntry);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording '
+      'ON silexgis_trip_entry(profile_uuid, recording_uuid)',
+    );
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1024,6 +1047,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V25ToV26Migration(),
   V26ToV27Migration(),
   V27ToV28Migration(),
+  V28ToV29Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
