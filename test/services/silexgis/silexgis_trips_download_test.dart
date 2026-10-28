@@ -14,7 +14,7 @@ import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
-import 'package:speleoloc/services/silexgis/silexgis_scan_merge_rule.dart';
+import 'package:speleoloc/services/silexgis/silexgis_missing_item_rule.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
@@ -461,7 +461,7 @@ void main() {
     });
 
     test('the rule answers by what this device knows of the scan', () {
-      const rule = SilexgisScanMergeRule();
+      const rule = SilexgisMissingItemRule();
       final id = Uuid.v7();
       SilexgisTripState state({bool received = false, bool sent = false}) =>
           SilexgisTripState(

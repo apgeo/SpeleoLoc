@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/silexgis_missing_item_rule.dart';
 
 /// What this device knows about one recording or scan on one installation,
 /// beyond its revision.
-class SilexgisTripState {
+class SilexgisTripState implements SilexgisItemHistory {
   const SilexgisTripState({
     required this.entityUuid,
     required this.recordingUuid,
@@ -19,10 +20,10 @@ class SilexgisTripState {
   final Uuid recordingUuid;
   final bool isScan;
 
-  /// First met by download: another phone made it.
+  @override
   final bool received;
 
-  /// This device has sent it.
+  @override
   final bool sent;
 
   /// The author the installation names, when no user on this device is that

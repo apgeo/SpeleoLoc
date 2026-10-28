@@ -6,7 +6,7 @@ import 'package:speleoloc/services/silexgis/model/sync_trips.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
-import 'package:speleoloc/services/silexgis/silexgis_scan_merge_rule.dart';
+import 'package:speleoloc/services/silexgis/silexgis_missing_item_rule.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_upload_answers.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -82,7 +82,7 @@ class SilexgisTripsApplied {
 ///   and an update leaves them as they are.
 /// - A scan of a place this device does not hold is skipped.
 /// - A local scan its recording no longer lists is decided by
-///   [SilexgisScanMergeRule].
+///   [SilexgisMissingItemRule].
 /// - A row whose unique key a different local row holds is not written; the
 ///   local row is kept and the collision reported.
 class SilexgisTripApplier {
@@ -93,7 +93,7 @@ class SilexgisTripApplier {
     required SilexgisHeldRowRepository heldRows,
     required SilexgisTripStateRepository trips,
     required String profileUuid,
-    SilexgisScanMergeRule mergeRule = const SilexgisScanMergeRule(),
+    SilexgisMissingItemRule mergeRule = const SilexgisMissingItemRule(),
     Clock clock = const SystemClock(),
   }) : _db = db,
        _logger = logger,
@@ -110,7 +110,7 @@ class SilexgisTripApplier {
   final SilexgisHeldRowRepository _heldRows;
   final SilexgisTripStateRepository _trips;
   final String _profileUuid;
-  final SilexgisScanMergeRule _mergeRule;
+  final SilexgisMissingItemRule _mergeRule;
   final Clock _clock;
   final _log = AppLogger.of('SilexgisTripApplier');
 
