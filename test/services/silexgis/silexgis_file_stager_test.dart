@@ -222,7 +222,66 @@ void main() {
     expect(client.isExhausted, isTrue);
   });
 
-  test('a piece out of place resumes from the offset asked for', () async {
+  test(
+    'a piece out of place resumes from the offset the refusal names',
+    () async {
+      // No status answer is scripted: asking for one would fail the test.
+      final client = ScriptedClient(<ScriptedResponse>[
+        config(),
+        opened(),
+        progress(8),
+        ScriptedResponse.problem(
+          path: upload,
+          method: 'PUT',
+          status: 409,
+          code: SilexgisCodes.chunkOutOfOrder,
+          detail: 'The next piece starts at 16.',
+          extra: <String, Object?>{'expectedOffset': 16},
+        ),
+        progress(20),
+        completed(),
+      ]);
+
+      final result = await stager(client).stage(request());
+
+      expect(result.outcome, SilexgisStageOutcome.staged);
+      expect(offsets(client), <String>['0', '8', '16']);
+      expect(
+        client.sent.where((r) => r.method == 'GET' && r.url.path == upload),
+        isEmpty,
+      );
+      expect(client.isExhausted, isTrue);
+    },
+  );
+
+  test(
+    'a refusal without an offset asks the transfer how far it got',
+    () async {
+      final client = ScriptedClient(<ScriptedResponse>[
+        config(),
+        opened(),
+        progress(8),
+        ScriptedResponse.problem(
+          path: upload,
+          method: 'PUT',
+          status: 409,
+          code: SilexgisCodes.chunkOutOfOrder,
+          detail: 'The next piece starts at 16.',
+        ),
+        progress(16, method: 'GET'),
+        progress(20),
+        completed(),
+      ]);
+
+      final result = await stager(client).stage(request());
+
+      expect(result.outcome, SilexgisStageOutcome.staged);
+      expect(offsets(client), <String>['0', '8', '16']);
+      expect(client.isExhausted, isTrue);
+    },
+  );
+
+  test('an offset beyond the file is not sent from', () async {
     final client = ScriptedClient(<ScriptedResponse>[
       config(),
       opened(),
@@ -232,9 +291,10 @@ void main() {
         method: 'PUT',
         status: 409,
         code: SilexgisCodes.chunkOutOfOrder,
-        detail: 'The next piece starts at 16.',
+        extra: <String, Object?>{'expectedOffset': 4000},
       ),
-      progress(16, method: 'GET'),
+      progress(8, method: 'GET'),
+      progress(16),
       progress(20),
       completed(),
     ]);
@@ -242,7 +302,7 @@ void main() {
     final result = await stager(client).stage(request());
 
     expect(result.outcome, SilexgisStageOutcome.staged);
-    expect(offsets(client), <String>['0', '8', '16']);
+    expect(offsets(client), <String>['0', '8', '8', '16']);
     expect(client.isExhausted, isTrue);
   });
 

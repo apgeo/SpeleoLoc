@@ -307,12 +307,16 @@ class SilexgisFileStager {
           answer = await _api.sendPiece(id, offset: offset, bytes: bytes);
         } on SilexgisProblemException catch (e) {
           if (e.code != SilexgisCodes.chunkOutOfOrder) rethrow;
-          // Where to resume is asked for rather than read out of the
-          // detail, which is a sentence for a human.
           if (++realignments > maxRealignments) {
             throw const _Misaligned('the transfer kept losing its place');
           }
-          offset = (await _api.status(id)).receivedBytes;
+          // The refusal names the next offset; the detail is a sentence for a
+          // human and is never read. A figure outside the file cannot be
+          // sent from, so the transfer's own count is asked for instead.
+          final named = e.problem.expectedOffset;
+          offset = named != null && named >= 0 && named <= request.sizeBytes
+              ? named
+              : (await _api.status(id)).receivedBytes;
           continue;
         }
         if (answer.receivedBytes <= offset) {
