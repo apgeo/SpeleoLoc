@@ -98,7 +98,7 @@ class SilexgisDocumentLinksUploadPart implements SilexgisUploadPart {
             SilexgisHeldEntry(
               section: section,
               entityUuid: local.uuid,
-              entityTable: SilexgisDocumentUploadPlanner.linkTable,
+              entityTable: local.table,
               reviewId: reviewId,
               sentLocalUpdatedAt: local.updatedAt,
             ),
@@ -121,7 +121,8 @@ class SilexgisDocumentLinksUploadPart implements SilexgisUploadPart {
           refusals.add(
             SilexgisRefusal(
               entityUuid: local?.uuid ?? link.documentId,
-              entityTable: SilexgisDocumentUploadPlanner.linkTable,
+              entityTable:
+                  local?.table ?? SilexgisDocumentUploadPlanner.linkTable,
               result: answer,
             ),
           );

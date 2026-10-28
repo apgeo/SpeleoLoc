@@ -26,6 +26,7 @@ import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.da
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_transfer_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/clock.dart';
 
@@ -657,6 +658,148 @@ void main() {
         expect(await serverLinks.readAll(profile), isEmpty);
       },
     );
+  });
+
+  group('a photo taken on a trip', () {
+    /// A closed recording in the cave, with one scan, as the installation
+    /// holds them — or, with [held] false, new to it.
+    Future<(Uuid, Uuid)> trip({bool held = true}) async {
+      final trip = Uuid.v7();
+      final point = Uuid.v7();
+      final now = clock.nowMs();
+      await db
+          .into(db.caveTrips)
+          .insert(
+            CaveTripsCompanion.insert(
+              uuid: trip,
+              caveUuid: caveId,
+              title: 'Invented trip',
+              tripStartedAt: now,
+            ).copyWith(updatedAt: Value(now)),
+          );
+      await db
+          .into(db.caveTripPoints)
+          .insert(
+            CaveTripPointsCompanion.insert(
+              uuid: point,
+              caveTripUuid: trip,
+              scannedAt: now,
+            ).copyWith(updatedAt: Value(now)),
+          );
+      if (held) {
+        for (final (id, table) in <(Uuid, String)>[
+          (trip, 'cave_trips'),
+          (point, 'cave_trip_points'),
+        ]) {
+          await localState.writeRevision(
+            profile,
+            id,
+            entityTable: table,
+            revision: 'r-trip',
+            localUpdatedAt: now,
+          );
+        }
+      }
+      return (trip, point);
+    }
+
+    /// A photo hung on nothing the installation holds but [trip] and [scan].
+    Future<(Uuid, List<int>)> tripPhoto(
+      String name, {
+      Uuid? trip,
+      Uuid? scan,
+    }) async {
+      final photoOf = await photo(name, target: Uuid.v7());
+      if (trip != null) {
+        await db
+            .into(db.documentationFilesToCaveTrips)
+            .insert(
+              DocumentationFilesToCaveTripsCompanion.insert(
+                uuid: Uuid.v7(),
+                documentationFileUuid: photoOf.$1,
+                caveTripUuid: trip,
+              ).copyWith(createdAt: Value(clock.nowMs())),
+            );
+      }
+      if (scan != null) {
+        await db
+            .into(db.documentationFilesToCaveTripPoints)
+            .insert(
+              DocumentationFilesToCaveTripPointsCompanion.insert(
+                uuid: Uuid.v7(),
+                documentationFileUuid: photoOf.$1,
+                caveTripPointUuid: scan,
+              ).copyWith(createdAt: Value(clock.nowMs())),
+            );
+      }
+      return photoOf;
+    }
+
+    test('hangs on its recording and its scan', () async {
+      final (recording, scan) = await trip();
+      final (id, bytes) = await tripPhoto(
+        'IMG_0002.jpg',
+        trip: recording,
+        scan: scan,
+      );
+      final client = ScriptedClient(<ScriptedResponse>[
+        config(),
+        ...staging(bytes),
+        answer(
+          documents: <Map<String, Object?>>[verdict(id.toString(), 'created')],
+          links: <Map<String, Object?>>[
+            verdict('link-r', 'created'),
+            verdict('link-s', 'created'),
+          ],
+        ),
+      ]);
+
+      final (report, _) = await run(client);
+
+      expect(report.refusals, isEmpty);
+      expect(
+        sentSection(client, SyncUploadSection.documents).single['id'],
+        id.toString(),
+      );
+      final links = sentSection(client, SyncUploadSection.documentLinks);
+      expect(links.map((l) => l['target']), <Object?>[
+        <String, Object?>{'kind': 'tripRecording', 'id': recording.toString()},
+        <String, Object?>{'kind': 'tripPoint', 'id': scan.toString()},
+      ]);
+      // No role: the server derives it from where the photo hangs.
+      expect(links.every((l) => !l.containsKey('role')), isTrue);
+      final held = await serverLinks.readAll(profile);
+      expect(held[(id, recording)]!.linkId, 'link-r');
+      expect(held[(id, scan)]!.targetKind, 'tripPoint');
+    });
+
+    test('goes with a recording sent in the same upload', () async {
+      final (recording, _) = await trip(held: false);
+      final (id, _) = await tripPhoto('IMG_0003.jpg', trip: recording);
+      final planner = SilexgisDocumentUploadPlanner(
+        db: db,
+        localState: localState,
+        heldRows: heldRows,
+        copies: copies,
+        staged: staged,
+        catalogue: catalogue,
+        serverLinks: serverLinks,
+        profileUuid: profile,
+      );
+
+      final alone = await planner.plan(SilexgisUploadContext());
+      expect(alone.documents, isEmpty);
+      expect(alone.links, isEmpty);
+
+      final withTrip = await planner.plan(
+        SilexgisUploadContext()..tripsSent.add(recording),
+      );
+      expect(withTrip.documents.single.id, id);
+      final link = withTrip.links.single;
+      expect(link.targetKind, 'tripRecording');
+      expect(link.targetId, recording);
+      expect(link.local!.table, 'documentation_files_to_cave_trips');
+    });
   });
 
   group('held for a reviewer', () {

@@ -46,6 +46,22 @@ class SilexgisPlannedDocument {
   String? get baseVersionId => copy?.versionId ?? catalogued?.versionId;
 }
 
+/// A local link row, whichever table it is in.
+class SilexgisLocalLink {
+  const SilexgisLocalLink({
+    required this.uuid,
+    required this.table,
+    this.updatedAt,
+  });
+
+  final Uuid uuid;
+  final String table;
+
+  /// The row's stamp. A link on a recording or a scan is never edited, so its
+  /// creation stands in.
+  final int? updatedAt;
+}
+
 /// A link this run hangs or takes down.
 class SilexgisPlannedLink {
   const SilexgisPlannedLink({
@@ -60,7 +76,7 @@ class SilexgisPlannedLink {
   final Uuid targetId;
 
   /// The local link row, or null for a removal.
-  final DocumentationFilesToGeofeature? local;
+  final SilexgisLocalLink? local;
 
   bool get isDelete => local == null;
   SilexgisLinkKey get key => (documentId, targetId);
@@ -79,9 +95,10 @@ class SilexgisDocumentPlan {
 
 /// Chooses which documentation files and links go up, by the same rule the
 /// feature rows follow: what the installation already holds, plus what hangs
-/// on something it holds or this run sends.
+/// on something it holds or this run sends — a feature, a trip recording or
+/// one of its scans.
 ///
-/// - A file goes up new when one of its links targets such a feature, and
+/// - A file goes up new when one of its links targets such a target, and
 ///   only when it is the caver's own or the server's stored file: a copy
 ///   without location or a drawn picture is never offered upward as if it
 ///   were the original.
@@ -91,7 +108,7 @@ class SilexgisDocumentPlan {
 ///   what is said about the file.
 /// - A file removed here goes up as a removal.
 /// - A link goes up when its document goes or is held there and its target
-///   is such a feature; a link the installation holds and this device no
+///   is such a target; a link the installation holds and this device no
 ///   longer has goes up as a removal.
 ///
 /// Rows held for a reviewer are not sent again until the caver edits them.
@@ -124,6 +141,14 @@ class SilexgisDocumentUploadPlanner {
   final String _profileUuid;
 
   static const String linkTable = 'documentation_files_to_geofeatures';
+  static const String recordingLinkTable = 'documentation_files_to_cave_trips';
+  static const String scanLinkTable = 'documentation_files_to_cave_trip_points';
+
+  /// The local tables whose rows are recordings and scans on the server.
+  static const Set<String> tripTables = <String>{
+    'cave_trips',
+    'cave_trip_points',
+  };
 
   /// The local tables whose rows are features on the server.
   static const Set<String> featureTables = <String>{
@@ -140,6 +165,11 @@ class SilexgisDocumentUploadPlanner {
         if (featureTables.contains(e.value.entityTable)) e.key,
       ...context.rowsSent,
     };
+    final trips = <Uuid>{
+      for (final e in revisions.entries)
+        if (tripTables.contains(e.value.entityTable)) e.key,
+      ...context.tripsSent,
+    };
     final heldDocuments = await _heldRows.readSection(
       _profileUuid,
       SyncUploadSection.documents,
@@ -151,12 +181,14 @@ class SilexgisDocumentUploadPlanner {
     final adopted = await _staged.adoptedHashes(_profileUuid);
     final serverLinks = await _serverLinks.readAll(_profileUuid);
 
-    final links = await (_db.select(
-      _db.documentationFilesToGeofeatures,
-    )..where((t) => t.deletedAt.isNull())).get();
+    final links = await _localLinks();
+    bool targetIsThere(_CandidateLink link) =>
+        link.targetKind == SyncDocumentLink.targetFeature
+        ? features.contains(link.targetId)
+        : trips.contains(link.targetId);
     final linkedToServer = <Uuid>{
       for (final link in links)
-        if (features.contains(link.geofeatureUuid)) link.documentationFileUuid,
+        if (targetIsThere(link)) link.documentId,
     };
 
     final documents = <SilexgisPlannedDocument>[];
@@ -224,22 +256,23 @@ class SilexgisDocumentUploadPlanner {
     final plannedLinks = <SilexgisPlannedLink>[];
     final live = <SilexgisLinkKey>{};
     for (final link in links) {
-      final target = link.geofeatureUuid;
-      if (target == null) continue;
-      final key = (link.documentationFileUuid, target);
+      final key = (link.documentId, link.targetId);
       live.add(key);
       if (serverLinks.containsKey(key)) continue;
-      if (!going.contains(link.documentationFileUuid)) continue;
-      if (!features.contains(target)) continue;
-      if (heldLinks[link.uuid]?.stillAsSent(link.updatedAt) ?? false) continue;
-      if (await _cataloguedLink(key) case final linkId?) {
+      if (!going.contains(link.documentId)) continue;
+      if (!targetIsThere(link)) continue;
+      final local = link.local;
+      if (heldLinks[local.uuid]?.stillAsSent(local.updatedAt) ?? false) {
+        continue;
+      }
+      if (await _cataloguedLink(key, link.targetKind) case final linkId?) {
         // Already hung there, as the catalogue says: recorded, not sent.
         await _serverLinks.record(
           _profileUuid,
           SilexgisServerLinkEntry(
             documentUuid: key.$1,
-            targetKind: SyncDocumentLink.targetFeature,
-            targetId: target,
+            targetKind: link.targetKind,
+            targetId: link.targetId,
             linkId: linkId,
           ),
         );
@@ -247,10 +280,10 @@ class SilexgisDocumentUploadPlanner {
       }
       plannedLinks.add(
         SilexgisPlannedLink(
-          documentId: link.documentationFileUuid,
-          targetKind: SyncDocumentLink.targetFeature,
-          targetId: target,
-          local: link,
+          documentId: link.documentId,
+          targetKind: link.targetKind,
+          targetId: link.targetId,
+          local: local,
         ),
       );
     }
@@ -282,13 +315,76 @@ class SilexgisDocumentUploadPlanner {
       : null;
 
   /// The installation's identifier for a link its catalogue already lists.
-  Future<String?> _cataloguedLink(SilexgisLinkKey key) async {
+  Future<String?> _cataloguedLink(SilexgisLinkKey key, String kind) async {
     for (final link in await _catalogue.linksOf(_profileUuid, key.$1)) {
-      if (link.targetId == key.$2 &&
-          link.targetKind == SyncDocumentLink.targetFeature) {
+      if (link.targetId == key.$2 && link.targetKind == kind) {
         return link.linkId;
       }
     }
     return null;
   }
+
+  /// Every live local link, from the three tables a document hangs from.
+  Future<List<_CandidateLink>> _localLinks() async {
+    final onFeatures = await (_db.select(
+      _db.documentationFilesToGeofeatures,
+    )..where((t) => t.deletedAt.isNull())).get();
+    final onRecordings = await (_db.select(
+      _db.documentationFilesToCaveTrips,
+    )..where((t) => t.deletedAt.isNull())).get();
+    final onScans = await (_db.select(
+      _db.documentationFilesToCaveTripPoints,
+    )..where((t) => t.deletedAt.isNull())).get();
+    return <_CandidateLink>[
+      for (final link in onFeatures)
+        if (link.geofeatureUuid case final target?)
+          _CandidateLink(
+            documentId: link.documentationFileUuid,
+            targetKind: SyncDocumentLink.targetFeature,
+            targetId: target,
+            local: SilexgisLocalLink(
+              uuid: link.uuid,
+              table: linkTable,
+              updatedAt: link.updatedAt,
+            ),
+          ),
+      for (final link in onRecordings)
+        _CandidateLink(
+          documentId: link.documentationFileUuid,
+          targetKind: SyncDocumentLink.targetTripRecording,
+          targetId: link.caveTripUuid,
+          local: SilexgisLocalLink(
+            uuid: link.uuid,
+            table: recordingLinkTable,
+            updatedAt: link.createdAt,
+          ),
+        ),
+      for (final link in onScans)
+        _CandidateLink(
+          documentId: link.documentationFileUuid,
+          targetKind: SyncDocumentLink.targetTripPoint,
+          targetId: link.caveTripPointUuid,
+          local: SilexgisLocalLink(
+            uuid: link.uuid,
+            table: scanLinkTable,
+            updatedAt: link.createdAt,
+          ),
+        ),
+    ];
+  }
+}
+
+/// One live local link, with the kind of target it travels as.
+class _CandidateLink {
+  const _CandidateLink({
+    required this.documentId,
+    required this.targetKind,
+    required this.targetId,
+    required this.local,
+  });
+
+  final Uuid documentId;
+  final String targetKind;
+  final Uuid targetId;
+  final SilexgisLocalLink local;
 }
