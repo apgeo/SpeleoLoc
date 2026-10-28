@@ -26,6 +26,7 @@ void main() {
   late SilexgisFileCopyRepository copies;
 
   final caveId = Uuid.v7();
+  final placeId = Uuid.v7();
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('speleoloc_copies_');
@@ -47,6 +48,17 @@ void main() {
     );
     copies = SilexgisFileCopyRepository(db);
     await db.into(db.caves).insert(Cave(uuid: caveId, title: 'Invented'));
+    await db
+        .into(db.cavePlaces)
+        .insert(
+          CavePlace(
+            uuid: placeId,
+            title: 'Invented place',
+            caveUuid: caveId,
+            isEntrance: 0,
+            isMainEntrance: 0,
+          ),
+        );
   });
   tearDown(() async {
     await db.close();
@@ -100,6 +112,70 @@ void main() {
       );
     }
     return id;
+  }
+
+  /// A raster map of the cave with one pin and its picture on disk. With
+  /// [heldAs], it came from an installation and its picture was fetched as
+  /// that, under the name the fetch gives it; without, the caver made it.
+  Future<(Uuid, Uuid)> map(String title, {SilexgisHeldAs? heldAs}) async {
+    final id = Uuid.v7();
+    final document = Uuid.v7();
+    final relPath = heldAs == null
+        ? 'cave_$caveId/raster_${title.toLowerCase()}.jpg'
+        : 'cave_$caveId/raster_$document.jpg';
+    final bytes = utf8.encode('invented picture $title');
+    final asset = File('${assetsDir.path}/$relPath');
+    await asset.parent.create(recursive: true);
+    await asset.writeAsBytes(bytes);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await db
+        .into(db.rasterMaps)
+        .insert(
+          RasterMapsCompanion.insert(
+            uuid: id,
+            title: title,
+            mapType: 'plane view',
+            fileName: relPath,
+            caveUuid: caveId,
+          ).copyWith(createdAt: Value(now), updatedAt: Value(now)),
+        );
+    final pin = Uuid.v7();
+    await db
+        .into(db.cavePlaceToRasterMapDefinitions)
+        .insert(
+          CavePlaceToRasterMapDefinitionsCompanion.insert(
+            uuid: pin,
+            cavePlaceUuid: placeId,
+            rasterMapUuid: id,
+          ).copyWith(
+            xCoordinate: const Value(10),
+            yCoordinate: const Value(20),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+    if (heldAs != null) {
+      await db
+          .into(db.silexgisRasterEntry)
+          .insert(
+            SilexgisRasterEntryCompanion.insert(
+              profileUuid: 'p-1',
+              entityUuid: id,
+              mapUuid: id,
+              received: const Value(true),
+              documentId: Value(document),
+            ),
+          );
+      await copies.register(
+        SilexgisFileCopyEntry(
+          documentUuid: document,
+          heldAs: heldAs,
+          origin: SilexgisCopyOrigin.server,
+          rendition: heldAs == SilexgisHeldAs.rendition ? 2400 : null,
+        ),
+      );
+    }
+    return (id, pin);
   }
 
   List<Map<String, Object?>> rowsOf(Archive zip, String entry) {
@@ -284,6 +360,73 @@ void main() {
       expect(row.fileName, 'documentation_files/rendition.jpg');
       expect((await copies.read(id))!.heldAs, SilexgisHeldAs.rendition);
     });
+  });
+
+  test('a map showing a server copy of its picture stays out of the archive '
+      'with its pins', () async {
+    final (own, ownPin) = await map('Own');
+    final (_, originalPin) = await map(
+      'Original',
+      heldAs: SilexgisHeldAs.original,
+    );
+    final (locationFree, locationFreePin) = await map(
+      'Without location',
+      heldAs: SilexgisHeldAs.locationFree,
+    );
+    final (_, renditionPin) = await map(
+      'Drawn',
+      heldAs: SilexgisHeldAs.rendition,
+    );
+    // The caver moved a pin on the drawn map, and renamed the other copy.
+    await logger.logUpdate(
+      'cave_place_to_raster_map_definitions',
+      renditionPin,
+      oldValues: <String, Object?>{'x_coordinate': 10},
+      newValues: <String, Object?>{'x_coordinate': 11},
+    );
+    await logger.logUpdate(
+      'raster_maps',
+      locationFree,
+      oldValues: <String, Object?>{'title': 'Without location'},
+      newValues: <String, Object?>{'title': 'Renamed'},
+    );
+    await logger.logInsert('raster_maps', own);
+
+    final zip = ZipDecoder().decodeBytes(
+      await (await sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'maps.zip',
+      )).readAsBytes(),
+    );
+
+    expect(
+      rowsOf(zip, 'tables/raster_maps.jsonl').map((r) => r['title']),
+      unorderedEquals(<String>['Own', 'Original']),
+    );
+    expect(
+      rowsOf(
+        zip,
+        'tables/cave_place_to_raster_map_definitions.jsonl',
+      ).map((r) => r['uuid']),
+      unorderedEquals(<String>[ownPin.toString(), originalPin.toString()]),
+    );
+    final assets = zip.files
+        .where((f) => f.isFile && f.name.startsWith('assets/cave_'))
+        .map((f) => f.name)
+        .toList();
+    expect(assets, hasLength(2));
+    expect(assets, contains('assets/cave_$caveId/raster_own.jpg'));
+    final log = rowsOf(zip, 'change_log.jsonl');
+    expect(log.map((r) => r['entity_uuid']), <String>[own.toString()]);
+
+    // Nothing here was touched, and the copies' pins stay on this device.
+    expect(await db.select(db.rasterMaps).get(), hasLength(4));
+    expect(
+      (await db.select(db.cavePlaceToRasterMapDefinitions).get()).map(
+        (d) => d.uuid,
+      ),
+      containsAll(<Uuid>[locationFreePin, renditionPin]),
+    );
   });
 }
 

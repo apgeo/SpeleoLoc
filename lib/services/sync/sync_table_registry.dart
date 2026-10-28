@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
@@ -51,6 +52,12 @@ class SyncTableRegistry {
   /// there. Read from the database being dumped, which is the one that knows.
   Future<Set<Uuid>> _serverOnlyCopies() =>
       SilexgisFileCopyRepository(_db).serverOnlyCopies();
+
+  /// Raster maps showing such a copy of their picture. They stay on the device
+  /// with their pins, for the same reason; a map made here, or received as the
+  /// original, travels.
+  Future<Set<Uuid>> _serverOnlyMaps() async =>
+      (await SilexgisMapPictureCopies(_db).serverOnlyPictures()).keys.toSet();
 
   /// All tables exported/imported by the sync archive, in FK order.
   List<SyncTableHandler> tables() => <SyncTableHandler>[
@@ -150,9 +157,13 @@ class SyncTableRegistry {
     ),
     SyncTableHandler(
       name: 'raster_maps',
-      dump: () async => (await _db.select(_db.rasterMaps).get())
-          .map((r) => r.toJson(serializer: _serializer))
-          .toList(),
+      dump: () async {
+        final local = await _serverOnlyMaps();
+        return (await _db.select(_db.rasterMaps).get())
+            .where((r) => !local.contains(r.uuid))
+            .map((r) => r.toJson(serializer: _serializer))
+            .toList();
+      },
       upsert: (rows, resolver) async => upsertRows<RasterMap>(
         rows,
         (j) => RasterMap.fromJson(
@@ -169,10 +180,13 @@ class SyncTableRegistry {
     ),
     SyncTableHandler(
       name: 'cave_place_to_raster_map_definitions',
-      dump: () async =>
-          (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
-              .map((r) => r.toJson(serializer: _serializer))
-              .toList(),
+      dump: () async {
+        final local = await _serverOnlyMaps();
+        return (await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
+            .where((r) => !local.contains(r.rasterMapUuid))
+            .map((r) => r.toJson(serializer: _serializer))
+            .toList();
+      },
       upsert: (rows, resolver) async =>
           upsertRows<CavePlaceToRasterMapDefinition>(
             rows,

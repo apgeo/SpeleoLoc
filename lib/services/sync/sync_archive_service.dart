@@ -11,6 +11,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
@@ -271,14 +272,27 @@ class SyncArchiveService {
     // change_log + change_log_field (shipped verbatim; dedup by uuid on
     // import). A server copy that stays here keeps its history here too: its
     // removal, replayed on another device, would remove that device's own
-    // file of the same identifier.
+    // file of the same identifier. So does a map showing such a copy, with
+    // its pins.
     final serverOnly = await SilexgisFileCopyRepository(_db).serverOnlyCopies();
+    final serverOnlyMaps = await SilexgisMapPictureCopies(
+      _db,
+    ).serverOnlyPictures();
+    final serverOnlyPins = <Uuid>{
+      for (final pin
+          in await _db.select(_db.cavePlaceToRasterMapDefinitions).get())
+        if (serverOnlyMaps.containsKey(pin.rasterMapUuid)) pin.uuid,
+    };
+    bool staysHere(ChangeLogData r) => switch (r.entityTable) {
+      'documentation_files' => serverOnly.contains(r.entityUuid),
+      'raster_maps' => serverOnlyMaps.containsKey(r.entityUuid),
+      'cave_place_to_raster_map_definitions' => serverOnlyPins.contains(
+        r.entityUuid,
+      ),
+      _ => false,
+    };
     final keptLog = (await _db.select(_db.changeLog).get())
-        .where(
-          (r) =>
-              !(r.entityTable == 'documentation_files' &&
-                  serverOnly.contains(r.entityUuid)),
-        )
+        .where((r) => !staysHere(r))
         .toList();
     final keptLogIds = <Uuid>{for (final r in keptLog) r.uuid};
     final changeLogRows = keptLog
@@ -323,6 +337,14 @@ class SyncArchiveService {
         );
       }
       if (includeRasterMaps) {
+        final local = <String>{
+          for (final map
+              in await (_db.select(_db.rasterMaps)..where(
+                    (t) => t.uuid.isIn(serverOnlyMaps.keys.map((u) => u.bytes)),
+                  ))
+                  .get())
+            map.fileName,
+        };
         assetRelPaths.addAll(
           (await _db
                   .customSelect(
@@ -330,7 +352,8 @@ class SyncArchiveService {
                     'WHERE deleted_at IS NULL',
                   )
                   .get())
-              .map((r) => r.read<String>('file_name')),
+              .map((r) => r.read<String>('file_name'))
+              .where((name) => !local.contains(name)),
         );
       }
     }
