@@ -21,6 +21,9 @@ class SilexgisProfile {
     this.accountEmail = '',
     this.syncSetId,
     this.uploadsNewRoots = false,
+    this.sendsFiles = true,
+    this.filesOnlyOverWifi = true,
+    this.asksBeforeMobileData = true,
   });
 
   /// Stable identifier, generated once when the profile is first created. It
@@ -59,6 +62,21 @@ class SilexgisProfile {
   /// the selection is impossible for the same reason.
   final bool uploadsNewRoots;
 
+  /// Whether photos and documents go up at all. Off, a run sends the feature
+  /// rows and leaves every documentation file on the device.
+  final bool sendsFiles;
+
+  /// Whether file bytes wait for Wi-Fi. What carries no file always goes.
+  ///
+  /// On by default: a photograph is megabytes, and a caver on a mobile plan
+  /// should be asked before a sync spends it.
+  final bool filesOnlyOverWifi;
+
+  /// Whether, away from Wi-Fi, the caver is asked to send files over mobile
+  /// data rather than having them simply wait. Read only while
+  /// [filesOnlyOverWifi] is on.
+  final bool asksBeforeMobileData;
+
   Uri get baseUri => Uri.parse(baseUrl);
 
   bool get isReadyToSync => syncSetId != null && syncSetId!.isNotEmpty;
@@ -70,6 +88,9 @@ class SilexgisProfile {
     String? syncSetId,
     bool clearSyncSet = false,
     bool? uploadsNewRoots,
+    bool? sendsFiles,
+    bool? filesOnlyOverWifi,
+    bool? asksBeforeMobileData,
   }) => SilexgisProfile(
     profileUuid: profileUuid,
     displayName: displayName ?? this.displayName,
@@ -77,6 +98,9 @@ class SilexgisProfile {
     accountEmail: accountEmail ?? this.accountEmail,
     syncSetId: clearSyncSet ? null : (syncSetId ?? this.syncSetId),
     uploadsNewRoots: uploadsNewRoots ?? this.uploadsNewRoots,
+    sendsFiles: sendsFiles ?? this.sendsFiles,
+    filesOnlyOverWifi: filesOnlyOverWifi ?? this.filesOnlyOverWifi,
+    asksBeforeMobileData: asksBeforeMobileData ?? this.asksBeforeMobileData,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -86,6 +110,9 @@ class SilexgisProfile {
     'accountEmail': accountEmail,
     'syncSetId': syncSetId,
     'uploadsNewRoots': uploadsNewRoots,
+    'sendsFiles': sendsFiles,
+    'filesOnlyOverWifi': filesOnlyOverWifi,
+    'asksBeforeMobileData': asksBeforeMobileData,
   };
 
   static SilexgisProfile fromJson(Map<String, Object?> json) => SilexgisProfile(
@@ -95,6 +122,9 @@ class SilexgisProfile {
     accountEmail: json['accountEmail'] as String? ?? '',
     syncSetId: json['syncSetId'] as String?,
     uploadsNewRoots: json['uploadsNewRoots'] as bool? ?? false,
+    sendsFiles: json['sendsFiles'] as bool? ?? true,
+    filesOnlyOverWifi: json['filesOnlyOverWifi'] as bool? ?? true,
+    asksBeforeMobileData: json['asksBeforeMobileData'] as bool? ?? true,
   );
 
   String encode() => jsonEncode(toJson());

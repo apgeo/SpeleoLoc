@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -15,7 +16,7 @@ import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
-import 'package:speleoloc/services/silexgis/silexgis_file_sending_gate.dart';
+import 'package:speleoloc/services/silexgis/silexgis_files_network_gate.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
@@ -66,6 +67,7 @@ class SilexgisSyncController extends ChangeNotifier {
     SilexgisStagedUploadRepository? staged,
     Future<Directory> Function() documentsDir =
         getApplicationDocumentsDirectory,
+    NetworkKindProbe? networkProbe,
     SilexgisSessionBuilder? sessionBuilder,
   }) : _db = db,
        _profiles = profiles,
@@ -81,6 +83,7 @@ class SilexgisSyncController extends ChangeNotifier {
        _serverLinks = serverLinks ?? SilexgisServerLinkRepository(db),
        _staged = staged ?? SilexgisStagedUploadRepository(db),
        _documentsDir = documentsDir,
+       _networkProbe = networkProbe ?? const _UnknownNetwork(),
        _sessionBuilder = sessionBuilder;
 
   final AppDatabase _db;
@@ -99,6 +102,9 @@ class SilexgisSyncController extends ChangeNotifier {
 
   /// The folder documentation files are stored relative to.
   final Future<Directory> Function() _documentsDir;
+
+  /// Which network the run is on, for the profile's "only over Wi-Fi".
+  final NetworkKindProbe _networkProbe;
   final SilexgisSessionBuilder? _sessionBuilder;
   final _log = AppLogger.of('SilexgisSyncController');
 
@@ -117,7 +123,13 @@ class SilexgisSyncController extends ChangeNotifier {
   /// correct, and it is the only thing that picks up a row which became
   /// readable — being granted the right to place a cave writes nothing to that
   /// cave's row, so no incremental read will ever carry it.
-  Future<void> syncDefault({bool fromBeginning = false}) async {
+  ///
+  /// [decider] is asked, at most once, whether files may go over mobile data
+  /// when the profile keeps them for Wi-Fi. Without one they wait.
+  Future<void> syncDefault({
+    bool fromBeginning = false,
+    SilexgisMobileDataDecider? decider,
+  }) async {
     if (isRunning) return _inFlight?.future;
     final profile = await _profiles.getDefaultProfile();
     if (profile == null) {
@@ -126,12 +138,13 @@ class SilexgisSyncController extends ChangeNotifier {
       _emit(const SilexgisSyncProgress.idle());
       return;
     }
-    return sync(profile, fromBeginning: fromBeginning);
+    return sync(profile, fromBeginning: fromBeginning, decider: decider);
   }
 
   Future<void> sync(
     SilexgisProfile profile, {
     bool fromBeginning = false,
+    SilexgisMobileDataDecider? decider,
   }) async {
     if (isRunning) return _inFlight?.future;
     final setId = profile.syncSetId;
@@ -145,7 +158,12 @@ class SilexgisSyncController extends ChangeNotifier {
 
     final completer = _inFlight = Completer<void>();
     try {
-      await _run(profile, setId, fromBeginning: fromBeginning);
+      await _run(
+        profile,
+        setId,
+        fromBeginning: fromBeginning,
+        decider: decider,
+      );
     } on SilexgisException catch (e) {
       _fail(e.message, action: e.action, code: _codeOf(e));
     } on Object catch (e, st) {
@@ -162,6 +180,7 @@ class SilexgisSyncController extends ChangeNotifier {
     SilexgisProfile profile,
     String setId, {
     required bool fromBeginning,
+    SilexgisMobileDataDecider? decider,
   }) async {
     final session = (_sessionBuilder ?? _defaultSession)(profile);
 
@@ -239,8 +258,8 @@ class SilexgisSyncController extends ChangeNotifier {
                 people: _people,
                 profileUuid: profile.profileUuid,
               ),
-            if (capabilities.servesDocumentUpload)
-              ..._documentParts(profile, session, documents),
+            if (capabilities.servesDocumentUpload && profile.sendsFiles)
+              ..._documentParts(profile, session, documents, decider),
           ],
         ).run(setId, capabilities: capabilities);
       } on SilexgisProblemException catch (e) {
@@ -360,6 +379,7 @@ class SilexgisSyncController extends ChangeNotifier {
     SilexgisProfile profile,
     SilexgisSession session,
     SilexgisDocumentUploadRun run,
+    SilexgisMobileDataDecider? decider,
   ) => <SilexgisUploadPart>[
     SilexgisDocumentsUploadPart(
       planner: SilexgisDocumentUploadPlanner(
@@ -378,7 +398,12 @@ class SilexgisSyncController extends ChangeNotifier {
         staged: _staged,
         profileUuid: profile.profileUuid,
       ),
-      gate: const SilexgisFilesAlwaysGo(),
+      gate: SilexgisFilesNetworkGate(
+        profile: profile,
+        profiles: _profiles,
+        probe: _networkProbe,
+        decider: decider,
+      ),
       staged: _staged,
       localState: _localState,
       heldRows: _heldRows,
@@ -459,4 +484,12 @@ class SilexgisSyncController extends ChangeNotifier {
     _progress = progress;
     notifyListeners();
   }
+}
+
+/// A network nothing could be asked about: treated as one that may cost.
+class _UnknownNetwork implements NetworkKindProbe {
+  const _UnknownNetwork();
+
+  @override
+  Future<NetworkKind> current() async => NetworkKind.unknown;
 }

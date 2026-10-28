@@ -71,6 +71,9 @@ void main() {
         'accountEmail',
         'syncSetId',
         'uploadsNewRoots',
+        'sendsFiles',
+        'filesOnlyOverWifi',
+        'asksBeforeMobileData',
       ]);
     });
   });

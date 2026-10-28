@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/silexgis_files_card.dart';
+import 'package:speleoloc/screens/settings/silexgis_mobile_data_dialog.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_tokens.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -90,14 +92,21 @@ class _SilexgisSyncSettingsPageState
                     },
                   ),
                   const SizedBox(height: 12),
+                  SilexgisFilesCard(
+                    profile: profile,
+                    onChanged: (changed) async {
+                      await ref
+                          .read(silexgisProfileRepositoryProvider)
+                          .save(changed);
+                      await _reload();
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   _RunCard(
                     profile: profile,
                     progress: progress,
-                    onSync: () =>
-                        ref.read(silexgisSyncControllerProvider).syncDefault(),
-                    onFullRead: () => ref
-                        .read(silexgisSyncControllerProvider)
-                        .syncDefault(fromBeginning: true),
+                    onSync: () => _sync(),
+                    onFullRead: () => _sync(fromBeginning: true),
                   ),
                   if (progress.needsAttention) ...<Widget>[
                     const SizedBox(height: 12),
@@ -110,6 +119,21 @@ class _SilexgisSyncSettingsPageState
   }
 
   // ------------------------------------------------------------------ actions
+
+  /// Runs the default profile. The question about mobile data is asked from
+  /// here, and an answer the caver chose to remember shows in the settings
+  /// once the run is over.
+  Future<void> _sync({bool fromBeginning = false}) async {
+    await ref
+        .read(silexgisSyncControllerProvider)
+        .syncDefault(
+          fromBeginning: fromBeginning,
+          decider: SilexgisMobileDataDialogDecider(
+            () => mounted ? context : null,
+          ),
+        );
+    if (mounted) await _reload();
+  }
 
   Future<void> _editProfile([SilexgisProfile? existing]) async {
     final edited = await showDialog<SilexgisProfile>(

@@ -1523,5 +1523,16 @@
   "silexgis_files_too_large": "{count} are larger than the server accepts",
   "silexgis_files_type": "{count} are of a type the server does not accept",
   "silexgis_files_missing": "{count} are no longer on this device",
-  "silexgis_files_failed": "{count} were interrupted; the next sync carries on"
+  "silexgis_files_failed": "{count} were interrupted; the next sync carries on",
+  "silexgis_files_send": "Send photos and documents",
+  "silexgis_files_send_desc": "Off, only caves and places are sent; your photos and documents stay on this device.",
+  "silexgis_files_wifi_only": "Only over Wi-Fi",
+  "silexgis_files_wifi_only_desc": "Files wait for Wi-Fi; everything without a file still goes. A phone's hotspot counts as Wi-Fi.",
+  "silexgis_files_ask": "Ask before using mobile data",
+  "silexgis_files_ask_desc": "Off, files simply wait for Wi-Fi.",
+  "silexgis_mobile_data_title": "Send files over mobile data?",
+  "silexgis_mobile_data_body": "{count} photos and documents ({size}) are ready to send, and this device is not on Wi-Fi.",
+  "silexgis_mobile_data_remember": "Remember my choice",
+  "silexgis_mobile_data_send": "Send now",
+  "silexgis_mobile_data_wait": "Wait for Wi-Fi"
 }

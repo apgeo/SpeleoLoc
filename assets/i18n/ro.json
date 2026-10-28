@@ -1522,5 +1522,16 @@
   "silexgis_files_too_large": "{count} sunt mai mari decât acceptă serverul",
   "silexgis_files_type": "{count} sunt de un tip pe care serverul nu îl acceptă",
   "silexgis_files_missing": "{count} nu mai sunt pe acest dispozitiv",
-  "silexgis_files_failed": "{count} au fost întrerupte; următoarea sincronizare continuă"
+  "silexgis_files_failed": "{count} au fost întrerupte; următoarea sincronizare continuă",
+  "silexgis_files_send": "Trimite fotografiile și documentele",
+  "silexgis_files_send_desc": "Oprit, se trimit doar peșterile și locurile; fotografiile și documentele rămân pe acest dispozitiv.",
+  "silexgis_files_wifi_only": "Doar prin Wi-Fi",
+  "silexgis_files_wifi_only_desc": "Fișierele așteaptă Wi-Fi; tot ce nu are fișier pleacă oricum. Hotspotul unui telefon contează ca Wi-Fi.",
+  "silexgis_files_ask": "Întreabă înainte de a folosi datele mobile",
+  "silexgis_files_ask_desc": "Oprit, fișierele doar așteaptă Wi-Fi.",
+  "silexgis_mobile_data_title": "Trimiți fișierele prin date mobile?",
+  "silexgis_mobile_data_body": "{count} fotografii și documente ({size}) sunt gata de trimis, iar acest dispozitiv nu este conectat la Wi-Fi.",
+  "silexgis_mobile_data_remember": "Ține minte alegerea",
+  "silexgis_mobile_data_send": "Trimite acum",
+  "silexgis_mobile_data_wait": "Așteaptă Wi-Fi"
 }

@@ -20,6 +20,8 @@ import 'package:speleoloc/services/documentation_byte_edit_service.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/cave_geo_service.dart';
 import 'package:speleoloc/services/location/location_service.dart';
+import 'package:speleoloc/services/network/connectivity_network_kind_probe.dart';
+import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/geo_transfer/place_transfer_service.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/tile_disk_cache.dart';
@@ -330,8 +332,15 @@ final silexgisSyncControllerProvider =
         tokens: ref.watch(silexgisTokenStoreProvider),
         copies: ref.watch(silexgisFileCopyRepositoryProvider),
         serverLinks: ref.watch(silexgisServerLinksProvider),
+        networkProbe: ref.watch(networkKindProbeProvider),
       ),
     );
+
+/// Which kind of network the device is on, for settings that keep files for
+/// Wi-Fi.
+final networkKindProbeProvider = Provider<NetworkKindProbe>(
+  (ref) => ConnectivityNetworkKindProbe(),
+);
 
 /// The configured server profiles, re-read whenever the settings page asks.
 final silexgisProfilesProvider = FutureProvider<List<SilexgisProfile>>(
