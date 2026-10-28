@@ -2,6 +2,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_rasters_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 
@@ -60,6 +61,7 @@ class SilexgisSyncProgress {
     this.reviews = const SilexgisReviewCounts(),
     this.files = const SilexgisFilesReport(),
     this.trips,
+    this.rasters,
   });
 
   const SilexgisSyncProgress.idle() : this(phase: SilexgisSyncPhase.idle);
@@ -102,6 +104,10 @@ class SilexgisSyncProgress {
   /// What reading the trip recordings did, once it has finished.
   final SilexgisTripsApplied? trips;
 
+  /// What reading the raster maps and fetching their pictures did, once it
+  /// has finished.
+  final SilexgisRastersReport? rasters;
+
   bool get isRunning =>
       phase != SilexgisSyncPhase.idle &&
       phase != SilexgisSyncPhase.completed &&
@@ -113,15 +119,18 @@ class SilexgisSyncProgress {
 
   /// True when the caver has something to decide or should know about: a row
   /// was refused, a conflict needs merging, something was carried and not
-  /// stored, rows wait on a reviewer or on the caver's choice, files wait, or
-  /// a recording read could not be stored beside one of the same name.
+  /// stored, rows wait on a reviewer or on the caver's choice, files wait, a
+  /// recording or map read could not be stored beside one of the same name,
+  /// or a map's picture could not be fetched.
   bool get needsAttention =>
       refusals.isNotEmpty ||
       (download?.unresolved.isNotEmpty ?? false) ||
       (upload?.duplicates.isNotEmpty ?? false) ||
       !reviews.isEmpty ||
       files.held > 0 ||
-      (trips?.collisions.isNotEmpty ?? false);
+      (trips?.collisions.isNotEmpty ?? false) ||
+      (rasters?.applied.collisions.isNotEmpty ?? false) ||
+      (rasters?.pictures.notFetched ?? 0) > 0;
 
   SilexgisSyncProgress copyWith({
     SilexgisSyncPhase? phase,
@@ -138,6 +147,7 @@ class SilexgisSyncProgress {
     SilexgisReviewCounts? reviews,
     SilexgisFilesReport? files,
     SilexgisTripsApplied? trips,
+    SilexgisRastersReport? rasters,
   }) => SilexgisSyncProgress(
     phase: phase ?? this.phase,
     message: message ?? this.message,
@@ -153,5 +163,6 @@ class SilexgisSyncProgress {
     reviews: reviews ?? this.reviews,
     files: files ?? this.files,
     trips: trips ?? this.trips,
+    rasters: rasters ?? this.rasters,
   );
 }

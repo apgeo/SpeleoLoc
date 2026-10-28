@@ -31,6 +31,8 @@ class SilexgisSyncReportCard extends StatelessWidget {
     final duplicates = progress.upload?.duplicates ?? const [];
     final reviews = progress.reviews;
     final tripCollisions = progress.trips?.collisions ?? const [];
+    final mapCollisions = progress.rasters?.applied.collisions ?? const [];
+    final picturesMissing = progress.rasters?.pictures.notFetched ?? 0;
 
     return Card(
       child: Column(
@@ -116,6 +118,29 @@ class SilexgisSyncReportCard extends StatelessWidget {
                 }),
               ),
               subtitle: Text(LocServ.inst.t('silexgis_trip_collisions_desc')),
+            ),
+          if (mapCollisions.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.map_outlined),
+              title: Text(
+                LocServ.inst.t('silexgis_raster_collisions', <String, String>{
+                  'count': '${mapCollisions.length}',
+                }),
+              ),
+              subtitle: Text(LocServ.inst.t('silexgis_raster_collisions_desc')),
+            ),
+          if (picturesMissing > 0)
+            ListTile(
+              leading: const Icon(Icons.image_not_supported_outlined),
+              title: Text(
+                LocServ.inst.t(
+                  'silexgis_raster_pictures_missing',
+                  <String, String>{'count': '$picturesMissing'},
+                ),
+              ),
+              subtitle: Text(
+                LocServ.inst.t('silexgis_raster_pictures_missing_desc'),
+              ),
             ),
         ],
       ),

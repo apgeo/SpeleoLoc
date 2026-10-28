@@ -1,4 +1,5 @@
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -17,6 +18,7 @@ class SilexgisSession {
     required this.auth,
     required this.api,
     required this.transfers,
+    this.files,
   });
 
   /// A session signed in with the refresh token kept in [tokens].
@@ -34,6 +36,7 @@ class SilexgisSession {
       auth: auth,
       api: SilexgisSyncApi(http),
       transfers: SilexgisTransferApi(http),
+      files: SilexgisFileFetcher(baseUri: profile.baseUri),
     );
   }
 
@@ -42,4 +45,8 @@ class SilexgisSession {
 
   /// The resumable transfer routes, for staging file bytes.
   final SilexgisTransferApi transfers;
+
+  /// Opens the signed file addresses the installation hands out. Null in a
+  /// session that never fetches a file.
+  final SilexgisFileFetcher? files;
 }

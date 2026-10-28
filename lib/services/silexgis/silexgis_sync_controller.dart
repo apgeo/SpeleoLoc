@@ -24,6 +24,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dar
 import 'package:speleoloc/services/silexgis/silexgis_document_links_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
@@ -34,10 +35,13 @@ import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_maps_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_picture_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_pins_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_upload_answers.dart';
+import 'package:speleoloc/services/silexgis/silexgis_rasters_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
@@ -419,6 +423,50 @@ class SilexgisSyncController extends ChangeNotifier {
             rowsApplied: _progress.rowsApplied + report.applied.changed,
             rowsDeleted: _progress.rowsDeleted + report.applied.removed,
             trips: report.applied,
+          ),
+        );
+      });
+    }
+
+    // After the features and the catalogue, so a map finds its cave, a pin
+    // its place and a picture its description.
+    if (capabilities.servesRasters) {
+      await _readPart('the raster maps', () async {
+        final report = await SilexgisRastersRunner(
+          api: session.api,
+          localState: _localState,
+          applier: SilexgisRasterApplier(
+            db: _db,
+            logger: _logger,
+            localState: _localState,
+            heldRows: _heldRows,
+            rasters: _rasters,
+            catalogue: _catalogue,
+            profileUuid: profile.profileUuid,
+          ),
+          pictures: capabilities.servesDocuments
+              ? SilexgisRasterPictureFetcher(
+                  db: _db,
+                  logger: _logger,
+                  api: session.api,
+                  fetcher:
+                      session.files ??
+                      SilexgisFileFetcher(baseUri: profile.baseUri),
+                  localState: _localState,
+                  catalogue: _catalogue,
+                  copies: _copies,
+                  rasters: _rasters,
+                  baseDir: _documentsDir,
+                  profileUuid: profile.profileUuid,
+                )
+              : null,
+          profileUuid: profile.profileUuid,
+        ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
+        _emit(
+          _progress.copyWith(
+            rowsApplied: _progress.rowsApplied + report.applied.changed,
+            rowsDeleted: _progress.rowsDeleted + report.applied.removed,
+            rasters: report,
           ),
         );
       });
