@@ -13,14 +13,18 @@ import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -226,6 +230,18 @@ void main() {
       ),
       localState: localState,
       heldRows: heldRows,
+      placer: buildSilexgisServerRowPlacer(
+        db: db,
+        logger: logger,
+        localState: localState,
+        heldRows: heldRows,
+        caves: caves,
+        places: places,
+        catalogue: SilexgisDocumentCatalogueRepository(db),
+        trips: SilexgisTripStateRepository(db),
+        rasters: SilexgisRasterStateRepository(db),
+        clock: clock,
+      ),
       profileUuid: profile.profileUuid,
     ).run(setId, capabilities: capabilities);
   }
@@ -309,39 +325,35 @@ void main() {
       },
     );
 
-    test(
-      'an accepted edit reads the feature stream again from the beginning',
-      () async {
-        // The acceptance may be partial, field by field, and nothing in it
-        // says so yet: only a full read brings the server's row.
-        await heldEntranceEdit();
-        await localState.writeSetState(
+    test('an edit accepted whole keeps every stream\'s position', () async {
+      // The row as written is the device's version: nothing to read again.
+      await heldEntranceEdit();
+      await localState.writeSetState(
+        profile.profileUuid,
+        setId,
+        cursor: 'features-c9',
+        setRevision: 1,
+      );
+
+      await readReviews(<Map<String, Object?>>[
+        reviewsPage(<Map<String, Object?>>[
+          decision('review-1', 'accepted', revision: decidedAt),
+        ]),
+      ]);
+
+      expect(
+        (await localState.readSetState(profile.profileUuid, setId)).cursor,
+        'features-c9',
+      );
+      expect(
+        (await localState.readStreamCursor(
           profile.profileUuid,
           setId,
-          cursor: 'features-c9',
-          setRevision: 1,
-        );
-
-        await readReviews(<Map<String, Object?>>[
-          reviewsPage(<Map<String, Object?>>[
-            decision('review-1', 'accepted', revision: decidedAt),
-          ]),
-        ]);
-
-        expect(
-          (await localState.readSetState(profile.profileUuid, setId)).cursor,
-          isNull,
-        );
-        expect(
-          (await localState.readStreamCursor(
-            profile.profileUuid,
-            setId,
-            SyncStream.reviews,
-          )).cursor,
-          'reviews-c1',
-        );
-      },
-    );
+          SyncStream.reviews,
+        )).cursor,
+        'reviews-c1',
+      );
+    });
 
     test('an accepted create keeps the feature stream\'s position', () async {
       await heldNewCave();

@@ -3,24 +3,35 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_place_repository.dart';
+import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
+import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_row_placer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_upload_answers.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 import 'decisions_fixture.dart';
+import 'scripted_client.dart';
+import 'token_source.dart';
 
 /// One upload section, as far as putting the server's row of an item back in
 /// place of the caver's goes.
@@ -73,6 +84,13 @@ void main() {
   );
   const agreedRevision = '2026-10-27T10:00:00.000Z';
   const serverRevision = '2026-10-28T09:00:00.000Z';
+  const acceptedRevision = '2026-10-28T08:59:00.000Z';
+  const capabilities = SilexgisCapabilities(
+    contractVersion: 1,
+    pageSizeMax: 500,
+    uploadRowsMax: 500,
+    features: <String>['download', 'upload', 'reviews'],
+  );
   final clock = FakeClock(DateTime.utc(2026, 10, 28, 8));
 
   late AppDatabase db;
@@ -82,6 +100,7 @@ void main() {
   late SilexgisDocumentCatalogueRepository catalogue;
   late SilexgisTripStateRepository trips;
   late SilexgisDecisionsService decisions;
+  late SilexgisServerRowPlacer placer;
 
   final caveId = Uuid.v7();
   final placeId = Uuid.v7();
@@ -103,6 +122,18 @@ void main() {
     heldRows = SilexgisHeldRowRepository(db, clock: clock);
     catalogue = SilexgisDocumentCatalogueRepository(db);
     trips = SilexgisTripStateRepository(db);
+    placer = buildSilexgisServerRowPlacer(
+      db: db,
+      logger: logger,
+      localState: localState,
+      heldRows: heldRows,
+      caves: CaveRepository(db, currentUser, logger, clock: clock),
+      places: CavePlaceRepository(db, currentUser, logger, clock: clock),
+      catalogue: catalogue,
+      trips: trips,
+      rasters: SilexgisRasterStateRepository(db),
+      clock: clock,
+    );
     decisions = buildDecisionsService(
       db: db,
       logger: logger,
@@ -536,6 +567,52 @@ void main() {
     return reviewId;
   }
 
+  /// Reads one page of the reviews stream holding [reviews].
+  Future<void> readReviews(List<Map<String, Object?>> reviews) =>
+      SilexgisReviewRunner(
+        db: db,
+        api: SilexgisSyncApi(
+          SilexgisHttp(
+            baseUri: profile.baseUri,
+            tokens: FixedTokenSource(),
+            client: ScriptedClient(<ScriptedResponse>[
+              ScriptedResponse.json(
+                path: SilexgisContract.reviewsPath(setId),
+                json: <String, Object?>{
+                  'setRevision': 1,
+                  'settings': const <String, Object?>{},
+                  'reviews': reviews,
+                  'nextCursor': 'reviews-c1',
+                  'hasMore': false,
+                },
+              ),
+            ]),
+          ),
+        ),
+        localState: localState,
+        heldRows: heldRows,
+        placer: placer,
+        profileUuid: profile.profileUuid,
+      ).run(setId, capabilities: capabilities);
+
+  /// [s]'s item accepted under [reviewId].
+  Map<String, Object?> accepted(
+    _Section s,
+    String reviewId,
+    Uuid id, {
+    bool partial = false,
+    Map<String, Object?>? current,
+  }) => <String, Object?>{
+    'reviewId': reviewId,
+    'entity': s.section.wireName,
+    'rowId': id.toString(),
+    'outcome': 'accepted',
+    'decidedAt': serverRevision,
+    'revision': acceptedRevision,
+    if (partial) 'partial': true,
+    'current': ?current,
+  };
+
   // ------------------------------------------------------------------- tests
 
   for (final s in sections) {
@@ -611,6 +688,91 @@ void main() {
       );
     });
   }
+
+  for (final s in sections) {
+    group('${s.name} accepted', () {
+      test('whole, keeps the caver\'s row and stores the revision', () async {
+        final (id, sentAt) = await s.make();
+        final reviewId = await hold(s, id, sentAt);
+
+        await readReviews(<Map<String, Object?>>[accepted(s, reviewId, id)]);
+
+        expect(await s.read(id), s.localValue);
+        expect(await heldRows.readAll(profile.profileUuid), isEmpty);
+        final stored = (await localState.readRevisions(
+          profile.profileUuid,
+        ))[id]!;
+        expect(stored.revision, acceptedRevision);
+        expect(stored.localUpdatedAt, sentAt);
+        expect(await positions(), allBut(s.stream, drop: false));
+      });
+
+      test('in part, is replaced by the server\'s row it hands over', () async {
+        final (id, sentAt) = await s.make();
+        final reviewId = await hold(s, id, sentAt);
+        await db.delete(db.changeLog).go();
+
+        await readReviews(<Map<String, Object?>>[
+          accepted(s, reviewId, id, partial: true, current: s.current(id)),
+        ]);
+
+        expect(await s.read(id), s.serverValue);
+        expect(await heldRows.readAll(profile.profileUuid), isEmpty);
+        if (s.hasRevision) {
+          expect(
+            await localState.readRevision(profile.profileUuid, id),
+            serverRevision,
+          );
+        }
+        expect(await db.select(db.changeLog).get(), isEmpty);
+        expect(await positions(), allBut(s.stream, drop: false));
+      });
+
+      test('in part without the server\'s row, reads that stream alone from '
+          'the beginning', () async {
+        final (id, sentAt) = await s.make();
+        final reviewId = await hold(s, id, sentAt);
+
+        await readReviews(<Map<String, Object?>>[
+          accepted(s, reviewId, id, partial: true),
+        ]);
+
+        expect(await s.read(id), s.localValue);
+        expect(await heldRows.readAll(profile.profileUuid), isEmpty);
+        // Stored as agreeing with the row as sent, so the read from the
+        // beginning writes over it.
+        final stored = (await localState.readRevisions(
+          profile.profileUuid,
+        ))[id]!;
+        expect(stored.revision, acceptedRevision);
+        expect(stored.agreesWith(sentAt), isTrue);
+        expect(await positions(), allBut(s.stream));
+      });
+    });
+  }
+
+  test('an edit accepted in part and edited here since stays the caver\'s, '
+      'to go up against the server\'s revision', () async {
+    final s = sections.firstWhere(
+      (s) => s.section == SyncUploadSection.tripRecordings,
+    );
+    final (id, sentAt) = await s.make();
+    final reviewId = await hold(s, id, sentAt);
+    clock.advance(const Duration(minutes: 5));
+    final editedAgain = clock.nowMs();
+    await (db.update(db.caveTrips)..where((t) => t.uuid.equalsValue(id))).write(
+      CaveTripsCompanion(updatedAt: Value(editedAgain)),
+    );
+
+    await readReviews(<Map<String, Object?>>[
+      accepted(s, reviewId, id, partial: true, current: s.current(id)),
+    ]);
+
+    expect(await s.read(id), s.localValue);
+    final stored = (await localState.readRevisions(profile.profileUuid))[id]!;
+    expect(stored.revision, acceptedRevision);
+    expect(stored.agreesWith(editedAgain), isFalse);
+  });
 
   test('a document\'s catalogue copy follows the server\'s too', () async {
     final s = sections.firstWhere(

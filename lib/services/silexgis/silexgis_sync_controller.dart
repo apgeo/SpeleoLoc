@@ -44,6 +44,7 @@ import 'package:speleoloc/services/silexgis/silexgis_raster_upload_answers.dart'
 import 'package:speleoloc/services/silexgis/silexgis_rasters_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_applier.dart';
@@ -485,6 +486,17 @@ class SilexgisSyncController extends ChangeNotifier {
           api: session.api,
           localState: _localState,
           heldRows: _heldRows,
+          placer: buildSilexgisServerRowPlacer(
+            db: _db,
+            logger: _logger,
+            localState: _localState,
+            heldRows: _heldRows,
+            caves: _caves,
+            places: _places,
+            catalogue: _catalogue,
+            trips: _trips,
+            rasters: _rasters,
+          ),
           profileUuid: profile.profileUuid,
         ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
       });

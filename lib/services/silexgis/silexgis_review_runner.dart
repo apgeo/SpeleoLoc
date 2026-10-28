@@ -2,10 +2,10 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
-import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_row_placer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -36,23 +36,30 @@ class SilexgisReviewReport {
 /// decision about the earlier one — `superseded` among them — no longer
 /// concerns it. A reviewer may also change their mind, so the same review can
 /// arrive twice; the decision read last is the one that stands.
+///
+/// An edit accepted whole is the device's version, and keeps it. An edit
+/// accepted in part is replaced by the server's row, from the decision or,
+/// when it does not come, from reading that section's stream again.
 class SilexgisReviewRunner {
   SilexgisReviewRunner({
     required AppDatabase db,
     required SilexgisSyncApi api,
     required SilexgisLocalStateRepository localState,
     required SilexgisHeldRowRepository heldRows,
+    required SilexgisServerRowPlacer placer,
     required String profileUuid,
   }) : _db = db,
        _api = api,
        _localState = localState,
        _heldRows = heldRows,
+       _placer = placer,
        _profileUuid = profileUuid;
 
   final AppDatabase _db;
   final SilexgisSyncApi _api;
   final SilexgisLocalStateRepository _localState;
   final SilexgisHeldRowRepository _heldRows;
+  final SilexgisServerRowPlacer _placer;
   final String _profileUuid;
   final _log = AppLogger.of('SilexgisReviewRunner');
 
@@ -116,18 +123,6 @@ class SilexgisReviewRunner {
     switch (review.outcome) {
       case SyncReviewOutcome.accepted:
         final revision = review.revision;
-        // A reviewer may accept part of a feature edit, field by field, and
-        // the answer cannot say which part yet. The server's row is then
-        // neither the device's nor what it held before, and an incremental
-        // read would never bring it: the feature stream is read again from
-        // the beginning. A create is accepted whole, and a removal has no row
-        // left to differ.
-        final wasEdit =
-            held.section == SyncUploadSection.rows &&
-            !held.isDelete &&
-            await _localState.readRevision(_profileUuid, held.entityUuid) !=
-                null;
-        if (wasEdit) await _localState.dropCursor(_profileUuid, setId);
         if (held.isDelete) {
           await _localState.forgetRevisions(_profileUuid, <Uuid>[
             held.entityUuid,
@@ -148,6 +143,13 @@ class SilexgisReviewRunner {
         await _heldRows.clear(_profileUuid, held.section, <Uuid>[
           held.entityUuid,
         ]);
+        if (review.partial && !held.isDelete) {
+          // The fields the reviewer left out keep the server's earlier
+          // values, which the device's row does not show. Written after the
+          // revision, so a row the caver has edited again since stays theirs
+          // and goes up against it.
+          await _placer.place(_profileUuid, setId, held, review.current);
+        }
         return SyncReviewOutcome.accepted;
 
       case SyncReviewOutcome.rejected:
