@@ -365,14 +365,12 @@ void main() {
         ours,
         recorded,
         // Stated because the device knows them: the size is checked against
-        // the staged bytes, the capture time stands only where the file
-        // states none, and the edit time is provenance.
-        deliberateAdditions: <String>{
-          'sizeBytes',
-          'capturedAt',
-          'clientUpdatedAt',
-        },
+        // the staged bytes, and the edit time is provenance.
+        deliberateAdditions: <String>{'sizeBytes', 'clientUpdatedAt'},
       );
+      // The row's creation time is when the file came onto the device, not
+      // when it was captured, so no capture time is claimed for it.
+      expect(ours.containsKey('capturedAt'), isFalse);
       // No base revision and no removal flag: absent says "new" and "not
       // removed" exactly as the recording does.
       expect(ours.containsKey('baseRevision'), isFalse);

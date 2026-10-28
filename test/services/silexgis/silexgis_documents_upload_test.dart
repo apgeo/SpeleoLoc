@@ -342,6 +342,9 @@ void main() {
       expect(row['title'], 'IMG_0001.jpg');
       expect(row['description'], 'Shaft');
       expect(row.containsKey('baseRevision'), isFalse);
+      // The row was made when the file came onto the device; that is not
+      // when it was captured, so no capture time is claimed.
+      expect(row.containsKey('capturedAt'), isFalse);
       final link = sentSection(client, SyncUploadSection.documentLinks).single;
       expect(link, <String, Object?>{
         'documentId': id.toString(),

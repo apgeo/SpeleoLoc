@@ -29,12 +29,12 @@ class SilexgisStagedContent {
 ///   with new content. An edit names [SyncUploadDocument.baseVersionId]
 ///   whenever the revision is known, and then needs no hash at all; a copy
 ///   without location or a drawn picture is only ever edited that way.
+/// - No capture time. A row's creation time is when the file came onto this
+///   device — the import, for a picked file — and the server keeps a stated
+///   capture time wherever the file states none, so sending it would assert
+///   a moment nobody witnessed. The file's own metadata is the better witness.
 class SilexgisDocumentRowComposer {
   const SilexgisDocumentRowComposer();
-
-  /// The kinds of file whose creation time here stands for when it was
-  /// captured, when the file itself says nothing.
-  static const Set<String> _capturedKinds = <String>{'photo', 'video', 'audio'};
 
   /// The row for [document], or null when no row can safely be sent for it.
   SyncUploadDocument? compose(
@@ -64,9 +64,6 @@ class SilexgisDocumentRowComposer {
         sha256: content.sha256,
         sizeBytes: content.sizeBytes,
         stagedUploadId: content.transferId,
-        capturedAt: _capturedKinds.contains(row.fileType)
-            ? _iso(row.createdAt)
-            : null,
         createdByDeviceUserId: author,
         clientUpdatedAt: updatedAt,
       );
