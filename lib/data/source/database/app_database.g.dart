@@ -21449,6 +21449,652 @@ class SilexgisTripEntryCompanion
   }
 }
 
+class SilexgisRasterEntry extends Table
+    with TableInfo<SilexgisRasterEntry, SilexgisRasterEntryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisRasterEntry(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> entityUuid =
+      GeneratedColumn<Uint8List>(
+        'entity_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisRasterEntry.$converterentityUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> mapUuid =
+      GeneratedColumn<Uint8List>(
+        'map_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisRasterEntry.$convertermapUuid);
+  static const VerificationMeta _isPinMeta = const VerificationMeta('isPin');
+  late final GeneratedColumn<bool> isPin = GeneratedColumn<bool>(
+    'is_pin',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _receivedMeta = const VerificationMeta(
+    'received',
+  );
+  late final GeneratedColumn<bool> received = GeneratedColumn<bool>(
+    'received',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _sentMeta = const VerificationMeta('sent');
+  late final GeneratedColumn<bool> sent = GeneratedColumn<bool>(
+    'sent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> documentId =
+      GeneratedColumn<Uint8List>(
+        'document_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      ).withConverter<Uuid?>(SilexgisRasterEntry.$converterdocumentIdn);
+  static const VerificationMeta _pictureVersionMeta = const VerificationMeta(
+    'pictureVersion',
+  );
+  late final GeneratedColumn<String> pictureVersion = GeneratedColumn<String>(
+    'picture_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _pictureSha256Meta = const VerificationMeta(
+    'pictureSha256',
+  );
+  late final GeneratedColumn<String> pictureSha256 = GeneratedColumn<String>(
+    'picture_sha256',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List> areaId =
+      GeneratedColumn<Uint8List>(
+        'area_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      ).withConverter<Uuid?>(SilexgisRasterEntry.$converterareaIdn);
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    entityUuid,
+    mapUuid,
+    isPin,
+    received,
+    sent,
+    documentId,
+    pictureVersion,
+    pictureSha256,
+    areaId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_raster_entry';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisRasterEntryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('is_pin')) {
+      context.handle(
+        _isPinMeta,
+        isPin.isAcceptableOrUnknown(data['is_pin']!, _isPinMeta),
+      );
+    }
+    if (data.containsKey('received')) {
+      context.handle(
+        _receivedMeta,
+        received.isAcceptableOrUnknown(data['received']!, _receivedMeta),
+      );
+    }
+    if (data.containsKey('sent')) {
+      context.handle(
+        _sentMeta,
+        sent.isAcceptableOrUnknown(data['sent']!, _sentMeta),
+      );
+    }
+    if (data.containsKey('picture_version')) {
+      context.handle(
+        _pictureVersionMeta,
+        pictureVersion.isAcceptableOrUnknown(
+          data['picture_version']!,
+          _pictureVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('picture_sha256')) {
+      context.handle(
+        _pictureSha256Meta,
+        pictureSha256.isAcceptableOrUnknown(
+          data['picture_sha256']!,
+          _pictureSha256Meta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, entityUuid};
+  @override
+  SilexgisRasterEntryData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisRasterEntryData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      entityUuid: SilexgisRasterEntry.$converterentityUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}entity_uuid'],
+        )!,
+      ),
+      mapUuid: SilexgisRasterEntry.$convertermapUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}map_uuid'],
+        )!,
+      ),
+      isPin: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pin'],
+      )!,
+      received: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}received'],
+      )!,
+      sent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}sent'],
+      )!,
+      documentId: SilexgisRasterEntry.$converterdocumentIdn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}document_id'],
+        ),
+      ),
+      pictureVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}picture_version'],
+      ),
+      pictureSha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}picture_sha256'],
+      ),
+      areaId: SilexgisRasterEntry.$converterareaIdn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}area_id'],
+        ),
+      ),
+    );
+  }
+
+  @override
+  SilexgisRasterEntry createAlias(String alias) {
+    return SilexgisRasterEntry(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterentityUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertermapUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterdocumentId =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $converterdocumentIdn =
+      NullAwareTypeConverter.wrap($converterdocumentId);
+  static TypeConverter<Uuid, Uint8List> $converterareaId =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $converterareaIdn =
+      NullAwareTypeConverter.wrap($converterareaId);
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, entity_uuid)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisRasterEntryData extends DataClass
+    implements Insertable<SilexgisRasterEntryData> {
+  final String profileUuid;
+  final Uuid entityUuid;
+  final Uuid mapUuid;
+  final bool isPin;
+  final bool received;
+  final bool sent;
+  final Uuid? documentId;
+  final String? pictureVersion;
+  final String? pictureSha256;
+  final Uuid? areaId;
+  const SilexgisRasterEntryData({
+    required this.profileUuid,
+    required this.entityUuid,
+    required this.mapUuid,
+    required this.isPin,
+    required this.received,
+    required this.sent,
+    this.documentId,
+    this.pictureVersion,
+    this.pictureSha256,
+    this.areaId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$converterentityUuid.toSql(entityUuid),
+      );
+    }
+    {
+      map['map_uuid'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$convertermapUuid.toSql(mapUuid),
+      );
+    }
+    map['is_pin'] = Variable<bool>(isPin);
+    map['received'] = Variable<bool>(received);
+    map['sent'] = Variable<bool>(sent);
+    if (!nullToAbsent || documentId != null) {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$converterdocumentIdn.toSql(documentId),
+      );
+    }
+    if (!nullToAbsent || pictureVersion != null) {
+      map['picture_version'] = Variable<String>(pictureVersion);
+    }
+    if (!nullToAbsent || pictureSha256 != null) {
+      map['picture_sha256'] = Variable<String>(pictureSha256);
+    }
+    if (!nullToAbsent || areaId != null) {
+      map['area_id'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$converterareaIdn.toSql(areaId),
+      );
+    }
+    return map;
+  }
+
+  SilexgisRasterEntryCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisRasterEntryCompanion(
+      profileUuid: Value(profileUuid),
+      entityUuid: Value(entityUuid),
+      mapUuid: Value(mapUuid),
+      isPin: Value(isPin),
+      received: Value(received),
+      sent: Value(sent),
+      documentId: documentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(documentId),
+      pictureVersion: pictureVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pictureVersion),
+      pictureSha256: pictureSha256 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pictureSha256),
+      areaId: areaId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(areaId),
+    );
+  }
+
+  factory SilexgisRasterEntryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisRasterEntryData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      entityUuid: serializer.fromJson<Uuid>(json['entity_uuid']),
+      mapUuid: serializer.fromJson<Uuid>(json['map_uuid']),
+      isPin: serializer.fromJson<bool>(json['is_pin']),
+      received: serializer.fromJson<bool>(json['received']),
+      sent: serializer.fromJson<bool>(json['sent']),
+      documentId: serializer.fromJson<Uuid?>(json['document_id']),
+      pictureVersion: serializer.fromJson<String?>(json['picture_version']),
+      pictureSha256: serializer.fromJson<String?>(json['picture_sha256']),
+      areaId: serializer.fromJson<Uuid?>(json['area_id']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'entity_uuid': serializer.toJson<Uuid>(entityUuid),
+      'map_uuid': serializer.toJson<Uuid>(mapUuid),
+      'is_pin': serializer.toJson<bool>(isPin),
+      'received': serializer.toJson<bool>(received),
+      'sent': serializer.toJson<bool>(sent),
+      'document_id': serializer.toJson<Uuid?>(documentId),
+      'picture_version': serializer.toJson<String?>(pictureVersion),
+      'picture_sha256': serializer.toJson<String?>(pictureSha256),
+      'area_id': serializer.toJson<Uuid?>(areaId),
+    };
+  }
+
+  SilexgisRasterEntryData copyWith({
+    String? profileUuid,
+    Uuid? entityUuid,
+    Uuid? mapUuid,
+    bool? isPin,
+    bool? received,
+    bool? sent,
+    Value<Uuid?> documentId = const Value.absent(),
+    Value<String?> pictureVersion = const Value.absent(),
+    Value<String?> pictureSha256 = const Value.absent(),
+    Value<Uuid?> areaId = const Value.absent(),
+  }) => SilexgisRasterEntryData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    entityUuid: entityUuid ?? this.entityUuid,
+    mapUuid: mapUuid ?? this.mapUuid,
+    isPin: isPin ?? this.isPin,
+    received: received ?? this.received,
+    sent: sent ?? this.sent,
+    documentId: documentId.present ? documentId.value : this.documentId,
+    pictureVersion: pictureVersion.present
+        ? pictureVersion.value
+        : this.pictureVersion,
+    pictureSha256: pictureSha256.present
+        ? pictureSha256.value
+        : this.pictureSha256,
+    areaId: areaId.present ? areaId.value : this.areaId,
+  );
+  SilexgisRasterEntryData copyWithCompanion(SilexgisRasterEntryCompanion data) {
+    return SilexgisRasterEntryData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      entityUuid: data.entityUuid.present
+          ? data.entityUuid.value
+          : this.entityUuid,
+      mapUuid: data.mapUuid.present ? data.mapUuid.value : this.mapUuid,
+      isPin: data.isPin.present ? data.isPin.value : this.isPin,
+      received: data.received.present ? data.received.value : this.received,
+      sent: data.sent.present ? data.sent.value : this.sent,
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      pictureVersion: data.pictureVersion.present
+          ? data.pictureVersion.value
+          : this.pictureVersion,
+      pictureSha256: data.pictureSha256.present
+          ? data.pictureSha256.value
+          : this.pictureSha256,
+      areaId: data.areaId.present ? data.areaId.value : this.areaId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisRasterEntryData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('mapUuid: $mapUuid, ')
+          ..write('isPin: $isPin, ')
+          ..write('received: $received, ')
+          ..write('sent: $sent, ')
+          ..write('documentId: $documentId, ')
+          ..write('pictureVersion: $pictureVersion, ')
+          ..write('pictureSha256: $pictureSha256, ')
+          ..write('areaId: $areaId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    entityUuid,
+    mapUuid,
+    isPin,
+    received,
+    sent,
+    documentId,
+    pictureVersion,
+    pictureSha256,
+    areaId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisRasterEntryData &&
+          other.profileUuid == this.profileUuid &&
+          other.entityUuid == this.entityUuid &&
+          other.mapUuid == this.mapUuid &&
+          other.isPin == this.isPin &&
+          other.received == this.received &&
+          other.sent == this.sent &&
+          other.documentId == this.documentId &&
+          other.pictureVersion == this.pictureVersion &&
+          other.pictureSha256 == this.pictureSha256 &&
+          other.areaId == this.areaId);
+}
+
+class SilexgisRasterEntryCompanion
+    extends UpdateCompanion<SilexgisRasterEntryData> {
+  final Value<String> profileUuid;
+  final Value<Uuid> entityUuid;
+  final Value<Uuid> mapUuid;
+  final Value<bool> isPin;
+  final Value<bool> received;
+  final Value<bool> sent;
+  final Value<Uuid?> documentId;
+  final Value<String?> pictureVersion;
+  final Value<String?> pictureSha256;
+  final Value<Uuid?> areaId;
+  final Value<int> rowid;
+  const SilexgisRasterEntryCompanion({
+    this.profileUuid = const Value.absent(),
+    this.entityUuid = const Value.absent(),
+    this.mapUuid = const Value.absent(),
+    this.isPin = const Value.absent(),
+    this.received = const Value.absent(),
+    this.sent = const Value.absent(),
+    this.documentId = const Value.absent(),
+    this.pictureVersion = const Value.absent(),
+    this.pictureSha256 = const Value.absent(),
+    this.areaId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisRasterEntryCompanion.insert({
+    required String profileUuid,
+    required Uuid entityUuid,
+    required Uuid mapUuid,
+    this.isPin = const Value.absent(),
+    this.received = const Value.absent(),
+    this.sent = const Value.absent(),
+    this.documentId = const Value.absent(),
+    this.pictureVersion = const Value.absent(),
+    this.pictureSha256 = const Value.absent(),
+    this.areaId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       entityUuid = Value(entityUuid),
+       mapUuid = Value(mapUuid);
+  static Insertable<SilexgisRasterEntryData> custom({
+    Expression<String>? profileUuid,
+    Expression<Uint8List>? entityUuid,
+    Expression<Uint8List>? mapUuid,
+    Expression<bool>? isPin,
+    Expression<bool>? received,
+    Expression<bool>? sent,
+    Expression<Uint8List>? documentId,
+    Expression<String>? pictureVersion,
+    Expression<String>? pictureSha256,
+    Expression<Uint8List>? areaId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (entityUuid != null) 'entity_uuid': entityUuid,
+      if (mapUuid != null) 'map_uuid': mapUuid,
+      if (isPin != null) 'is_pin': isPin,
+      if (received != null) 'received': received,
+      if (sent != null) 'sent': sent,
+      if (documentId != null) 'document_id': documentId,
+      if (pictureVersion != null) 'picture_version': pictureVersion,
+      if (pictureSha256 != null) 'picture_sha256': pictureSha256,
+      if (areaId != null) 'area_id': areaId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisRasterEntryCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<Uuid>? entityUuid,
+    Value<Uuid>? mapUuid,
+    Value<bool>? isPin,
+    Value<bool>? received,
+    Value<bool>? sent,
+    Value<Uuid?>? documentId,
+    Value<String?>? pictureVersion,
+    Value<String?>? pictureSha256,
+    Value<Uuid?>? areaId,
+    Value<int>? rowid,
+  }) {
+    return SilexgisRasterEntryCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      entityUuid: entityUuid ?? this.entityUuid,
+      mapUuid: mapUuid ?? this.mapUuid,
+      isPin: isPin ?? this.isPin,
+      received: received ?? this.received,
+      sent: sent ?? this.sent,
+      documentId: documentId ?? this.documentId,
+      pictureVersion: pictureVersion ?? this.pictureVersion,
+      pictureSha256: pictureSha256 ?? this.pictureSha256,
+      areaId: areaId ?? this.areaId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (entityUuid.present) {
+      map['entity_uuid'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$converterentityUuid.toSql(entityUuid.value),
+      );
+    }
+    if (mapUuid.present) {
+      map['map_uuid'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$convertermapUuid.toSql(mapUuid.value),
+      );
+    }
+    if (isPin.present) {
+      map['is_pin'] = Variable<bool>(isPin.value);
+    }
+    if (received.present) {
+      map['received'] = Variable<bool>(received.value);
+    }
+    if (sent.present) {
+      map['sent'] = Variable<bool>(sent.value);
+    }
+    if (documentId.present) {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$converterdocumentIdn.toSql(documentId.value),
+      );
+    }
+    if (pictureVersion.present) {
+      map['picture_version'] = Variable<String>(pictureVersion.value);
+    }
+    if (pictureSha256.present) {
+      map['picture_sha256'] = Variable<String>(pictureSha256.value);
+    }
+    if (areaId.present) {
+      map['area_id'] = Variable<Uint8List>(
+        SilexgisRasterEntry.$converterareaIdn.toSql(areaId.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisRasterEntryCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('mapUuid: $mapUuid, ')
+          ..write('isPin: $isPin, ')
+          ..write('received: $received, ')
+          ..write('sent: $sent, ')
+          ..write('documentId: $documentId, ')
+          ..write('pictureVersion: $pictureVersion, ')
+          ..write('pictureSha256: $pictureSha256, ')
+          ..write('areaId: $areaId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -21552,6 +22198,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_silexgis_trip_entry_recording',
     'CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording ON silexgis_trip_entry (profile_uuid, recording_uuid)',
   );
+  late final SilexgisRasterEntry silexgisRasterEntry = SilexgisRasterEntry(
+    this,
+  );
+  late final Index idxSilexgisRasterEntryMap = Index(
+    'idx_silexgis_raster_entry_map',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_raster_entry_map ON silexgis_raster_entry (profile_uuid, map_uuid)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -21604,6 +22257,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     silexgisServerLink,
     silexgisTripEntry,
     idxSilexgisTripEntryRecording,
+    silexgisRasterEntry,
+    idxSilexgisRasterEntryMap,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -39364,6 +40019,325 @@ typedef $SilexgisTripEntryProcessedTableManager =
       SilexgisTripEntryData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisRasterEntryCreateCompanionBuilder =
+    SilexgisRasterEntryCompanion Function({
+      required String profileUuid,
+      required Uuid entityUuid,
+      required Uuid mapUuid,
+      Value<bool> isPin,
+      Value<bool> received,
+      Value<bool> sent,
+      Value<Uuid?> documentId,
+      Value<String?> pictureVersion,
+      Value<String?> pictureSha256,
+      Value<Uuid?> areaId,
+      Value<int> rowid,
+    });
+typedef $SilexgisRasterEntryUpdateCompanionBuilder =
+    SilexgisRasterEntryCompanion Function({
+      Value<String> profileUuid,
+      Value<Uuid> entityUuid,
+      Value<Uuid> mapUuid,
+      Value<bool> isPin,
+      Value<bool> received,
+      Value<bool> sent,
+      Value<Uuid?> documentId,
+      Value<String?> pictureVersion,
+      Value<String?> pictureSha256,
+      Value<Uuid?> areaId,
+      Value<int> rowid,
+    });
+
+class $SilexgisRasterEntryFilterComposer
+    extends Composer<_$AppDatabase, SilexgisRasterEntry> {
+  $SilexgisRasterEntryFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get mapUuid =>
+      $composableBuilder(
+        column: $table.mapUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<bool> get isPin => $composableBuilder(
+    column: $table.isPin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get received => $composableBuilder(
+    column: $table.received,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get sent => $composableBuilder(
+    column: $table.sent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid?, Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get pictureVersion => $composableBuilder(
+    column: $table.pictureVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pictureSha256 => $composableBuilder(
+    column: $table.pictureSha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid?, Uuid, Uint8List> get areaId =>
+      $composableBuilder(
+        column: $table.areaId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+}
+
+class $SilexgisRasterEntryOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisRasterEntry> {
+  $SilexgisRasterEntryOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get entityUuid => $composableBuilder(
+    column: $table.entityUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get mapUuid => $composableBuilder(
+    column: $table.mapUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPin => $composableBuilder(
+    column: $table.isPin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get received => $composableBuilder(
+    column: $table.received,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get sent => $composableBuilder(
+    column: $table.sent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pictureVersion => $composableBuilder(
+    column: $table.pictureVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pictureSha256 => $composableBuilder(
+    column: $table.pictureSha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get areaId => $composableBuilder(
+    column: $table.areaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisRasterEntryAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisRasterEntry> {
+  $SilexgisRasterEntryAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get mapUuid =>
+      $composableBuilder(column: $table.mapUuid, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPin =>
+      $composableBuilder(column: $table.isPin, builder: (column) => column);
+
+  GeneratedColumn<bool> get received =>
+      $composableBuilder(column: $table.received, builder: (column) => column);
+
+  GeneratedColumn<bool> get sent =>
+      $composableBuilder(column: $table.sent, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid?, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get pictureVersion => $composableBuilder(
+    column: $table.pictureVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pictureSha256 => $composableBuilder(
+    column: $table.pictureSha256,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid?, Uint8List> get areaId =>
+      $composableBuilder(column: $table.areaId, builder: (column) => column);
+}
+
+class $SilexgisRasterEntryTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisRasterEntry,
+          SilexgisRasterEntryData,
+          $SilexgisRasterEntryFilterComposer,
+          $SilexgisRasterEntryOrderingComposer,
+          $SilexgisRasterEntryAnnotationComposer,
+          $SilexgisRasterEntryCreateCompanionBuilder,
+          $SilexgisRasterEntryUpdateCompanionBuilder,
+          (
+            SilexgisRasterEntryData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisRasterEntry,
+              SilexgisRasterEntryData
+            >,
+          ),
+          SilexgisRasterEntryData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisRasterEntryTableManager(_$AppDatabase db, SilexgisRasterEntry table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisRasterEntryFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisRasterEntryOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisRasterEntryAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<Uuid> entityUuid = const Value.absent(),
+                Value<Uuid> mapUuid = const Value.absent(),
+                Value<bool> isPin = const Value.absent(),
+                Value<bool> received = const Value.absent(),
+                Value<bool> sent = const Value.absent(),
+                Value<Uuid?> documentId = const Value.absent(),
+                Value<String?> pictureVersion = const Value.absent(),
+                Value<String?> pictureSha256 = const Value.absent(),
+                Value<Uuid?> areaId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisRasterEntryCompanion(
+                profileUuid: profileUuid,
+                entityUuid: entityUuid,
+                mapUuid: mapUuid,
+                isPin: isPin,
+                received: received,
+                sent: sent,
+                documentId: documentId,
+                pictureVersion: pictureVersion,
+                pictureSha256: pictureSha256,
+                areaId: areaId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required Uuid entityUuid,
+                required Uuid mapUuid,
+                Value<bool> isPin = const Value.absent(),
+                Value<bool> received = const Value.absent(),
+                Value<bool> sent = const Value.absent(),
+                Value<Uuid?> documentId = const Value.absent(),
+                Value<String?> pictureVersion = const Value.absent(),
+                Value<String?> pictureSha256 = const Value.absent(),
+                Value<Uuid?> areaId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisRasterEntryCompanion.insert(
+                profileUuid: profileUuid,
+                entityUuid: entityUuid,
+                mapUuid: mapUuid,
+                isPin: isPin,
+                received: received,
+                sent: sent,
+                documentId: documentId,
+                pictureVersion: pictureVersion,
+                pictureSha256: pictureSha256,
+                areaId: areaId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisRasterEntryProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisRasterEntry,
+      SilexgisRasterEntryData,
+      $SilexgisRasterEntryFilterComposer,
+      $SilexgisRasterEntryOrderingComposer,
+      $SilexgisRasterEntryAnnotationComposer,
+      $SilexgisRasterEntryCreateCompanionBuilder,
+      $SilexgisRasterEntryUpdateCompanionBuilder,
+      (
+        SilexgisRasterEntryData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisRasterEntry,
+          SilexgisRasterEntryData
+        >,
+      ),
+      SilexgisRasterEntryData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -39450,4 +40424,6 @@ class $AppDatabaseManager {
       $SilexgisServerLinkTableManager(_db, _db.silexgisServerLink);
   $SilexgisTripEntryTableManager get silexgisTripEntry =>
       $SilexgisTripEntryTableManager(_db, _db.silexgisTripEntry);
+  $SilexgisRasterEntryTableManager get silexgisRasterEntry =>
+      $SilexgisRasterEntryTableManager(_db, _db.silexgisRasterEntry);
 }

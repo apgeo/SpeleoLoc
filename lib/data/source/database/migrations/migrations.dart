@@ -996,6 +996,29 @@ class V28ToV29Migration extends SchemaMigration {
   }
 }
 
+/// v29 → v30.
+///
+/// Adds the local-only SilexGIS record of the raster maps and pins an
+/// installation holds: which map a pin is on, whether a row came from the
+/// installation or was sent from here, and which local picture stands for the
+/// installation's. Local only, like the other SilexGIS state tables; nothing
+/// is moved into it.
+class V29ToV30Migration extends SchemaMigration {
+  const V29ToV30Migration();
+
+  @override
+  int get toVersion => 30;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisRasterEntry);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_raster_entry_map '
+      'ON silexgis_raster_entry(profile_uuid, map_uuid)',
+    );
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1048,6 +1071,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V26ToV27Migration(),
   V27ToV28Migration(),
   V28ToV29Migration(),
+  V29ToV30Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

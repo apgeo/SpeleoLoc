@@ -738,3 +738,41 @@ CREATE TABLE IF NOT EXISTS silexgis_trip_entry (
 
 CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording
     ON silexgis_trip_entry(profile_uuid, recording_uuid);
+
+-- Table: silexgis_raster_entry
+-- LOCAL ONLY. What this device knows about a raster map or one of its pins on
+-- one installation, beyond the revision `silexgis_row_revision` keeps.
+--
+-- `map_uuid` is the map itself for a map, and the pin's map for a pin — kept
+-- because a local delete is physical, and a pin's removal still has to name
+-- its map once the row is gone.
+-- `received` marks a row first met by download, and `sent` a row this device
+-- has sent. A pin missing from its map's list is removed here only when it
+-- was received and never sent, because a pin of a withheld place is missing
+-- exactly as a removed one is.
+-- `document_id` is the installation's document holding the map's picture.
+-- `picture_sha256` is the hash of the local picture that stands for the
+-- installation's current one — the bytes fetched or sent — so a picture is
+-- sent again only when the caver gave the map another, and a copy fetched
+-- without its location data never goes back up. Null while the picture is
+-- still to fetch. `picture_version` is the catalogue's revision of those
+-- bytes, when known.
+-- `area_id` is the area the installation names when this device holds no
+-- such area: the row's own column stays null, and the id is sent back so an
+-- edit never clears it there.
+CREATE TABLE IF NOT EXISTS silexgis_raster_entry (
+    profile_uuid     TEXT(36) NOT NULL,
+    entity_uuid      BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    map_uuid         BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    is_pin           BOOLEAN NOT NULL DEFAULT 0,
+    received         BOOLEAN NOT NULL DEFAULT 0,
+    sent             BOOLEAN NOT NULL DEFAULT 0,
+    document_id      BLOB MAPPED BY `const UuidConverter()`,
+    picture_version  TEXT(36),
+    picture_sha256   TEXT(64),
+    area_id          BLOB MAPPED BY `const UuidConverter()`,
+    PRIMARY KEY (profile_uuid, entity_uuid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_raster_entry_map
+    ON silexgis_raster_entry(profile_uuid, map_uuid);
