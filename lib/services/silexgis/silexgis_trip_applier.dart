@@ -126,40 +126,63 @@ class SilexgisTripApplier {
   Future<SilexgisTripsApplied> applyPage(
     SyncTripsPage page, {
     Future<void> Function()? afterwards,
-  }) async {
+  }) => _suspendedTransaction(() async {
     var applied = const SilexgisTripsApplied();
-    await _logger.runSuspended(() async {
-      await _db.transaction(() async {
-        _agreed = await _localState.readRevisions(_profileUuid);
-        _held = <Uuid>{
-          ...(await _heldRows.readSection(
-            _profileUuid,
-            SyncUploadSection.tripRecordings,
-          )).keys,
-          ...(await _heldRows.readSection(
-            _profileUuid,
-            SyncUploadSection.tripPoints,
-          )).keys,
-        };
-        _states = await _trips.readAll(_profileUuid);
-        _users = <Uuid>{
-          for (final user in await _db.select(_db.users).get()) user.uuid,
-        };
-        final namesRemovedScans = page.pointTombstones != null;
-        for (final recording in page.recordings) {
-          applied = applied.plus(
-            await _recording(recording, namesRemovedScans: namesRemovedScans),
-          );
-        }
-        applied = applied.plus(await _tombstones(page.tombstones));
-        applied = applied.plus(
-          await _pointTombstones(page.pointTombstones ?? const []),
-        );
-        await afterwards?.call();
-      });
-    });
+    final namesRemovedScans = page.pointTombstones != null;
+    for (final recording in page.recordings) {
+      applied = applied.plus(
+        await _recording(recording, namesRemovedScans: namesRemovedScans),
+      );
+    }
+    applied = applied.plus(await _tombstones(page.tombstones));
+    applied = applied.plus(
+      await _pointTombstones(page.pointTombstones ?? const []),
+    );
+    await afterwards?.call();
     return applied;
-  }
+  });
+
+  /// Writes one scan of [recording] that did not come on a page — the
+  /// server's own version, handed back with a reviewer's decision — exactly
+  /// as a page's scans are written. Nothing is written when the recording is
+  /// not on this device.
+  Future<SilexgisTripsApplied> applyScan(
+    Uuid recording,
+    SyncTripPoint server,
+  ) => _suspendedTransaction(() async {
+    final id = Uuid.tryParse(server.id);
+    if (id == null ||
+        await (_db.select(
+              _db.caveTrips,
+            )..where((t) => t.uuid.equalsValue(recording))).getSingleOrNull() ==
+            null) {
+      return const SilexgisTripsApplied();
+    }
+    return _scan(recording, id, server);
+  });
+
+  Future<SilexgisTripsApplied> _suspendedTransaction(
+    Future<SilexgisTripsApplied> Function() body,
+  ) => _logger.runSuspended(
+    () => _db.transaction(() async {
+      _agreed = await _localState.readRevisions(_profileUuid);
+      _held = <Uuid>{
+        ...(await _heldRows.readSection(
+          _profileUuid,
+          SyncUploadSection.tripRecordings,
+        )).keys,
+        ...(await _heldRows.readSection(
+          _profileUuid,
+          SyncUploadSection.tripPoints,
+        )).keys,
+      };
+      _states = await _trips.readAll(_profileUuid);
+      _users = <Uuid>{
+        for (final user in await _db.select(_db.users).get()) user.uuid,
+      };
+      return body();
+    }),
+  );
 
   // -------------------------------------------------------------- recordings
 

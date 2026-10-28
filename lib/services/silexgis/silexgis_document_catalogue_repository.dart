@@ -143,6 +143,23 @@ class SilexgisDocumentCatalogueRepository {
     );
   }
 
+  /// Replaces the copy held of [document] — the server's own version, handed
+  /// back with a reviewer's decision. A document the catalogue does not list
+  /// is not added: it is listed only while something here hangs on it.
+  /// Returns whether a copy was held.
+  Future<bool> refreshDocument(
+    String profileUuid,
+    SyncDocument document,
+  ) async {
+    final documentId = Uuid.tryParse(document.id);
+    if (documentId == null ||
+        await this.document(profileUuid, documentId) == null) {
+      return false;
+    }
+    await _writeDocument(profileUuid, documentId, document);
+    return true;
+  }
+
   /// Forgets [documentId] and every link to it — the installation said it is
   /// no longer there for this account. The next read says whether it is
   /// listed again.

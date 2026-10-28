@@ -139,37 +139,57 @@ class SilexgisRasterApplier {
   Future<SilexgisRastersApplied> applyPage(
     SyncRastersPage page, {
     Future<void> Function()? afterwards,
-  }) async {
+  }) => _suspendedTransaction(() async {
     var applied = const SilexgisRastersApplied();
-    await _logger.runSuspended(() async {
-      await _db.transaction(() async {
-        _agreed = await _localState.readRevisions(_profileUuid);
-        _held = <Uuid>{
-          ...(await _heldRows.readSection(
-            _profileUuid,
-            SyncUploadSection.rasterMaps,
-          )).keys,
-          ...(await _heldRows.readSection(
-            _profileUuid,
-            SyncUploadSection.rasterPins,
-          )).keys,
-        };
-        _states = await _rasters.readAll(_profileUuid);
-        final namesRemovedPins = page.pinTombstones != null;
-        for (final map in page.maps) {
-          applied = applied.plus(
-            await _map(map, namesRemovedPins: namesRemovedPins),
-          );
-        }
-        applied = applied.plus(await _tombstones(page.tombstones));
-        applied = applied.plus(
-          await _pinTombstones(page.pinTombstones ?? const []),
-        );
-        await afterwards?.call();
-      });
-    });
+    final namesRemovedPins = page.pinTombstones != null;
+    for (final map in page.maps) {
+      applied = applied.plus(
+        await _map(map, namesRemovedPins: namesRemovedPins),
+      );
+    }
+    applied = applied.plus(await _tombstones(page.tombstones));
+    applied = applied.plus(
+      await _pinTombstones(page.pinTombstones ?? const []),
+    );
+    await afterwards?.call();
     return applied;
-  }
+  });
+
+  /// Writes one pin of [map] that did not come on a page — the server's own
+  /// version, handed back with a reviewer's decision — exactly as a page's
+  /// pins are written. Nothing is written when the map is not on this device.
+  Future<SilexgisRastersApplied> applyPin(Uuid map, SyncRasterPin server) =>
+      _suspendedTransaction(() async {
+        final id = Uuid.tryParse(server.id);
+        if (id == null ||
+            await (_db.select(
+                  _db.rasterMaps,
+                )..where((t) => t.uuid.equalsValue(map))).getSingleOrNull() ==
+                null) {
+          return const SilexgisRastersApplied();
+        }
+        return _pin(map, id, server);
+      });
+
+  Future<SilexgisRastersApplied> _suspendedTransaction(
+    Future<SilexgisRastersApplied> Function() body,
+  ) => _logger.runSuspended(
+    () => _db.transaction(() async {
+      _agreed = await _localState.readRevisions(_profileUuid);
+      _held = <Uuid>{
+        ...(await _heldRows.readSection(
+          _profileUuid,
+          SyncUploadSection.rasterMaps,
+        )).keys,
+        ...(await _heldRows.readSection(
+          _profileUuid,
+          SyncUploadSection.rasterPins,
+        )).keys,
+      };
+      _states = await _rasters.readAll(_profileUuid);
+      return body();
+    }),
+  );
 
   // -------------------------------------------------------------------- maps
 

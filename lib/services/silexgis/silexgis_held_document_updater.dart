@@ -44,40 +44,67 @@ class SilexgisHeldDocumentUpdater {
     await _logger.runSuspended(() async {
       final agreed = await _localState.readRevisions(_profileUuid);
       for (final document in documents) {
-        final id = Uuid.tryParse(document.id);
-        if (id == null) continue;
-        final stored = agreed[id];
-        if (stored == null || stored.entityTable != entityTable) continue;
-        final row = await (_db.select(
-          _db.documentationFiles,
-        )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
-        if (row == null || !stored.agreesWith(row.updatedAt)) continue;
-
-        final title = SilexgisDocumentTitle.local(document.title);
-        var localUpdatedAt = row.updatedAt;
-        if (row.title != title || row.description != document.description) {
-          localUpdatedAt = _clock.nowMs();
-          await (_db.update(
-            _db.documentationFiles,
-          )..where((t) => t.uuid.equalsValue(id))).write(
-            DocumentationFilesCompanion(
-              title: Value(title),
-              description: Value(document.description),
-              updatedAt: Value(localUpdatedAt),
-            ),
-          );
-          changed++;
-        }
-        await _localState.writeRevision(
-          _profileUuid,
-          id,
-          entityTable: entityTable,
-          wireKind: wireKind,
-          revision: revisionOf(document),
-          localUpdatedAt: localUpdatedAt,
-        );
+        if (await _follow(document, agreed) == _Followed.changed) changed++;
       }
     });
     return changed;
   }
+
+  /// Applies one [document] that did not come on a page — the server's own
+  /// version, handed back with a reviewer's decision. Returns whether the
+  /// local row now says what the server's does.
+  Future<bool> follow(SyncDocument document) => _logger.runSuspended(
+    () async =>
+        await _follow(
+          document,
+          await _localState.readRevisions(_profileUuid),
+        ) !=
+        _Followed.skipped,
+  );
+
+  Future<_Followed> _follow(
+    SyncDocument document,
+    Map<Uuid, StoredRevision> agreed,
+  ) async {
+    final id = Uuid.tryParse(document.id);
+    if (id == null) return _Followed.skipped;
+    final stored = agreed[id];
+    if (stored == null || stored.entityTable != entityTable) {
+      return _Followed.skipped;
+    }
+    final row = await (_db.select(
+      _db.documentationFiles,
+    )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
+    if (row == null || !stored.agreesWith(row.updatedAt)) {
+      return _Followed.skipped;
+    }
+
+    final title = SilexgisDocumentTitle.local(document.title);
+    var localUpdatedAt = row.updatedAt;
+    var followed = _Followed.unchanged;
+    if (row.title != title || row.description != document.description) {
+      localUpdatedAt = _clock.nowMs();
+      await (_db.update(
+        _db.documentationFiles,
+      )..where((t) => t.uuid.equalsValue(id))).write(
+        DocumentationFilesCompanion(
+          title: Value(title),
+          description: Value(document.description),
+          updatedAt: Value(localUpdatedAt),
+        ),
+      );
+      followed = _Followed.changed;
+    }
+    await _localState.writeRevision(
+      _profileUuid,
+      id,
+      entityTable: entityTable,
+      wireKind: wireKind,
+      revision: revisionOf(document),
+      localUpdatedAt: localUpdatedAt,
+    );
+    return followed;
+  }
 }
+
+enum _Followed { skipped, unchanged, changed }
