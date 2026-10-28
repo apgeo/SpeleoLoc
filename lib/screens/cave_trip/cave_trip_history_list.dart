@@ -7,7 +7,8 @@ import 'package:speleoloc/utils/localization.dart';
 /// The ended trips of a cave, with another phone's recordings — read from an
 /// installation — kept out of the way: hidden by default, counted, and shown
 /// with a badge once the caver turns them on. Another phone's recording that
-/// has not ended yet is listed with them, marked as still open.
+/// has not ended yet is listed with them, marked as still open, and one whose
+/// caver the installation names says who recorded it.
 class CaveTripHistoryList extends StatefulWidget {
   const CaveTripHistoryList({
     required this.trips,
@@ -107,6 +108,10 @@ class _CaveTripHistoryListState extends State<CaveTripHistoryList> {
                           ),
                           if (trip.tripEndedAt == null)
                             LocServ.inst.t('trip_still_open'),
+                          if (received?.recordedBy[trip.uuid] case final caver?)
+                            LocServ.inst.t('trip_recorded_by', <String, String>{
+                              'caver': caver,
+                            }),
                         ].join(' · '),
                       ),
                       trailing: Row(

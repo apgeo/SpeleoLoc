@@ -750,6 +750,7 @@
   "trip_installation_hidden": "{count} from {installation} hidden",
   "trip_from_installation": "Recorded on another phone, read from {installation}",
   "trip_still_open": "still open",
+  "trip_recorded_by": "recorded by {caver}",
   "trip_cave": "Cave",
   "trip_log_started": "Trip started: \"{title}\"",
   "trip_log_restarted": "Trip restarted",

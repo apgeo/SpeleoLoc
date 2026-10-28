@@ -82,6 +82,23 @@ void main() {
     expect(opened, <CaveTrip>[theirsA]);
   });
 
+  testWidgets('says who recorded one the installation names a caver for', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      from: SilexgisReceivedTrips(
+        installation: 'Club server',
+        recordings: <Uuid>{theirsA.uuid, theirsB.uuid},
+        recordedBy: <Uuid, String>{theirsA.uuid: 'Invented Caver'},
+      ),
+    );
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('recorded by Invented Caver'), findsOneWidget);
+  });
+
   group('another phone\'s open recording', () {
     final open = CaveTrip(
       uuid: Uuid.v7(),

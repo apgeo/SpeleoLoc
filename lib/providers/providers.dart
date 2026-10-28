@@ -311,6 +311,7 @@ final silexgisTripOriginServiceProvider = Provider<SilexgisTripOriginService>(
   (ref) => SilexgisTripOriginService(
     profiles: ref.watch(silexgisProfileRepositoryProvider),
     trips: SilexgisTripStateRepository(ref.watch(appDatabaseProvider)),
+    people: ref.watch(silexgisPeopleRepositoryProvider),
   ),
 );
 
