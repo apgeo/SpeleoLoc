@@ -49,9 +49,14 @@ Nothing has to be configured on the server, and any build can connect.
 3. Press **Sign in** on the server card, and sign in as
    `editor@test.local` with the password above.
 4. Press **Choose** to pick a selection. The account starts each day with
-   none, so first sign in to `https://silexgistest.speotopo.ro` in a browser as
-   `editor@test.local`, create a selection there, then come back and choose
-   it.
+   none, and the app cannot make one, so first make it in a browser:
+   - sign in to `https://silexgistest.speotopo.ro` as `editor@test.local`;
+   - open **Settings → Sync** and press **New selection**;
+   - give it a name and pick the caves the phone should carry;
+   - choose who **New records are visible to**, and the caving group when
+     that is the choice.
+
+   Then come back to the phone and choose it.
 5. Run a sync.
 
 The server card shows what the installation offers. On this one all of it is
