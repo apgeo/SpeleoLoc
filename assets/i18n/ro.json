@@ -748,6 +748,7 @@
   "trip_installation_show": "Arată turele de pe {installation}",
   "trip_installation_hidden": "{count} de pe {installation} ascunse",
   "trip_from_installation": "Înregistrată pe alt telefon, citită de pe {installation}",
+  "trip_still_open": "încă deschisă",
   "trip_cave": "Peșteră",
   "trip_log_started": "Tură începută: \"{title}\"",
   "trip_log_restarted": "Tură repornită",

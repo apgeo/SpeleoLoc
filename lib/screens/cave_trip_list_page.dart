@@ -48,7 +48,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
     ),
   ];
   Cave? _cave;
-  List<CaveTrip> _endedTrips = [];
+  List<CaveTrip> _listedTrips = [];
   Map<Uuid, int> _pointCounts = {};
   SilexgisReceivedTrips? _received;
 
@@ -92,21 +92,21 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
     final allTrips = await ref
         .read(caveTripRepositoryProvider)
         .getCaveTrips(widget.caveUuid);
-    final ended = allTrips.where((t) => t.tripEndedAt != null).toList();
+    final received = await ref
+        .read(silexgisTripOriginServiceProvider)
+        .received();
+    final listed = CaveTripHistoryList.listed(allTrips, received);
     Map<Uuid, int> counts = {};
-    for (final trip in ended) {
+    for (final trip in listed) {
       final points = await ref
           .read(caveTripRepositoryProvider)
           .getTripPoints(trip.uuid);
       counts[trip.uuid] = points.length;
     }
-    final received = await ref
-        .read(silexgisTripOriginServiceProvider)
-        .received();
     if (mounted) {
       setState(() {
         _cave = cave;
-        _endedTrips = ended;
+        _listedTrips = listed;
         _pointCounts = counts;
         _received = received;
       });
@@ -347,7 +347,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
         children: [
           KeyedSubtree(key: tourKeys['toolbar'], child: _buildToolbar()),
           if (activeTripId != null) _buildActiveTripCard(activeTripId),
-          if (_endedTrips.isNotEmpty)
+          if (_listedTrips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text(
@@ -358,7 +358,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
           Expanded(
             key: tourKeys['list'],
             child: CaveTripHistoryList(
-              trips: _endedTrips,
+              trips: _listedTrips,
               pointCounts: _pointCounts,
               received: _received,
               emptyText: activeTripId != null

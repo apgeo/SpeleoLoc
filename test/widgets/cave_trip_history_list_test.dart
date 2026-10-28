@@ -82,6 +82,74 @@ void main() {
     expect(opened, <CaveTrip>[theirsA]);
   });
 
+  group('another phone\'s open recording', () {
+    final open = CaveTrip(
+      uuid: Uuid.v7(),
+      caveUuid: caveId,
+      title: 'Club trip underway',
+      tripStartedAt: DateTime(2026, 10, 28, 8).millisecondsSinceEpoch,
+    );
+    final mineOpen = CaveTrip(
+      uuid: Uuid.v7(),
+      caveUuid: caveId,
+      title: 'My trip underway',
+      tripStartedAt: DateTime(2026, 10, 28, 9).millisecondsSinceEpoch,
+    );
+    final withOpen = SilexgisReceivedTrips(
+      installation: 'Club server',
+      recordings: <Uuid>{theirsA.uuid, open.uuid},
+    );
+
+    test('is listed with the ended trips; this device\'s own is not', () {
+      expect(
+        CaveTripHistoryList.listed(<CaveTrip>[
+          mine,
+          open,
+          mineOpen,
+          theirsA,
+        ], withOpen),
+        <CaveTrip>[mine, open, theirsA],
+      );
+      expect(
+        CaveTripHistoryList.listed(<CaveTrip>[mine, open, mineOpen], null),
+        <CaveTrip>[mine],
+      );
+    });
+
+    testWidgets('behind the same switch, marked as open and as the '
+        'installation\'s', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CaveTripHistoryList(
+              trips: CaveTripHistoryList.listed(<CaveTrip>[
+                mine,
+                open,
+                theirsA,
+              ], withOpen),
+              pointCounts: const <Uuid, int>{},
+              received: withOpen,
+              onOpen: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Club trip underway'), findsNothing);
+      expect(find.text('2 from Club server hidden'), findsOneWidget);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Club trip underway'), findsOneWidget);
+      expect(find.textContaining('still open'), findsOneWidget);
+      expect(
+        find.byTooltip('Recorded on another phone, read from Club server'),
+        findsNWidgets(2),
+      );
+    });
+  });
+
   testWidgets('without an installation every trip is listed as before', (
     tester,
   ) async {

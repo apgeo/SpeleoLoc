@@ -6,7 +6,8 @@ import 'package:speleoloc/utils/localization.dart';
 
 /// The ended trips of a cave, with another phone's recordings — read from an
 /// installation — kept out of the way: hidden by default, counted, and shown
-/// with a badge once the caver turns them on.
+/// with a badge once the caver turns them on. Another phone's recording that
+/// has not ended yet is listed with them, marked as still open.
 class CaveTripHistoryList extends StatefulWidget {
   const CaveTripHistoryList({
     required this.trips,
@@ -29,6 +30,18 @@ class CaveTripHistoryList extends StatefulWidget {
 
   @override
   State<CaveTripHistoryList> createState() => _CaveTripHistoryListState();
+
+  /// The trips of [all] the list shows: every ended one, and another phone's
+  /// open ones. This device's own open trip is the active trip, shown on its
+  /// own, and never listed here.
+  static List<CaveTrip> listed(
+    List<CaveTrip> all,
+    SilexgisReceivedTrips? received,
+  ) => <CaveTrip>[
+    for (final trip in all)
+      if (trip.tripEndedAt != null || (received?.contains(trip.uuid) ?? false))
+        trip,
+  ];
 }
 
 class _CaveTripHistoryListState extends State<CaveTripHistoryList> {
@@ -86,11 +99,15 @@ class _CaveTripHistoryListState extends State<CaveTripHistoryList> {
                     return ListTile(
                       title: Text(trip.title),
                       subtitle: Text(
-                        _dateFormat.format(
-                          DateTime.fromMillisecondsSinceEpoch(
-                            trip.tripStartedAt,
+                        <String>[
+                          _dateFormat.format(
+                            DateTime.fromMillisecondsSinceEpoch(
+                              trip.tripStartedAt,
+                            ),
                           ),
-                        ),
+                          if (trip.tripEndedAt == null)
+                            LocServ.inst.t('trip_still_open'),
+                        ].join(' · '),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
