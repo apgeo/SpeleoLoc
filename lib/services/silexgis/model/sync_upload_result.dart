@@ -110,6 +110,9 @@ class SyncRowResult {
       // A document: send its bytes again, then the row naming them.
       case SilexgisCodes.fileBytesMissing:
       case SilexgisCodes.fileHashMismatch:
+      // A scan: send its recording, or its place, first in the same upload.
+      case SilexgisCodes.recordingNotFound:
+      case SilexgisCodes.placeNotFound:
         return SilexgisAction.applyAndResubmit;
 
       case SilexgisCodes.idConflict:
@@ -118,6 +121,8 @@ class SyncRowResult {
       // resent. `access.create_forbidden` stands for an account that holds no
       // right to create at all, where choosing a club would change nothing.
       case SilexgisCodes.setUnbound:
+      // A recording in a cave this account does not have.
+      case SilexgisCodes.caveNotFound:
         return SilexgisAction.surfaceToUser;
 
       case SilexgisCodes.rowForbidden:

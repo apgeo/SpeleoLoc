@@ -117,6 +117,19 @@ class SilexgisCodes {
   /// for every case, so it says nothing about what exists.
   static const String targetNotFound = 'sync.target_not_found';
 
+  // One trip recording or scan inside a 200.
+
+  /// A recording names a cave this account does not have — not here, not a
+  /// cave, or not readable, answered alike.
+  static const String caveNotFound = 'sync.cave_not_found';
+
+  /// A scan's recording is not here, not readable, or was removed. Send the
+  /// recording first in the same upload.
+  static const String recordingNotFound = 'sync.recording_not_found';
+
+  /// A scan names a place that is not here or not readable, answered alike.
+  static const String placeNotFound = 'sync.place_not_found';
+
   // Sending file bytes ahead of an upload.
   static const String fileTooLarge = 'file.too_large';
   static const String fileTypeNotAccepted = 'file.type_not_accepted';

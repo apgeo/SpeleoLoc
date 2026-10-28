@@ -5,6 +5,7 @@ import 'package:speleoloc/services/silexgis/model/sync_file_links.dart';
 import 'package:speleoloc/services/silexgis/model/sync_people.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
+import 'package:speleoloc/services/silexgis/model/sync_trips.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
@@ -107,6 +108,22 @@ class SilexgisSyncApi {
   }) async => SyncDocumentsPage.fromJson(
     await _http.getJson(
       SilexgisContract.documentsPath(setId),
+      query: <String, String>{
+        'cursor': ?cursor,
+        if (pageSize != null) 'pageSize': '$pageSize',
+      },
+    ),
+  );
+
+  /// One page of the trip recordings, with their scans, on the trips stream's
+  /// own cursor.
+  Future<SyncTripsPage> trips(
+    String setId, {
+    String? cursor,
+    int? pageSize,
+  }) async => SyncTripsPage.fromJson(
+    await _http.getJson(
+      SilexgisContract.tripsPath(setId),
       query: <String, String>{
         'cursor': ?cursor,
         if (pageSize != null) 'pageSize': '$pageSize',
