@@ -279,11 +279,15 @@ void main() {
       expect(states[map]!.received, isTrue);
       expect(states[map]!.documentId, document);
       expect(states[map]!.pictureSha256, isNull);
-      // The frame the pins are in; the recording does not say how the
-      // renditions are turned.
+      // The frame the pins are in, and how the renditions are drawn from it.
       expect(
         states[map]!.pictureFrame,
-        const SilexgisPictureFrame(width: 64, height: 48),
+        const SilexgisPictureFrame(
+          width: 64,
+          height: 48,
+          mirrored: false,
+          turn: 0,
+        ),
       );
       expect(states[pin]!.mapUuid, map);
       expect(states[pin]!.pictureFrame, const SilexgisPictureFrame());
