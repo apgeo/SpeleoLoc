@@ -10,6 +10,7 @@ import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/raw_image_data.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
@@ -377,12 +378,24 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
   /// Builds the readonly [RasterMapPlacePointEditor] for the given image.
   /// Callers should wrap in [ClipRect] when `allowEditorOverflow` is false.
   Widget _buildEditorWidget(File file, String imagePath) {
+    return RasterMapPinsGate(
+      rasterMapUuid: _selectedRasterMap?.uuid,
+      places: _placesWithDefs,
+      builder: (context, places, _) => _buildEditor(file, imagePath, places),
+    );
+  }
+
+  Widget _buildEditor(
+    File file,
+    String imagePath,
+    List<CavePlaceWithDefinition> places,
+  ) {
     return RepaintBoundary(
       child: RasterMapPlacePointEditor(
         controller: _editorController,
         imageFile: file,
         imageProvider: _imageProviderCache[imagePath] ??= FileImage(file),
-        cavePlacesWithDefinitions: _placesWithDefs,
+        cavePlacesWithDefinitions: places,
         selectedRasterMapUuid: _selectedRasterMap?.uuid,
         rasterMaps: _rasterMaps,
         isReadonly: true,

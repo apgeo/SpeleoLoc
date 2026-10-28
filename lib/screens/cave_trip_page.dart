@@ -27,6 +27,7 @@ import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
@@ -1201,30 +1202,36 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         // Map editor
         Expanded(
           child: imageFile != null
-              ? RepaintBoundary(
-                  key: _mapRepaintKey,
-                  child: RasterMapPlacePointEditor(
-                    controller: _editorController,
-                    imageFile: imageFile,
-                    imageProvider: _imageProviderCache[imageFile.path] ??=
-                        FileImage(imageFile),
-                    cavePlacesWithDefinitions: _placesWithDefs,
-                    selectedRasterMapUuid: _selectedRasterMap?.uuid,
-                    rasterMaps: _rasterMaps,
-                    isReadonly: true,
-                    onFullScreenChanged: (isFullScreen) {
-                      setState(() => _isFullScreen = isFullScreen);
-                    },
-                    onSortCavePlacesRequested: _showCavePlacesSortDialog,
-                    onSortRasterMapsRequested: _showRasterMapSortDialog,
-                    onManageRasterMapsRequested: _openRasterMapsPage,
-                    onNavBarShowRasterMapsChanged: (v) =>
-                        setState(() => _navBarShowMaps = v),
-                    onNavBarShowCavePlacesChanged: (v) =>
-                        setState(() => _navBarShowPlaces = v),
-                    tripOverlay: visibleIds.isNotEmpty
-                        ? TripOverlayData(orderedCavePlaceIds: visibleIds)
-                        : null,
+              ? RasterMapPinsGate(
+                  rasterMapUuid: _selectedRasterMap?.uuid,
+                  places: _placesWithDefs,
+                  builder: (context, places, pinsFit) => RepaintBoundary(
+                    key: _mapRepaintKey,
+                    child: RasterMapPlacePointEditor(
+                      controller: _editorController,
+                      imageFile: imageFile,
+                      imageProvider: _imageProviderCache[imageFile.path] ??=
+                          FileImage(imageFile),
+                      cavePlacesWithDefinitions: places,
+                      selectedRasterMapUuid: _selectedRasterMap?.uuid,
+                      rasterMaps: _rasterMaps,
+                      isReadonly: true,
+                      onFullScreenChanged: (isFullScreen) {
+                        setState(() => _isFullScreen = isFullScreen);
+                      },
+                      onSortCavePlacesRequested: _showCavePlacesSortDialog,
+                      onSortRasterMapsRequested: _showRasterMapSortDialog,
+                      onManageRasterMapsRequested: _openRasterMapsPage,
+                      onNavBarShowRasterMapsChanged: (v) =>
+                          setState(() => _navBarShowMaps = v),
+                      onNavBarShowCavePlacesChanged: (v) =>
+                          setState(() => _navBarShowPlaces = v),
+                      // The trip is drawn through its places' pins, which
+                      // do not fit a reduced picture either.
+                      tripOverlay: pinsFit && visibleIds.isNotEmpty
+                          ? TripOverlayData(orderedCavePlaceIds: visibleIds)
+                          : null,
+                    ),
                   ),
                 )
               : Center(child: Text(LocServ.inst.t('no_raster_maps'))),

@@ -9,6 +9,8 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 /// Renders the "Raster maps" tab content for a single [RasterMap] in
@@ -98,6 +100,11 @@ class _CavePlaceMapTabState extends ConsumerState<CavePlaceMapTab> {
 
   Future<void> _definePlace() async {
     final rm = widget.rasterMap;
+    if (!await ref.read(rasterMapPinsFitProvider(rm.uuid).future)) {
+      SnackBarService.showWarning(LocServ.inst.t('raster_map_reduced_picture'));
+      return;
+    }
+    if (!mounted) return;
     _log.fine('_definePlace rasterMapUuid=${rm.uuid}');
 
     var cavePlaceUuid = widget.cavePlaceUuid;
@@ -163,16 +170,20 @@ class _CavePlaceMapTabState extends ConsumerState<CavePlaceMapTab> {
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: SizedBox(
                   height: 300,
-                  child: RasterMapPlacePointEditor(
-                    controller: RasterMapPlacePointEditorController(
-                      showLegend: false,
-                      showZoomControls: false,
-                      gestureZoomEnabled: false,
+                  child: RasterMapPinsGate(
+                    rasterMapUuid: widget.rasterMap.uuid,
+                    places: defs,
+                    builder: (context, places, _) => RasterMapPlacePointEditor(
+                      controller: RasterMapPlacePointEditorController(
+                        showLegend: false,
+                        showZoomControls: false,
+                        gestureZoomEnabled: false,
+                      ),
+                      imageFile: file,
+                      cavePlacesWithDefinitions: places,
+                      isReadonly: true,
+                      debugUi: false,
                     ),
-                    imageFile: file,
-                    cavePlacesWithDefinitions: defs,
-                    isReadonly: true,
-                    debugUi: false,
                   ),
                 ),
               );

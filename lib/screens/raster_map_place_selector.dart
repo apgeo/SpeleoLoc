@@ -10,6 +10,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_screen_mixin.dart';
@@ -592,47 +593,13 @@ class _RasterMapPlaceSelectorPageState
                 Expanded(
                   key: tourKeys['map'],
                   child: ClipRect(
-                    child: RasterMapPlacePointEditor(
-                      controller: _editorController,
-                      imageFile: _imageFile!,
-                      cavePlacesWithDefinitions: _placesWithDefinitions,
-                      initialImageX: _selectedDefinition?.xCoordinate
-                          ?.toDouble(),
-                      initialImageY: _selectedDefinition?.yCoordinate
-                          ?.toDouble(),
-                      isReadonly: widget.isReadonly,
-                      debugUi: DEBUG_UI,
-                      rasterMaps: _rasterMaps,
-                      selectedRasterMapUuid: _selectedRasterMap.uuid,
-                      navBarStyle: _compactNavBar
-                          ? const RasterMapNavBarStyle.compact()
-                          : const RasterMapNavBarStyle(),
-                      onRasterMapSelected: _onRasterMapSelected,
-                      onCavePlaceSelected: _onCavePlaceSelected,
-                      onAutoSaveRequested: _handleAutoSaveRequested,
-                      onRemoveDefinitionRequested: _handleRemoveDefinition,
-                      onSaveDefinitionRequested: widget.isReadonly
-                          ? null
-                          : _definePlace,
-                      caveUuid: widget.rasterMap.caveUuid,
-                      caveAreaTitles: _caveAreaTitles,
-                      groupPlacesByCaveArea:
-                          _cavePlaceSortOption.groupByCaveArea,
-                      onCavePlaceAdded: () {
-                        _loadDefinitionsForSelected();
-                      },
-                      onSortCavePlacesRequested: _showCavePlacesSortDialog,
-                      onSortRasterMapsRequested: _showSortDialog,
-                      onManageRasterMapsRequested: _openRasterMapsPage,
-                      onFullScreenChanged: (isFullScreen) {
-                        setState(() => _isFullScreen = isFullScreen);
-                      },
-                      onImagePointChanged: (x, y) {
-                        setState(() {
-                          _imageSelectedX = x;
-                          _imageSelectedY = y;
-                        });
-                      },
+                    child: RasterMapPinsGate(
+                      rasterMapUuid: _selectedRasterMap.uuid,
+                      places: _placesWithDefinitions,
+                      builder: (context, places, pinsFit) => _buildEditor(
+                        places,
+                        readonly: widget.isReadonly || !pinsFit,
+                      ),
                     ),
                   ),
                 ),
@@ -640,4 +607,45 @@ class _RasterMapPlaceSelectorPageState
             ),
     );
   }
+
+  Widget _buildEditor(
+    List<CavePlaceWithDefinition> places, {
+    required bool readonly,
+  }) => RasterMapPlacePointEditor(
+    controller: _editorController,
+    imageFile: _imageFile!,
+    cavePlacesWithDefinitions: places,
+    initialImageX: _selectedDefinition?.xCoordinate?.toDouble(),
+    initialImageY: _selectedDefinition?.yCoordinate?.toDouble(),
+    isReadonly: readonly,
+    debugUi: DEBUG_UI,
+    rasterMaps: _rasterMaps,
+    selectedRasterMapUuid: _selectedRasterMap.uuid,
+    navBarStyle: _compactNavBar
+        ? const RasterMapNavBarStyle.compact()
+        : const RasterMapNavBarStyle(),
+    onRasterMapSelected: _onRasterMapSelected,
+    onCavePlaceSelected: _onCavePlaceSelected,
+    onAutoSaveRequested: readonly ? null : _handleAutoSaveRequested,
+    onRemoveDefinitionRequested: readonly ? null : _handleRemoveDefinition,
+    onSaveDefinitionRequested: readonly ? null : _definePlace,
+    caveUuid: widget.rasterMap.caveUuid,
+    caveAreaTitles: _caveAreaTitles,
+    groupPlacesByCaveArea: _cavePlaceSortOption.groupByCaveArea,
+    onCavePlaceAdded: () {
+      _loadDefinitionsForSelected();
+    },
+    onSortCavePlacesRequested: _showCavePlacesSortDialog,
+    onSortRasterMapsRequested: _showSortDialog,
+    onManageRasterMapsRequested: _openRasterMapsPage,
+    onFullScreenChanged: (isFullScreen) {
+      setState(() => _isFullScreen = isFullScreen);
+    },
+    onImagePointChanged: (x, y) {
+      setState(() {
+        _imageSelectedX = x;
+        _imageSelectedY = y;
+      });
+    },
+  );
 }
