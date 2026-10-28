@@ -59,6 +59,9 @@ void main() {
         'mapType',
         'sortOrder',
         'documentId',
+        // The picture's stored pixel size is a frame, not a position.
+        'pictureWidth',
+        'pictureHeight',
         'revision',
         'pins',
       });
