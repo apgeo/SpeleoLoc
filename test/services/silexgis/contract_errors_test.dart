@@ -125,6 +125,38 @@ void main() {
     });
   });
 
+  group('16-errors/chunk-out-of-order', () {
+    final exchange = ContractExchange('16-errors/chunk-out-of-order');
+
+    test(
+      'a piece sent from the wrong offset is refused with the right one',
+      () {
+        expect(exchange.status, 409);
+        expect(exchange.requestLine, startsWith('PUT '));
+        expect(exchange.requestTarget, endsWith('?offset=470'));
+
+        final problem = SilexgisProblem.tryParse(
+          exchange.status,
+          exchange.responseBody,
+        )!;
+        expect(problem.code, SilexgisCodes.chunkOutOfOrder);
+        expect(problem.action, SilexgisAction.applyAndResubmit);
+        // The member is an integer beside the code, not a number in the detail.
+        expect(problem.expectedOffset, 460);
+      },
+    );
+
+    test('a refusal that names no offset reads as none', () {
+      final problem = SilexgisProblem.tryParse(409, <String, Object?>{
+        'title': 'Conflict',
+        'status': 409,
+        'code': 'upload.chunk_out_of_order',
+        'detail': 'The next piece starts at 460.',
+      })!;
+      expect(problem.expectedOffset, isNull);
+    });
+  });
+
   group('the two answers that carry no code', () {
     test('a 401 is re-auth even when the body says nothing useful', () {
       // Produced by authentication before the route runs, so no handler mints

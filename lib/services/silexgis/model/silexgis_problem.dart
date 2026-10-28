@@ -159,8 +159,8 @@ class SilexgisCodes {
   /// Not enough storage room left; staged bytes already count against it.
   static const String quotaExceeded = 'file.quota_exceeded';
 
-  /// The piece does not continue the file. Where it should start is asked
-  /// for again rather than read out of the detail.
+  /// The piece does not continue the file. The answer names where the next
+  /// one starts; when that answer was lost, the transfer's status does.
   static const String chunkOutOfOrder = 'upload.chunk_out_of_order';
   static const String sizeMismatch = 'upload.size_mismatch';
   static const String uploadIncomplete = 'upload.incomplete';
@@ -190,6 +190,7 @@ class SilexgisProblem {
     this.detail,
     this.traceId,
     this.type,
+    this.expectedOffset,
   });
 
   final int status;
@@ -205,6 +206,10 @@ class SilexgisProblem {
   final String? traceId;
 
   final String? type;
+
+  /// On a piece that does not continue the file: the offset the next piece
+  /// starts at. Absent on every other refusal.
+  final int? expectedOffset;
 
   /// Reads a problem document out of a decoded response body.
   ///
@@ -230,6 +235,7 @@ class SilexgisProblem {
           detail: map['detail'] as String?,
           traceId: map['traceId'] as String?,
           type: map['type'] as String?,
+          expectedOffset: (map['expectedOffset'] as num?)?.toInt(),
         );
       }
     }
