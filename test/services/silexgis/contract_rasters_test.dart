@@ -29,6 +29,9 @@ void main() {
       expect(page.hasMore, isFalse);
       expect(page.nextCursor, '<cursor>');
       expect(page.tombstones, isEmpty);
+      // Present and empty: no pin was removed, which is not the same as a
+      // server that does not name them.
+      expect(page.pinTombstones, isEmpty);
 
       final map = page.maps.single;
       expect(map.id, '<map>');
@@ -47,6 +50,27 @@ void main() {
       expect(pin.x, 120);
       expect(pin.y, 80);
       expect(pin.revision, '<timestamp>');
+    });
+
+    test('a page without the member reads as one that does not name pins', () {
+      final json = Map<String, Object?>.from(exchange.responseBody)
+        ..remove('pinTombstones');
+      expect(SyncRastersPage.fromJson(json).pinTombstones, isNull);
+    });
+
+    test('a removed pin names its map and the moment', () {
+      final json = Map<String, Object?>.from(exchange.responseBody)
+        ..['pinTombstones'] = <Object?>[
+          <String, Object?>{
+            'id': 'p-1',
+            'mapId': 'm-1',
+            'deletedAt': '2026-10-28T09:00:00.000Z',
+          },
+        ];
+      final tombstone = SyncRastersPage.fromJson(json).pinTombstones!.single;
+      expect(tombstone.id, 'p-1');
+      expect(tombstone.mapId, 'm-1');
+      expect(tombstone.deletedAt, '2026-10-28T09:00:00.000Z');
     });
 
     test('carries no position and no georeference', () {

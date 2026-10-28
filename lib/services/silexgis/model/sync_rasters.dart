@@ -63,6 +63,29 @@ class SyncRasterPin {
   );
 }
 
+/// A pin removed from a map, named by the rasters stream.
+///
+/// Only a pin the account would be given were it live is named; the removal
+/// of a pin of a withheld place stays silent.
+class SyncPinTombstone {
+  const SyncPinTombstone({
+    required this.id,
+    required this.mapId,
+    required this.deletedAt,
+  });
+
+  final String id;
+  final String mapId;
+  final String deletedAt;
+
+  static SyncPinTombstone fromJson(Map<String, Object?> json) =>
+      SyncPinTombstone(
+        id: json['id']! as String,
+        mapId: json['mapId']! as String,
+        deletedAt: json['deletedAt']! as String,
+      );
+}
+
 /// One map on the rasters stream, with its live pins.
 class SyncRasterMap {
   const SyncRasterMap({
@@ -121,6 +144,7 @@ class SyncRastersPage implements SyncStreamPage {
     required this.setRevision,
     required this.maps,
     required this.tombstones,
+    required this.pinTombstones,
     required this.nextCursor,
     required this.hasMore,
   });
@@ -129,9 +153,15 @@ class SyncRastersPage implements SyncStreamPage {
   final int setRevision;
   final List<SyncRasterMap> maps;
 
-  /// Maps removed after the cursor. A removed pin is not one: its map comes
-  /// again without it.
+  /// Maps removed after the cursor. A removed pin is not one; it is named in
+  /// [pinTombstones].
   final List<SyncTombstone> tombstones;
+
+  /// Pins removed after the cursor, **or null when the page has no such
+  /// member** — a server that does not name removed pins, whose map comes
+  /// again without the pin and says nothing more. An empty list is an answer:
+  /// no pin was removed, so a pin missing from a map's list is only withheld.
+  final List<SyncPinTombstone>? pinTombstones;
 
   @override
   final String? nextCursor;
@@ -148,6 +178,10 @@ class SyncRastersPage implements SyncStreamPage {
     tombstones: (json['tombstones'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((e) => SyncTombstone.fromJson(Map<String, Object?>.from(e)))
+        .toList(growable: false),
+    pinTombstones: (json['pinTombstones'] as List?)
+        ?.whereType<Map>()
+        .map((e) => SyncPinTombstone.fromJson(Map<String, Object?>.from(e)))
         .toList(growable: false),
     nextCursor: json['nextCursor'] as String?,
     hasMore: json['hasMore'] as bool? ?? false,

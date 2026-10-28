@@ -29,6 +29,9 @@ void main() {
       expect(page.hasMore, isFalse);
       expect(page.nextCursor, '<cursor>');
       expect(page.tombstones, isEmpty);
+      // Present and empty: no scan was removed, which is not the same as a
+      // server that does not name them.
+      expect(page.pointTombstones, isEmpty);
 
       final recording = page.recordings.single;
       expect(recording.id, '<recording>');
@@ -48,6 +51,27 @@ void main() {
       // A scan may name no place, and then names no author either here.
       expect(recording.points.last.placeId, isNull);
       expect(recording.points.last.createdByDeviceUserId, isNull);
+    });
+
+    test('a page without the member reads as one that does not name scans', () {
+      final json = Map<String, Object?>.from(exchange.responseBody)
+        ..remove('pointTombstones');
+      expect(SyncTripsPage.fromJson(json).pointTombstones, isNull);
+    });
+
+    test('a removed scan names its recording and the moment', () {
+      final json = Map<String, Object?>.from(exchange.responseBody)
+        ..['pointTombstones'] = <Object?>[
+          <String, Object?>{
+            'id': 's-1',
+            'recordingId': 'r-1',
+            'deletedAt': '2026-10-28T09:00:00.000Z',
+          },
+        ];
+      final tombstone = SyncTripsPage.fromJson(json).pointTombstones!.single;
+      expect(tombstone.id, 's-1');
+      expect(tombstone.recordingId, 'r-1');
+      expect(tombstone.deletedAt, '2026-10-28T09:00:00.000Z');
     });
 
     test('carries no position and no device', () {

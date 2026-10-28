@@ -38,6 +38,29 @@ class SyncTripPoint {
   );
 }
 
+/// A scan removed from a recording, named by the trips stream.
+///
+/// Only a scan the account would be given were it live is named; the removal
+/// of a scan of a withheld place stays silent.
+class SyncPointTombstone {
+  const SyncPointTombstone({
+    required this.id,
+    required this.recordingId,
+    required this.deletedAt,
+  });
+
+  final String id;
+  final String recordingId;
+  final String deletedAt;
+
+  static SyncPointTombstone fromJson(Map<String, Object?> json) =>
+      SyncPointTombstone(
+        id: json['id']! as String,
+        recordingId: json['recordingId']! as String,
+        deletedAt: json['deletedAt']! as String,
+      );
+}
+
 /// One recording on the trips stream, with its live scans.
 class SyncTripRecording {
   const SyncTripRecording({
@@ -98,6 +121,7 @@ class SyncTripsPage implements SyncStreamPage {
     required this.setRevision,
     required this.recordings,
     required this.tombstones,
+    required this.pointTombstones,
     required this.nextCursor,
     required this.hasMore,
   });
@@ -106,9 +130,16 @@ class SyncTripsPage implements SyncStreamPage {
   final int setRevision;
   final List<SyncTripRecording> recordings;
 
-  /// Recordings removed after the cursor. A removed scan is not one: its
-  /// recording comes again without it.
+  /// Recordings removed after the cursor. A removed scan is not one; it is
+  /// named in [pointTombstones].
   final List<SyncTombstone> tombstones;
+
+  /// Scans removed after the cursor, **or null when the page has no such
+  /// member** — a server that does not name removed scans, whose recording
+  /// comes again without the scan and says nothing more. An empty list is an
+  /// answer: no scan was removed, so a scan missing from a recording's list is
+  /// only withheld.
+  final List<SyncPointTombstone>? pointTombstones;
 
   @override
   final String? nextCursor;
@@ -125,6 +156,10 @@ class SyncTripsPage implements SyncStreamPage {
     tombstones: (json['tombstones'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((e) => SyncTombstone.fromJson(Map<String, Object?>.from(e)))
+        .toList(growable: false),
+    pointTombstones: (json['pointTombstones'] as List?)
+        ?.whereType<Map>()
+        .map((e) => SyncPointTombstone.fromJson(Map<String, Object?>.from(e)))
         .toList(growable: false),
     nextCursor: json['nextCursor'] as String?,
     hasMore: json['hasMore'] as bool? ?? false,
