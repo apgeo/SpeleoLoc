@@ -475,6 +475,18 @@ void main() {
         await localState.readRevision(profile, placeId),
         '2026-08-28T09:00:00.000Z',
       );
+      // The caver decides, with the server's row kept for "use the server's
+      // version"; until then the row is not sent again into the same
+      // conflict.
+      final kept = (await heldRows.readSection(
+        profile,
+        SyncUploadSection.rows,
+      ))[placeId]!;
+      expect(kept.isConflict, isTrue);
+      expect(kept.awaitsCaver, isTrue);
+      expect(kept.isWaiting, isFalse);
+      expect(kept.current?['name'], 'Sala Mare (club)');
+      expect(await builder.build(), isEmpty);
     });
 
     test('a conflict with no echo is a row to re-read, not an error', () async {
@@ -499,6 +511,14 @@ void main() {
       )).refusals.single;
       expect(refusal.serverRow, isNull);
       expect(refusal.needsReread, isTrue);
+      final kept = (await heldRows.readSection(
+        profile,
+        SyncUploadSection.rows,
+      ))[placeId]!;
+      expect(kept.isConflict, isTrue);
+      expect(kept.current, isNull);
+      expect(kept.code, 'sync.conflict');
+      expect(await builder.build(), isEmpty);
     });
 
     test('a refusal names the one action that moves it forward', () async {

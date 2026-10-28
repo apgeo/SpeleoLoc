@@ -62,7 +62,7 @@ class SilexgisPlannedRasterItem {
 /// A conflict carries no echo, and a pin refused because another marks its
 /// place asks for the map to be read again: both drop the rasters stream's
 /// position, so the next read hands the map over whole. The local row is left
-/// as the caver has it, and the caver is told.
+/// as the caver has it, and kept for the caver to decide about.
 class SilexgisRasterUploadAnswers {
   SilexgisRasterUploadAnswers({
     required SilexgisLocalStateRepository localState,
@@ -95,6 +95,7 @@ class SilexgisRasterUploadAnswers {
     final sent = <SilexgisRasterState>[];
     final forgotten = <Uuid>[];
     final heldNow = <SilexgisHeldEntry>[];
+    final conflicts = <SilexgisConflictEntry>[];
     final answeredOtherwise = <Uuid>[];
     final refusals = <SilexgisRefusal>[];
     var reread = false;
@@ -168,9 +169,13 @@ class SilexgisRasterUploadAnswers {
           refusals.add(_refusal(item, answer));
         case SyncRowStatus.rejected when answer.code == SilexgisCodes.pinExists:
           reread = true;
+          conflicts.add(_conflict(section, item, SilexgisCodes.pinExists));
           refusals.add(_refusal(item, answer));
         case SyncRowStatus.conflict:
           reread = true;
+          conflicts.add(
+            _conflict(section, item, answer.code ?? SilexgisCodes.conflict),
+          );
           refusals.add(_refusal(item, answer));
         case SyncRowStatus.rejected:
         case null:
@@ -187,6 +192,7 @@ class SilexgisRasterUploadAnswers {
     }
     await _heldRows.clear(_profileUuid, section, answeredOtherwise);
     await _heldRows.recordHeld(_profileUuid, heldNow);
+    await _heldRows.recordConflicts(_profileUuid, conflicts);
     // With no `current` on a raster answer, the installation's version is had
     // by reading the stream from the beginning.
     if (reread) await _rastersCursor.drop();
@@ -198,6 +204,21 @@ class SilexgisRasterUploadAnswers {
     item.id,
     if (!item.isPin) ...await _rasters.pinsOf(_profileUuid, item.id),
   ];
+
+  /// Kept for the caver to settle; until they do, the item is not sent again
+  /// and the installation's version is not laid over it.
+  static SilexgisConflictEntry _conflict(
+    SyncUploadSection section,
+    SilexgisPlannedRasterItem item,
+    String code,
+  ) => SilexgisConflictEntry(
+    section: section,
+    entityUuid: item.id,
+    entityTable: item.entityTable,
+    code: code,
+    isDelete: item.isDelete,
+    sentLocalUpdatedAt: item.localUpdatedAt,
+  );
 
   static SilexgisRefusal _refusal(
     SilexgisPlannedRasterItem item,

@@ -68,6 +68,7 @@ class SilexgisTripUploadAnswers {
     final sent = <SilexgisTripState>[];
     final forgotten = <Uuid>[];
     final heldNow = <SilexgisHeldEntry>[];
+    final conflicts = <SilexgisConflictEntry>[];
     final answeredOtherwise = <Uuid>[];
     final refusals = <SilexgisRefusal>[];
     var held = 0;
@@ -130,11 +131,22 @@ class SilexgisTripUploadAnswers {
           // Not there after all: forgotten, it goes as new next time.
           forgotten.add(item.id);
           refusals.add(_refusal(item, answer));
-        case SyncRowStatus.rejected:
         case SyncRowStatus.conflict:
+          // A conflict comes with no echo to merge with, so the local edit
+          // stays as it is, unsent, until the caver chooses what to do.
+          conflicts.add(
+            SilexgisConflictEntry(
+              section: section,
+              entityUuid: item.id,
+              entityTable: item.entityTable,
+              code: answer.code ?? SilexgisCodes.conflict,
+              isDelete: item.isDelete,
+              sentLocalUpdatedAt: item.localUpdatedAt,
+            ),
+          );
+          refusals.add(_refusal(item, answer));
+        case SyncRowStatus.rejected:
         case null:
-          // A conflict comes with no echo to merge with, so the caver is
-          // told and the local edit stays as it is.
           refusals.add(_refusal(item, answer));
       }
     }
@@ -145,6 +157,7 @@ class SilexgisTripUploadAnswers {
     await _trips.forget(_profileUuid, forgotten);
     await _heldRows.clear(_profileUuid, section, answeredOtherwise);
     await _heldRows.recordHeld(_profileUuid, heldNow);
+    await _heldRows.recordConflicts(_profileUuid, conflicts);
     return SilexgisPartAnswers(refusals: refusals, held: held);
   }
 

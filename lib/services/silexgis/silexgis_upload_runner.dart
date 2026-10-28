@@ -229,6 +229,7 @@ class SilexgisUploadRunner {
     final forgotten = <Uuid>[];
     final refusals = <SilexgisRefusal>[];
     final heldNow = <SilexgisHeldEntry>[];
+    final conflicts = <SilexgisConflictEntry>[];
     // Any other answer is the row's news now, whatever an earlier review said.
     final answeredOtherwise = <Uuid>[];
 
@@ -287,6 +288,28 @@ class SilexgisUploadRunner {
             ),
           );
         case SyncRowStatus.conflict:
+          // Kept for the caver to settle: until they do, the row is not sent
+          // again, since it would only meet the same later version.
+          conflicts.add(
+            SilexgisConflictEntry(
+              section: SyncUploadSection.rows,
+              entityUuid: sentRow.entityUuid,
+              entityTable: sentRow.entityTable,
+              wireKind: sentRow.row.kind.wireName,
+              code: answer.code ?? SilexgisCodes.conflict,
+              isDelete: sentRow.isDelete,
+              sentLocalUpdatedAt: sentRow.localUpdatedAt,
+              current: result.conflictEchoFor(answer.id),
+            ),
+          );
+          refusals.add(
+            SilexgisRefusal(
+              entityUuid: sentRow.entityUuid,
+              entityTable: sentRow.entityTable,
+              result: answer,
+              serverRow: result.conflictFor(answer.id),
+            ),
+          );
         case SyncRowStatus.rejected:
         case null:
           refusals.add(
@@ -308,6 +331,7 @@ class SilexgisUploadRunner {
       answeredOtherwise,
     );
     await _heldRows.recordHeld(_profileUuid, heldNow);
+    await _heldRows.recordConflicts(_profileUuid, conflicts);
     return refusals;
   }
 }

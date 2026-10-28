@@ -537,6 +537,13 @@ CREATE TABLE IF NOT EXISTS silexgis_stream_cursor (
 -- (`current_json`, when it may be handed over), until the caver chooses what
 -- to do; `kept_at` records that they chose to keep their version unsent. An
 -- accepted proposal is not kept: its revision becomes the row's base revision.
+--
+-- A row an upload answered with a conflict — or, for a pin, with another pin
+-- already marking its place — is recorded here too, with `outcome` `conflict`,
+-- the answer's `code`, an empty `review_id` and the server's row when the
+-- answer echoed it. Like a decided proposal it waits for the caver, and while
+-- it still carries the stamp it was sent at it is neither sent again nor
+-- overwritten by a read.
 CREATE TABLE IF NOT EXISTS silexgis_held_row (
     profile_uuid          TEXT(36) NOT NULL,
     section               TEXT(32) NOT NULL,   -- the upload array the row went in

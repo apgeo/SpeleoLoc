@@ -185,6 +185,7 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
     final revisions = <SilexgisRevisionEntry>[];
     final forgotten = <Uuid>[];
     final heldNow = <SilexgisHeldEntry>[];
+    final conflicts = <SilexgisConflictEntry>[];
     final answeredOtherwise = <Uuid>[];
     final refusals = <SilexgisRefusal>[];
     final resend = <SyncUploadItem>[];
@@ -262,8 +263,23 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
           // time, bytes and all.
           forgotten.add(document.id);
           refusals.add(_refusal(document, answer));
-        case SyncRowStatus.rejected:
         case SyncRowStatus.conflict:
+          // Somebody wrote the document, or gave it new bytes, since: kept for
+          // the caver to settle rather than sent against the same revision
+          // again.
+          conflicts.add(
+            SilexgisConflictEntry(
+              section: section,
+              entityUuid: document.id,
+              entityTable: entityTable,
+              wireKind: wireKind,
+              code: answer.code ?? SilexgisCodes.conflict,
+              isDelete: item.deleted,
+              sentLocalUpdatedAt: stamp,
+            ),
+          );
+          refusals.add(_refusal(document, answer));
+        case SyncRowStatus.rejected:
         case null:
           refusals.add(_refusal(document, answer));
       }
@@ -276,6 +292,7 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
     }
     await _heldRows.clear(_profileUuid, section, answeredOtherwise);
     await _heldRows.recordHeld(_profileUuid, heldNow);
+    await _heldRows.recordConflicts(_profileUuid, conflicts);
     return SilexgisPartAnswers(refusals: refusals, resend: resend, held: held);
   }
 

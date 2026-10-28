@@ -69,6 +69,7 @@ class SilexgisDocumentLinksUploadPart implements SilexgisUploadPart {
     final refusals = <SilexgisRefusal>[];
     final resend = <SyncUploadItem>[];
     final heldNow = <SilexgisHeldEntry>[];
+    final conflicts = <SilexgisConflictEntry>[];
     final answeredOtherwise = <Uuid>[];
     var held = 0;
 
@@ -115,6 +116,23 @@ class SilexgisDocumentLinksUploadPart implements SilexgisUploadPart {
                 _run.resent.contains(link.documentId):
           // Its document goes once more in this run; so does the link.
           resend.add(item);
+        case SyncRowStatus.conflict when local != null:
+          conflicts.add(
+            SilexgisConflictEntry(
+              section: section,
+              entityUuid: local.uuid,
+              entityTable: local.table,
+              code: answer.code ?? SilexgisCodes.conflict,
+              sentLocalUpdatedAt: local.updatedAt,
+            ),
+          );
+          refusals.add(
+            SilexgisRefusal(
+              entityUuid: local.uuid,
+              entityTable: local.table,
+              result: answer,
+            ),
+          );
         case SyncRowStatus.rejected:
         case SyncRowStatus.conflict:
         case null:
@@ -131,6 +149,7 @@ class SilexgisDocumentLinksUploadPart implements SilexgisUploadPart {
 
     await _heldRows.clear(_profileUuid, section, answeredOtherwise);
     await _heldRows.recordHeld(_profileUuid, heldNow);
+    await _heldRows.recordConflicts(_profileUuid, conflicts);
     return SilexgisPartAnswers(refusals: refusals, resend: resend, held: held);
   }
 

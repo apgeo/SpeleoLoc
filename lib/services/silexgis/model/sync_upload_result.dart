@@ -234,6 +234,7 @@ class SyncUploadResult {
     required this.sections,
     required this.conflicts,
     required this.duplicates,
+    this.conflictEchoes = const <Map<String, Object?>>[],
   });
 
   final String batchId;
@@ -275,11 +276,22 @@ class SyncUploadResult {
   /// an error.
   final List<SyncFeatureRow> conflicts;
 
+  /// [conflicts] as they came, kept so the server's row can be stored for the
+  /// caver's decision and applied later exactly as it was handed over.
+  final List<Map<String, Object?>> conflictEchoes;
+
   final List<SyncDuplicateReport> duplicates;
 
   SyncFeatureRow? conflictFor(String rowId) {
     for (final row in conflicts) {
       if (row.id == rowId) return row;
+    }
+    return null;
+  }
+
+  Map<String, Object?>? conflictEchoFor(String rowId) {
+    for (final row in conflictEchoes) {
+      if (row['id'] == rowId) return row;
     }
     return null;
   }
@@ -303,6 +315,10 @@ class SyncUploadResult {
     conflicts: (json['conflicts'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((e) => SyncFeatureRow.fromJson(Map<String, Object?>.from(e)))
+        .toList(growable: false),
+    conflictEchoes: (json['conflicts'] as List? ?? const <Object?>[])
+        .whereType<Map>()
+        .map((e) => Map<String, Object?>.from(e))
         .toList(growable: false),
     duplicates: (json['duplicates'] as List? ?? const <Object?>[])
         .whereType<Map>()

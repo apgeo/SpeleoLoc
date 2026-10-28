@@ -24,6 +24,7 @@ class SilexgisHeldItem {
     this.decidedAt,
     this.current,
     this.keptAt,
+    this.isConflict = false,
   });
 
   final SyncUploadSection section;
@@ -32,7 +33,7 @@ class SilexgisHeldItem {
   final String? wireKind;
 
   /// The proposal the row waits under. A row sent again with other content
-  /// waits under a new one.
+  /// waits under a new one. Empty for a conflict, which no reviewer decides.
   final String reviewId;
 
   /// The proposal is a removal: the local row is already gone.
@@ -42,24 +43,31 @@ class SilexgisHeldItem {
   final int? sentLocalUpdatedAt;
   final int? heldAt;
 
-  /// Null while the proposal waits; [SyncReviewOutcome.rejected] or
-  /// [SyncReviewOutcome.failed] once decided.
+  /// Null while the proposal waits, and for a conflict;
+  /// [SyncReviewOutcome.rejected] or [SyncReviewOutcome.failed] once decided.
   final SyncReviewOutcome? outcome;
   final String? note;
   final String? code;
   final String? decidedAt;
 
   /// The server's own row, as the feature stream shapes it, when the decision
-  /// could hand it over.
+  /// or the conflict could hand it over.
   final Map<String, Object?>? current;
 
   /// When the caver chose to keep their version unsent.
   final int? keptAt;
 
-  bool get isWaiting => outcome == null;
+  /// The row was not written because the installation holds a later version
+  /// of it ([code] is `sync.conflict`), or because another pin already marks
+  /// its place (`sync.pin_exists`). No reviewer is involved: only the caver
+  /// can settle it.
+  final bool isConflict;
 
-  /// Decided against, and the caver has not yet said what to do about it.
-  bool get awaitsCaver => outcome != null && keptAt == null;
+  bool get isWaiting => outcome == null && !isConflict;
+
+  /// Decided against, or in conflict, and the caver has not yet said what to
+  /// do about it.
+  bool get awaitsCaver => (outcome != null || isConflict) && keptAt == null;
 
   /// Whether the local row still says what was sent for review.
   ///
@@ -91,6 +99,34 @@ class SilexgisHeldEntry {
   final int? sentLocalUpdatedAt;
 }
 
+/// A row an upload did not write because of the installation's own version,
+/// ready to be recorded.
+class SilexgisConflictEntry {
+  const SilexgisConflictEntry({
+    required this.section,
+    required this.entityUuid,
+    required this.entityTable,
+    required this.code,
+    this.wireKind,
+    this.isDelete = false,
+    this.sentLocalUpdatedAt,
+    this.current,
+  });
+
+  final SyncUploadSection section;
+  final Uuid entityUuid;
+  final String entityTable;
+
+  /// `sync.conflict` or `sync.pin_exists`.
+  final String code;
+  final String? wireKind;
+  final bool isDelete;
+  final int? sentLocalUpdatedAt;
+
+  /// The server's row, when the answer echoed it.
+  final Map<String, Object?>? current;
+}
+
 /// How many held rows there are, by what they wait on.
 class SilexgisReviewCounts {
   const SilexgisReviewCounts({this.waiting = 0, this.toDecide = 0});
@@ -98,7 +134,7 @@ class SilexgisReviewCounts {
   /// Waiting for a reviewer.
   final int waiting;
 
-  /// Turned down or failed, and waiting for the caver.
+  /// Turned down, failed or in conflict, and waiting for the caver.
   final int toDecide;
 
   bool get isEmpty => waiting == 0 && toDecide == 0;
@@ -115,6 +151,10 @@ class SilexgisHeldRowRepository {
   final AppDatabase _db;
   final Clock _clock;
 
+  /// What `outcome` holds for a conflict. Never a reviewer's word, so it
+  /// cannot be mistaken for one.
+  static const String conflictOutcome = 'conflict';
+
   /// Every held row of one section, by row identifier. Read once per run.
   Future<Map<Uuid, SilexgisHeldItem>> readSection(
     String profileUuid,
@@ -128,8 +168,7 @@ class SilexgisHeldRowRepository {
             ))
             .get();
     return <Uuid, SilexgisHeldItem>{
-      for (final row in rows)
-        row.entityUuid: ?_read(row),
+      for (final row in rows) row.entityUuid: ?_read(row),
     };
   }
 
@@ -138,10 +177,7 @@ class SilexgisHeldRowRepository {
     final rows = await (_db.select(
       _db.silexgisHeldRow,
     )..where((t) => t.profileUuid.equals(profileUuid))).get();
-    return <SilexgisHeldItem>[
-      for (final row in rows)
-        ?_read(row),
-    ];
+    return <SilexgisHeldItem>[for (final row in rows) ?_read(row)];
   }
 
   /// The row waiting under [reviewId], or null when none does — the review is
@@ -151,6 +187,7 @@ class SilexgisHeldRowRepository {
     String profileUuid,
     String reviewId,
   ) async {
+    if (reviewId.isEmpty) return null;
     final row =
         await (_db.select(_db.silexgisHeldRow)
               ..where(
@@ -193,6 +230,41 @@ class SilexgisHeldRowRepository {
     });
   }
 
+  /// Records rows an upload answered with a conflict. Until the caver chooses,
+  /// a row recorded here is held back from what a read brings and is not sent
+  /// again while it says what was sent: sending it again would only meet the
+  /// same later version.
+  Future<void> recordConflicts(
+    String profileUuid,
+    Iterable<SilexgisConflictEntry> entries,
+  ) async {
+    if (entries.isEmpty) return;
+    final now = _clock.nowMs();
+    await _db.batch((batch) {
+      for (final entry in entries) {
+        final current = entry.current;
+        batch.insert(
+          _db.silexgisHeldRow,
+          SilexgisHeldRowCompanion.insert(
+            profileUuid: profileUuid,
+            section: entry.section.wireName,
+            entityUuid: entry.entityUuid,
+            entityTable: entry.entityTable,
+            wireKind: Value(entry.wireKind),
+            reviewId: '',
+            isDelete: Value(entry.isDelete),
+            sentLocalUpdatedAt: Value(entry.sentLocalUpdatedAt),
+            heldAt: Value(now),
+            outcome: const Value(conflictOutcome),
+            code: Value(entry.code),
+            currentJson: Value(current == null ? null : jsonEncode(current)),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+  }
+
   /// Records a reviewer's decision against the row waiting under [reviewId].
   /// The last decision read for a review is the one that stands.
   Future<void> recordDecision(
@@ -204,6 +276,7 @@ class SilexgisHeldRowRepository {
     String? decidedAt,
     Map<String, Object?>? current,
   }) async {
+    if (reviewId.isEmpty) return;
     await (_db.update(_db.silexgisHeldRow)..where(
           (t) =>
               t.profileUuid.equals(profileUuid) & t.reviewId.equals(reviewId),
@@ -274,6 +347,7 @@ class SilexgisHeldRowRepository {
     final section = SyncUploadSection.tryParse(row.section);
     if (section == null) return null;
     final json = row.currentJson;
+    final isConflict = row.outcome == conflictOutcome;
     return SilexgisHeldItem(
       section: section,
       entityUuid: row.entityUuid,
@@ -283,7 +357,7 @@ class SilexgisHeldRowRepository {
       isDelete: row.isDelete,
       sentLocalUpdatedAt: row.sentLocalUpdatedAt,
       heldAt: row.heldAt,
-      outcome: SyncReviewOutcome.tryParse(row.outcome),
+      outcome: isConflict ? null : SyncReviewOutcome.tryParse(row.outcome),
       note: row.note,
       code: row.code,
       decidedAt: row.decidedAt,
@@ -291,6 +365,7 @@ class SilexgisHeldRowRepository {
           ? null
           : Map<String, Object?>.from(jsonDecode(json) as Map),
       keptAt: row.keptAt,
+      isConflict: isConflict,
     );
   }
 }
