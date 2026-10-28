@@ -134,11 +134,14 @@ void main() {
   SyncRastersPage page(
     List<Map<String, Object?>> maps, {
     List<Map<String, Object?>> tombstones = const <Map<String, Object?>>[],
+    List<Map<String, Object?>>? pinTombstones,
   }) => SyncRastersPage.fromJson(<String, Object?>{
     'setRevision': 1,
     'settings': const <String, Object?>{},
     'maps': maps,
     'tombstones': tombstones,
+    // Left out unless given: a server that does not name removed pins.
+    'pinTombstones': ?pinTombstones,
     'nextCursor': 'rasters-c2',
     'hasMore': false,
   });
@@ -375,7 +378,7 @@ void main() {
     });
   });
 
-  group('a pin missing from its map', () {
+  group('a pin missing from a server that names no removed pins', () {
     Future<(Uuid, Uuid)> mapWithPin() async {
       final map = Uuid.v7();
       final pin = Uuid.v7();
@@ -433,6 +436,117 @@ void main() {
           );
       await applier.applyPage(page(<Map<String, Object?>>[mapJson(map)]));
       expect((await pinsOf(map)).map((p) => p.uuid), <Uuid>[mine]);
+    });
+  });
+
+  group('with the pin tombstones named', () {
+    Future<(Uuid, Uuid)> mapWithPin() async {
+      final map = Uuid.v7();
+      final pin = Uuid.v7();
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          mapJson(map, pins: <Map<String, Object?>>[pinJson(pin)]),
+        ]),
+      );
+      return (map, pin);
+    }
+
+    Map<String, Object?> pinTombstone(Uuid map, Uuid pin) => <String, Object?>{
+      'id': pin.toString(),
+      'mapId': map.toString(),
+      'deletedAt': revision,
+    };
+
+    test('a tombstone removes the pin and what is kept of it', () async {
+      final (map, pin) = await mapWithPin();
+      final applied = await applier.applyPage(
+        page(
+          <Map<String, Object?>>[mapJson(map)],
+          pinTombstones: <Map<String, Object?>>[pinTombstone(map, pin)],
+        ),
+      );
+      expect(applied.pinsRemoved, 1);
+      expect(await pinsOf(map), isEmpty);
+      expect((await mapRow(map)), isNotNull);
+      expect((await localState.readRevisions(profile))[pin], isNull);
+      expect((await rasters.readAll(profile))[pin], isNull);
+      expect(await db.select(db.changeLog).get(), isEmpty);
+    });
+
+    test('a tombstone removes a pin this device sent as well', () async {
+      final (map, pin) = await mapWithPin();
+      await rasters.recordSent(profile, <SilexgisRasterState>[
+        SilexgisRasterState(entityUuid: pin, mapUuid: map, isPin: true),
+      ]);
+      final applied = await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          pinTombstones: <Map<String, Object?>>[pinTombstone(map, pin)],
+        ),
+      );
+      expect(applied.pinsRemoved, 1);
+      expect(await pinsOf(map), isEmpty);
+    });
+
+    test(
+      'a tombstone of a pin this device never held changes nothing',
+      () async {
+        final (map, pin) = await mapWithPin();
+        final applied = await applier.applyPage(
+          page(
+            <Map<String, Object?>>[
+              mapJson(map, pins: <Map<String, Object?>>[pinJson(pin)]),
+            ],
+            pinTombstones: <Map<String, Object?>>[pinTombstone(map, Uuid.v7())],
+          ),
+        );
+        expect(applied.pinsRemoved, 0);
+        expect((await pinsOf(map)).single.uuid, pin);
+      },
+    );
+
+    test('a tombstone leaves a pin with an unsent edit to the caver', () async {
+      final (map, pin) = await mapWithPin();
+      await (db.update(
+        db.cavePlaceToRasterMapDefinitions,
+      )..where((t) => t.uuid.equalsValue(pin))).write(
+        CavePlaceToRasterMapDefinitionsCompanion(
+          xCoordinate: const Value(77),
+          updatedAt: Value(clock.nowMs() + 1000),
+        ),
+      );
+      final applied = await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          pinTombstones: <Map<String, Object?>>[pinTombstone(map, pin)],
+        ),
+      );
+      expect(applied.pinsRemoved, 0);
+      expect(applied.heldBack, 1);
+      expect((await pinsOf(map)).single.xCoordinate, 77);
+    });
+
+    test('a pin merely missing is kept, whatever its history', () async {
+      final (map, pin) = await mapWithPin();
+      // Received here and never sent: the interim rule would remove it.
+      final applied = await applier.applyPage(
+        page(<Map<String, Object?>>[mapJson(map)], pinTombstones: const []),
+      );
+      expect(applied.pinsRemoved, 0);
+      expect((await pinsOf(map)).single.uuid, pin);
+      expect((await localState.readRevisions(profile))[pin], isNotNull);
+    });
+
+    test('a pin missing is kept beside a tombstone naming another', () async {
+      final (map, pin) = await mapWithPin();
+      final applied = await applier.applyPage(
+        page(
+          <Map<String, Object?>>[mapJson(map)],
+          pinTombstones: <Map<String, Object?>>[pinTombstone(map, Uuid.v7())],
+        ),
+      );
+      expect(applied.pinsRemoved, 0);
+      expect((await pinsOf(map)).single.uuid, pin);
     });
   });
 

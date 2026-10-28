@@ -16,9 +16,11 @@ abstract interface class SilexgisItemHistory {
 /// sent it: one this device made, or sent, may only be withheld, and removing
 /// it would lose the caver's work.
 ///
-/// Once the streams name removed items by their own tombstones, a missing item
-/// is kept whatever its history and a tombstoned one removed: [removesMissing]
-/// then answers false, and the tombstones are applied as their parents' are.
+/// This is the rule for a server that does not name removed pins and scans.
+/// A page that carries those tombstones — even an empty list — removes only
+/// what they name and keeps whatever is merely missing, whatever its history;
+/// the appliers then never ask here. The rule stays for the installations that
+/// predate those tombstones, which a device may still be pointed at.
 class SilexgisMissingItemRule {
   const SilexgisMissingItemRule();
 

@@ -81,8 +81,10 @@ class SilexgisTripsApplied {
 /// - Who went, the log's staleness and the device are never in the stream,
 ///   and an update leaves them as they are.
 /// - A scan of a place this device does not hold is skipped.
-/// - A local scan its recording no longer lists is decided by
-///   [SilexgisMissingItemRule].
+/// - A scan the stream names as removed goes, unless the caver has an edit of
+///   it not yet sent. A scan merely missing from its recording's list is kept,
+///   as it may only be withheld; only a server that does not name removed
+///   scans leaves that to [SilexgisMissingItemRule].
 /// - A row whose unique key a different local row holds is not written; the
 ///   local row is kept and the collision reported.
 class SilexgisTripApplier {
@@ -143,10 +145,16 @@ class SilexgisTripApplier {
         _users = <Uuid>{
           for (final user in await _db.select(_db.users).get()) user.uuid,
         };
+        final namesRemovedScans = page.pointTombstones != null;
         for (final recording in page.recordings) {
-          applied = applied.plus(await _recording(recording));
+          applied = applied.plus(
+            await _recording(recording, namesRemovedScans: namesRemovedScans),
+          );
         }
         applied = applied.plus(await _tombstones(page.tombstones));
+        applied = applied.plus(
+          await _pointTombstones(page.pointTombstones ?? const []),
+        );
         await afterwards?.call();
       });
     });
@@ -155,7 +163,10 @@ class SilexgisTripApplier {
 
   // -------------------------------------------------------------- recordings
 
-  Future<SilexgisTripsApplied> _recording(SyncTripRecording server) async {
+  Future<SilexgisTripsApplied> _recording(
+    SyncTripRecording server, {
+    required bool namesRemovedScans,
+  }) async {
     final id = Uuid.tryParse(server.id);
     final started = _epoch(server.startedAt);
     if (id == null || started == null) {
@@ -239,15 +250,18 @@ class SilexgisTripApplier {
       );
       applied = const SilexgisTripsApplied(recordingsUpdated: 1);
     }
-    return applied.plus(await _scans(id, server.points));
+    return applied.plus(
+      await _scans(id, server.points, namesRemovedScans: namesRemovedScans),
+    );
   }
 
   // -------------------------------------------------------------------- scans
 
   Future<SilexgisTripsApplied> _scans(
     Uuid recording,
-    List<SyncTripPoint> points,
-  ) async {
+    List<SyncTripPoint> points, {
+    required bool namesRemovedScans,
+  }) async {
     var applied = const SilexgisTripsApplied();
     final listed = <Uuid>{};
     for (final point in points) {
@@ -256,6 +270,7 @@ class SilexgisTripApplier {
       listed.add(id);
       applied = applied.plus(await _scan(recording, id, point));
     }
+    if (namesRemovedScans) return applied;
 
     final local = await (_db.select(
       _db.caveTripPoints,
@@ -269,12 +284,16 @@ class SilexgisTripApplier {
       )) {
         continue;
       }
-      await _db.deleteTripPointDocumentLinks(scan.uuid);
-      await _db.deleteTripPoint(scan.uuid);
+      await _deleteScan(scan.uuid);
       removed.add(scan.uuid);
     }
     await _forget(removed);
     return applied.plus(SilexgisTripsApplied(scansRemoved: removed.length));
+  }
+
+  Future<void> _deleteScan(Uuid id) async {
+    await _db.deleteTripPointDocumentLinks(id);
+    await _db.deleteTripPoint(id);
   }
 
   Future<SilexgisTripsApplied> _scan(
@@ -389,6 +408,35 @@ class SilexgisTripApplier {
       removed++;
     }
     return SilexgisTripsApplied(recordingsRemoved: removed, heldBack: heldBack);
+  }
+
+  /// A removed scan goes, with the photos' links on it — unless the caver has
+  /// an edit of it not yet sent, which is theirs and is answered when it goes
+  /// up, as a removed recording's is.
+  Future<SilexgisTripsApplied> _pointTombstones(
+    List<SyncPointTombstone> tombstones,
+  ) async {
+    final removed = <Uuid>[];
+    var heldBack = 0;
+    for (final tombstone in tombstones) {
+      final id = Uuid.tryParse(tombstone.id);
+      if (id == null) continue;
+      final local = await (_db.select(
+        _db.caveTripPoints,
+      )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
+      if (local == null) continue;
+      if (_editedHere(id, local.updatedAt)) {
+        heldBack++;
+        continue;
+      }
+      await _deleteScan(id);
+      removed.add(id);
+    }
+    await _forget(removed);
+    return SilexgisTripsApplied(
+      scansRemoved: removed.length,
+      heldBack: heldBack,
+    );
   }
 
   // ---------------------------------------------------------------- plumbing

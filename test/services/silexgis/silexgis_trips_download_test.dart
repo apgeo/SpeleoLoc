@@ -119,11 +119,14 @@ void main() {
   SyncTripsPage page(
     List<Map<String, Object?>> recordings, {
     List<Map<String, Object?>> tombstones = const <Map<String, Object?>>[],
+    List<Map<String, Object?>>? pointTombstones,
   }) => SyncTripsPage.fromJson(<String, Object?>{
     'setRevision': 1,
     'settings': const <String, Object?>{},
     'recordings': recordings,
     'tombstones': tombstones,
+    // Left out unless given: a server that does not name removed scans.
+    'pointTombstones': ?pointTombstones,
     'nextCursor': 'trips-c2',
     'hasMore': false,
   });
@@ -379,7 +382,7 @@ void main() {
     );
   });
 
-  group('a scan missing from its recording', () {
+  group('a scan missing from a server that names no removed scans', () {
     Future<(Uuid, Uuid, Uuid)> twoScans() async {
       final recording = Uuid.v7();
       final kept = Uuid.v7();
@@ -488,6 +491,143 @@ void main() {
         isFalse,
       );
       expect(rule.removesMissing(state(), editedHere: false), isFalse);
+    });
+  });
+
+  group('with the scan tombstones named', () {
+    Future<(Uuid, Uuid)> recordingWithScan() async {
+      final recording = Uuid.v7();
+      final scan = Uuid.v7();
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          recordingJson(
+            recording,
+            points: <Map<String, Object?>>[pointJson(scan)],
+          ),
+        ]),
+      );
+      return (recording, scan);
+    }
+
+    Map<String, Object?> pointTombstone(Uuid recording, Uuid scan) =>
+        <String, Object?>{
+          'id': scan.toString(),
+          'recordingId': recording.toString(),
+          'deletedAt': revision,
+        };
+
+    test('a tombstone removes the scan and what is kept of it', () async {
+      final (recording, scan) = await recordingWithScan();
+      final applied = await applier.applyPage(
+        page(
+          <Map<String, Object?>>[recordingJson(recording)],
+          pointTombstones: <Map<String, Object?>>[
+            pointTombstone(recording, scan),
+          ],
+        ),
+      );
+      expect(applied.scansRemoved, 1);
+      expect(await scansOf(recording), isEmpty);
+      expect(await tripRow(recording), isNotNull);
+      expect((await localState.readRevisions(profile))[scan], isNull);
+      expect((await trips.readAll(profile))[scan], isNull);
+      expect(await db.select(db.changeLog).get(), isEmpty);
+    });
+
+    test('a tombstone removes a scan this device sent as well', () async {
+      final (recording, scan) = await recordingWithScan();
+      await trips.recordSent(profile, <SilexgisTripState>[
+        SilexgisTripState(
+          entityUuid: scan,
+          recordingUuid: recording,
+          isScan: true,
+        ),
+      ]);
+      final applied = await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          pointTombstones: <Map<String, Object?>>[
+            pointTombstone(recording, scan),
+          ],
+        ),
+      );
+      expect(applied.scansRemoved, 1);
+      expect(await scansOf(recording), isEmpty);
+    });
+
+    test(
+      'a tombstone of a scan this device never held changes nothing',
+      () async {
+        final (recording, scan) = await recordingWithScan();
+        final applied = await applier.applyPage(
+          page(
+            <Map<String, Object?>>[
+              recordingJson(
+                recording,
+                points: <Map<String, Object?>>[pointJson(scan)],
+              ),
+            ],
+            pointTombstones: <Map<String, Object?>>[
+              pointTombstone(recording, Uuid.v7()),
+            ],
+          ),
+        );
+        expect(applied.scansRemoved, 0);
+        expect((await scansOf(recording)).single.uuid, scan);
+      },
+    );
+
+    test(
+      'a tombstone leaves a scan with an unsent edit to the caver',
+      () async {
+        final (recording, scan) = await recordingWithScan();
+        await (db.update(
+          db.caveTripPoints,
+        )..where((t) => t.uuid.equalsValue(scan))).write(
+          CaveTripPointsCompanion(
+            notes: const Value('mine'),
+            updatedAt: Value(clock.nowMs() + 1000),
+          ),
+        );
+        final applied = await applier.applyPage(
+          page(
+            const <Map<String, Object?>>[],
+            pointTombstones: <Map<String, Object?>>[
+              pointTombstone(recording, scan),
+            ],
+          ),
+        );
+        expect(applied.scansRemoved, 0);
+        expect(applied.heldBack, 1);
+        expect((await scansOf(recording)).single.notes, 'mine');
+      },
+    );
+
+    test('a scan merely missing is kept, whatever its history', () async {
+      final (recording, scan) = await recordingWithScan();
+      // Received here and never sent: the interim rule would remove it.
+      final applied = await applier.applyPage(
+        page(<Map<String, Object?>>[
+          recordingJson(recording),
+        ], pointTombstones: const []),
+      );
+      expect(applied.scansRemoved, 0);
+      expect((await scansOf(recording)).single.uuid, scan);
+      expect((await localState.readRevisions(profile))[scan], isNotNull);
+    });
+
+    test('a scan missing is kept beside a tombstone naming another', () async {
+      final (recording, scan) = await recordingWithScan();
+      final applied = await applier.applyPage(
+        page(
+          <Map<String, Object?>>[recordingJson(recording)],
+          pointTombstones: <Map<String, Object?>>[
+            pointTombstone(recording, Uuid.v7()),
+          ],
+        ),
+      );
+      expect(applied.scansRemoved, 0);
+      expect((await scansOf(recording)).single.uuid, scan);
     });
   });
 

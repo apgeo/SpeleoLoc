@@ -82,8 +82,10 @@ class SilexgisRastersApplied {
 /// - An area this device does not hold leaves the map's own column null and
 ///   is kept in local-only state, so an edit never clears it there.
 /// - A pin of a place this device does not hold is skipped.
-/// - A local pin its map no longer lists is decided by
-///   [SilexgisMissingItemRule].
+/// - A pin the stream names as removed goes, unless the caver has an edit of
+///   it not yet sent. A pin merely missing from its map's list is kept, as it
+///   may only be withheld; only a server that does not name removed pins
+///   leaves that to [SilexgisMissingItemRule].
 /// - A row whose unique key a different local row holds is not written; the
 ///   local row is kept and the collision reported.
 class SilexgisRasterApplier {
@@ -152,10 +154,16 @@ class SilexgisRasterApplier {
           )).keys,
         };
         _states = await _rasters.readAll(_profileUuid);
+        final namesRemovedPins = page.pinTombstones != null;
         for (final map in page.maps) {
-          applied = applied.plus(await _map(map));
+          applied = applied.plus(
+            await _map(map, namesRemovedPins: namesRemovedPins),
+          );
         }
         applied = applied.plus(await _tombstones(page.tombstones));
+        applied = applied.plus(
+          await _pinTombstones(page.pinTombstones ?? const []),
+        );
         await afterwards?.call();
       });
     });
@@ -164,7 +172,10 @@ class SilexgisRasterApplier {
 
   // -------------------------------------------------------------------- maps
 
-  Future<SilexgisRastersApplied> _map(SyncRasterMap server) async {
+  Future<SilexgisRastersApplied> _map(
+    SyncRasterMap server, {
+    required bool namesRemovedPins,
+  }) async {
     final id = Uuid.tryParse(server.id);
     final cave = Uuid.tryParse(server.caveId);
     if (id == null || cave == null) {
@@ -257,15 +268,18 @@ class SilexgisRasterApplier {
       );
       applied = const SilexgisRastersApplied(mapsUpdated: 1);
     }
-    return applied.plus(await _pins(id, server.pins));
+    return applied.plus(
+      await _pins(id, server.pins, namesRemovedPins: namesRemovedPins),
+    );
   }
 
   // --------------------------------------------------------------------- pins
 
   Future<SilexgisRastersApplied> _pins(
     Uuid map,
-    List<SyncRasterPin> pins,
-  ) async {
+    List<SyncRasterPin> pins, {
+    required bool namesRemovedPins,
+  }) async {
     var applied = const SilexgisRastersApplied();
     final listed = <Uuid>{};
     for (final pin in pins) {
@@ -274,6 +288,7 @@ class SilexgisRasterApplier {
       listed.add(id);
       applied = applied.plus(await _pin(map, id, pin));
     }
+    if (namesRemovedPins) return applied;
 
     final local = await (_db.select(
       _db.cavePlaceToRasterMapDefinitions,
@@ -287,14 +302,16 @@ class SilexgisRasterApplier {
       )) {
         continue;
       }
-      await (_db.delete(
-        _db.cavePlaceToRasterMapDefinitions,
-      )..where((t) => t.uuid.equalsValue(pin.uuid))).go();
+      await _deletePin(pin.uuid);
       removed.add(pin.uuid);
     }
     await _forget(removed);
     return applied.plus(SilexgisRastersApplied(pinsRemoved: removed.length));
   }
+
+  Future<void> _deletePin(Uuid id) => (_db.delete(
+    _db.cavePlaceToRasterMapDefinitions,
+  )..where((t) => t.uuid.equalsValue(id))).go();
 
   Future<SilexgisRastersApplied> _pin(
     Uuid map,
@@ -402,6 +419,34 @@ class SilexgisRasterApplier {
       removed++;
     }
     return SilexgisRastersApplied(mapsRemoved: removed, heldBack: heldBack);
+  }
+
+  /// A removed pin goes — unless the caver has an edit of it not yet sent,
+  /// which is theirs and is answered when it goes up, as a removed map's is.
+  Future<SilexgisRastersApplied> _pinTombstones(
+    List<SyncPinTombstone> tombstones,
+  ) async {
+    final removed = <Uuid>[];
+    var heldBack = 0;
+    for (final tombstone in tombstones) {
+      final id = Uuid.tryParse(tombstone.id);
+      if (id == null) continue;
+      final local = await (_db.select(
+        _db.cavePlaceToRasterMapDefinitions,
+      )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
+      if (local == null) continue;
+      if (_editedHere(id, local.updatedAt)) {
+        heldBack++;
+        continue;
+      }
+      await _deletePin(id);
+      removed.add(id);
+    }
+    await _forget(removed);
+    return SilexgisRastersApplied(
+      pinsRemoved: removed.length,
+      heldBack: heldBack,
+    );
   }
 
   // ---------------------------------------------------------------- plumbing
