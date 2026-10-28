@@ -8,7 +8,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_reposito
 import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_importer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
-import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_fetched_copy.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -324,8 +324,13 @@ class SilexgisDocumentDownloader {
       }
     }
 
-    final heldAs = _heldAs(document, link);
-    final mismatch = _mismatch(document, link, heldAs, fetched);
+    final heldAs = SilexgisFetchedCopy.heldAs(document, link);
+    final mismatch = SilexgisFetchedCopy.mismatch(
+      document,
+      link,
+      heldAs,
+      fetched,
+    );
     if (mismatch != null) return _failed(id, partial, mismatch);
 
     // Checked again on what arrived: the device may have come to hold the
@@ -363,54 +368,6 @@ class SilexgisDocumentDownloader {
       outcome: SilexgisDownloadOutcome.downloaded,
       rendition: rendition,
     );
-  }
-
-  /// What the fetched bytes are. Numbers on the address mark the rewritten
-  /// copy whatever the catalogue said: the reach is decided again on every
-  /// request.
-  static SilexgisHeldAs _heldAs(
-    SilexgisDocumentData document,
-    SyncFileLink link,
-  ) {
-    if (!link.rendition.isOriginal) return SilexgisHeldAs.rendition;
-    if (link.sha256 != null || link.sizeBytes != null) {
-      return SilexgisHeldAs.locationFree;
-    }
-    return SyncDocumentReach.parse(document.reach) ==
-            SyncDocumentReach.locationFree
-        ? SilexgisHeldAs.locationFree
-        : SilexgisHeldAs.original;
-  }
-
-  /// Why what arrived is not what was described, or null when it is.
-  static String? _mismatch(
-    SilexgisDocumentData document,
-    SyncFileLink link,
-    SilexgisHeldAs heldAs,
-    SilexgisFetchedFile fetched,
-  ) {
-    String? sha;
-    int? size;
-    switch (heldAs) {
-      case SilexgisHeldAs.original:
-        sha = document.sha256;
-        size = document.sizeBytes;
-      case SilexgisHeldAs.locationFree:
-        sha = link.sha256;
-        size = link.sizeBytes;
-      case SilexgisHeldAs.rendition:
-      case SilexgisHeldAs.own:
-        break;
-    }
-    // With no numbers to go by, the response's own length is all there is.
-    size ??= sha == null ? fetched.announcedLength : null;
-    if (sha != null && sha.toLowerCase() != fetched.sha256) {
-      return 'the file does not match its fingerprint';
-    }
-    if (size != null && size != fetched.length) {
-      return 'the file is ${fetched.length} bytes, not $size';
-    }
-    return null;
   }
 
   Future<SilexgisDownloadResult> _failed(
