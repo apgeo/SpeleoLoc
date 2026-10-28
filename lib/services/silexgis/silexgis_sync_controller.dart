@@ -36,6 +36,10 @@ import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_points_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_recordings_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_upload_answers.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
@@ -65,6 +69,7 @@ class SilexgisSyncController extends ChangeNotifier {
     SilexgisFileCopyRepository? copies,
     SilexgisServerLinkRepository? serverLinks,
     SilexgisStagedUploadRepository? staged,
+    SilexgisTripStateRepository? trips,
     Future<Directory> Function() documentsDir =
         getApplicationDocumentsDirectory,
     NetworkKindProbe? networkProbe,
@@ -82,6 +87,7 @@ class SilexgisSyncController extends ChangeNotifier {
        _copies = copies ?? SilexgisFileCopyRepository(db),
        _serverLinks = serverLinks ?? SilexgisServerLinkRepository(db),
        _staged = staged ?? SilexgisStagedUploadRepository(db),
+       _trips = trips ?? SilexgisTripStateRepository(db),
        _documentsDir = documentsDir,
        _networkProbe = networkProbe ?? const _UnknownNetwork(),
        _sessionBuilder = sessionBuilder;
@@ -99,6 +105,7 @@ class SilexgisSyncController extends ChangeNotifier {
   final SilexgisFileCopyRepository _copies;
   final SilexgisServerLinkRepository _serverLinks;
   final SilexgisStagedUploadRepository _staged;
+  final SilexgisTripStateRepository _trips;
 
   /// The folder documentation files are stored relative to.
   final Future<Directory> Function() _documentsDir;
@@ -251,15 +258,19 @@ class SilexgisSyncController extends ChangeNotifier {
           localState: _localState,
           heldRows: _heldRows,
           profileUuid: profile.profileUuid,
+          // Built in this order: a document goes when it hangs on a
+          // recording this run sends, and the people part describes the
+          // authors every other part names.
           parts: <SilexgisUploadPart>[
+            if (capabilities.servesTrips) ..._tripParts(profile),
+            if (capabilities.servesDocumentUpload && profile.sendsFiles)
+              ..._documentParts(profile, session, documents, decider),
             if (capabilities.servesPeople)
               SilexgisPeopleUploadPart(
                 db: _db,
                 people: _people,
                 profileUuid: profile.profileUuid,
               ),
-            if (capabilities.servesDocumentUpload && profile.sendsFiles)
-              ..._documentParts(profile, session, documents, decider),
           ],
         ).run(setId, capabilities: capabilities);
       } on SilexgisProblemException catch (e) {
@@ -371,6 +382,34 @@ class SilexgisSyncController extends ChangeNotifier {
         message: _summary(reviews),
       ),
     );
+  }
+
+  /// The two trip sections: recordings first, so a scan goes with a
+  /// recording that goes.
+  List<SilexgisUploadPart> _tripParts(SilexgisProfile profile) {
+    final answers = SilexgisTripUploadAnswers(
+      localState: _localState,
+      heldRows: _heldRows,
+      trips: _trips,
+      profileUuid: profile.profileUuid,
+    );
+    return <SilexgisUploadPart>[
+      SilexgisTripRecordingsUploadPart(
+        db: _db,
+        localState: _localState,
+        heldRows: _heldRows,
+        answers: answers,
+        profileUuid: profile.profileUuid,
+      ),
+      SilexgisTripPointsUploadPart(
+        db: _db,
+        localState: _localState,
+        heldRows: _heldRows,
+        trips: _trips,
+        answers: answers,
+        profileUuid: profile.profileUuid,
+      ),
+    ];
   }
 
   /// The two document sections, sharing one plan: `documents` first, so a
