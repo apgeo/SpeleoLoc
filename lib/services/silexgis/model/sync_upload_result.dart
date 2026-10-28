@@ -113,6 +113,11 @@ class SyncRowResult {
       // A scan: send its recording, or its place, first in the same upload.
       case SilexgisCodes.recordingNotFound:
       case SilexgisCodes.placeNotFound:
+      // A map without the area, a pin without its map, or a pin of a place
+      // another pin marks: send what is missing, or read the map again.
+      case SilexgisCodes.areaNotFound:
+      case SilexgisCodes.rasterMapNotFound:
+      case SilexgisCodes.pinExists:
         return SilexgisAction.applyAndResubmit;
 
       case SilexgisCodes.idConflict:
@@ -121,8 +126,9 @@ class SyncRowResult {
       // resent. `access.create_forbidden` stands for an account that holds no
       // right to create at all, where choosing a club would change nothing.
       case SilexgisCodes.setUnbound:
-      // A recording in a cave this account does not have.
+      // A recording or a map in a cave this account does not have.
       case SilexgisCodes.caveNotFound:
+      case SilexgisCodes.rasterNotAnImage:
         return SilexgisAction.surfaceToUser;
 
       case SilexgisCodes.rowForbidden:
@@ -137,6 +143,8 @@ class SyncRowResult {
       case SilexgisCodes.cavingGroupForbidden:
       case SilexgisCodes.documentUnavailable:
       case SilexgisCodes.targetNotFound:
+      // A map is removed and sent anew to move it to another cave.
+      case SilexgisCodes.mapCaveFixed:
         return SilexgisAction.stop;
     }
     // A write-service code passed through from the shared write service — a

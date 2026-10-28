@@ -127,8 +127,30 @@ class SilexgisCodes {
   /// recording first in the same upload.
   static const String recordingNotFound = 'sync.recording_not_found';
 
-  /// A scan names a place that is not here or not readable, answered alike.
+  /// A scan or a pin names a place that is not here or not readable — for a
+  /// pin, or not inside the map's cave — answered alike.
   static const String placeNotFound = 'sync.place_not_found';
+
+  // One raster map or pin inside a 200.
+
+  /// A map names an area that is not here, not readable, or not inside the
+  /// map's cave, answered alike.
+  static const String areaNotFound = 'sync.area_not_found';
+
+  /// A map was sent with another cave than the one it has. A map stays with
+  /// its cave: remove it and send a new one.
+  static const String mapCaveFixed = 'sync.map_cave_fixed';
+
+  /// A map's staged bytes are not an image; nothing was stored.
+  static const String rasterNotAnImage = 'sync.raster_not_an_image';
+
+  /// A pin's map is not here, or its cave is not readable. Send the map first
+  /// in the same upload.
+  static const String rasterMapNotFound = 'sync.raster_map_not_found';
+
+  /// Another live pin already marks that place on the map. Read the map again
+  /// and edit that pin.
+  static const String pinExists = 'sync.pin_exists';
 
   // Sending file bytes ahead of an upload.
   static const String fileTooLarge = 'file.too_large';

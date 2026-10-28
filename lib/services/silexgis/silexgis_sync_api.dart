@@ -3,6 +3,7 @@ import 'package:speleoloc/services/silexgis/model/sync_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_download_page.dart';
 import 'package:speleoloc/services/silexgis/model/sync_file_links.dart';
 import 'package:speleoloc/services/silexgis/model/sync_people.dart';
+import 'package:speleoloc/services/silexgis/model/sync_rasters.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
 import 'package:speleoloc/services/silexgis/model/sync_trips.dart';
@@ -124,6 +125,22 @@ class SilexgisSyncApi {
   }) async => SyncTripsPage.fromJson(
     await _http.getJson(
       SilexgisContract.tripsPath(setId),
+      query: <String, String>{
+        'cursor': ?cursor,
+        if (pageSize != null) 'pageSize': '$pageSize',
+      },
+    ),
+  );
+
+  /// One page of the raster maps, with their pins, on the rasters stream's
+  /// own cursor.
+  Future<SyncRastersPage> rasters(
+    String setId, {
+    String? cursor,
+    int? pageSize,
+  }) async => SyncRastersPage.fromJson(
+    await _http.getJson(
+      SilexgisContract.rastersPath(setId),
       query: <String, String>{
         'cursor': ?cursor,
         if (pageSize != null) 'pageSize': '$pageSize',
