@@ -36,10 +36,12 @@ import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_points_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_recordings_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_upload_answers.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trips_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
@@ -359,6 +361,32 @@ class SilexgisSyncController extends ChangeNotifier {
     } else {
       // Not offered this run, so nothing is offered to fetch from it.
       await _catalogue.clear(profile.profileUuid);
+    }
+
+    // After the features, so a recording finds its cave and a scan its place.
+    if (capabilities.servesTrips) {
+      await _readPart('the trip recordings', () async {
+        final report = await SilexgisTripsRunner(
+          api: session.api,
+          localState: _localState,
+          applier: SilexgisTripApplier(
+            db: _db,
+            logger: _logger,
+            localState: _localState,
+            heldRows: _heldRows,
+            trips: _trips,
+            profileUuid: profile.profileUuid,
+          ),
+          profileUuid: profile.profileUuid,
+        ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
+        _emit(
+          _progress.copyWith(
+            rowsApplied: _progress.rowsApplied + report.applied.changed,
+            rowsDeleted: _progress.rowsDeleted + report.applied.removed,
+            trips: report.applied,
+          ),
+        );
+      });
     }
 
     // Last, so that an accepted revision lands on rows already here.

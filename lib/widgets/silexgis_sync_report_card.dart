@@ -30,6 +30,7 @@ class SilexgisSyncReportCard extends StatelessWidget {
     final unresolved = progress.download?.unresolved ?? const [];
     final duplicates = progress.upload?.duplicates ?? const [];
     final reviews = progress.reviews;
+    final tripCollisions = progress.trips?.collisions ?? const [];
 
     return Card(
       child: Column(
@@ -105,6 +106,16 @@ class SilexgisSyncReportCard extends StatelessWidget {
               // the cave above it, and a place with no cave is not a shape
               // this application has.
               subtitle: Text(LocServ.inst.t('silexgis_unresolved_desc')),
+            ),
+          if (tripCollisions.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.route_outlined),
+              title: Text(
+                LocServ.inst.t('silexgis_trip_collisions', <String, String>{
+                  'count': '${tripCollisions.length}',
+                }),
+              ),
+              subtitle: Text(LocServ.inst.t('silexgis_trip_collisions_desc')),
             ),
         ],
       ),

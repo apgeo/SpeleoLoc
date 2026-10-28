@@ -2,6 +2,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 
 /// Where a run has got to.
@@ -58,6 +59,7 @@ class SilexgisSyncProgress {
     this.unavailable = const <SilexgisUnavailablePart>[],
     this.reviews = const SilexgisReviewCounts(),
     this.files = const SilexgisFilesReport(),
+    this.trips,
   });
 
   const SilexgisSyncProgress.idle() : this(phase: SilexgisSyncPhase.idle);
@@ -97,6 +99,9 @@ class SilexgisSyncProgress {
   /// What became of the files this run meant to send.
   final SilexgisFilesReport files;
 
+  /// What reading the trip recordings did, once it has finished.
+  final SilexgisTripsApplied? trips;
+
   bool get isRunning =>
       phase != SilexgisSyncPhase.idle &&
       phase != SilexgisSyncPhase.completed &&
@@ -108,13 +113,15 @@ class SilexgisSyncProgress {
 
   /// True when the caver has something to decide or should know about: a row
   /// was refused, a conflict needs merging, something was carried and not
-  /// stored, rows wait on a reviewer or on the caver's choice, or files wait.
+  /// stored, rows wait on a reviewer or on the caver's choice, files wait, or
+  /// a recording read could not be stored beside one of the same name.
   bool get needsAttention =>
       refusals.isNotEmpty ||
       (download?.unresolved.isNotEmpty ?? false) ||
       (upload?.duplicates.isNotEmpty ?? false) ||
       !reviews.isEmpty ||
-      files.held > 0;
+      files.held > 0 ||
+      (trips?.collisions.isNotEmpty ?? false);
 
   SilexgisSyncProgress copyWith({
     SilexgisSyncPhase? phase,
@@ -130,6 +137,7 @@ class SilexgisSyncProgress {
     List<SilexgisUnavailablePart>? unavailable,
     SilexgisReviewCounts? reviews,
     SilexgisFilesReport? files,
+    SilexgisTripsApplied? trips,
   }) => SilexgisSyncProgress(
     phase: phase ?? this.phase,
     message: message ?? this.message,
@@ -144,5 +152,6 @@ class SilexgisSyncProgress {
     unavailable: unavailable ?? this.unavailable,
     reviews: reviews ?? this.reviews,
     files: files ?? this.files,
+    trips: trips ?? this.trips,
   );
 }

@@ -1529,6 +1529,8 @@
   "silexgis_files_wifi_only_desc": "Fișierele așteaptă Wi-Fi; tot ce nu are fișier pleacă oricum. Hotspotul unui telefon contează ca Wi-Fi.",
   "silexgis_files_ask": "Întreabă înainte de a folosi datele mobile",
   "silexgis_files_ask_desc": "Oprit, fișierele doar așteaptă Wi-Fi.",
+  "silexgis_trip_collisions": "{count} ture sau scanări nu au fost salvate",
+  "silexgis_trip_collisions_desc": "Pe acest dispozitiv există deja una cu același nume sau cu același loc și moment. A fost păstrată așa cum este.",
   "silexgis_mobile_data_title": "Trimiți fișierele prin date mobile?",
   "silexgis_mobile_data_body": "{count} fotografii și documente ({size}) sunt gata de trimis, iar acest dispozitiv nu este conectat la Wi-Fi.",
   "silexgis_mobile_data_remember": "Ține minte alegerea",
