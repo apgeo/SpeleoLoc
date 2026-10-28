@@ -74,6 +74,9 @@ class SilexgisRasterServerRow implements SilexgisServerRowHandler {
           setRevision: 0,
           maps: <SyncRasterMap>[SyncRasterMap.fromJson(current)],
           tombstones: const <SyncTombstone>[],
+          // The decision hands over the map, not its removed pins: those come
+          // on the stream, and a pin merely missing here is kept.
+          pinTombstones: const <SyncPinTombstone>[],
           nextCursor: null,
           hasMore: false,
         ),

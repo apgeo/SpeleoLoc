@@ -68,6 +68,9 @@ class SilexgisTripServerRow implements SilexgisServerRowHandler {
           setRevision: 0,
           recordings: <SyncTripRecording>[SyncTripRecording.fromJson(current)],
           tombstones: const <SyncTombstone>[],
+          // The decision hands over the recording, not its removed scans:
+          // those come on the stream, and a scan merely missing here is kept.
+          pointTombstones: const <SyncPointTombstone>[],
           nextCursor: null,
           hasMore: false,
         ),
