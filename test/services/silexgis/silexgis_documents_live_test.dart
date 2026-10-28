@@ -31,6 +31,7 @@ import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_transfer_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/user_repository.dart';
@@ -160,7 +161,13 @@ void main() {
       catalogue: catalogue,
       documents: DocumentationRepository(db, logger, currentUser),
       // The session signed in above, whose refresh token the store holds.
-      sessionBuilder: (_) => SilexgisSession(auth: auth, api: api),
+      sessionBuilder: (_) => SilexgisSession(
+        auth: auth,
+        api: api,
+        transfers: SilexgisTransferApi(
+          SilexgisHttp(baseUri: baseUri, tokens: auth),
+        ),
+      ),
       downloaderBuilder: (profile, api) => SilexgisDocumentDownloader(
         db: db,
         api: api,

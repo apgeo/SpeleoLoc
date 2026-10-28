@@ -52,7 +52,7 @@ class SilexgisPeopleUploadPart implements SilexgisUploadPart {
       .toString();
 
   @override
-  Future<List<SyncUploadItem>> build() async {
+  Future<List<SyncUploadItem>> build(SilexgisUploadContext context) async {
     final links = await _people.readLinks(_profileUuid);
     final users = await (_db.select(
       _db.users,

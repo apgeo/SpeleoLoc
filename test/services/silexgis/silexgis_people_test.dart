@@ -16,6 +16,7 @@ import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -165,13 +166,15 @@ void main() {
         };
 
     test('says nothing about a user nothing was chosen or sent for', () async {
-      expect(await part.build(), isEmpty);
+      expect(await part.build(const SilexgisUploadContext()), isEmpty);
     });
 
     test('sends a chosen caver, once', () async {
       await people.choose(profile, ana, 'caver-1');
 
-      final items = (await part.build()).cast<SyncUploadPerson>();
+      final items = (await part.build(
+        const SilexgisUploadContext(),
+      )).cast<SyncUploadPerson>();
       expect(items.single.deviceUserId, ana.toString());
       expect(items.single.caverId, 'caver-1');
 
@@ -184,7 +187,7 @@ void main() {
       expect(link.choicePending, isFalse);
       expect(link.sentNamesHash, isNotNull);
       // Nothing changed since, so nothing goes next time.
-      expect(await part.build(), isEmpty);
+      expect(await part.build(const SilexgisUploadContext()), isEmpty);
     });
 
     test(
@@ -197,7 +200,9 @@ void main() {
         await (db.update(db.users)..where((t) => t.uuid.equalsValue(ana)))
             .write(const UsersCompanion(lastName: Value('Pop')));
 
-        final items = (await part.build()).cast<SyncUploadPerson>();
+        final items = (await part.build(
+          const SilexgisUploadContext(),
+        )).cast<SyncUploadPerson>();
         expect(items.single.lastName, 'Pop');
         expect(items.single.caverId, isNull);
         expect(items.single.toJson().containsKey('caverId'), isFalse);
@@ -266,7 +271,7 @@ void main() {
 
     test('never names the device or the user signed in on it', () async {
       await people.choose(profile, ana, 'caver-1');
-      final items = await part.build();
+      final items = await part.build(const SilexgisUploadContext());
       expect(items.single.toJson().keys.toSet(), <String>{
         'deviceUserId',
         'username',

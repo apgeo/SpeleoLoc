@@ -19,6 +19,7 @@ import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_transfer_api.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
 import 'scripted_client.dart';
@@ -76,11 +77,15 @@ void main() {
             store: tokens,
             client: client,
           );
+          final http = SilexgisHttp(
+            baseUri: p.baseUri,
+            tokens: auth,
+            client: client,
+          );
           return SilexgisSession(
             auth: auth,
-            api: SilexgisSyncApi(
-              SilexgisHttp(baseUri: p.baseUri, tokens: auth, client: client),
-            ),
+            api: SilexgisSyncApi(http),
+            transfers: SilexgisTransferApi(http),
           );
         },
         downloaderBuilder: (_, _) =>

@@ -2,6 +2,7 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_transfer_api.dart';
 
 /// Builds the per-installation pieces a conversation with the server needs.
 ///
@@ -12,7 +13,11 @@ typedef SilexgisSessionBuilder =
 
 /// One installation's client, assembled.
 class SilexgisSession {
-  const SilexgisSession({required this.auth, required this.api});
+  const SilexgisSession({
+    required this.auth,
+    required this.api,
+    required this.transfers,
+  });
 
   /// A session signed in with the refresh token kept in [tokens].
   factory SilexgisSession.signedIn(
@@ -24,14 +29,17 @@ class SilexgisSession {
       profileUuid: profile.profileUuid,
       store: tokens,
     );
+    final http = SilexgisHttp(baseUri: profile.baseUri, tokens: auth);
     return SilexgisSession(
       auth: auth,
-      api: SilexgisSyncApi(
-        SilexgisHttp(baseUri: profile.baseUri, tokens: auth),
-      ),
+      api: SilexgisSyncApi(http),
+      transfers: SilexgisTransferApi(http),
     );
   }
 
   final SilexgisAuthService auth;
   final SilexgisSyncApi api;
+
+  /// The resumable transfer routes, for staging file bytes.
+  final SilexgisTransferApi transfers;
 }

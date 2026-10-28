@@ -115,9 +115,15 @@ class SilexgisUploadRunner {
     required SilexgisCapabilities capabilities,
   }) async {
     final pending = await _builder.build();
+    final context = SilexgisUploadContext(
+      rowsSent: <Uuid>{
+        for (final row in pending)
+          if (!row.isDelete) row.entityUuid,
+      },
+    );
     final items = <SyncUploadSection, List<Object>>{
       SyncUploadSection.rows: pending,
-      for (final part in _parts) part.section: await part.build(),
+      for (final part in _parts) part.section: await part.build(context),
     };
     if (items.values.every((i) => i.isEmpty)) {
       return const SilexgisUploadReport.nothingToSend();
