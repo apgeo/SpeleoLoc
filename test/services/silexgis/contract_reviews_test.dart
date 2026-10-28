@@ -59,6 +59,35 @@ void main() {
     });
   });
 
+  test('an edit accepted in part says so, with the server\'s row of any '
+      'section', () {
+    final review = SyncReview.fromJson(const <String, Object?>{
+      'reviewId': 'r',
+      'entity': 'tripRecordings',
+      'rowId': 'x',
+      'outcome': 'accepted',
+      'partial': true,
+      'revision': '2026-10-28T09:00:00Z',
+      'current': <String, Object?>{'id': 'x', 'points': <Object?>[]},
+    });
+    expect(review.outcome, SyncReviewOutcome.accepted);
+    expect(review.partial, isTrue);
+    expect(review.current?['id'], 'x');
+    // Not a feature, so not read as one.
+    expect(review.currentRow, isNull);
+  });
+
+  test('an edit written whole names no part', () {
+    final review = SyncReview.fromJson(const <String, Object?>{
+      'reviewId': 'r',
+      'entity': 'rows',
+      'rowId': 'x',
+      'outcome': 'accepted',
+    });
+    expect(review.partial, isFalse);
+    expect(review.current, isNull);
+  });
+
   test('an outcome this build has not heard of is kept, not guessed', () {
     final review = SyncReview.fromJson(const <String, Object?>{
       'reviewId': 'r',

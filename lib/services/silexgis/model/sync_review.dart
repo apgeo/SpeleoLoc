@@ -40,6 +40,7 @@ class SyncReview {
     this.note,
     this.revision,
     this.code,
+    this.partial = false,
     this.current,
   });
 
@@ -73,9 +74,14 @@ class SyncReview {
   /// Why a [SyncReviewOutcome.failed] row could not be written.
   final String? code;
 
-  /// The server's row after a turned-down edit or removal of a feature, shaped
-  /// as the feature stream delivers it. **Absent when this account may not be
-  /// given that row's position**, and for every section but feature rows.
+  /// An accepted edit of which the reviewer wrote only some fields: the
+  /// device's version of the others is not the server's.
+  final bool partial;
+
+  /// The server's row after a turned-down or failed edit or removal, or a
+  /// [partial] acceptance, shaped exactly as [section]'s own stream delivers
+  /// it. **Absent whenever that stream would not hand this account the row
+  /// now**, and always for `people`.
   final Map<String, Object?>? current;
 
   /// [current] read as a feature row, when it is one.
@@ -98,6 +104,7 @@ class SyncReview {
       note: json['note'] as String?,
       revision: json['revision'] as String?,
       code: json['code'] as String?,
+      partial: json['partial'] == true,
       current: json['current'] is Map
           ? Map<String, Object?>.from(json['current']! as Map)
           : null,
