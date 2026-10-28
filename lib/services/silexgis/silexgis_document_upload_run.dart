@@ -45,6 +45,16 @@ class SilexgisFilesReport {
       failed;
 
   bool get isEmpty => staged == 0 && held == 0;
+
+  SilexgisFilesReport plus(SilexgisFilesReport other) => SilexgisFilesReport(
+    staged: staged + other.staged,
+    waitingForNetwork: waitingForNetwork + other.waitingForNetwork,
+    quotaExceeded: quotaExceeded + other.quotaExceeded,
+    tooLarge: tooLarge + other.tooLarge,
+    typeRefused: typeRefused + other.typeRefused,
+    missing: missing + other.missing,
+    failed: failed + other.failed,
+  );
 }
 
 /// What the two document sections of one run share: the plan, and the

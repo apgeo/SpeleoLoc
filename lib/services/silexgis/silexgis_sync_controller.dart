@@ -9,6 +9,7 @@ import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
@@ -29,9 +30,14 @@ import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_maps_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_pins_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_upload_answers.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
@@ -72,6 +78,7 @@ class SilexgisSyncController extends ChangeNotifier {
     SilexgisServerLinkRepository? serverLinks,
     SilexgisStagedUploadRepository? staged,
     SilexgisTripStateRepository? trips,
+    SilexgisRasterStateRepository? rasters,
     Future<Directory> Function() documentsDir =
         getApplicationDocumentsDirectory,
     NetworkKindProbe? networkProbe,
@@ -90,6 +97,7 @@ class SilexgisSyncController extends ChangeNotifier {
        _serverLinks = serverLinks ?? SilexgisServerLinkRepository(db),
        _staged = staged ?? SilexgisStagedUploadRepository(db),
        _trips = trips ?? SilexgisTripStateRepository(db),
+       _rasters = rasters ?? SilexgisRasterStateRepository(db),
        _documentsDir = documentsDir,
        _networkProbe = networkProbe ?? const _UnknownNetwork(),
        _sessionBuilder = sessionBuilder;
@@ -108,6 +116,7 @@ class SilexgisSyncController extends ChangeNotifier {
   final SilexgisServerLinkRepository _serverLinks;
   final SilexgisStagedUploadRepository _staged;
   final SilexgisTripStateRepository _trips;
+  final SilexgisRasterStateRepository _rasters;
 
   /// The folder documentation files are stored relative to.
   final Future<Directory> Function() _documentsDir;
@@ -246,6 +255,29 @@ class SilexgisSyncController extends ChangeNotifier {
     if (capabilities.servesUpload) {
       _emit(_progress.copyWith(phase: SilexgisSyncPhase.uploading));
       final documents = SilexgisDocumentUploadRun();
+      // One of each per run, whatever sends bytes: the caver is asked about
+      // mobile data once, and the room left is counted across every file.
+      final gate = SilexgisFilesNetworkGate(
+        profile: profile,
+        profiles: _profiles,
+        probe: _networkProbe,
+        decider: decider,
+      );
+      final stager = SilexgisFileStager(
+        api: session.transfers,
+        staged: _staged,
+        profileUuid: profile.profileUuid,
+      );
+      final rasterParts = capabilities.servesRasters
+          ? _rasterParts(
+              profile,
+              setId,
+              stager,
+              gate,
+              filesAllowed:
+                  capabilities.servesDocumentUpload && profile.sendsFiles,
+            )
+          : null;
       final SilexgisUploadReport report;
       try {
         report = await SilexgisUploadRunner(
@@ -265,8 +297,9 @@ class SilexgisSyncController extends ChangeNotifier {
           // authors every other part names.
           parts: <SilexgisUploadPart>[
             if (capabilities.servesTrips) ..._tripParts(profile),
+            ...?rasterParts?.parts,
             if (capabilities.servesDocumentUpload && profile.sendsFiles)
-              ..._documentParts(profile, session, documents, decider),
+              ..._documentParts(profile, documents, stager, gate),
             if (capabilities.servesPeople)
               SilexgisPeopleUploadPart(
                 db: _db,
@@ -292,7 +325,9 @@ class SilexgisSyncController extends ChangeNotifier {
         _progress.copyWith(
           rowsSent: report.written,
           upload: report,
-          files: documents.files,
+          files: rasterParts == null
+              ? documents.files
+              : documents.files.plus(rasterParts.maps.files),
         ),
       );
     }
@@ -440,13 +475,64 @@ class SilexgisSyncController extends ChangeNotifier {
     ];
   }
 
+  /// The two raster sections: maps first, so a pin goes with a map that
+  /// goes. A map's picture goes only when files may.
+  ({SilexgisRasterMapsUploadPart maps, List<SilexgisUploadPart> parts})
+  _rasterParts(
+    SilexgisProfile profile,
+    String setId,
+    SilexgisFileStager stager,
+    SilexgisFilesNetworkGate gate, {
+    required bool filesAllowed,
+  }) {
+    final answers = SilexgisRasterUploadAnswers(
+      localState: _localState,
+      heldRows: _heldRows,
+      rasters: _rasters,
+      staged: _staged,
+      rastersCursor: SilexgisStreamCursorStore(
+        localState: _localState,
+        profileUuid: profile.profileUuid,
+        setId: setId,
+        stream: SyncStream.rasters,
+      ),
+      profileUuid: profile.profileUuid,
+    );
+    final maps = SilexgisRasterMapsUploadPart(
+      db: _db,
+      localState: _localState,
+      heldRows: _heldRows,
+      rasters: _rasters,
+      answers: answers,
+      stager: stager,
+      gate: gate,
+      baseDir: _documentsDir,
+      profileUuid: profile.profileUuid,
+      filesAllowed: filesAllowed,
+    );
+    return (
+      maps: maps,
+      parts: <SilexgisUploadPart>[
+        maps,
+        SilexgisRasterPinsUploadPart(
+          db: _db,
+          localState: _localState,
+          heldRows: _heldRows,
+          rasters: _rasters,
+          answers: answers,
+          profileUuid: profile.profileUuid,
+        ),
+      ],
+    );
+  }
+
   /// The two document sections, sharing one plan: `documents` first, so a
   /// link waits with a document whose bytes wait.
   List<SilexgisUploadPart> _documentParts(
     SilexgisProfile profile,
-    SilexgisSession session,
     SilexgisDocumentUploadRun run,
-    SilexgisMobileDataDecider? decider,
+    SilexgisFileStager stager,
+    SilexgisFilesNetworkGate gate,
   ) => <SilexgisUploadPart>[
     SilexgisDocumentsUploadPart(
       planner: SilexgisDocumentUploadPlanner(
@@ -460,17 +546,8 @@ class SilexgisSyncController extends ChangeNotifier {
         profileUuid: profile.profileUuid,
       ),
       run: run,
-      stager: SilexgisFileStager(
-        api: session.transfers,
-        staged: _staged,
-        profileUuid: profile.profileUuid,
-      ),
-      gate: SilexgisFilesNetworkGate(
-        profile: profile,
-        profiles: _profiles,
-        probe: _networkProbe,
-        decider: decider,
-      ),
+      stager: stager,
+      gate: gate,
       staged: _staged,
       localState: _localState,
       heldRows: _heldRows,

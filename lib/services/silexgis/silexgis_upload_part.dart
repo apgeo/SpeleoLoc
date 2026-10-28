@@ -23,8 +23,8 @@ class SilexgisPartAnswers {
 }
 
 /// What this run sends, for a part whose items depend on it — a recording
-/// goes up when its cave is on the server or goes now, and a document when it
-/// hangs on something that is or does.
+/// goes up when its cave is on the server or goes now, a document when it
+/// hangs on something that is or does, and a pin when its map does.
 ///
 /// Parts are built in the order the runner was given them, and a part adds
 /// what it sends here as it is built, so a part built later can depend on it.
@@ -36,6 +36,9 @@ class SilexgisUploadContext {
 
   /// The recordings and scans this run creates or edits.
   final Set<Uuid> tripsSent = <Uuid>{};
+
+  /// The raster maps this run creates or edits.
+  final Set<Uuid> rasterMapsSent = <Uuid>{};
 
   /// The phone users named as the author of something this run sends.
   final Set<Uuid> authors = <Uuid>{};
