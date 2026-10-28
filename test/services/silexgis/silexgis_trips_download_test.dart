@@ -218,6 +218,34 @@ void main() {
       expect(await db.select(db.changeLog).get(), isEmpty);
     });
 
+    test('a revision is kept verbatim and never read as a moment', () async {
+      final asMoment = Uuid.v7();
+      final opaque = Uuid.v7();
+      final scan = Uuid.v7();
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          recordingJson(asMoment, title: 'A', rev: '2020-01-01T00:00:00Z'),
+          recordingJson(
+            opaque,
+            title: 'B',
+            rev: 'r7',
+            points: <Map<String, Object?>>[pointJson(scan)],
+          ),
+        ]),
+      );
+
+      for (final id in <Uuid>[asMoment, opaque]) {
+        final row = (await tripRow(id))!;
+        expect(row.updatedAt, clock.nowMs());
+        expect(row.createdAt, clock.nowMs());
+      }
+      expect((await scansOf(opaque)).single.updatedAt, clock.nowMs());
+      final revisions = await localState.readRevisions(profile);
+      expect(revisions[asMoment]!.revision, '2020-01-01T00:00:00Z');
+      expect(revisions[opaque]!.revision, 'r7');
+      expect(revisions[opaque]!.agreesWith(clock.nowMs()), isTrue);
+    });
+
     test('an author this device has is the row\'s own', () async {
       final recording = Uuid.v7();
       await applier.applyPage(
@@ -280,7 +308,8 @@ void main() {
         )..where((t) => t.uuid.equalsValue(recording))).write(
           CaveTripsCompanion(
             log: const Value('mine'),
-            updatedAt: Value(clock.nowMs()),
+            // The caver's edit comes after the read.
+            updatedAt: Value(clock.nowMs() + 1000),
           ),
         );
 

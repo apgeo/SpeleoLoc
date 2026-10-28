@@ -163,7 +163,7 @@ class SilexgisTripApplier {
       return const SilexgisTripsApplied();
     }
     final (localAuthor, foreignAuthor) = _author(server.createdByDeviceUserId);
-    final stamp = _epoch(server.revision) ?? _clock.nowMs();
+    final stamp = _clock.nowMs();
     final local = await (_db.select(
       _db.caveTrips,
     )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
@@ -290,7 +290,7 @@ class SilexgisTripApplier {
       return const SilexgisTripsApplied(scansWithoutPlace: 1);
     }
     final (localAuthor, foreignAuthor) = _author(server.createdByDeviceUserId);
-    final stamp = _epoch(server.revision) ?? _clock.nowMs();
+    final stamp = _clock.nowMs();
     final local = await (_db.select(
       _db.caveTripPoints,
     )..where((t) => t.uuid.equalsValue(id))).getSingleOrNull();
@@ -495,10 +495,10 @@ class SilexgisTripApplier {
       )..where((t) => t.uuid.equalsValue(place))).getSingleOrNull() !=
       null;
 
-  /// The server's moment as local epoch milliseconds. A row's stamp is its
-  /// revision's moment rather than the import's, which would make every
-  /// downloaded row beat a peer's newer edit in the next archive merge; only a
-  /// revision that is not a moment falls back to the clock.
+  /// A moment the stream states as a field, as local epoch milliseconds.
+  ///
+  /// Never applied to a `revision`: revisions are opaque and travel back
+  /// verbatim, so a row's local stamp is the moment of the read.
   static int? _epoch(String? iso) {
     if (iso == null) return null;
     return DateTime.tryParse(iso)?.millisecondsSinceEpoch;
