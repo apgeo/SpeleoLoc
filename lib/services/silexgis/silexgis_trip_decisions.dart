@@ -1,13 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
-import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_row_lookup.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_row_placer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_upload_answers.dart';
 
@@ -17,17 +17,17 @@ typedef SilexgisScanRemover = Future<void> Function(Uuid scanUuid);
 
 /// Decisions about trip recordings and their scans.
 ///
-/// No answer about a recording carries the server's version of it, so going
-/// back to it means reading the trips stream again from the beginning. A scan
-/// is named after its recording and the place it marks.
+/// A scan is named after its recording and the place it marks.
 class SilexgisTripDecisions implements SilexgisDecisionResolver {
   SilexgisTripDecisions({
     required AppDatabase db,
     required SilexgisServerVersionReread reread,
+    required SilexgisServerRowPlacer placer,
     required ICaveTripRepository trips,
     required SilexgisScanRemover removeScan,
   }) : _db = db,
        _reread = reread,
+       _placer = placer,
        _trips = trips,
        _removeScan = removeScan,
        _recordings = SilexgisLocalRowLookup(
@@ -37,6 +37,7 @@ class SilexgisTripDecisions implements SilexgisDecisionResolver {
 
   final AppDatabase _db;
   final SilexgisServerVersionReread _reread;
+  final SilexgisServerRowPlacer _placer;
   final ICaveTripRepository _trips;
   final SilexgisScanRemover _removeScan;
   final SilexgisLocalRowLookup _recordings;
@@ -76,8 +77,12 @@ class SilexgisTripDecisions implements SilexgisDecisionResolver {
       held,
       localUpdatedAt: await _updatedAt(held),
     );
-    await _reread.rereadFromBeginning(profile, SyncStream.trips);
-    return false;
+    return _placer.place(
+      profile.profileUuid,
+      profile.syncSetId,
+      held,
+      held.current,
+    );
   }
 
   @override

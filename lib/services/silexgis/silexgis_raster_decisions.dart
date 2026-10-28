@@ -10,23 +10,24 @@ import 'package:speleoloc/services/silexgis/silexgis_local_row_lookup.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_row_placer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 
 /// Decisions about raster maps and their pins.
 ///
-/// No answer about a map carries the server's version of it, so going back to
-/// it means reading the rasters stream again from the beginning. A pin is
-/// named after its map and the place it marks. A pin refused because another
-/// already marks its place can be removed, and the next read then brings the
-/// one the installation holds.
+/// A pin is named after its map and the place it marks. A pin refused because
+/// another already marks its place can be removed, and the next read then
+/// brings the one the installation holds.
 class SilexgisRasterDecisions implements SilexgisDecisionResolver {
   SilexgisRasterDecisions({
     required AppDatabase db,
     required SilexgisServerVersionReread reread,
+    required SilexgisServerRowPlacer placer,
     required IRasterMapRepository maps,
     required IDefinitionRepository pins,
   }) : _db = db,
        _reread = reread,
+       _placer = placer,
        _maps = maps,
        _pins = pins,
        _mapRows = SilexgisLocalRowLookup(
@@ -36,6 +37,7 @@ class SilexgisRasterDecisions implements SilexgisDecisionResolver {
 
   final AppDatabase _db;
   final SilexgisServerVersionReread _reread;
+  final SilexgisServerRowPlacer _placer;
   final IRasterMapRepository _maps;
   final IDefinitionRepository _pins;
   final SilexgisLocalRowLookup _mapRows;
@@ -74,8 +76,12 @@ class SilexgisRasterDecisions implements SilexgisDecisionResolver {
           ? (await _mapRows.read(held.entityTable, held.entityUuid))?.updatedAt
           : (await _pin(held.entityUuid))?.read<int?>('updated_at'),
     );
-    await _reread.rereadFromBeginning(profile, SyncStream.rasters);
-    return false;
+    return _placer.place(
+      profile.profileUuid,
+      profile.syncSetId,
+      held,
+      held.current,
+    );
   }
 
   @override
@@ -94,7 +100,11 @@ class SilexgisRasterDecisions implements SilexgisDecisionResolver {
     if (held.code == SilexgisCodes.pinExists) {
       // The pin already on the server for that place arrives with the next
       // read of the whole stream.
-      await _reread.rereadFromBeginning(profile, SyncStream.rasters);
+      await _reread.rereadFromBeginning(
+        profile.profileUuid,
+        profile.syncSetId,
+        SyncStream.rasters,
+      );
     }
   }
 

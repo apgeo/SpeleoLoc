@@ -1,13 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
-import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_row_placer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 
 /// Decisions about where a document hangs.
@@ -15,20 +15,23 @@ import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart'
 /// A link has no revision of its own on this device: once the installation
 /// holds it, it is recorded and never sent again. So a link waiting here is
 /// one the installation does not hold as the device sent it — new, unless the
-/// answer was a conflict, which says the installation holds something of it.
-/// Its name is the document's.
+/// answer was a conflict or handed over the server's link, either of which
+/// says the installation holds something of it. Its name is the document's.
 class SilexgisDocumentLinkDecisions implements SilexgisDecisionResolver {
   SilexgisDocumentLinkDecisions({
     required AppDatabase db,
     required ChangeLogger logger,
     required SilexgisServerVersionReread reread,
+    required SilexgisServerRowPlacer placer,
   }) : _db = db,
        _logger = logger,
-       _reread = reread;
+       _reread = reread,
+       _placer = placer;
 
   final AppDatabase _db;
   final ChangeLogger _logger;
   final SilexgisServerVersionReread _reread;
+  final SilexgisServerRowPlacer _placer;
 
   /// Each local link table, and the column naming what the document hangs
   /// on there.
@@ -51,18 +54,23 @@ class SilexgisDocumentLinkDecisions implements SilexgisDecisionResolver {
   Future<bool> isNew(
     SilexgisHeldItem held,
     Map<Uuid, StoredRevision> revisions,
-  ) async => !held.isConflict;
+  ) async => !held.isConflict && held.current == null;
 
-  /// Forgets the decision and reads the catalogue again from the beginning:
-  /// a link the installation holds is then recorded as held, not sent.
+  /// Forgets the decision and puts the server's link in the catalogue, or
+  /// reads the catalogue again from the beginning: a link the installation
+  /// holds is then recorded as held, not sent.
   @override
   Future<bool> useServerVersion(
     SilexgisProfile profile,
     SilexgisHeldItem held,
   ) async {
     await _reread.giveUp(profile.profileUuid, held);
-    await _reread.rereadFromBeginning(profile, SyncStream.documents);
-    return false;
+    return _placer.place(
+      profile.profileUuid,
+      profile.syncSetId,
+      held,
+      held.current,
+    );
   }
 
   @override

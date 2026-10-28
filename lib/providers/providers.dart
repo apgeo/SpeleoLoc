@@ -59,7 +59,9 @@ import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_decisions.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_decisions.dart';
@@ -321,9 +323,22 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
   final logger = ref.watch(changeLoggerProvider);
   final localState = ref.watch(silexgisLocalStateProvider);
   final heldRows = ref.watch(silexgisHeldRowsProvider);
+  final caves = ref.watch(caveRepositoryProvider);
+  final places = ref.watch(cavePlaceRepositoryProvider);
   final reread = SilexgisServerVersionReread(
     localState: localState,
     heldRows: heldRows,
+  );
+  final placer = buildSilexgisServerRowPlacer(
+    db: db,
+    logger: logger,
+    localState: localState,
+    heldRows: heldRows,
+    caves: caves,
+    places: places,
+    catalogue: ref.watch(silexgisDocumentCatalogueProvider),
+    trips: SilexgisTripStateRepository(db),
+    rasters: SilexgisRasterStateRepository(db),
   );
   return SilexgisDecisionsService(
     localState: localState,
@@ -331,22 +346,27 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
     resolvers: <SilexgisDecisionResolver>[
       SilexgisFeatureDecisions(
         db: db,
-        logger: logger,
-        localState: localState,
-        heldRows: heldRows,
         reread: reread,
-        caves: ref.watch(caveRepositoryProvider),
-        places: ref.watch(cavePlaceRepositoryProvider),
+        placer: placer,
+        caves: caves,
+        places: places,
       ),
       SilexgisDocumentDecisions(
         db: db,
         reread: reread,
+        placer: placer,
         documents: ref.watch(documentationRepositoryProvider),
       ),
-      SilexgisDocumentLinkDecisions(db: db, logger: logger, reread: reread),
+      SilexgisDocumentLinkDecisions(
+        db: db,
+        logger: logger,
+        reread: reread,
+        placer: placer,
+      ),
       SilexgisTripDecisions(
         db: db,
         reread: reread,
+        placer: placer,
         trips: ref.watch(caveTripRepositoryProvider),
         removeScan: (scan) =>
             ref.read(caveTripServiceProvider).deletePoint(scan),
@@ -354,6 +374,7 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
       SilexgisRasterDecisions(
         db: db,
         reread: reread,
+        placer: placer,
         maps: ref.watch(rasterMapRepositoryProvider),
         pins: ref.watch(definitionRepositoryProvider),
       ),

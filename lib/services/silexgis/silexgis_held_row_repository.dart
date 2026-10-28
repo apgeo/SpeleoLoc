@@ -50,7 +50,7 @@ class SilexgisHeldItem {
   final String? code;
   final String? decidedAt;
 
-  /// The server's own row, as the feature stream shapes it, when the decision
+  /// The server's own row, as [section]'s stream shapes it, when the decision
   /// or the conflict could hand it over.
   final Map<String, Object?>? current;
 
