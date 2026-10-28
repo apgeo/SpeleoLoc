@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:speleoloc/screens/settings/silexgis_review_outcomes_page.dart';
+import 'package:speleoloc/screens/settings/silexgis_decisions_page.dart';
 import 'package:speleoloc/screens/settings/silexgis_sync_settings_page.dart'
     show SilexgisActionLabel;
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
@@ -17,8 +17,9 @@ import 'package:speleoloc/widgets/silexgis_files_waiting_tile.dart';
 /// a verdict at all: the row was written, and whether it is the same cave as
 /// the one nearby is a question only a caver can answer.
 ///
-/// Rows held for a reviewer are counted here as well, and rows a reviewer
-/// turned down lead to the page where the caver decides what happens to each.
+/// Rows held for a reviewer are counted here as well. Rows a reviewer turned
+/// down, and items that met a later version on the server, lead to the page
+/// where the caver decides what happens to each.
 class SilexgisSyncReportCard extends StatelessWidget {
   const SilexgisSyncReportCard({required this.progress, super.key});
 
@@ -49,15 +50,15 @@ class SilexgisSyncReportCard extends StatelessWidget {
                 color: Theme.of(context).colorScheme.error,
               ),
               title: Text(
-                LocServ.inst.t('silexgis_review_to_decide', <String, String>{
+                LocServ.inst.t('silexgis_decisions_to_make', <String, String>{
                   'count': '${reviews.toDecide}',
                 }),
               ),
-              subtitle: Text(LocServ.inst.t('silexgis_review_to_decide_desc')),
+              subtitle: Text(LocServ.inst.t('silexgis_decisions_to_make_desc')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const SilexgisReviewOutcomesPage(),
+                  builder: (_) => const SilexgisDecisionsPage(),
                 ),
               ),
             ),

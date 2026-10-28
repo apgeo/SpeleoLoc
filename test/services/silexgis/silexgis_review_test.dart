@@ -18,7 +18,7 @@ import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
-import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
@@ -26,6 +26,7 @@ import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 import 'contract_fixtures.dart';
+import 'decisions_fixture.dart';
 import 'scripted_client.dart';
 import 'token_source.dart';
 
@@ -54,7 +55,7 @@ void main() {
   late SilexgisHeldRowRepository heldRows;
   late CaveRepository caves;
   late CavePlaceRepository places;
-  late SilexgisReviewOutcomesService outcomes;
+  late SilexgisDecisionsService outcomes;
   late SilexgisUploadBuilder builder;
   final clock = FakeClock(DateTime.utc(2026, 10, 26, 8));
 
@@ -77,13 +78,13 @@ void main() {
     heldRows = SilexgisHeldRowRepository(db, clock: clock);
     caves = CaveRepository(db, currentUser, logger, clock: clock);
     places = CavePlaceRepository(db, currentUser, logger, clock: clock);
-    outcomes = SilexgisReviewOutcomesService(
+    outcomes = buildDecisionsService(
       db: db,
       logger: logger,
+      currentUser: currentUser,
       localState: localState,
       heldRows: heldRows,
-      caves: caves,
-      places: places,
+      clock: clock,
     );
     builder = SilexgisUploadBuilder(
       db: db,
@@ -434,7 +435,7 @@ void main() {
         recorded('21-reviews-first-page'),
       ]);
 
-      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      final outcome = (await outcomes.decisions(profile.profileUuid)).single;
       expect(outcome.isNew, isFalse);
       expect(outcome.hasServerRow, isTrue);
       expect(outcome.canUseServerVersion, isTrue);
@@ -450,7 +451,7 @@ void main() {
       );
       expect(await db.select(db.changeLog).get(), isEmpty);
       expect(await builder.build(), isEmpty);
-      expect(await outcomes.outcomes(profile.profileUuid), isEmpty);
+      expect(await outcomes.decisions(profile.profileUuid), isEmpty);
     });
 
     test('22: without the server\'s row, the set is read again', () async {
@@ -465,7 +466,7 @@ void main() {
         recorded('22-reviews-current-withheld'),
       ]);
 
-      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      final outcome = (await outcomes.decisions(profile.profileUuid)).single;
       expect(outcome.hasServerRow, isFalse);
       expect(await outcomes.useServerVersion(profile, outcome), isFalse);
 
@@ -522,7 +523,7 @@ void main() {
         ]),
       ]);
 
-      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      final outcome = (await outcomes.decisions(profile.profileUuid)).single;
       expect(outcome.isNew, isTrue);
       expect(outcome.canUseServerVersion, isFalse);
       expect(outcome.canDelete, isTrue);
@@ -538,7 +539,7 @@ void main() {
       expect(await sending.build(), isEmpty);
 
       await outcomes.keepMine(profile.profileUuid, outcome);
-      expect(await outcomes.outcomes(profile.profileUuid), isEmpty);
+      expect(await outcomes.decisions(profile.profileUuid), isEmpty);
       expect(await sending.build(), isEmpty);
 
       // An edit is what sends it again.
@@ -554,9 +555,9 @@ void main() {
           decision('review-1', 'rejected', rowId: caveId),
         ]),
       ]);
-      final outcome = (await outcomes.outcomes(profile.profileUuid)).single;
+      final outcome = (await outcomes.decisions(profile.profileUuid)).single;
 
-      await outcomes.deleteDraft(profile.profileUuid, outcome);
+      await outcomes.delete(profile, outcome);
 
       expect(await db.select(db.caves).get(), isEmpty);
       expect(await heldFor(caveId), isNull);

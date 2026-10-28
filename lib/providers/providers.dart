@@ -38,12 +38,17 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
+import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_downloader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_importer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_link_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
@@ -52,9 +57,11 @@ import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
-import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_origin_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
@@ -304,18 +311,54 @@ final silexgisTripOriginServiceProvider = Provider<SilexgisTripOriginService>(
   ),
 );
 
-/// What the caver can do about a row a reviewer turned down.
-final silexgisReviewOutcomesServiceProvider =
-    Provider<SilexgisReviewOutcomesService>(
-      (ref) => SilexgisReviewOutcomesService(
-        db: ref.watch(appDatabaseProvider),
-        logger: ref.watch(changeLoggerProvider),
-        localState: ref.watch(silexgisLocalStateProvider),
-        heldRows: ref.watch(silexgisHeldRowsProvider),
+/// What the caver can do about what an installation did not write, section by
+/// section.
+final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
+  ref,
+) {
+  final db = ref.watch(appDatabaseProvider);
+  final logger = ref.watch(changeLoggerProvider);
+  final localState = ref.watch(silexgisLocalStateProvider);
+  final heldRows = ref.watch(silexgisHeldRowsProvider);
+  final reread = SilexgisServerVersionReread(
+    localState: localState,
+    heldRows: heldRows,
+  );
+  return SilexgisDecisionsService(
+    localState: localState,
+    heldRows: heldRows,
+    resolvers: <SilexgisDecisionResolver>[
+      SilexgisFeatureDecisions(
+        db: db,
+        logger: logger,
+        localState: localState,
+        heldRows: heldRows,
+        reread: reread,
         caves: ref.watch(caveRepositoryProvider),
         places: ref.watch(cavePlaceRepositoryProvider),
       ),
-    );
+      SilexgisDocumentDecisions(
+        db: db,
+        reread: reread,
+        documents: ref.watch(documentationRepositoryProvider),
+      ),
+      SilexgisDocumentLinkDecisions(db: db, logger: logger, reread: reread),
+      SilexgisTripDecisions(
+        db: db,
+        reread: reread,
+        trips: ref.watch(caveTripRepositoryProvider),
+        removeScan: (scan) =>
+            ref.read(caveTripServiceProvider).deletePoint(scan),
+      ),
+      SilexgisRasterDecisions(
+        db: db,
+        reread: reread,
+        maps: ref.watch(rasterMapRepositoryProvider),
+        pins: ref.watch(definitionRepositoryProvider),
+      ),
+    ],
+  );
+});
 
 /// The configured SilexGIS installations. Its own configuration key — a server
 /// profile follows the FTP-profile pattern without joining that machinery.
