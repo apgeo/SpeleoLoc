@@ -96,6 +96,10 @@ class SyncRasterMap {
     this.title,
     this.sortOrder,
     this.documentId,
+    this.pictureWidth,
+    this.pictureHeight,
+    this.pictureMirrored,
+    this.pictureTurn,
     this.revision,
     this.pins = const <SyncRasterPin>[],
   });
@@ -112,6 +116,22 @@ class SyncRasterMap {
   /// The picture: a document of the documents stream, fetched like any
   /// photograph.
   final String? documentId;
+
+  /// The pixel size of the picture as stored, the frame pins' [SyncRasterPin.x]
+  /// and [SyncRasterPin.y] are measured in. Null when the server could not
+  /// read it.
+  final int? pictureWidth;
+  final int? pictureHeight;
+
+  /// Whether the server's upright renditions of the picture are the stored
+  /// one flipped left to right before [pictureTurn]. Null when not known,
+  /// which includes a server that does not say.
+  final bool? pictureMirrored;
+
+  /// The clockwise turn, in degrees, from the stored picture (after any flip)
+  /// to its upright renditions. Null when not known, which includes a server
+  /// that does not say.
+  final int? pictureTurn;
 
   /// The map's own revision, sent back as its `baseRevision`. A pin added or
   /// removed does not move it.
@@ -130,6 +150,10 @@ class SyncRasterMap {
     mapType: SyncRasterMapType.fromWire(json['mapType'] as String?),
     sortOrder: (json['sortOrder'] as num?)?.toInt(),
     documentId: json['documentId'] as String?,
+    pictureWidth: (json['pictureWidth'] as num?)?.toInt(),
+    pictureHeight: (json['pictureHeight'] as num?)?.toInt(),
+    pictureMirrored: json['pictureMirrored'] as bool?,
+    pictureTurn: (json['pictureTurn'] as num?)?.toInt(),
     revision: json['revision'] as String?,
     pins: (json['pins'] as List? ?? const <Object?>[])
         .whereType<Map>()

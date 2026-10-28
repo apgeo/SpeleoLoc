@@ -41,6 +41,11 @@ void main() {
       expect(map.mapType, SyncRasterMapType.planView);
       expect(map.sortOrder, 0);
       expect(map.documentId, '<uuid-1>');
+      expect(map.pictureWidth, 64);
+      expect(map.pictureHeight, 48);
+      // Not on the recorded page: the turn to the renditions is unknown.
+      expect(map.pictureMirrored, isNull);
+      expect(map.pictureTurn, isNull);
       expect(map.revision, '<timestamp>');
 
       // The map's other pin is on a protected place, and is absent.
@@ -98,6 +103,46 @@ void main() {
           'revision',
         });
       }
+    });
+  });
+
+  group('the stored picture', () {
+    Map<String, Object?> invented(Map<String, Object?> picture) =>
+        <String, Object?>{
+          'id': 'm-1',
+          'caveId': 'c-1',
+          'mapType': 'planView',
+          ...picture,
+        };
+
+    test('names how its renditions are turned, when the server says', () {
+      final map = SyncRasterMap.fromJson(
+        invented(<String, Object?>{
+          'pictureWidth': 300,
+          'pictureHeight': 200,
+          'pictureMirrored': true,
+          'pictureTurn': 270,
+        }),
+      );
+      expect(map.pictureWidth, 300);
+      expect(map.pictureHeight, 200);
+      expect(map.pictureMirrored, isTrue);
+      expect(map.pictureTurn, 270);
+    });
+
+    test('is unknown when its size could not be read', () {
+      final map = SyncRasterMap.fromJson(
+        invented(<String, Object?>{
+          'pictureWidth': null,
+          'pictureHeight': null,
+          'pictureMirrored': null,
+          'pictureTurn': null,
+        }),
+      );
+      expect(map.pictureWidth, isNull);
+      expect(map.pictureHeight, isNull);
+      expect(map.pictureMirrored, isNull);
+      expect(map.pictureTurn, isNull);
     });
   });
 
