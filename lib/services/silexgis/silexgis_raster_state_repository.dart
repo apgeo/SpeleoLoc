@@ -23,6 +23,8 @@ class SilexgisRasterState implements SilexgisItemHistory {
     this.pictureSha256,
     this.areaId,
     this.pictureFrame = const SilexgisPictureFrame(),
+    this.fetchedMirrored,
+    this.fetchedTurn,
   });
 
   final Uuid entityUuid;
@@ -52,6 +54,11 @@ class SilexgisRasterState implements SilexgisItemHistory {
 
   /// What the installation says of a map's picture as it stores it.
   final SilexgisPictureFrame pictureFrame;
+
+  /// The flip and turn the held picture was fetched under; null where the
+  /// installation had not said, and for a picture this device sent.
+  final bool? fetchedMirrored;
+  final int? fetchedTurn;
 }
 
 /// The device's local-only record of the raster maps and pins an
@@ -148,11 +155,16 @@ class SilexgisRasterStateRepository {
 
   /// Records which local picture stands for the installation's: the bytes
   /// fetched for [mapUuid], or the catalogue revision of bytes it sent.
+  ///
+  /// [fetchedUnder] is the frame the map had when the bytes were fetched —
+  /// only its flip and turn are kept. It is left out when no bytes were
+  /// fetched, so what an earlier fetch recorded stays.
   Future<void> recordPicture(
     String profileUuid,
     Uuid mapUuid, {
     required String sha256,
     String? version,
+    SilexgisPictureFrame? fetchedUnder,
   }) async {
     await (_db.update(_db.silexgisRasterEntry)..where(
           (t) =>
@@ -163,6 +175,12 @@ class SilexgisRasterStateRepository {
           SilexgisRasterEntryCompanion(
             pictureSha256: Value(sha256),
             pictureVersion: Value(version),
+            fetchedMirrored: fetchedUnder == null
+                ? const Value.absent()
+                : Value(fetchedUnder.mirrored),
+            fetchedTurn: fetchedUnder == null
+                ? const Value.absent()
+                : Value(fetchedUnder.turn),
           ),
         );
   }
@@ -208,5 +226,7 @@ class SilexgisRasterStateRepository {
           mirrored: row.pictureMirrored,
           turn: row.pictureTurn,
         ),
+        fetchedMirrored: row.fetchedMirrored,
+        fetchedTurn: row.fetchedTurn,
       );
 }

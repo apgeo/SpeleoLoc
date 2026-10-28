@@ -1023,8 +1023,10 @@ class V29ToV30Migration extends SchemaMigration {
 ///
 /// Records, per map an installation holds, the size of its picture as stored
 /// and how the server's renditions are turned from it, so pins can be drawn
-/// on a rendition. Additive and nullable on a local-only table; an existing
-/// row learns the values on the map's next read.
+/// on a rendition, and the flip and turn the held picture was fetched under,
+/// so a rendition is fetched again when they change. Additive and nullable on
+/// a local-only table; an existing row learns the first on the map's next
+/// read and the second when its picture is next fetched.
 class V30ToV31Migration extends SchemaMigration {
   const V30ToV31Migration();
 
@@ -1039,6 +1041,8 @@ class V30ToV31Migration extends SchemaMigration {
       table.pictureHeight,
       table.pictureMirrored,
       table.pictureTurn,
+      table.fetchedMirrored,
+      table.fetchedTurn,
     ]) {
       await _addColumnIfMissing(db, migrator, table, column);
     }

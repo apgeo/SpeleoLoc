@@ -772,6 +772,10 @@ CREATE INDEX IF NOT EXISTS idx_silexgis_trip_entry_recording
 -- in — and `picture_mirrored` and `picture_turn` (clockwise degrees, after
 -- the flip) how its upright renditions are drawn from it. Each is null when
 -- the installation does not say; a pin row leaves them null.
+-- `fetched_mirrored` and `fetched_turn` are the flip and turn the held picture
+-- was fetched under: a rendition is drawn with them, so a map that now comes
+-- with others holds a picture drawn the old way. Null for a picture fetched
+-- before the installation said, and for one this device sent.
 CREATE TABLE IF NOT EXISTS silexgis_raster_entry (
     profile_uuid     TEXT(36) NOT NULL,
     entity_uuid      BLOB NOT NULL MAPPED BY `const UuidConverter()`,
@@ -787,6 +791,8 @@ CREATE TABLE IF NOT EXISTS silexgis_raster_entry (
     picture_height   INTEGER,
     picture_mirrored BOOLEAN,
     picture_turn     INTEGER,
+    fetched_mirrored BOOLEAN,
+    fetched_turn     INTEGER,
     PRIMARY KEY (profile_uuid, entity_uuid)
 );
 

@@ -4,7 +4,8 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 
 /// Functional coverage for [V30ToV31Migration]: the raster entries learn the
-/// stored picture's size and turn as empty columns, keeping every row, and a
+/// stored picture's size and turn, and the turn a picture was fetched under, as
+/// empty columns, keeping every row, and a
 /// second run changes nothing.
 void main() {
   late AppDatabase db;
@@ -60,6 +61,8 @@ void main() {
         'picture_height',
         'picture_mirrored',
         'picture_turn',
+        'fetched_mirrored',
+        'fetched_turn',
       ]),
     );
     final row = await db.select(db.silexgisRasterEntry).getSingle();
@@ -70,13 +73,15 @@ void main() {
     expect(row.pictureHeight, isNull);
     expect(row.pictureMirrored, isNull);
     expect(row.pictureTurn, isNull);
+    expect(row.fetchedMirrored, isNull);
+    expect(row.fetchedTurn, isNull);
   });
 
   test('running it again changes nothing', () async {
     await migrate();
     await migrate();
 
-    expect((await columns()).length, 14);
+    expect((await columns()).length, 16);
     expect(await db.select(db.silexgisRasterEntry).get(), hasLength(1));
   });
 }

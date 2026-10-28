@@ -21600,6 +21600,28 @@ class SilexgisRasterEntry extends Table
     requiredDuringInsert: false,
     $customConstraints: '',
   );
+  static const VerificationMeta _fetchedMirroredMeta = const VerificationMeta(
+    'fetchedMirrored',
+  );
+  late final GeneratedColumn<bool> fetchedMirrored = GeneratedColumn<bool>(
+    'fetched_mirrored',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _fetchedTurnMeta = const VerificationMeta(
+    'fetchedTurn',
+  );
+  late final GeneratedColumn<int> fetchedTurn = GeneratedColumn<int>(
+    'fetched_turn',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   @override
   List<GeneratedColumn> get $columns => [
     profileUuid,
@@ -21616,6 +21638,8 @@ class SilexgisRasterEntry extends Table
     pictureHeight,
     pictureMirrored,
     pictureTurn,
+    fetchedMirrored,
+    fetchedTurn,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -21712,6 +21736,24 @@ class SilexgisRasterEntry extends Table
         ),
       );
     }
+    if (data.containsKey('fetched_mirrored')) {
+      context.handle(
+        _fetchedMirroredMeta,
+        fetchedMirrored.isAcceptableOrUnknown(
+          data['fetched_mirrored']!,
+          _fetchedMirroredMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fetched_turn')) {
+      context.handle(
+        _fetchedTurnMeta,
+        fetchedTurn.isAcceptableOrUnknown(
+          data['fetched_turn']!,
+          _fetchedTurnMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -21788,6 +21830,14 @@ class SilexgisRasterEntry extends Table
         DriftSqlType.int,
         data['${effectivePrefix}picture_turn'],
       ),
+      fetchedMirrored: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}fetched_mirrored'],
+      ),
+      fetchedTurn: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}fetched_turn'],
+      ),
     );
   }
 
@@ -21832,6 +21882,8 @@ class SilexgisRasterEntryData extends DataClass
   final int? pictureHeight;
   final bool? pictureMirrored;
   final int? pictureTurn;
+  final bool? fetchedMirrored;
+  final int? fetchedTurn;
   const SilexgisRasterEntryData({
     required this.profileUuid,
     required this.entityUuid,
@@ -21847,6 +21899,8 @@ class SilexgisRasterEntryData extends DataClass
     this.pictureHeight,
     this.pictureMirrored,
     this.pictureTurn,
+    this.fetchedMirrored,
+    this.fetchedTurn,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -21893,6 +21947,12 @@ class SilexgisRasterEntryData extends DataClass
     if (!nullToAbsent || pictureTurn != null) {
       map['picture_turn'] = Variable<int>(pictureTurn);
     }
+    if (!nullToAbsent || fetchedMirrored != null) {
+      map['fetched_mirrored'] = Variable<bool>(fetchedMirrored);
+    }
+    if (!nullToAbsent || fetchedTurn != null) {
+      map['fetched_turn'] = Variable<int>(fetchedTurn);
+    }
     return map;
   }
 
@@ -21928,6 +21988,12 @@ class SilexgisRasterEntryData extends DataClass
       pictureTurn: pictureTurn == null && nullToAbsent
           ? const Value.absent()
           : Value(pictureTurn),
+      fetchedMirrored: fetchedMirrored == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fetchedMirrored),
+      fetchedTurn: fetchedTurn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fetchedTurn),
     );
   }
 
@@ -21951,6 +22017,8 @@ class SilexgisRasterEntryData extends DataClass
       pictureHeight: serializer.fromJson<int?>(json['picture_height']),
       pictureMirrored: serializer.fromJson<bool?>(json['picture_mirrored']),
       pictureTurn: serializer.fromJson<int?>(json['picture_turn']),
+      fetchedMirrored: serializer.fromJson<bool?>(json['fetched_mirrored']),
+      fetchedTurn: serializer.fromJson<int?>(json['fetched_turn']),
     );
   }
   @override
@@ -21971,6 +22039,8 @@ class SilexgisRasterEntryData extends DataClass
       'picture_height': serializer.toJson<int?>(pictureHeight),
       'picture_mirrored': serializer.toJson<bool?>(pictureMirrored),
       'picture_turn': serializer.toJson<int?>(pictureTurn),
+      'fetched_mirrored': serializer.toJson<bool?>(fetchedMirrored),
+      'fetched_turn': serializer.toJson<int?>(fetchedTurn),
     };
   }
 
@@ -21989,6 +22059,8 @@ class SilexgisRasterEntryData extends DataClass
     Value<int?> pictureHeight = const Value.absent(),
     Value<bool?> pictureMirrored = const Value.absent(),
     Value<int?> pictureTurn = const Value.absent(),
+    Value<bool?> fetchedMirrored = const Value.absent(),
+    Value<int?> fetchedTurn = const Value.absent(),
   }) => SilexgisRasterEntryData(
     profileUuid: profileUuid ?? this.profileUuid,
     entityUuid: entityUuid ?? this.entityUuid,
@@ -22012,6 +22084,10 @@ class SilexgisRasterEntryData extends DataClass
         ? pictureMirrored.value
         : this.pictureMirrored,
     pictureTurn: pictureTurn.present ? pictureTurn.value : this.pictureTurn,
+    fetchedMirrored: fetchedMirrored.present
+        ? fetchedMirrored.value
+        : this.fetchedMirrored,
+    fetchedTurn: fetchedTurn.present ? fetchedTurn.value : this.fetchedTurn,
   );
   SilexgisRasterEntryData copyWithCompanion(SilexgisRasterEntryCompanion data) {
     return SilexgisRasterEntryData(
@@ -22047,6 +22123,12 @@ class SilexgisRasterEntryData extends DataClass
       pictureTurn: data.pictureTurn.present
           ? data.pictureTurn.value
           : this.pictureTurn,
+      fetchedMirrored: data.fetchedMirrored.present
+          ? data.fetchedMirrored.value
+          : this.fetchedMirrored,
+      fetchedTurn: data.fetchedTurn.present
+          ? data.fetchedTurn.value
+          : this.fetchedTurn,
     );
   }
 
@@ -22066,7 +22148,9 @@ class SilexgisRasterEntryData extends DataClass
           ..write('pictureWidth: $pictureWidth, ')
           ..write('pictureHeight: $pictureHeight, ')
           ..write('pictureMirrored: $pictureMirrored, ')
-          ..write('pictureTurn: $pictureTurn')
+          ..write('pictureTurn: $pictureTurn, ')
+          ..write('fetchedMirrored: $fetchedMirrored, ')
+          ..write('fetchedTurn: $fetchedTurn')
           ..write(')'))
         .toString();
   }
@@ -22087,6 +22171,8 @@ class SilexgisRasterEntryData extends DataClass
     pictureHeight,
     pictureMirrored,
     pictureTurn,
+    fetchedMirrored,
+    fetchedTurn,
   );
   @override
   bool operator ==(Object other) =>
@@ -22105,7 +22191,9 @@ class SilexgisRasterEntryData extends DataClass
           other.pictureWidth == this.pictureWidth &&
           other.pictureHeight == this.pictureHeight &&
           other.pictureMirrored == this.pictureMirrored &&
-          other.pictureTurn == this.pictureTurn);
+          other.pictureTurn == this.pictureTurn &&
+          other.fetchedMirrored == this.fetchedMirrored &&
+          other.fetchedTurn == this.fetchedTurn);
 }
 
 class SilexgisRasterEntryCompanion
@@ -22124,6 +22212,8 @@ class SilexgisRasterEntryCompanion
   final Value<int?> pictureHeight;
   final Value<bool?> pictureMirrored;
   final Value<int?> pictureTurn;
+  final Value<bool?> fetchedMirrored;
+  final Value<int?> fetchedTurn;
   final Value<int> rowid;
   const SilexgisRasterEntryCompanion({
     this.profileUuid = const Value.absent(),
@@ -22140,6 +22230,8 @@ class SilexgisRasterEntryCompanion
     this.pictureHeight = const Value.absent(),
     this.pictureMirrored = const Value.absent(),
     this.pictureTurn = const Value.absent(),
+    this.fetchedMirrored = const Value.absent(),
+    this.fetchedTurn = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SilexgisRasterEntryCompanion.insert({
@@ -22157,6 +22249,8 @@ class SilexgisRasterEntryCompanion
     this.pictureHeight = const Value.absent(),
     this.pictureMirrored = const Value.absent(),
     this.pictureTurn = const Value.absent(),
+    this.fetchedMirrored = const Value.absent(),
+    this.fetchedTurn = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileUuid = Value(profileUuid),
        entityUuid = Value(entityUuid),
@@ -22176,6 +22270,8 @@ class SilexgisRasterEntryCompanion
     Expression<int>? pictureHeight,
     Expression<bool>? pictureMirrored,
     Expression<int>? pictureTurn,
+    Expression<bool>? fetchedMirrored,
+    Expression<int>? fetchedTurn,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -22193,6 +22289,8 @@ class SilexgisRasterEntryCompanion
       if (pictureHeight != null) 'picture_height': pictureHeight,
       if (pictureMirrored != null) 'picture_mirrored': pictureMirrored,
       if (pictureTurn != null) 'picture_turn': pictureTurn,
+      if (fetchedMirrored != null) 'fetched_mirrored': fetchedMirrored,
+      if (fetchedTurn != null) 'fetched_turn': fetchedTurn,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -22212,6 +22310,8 @@ class SilexgisRasterEntryCompanion
     Value<int?>? pictureHeight,
     Value<bool?>? pictureMirrored,
     Value<int?>? pictureTurn,
+    Value<bool?>? fetchedMirrored,
+    Value<int?>? fetchedTurn,
     Value<int>? rowid,
   }) {
     return SilexgisRasterEntryCompanion(
@@ -22229,6 +22329,8 @@ class SilexgisRasterEntryCompanion
       pictureHeight: pictureHeight ?? this.pictureHeight,
       pictureMirrored: pictureMirrored ?? this.pictureMirrored,
       pictureTurn: pictureTurn ?? this.pictureTurn,
+      fetchedMirrored: fetchedMirrored ?? this.fetchedMirrored,
+      fetchedTurn: fetchedTurn ?? this.fetchedTurn,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -22286,6 +22388,12 @@ class SilexgisRasterEntryCompanion
     if (pictureTurn.present) {
       map['picture_turn'] = Variable<int>(pictureTurn.value);
     }
+    if (fetchedMirrored.present) {
+      map['fetched_mirrored'] = Variable<bool>(fetchedMirrored.value);
+    }
+    if (fetchedTurn.present) {
+      map['fetched_turn'] = Variable<int>(fetchedTurn.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -22309,6 +22417,8 @@ class SilexgisRasterEntryCompanion
           ..write('pictureHeight: $pictureHeight, ')
           ..write('pictureMirrored: $pictureMirrored, ')
           ..write('pictureTurn: $pictureTurn, ')
+          ..write('fetchedMirrored: $fetchedMirrored, ')
+          ..write('fetchedTurn: $fetchedTurn, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -40255,6 +40365,8 @@ typedef $SilexgisRasterEntryCreateCompanionBuilder =
       Value<int?> pictureHeight,
       Value<bool?> pictureMirrored,
       Value<int?> pictureTurn,
+      Value<bool?> fetchedMirrored,
+      Value<int?> fetchedTurn,
       Value<int> rowid,
     });
 typedef $SilexgisRasterEntryUpdateCompanionBuilder =
@@ -40273,6 +40385,8 @@ typedef $SilexgisRasterEntryUpdateCompanionBuilder =
       Value<int?> pictureHeight,
       Value<bool?> pictureMirrored,
       Value<int?> pictureTurn,
+      Value<bool?> fetchedMirrored,
+      Value<int?> fetchedTurn,
       Value<int> rowid,
     });
 
@@ -40358,6 +40472,16 @@ class $SilexgisRasterEntryFilterComposer
     column: $table.pictureTurn,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get fetchedMirrored => $composableBuilder(
+    column: $table.fetchedMirrored,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fetchedTurn => $composableBuilder(
+    column: $table.fetchedTurn,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $SilexgisRasterEntryOrderingComposer
@@ -40438,6 +40562,16 @@ class $SilexgisRasterEntryOrderingComposer
     column: $table.pictureTurn,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get fetchedMirrored => $composableBuilder(
+    column: $table.fetchedMirrored,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fetchedTurn => $composableBuilder(
+    column: $table.fetchedTurn,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $SilexgisRasterEntryAnnotationComposer
@@ -40510,6 +40644,16 @@ class $SilexgisRasterEntryAnnotationComposer
     column: $table.pictureTurn,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get fetchedMirrored => $composableBuilder(
+    column: $table.fetchedMirrored,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get fetchedTurn => $composableBuilder(
+    column: $table.fetchedTurn,
+    builder: (column) => column,
+  );
 }
 
 class $SilexgisRasterEntryTableManager
@@ -40561,6 +40705,8 @@ class $SilexgisRasterEntryTableManager
                 Value<int?> pictureHeight = const Value.absent(),
                 Value<bool?> pictureMirrored = const Value.absent(),
                 Value<int?> pictureTurn = const Value.absent(),
+                Value<bool?> fetchedMirrored = const Value.absent(),
+                Value<int?> fetchedTurn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisRasterEntryCompanion(
                 profileUuid: profileUuid,
@@ -40577,6 +40723,8 @@ class $SilexgisRasterEntryTableManager
                 pictureHeight: pictureHeight,
                 pictureMirrored: pictureMirrored,
                 pictureTurn: pictureTurn,
+                fetchedMirrored: fetchedMirrored,
+                fetchedTurn: fetchedTurn,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -40595,6 +40743,8 @@ class $SilexgisRasterEntryTableManager
                 Value<int?> pictureHeight = const Value.absent(),
                 Value<bool?> pictureMirrored = const Value.absent(),
                 Value<int?> pictureTurn = const Value.absent(),
+                Value<bool?> fetchedMirrored = const Value.absent(),
+                Value<int?> fetchedTurn = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SilexgisRasterEntryCompanion.insert(
                 profileUuid: profileUuid,
@@ -40611,6 +40761,8 @@ class $SilexgisRasterEntryTableManager
                 pictureHeight: pictureHeight,
                 pictureMirrored: pictureMirrored,
                 pictureTurn: pictureTurn,
+                fetchedMirrored: fetchedMirrored,
+                fetchedTurn: fetchedTurn,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
