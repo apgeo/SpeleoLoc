@@ -63,6 +63,13 @@ dependencies:
   # Direct dep for the caching tile provider; flutter_map already pulls the
   # same major transitively.
   http: ^1.2.0
+  # Which network a SilexGIS sync runs over, for the "only over Wi-Fi" setting
+  # (read through NetworkKindProbe, never directly). It reports the transport
+  # — wifi, mobile, ethernet, vpn — not whether the network is metered: a
+  # phone's hotspot reads as wifi and a metered Wi-Fi is not told apart. On
+  # Linux it asks NetworkManager over D-Bus. Held on 6.x: 7.0 needs Android
+  # Gradle Plugin 8.12.1 and this project builds with 8.11.1.
+  connectivity_plus: ^6.1.5
   # GPX/KML place exchange; pdf already pulls the same major transitively.
   xml: ^6.5.0
   flex_color_picker: ^3.7.1
