@@ -55,6 +55,8 @@ import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_review_outcomes_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_origin_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
@@ -292,6 +294,15 @@ final silexgisCaverChoiceProvider = FutureProvider.autoDispose
       (ref, userUuid) =>
           ref.watch(silexgisPeopleServiceProvider).choiceFor(userUuid),
     );
+
+/// Which recordings on this device came from the active installation and
+/// were made on another phone, for the trips list to keep out of the way.
+final silexgisTripOriginServiceProvider = Provider<SilexgisTripOriginService>(
+  (ref) => SilexgisTripOriginService(
+    profiles: ref.watch(silexgisProfileRepositoryProvider),
+    trips: SilexgisTripStateRepository(ref.watch(appDatabaseProvider)),
+  ),
+);
 
 /// What the caver can do about a row a reviewer turned down.
 final silexgisReviewOutcomesServiceProvider =

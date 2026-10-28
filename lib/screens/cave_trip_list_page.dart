@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:intl/intl.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_trip/cave_trip_history_list.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_trip_origin_service.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -48,6 +50,7 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
   Cave? _cave;
   List<CaveTrip> _endedTrips = [];
   Map<Uuid, int> _pointCounts = {};
+  SilexgisReceivedTrips? _received;
 
   // Kept from initState rather than read again in dispose: by the time
   // dispose runs, `ref` can no longer be used, and the read there threw —
@@ -97,11 +100,15 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
           .getTripPoints(trip.uuid);
       counts[trip.uuid] = points.length;
     }
+    final received = await ref
+        .read(silexgisTripOriginServiceProvider)
+        .received();
     if (mounted) {
       setState(() {
         _cave = cave;
         _endedTrips = ended;
         _pointCounts = counts;
+        _received = received;
       });
     }
   }
@@ -326,8 +333,6 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
         .read(caveTripServiceProvider)
         .activeTripIdNotifier
         .value;
-    final dateFormat = DateFormat('yyyy/MM/dd HH:mm');
-
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
@@ -352,42 +357,18 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
             ),
           Expanded(
             key: tourKeys['list'],
-            child: _endedTrips.isEmpty
-                ? Center(
-                    child: Text(
-                      activeTripId != null
-                          ? ''
-                          : LocServ.inst.t('trip_no_history'),
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: _endedTrips.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final trip = _endedTrips[i];
-                      final dt = DateTime.fromMillisecondsSinceEpoch(
-                        trip.tripStartedAt,
-                      );
-                      final count = _pointCounts[trip.uuid] ?? 0;
-                      return ListTile(
-                        title: Text(trip.title),
-                        subtitle: Text(dateFormat.format(dt)),
-                        trailing: Text(
-                          '$count pts',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        onTap: () async {
-                          await AppRoutes.pushCaveTrip(context, trip.uuid);
-                          unawaited(_load());
-                        },
-                      );
-                    },
-                  ),
+            child: CaveTripHistoryList(
+              trips: _endedTrips,
+              pointCounts: _pointCounts,
+              received: _received,
+              emptyText: activeTripId != null
+                  ? ''
+                  : LocServ.inst.t('trip_no_history'),
+              onOpen: (trip) async {
+                await AppRoutes.pushCaveTrip(context, trip.uuid);
+                unawaited(_load());
+              },
+            ),
           ),
         ],
       ),
