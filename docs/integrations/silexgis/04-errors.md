@@ -377,7 +377,7 @@ routes' own:
 | 400 | `file.type_not_accepted` | The installation does not accept files of this type | `surface-to-user` |
 | 403 | `access.create_forbidden` | This account may not add documents anywhere | `stop` — keep the file on the phone |
 | 409 | `file.quota_exceeded` | Not enough storage room left for this account or for the installation; staged bytes already count | `surface-to-user` — send the rows that need no file, or withdraw staged files nothing will adopt |
-| 409 | `upload.chunk_out_of_order` | The piece does not continue the file; the detail names the offset to send from | `apply-and-resubmit` — send from that offset |
+| 409 | `upload.chunk_out_of_order` | The piece does not continue the file; the integer member `expectedOffset` names the offset to send from (the detail says the same in words) | `apply-and-resubmit` — send from `expectedOffset`, or, when the answer was lost, from the `receivedBytes` that `GET /api/v1/files/uploads/{id}` reports |
 | 400 | `upload.size_mismatch` | The pieces add up to more than the declared size — including any piece sent after the bytes were staged | `stop` — open a new transfer with the right size |
 | 409 | `upload.incomplete` | Completed before every byte arrived | `apply-and-resubmit` — ask how far it got (`GET`), send the rest, complete again |
 | 404 | `upload.session_not_found` | No such transfer for this account: it never existed, belongs to another account, was withdrawn, or waited past its retention (or 24 hours idle while still arriving) | `apply-and-resubmit` — open a new transfer and send the bytes again |
@@ -411,7 +411,13 @@ boundary is stated so that a gap is not mistaken for an omission.
   row was written by somebody else since the phone read it; the problem lists the `reviewIds`, and
   nothing was decided — send `overCurrent: true` to write the accepted fields onto the current row),
   `review.fields_unsupported` (400 — a field list for a line that can only be decided whole, or a field
-  it does not have) and `validation.failed` (400 — a note longer than 2,000 characters).
+  it does not have; the line's `acceptableFields` lists the ones it has) and `validation.failed` (400 — a
+  note longer than 2,000 characters). The picture of a held photo or raster map
+  (`GET /api/v1/review/items/{reviewId}/preview?size=480|1200`, a rendering without metadata) answers
+  `review.item_not_found` (404) also for a line whose content the caller is not shown,
+  `review.preview_unavailable` (404 — the line keeps no picture: a file that is not an image, or bytes
+  already adopted or swept), `review.preview_size_unsupported` (400) and `review.preview_failed` (400 —
+  the bytes could not be drawn).
   **On the reviews stream**, a `failed` decision's `code` is the code the upload itself would have
   answered for that row (section 6.2), `review.dependency_failed` — a held row it depends on was
   not written, so it could not be either — or `review.proposal_unreadable` (a kept proposal this build
