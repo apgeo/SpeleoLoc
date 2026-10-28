@@ -42,6 +42,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// The run card sits below the server's settings, past the first screen.
+  Future<void> scrollToRun(WidgetTester tester) => tester.scrollUntilVisible(
+    find.widgetWithText(FilledButton, 'silexgis_sync_now'),
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+
   testWidgets('with no server configured it invites rather than warns', (
     tester,
   ) async {
@@ -70,6 +77,7 @@ void main() {
     expect(find.text('silexgis_selection_none'), findsOneWidget);
     // Both run buttons are there and both are disabled: there is nothing to
     // sync until a caver chooses what this device carries.
+    await scrollToRun(tester);
     final sync = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'silexgis_sync_now'),
     );
@@ -91,13 +99,16 @@ void main() {
       ),
     );
 
+    // Off by default: a caver who picked the club's caves to carry would not
+    // expect their own survey of an unrelated cave to be published.
+    final toggle = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'silexgis_send_new_caves'),
+    );
+    await scrollToRun(tester);
     final sync = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'silexgis_sync_now'),
     );
     expect(sync.onPressed, isNotNull);
-    // Off by default: a caver who picked the club's caves to carry would not
-    // expect their own survey of an unrelated cave to be published.
-    final toggle = tester.widget<SwitchListTile>(find.byType(SwitchListTile));
     expect(toggle.value, isFalse);
   });
 
