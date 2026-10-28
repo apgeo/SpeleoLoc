@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/documentation_byte_edit_service.dart';
 import 'package:speleoloc/utils/clock.dart';
 
 /// What a documentation file on this device is a copy of.
@@ -77,7 +78,7 @@ class SilexgisFileCopyEntry {
 ///
 /// A file with no entry is the caver's own. The register is about the files on
 /// this device, not about any one installation, so it outlives a profile.
-class SilexgisFileCopyRepository {
+class SilexgisFileCopyRepository implements DocumentationCopyRegister {
   SilexgisFileCopyRepository(this._db, {Clock clock = const SystemClock()})
     : _clock = clock;
 
@@ -149,6 +150,12 @@ class SilexgisFileCopyRepository {
       adopted++;
     }
     return adopted;
+  }
+
+  @override
+  Future<bool> isServerOnlyCopy(Uuid documentUuid) async {
+    final heldAs = (await read(documentUuid))?.heldAs;
+    return SilexgisHeldAs.serverOnlyCopies.contains(heldAs);
   }
 
   /// The entry for [documentUuid], or null for the caver's own file.

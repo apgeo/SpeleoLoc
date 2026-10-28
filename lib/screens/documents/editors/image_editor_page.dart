@@ -15,7 +15,8 @@ import 'package:speleoloc/widgets/snack_bar_service.dart';
 /// Full-featured image editor powered by `pro_image_editor`.
 ///
 /// * **Edit mode** (`existingDoc != null`): loads the existing image and
-///   overwrites it on save.
+///   overwrites it on save — or, for a server copy without location or a
+///   picture the server drew, saves the edit as a new document.
 /// * **Create mode**: expects [initialFile] (e.g. from file-picker or camera)
 ///   so the user can annotate / crop before the first save.
 class ImageEditorPage extends ConsumerStatefulWidget {
@@ -83,17 +84,11 @@ class _ImageEditorPageState extends ConsumerState<ImageEditorPage> {
     try {
       if (_isEditMode) {
         // ---- UPDATE existing image ----
-        final doc = widget.existingDoc!;
-        final saved = await DocumentationFileHelper.overwriteBytes(
-          relativePath: doc.fileName,
-          bytes: editedBytes,
-        );
-        await DocumentationFileHelper.updateRecord(
-          id: doc.uuid,
-          title: doc.title,
-          description: doc.description,
-          savedFile: saved,
-        );
+        // A server copy that is not the file itself is never written over:
+        // the edit becomes a new document beside it.
+        await ref
+            .read(documentationByteEditServiceProvider)
+            .save(widget.existingDoc!, editedBytes);
       } else {
         // ---- CREATE new image ----
         final baseName = 'image_${DateTime.now().millisecondsSinceEpoch}.png';

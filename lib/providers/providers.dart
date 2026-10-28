@@ -16,6 +16,7 @@ import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/definition_repository.dart';
+import 'package:speleoloc/services/documentation_byte_edit_service.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/cave_geo_service.dart';
 import 'package:speleoloc/services/location/location_service.dart';
@@ -185,6 +186,20 @@ final silexgisDocumentCatalogueProvider =
     Provider<SilexgisDocumentCatalogueRepository>(
       (ref) =>
           SilexgisDocumentCatalogueRepository(ref.watch(appDatabaseProvider)),
+    );
+
+/// Saves an editor's new content of a documentation file — in place, or as a
+/// new document when the file is a server copy that is not the file itself.
+final documentationByteEditServiceProvider =
+    Provider<DocumentationByteEditService>(
+      (ref) => DocumentationByteEditService(
+        db: ref.watch(appDatabaseProvider),
+        logger: ref.watch(changeLoggerProvider),
+        currentUser: ref.watch(currentUserServiceProvider),
+        copies: ref.watch(silexgisFileCopyRepositoryProvider),
+        baseDir: getApplicationDocumentsDirectory,
+        clock: ref.watch(clockProvider),
+      ),
     );
 
 /// What each documentation file on this device is a copy of, when it came
