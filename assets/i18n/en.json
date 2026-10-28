@@ -1580,6 +1580,7 @@
   "silexgis_raster_pictures_missing": "{count} map pictures were not fetched",
   "silexgis_raster_pictures_missing_desc": "Their maps are here without a picture. The next sync tries again.",
   "raster_map_reduced_picture": "This is a reduced picture from the server. Points cannot be shown or placed on it; the points stay stored.",
+  "raster_map_reduced_picture_read_only": "This is a reduced picture from the server. Points are shown on it but cannot be placed or moved.",
   "silexgis_mobile_data_title": "Send files over mobile data?",
   "silexgis_mobile_data_body": "{count} photos and documents ({size}) are ready to send, and this device is not on Wi-Fi.",
   "silexgis_mobile_data_remember": "Remember my choice",

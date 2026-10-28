@@ -595,10 +595,16 @@ class _RasterMapPlaceSelectorPageState
                   child: ClipRect(
                     child: RasterMapPinsGate(
                       rasterMapUuid: _selectedRasterMap.uuid,
+                      picture: FileImage(_imageFile!),
                       places: _placesWithDefinitions,
-                      builder: (context, places, pinsFit) => _buildEditor(
+                      builder: (context, places, pinsEditable) => _buildEditor(
                         places,
-                        readonly: widget.isReadonly || !pinsFit,
+                        readonly: widget.isReadonly || !pinsEditable,
+                        // On a reduced picture the selected point is shown
+                        // away from where it is stored.
+                        selected: pinsEditable
+                            ? _selectedDefinition
+                            : _shownDefinition(places),
                       ),
                     ),
                   ),
@@ -608,15 +614,27 @@ class _RasterMapPlaceSelectorPageState
     );
   }
 
+  CavePlaceToRasterMapDefinition? _shownDefinition(
+    List<CavePlaceWithDefinition> places,
+  ) {
+    final uuid = _selectedDefinition?.uuid;
+    if (uuid == null) return null;
+    for (final place in places) {
+      if (place.definition?.uuid == uuid) return place.definition;
+    }
+    return null;
+  }
+
   Widget _buildEditor(
     List<CavePlaceWithDefinition> places, {
     required bool readonly,
+    required CavePlaceToRasterMapDefinition? selected,
   }) => RasterMapPlacePointEditor(
     controller: _editorController,
     imageFile: _imageFile!,
     cavePlacesWithDefinitions: places,
-    initialImageX: _selectedDefinition?.xCoordinate?.toDouble(),
-    initialImageY: _selectedDefinition?.yCoordinate?.toDouble(),
+    initialImageX: selected?.xCoordinate?.toDouble(),
+    initialImageY: selected?.yCoordinate?.toDouble(),
     isReadonly: readonly,
     debugUi: DEBUG_UI,
     rasterMaps: _rasterMaps,

@@ -1579,6 +1579,7 @@
   "silexgis_raster_pictures_missing": "{count} imagini de hartă nu au fost descărcate",
   "silexgis_raster_pictures_missing_desc": "Hărțile lor sunt aici fără imagine. Următoarea sincronizare încearcă din nou.",
   "raster_map_reduced_picture": "Aceasta este o imagine redusă de pe server. Punctele nu pot fi afișate sau plasate pe ea; punctele rămân salvate.",
+  "raster_map_reduced_picture_read_only": "Aceasta este o imagine redusă de pe server. Punctele sunt afișate pe ea, dar nu pot fi plasate sau mutate.",
   "silexgis_mobile_data_title": "Trimiți fișierele prin date mobile?",
   "silexgis_mobile_data_body": "{count} fotografii și documente ({size}) sunt gata de trimis, iar acest dispozitiv nu este conectat la Wi-Fi.",
   "silexgis_mobile_data_remember": "Ține minte alegerea",

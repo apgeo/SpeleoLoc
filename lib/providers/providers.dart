@@ -54,7 +54,6 @@ import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
-import 'package:speleoloc/services/silexgis/silexgis_map_pin_rule.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
@@ -362,12 +361,15 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
   );
 });
 
-/// Whether a raster map's pins fit the picture this device holds for it.
-final rasterMapPinsFitProvider = FutureProvider.autoDispose.family<bool, Uuid>(
-  (ref, mapUuid) => SilexgisMapPinRule(
-    SilexgisMapPictureCopies(ref.watch(appDatabaseProvider)),
-  ).pinsFitOn(mapUuid),
-);
+/// The server copy a raster map shows as its picture, with what the
+/// installation says of the picture as stored; null when the map shows the
+/// caver's own picture or the original.
+final rasterMapPictureProvider = FutureProvider.autoDispose
+    .family<SilexgisMapPicture?, Uuid>(
+      (ref, mapUuid) => SilexgisMapPictureCopies(
+        ref.watch(appDatabaseProvider),
+      ).pictureOf(mapUuid),
+    );
 
 /// The configured SilexGIS installations. Its own configuration key — a server
 /// profile follows the FTP-profile pattern without joining that machinery.

@@ -89,6 +89,11 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
   List<RasterMap> _rasterMaps = [];
   RasterMap? _selectedRasterMap;
   List<CavePlaceWithDefinition> _placesWithDefs = [];
+
+  /// The places as the editor last drew them. On a server's reduced picture
+  /// their points sit elsewhere than stored, so centering on one reads it
+  /// here.
+  List<CavePlaceWithDefinition> _drawnPlaces = [];
   Uuid? _selectedPlaceId;
 
   static const bool SHOW_CAVE_PLACE_ACTIONS_IN_APP_BAR = false;
@@ -265,7 +270,7 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
         final id = _selectedPlaceId;
         final cpwd = id == null
             ? null
-            : _placesWithDefs.where((p) => p.cavePlace.uuid == id).firstOrNull;
+            : _drawnPlaces.where((p) => p.cavePlace.uuid == id).firstOrNull;
         final x = cpwd?.definition?.xCoordinate?.toDouble();
         final y = cpwd?.definition?.yCoordinate?.toDouble();
         if (x != null && y != null) {
@@ -380,8 +385,10 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
   Widget _buildEditorWidget(File file, String imagePath) {
     return RasterMapPinsGate(
       rasterMapUuid: _selectedRasterMap?.uuid,
+      picture: _imageProviderCache[imagePath] ??= FileImage(file),
       places: _placesWithDefs,
-      builder: (context, places, _) => _buildEditor(file, imagePath, places),
+      builder: (context, places, _) =>
+          _buildEditor(file, imagePath, _drawnPlaces = places),
     );
   }
 
@@ -453,7 +460,12 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
         }
         await _loadDefinitionsForSelected();
       },
-      onCavePlaceSelected: (cpwd) {
+      onCavePlaceSelected: (listed) {
+        final cpwd =
+            _drawnPlaces
+                .where((p) => p.cavePlace.uuid == listed.cavePlace.uuid)
+                .firstOrNull ??
+            listed;
         final hasDef =
             cpwd.definition != null &&
             cpwd.definition!.xCoordinate != null &&

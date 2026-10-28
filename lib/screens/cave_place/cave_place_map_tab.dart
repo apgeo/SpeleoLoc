@@ -7,6 +7,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/raster_map_place_selector.dart';
+import 'package:speleoloc/services/silexgis/silexgis_map_pin_rule.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
@@ -100,7 +101,8 @@ class _CavePlaceMapTabState extends ConsumerState<CavePlaceMapTab> {
 
   Future<void> _definePlace() async {
     final rm = widget.rasterMap;
-    if (!await ref.read(rasterMapPinsFitProvider(rm.uuid).future)) {
+    final picture = await ref.read(rasterMapPictureProvider(rm.uuid).future);
+    if (!SilexgisMapPinRule.pinsPlaceable(picture?.heldAs)) {
       SnackBarService.showWarning(LocServ.inst.t('raster_map_reduced_picture'));
       return;
     }
@@ -172,6 +174,7 @@ class _CavePlaceMapTabState extends ConsumerState<CavePlaceMapTab> {
                   height: 300,
                   child: RasterMapPinsGate(
                     rasterMapUuid: widget.rasterMap.uuid,
+                    picture: FileImage(file),
                     places: defs,
                     builder: (context, places, _) => RasterMapPlacePointEditor(
                       controller: RasterMapPlacePointEditorController(

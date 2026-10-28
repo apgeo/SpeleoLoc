@@ -83,6 +83,11 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   List<RasterMap> _rasterMaps = [];
   RasterMap? _selectedRasterMap;
   List<CavePlaceWithDefinition> _placesWithDefs = [];
+
+  /// The places as the map editor last drew them. On a server's reduced
+  /// picture their points sit elsewhere than stored, so centering and fitting
+  /// read them here.
+  List<CavePlaceWithDefinition> _drawnPlaces = [];
   File? _rasterImageFile;
   final Map<String, ImageProvider> _imageProviderCache = {};
   final GlobalKey<RasterMapNavBarState> _navBarKey =
@@ -342,7 +347,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   void _zoomToTripExtent() {
     final imagePoints = <Offset>[];
     for (final pt in _points) {
-      final cpwd = _placesWithDefs
+      final cpwd = _drawnPlaces
           .where((c) => c.cavePlace.uuid == pt.cavePlaceUuid)
           .firstOrNull;
       final def = cpwd?.definition;
@@ -1179,7 +1184,14 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             await _loadRasterMapData();
           },
           onCavePlaceSelected: (cpwd) {
-            final def = cpwd.definition;
+            final def =
+                (_drawnPlaces
+                            .where(
+                              (p) => p.cavePlace.uuid == cpwd.cavePlace.uuid,
+                            )
+                            .firstOrNull ??
+                        cpwd)
+                    .definition;
             setState(() => _selectedPlaceId = cpwd.cavePlace.uuid);
             _editorController.setCavePlaceId(cpwd.cavePlace.uuid);
             if (def != null &&
@@ -1204,15 +1216,18 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
           child: imageFile != null
               ? RasterMapPinsGate(
                   rasterMapUuid: _selectedRasterMap?.uuid,
+                  picture: _imageProviderCache[imageFile.path] ??= FileImage(
+                    imageFile,
+                  ),
                   places: _placesWithDefs,
-                  builder: (context, places, pinsFit) => RepaintBoundary(
+                  builder: (context, places, _) => RepaintBoundary(
                     key: _mapRepaintKey,
                     child: RasterMapPlacePointEditor(
                       controller: _editorController,
                       imageFile: imageFile,
                       imageProvider: _imageProviderCache[imageFile.path] ??=
                           FileImage(imageFile),
-                      cavePlacesWithDefinitions: places,
+                      cavePlacesWithDefinitions: _drawnPlaces = places,
                       selectedRasterMapUuid: _selectedRasterMap?.uuid,
                       rasterMaps: _rasterMaps,
                       isReadonly: true,
@@ -1226,9 +1241,10 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
                           setState(() => _navBarShowMaps = v),
                       onNavBarShowCavePlacesChanged: (v) =>
                           setState(() => _navBarShowPlaces = v),
-                      // The trip is drawn through its places' pins, which
-                      // do not fit a reduced picture either.
-                      tripOverlay: pinsFit && visibleIds.isNotEmpty
+                      // The trip is drawn through its places' pins as
+                      // shown, so on a reduced picture it follows them, or
+                      // is not drawn when they are not.
+                      tripOverlay: visibleIds.isNotEmpty
                           ? TripOverlayData(orderedCavePlaceIds: visibleIds)
                           : null,
                     ),
