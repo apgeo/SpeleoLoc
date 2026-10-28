@@ -1,11 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 
 /// Functional coverage for [V30ToV31Migration]: the raster entries learn the
-/// stored picture's size and turn, and the turn a picture was fetched under, as
-/// empty columns, keeping every row, and a
+/// stored picture's size and turn as empty columns, keeping every row, and a
 /// second run changes nothing.
 void main() {
   late AppDatabase db;
@@ -61,27 +62,34 @@ void main() {
         'picture_height',
         'picture_mirrored',
         'picture_turn',
-        'fetched_mirrored',
-        'fetched_turn',
       ]),
     );
-    final row = await db.select(db.silexgisRasterEntry).getSingle();
-    expect(row.entityUuid, map);
-    expect(row.received, isTrue);
-    expect(row.pictureSha256, 'ab12');
-    expect(row.pictureWidth, isNull);
-    expect(row.pictureHeight, isNull);
-    expect(row.pictureMirrored, isNull);
-    expect(row.pictureTurn, isNull);
-    expect(row.fetchedMirrored, isNull);
-    expect(row.fetchedTurn, isNull);
+    // Read by name: the generated row also has the columns a later step
+    // adds.
+    final row = await db
+        .customSelect('SELECT * FROM silexgis_raster_entry')
+        .getSingle();
+    expect(row.read<Uint8List>('entity_uuid'), map.bytes);
+    expect(row.read<bool>('received'), isTrue);
+    expect(row.read<String>('picture_sha256'), 'ab12');
+    for (final column in <String>[
+      'picture_width',
+      'picture_height',
+      'picture_mirrored',
+      'picture_turn',
+    ]) {
+      expect(row.data[column], isNull, reason: column);
+    }
   });
 
   test('running it again changes nothing', () async {
     await migrate();
     await migrate();
 
-    expect((await columns()).length, 16);
-    expect(await db.select(db.silexgisRasterEntry).get(), hasLength(1));
+    expect((await columns()).length, 14);
+    expect(
+      await db.customSelect('SELECT * FROM silexgis_raster_entry').get(),
+      hasLength(1),
+    );
   });
 }

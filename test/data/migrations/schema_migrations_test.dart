@@ -125,6 +125,7 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
       expect(appliedFor(6), [
         7,
@@ -151,6 +152,7 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
 
       // From v7: every migration from v8 onward fires.
@@ -179,6 +181,7 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
 
       // Mid-ladder upgrade: only the remaining steps fire.
@@ -204,6 +207,7 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
       expect(appliedFor(16), [
         17,
@@ -221,6 +225,7 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
       expect(appliedFor(17), [
         18,
@@ -237,6 +242,7 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
       expect(appliedFor(18), [
         19,
@@ -252,24 +258,40 @@ void main() {
         29,
         30,
         31,
+        32,
       ]);
 
-      expect(appliedFor(19), [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(20), [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(21), [22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(22), [23, 24, 25, 26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(23), [24, 25, 26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(24), [25, 26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(25), [26, 27, 28, 29, 30, 31]);
-      expect(appliedFor(26), [27, 28, 29, 30, 31]);
-      expect(appliedFor(27), [28, 29, 30, 31]);
-      expect(appliedFor(28), [29, 30, 31]);
+      expect(appliedFor(19), [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+      ]);
+      expect(appliedFor(20), [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(21), [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(22), [23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(23), [24, 25, 26, 27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(24), [25, 26, 27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(25), [26, 27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(26), [27, 28, 29, 30, 31, 32]);
+      expect(appliedFor(27), [28, 29, 30, 31, 32]);
+      expect(appliedFor(28), [29, 30, 31, 32]);
 
-      expect(appliedFor(29), [30, 31]);
-      expect(appliedFor(30), [31]);
+      expect(appliedFor(29), [30, 31, 32]);
+      expect(appliedFor(30), [31, 32]);
+      expect(appliedFor(31), [32]);
 
       // Already current: nothing fires.
-      expect(appliedFor(31), isEmpty);
+      expect(appliedFor(32), isEmpty);
     });
   });
 }

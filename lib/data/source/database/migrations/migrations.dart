@@ -1023,10 +1023,8 @@ class V29ToV30Migration extends SchemaMigration {
 ///
 /// Records, per map an installation holds, the size of its picture as stored
 /// and how the server's renditions are turned from it, so pins can be drawn
-/// on a rendition, and the flip and turn the held picture was fetched under,
-/// so a rendition is fetched again when they change. Additive and nullable on
-/// a local-only table; an existing row learns the first on the map's next
-/// read and the second when its picture is next fetched.
+/// on a rendition. Additive and nullable on a local-only table; an existing
+/// row learns them on the map's next read.
 class V30ToV31Migration extends SchemaMigration {
   const V30ToV31Migration();
 
@@ -1041,6 +1039,29 @@ class V30ToV31Migration extends SchemaMigration {
       table.pictureHeight,
       table.pictureMirrored,
       table.pictureTurn,
+    ]) {
+      await _addColumnIfMissing(db, migrator, table, column);
+    }
+  }
+}
+
+/// v31 → v32.
+///
+/// Records the flip and turn the held picture of a map was fetched under, so
+/// a server copy drawn before the picture was turned in the browser is
+/// fetched again. Additive and nullable on a local-only table; an existing
+/// row learns them when its picture is next fetched. Its own step because v31
+/// had already left this machine.
+class V31ToV32Migration extends SchemaMigration {
+  const V31ToV32Migration();
+
+  @override
+  int get toVersion => 32;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    final table = db.silexgisRasterEntry;
+    for (final column in <GeneratedColumn<Object>>[
       table.fetchedMirrored,
       table.fetchedTurn,
     ]) {
@@ -1103,6 +1124,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V28ToV29Migration(),
   V29ToV30Migration(),
   V30ToV31Migration(),
+  V31ToV32Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
