@@ -141,7 +141,15 @@ class SilexgisRasterPictureFetcher {
       _log.info('a map picture is not handed to this account in any form');
       return false;
     }
-    final link = await _address(documentId, rendition, document == null);
+    final SyncFileLink? link;
+    try {
+      link = await _address(documentId, rendition, document == null);
+    } on SilexgisException catch (e) {
+      // One picture's address is not the run's: the maps are stored, and the
+      // next run asks again.
+      _log.info('no address for a map picture: ${e.message}');
+      return false;
+    }
     if (link == null) return false;
 
     final base = await _baseDir();

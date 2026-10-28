@@ -672,6 +672,27 @@ void main() {
       },
     );
 
+    test('a server error on one picture is that picture\'s alone', () async {
+      final map = Uuid.v7();
+      final document = Uuid.v7();
+      await catalogued(document);
+      await applier.applyPage(
+        page(<Map<String, Object?>>[mapJson(map, document: document)]),
+      );
+      final pictures = fetcher(<ScriptedResponse>[
+        ScriptedResponse.problem(
+          path: SilexgisContract.fileLinksPath,
+          status: 503,
+          title: 'Unavailable',
+        ),
+      ]);
+
+      final report = await pictures.fetchPending();
+
+      expect(report.notFetched, 1);
+      expect(await mapRow(map), isNotNull);
+    });
+
     test('a refused picture is counted and asked for again next run', () async {
       final map = Uuid.v7();
       final document = Uuid.v7();
