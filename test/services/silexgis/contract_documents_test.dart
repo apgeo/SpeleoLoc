@@ -44,7 +44,7 @@ void main() {
       expect(document.sizeBytes, isNull);
       expect(document.sha256, isNull);
       expect(document.renditions, <int>[2400, 1200, 480, 160]);
-      // Not recorded yet; read as absent.
+      // A photo that names no photographer: recorded as null.
       expect(document.createdByDeviceUserId, isNull);
     });
 
