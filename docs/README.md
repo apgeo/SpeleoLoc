@@ -95,6 +95,7 @@ For maintainers, about building the app rather than using it:
 - [Working with a local test archive](workflows/local-test-archive.md)
 - [Shipping a build with a pre-configured sync profile](workflows/seeded-sync-profile.md)
 - [Android emulators and automated UI checks](workflows/android-emulator-and-ui-testing.md)
+- [Connecting a build to the SilexGIS test instance](workflows/silexgis-test-instance.md)
 
 ---
 
