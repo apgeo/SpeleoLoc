@@ -43,9 +43,8 @@ void main() {
       expect(map.documentId, '<uuid-1>');
       expect(map.pictureWidth, 64);
       expect(map.pictureHeight, 48);
-      // Not on the recorded page: the turn to the renditions is unknown.
-      expect(map.pictureMirrored, isNull);
-      expect(map.pictureTurn, isNull);
+      expect(map.pictureMirrored, isFalse);
+      expect(map.pictureTurn, 0);
       expect(map.revision, '<timestamp>');
 
       // The map's other pin is on a protected place, and is absent.
@@ -88,9 +87,11 @@ void main() {
         'mapType',
         'sortOrder',
         'documentId',
-        // The picture's stored pixel size is a frame, not a position.
+        // The picture's stored size and turn are a frame, not a position.
         'pictureWidth',
         'pictureHeight',
+        'pictureMirrored',
+        'pictureTurn',
         'revision',
         'pins',
       });
