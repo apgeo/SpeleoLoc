@@ -65,6 +65,18 @@ class SilexgisProfileRepository {
     }
   }
 
+  /// Records which parts the installation offered on the run that just read
+  /// its capabilities. Read afresh, so a setting changed during the run is
+  /// kept.
+  Future<void> recordServedFeatures(
+    String profileUuid,
+    List<String> features,
+  ) async {
+    final current = await find(profileUuid);
+    if (current == null) return;
+    await save(current.copyWith(servedFeatures: features));
+  }
+
   /// Removes a profile, its stored credential, and everything this device
   /// remembered about its conversation with that installation.
   ///

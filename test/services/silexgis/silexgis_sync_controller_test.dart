@@ -289,6 +289,11 @@ void main() {
     expect(await db.select(db.changeLog).get(), isEmpty);
     // And this device's position on that installation is stored.
     expect((await localState.readSetState('p-1', setId)).cursor, 'c1');
+    // As is what the installation offered, for the settings page.
+    expect((await profiles.find('p-1'))!.servedFeatures, <String>[
+      'download',
+      'upload',
+    ]);
   });
 
   test(

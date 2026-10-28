@@ -119,6 +119,31 @@ void main() {
       expect(decoded.baseUrl, 'https://speo.example.org');
       expect(decoded.accountEmail, 'caver@example.org');
       expect(decoded.syncSetId, 'set-1');
+      expect(decoded.servedFeatures, isNull);
+    });
+
+    test('keeps what the installation offered, until another address', () {
+      final served = SilexgisProfile.decode(
+        profile.copyWith(servedFeatures: <String>['trips', 'people']).encode(),
+      );
+      expect(served.servedFeatures, <String>['trips', 'people']);
+      expect(served.copyWith(sendsFiles: false).servedFeatures, <String>[
+        'trips',
+        'people',
+      ]);
+      expect(served.copyWith(clearServedFeatures: true).servedFeatures, isNull);
+    });
+
+    test('records what was offered on the stored profile, keeping the rest '
+        'of it', () async {
+      await repo.save(profile);
+      await repo.save(profile.copyWith(sendsFiles: false));
+
+      await repo.recordServedFeatures('p-1', <String>['documents']);
+
+      final stored = (await repo.find('p-1'))!;
+      expect(stored.servedFeatures, <String>['documents']);
+      expect(stored.sendsFiles, isFalse);
     });
 
     test('keeps a base address that carries a path prefix', () {

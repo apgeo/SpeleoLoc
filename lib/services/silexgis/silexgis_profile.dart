@@ -24,6 +24,7 @@ class SilexgisProfile {
     this.sendsFiles = true,
     this.filesOnlyOverWifi = true,
     this.asksBeforeMobileData = true,
+    this.servedFeatures,
   });
 
   /// Stable identifier, generated once when the profile is first created. It
@@ -77,6 +78,12 @@ class SilexgisProfile {
   /// [filesOnlyOverWifi] is on.
   final bool asksBeforeMobileData;
 
+  /// The parts the installation named in its capabilities on the last run
+  /// that reached it, or null before any did. A record of what was offered
+  /// then, for the caver to read — never what a run goes by, which asks
+  /// again every time.
+  final List<String>? servedFeatures;
+
   Uri get baseUri => Uri.parse(baseUrl);
 
   bool get isReadyToSync => syncSetId != null && syncSetId!.isNotEmpty;
@@ -91,6 +98,8 @@ class SilexgisProfile {
     bool? sendsFiles,
     bool? filesOnlyOverWifi,
     bool? asksBeforeMobileData,
+    List<String>? servedFeatures,
+    bool clearServedFeatures = false,
   }) => SilexgisProfile(
     profileUuid: profileUuid,
     displayName: displayName ?? this.displayName,
@@ -101,6 +110,9 @@ class SilexgisProfile {
     sendsFiles: sendsFiles ?? this.sendsFiles,
     filesOnlyOverWifi: filesOnlyOverWifi ?? this.filesOnlyOverWifi,
     asksBeforeMobileData: asksBeforeMobileData ?? this.asksBeforeMobileData,
+    servedFeatures: clearServedFeatures
+        ? null
+        : (servedFeatures ?? this.servedFeatures),
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -113,6 +125,7 @@ class SilexgisProfile {
     'sendsFiles': sendsFiles,
     'filesOnlyOverWifi': filesOnlyOverWifi,
     'asksBeforeMobileData': asksBeforeMobileData,
+    'servedFeatures': ?servedFeatures,
   };
 
   static SilexgisProfile fromJson(Map<String, Object?> json) => SilexgisProfile(
@@ -125,6 +138,9 @@ class SilexgisProfile {
     sendsFiles: json['sendsFiles'] as bool? ?? true,
     filesOnlyOverWifi: json['filesOnlyOverWifi'] as bool? ?? true,
     asksBeforeMobileData: json['asksBeforeMobileData'] as bool? ?? true,
+    servedFeatures: (json['servedFeatures'] as List?)
+        ?.whereType<String>()
+        .toList(growable: false),
   );
 
   String encode() => jsonEncode(toJson());

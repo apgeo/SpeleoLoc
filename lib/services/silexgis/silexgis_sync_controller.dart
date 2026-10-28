@@ -236,6 +236,11 @@ class SilexgisSyncController extends ChangeNotifier {
       );
       return;
     }
+    // Shown on the settings page as what the installation offered as of now.
+    await _profiles.recordServedFeatures(
+      profile.profileUuid,
+      capabilities.features,
+    );
 
     final applier = SilexgisDownloadApplier(
       db: _db,

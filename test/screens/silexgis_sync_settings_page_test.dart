@@ -112,6 +112,29 @@ void main() {
     expect(toggle.value, isFalse);
   });
 
+  testWidgets('says what the installation offered on the last run', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      profile: const SilexgisProfile(
+        profileUuid: 'p-1',
+        displayName: 'Clubul Speo Example',
+        baseUrl: 'https://speo.example.org',
+        syncSetId: 'set-1',
+        servedFeatures: <String>['trips'],
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('silexgis_part_people'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('silexgis_parts_title'), findsOneWidget);
+    expect(find.text('silexgis_part_trips'), findsOneWidget);
+  });
+
   testWidgets('forgetting a server asks first, and says what it keeps', (
     tester,
   ) async {

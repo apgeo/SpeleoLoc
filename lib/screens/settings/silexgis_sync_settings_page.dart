@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/settings/silexgis_files_card.dart';
 import 'package:speleoloc/screens/settings/silexgis_mobile_data_dialog.dart';
+import 'package:speleoloc/screens/settings/silexgis_served_parts_card.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_tokens.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -112,6 +113,8 @@ class _SilexgisSyncSettingsPageState
                     const SizedBox(height: 12),
                     SilexgisSyncReportCard(progress: progress),
                   ],
+                  const SizedBox(height: 12),
+                  SilexgisServedPartsCard(profile: profile),
                 ],
               ],
             ),
@@ -534,6 +537,9 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           : existing.copyWith(
               displayName: _name.text.trim(),
               baseUrl: _url.text.trim(),
+              // Another address may be another installation, which has
+              // offered nothing yet.
+              clearServedFeatures: _url.text.trim() != existing.baseUrl,
             ),
     );
   }
