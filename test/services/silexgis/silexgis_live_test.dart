@@ -582,6 +582,7 @@ void main() {
     late SilexgisProfileRepository profiles;
     late SilexgisProfile profile;
     late CavePlaceRepository placeRepository;
+    late Directory files;
 
     setUpAll(() async {
       final group = await demoCavingGroupId(baseUri, await auth.accessToken());
@@ -597,6 +598,9 @@ void main() {
       );
       created.add(set.id);
 
+      // Where the run stores what it fetches, such as the demo plan's
+      // picture.
+      files = await Directory.systemTemp.createTemp('silexgis_live_run_');
       db = AppDatabase.forTesting(NativeDatabase.memory());
       late ChangeLogger loggerRef;
       final users = UserRepository(db, () => loggerRef);
@@ -651,10 +655,14 @@ void main() {
         caves: CaveRepository(db, currentUser, logger),
         places: placeRepository,
         tokens: tokens,
+        documentsDir: () async => files,
       );
     });
 
-    tearDownAll(() => db.close());
+    tearDownAll(() async {
+      await db.close();
+      await files.delete(recursive: true);
+    });
 
     test('reads the club\'s caves onto an empty device', () async {
       await controller.syncDefault();

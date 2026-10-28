@@ -155,6 +155,7 @@ void main() {
       caves: CaveRepository(db, currentUser, logger),
       places: CavePlaceRepository(db, currentUser, logger),
       tokens: tokens,
+      documentsDir: () async => base,
     );
     documents = SilexgisDocumentsService(
       profiles: profiles,

@@ -178,8 +178,12 @@ void main() {
     late SilexgisPeopleRepository people;
     late SilexgisSyncController controller;
     final user = Uuid.v7();
+    late Directory files;
 
     setUpAll(() async {
+      // Where the run stores what it fetches, such as the demo plan's
+      // picture.
+      files = await Directory.systemTemp.createTemp('silexgis_live_run_');
       db = AppDatabase.forTesting(NativeDatabase.memory());
       late ChangeLogger loggerRef;
       final users = UserRepository(db, () => loggerRef);
@@ -227,6 +231,7 @@ void main() {
         caves: CaveRepository(db, currentUser, logger),
         places: CavePlaceRepository(db, currentUser, logger),
         tokens: tokens,
+        documentsDir: () async => files,
       );
 
       await db
@@ -240,7 +245,10 @@ void main() {
           );
     });
 
-    tearDownAll(() => db.close());
+    tearDownAll(() async {
+      await db.close();
+      await files.delete(recursive: true);
+    });
 
     test('reads the directory onto the device', () async {
       await controller.syncDefault();

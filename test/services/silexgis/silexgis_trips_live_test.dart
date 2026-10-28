@@ -60,6 +60,7 @@ void main() {
   late SilexgisSyncApi api;
   late SyncSet set;
 
+  late Directory files;
   late AppDatabase db;
   late SilexgisSyncController controller;
   late SilexgisLocalStateRepository localState;
@@ -105,6 +106,8 @@ void main() {
       ),
     );
 
+    // Where the run stores what it fetches, such as the demo plan's picture.
+    files = await Directory.systemTemp.createTemp('silexgis_trips_live_');
     db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
     final users = UserRepository(db, () => loggerRef);
@@ -145,7 +148,7 @@ void main() {
       places: CavePlaceRepository(db, currentUser, logger),
       tokens: tokens,
       trips: trips,
-      documentsDir: () async => Directory.systemTemp,
+      documentsDir: () async => files,
     );
     // An invented phone user, the author of the recording sent below.
     await db
@@ -162,6 +165,7 @@ void main() {
     await api.deleteSet(set.id);
     auth.close();
     await db.close();
+    await files.delete(recursive: true);
   });
 
   Future<void> sync() async {
