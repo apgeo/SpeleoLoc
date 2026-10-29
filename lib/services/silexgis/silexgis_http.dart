@@ -60,13 +60,27 @@ class SilexgisHttp {
   Future<Map<String, Object?>> getJson(
     String path, {
     Map<String, String>? query,
-  }) => _send(() => http.Request('GET', resolve(path, query)));
+  }) => _sendForObject(() => http.Request('GET', resolve(path, query)));
+
+  /// A `GET` whose route answers a bare JSON array rather than an object —
+  /// the collection routes that are not paged, such as the caller's own sets.
+  Future<List<Object?>> getJsonList(
+    String path, {
+    Map<String, String>? query,
+  }) async {
+    final body = await _send(() => http.Request('GET', resolve(path, query)));
+    if (body == null) return const <Object?>[];
+    if (body is List) return List<Object?>.from(body);
+    throw SilexgisTransportException(
+      'Expected a JSON array and got ${body.runtimeType}',
+    );
+  }
 
   Future<Map<String, Object?>> postJson(
     String path,
     Object? body, {
     Map<String, String>? query,
-  }) => _send(() {
+  }) => _sendForObject(() {
     final request = http.Request('POST', resolve(path, query));
     if (body != null) {
       request.headers['Content-Type'] = 'application/json';
@@ -75,12 +89,13 @@ class SilexgisHttp {
     return request;
   });
 
-  Future<Map<String, Object?>> putJson(String path, Object? body) => _send(() {
-    final request = http.Request('PUT', resolve(path))
-      ..headers['Content-Type'] = 'application/json'
-      ..body = jsonEncode(body);
-    return request;
-  });
+  Future<Map<String, Object?>> putJson(String path, Object? body) =>
+      _sendForObject(() {
+        final request = http.Request('PUT', resolve(path))
+          ..headers['Content-Type'] = 'application/json'
+          ..body = jsonEncode(body);
+        return request;
+      });
 
   Future<void> delete(String path) async {
     await _send(() => http.Request('DELETE', resolve(path)));
@@ -94,12 +109,24 @@ class SilexgisHttp {
     List<int> bytes, {
     Map<String, String>? query,
     Duration? timeout,
-  }) => _send(() {
+  }) => _sendForObject(() {
     final request = http.Request('PUT', resolve(path, query))
       ..headers['Content-Type'] = 'application/octet-stream'
       ..bodyBytes = bytes;
     return request;
   }, timeout: timeout);
+
+  Future<Map<String, Object?>> _sendForObject(
+    http.Request Function() build, {
+    Duration? timeout,
+  }) async {
+    final body = await _send(build, timeout: timeout);
+    if (body == null) return const <String, Object?>{};
+    if (body is Map) return Map<String, Object?>.from(body);
+    throw SilexgisTransportException(
+      'Expected a JSON object and got ${body.runtimeType}',
+    );
+  }
 
   /// Sends [build], and on a `401` refreshes the credential and sends it once
   /// more.
@@ -107,7 +134,7 @@ class SilexgisHttp {
   /// Once, and never in a loop: if the refresh also fails the caver has to
   /// sign in again, and a device that kept retrying would stop syncing within
   /// the access token's fifteen minutes with nothing in the log but retries.
-  Future<Map<String, Object?>> _send(
+  Future<Object?> _send(
     http.Request Function() build, {
     Duration? timeout,
   }) async {
@@ -154,7 +181,8 @@ class SilexgisHttp {
     }
   }
 
-  Map<String, Object?> _decode(http.Response response) {
+  /// The decoded body of a successful response, or null when it had none.
+  Object? _decode(http.Response response) {
     final status = response.statusCode;
     if (status >= 300 && status < 400) {
       throw SilexgisTransportException(
@@ -187,12 +215,7 @@ class SilexgisHttp {
       throw SilexgisProblemException(problem);
     }
 
-    if (body == null) return const <String, Object?>{};
-    if (body is Map) return Map<String, Object?>.from(body);
-    throw SilexgisTransportException(
-      'Expected a JSON object and got ${body.runtimeType}',
-      status: status,
-    );
+    return body;
   }
 
   void close() => _client.close();

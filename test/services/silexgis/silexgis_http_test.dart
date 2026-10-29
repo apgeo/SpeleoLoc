@@ -3,6 +3,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 
 import 'scripted_client.dart';
 
@@ -213,5 +214,45 @@ void main() {
       'cursor': 'MXwxNjM4',
       'pageSize': '100',
     });
+  });
+
+  test('the sets list is read as the bare array the server answers', () async {
+    final client = ScriptedClient(<ScriptedResponse>[
+      ScriptedResponse.json(
+        path: SilexgisContract.setsPath,
+        json: const <Object?>[
+          <String, Object?>{'id': 'set-1', 'name': 'Club caves'},
+        ],
+      ),
+    ]);
+    final sets = await SilexgisSyncApi(build(client, _FakeTokens())).listSets();
+    expect(sets.single.id, 'set-1');
+    expect(sets.single.name, 'Club caves');
+  });
+
+  test('an object where an array is expected is a transport failure', () {
+    final client = ScriptedClient(<ScriptedResponse>[
+      ScriptedResponse.json(
+        path: SilexgisContract.setsPath,
+        json: const <String, Object?>{'items': <Object?>[]},
+      ),
+    ]);
+    return expectLater(
+      build(client, _FakeTokens()).getJsonList(SilexgisContract.setsPath),
+      throwsA(isA<SilexgisTransportException>()),
+    );
+  });
+
+  test('an array where an object is expected is a transport failure', () {
+    final client = ScriptedClient(<ScriptedResponse>[
+      ScriptedResponse.json(
+        path: SilexgisContract.capabilitiesPath,
+        json: const <Object?>[],
+      ),
+    ]);
+    return expectLater(
+      build(client, _FakeTokens()).getJson(SilexgisContract.capabilitiesPath),
+      throwsA(isA<SilexgisTransportException>()),
+    );
   });
 }

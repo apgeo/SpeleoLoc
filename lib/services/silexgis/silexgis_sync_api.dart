@@ -33,9 +33,8 @@ class SilexgisSyncApi {
   /// like one that does not exist, so this route cannot be used to count other
   /// people's devices.
   Future<List<SyncSet>> listSets() async {
-    final body = await _http.getJson(SilexgisContract.setsPath);
-    final items = body['items'] ?? body['sets'];
-    return (items as List? ?? const <Object?>[])
+    final items = await _http.getJsonList(SilexgisContract.setsPath);
+    return items
         .whereType<Map>()
         .map((e) => SyncSet.fromJson(Map<String, Object?>.from(e)))
         .toList(growable: false);
