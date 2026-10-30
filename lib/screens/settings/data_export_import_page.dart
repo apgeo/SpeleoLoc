@@ -127,9 +127,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
             onPressed: () => _import(context),
           ),
 
-          // -- Test data section -- dev builds only, and only actionable
-          // when an archive URL is configured.
-          if (BuildConfig.devToolsEnabled && testArchiveUrl.isNotEmpty) ...[
+          // -- Test data section -- builds with sample data enabled, and
+          // only actionable when an archive URL is configured.
+          if (BuildConfig.sampleDataEnabled && testArchiveUrl.isNotEmpty) ...[
             const Divider(height: 32),
             Text(
               LocServ.inst.t('test_data_section'),

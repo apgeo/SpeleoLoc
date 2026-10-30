@@ -305,10 +305,10 @@ class _HomePageState extends ConsumerState<HomePage>
       if (!mounted) return;
       setState(() {});
 
-      // Dev builds only: on the first 4 starts, if no caves exist, offer to
-      // populate test data. Store builds never show the prompt (no archive
-      // URL is configured there and the tooling is compiled out).
-      if (BuildConfig.devToolsEnabled &&
+      // On the first 4 starts, if no caves exist, offer to populate sample
+      // data. Builds without SAMPLE_DATA (or without an archive URL) never
+      // show the prompt.
+      if (BuildConfig.sampleDataEnabled &&
           testArchiveUrl.trim().isNotEmpty &&
           !_testDataPromptShown &&
           _caves.isEmpty &&
