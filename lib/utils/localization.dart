@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 /// LocalizationService
 ///
@@ -11,8 +12,8 @@ class LocServ {
   LocServ._private();
   static final LocServ inst = LocServ._private(); // instance
 
-  String _locale = 'ro';
-  final String _defaultLocale = 'ro';
+  String _locale = BuildConfig.defaultLocale;
+  final String _defaultLocale = BuildConfig.defaultLocale;
 
   final Map<String, Map<String, String>> _strings = {};
 

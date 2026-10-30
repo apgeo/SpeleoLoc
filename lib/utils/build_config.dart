@@ -49,4 +49,12 @@ abstract final class BuildConfig {
     'FEATURE_BEACONS',
     defaultValue: true,
   );
+
+  /// Language used until the user picks one in settings. Store builds set
+  /// `DEFAULT_LOCALE=en` for testers and reviewers outside Romania; a
+  /// language already saved on the device still wins.
+  static const String defaultLocale = String.fromEnvironment(
+    'DEFAULT_LOCALE',
+    defaultValue: 'ro',
+  );
 }

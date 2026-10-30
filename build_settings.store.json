@@ -4,5 +4,6 @@
   "SAMPLE_DATA": "true",
   "test_archive_url": "https://speotopo.ro/res/speleoloc/test_data/speleo_loc_test_2026-09-01_08-46-36",
   "FEATURE_SILEXGIS": "false",
-  "FEATURE_BEACONS": "false"
+  "FEATURE_BEACONS": "false",
+  "DEFAULT_LOCALE": "en"
 }

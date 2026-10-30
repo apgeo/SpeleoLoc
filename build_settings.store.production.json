@@ -1,3 +1,4 @@
 {
-  "DEV_TOOLS": "false"
+  "DEV_TOOLS": "false",
+  "DEFAULT_LOCALE": "en"
 }
