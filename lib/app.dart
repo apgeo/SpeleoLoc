@@ -26,6 +26,7 @@ import 'package:speleoloc/utils/uuid.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart'
     show FlutterQuillLocalizations;
+import 'package:speleoloc/utils/build_config.dart';
 
 class SpeleoLocApp extends StatefulWidget {
   const SpeleoLocApp({super.key});
@@ -43,7 +44,9 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
     DeepLinkHandler.instance.init(navigatorKey);
     // Fire-and-forget: stays off unless enabled in settings AND
     // permissions are already granted; all failures are logged only.
-    BeaconDetectionService.instance.start();
+    // A hidden feature must not scan either: a restored archive or an
+    // earlier install can carry detection switched on.
+    if (BuildConfig.beaconsEnabled) BeaconDetectionService.instance.start();
     // After the first frame (navigator must exist): if a detection
     // notification cold-started the app, finish its navigation.
     WidgetsBinding.instance.addPostFrameCallback((_) {

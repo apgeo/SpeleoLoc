@@ -30,6 +30,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 class CavePlacesListPage extends ConsumerStatefulWidget {
   const CavePlacesListPage({super.key, required this.caveUuid});
@@ -1010,16 +1011,17 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
                       ],
                     ),
                   ),
-                  PopupMenuItem<String>(
-                    value: 'beacons',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.bluetooth, size: 20),
-                        const SizedBox(width: 8),
-                        Text(LocServ.inst.t('cave_beacons_title')),
-                      ],
+                  if (BuildConfig.beaconsEnabled)
+                    PopupMenuItem<String>(
+                      value: 'beacons',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.bluetooth, size: 20),
+                          const SizedBox(width: 8),
+                          Text(LocServ.inst.t('cave_beacons_title')),
+                        ],
+                      ),
                     ),
-                  ),
                   PopupMenuItem<String>(
                     value: 'delete',
                     child: Row(

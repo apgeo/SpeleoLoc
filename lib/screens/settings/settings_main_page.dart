@@ -18,6 +18,7 @@ import 'package:speleoloc/screens/settings/data_export_import_page.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 /// Master settings page with sections that navigate to subpages.
 class SettingsMainPage extends StatefulWidget {
@@ -204,19 +205,20 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 );
               },
             ),
-            _SettingsSection(
-              icon: Icons.dns_outlined,
-              title: LocServ.inst.t('silexgis_title'),
-              subtitle: LocServ.inst.t('silexgis_desc'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SilexgisSyncSettingsPage(),
-                  ),
-                );
-              },
-            ),
+            if (BuildConfig.silexgisEnabled)
+              _SettingsSection(
+                icon: Icons.dns_outlined,
+                title: LocServ.inst.t('silexgis_title'),
+                subtitle: LocServ.inst.t('silexgis_desc'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SilexgisSyncSettingsPage(),
+                    ),
+                  );
+                },
+              ),
             _SettingsSection(
               icon: Icons.archive_outlined,
               title: LocServ.inst.t('data_export_import'),
@@ -230,19 +232,20 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 );
               },
             ),
-            _SettingsSection(
-              icon: Icons.bluetooth_searching,
-              title: LocServ.inst.t('settings_beacons'),
-              subtitle: LocServ.inst.t('settings_beacons_desc'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SettingsBeaconsPage(),
-                  ),
-                );
-              },
-            ),
+            if (BuildConfig.beaconsEnabled)
+              _SettingsSection(
+                icon: Icons.bluetooth_searching,
+                title: LocServ.inst.t('settings_beacons'),
+                subtitle: LocServ.inst.t('settings_beacons_desc'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsBeaconsPage(),
+                    ),
+                  );
+                },
+              ),
             ValueListenableBuilder<bool>(
               valueListenable: debugModeNotifier,
               builder: (context, isDebug, _) {

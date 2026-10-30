@@ -15,6 +15,7 @@ import 'package:speleoloc/widgets/beacon_detection_drawer_toggle.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 /// Configuration key for the persisted menu mode preference.
 const String _menuModeConfigKey = 'app_menu_mode';
@@ -485,8 +486,10 @@ class _AppMenuDrawer extends StatelessWidget {
                     ),
                     // Quick-toggle for automatic beacon detection — mirrors
                     // the Settings → Beacon detection master switch.
-                    const Divider(height: 8),
-                    const BeaconDetectionDrawerToggle(),
+                    if (BuildConfig.beaconsEnabled) ...[
+                      const Divider(height: 8),
+                      const BeaconDetectionDrawerToggle(),
+                    ],
                   ],
                 ),
               ),

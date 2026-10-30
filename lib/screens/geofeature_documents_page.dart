@@ -27,6 +27,7 @@ import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/silexgis_server_documents_section.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 // ---------------------------------------------------------------------------
 //  Enums
@@ -1050,7 +1051,7 @@ class _GeofeatureDocumentsPageState
                         ),
                       ),
                       ..._buildContentSlivers(serverSection: hasServerDocs),
-                      if (link != null)
+                      if (BuildConfig.silexgisEnabled && link != null)
                         SilexgisServerDocumentsSection(
                           featureId: link.geofeatureUuid,
                           onDownloaded: _loadDocuments,

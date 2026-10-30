@@ -30,6 +30,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/utils/build_config.dart';
 
 class CavePlacePage extends ConsumerStatefulWidget {
   const CavePlacePage({super.key, required this.caveUuid, this.cavePlaceUuid});
@@ -581,7 +582,8 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
                 ),
                 const SizedBox(height: 8),
                 // BLE beacon registrations (persisted places only).
-                if (_currentCavePlaceId != null) ...[
+                if (BuildConfig.beaconsEnabled &&
+                    _currentCavePlaceId != null) ...[
                   CavePlaceBeaconSection(
                     key: ValueKey('beacons-$_currentCavePlaceId'),
                     cavePlaceUuid: _currentCavePlaceId!,

@@ -32,4 +32,21 @@ abstract final class BuildConfig {
     'SAMPLE_DATA',
     defaultValue: devToolsEnabled,
   );
+
+  /// Feature switches for builds that ship with a feature hidden, e.g. a
+  /// closed-testing build whose testers have no SilexGIS account or no
+  /// beacons. Only the entry points are hidden; the code and the stored data
+  /// stay, so switching a feature back on loses nothing. Override with
+  /// `--dart-define=FEATURE_SILEXGIS=false` / `FEATURE_BEACONS=false`.
+  static const bool silexgisEnabled = bool.fromEnvironment(
+    'FEATURE_SILEXGIS',
+    defaultValue: true,
+  );
+
+  /// Bluetooth beacons: settings, the drawer's detection toggle, the
+  /// per-place and per-cave beacon screens, and background detection.
+  static const bool beaconsEnabled = bool.fromEnvironment(
+    'FEATURE_BEACONS',
+    defaultValue: true,
+  );
 }
