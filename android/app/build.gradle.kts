@@ -35,8 +35,9 @@ android {
 
     defaultConfig {
         // Permanent Play/App Store identity — must never change after the
-        // first store upload.
-        applicationId = "ro.speosilex.speleoloc"
+        // first store upload. Deliberately different from `namespace`: the
+        // namespace is the Kotlin package, the id is the store listing.
+        applicationId = "ro.speotopo.speleoloc"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

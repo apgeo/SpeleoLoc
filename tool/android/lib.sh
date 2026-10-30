@@ -18,7 +18,7 @@ ADB="$ANDROID_HOME/platform-tools/adb"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
 SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-PKG="${SPELEO_PACKAGE:-ro.speosilex.speleoloc}"
+PKG="${SPELEO_PACKAGE:-ro.speotopo.speleoloc}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 

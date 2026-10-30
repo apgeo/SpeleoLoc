@@ -25,4 +25,4 @@ android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 android.permission.VIBRATE
 android.permission.WAKE_LOCK
 android.permission.WRITE_EXTERNAL_STORAGE
-ro.speosilex.speleoloc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ro.speotopo.speleoloc.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
