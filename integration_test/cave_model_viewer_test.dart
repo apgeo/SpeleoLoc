@@ -99,7 +99,7 @@ void main() {
     expect(loaded?.stations, 11);
     if (_holdSeconds > 0) {
       debugPrint('holding the drawn fixture for $_holdSeconds s');
-      await Future<void>.delayed(Duration(seconds: _holdSeconds));
+      await Future<void>.delayed(const Duration(seconds: _holdSeconds));
     }
     debugPrint(
       'lox fixture: drawn in ${DateTime.now().difference(started).inMilliseconds} ms',
@@ -132,8 +132,20 @@ void main() {
   });
 
   testWidgets('draws a model supplied by hand', (tester) async {
+    // `flutter test` installs the app only for the run, so the file can only
+    // be copied into the app's storage once the run has started.
+    final supplied = File(_extraModel);
+    if (!supplied.existsSync()) {
+      debugPrint('waiting for the supplied model');
+      final until = DateTime.now().add(const Duration(minutes: 2));
+      while (!supplied.existsSync() && DateTime.now().isBefore(until)) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      // The copy may still be writing.
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
     final started = DateTime.now();
-    final seen = await open(tester, File(_extraModel));
+    final seen = await open(tester, supplied);
     final done = await waitUntil(
       tester,
       () => settled(seen),
