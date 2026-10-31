@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:speleoloc/services/device_preferences_carry_over.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
@@ -268,6 +269,9 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       }
 
       final userHandover = await UserHandoverStore(appDatabase).capture();
+      final devicePreferences = await DevicePreferencesCarryOver.capture(
+        appDatabase,
+      );
 
       await appDatabase.close();
       final directory = await getApplicationDocumentsDirectory();
@@ -300,6 +304,7 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
         );
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
+      await devicePreferences.applyTo(appDatabase);
 
       if (context.mounted) {
         Navigator.pop(context);

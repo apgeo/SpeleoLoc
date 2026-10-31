@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/test_database_loader.dart';
+import 'package:speleoloc/services/device_preferences_carry_over.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -24,6 +25,9 @@ class DatabaseRestoreHelper {
     required bool populateTestData,
   }) async {
     final userHandover = await UserHandoverStore(appDatabase).capture();
+    final devicePreferences = await DevicePreferencesCarryOver.capture(
+      appDatabase,
+    );
     await appDatabase.close();
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/speleo_loc.sqlite');
@@ -41,6 +45,7 @@ class DatabaseRestoreHelper {
       logMigrationIfAny(source: 'empty-database-reinitialize');
     }
     await UserHandoverStore(appDatabase).handOver(userHandover);
+    await devicePreferences.applyTo(appDatabase);
     return true;
   }
 
