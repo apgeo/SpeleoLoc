@@ -5,6 +5,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/silexgis_caver_picker.dart';
+import 'package:speleoloc/widgets/user_details_fields.dart';
 import 'package:speleoloc/utils/build_config.dart';
 
 /// Settings page for managing the list of known users and selecting the
@@ -92,12 +93,7 @@ class _UsersPageState extends ConsumerState<UsersPage>
   }
 
   Future<void> _showAddEditDialog({User? existing}) async {
-    final usernameCtrl = TextEditingController(text: existing?.username ?? '');
-    final firstNameCtrl = TextEditingController(
-      text: existing?.firstName ?? '',
-    );
-    final lastNameCtrl = TextEditingController(text: existing?.lastName ?? '');
-    final detailsCtrl = TextEditingController(text: existing?.details ?? '');
+    final fields = UserDetailsControllers(initial: existing);
 
     final saved = await showDialog<bool>(
       context: context,
@@ -111,34 +107,7 @@ class _UsersPageState extends ConsumerState<UsersPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: usernameCtrl,
-                decoration: InputDecoration(
-                  labelText: LocServ.inst.t('username'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: firstNameCtrl,
-                decoration: InputDecoration(
-                  labelText: LocServ.inst.t('first_name'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: lastNameCtrl,
-                decoration: InputDecoration(
-                  labelText: LocServ.inst.t('last_name'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: detailsCtrl,
-                decoration: InputDecoration(
-                  labelText: LocServ.inst.t('details'),
-                ),
-                maxLines: 3,
-              ),
+              UserDetailsFields(controllers: fields),
               if (BuildConfig.silexgisEnabled && existing != null)
                 SilexgisCaverPicker(userUuid: existing.uuid),
             ],
@@ -151,29 +120,27 @@ class _UsersPageState extends ConsumerState<UsersPage>
           ),
           TextButton(
             onPressed: () async {
-              final username = usernameCtrl.text.trim();
+              final username = fields.usernameValue;
               if (username.isEmpty) return;
               final repo = ref.read(userRepositoryProvider);
               final currentUser = ref.read(currentUserServiceProvider);
               final author = await currentUser.currentOrSystem();
-              String? optional(TextEditingController c) =>
-                  c.text.trim().isEmpty ? null : c.text.trim();
               try {
                 if (existing == null) {
                   await repo.addUser(
                     username: username,
-                    firstName: optional(firstNameCtrl),
-                    lastName: optional(lastNameCtrl),
-                    details: optional(detailsCtrl),
+                    firstName: fields.firstNameValue,
+                    lastName: fields.lastNameValue,
+                    details: fields.detailsValue,
                     authorUserUuid: author,
                   );
                 } else {
                   await repo.updateUser(
                     existing.uuid,
                     username: username,
-                    firstName: optional(firstNameCtrl),
-                    lastName: optional(lastNameCtrl),
-                    details: optional(detailsCtrl),
+                    firstName: fields.firstNameValue,
+                    lastName: fields.lastNameValue,
+                    details: fields.detailsValue,
                     authorUserUuid: author,
                   );
                 }
@@ -191,10 +158,7 @@ class _UsersPageState extends ConsumerState<UsersPage>
         ],
       ),
     );
-    usernameCtrl.dispose();
-    firstNameCtrl.dispose();
-    lastNameCtrl.dispose();
-    detailsCtrl.dispose();
+    fields.dispose();
     if (saved == true && mounted) setState(() {});
   }
 }
