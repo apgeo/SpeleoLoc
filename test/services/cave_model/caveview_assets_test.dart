@@ -30,8 +30,9 @@ void main() {
     }
   });
 
-  test('pubspec.yaml bundles every vendored folder', () {
+  test('pubspec.yaml bundles the host page and every vendored folder', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
+    expect(pubspec, contains('- ${CaveViewAssets.hostDir}/\n'));
     expect(pubspec, contains('- ${CaveViewAssets.buildDir}/\n'));
     for (final folder in build.listSync().whereType<Directory>()) {
       final name = folder.uri.pathSegments.where((s) => s.isNotEmpty).last;

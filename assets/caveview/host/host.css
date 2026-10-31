@@ -1,0 +1,21 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  /* The app owns every gesture over the model; the WebView must not scroll,
+     zoom the page or show a text selection while the model is turned. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#model {
+  position: absolute;
+  inset: 0;
+  --cv-toolbar-background: rgba(0, 0, 0, 0.7);
+  --cv-toolbar-border: 1px solid #1ab4e5;
+  --cv-toolbar-active-background: #1ab4e5;
+}
