@@ -59,6 +59,11 @@
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>SpeleoLoc saves an image to your photo library only when you export it there yourself.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
