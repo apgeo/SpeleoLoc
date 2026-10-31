@@ -1586,5 +1586,17 @@
   "silexgis_mobile_data_body": "{count} photos and documents ({size}) are ready to send, and this device is not on Wi-Fi.",
   "silexgis_mobile_data_remember": "Remember my choice",
   "silexgis_mobile_data_send": "Send now",
-  "silexgis_mobile_data_wait": "Wait for Wi-Fi"
+  "silexgis_mobile_data_wait": "Wait for Wi-Fi",
+  "user_setup_title": "Who is using the app?",
+  "user_setup_intro": "Changes you make are recorded under your name. Choose yourself from the list or create a new user. You can change this later in Settings > Users.",
+  "user_setup_previous_missing": "The user “{username}” was not found in the data that was just loaded.",
+  "user_setup_current_deleted": "The user “{username}” has been deleted, possibly on another device and then synced here.",
+  "user_setup_keep_previous": "Keep your previous user",
+  "user_setup_bring_over": "Continue as “{username}” (add to this data)",
+  "user_setup_pick_existing": "Choose an existing user",
+  "user_setup_create_new": "Create a new user",
+  "user_setup_create_and_continue": "Create and continue",
+  "user_setup_username_required": "Enter a username",
+  "user_setup_username_taken": "This username is already in use",
+  "user_setup_failed": "Could not set the user"
 }

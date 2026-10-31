@@ -1585,5 +1585,17 @@
   "silexgis_mobile_data_body": "{count} fotografii și documente ({size}) sunt gata de trimis, iar acest dispozitiv nu este conectat la Wi-Fi.",
   "silexgis_mobile_data_remember": "Ține minte alegerea",
   "silexgis_mobile_data_send": "Trimite acum",
-  "silexgis_mobile_data_wait": "Așteaptă Wi-Fi"
+  "silexgis_mobile_data_wait": "Așteaptă Wi-Fi",
+  "user_setup_title": "Cine folosește aplicația?",
+  "user_setup_intro": "Modificările pe care le faceți sunt înregistrate pe numele dumneavoastră. Alegeți-vă din listă sau creați un utilizator nou. Puteți schimba asta ulterior din Setări > Utilizatori.",
+  "user_setup_previous_missing": "Utilizatorul „{username}” nu a fost găsit în datele tocmai încărcate.",
+  "user_setup_current_deleted": "Utilizatorul „{username}” a fost șters, probabil pe alt dispozitiv și apoi sincronizat aici.",
+  "user_setup_keep_previous": "Păstrați utilizatorul anterior",
+  "user_setup_bring_over": "Continuați ca „{username}” (adăugat în aceste date)",
+  "user_setup_pick_existing": "Alegeți un utilizator existent",
+  "user_setup_create_new": "Creați un utilizator nou",
+  "user_setup_create_and_continue": "Creează și continuă",
+  "user_setup_username_required": "Introduceți un nume de utilizator",
+  "user_setup_username_taken": "Acest nume de utilizator este deja folosit",
+  "user_setup_failed": "Utilizatorul nu a putut fi setat"
 }

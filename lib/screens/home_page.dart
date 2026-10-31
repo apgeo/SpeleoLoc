@@ -9,6 +9,7 @@ import 'package:speleoloc/screens/general_data/surface_areas_page.dart';
 import 'package:speleoloc/screens/settings/settings_main_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/screens/settings/sync_dashboard_page.dart';
+import 'package:speleoloc/screens/user_setup/ensure_current_user.dart';
 import 'package:speleoloc/screens/settings/ftp_sync_progress_page.dart';
 import 'package:speleoloc/screens/general_data/documentation_files_page.dart';
 import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
@@ -178,8 +179,11 @@ class _HomePageState extends ConsumerState<HomePage>
   bool _showMainToolbar = false;
   bool _allowMainObjectBulkDeletes = true;
 
-  bool _testDataPromptShown = false;
-  Completer<void>? _testDataPromptCompleter;
+  // Start-up prompts run once and in this order: the sample-data offer,
+  // which replaces the dataset and restarts, then the choice of user against
+  // whatever dataset is loaded. The tour waits for both.
+  bool _startupPromptsStarted = false;
+  final Completer<void> _startupPromptsDone = Completer<void>();
 
   // --- Long-press QR manual input (enabled by [enableQrManualInput]) ---
   Timer? _qrScanLongPressTimer;
@@ -281,10 +285,7 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   @override
-  Future<void> beforeAutoTour() async {
-    if (_testDataPromptCompleter != null)
-      await _testDataPromptCompleter!.future;
-  }
+  Future<void> beforeAutoTour() => _startupPromptsDone.future;
 
   Future<void> _loadCaves() async {
     try {
@@ -305,21 +306,20 @@ class _HomePageState extends ConsumerState<HomePage>
       if (!mounted) return;
       setState(() {});
 
-      // On the first 4 starts, if no caves exist, offer to populate sample
-      // data. Builds without SAMPLE_DATA (or without an archive URL) never
-      // show the prompt.
-      if (BuildConfig.sampleDataEnabled &&
-          testArchiveUrl.trim().isNotEmpty &&
-          !_testDataPromptShown &&
-          _caves.isEmpty &&
-          AppStartCounter.count <= 4) {
-        _testDataPromptShown = true;
-        _testDataPromptCompleter = Completer<void>();
+      if (!_startupPromptsStarted) {
+        _startupPromptsStarted = true;
+        // On the first 4 starts, if no caves exist, offer to populate sample
+        // data. Builds without SAMPLE_DATA (or without an archive URL) never
+        // show the prompt.
+        final offerSampleData =
+            BuildConfig.sampleDataEnabled &&
+            testArchiveUrl.trim().isNotEmpty &&
+            _caves.isEmpty &&
+            AppStartCounter.count <= 4;
         unawaited(
-          _offerTestDataPopulation().whenComplete(() {
-            _testDataPromptCompleter?.complete();
-            _testDataPromptCompleter = null;
-          }),
+          _runStartupPrompts(
+            offerSampleData: offerSampleData,
+          ).whenComplete(_startupPromptsDone.complete),
         );
       }
     } catch (e) {
@@ -327,6 +327,12 @@ class _HomePageState extends ConsumerState<HomePage>
       SnackBarService.showError('${LocServ.inst.t('error_loading_caves')}: $e');
       rethrow;
     }
+  }
+
+  Future<void> _runStartupPrompts({required bool offerSampleData}) async {
+    if (offerSampleData) await _offerTestDataPopulation();
+    if (!mounted) return;
+    await ensureCurrentUser(context, ref.read(currentUserResolverProvider));
   }
 
   Future<void> _offerTestDataPopulation() async {

@@ -15,6 +15,8 @@ import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
+import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_byte_edit_service.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
@@ -125,6 +127,14 @@ final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
   svc.initialize();
   return svc;
 });
+
+final currentUserResolverProvider = Provider<CurrentUserResolver>(
+  (ref) => CurrentUserResolver(
+    ref.watch(userRepositoryProvider),
+    ref.watch(currentUserServiceProvider),
+    UserHandoverStore(ref.watch(appDatabaseProvider)),
+  ),
+);
 
 final changeLoggerProvider = Provider<ChangeLogger>(
   (ref) => ChangeLogger(

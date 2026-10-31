@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:speleoloc/main.dart' as app;
+import 'package:speleoloc/screens/user_setup/user_setup_page.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
 
@@ -116,6 +117,27 @@ class AppDriver {
     Recorder.instance.startupMs ??= DateTime.now()
         .difference(started)
         .inMilliseconds;
+    await settle();
+    await _chooseUserIfAsked();
+  }
+
+  /// Seeded data may select nobody, and the app then asks who is using it
+  /// before anything else. An invented user is created through the page
+  /// itself, so the flows start from the home screen as they always did;
+  /// it persists, so later launches in the run are not asked again.
+  Future<void> _chooseUserIfAsked() async {
+    if (find.byType(UserSetupPage).evaluate().isEmpty) return;
+    final page = find.byType(UserSetupPage);
+    await tester.enterText(
+      find.descendant(of: page, matching: find.byType(TextField)).first,
+      'matrix-runner',
+    );
+    final create = find.descendant(
+      of: page,
+      matching: find.byIcon(Icons.person_add),
+    );
+    await tester.ensureVisible(create);
+    await tester.tap(create);
     await settle();
   }
 

@@ -1,4 +1,8 @@
 import 'package:flutter/widgets.dart';
+import 'package:speleoloc/screens/user_setup/user_setup_page.dart';
+import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
+import 'package:speleoloc/services/user_identity/user_handover.dart';
+import 'package:speleoloc/utils/uuid.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/beacon_tag_edit_page.dart';
 import 'package:speleoloc/screens/beacon_tags_page.dart';
@@ -539,6 +543,23 @@ final List<ScreenEntry> screenCatalogue = [
     needs: {Need.bluetooth},
   ),
   ScreenEntry('users', 'settings', (fx) => const UsersPage()),
+  ScreenEntry(
+    'user_setup',
+    'settings',
+    (fx) =>
+        const UserSetupPage(need: UserChoiceNeeded(UserChoiceReason.firstRun)),
+  ),
+  ScreenEntry(
+    'user_setup_previous_missing',
+    'settings',
+    (fx) => UserSetupPage(
+      need: UserChoiceNeeded(
+        UserChoiceReason.previousUserMissing,
+        previousUsername: 'invented-caver',
+        bringOver: UserHandover(uuid: Uuid.zero, username: 'invented-caver'),
+      ),
+    ),
+  ),
   ScreenEntry('change_log', 'settings', (fx) => const ChangeLogPage()),
   ScreenEntry('debug_info', 'settings', (fx) => const DebugInfoPage()),
   ScreenEntry(
