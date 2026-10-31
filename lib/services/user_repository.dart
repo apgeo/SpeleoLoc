@@ -14,7 +14,11 @@ abstract class IUserRepository {
   Stream<List<User>> watchUsers();
   Future<User?> findByUuid(Uuid uuid);
   Future<User?> findByUsername(String username);
+
+  /// Pass [uuid] to give the new row a known identity, e.g. a user carried
+  /// over from a dataset that was replaced.
   Future<Uuid> addUser({
+    Uuid? uuid,
     required String username,
     String? firstName,
     String? lastName,
@@ -80,6 +84,7 @@ class UserRepository implements IUserRepository {
 
   @override
   Future<Uuid> addUser({
+    Uuid? uuid,
     required String username,
     String? firstName,
     String? lastName,
@@ -88,7 +93,7 @@ class UserRepository implements IUserRepository {
   }) async {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
-      final newUuid = Uuid.v7();
+      final newUuid = uuid ?? Uuid.v7();
       // Self-authored if authorUserUuid is null (first-ever user).
       final author = authorUserUuid ?? newUuid;
       await _database

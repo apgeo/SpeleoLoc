@@ -13,6 +13,7 @@ import 'package:speleoloc/services/service_locator.dart';
 
 import 'package:speleoloc/services/archive/archive_models.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
@@ -172,6 +173,7 @@ class DataArchiveService {
         'archive_sync_import_export_config',
       );
       final copyUuidFromArchive = _parseCopyDeviceUuidFlag(importExportCfgRaw);
+      final userHandover = await UserHandoverStore(appDatabase).capture();
 
       // Close current database.
       await appDatabase.close();
@@ -196,6 +198,7 @@ class DataArchiveService {
       if (!copyUuidFromArchive && savedDeviceUuid != null) {
         await _writeConfigValue('device_uuid', savedDeviceUuid);
       }
+      await UserHandoverStore(appDatabase).handOver(userHandover);
 
       // Restore FTP passwords from the archive's ftp_credentials.json into
       // the OS keystore (flutter_secure_storage). This must run after the

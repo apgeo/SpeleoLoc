@@ -14,6 +14,11 @@ class ConfigKey {
   ConfigKey._();
   static const String deviceUuid = 'device_uuid';
   static const String currentUserUuid = 'current_user_uuid';
+
+  /// JSON of the user that was selected before the whole database was
+  /// replaced, kept until that user is matched or replaced in the new data.
+  /// Device-local.
+  static const String pendingUserHandover = 'pending_user_handover';
   static const String changeLogRetentionDays = 'change_log_retention_days';
   static const String tombstoneRetentionDays = 'tombstone_retention_days';
   // FTP sync (feat/sync-v2, Phase A).
@@ -97,6 +102,11 @@ class ConfigKey {
 class CurrentUserService {
   CurrentUserService(this._db, this._users, this._configs);
 
+  /// Username of the user created automatically when something is written
+  /// before anyone has been chosen. It stands for nobody in particular, so
+  /// it is never offered as a choice and never kept as an identity.
+  static const String systemUsername = 'system';
+
   // Reserved: a later change will route the remaining direct DB access here
   // through `_db`. Until then it
   // is referenced only by the constructor so tests and the production
@@ -165,11 +175,11 @@ class CurrentUserService {
   Future<Uuid> currentOrSystem() async {
     final cur = currentUserUuid.value;
     if (cur != null) return cur;
-    final existing = await _users.findByUsername('system');
+    final existing = await _users.findByUsername(systemUsername);
     final id =
         existing?.uuid ??
         await _users.addUser(
-          username: 'system',
+          username: systemUsername,
           firstName: 'System',
           details: 'Auto-generated default user.',
         );

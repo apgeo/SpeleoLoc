@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
+import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
@@ -266,6 +267,8 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
         } catch (_) {}
       }
 
+      final userHandover = await UserHandoverStore(appDatabase).capture();
+
       await appDatabase.close();
       final directory = await getApplicationDocumentsDirectory();
       final targetPath = '${directory.path}/speleo_loc.sqlite';
@@ -296,6 +299,7 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
           ['device_uuid', savedDeviceUuid, now, now],
         );
       }
+      await UserHandoverStore(appDatabase).handOver(userHandover);
 
       if (context.mounted) {
         Navigator.pop(context);
