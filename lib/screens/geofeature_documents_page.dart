@@ -250,6 +250,7 @@ class _GeofeatureDocumentsPageState
     'audio' => LocServ.inst.t('doc_type_audio'),
     'text_document' => LocServ.inst.t('doc_type_text'),
     'web_link' => LocServ.inst.t('doc_type_web_link'),
+    'survey_model' => LocServ.inst.t('doc_type_survey_model'),
     _ => LocServ.inst.t('doc_type_other'),
   };
 
@@ -259,6 +260,7 @@ class _GeofeatureDocumentsPageState
     'audio' => Icons.audiotrack,
     'text_document' => Icons.description,
     'web_link' => Icons.link,
+    'survey_model' => Icons.view_in_ar,
     _ => Icons.insert_drive_file,
   };
 

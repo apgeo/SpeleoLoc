@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/cave_model/cave_model_viewer_page.dart';
+import 'package:speleoloc/services/cave_model/survey_model_format.dart';
 import 'package:speleoloc/widgets/editable_document_viewer.dart';
 import 'package:speleoloc/screens/documents/editors/camera_capture_page.dart';
 import 'package:speleoloc/screens/documents/editors/image_editor_page.dart';
@@ -400,6 +402,19 @@ void registerBuiltInDocumentFormats() {
       icon: Icons.videocam,
       extensions: DocumentationFileHelper.videoExtensions,
       buildThumbnail: _iconThumb(Icons.videocam, tint: Colors.deepOrange),
+    ),
+  );
+
+  // ---- Survey models ---- (viewer = 3D, read-only)
+  reg.register(
+    DocumentFormatHandler(
+      formatId: 'survey_model',
+      label: '3D survey model',
+      icon: Icons.view_in_ar,
+      extensions: {for (final f in SurveyModelFormat.values) f.extension},
+      buildViewer: ({required file, required doc}) =>
+          CaveModelViewerPage(file: file, title: doc.title),
+      buildThumbnail: _iconThumb(Icons.view_in_ar, tint: Colors.brown),
     ),
   );
 
