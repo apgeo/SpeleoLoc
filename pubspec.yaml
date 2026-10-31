@@ -174,3 +174,12 @@ flutter:
     # Foreground beacon-detection alert; the same file also ships as an
     # Android raw resource (res/raw) for the notification channel sound.
     - assets/sounds/
+    # The 3D model viewer: the CaveView.js fork's build (MIT), vendored by
+    # tool/refresh_caveview.sh — one version directory at a time, never
+    # replaced in place. Flutter bundles only the files directly in a listed
+    # folder, so each sub-folder is named.
+    - assets/caveview/v2.9.0-slx.22/
+    - assets/caveview/v2.9.0-slx.22/js/
+    - assets/caveview/v2.9.0-slx.22/css/
+    - assets/caveview/v2.9.0-slx.22/images/
+    - assets/caveview/v2.9.0-slx.22/lib/
