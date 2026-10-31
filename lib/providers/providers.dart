@@ -105,9 +105,13 @@ final caveRepositoryProvider = Provider<ICaveRepository>(
 
 final userRepositoryProvider = Provider<IUserRepository>(_buildUserRepository);
 
+// The logger is read through the container, not through `ref`: the logger
+// depends on this repository, and Riverpod's debug-mode check rejects a
+// `ref.read` of a provider that depends on the reader, even after both are
+// built. Every logged user insert or update failed in debug builds.
 IUserRepository _buildUserRepository(Ref ref) => UserRepository(
   ref.watch(appDatabaseProvider),
-  () => ref.read(changeLoggerProvider),
+  () => ref.container.read(changeLoggerProvider),
 );
 
 final currentUserServiceProvider = Provider<CurrentUserService>((ref) {
