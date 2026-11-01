@@ -1,4 +1,5 @@
 {
   "DEV_TOOLS": "false",
-  "DEFAULT_LOCALE": "en"
+  "DEFAULT_LOCALE": "en",
+  "FEATURE_MODEL_3D": "false"
 }

@@ -50,6 +50,14 @@ abstract final class BuildConfig {
     defaultValue: true,
   );
 
+  /// The 3D survey-model viewer's entry points: "3D model" and "View in 3D"
+  /// buttons and its settings page. Store builds pass false until the owner
+  /// has tried it on a phone; opening a model from its document still works.
+  static const bool model3dEnabled = bool.fromEnvironment(
+    'FEATURE_MODEL_3D',
+    defaultValue: true,
+  );
+
   /// Language used until the user picks one in settings. Store builds set
   /// `DEFAULT_LOCALE=en` for testers and reviewers outside Romania; a
   /// language already saved on the device still wins.
