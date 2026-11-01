@@ -196,4 +196,23 @@ class DocumentationRepository implements IDocumentationRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<List<DocumentationGeofeatureLink>> geofeatureLinksOf(
+    Uuid documentationFileUuid,
+  ) async {
+    final rows =
+        await (_database.select(_database.documentationFilesToGeofeatures)
+              ..where(
+                (t) =>
+                    t.documentationFileUuid.equalsValue(documentationFileUuid),
+              ))
+            .get();
+    return [
+      for (final r in rows)
+        if ((GeofeatureType.fromDbValue(r.geofeatureType), r.geofeatureUuid)
+            case (final type?, final uuid?))
+          DocumentationGeofeatureLink(type: type, geofeatureUuid: uuid),
+    ];
+  }
 }

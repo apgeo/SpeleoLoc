@@ -354,6 +354,11 @@ abstract class IDocumentationRepository {
   /// soft-deleted).
   Future<bool> hasAnyDocumentationFiles();
 
+  /// The caves, places and areas the documentation file hangs on.
+  Future<List<DocumentationGeofeatureLink>> geofeatureLinksOf(
+    Uuid documentationFileUuid,
+  );
+
   /// Deletes the documentation file with [uuid] plus its geofeature/trip
   /// link rows, writing a change-log tombstone for every removed row so
   /// the delete propagates to peers on sync. Always use this instead of
