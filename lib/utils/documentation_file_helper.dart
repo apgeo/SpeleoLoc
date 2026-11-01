@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/survey_model_format.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
@@ -56,6 +57,7 @@ class DocumentationFileHelper {
     if (['txt', 'rtf', 'doc', 'docx', 'odt', 'pdf', 'md'].contains(ext)) {
       return 'text_document';
     }
+    if (SurveyModelFormat.fromFileName(fileName) != null) return 'survey_model';
     return 'unknown';
   }
 

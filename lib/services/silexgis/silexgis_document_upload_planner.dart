@@ -69,11 +69,16 @@ class SilexgisPlannedLink {
     required this.targetKind,
     required this.targetId,
     this.local,
+    this.role,
   });
 
   final Uuid documentId;
   final String targetKind;
   final Uuid targetId;
+
+  /// The link's role on the server when the app names one: survey models go
+  /// up as `surveyData`. Null leaves it to the server's default.
+  final String? role;
 
   /// The local link row, or null for a removal.
   final SilexgisLocalLink? local;
@@ -197,6 +202,10 @@ class SilexgisDocumentUploadPlanner {
       _db.documentationFiles,
     )..where((t) => t.deletedAt.isNull())).get();
     final present = <Uuid>{for (final row in rows) row.uuid};
+    final surveyModels = <Uuid>{
+      for (final row in rows)
+        if (row.fileType == 'survey_model') row.uuid,
+    };
 
     for (final row in rows) {
       final stored = _documentRevision(revisions[row.uuid]);
@@ -284,6 +293,7 @@ class SilexgisDocumentUploadPlanner {
           targetKind: link.targetKind,
           targetId: link.targetId,
           local: local,
+          role: surveyModels.contains(link.documentId) ? 'surveyData' : null,
         ),
       );
     }

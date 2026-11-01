@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/model_links_cleanup.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -212,6 +213,8 @@ class CaveRepository implements ICaveRepository {
         await (_database.delete(
           _database.caveTrips,
         )..where((t) => t.caveUuid.equalsValue(id))).go();
+
+        await deleteModelLinks(_database, _logger, caveUuid: id);
 
         // Remove BLE tag registrations for this cave. Unregistering is a
         // soft delete, so active and already-unregistered rows alike still

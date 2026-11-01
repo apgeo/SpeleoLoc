@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
+import 'package:speleoloc/services/location/last_located_place.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
@@ -597,7 +599,15 @@ final qrCodeLookupHandlerProvider = Provider<QrCodeLookupHandler>(
     ref.watch(definitionRepositoryProvider),
     ref.watch(caveRepositoryProvider),
     ref.watch(caveTripRepositoryProvider),
+    ref.watch(lastLocatedPlaceProvider),
   ),
+);
+
+/// Where the device was last found, by a QR label or a beacon. The one
+/// instance lives on the beacon detection service, which still predates
+/// injection; QR scans record into the same one through this provider.
+final lastLocatedPlaceProvider = Provider<LastLocatedPlace>(
+  (ref) => BeaconDetectionService.instance.lastLocated,
 );
 
 /// Documentation-file helper surface used by editor pages and the

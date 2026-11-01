@@ -57,6 +57,16 @@ void main() {
       }
     });
 
+    test('recognises survey models', () {
+      for (final n in ['cave.lox', 'cave.LOX', 'cave.3d', 'cave.3D']) {
+        expect(
+          DocumentationFileHelper.detectFileType(n),
+          'survey_model',
+          reason: n,
+        );
+      }
+    });
+
     test('returns unknown for files without a usable extension', () {
       expect(DocumentationFileHelper.detectFileType('README'), 'unknown');
       expect(DocumentationFileHelper.detectFileType(''), 'unknown');

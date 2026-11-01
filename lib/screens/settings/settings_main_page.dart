@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speleoloc/screens/settings/settings_model_viewer_page.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/settings/debug_info_page.dart';
@@ -157,6 +158,20 @@ class _SettingsMainPageState extends State<SettingsMainPage>
                 );
               },
             ),
+            if (BuildConfig.model3dEnabled)
+              _SettingsSection(
+                icon: Icons.view_in_ar,
+                title: LocServ.inst.t('settings_model_viewer'),
+                subtitle: LocServ.inst.t('settings_model_viewer_desc'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsModelViewerPage(),
+                    ),
+                  );
+                },
+              ),
             _SettingsSection(
               icon: Icons.storage,
               title: LocServ.inst.t('settings_database'),

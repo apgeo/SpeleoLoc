@@ -1,4 +1,5 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/model_splay_offset.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 /// Abstract contract for the cave repository.
@@ -180,6 +181,38 @@ abstract class IRasterMapRepository {
   Future<bool> hasAnyRasterMaps();
 }
 
+/// Where cave places are in survey models: one station or splay end per
+/// place per model document.
+abstract class IPlaceStationMappingRepository {
+  Future<List<CavePlaceModelStation>> mappingsForModel(
+    Uuid documentationFileUuid,
+  );
+  Stream<List<CavePlaceModelStation>> watchMappingsForModel(
+    Uuid documentationFileUuid,
+  );
+  Future<List<CavePlaceModelStation>> mappingsForPlace(Uuid cavePlaceUuid);
+
+  /// Maps the place to [station] (and, with [splay], to that splay's far
+  /// end) in the model, replacing an earlier mapping of the place there.
+  /// A splay mapping is stored as needing review.
+  Future<CavePlaceModelStation> saveMapping({
+    required Uuid cavePlaceUuid,
+    required Uuid caveUuid,
+    required Uuid documentationFileUuid,
+    required String station,
+    ModelSplayOffset? splay,
+  });
+
+  Future<bool> deleteMapping(Uuid cavePlaceUuid, Uuid documentationFileUuid);
+}
+
+/// The survey model a cave opens by default, when a caver chose one.
+abstract class ICaveDefaultModelRepository {
+  Future<Uuid?> defaultModelOf(Uuid caveUuid);
+  Future<void> setDefaultModel(Uuid caveUuid, Uuid documentationFileUuid);
+  Future<void> clearDefaultModel(Uuid caveUuid);
+}
+
 /// Abstract contract for the cave-place ↔ raster-map definition repository.
 abstract class IDefinitionRepository {
   Future<CavePlaceToRasterMapDefinition?> findDefinition(
@@ -320,6 +353,11 @@ abstract class IDocumentationRepository {
   /// Returns `true` when at least one documentation file exists (not
   /// soft-deleted).
   Future<bool> hasAnyDocumentationFiles();
+
+  /// The caves, places and areas the documentation file hangs on.
+  Future<List<DocumentationGeofeatureLink>> geofeatureLinksOf(
+    Uuid documentationFileUuid,
+  );
 
   /// Deletes the documentation file with [uuid] plus its geofeature/trip
   /// link rows, writing a change-log tombstone for every removed row so

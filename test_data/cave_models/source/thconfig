@@ -1,0 +1,4 @@
+encoding utf-8
+source test_cave.th
+export model -fmt loch -output ../test_cave.lox
+export model -fmt survex -output ../test_cave.3d

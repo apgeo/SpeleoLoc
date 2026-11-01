@@ -57,6 +57,7 @@ preferați să vedeți aplicația în loc să citiți despre ea.
 - [Harta peșterii](features/surface-map.md)
 - [Hărți](features/raster-maps.md)
 - [Vizualizatorul de hărți și editorul de puncte](features/map-viewer.md)
+- [Modele 3D de topografie](features/3d-models.md)
 - [GPS și coordonate](features/gps-and-coordinates.md)
 
 **Identificarea locurilor**

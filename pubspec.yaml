@@ -95,6 +95,12 @@ dependencies:
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   sqlite3: ^3.3.4
+  # 3D survey-model viewer: the CaveView.js fork runs in a WebView fed from a
+  # loopback server. Android and iOS only — there is no Linux implementation,
+  # so on the desktop test build the viewer screen shows a placeholder and is
+  # never constructed. Chosen over flutter_inappwebview, whose stable line has
+  # been frozen since 2024 and defaults to hybrid composition.
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:
@@ -168,3 +174,13 @@ flutter:
     # Foreground beacon-detection alert; the same file also ships as an
     # Android raw resource (res/raw) for the notification channel sound.
     - assets/sounds/
+    # The 3D model viewer: our host page, and the CaveView.js fork's build
+    # (MIT) vendored by tool/refresh_caveview.sh — one version directory at a
+    # time, never replaced in place. Flutter bundles only the files directly in
+    # a listed folder, so each sub-folder is named.
+    - assets/caveview/host/
+    - assets/caveview/v2.9.0-slx.23/
+    - assets/caveview/v2.9.0-slx.23/js/
+    - assets/caveview/v2.9.0-slx.23/css/
+    - assets/caveview/v2.9.0-slx.23/images/
+    - assets/caveview/v2.9.0-slx.23/lib/

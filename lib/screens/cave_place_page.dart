@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/screens/cave_model/view_in_model_button.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -475,6 +476,11 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
                     ),
                   );
                 },
+              ),
+            if (_currentCavePlaceId != null)
+              ViewInModelButton(
+                caveUuid: widget.caveUuid,
+                cavePlaceUuid: _currentCavePlaceId,
               ),
             IconButton(
               icon: const Icon(Icons.travel_explore),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:speleoloc/services/location/last_located_place.dart';
+import 'package:speleoloc/services/map/best_raster_map_finder.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/settings/settings_general_page.dart';
@@ -11,7 +13,6 @@ import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// What to do when a QR code matches places in multiple caves.
@@ -61,6 +62,7 @@ class QrCodeLookupHandler {
   final IDefinitionRepository _definitionRepo;
   final ICaveRepository _caveRepo;
   final ICaveTripRepository _tripRepo;
+  final LastLocatedPlace _lastLocated;
 
   QrCodeLookupHandler(
     this._service,
@@ -69,6 +71,7 @@ class QrCodeLookupHandler {
     this._definitionRepo,
     this._caveRepo,
     this._tripRepo,
+    this._lastLocated,
   );
 
   /// Process [rawCode] end-to-end: preprocess payload, lookup, resolve
@@ -150,22 +153,11 @@ class QrCodeLookupHandler {
 
     // Find the best raster map to open: first in sort order that has a
     // definition for this cave place.  If none found, fall back to CavePlacePage.
-    final allMaps = await _rasterMapRepo.getRasterMaps(cavePlace.caveUuid);
-    Uuid? bestMapUuid;
-    if (allMaps.isNotEmpty) {
-      final sortOption = await RasterMapSortOption.load();
-      final sortedMaps = sortOption.apply(allMaps, []);
-      for (final rm in sortedMaps) {
-        final def = await _definitionRepo.findDefinition(
-          cavePlace.uuid,
-          rm.uuid,
-        );
-        if (def != null) {
-          bestMapUuid = rm.uuid;
-          break;
-        }
-      }
-    }
+    _lastLocated.record(cavePlace.uuid);
+    final bestMapUuid = await BestRasterMapFinder(
+      _rasterMapRepo,
+      _definitionRepo,
+    ).bestMapFor(cavePlace);
 
     if (!context.mounted) return cavePlace;
 

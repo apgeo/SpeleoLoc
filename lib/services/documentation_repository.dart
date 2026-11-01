@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/model_links_cleanup.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -134,6 +135,7 @@ class DocumentationRepository implements IDocumentationRepository {
           _database.documentationFilesToCaveTripPoints,
         )..where((t) => t.documentationFileUuid.equalsValue(uuid))).get();
 
+        await deleteModelLinks(_database, _logger, documentationFileUuid: uuid);
         await _database.deleteDocumentationFileByUuid(uuid);
 
         if (file != null) {
@@ -193,5 +195,24 @@ class DocumentationRepository implements IDocumentationRepository {
       _log.severe('hasAnyDocumentationFiles failed', e, st);
       rethrow;
     }
+  }
+
+  @override
+  Future<List<DocumentationGeofeatureLink>> geofeatureLinksOf(
+    Uuid documentationFileUuid,
+  ) async {
+    final rows =
+        await (_database.select(_database.documentationFilesToGeofeatures)
+              ..where(
+                (t) =>
+                    t.documentationFileUuid.equalsValue(documentationFileUuid),
+              ))
+            .get();
+    return [
+      for (final r in rows)
+        if ((GeofeatureType.fromDbValue(r.geofeatureType), r.geofeatureUuid)
+            case (final type?, final uuid?))
+          DocumentationGeofeatureLink(type: type, geofeatureUuid: uuid),
+    ];
   }
 }
