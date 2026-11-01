@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
+import 'package:speleoloc/screens/cave_model/cave_model_viewer_page.dart';
+import 'package:speleoloc/screens/settings/settings_model_viewer_page.dart';
 import 'package:speleoloc/screens/user_setup/user_setup_page.dart';
 import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
@@ -64,6 +69,7 @@ import 'package:speleoloc/screens/trip_report_templates_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 
 import '../support/cell.dart';
+import '../support/cave_model_fixtures.dart';
 import '../support/fixture.dart';
 
 /// One screen of the app and how to open it on whatever data is loaded.
@@ -148,6 +154,13 @@ final List<ScreenEntry> screenCatalogue = [
     (fx) => fx.cave == null
         ? null
         : CSVCavePlacesImportPage(caveUuid: fx.cave!.uuid),
+  ),
+  // The invented survey of test_data/cave_models/; the desktop build shows
+  // the viewer's placeholder, a phone draws it.
+  ScreenEntry(
+    'cave_model_viewer',
+    'cave',
+    (fx) => CaveModelViewerPage(file: _testCaveModel(), title: 'Test Cave'),
   ),
   ScreenEntry(
     'generated_qr_codes',
@@ -522,6 +535,11 @@ final List<ScreenEntry> screenCatalogue = [
   ),
   ScreenEntry('settings_map', 'settings', (fx) => const SettingsMapPage()),
   ScreenEntry(
+    'settings_model_viewer',
+    'settings',
+    (fx) => const SettingsModelViewerPage(),
+  ),
+  ScreenEntry(
     'settings_pdf_output',
     'settings',
     (fx) => const SettingsPdfOutputPage(),
@@ -568,3 +586,11 @@ final List<ScreenEntry> screenCatalogue = [
     (fx) => const SQLCommandRunner(),
   ),
 ];
+
+/// The invented survey written where the viewer can read it.
+File _testCaveModel() {
+  final file = File('${Directory.systemTemp.path}/catalogue_test_cave.lox');
+  if (!file.existsSync())
+    file.writeAsBytesSync(base64Decode(testCaveLoxBase64));
+  return file;
+}
