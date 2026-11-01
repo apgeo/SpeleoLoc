@@ -36,6 +36,7 @@ class ModelViewerAssetServer {
   final String _modelName;
   final String _token;
   HttpServer? _server;
+  final _media = <String, File>{};
 
   static String _newToken(Random random) => List.generate(
     16,
@@ -56,6 +57,16 @@ class ModelViewerAssetServer {
       path: '/$_token/host/index.html',
       queryParameters: {'model': _modelName, 'lang': language},
     );
+  }
+
+  /// Serves [file] — a photo shown on a station — and returns its address
+  /// relative to the host page. Only files offered here are served.
+  String serveMedia(File file) {
+    final dot = file.path.lastIndexOf('.');
+    final ext = dot < 0 ? '' : file.path.substring(dot + 1).toLowerCase();
+    final name = 'm${_media.length}${ext.isEmpty ? '' : '.$ext'}';
+    _media[name] = file;
+    return '../media/$name';
   }
 
   Future<void> stop() async {
@@ -102,7 +113,9 @@ class ModelViewerAssetServer {
     final rest = segments.skip(2).join('/');
     response.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
     if (area == 'model' && rest == _modelName) {
-      await _sendModel(request);
+      await _sendFile(request, _modelFile, ContentType.binary);
+    } else if (area == 'media' && _media.containsKey(rest)) {
+      await _sendFile(request, _media[rest]!, _imageType(rest));
     } else if (area == 'host') {
       await _sendAsset(request, '${CaveViewAssets.hostDir}/$rest');
     } else if (area == 'caveview') {
@@ -112,16 +125,27 @@ class ModelViewerAssetServer {
     }
   }
 
-  Future<void> _sendModel(HttpRequest request) async {
+  static ContentType _imageType(String name) =>
+      switch (name.substring(name.lastIndexOf('.') + 1)) {
+        'png' => ContentType('image', 'png'),
+        'webp' => ContentType('image', 'webp'),
+        'gif' => ContentType('image', 'gif'),
+        _ => ContentType('image', 'jpeg'),
+      };
+
+  Future<void> _sendFile(
+    HttpRequest request,
+    File file,
+    ContentType type,
+  ) async {
     final response = request.response;
-    if (!await _modelFile.exists()) {
+    if (!await file.exists()) {
       response.statusCode = HttpStatus.notFound;
       return;
     }
-    response.headers.contentType = ContentType.binary;
-    response.contentLength = await _modelFile.length();
-    if (request.method == 'GET')
-      await response.addStream(_modelFile.openRead());
+    response.headers.contentType = type;
+    response.contentLength = await file.length();
+    if (request.method == 'GET') await response.addStream(file.openRead());
   }
 
   Future<void> _sendAsset(HttpRequest request, String key) async {

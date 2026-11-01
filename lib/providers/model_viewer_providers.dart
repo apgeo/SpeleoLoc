@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/cave_model/cave_default_model_repository.dart';
+import 'package:speleoloc/services/cave_model/cave_model_locator.dart';
 import 'package:speleoloc/services/cave_model/model_viewer_asset_server.dart';
 import 'package:speleoloc/services/cave_model/place_station_mapping_repository.dart';
 import 'package:speleoloc/services/cave_model/survey_model_format.dart';
@@ -62,4 +64,20 @@ final caveDefaultModelRepositoryProvider =
         ref.watch(changeLoggerProvider),
         clock: ref.watch(clockProvider),
       ),
+    );
+
+final caveModelLocatorProvider = Provider<CaveModelLocator>(
+  (ref) => CaveModelLocator(
+    ref.watch(documentationRepositoryProvider),
+    ref.watch(caveDefaultModelRepositoryProvider),
+    ref.watch(placeStationMappingRepositoryProvider),
+    ref.watch(cavePlaceRepositoryProvider),
+  ),
+);
+
+/// The survey models attached to a cave, read afresh each time a screen
+/// that offers the 3D viewer is built.
+final caveModelsProvider = FutureProvider.autoDispose
+    .family<List<DocumentationFile>, Uuid>(
+      (ref, caveUuid) => ref.watch(caveModelLocatorProvider).modelsOf(caveUuid),
     );

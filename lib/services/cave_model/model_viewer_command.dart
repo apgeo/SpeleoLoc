@@ -217,3 +217,31 @@ final class RemoveModelTrail extends ModelViewerCommand {
   @override
   Map<String, Object?> get _fields => {'type': 'removeTrail', 'id': id};
 }
+
+/// A photo shown on a station: [url] as `ModelViewerAssetServer.serveMedia`
+/// returned it.
+class ModelStationPhoto {
+  const ModelStationPhoto({required this.url, required this.caption});
+
+  final String url;
+  final String caption;
+}
+
+/// Shows each station's photos when it is tapped, with a camera marker on
+/// every station that has some. An empty map takes them all away.
+final class SetModelStationMedia extends ModelViewerCommand {
+  const SetModelStationMedia(this.media);
+
+  final Map<String, List<ModelStationPhoto>> media;
+
+  @override
+  Map<String, Object?> get _fields => {
+    'type': 'setStationMedia',
+    'media': {
+      for (final e in media.entries)
+        e.key: [
+          for (final p in e.value) {'url': p.url, 'caption': p.caption},
+        ],
+    },
+  };
+}

@@ -294,6 +294,22 @@
     setTrailProgress: function (command) {
       viewer.setTrailProgress(command.id, command.progress);
     },
+    setStationMedia: function (command) {
+      const media = new Map();
+      for (const station of Object.keys(command.media || {})) {
+        media.set(station, command.media[station].map(function (entry) {
+          return { url: entry.url, thumbnailUrl: entry.url, caption: entry.caption };
+        }));
+      }
+      if (media.size === 0) {
+        viewer.clearStationMedia();
+        return;
+      }
+      viewer.setStationMedia(media);
+      // The strip appears where the station's name would.
+      viewer.stationLabelOver = true;
+      viewer.setStationMediaMarkers(true);
+    },
     removeTrail: function (command) {
       viewer.removeTrail(command.id);
       trails.delete(command.id);

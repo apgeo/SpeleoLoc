@@ -104,6 +104,18 @@ void main() {
     expect((await get(at('/$token/host/.hidden'))).$1, 404);
   });
 
+  test('serves only the photos it was given', () async {
+    final photo = File('${dir.path}/doc_2_lake.JPG')
+      ..writeAsBytesSync([1, 2, 3]);
+    final relative = server.serveMedia(photo);
+    expect(relative, '../media/m0.jpg');
+    final (status, body, type) = await get(at('/$token/media/m0.jpg'));
+    expect(status, 200);
+    expect(type, 'image/jpeg');
+    expect(body, [1, 2, 3]);
+    expect((await get(at('/$token/media/m1.jpg'))).$1, 404);
+  });
+
   test('is read-only', () async {
     expect((await get(page, method: 'POST')).$1, 405);
     expect((await get(page, method: 'PUT')).$1, 405);

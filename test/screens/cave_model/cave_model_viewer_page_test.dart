@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/model_viewer_providers.dart';
+import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/cave_model/cave_model_viewer_page.dart';
 import 'package:speleoloc/services/cave_model/model_viewer_asset_server.dart';
 import 'package:speleoloc/services/cave_model/model_viewer_command.dart';
@@ -36,18 +39,28 @@ class _FakeViewer implements ModelViewerHost {
 
 void main() {
   late _FakeViewer viewer;
+  late AppDatabase db;
 
-  setUp(() => viewer = _FakeViewer());
+  setUp(() {
+    viewer = _FakeViewer();
+    db = AppDatabase.forTesting(NativeDatabase.memory());
+  });
+
+  tearDown(() => db.close());
 
   Future<void> open(
     WidgetTester tester,
     String fixture, {
     bool supported = true,
+    DocumentationFile? model,
+    Uuid? caveUuid,
+    Uuid? focusPlaceUuid,
   }) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            appDatabaseProvider.overrideWithValue(db),
             modelViewerBuilderProvider.overrideWithValue(
               supported ? viewer.build : null,
             ),
@@ -60,13 +73,19 @@ void main() {
             ),
           ],
           child: MaterialApp(
-            home: CaveModelViewerPage(file: File(fixture), title: 'Test Cave'),
+            home: CaveModelViewerPage(
+              file: File(fixture),
+              title: 'Test Cave',
+              model: model,
+              caveUuid: caveUuid,
+              focusPlaceUuid: focusPlaceUuid,
+            ),
           ),
         ),
       );
       // The format is read from the file and a loopback port opened: real
       // I/O, which only completes outside the test's fake clock.
-      for (var i = 0; i < 20 && viewer.pageUri == null; i++) {
+      for (var i = 0; i < 40 && viewer.pageUri == null; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 25));
         await tester.pump();
       }
