@@ -3,14 +3,18 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/cave_model/cave_default_model_repository.dart';
 import 'package:speleoloc/services/cave_model/cave_model_locator.dart';
+import 'package:speleoloc/services/cave_model/current_survey_models.dart';
 import 'package:speleoloc/services/cave_model/model_viewer_asset_server.dart';
 import 'package:speleoloc/services/cave_model/place_station_mapping_repository.dart';
 import 'package:speleoloc/services/cave_model/survey_model_format.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/silexgis/silexgis_session.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_download_service.dart';
 import 'package:speleoloc/widgets/model_viewer/caveview_web_view.dart';
 import 'package:speleoloc/widgets/model_viewer/model_viewer_builder.dart';
 
@@ -72,6 +76,7 @@ final caveModelLocatorProvider = Provider<CaveModelLocator>(
     ref.watch(caveDefaultModelRepositoryProvider),
     ref.watch(placeStationMappingRepositoryProvider),
     ref.watch(cavePlaceRepositoryProvider),
+    server: ref.watch(silexgisSurveyModelsProvider),
   ),
 );
 
@@ -81,3 +86,28 @@ final caveModelsProvider = FutureProvider.autoDispose
     .family<List<DocumentationFile>, Uuid>(
       (ref, caveUuid) => ref.watch(caveModelLocatorProvider).modelsOf(caveUuid),
     );
+
+/// A cave's models on a server whose file is not on this device, read afresh
+/// each time the viewer's model list is opened.
+final caveServerModelsProvider = FutureProvider.autoDispose
+    .family<List<ServerSurveyModel>, Uuid>(
+      (ref, caveUuid) =>
+          ref.watch(silexgisSurveyModelsProvider).notHeld(caveUuid),
+    );
+
+/// Fetches a server model when the caver asks for it.
+final serverSurveyModelFetcherProvider = Provider<ServerSurveyModelFetcher>((
+  ref,
+) {
+  final tokens = ref.watch(silexgisTokenStoreProvider);
+  return SilexgisSurveyModelDownloadService(
+    db: ref.watch(appDatabaseProvider),
+    logger: ref.watch(changeLoggerProvider),
+    profiles: ref.watch(silexgisProfileRepositoryProvider),
+    localState: ref.watch(silexgisLocalStateProvider),
+    models: ref.watch(silexgisSurveyModelsProvider),
+    copies: ref.watch(silexgisFileCopyRepositoryProvider),
+    sessionBuilder: (profile) => SilexgisSession.signedIn(profile, tokens),
+    baseDir: getApplicationDocumentsDirectory,
+  );
+});

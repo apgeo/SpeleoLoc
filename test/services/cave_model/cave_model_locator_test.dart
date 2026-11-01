@@ -5,6 +5,7 @@ import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_model/cave_default_model_repository.dart';
 import 'package:speleoloc/services/cave_model/cave_model_locator.dart';
+import 'package:speleoloc/services/cave_model/current_survey_models.dart';
 import 'package:speleoloc/services/cave_model/place_station_mapping_repository.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
@@ -13,7 +14,8 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
-/// Which of a cave's models opens: the caver's default, else the newest; for
+/// Which of a cave's models opens: the caver's default, else the one a server
+/// marks current, else the newest; for
 /// a place, the first in that order that maps it.
 void main() {
   late AppDatabase db;
@@ -25,6 +27,8 @@ void main() {
   late Uuid place;
   late Uuid older;
   late Uuid newer;
+  late CurrentUserService user;
+  late ChangeLogger logger;
 
   Future<Uuid> addModel(String name, int createdAt, {Uuid? onPlace}) =>
       documents.insertDocumentationFile(
@@ -46,8 +50,7 @@ void main() {
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    late ChangeLogger logger;
-    final user = CurrentUserService(
+    user = CurrentUserService(
       db,
       UserRepository(db, () => logger),
       ConfigurationRepository(db),
@@ -73,6 +76,29 @@ void main() {
     await defaults.setDefaultModel(cave, older);
     expect((await locator.modelsOf(cave)).map((d) => d.uuid), [older, newer]);
     expect((await locator.modelToOpen(cave))!.model.uuid, older);
+  });
+
+  test('a server\'s current model comes before the newest, and the phone\'s '
+      'default before both', () async {
+    final third = await addModel('third.lox', 3000);
+    final server = CaveModelLocator(
+      documents,
+      defaults,
+      mappings,
+      CavePlaceRepository(db, user, logger),
+      server: _Current(<Uuid>{older}),
+    );
+    expect((await server.modelsOf(cave)).map((d) => d.uuid), [
+      older,
+      third,
+      newer,
+    ]);
+    await defaults.setDefaultModel(cave, newer);
+    expect((await server.modelsOf(cave)).map((d) => d.uuid), [
+      newer,
+      older,
+      third,
+    ]);
   });
 
   test('a place opens the first model that maps it', () async {
@@ -107,4 +133,16 @@ void main() {
     await documents.deleteDocumentationFile(newer);
     expect(await locator.modelToOpen(cave), isNull);
   });
+}
+
+class _Current implements CurrentSurveyModels {
+  const _Current(this._documents);
+
+  final Set<Uuid> _documents;
+
+  @override
+  Future<Set<Uuid>> currentModelDocuments(Uuid caveUuid) async => _documents;
+
+  @override
+  Future<List<ServerSurveyModel>> notHeld(Uuid caveUuid) async => const [];
 }

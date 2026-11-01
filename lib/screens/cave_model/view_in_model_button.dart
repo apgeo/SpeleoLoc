@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/model_viewer_providers.dart';
 import 'package:speleoloc/screens/cave_model/cave_model_navigation.dart';
+import 'package:speleoloc/screens/cave_model/server_models_sheet.dart';
 import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -27,7 +28,8 @@ class ViewInModelButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!BuildConfig.model3dEnabled) return const SizedBox.shrink();
     final models = ref.watch(caveModelsProvider(caveUuid)).valueOrNull;
-    if (models == null || models.isEmpty) return const SizedBox.shrink();
+    if (models == null) return const SizedBox.shrink();
+    if (models.isEmpty) return _fromServer(context, ref);
     final tooltip = replayTripUuid != null
         ? 'model_replay_trip'
         : cavePlaceUuid != null
@@ -45,6 +47,28 @@ class ViewInModelButton extends ConsumerWidget {
           replayTripUuid: replayTripUuid,
         ),
       ),
+    );
+  }
+
+  /// With no model on this phone, a server's models are offered to fetch;
+  /// the fetched one then opens as a model here would.
+  Widget _fromServer(BuildContext context, WidgetRef ref) {
+    final waiting = ref.watch(caveServerModelsProvider(caveUuid)).valueOrNull;
+    if (waiting == null || waiting.isEmpty) return const SizedBox.shrink();
+    return IconButton(
+      icon: const Icon(Icons.cloud_download_outlined),
+      tooltip: LocServ.inst.t('model_server_models'),
+      onPressed: () async {
+        final fetched = await showServerModelsSheet(context, caveUuid);
+        if (fetched == null || !context.mounted) return;
+        await openCaveModel(
+          context,
+          ref,
+          caveUuid: caveUuid,
+          cavePlaceUuid: cavePlaceUuid,
+          replayTripUuid: replayTripUuid,
+        );
+      },
     );
   }
 }

@@ -15,6 +15,7 @@ import 'package:speleoloc/screens/cave_model/model_place_picker_sheet.dart';
 import 'package:speleoloc/screens/cave_model/model_station_search_sheet.dart';
 import 'package:speleoloc/screens/cave_model/model_station_sheet.dart';
 import 'package:speleoloc/screens/cave_model/model_view_menu_button.dart';
+import 'package:speleoloc/screens/cave_model/server_models_sheet.dart';
 import 'package:speleoloc/screens/cave_model/trip_replay_panel.dart';
 import 'package:speleoloc/services/cave_model/model_mark_colours.dart';
 import 'package:speleoloc/services/cave_model/model_splay_offset.dart';
@@ -686,6 +687,16 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
     );
   }
 
+  Future<void> _fetchServerModel() async {
+    final cave = widget.caveUuid;
+    if (cave == null) return;
+    final fetched = await showServerModelsSheet(context, cave);
+    if (fetched == null || !mounted) return;
+    final models = await ref.read(caveModelLocatorProvider).modelsOf(cave);
+    final model = models.where((m) => m.uuid == fetched).firstOrNull;
+    if (model != null) await _switchModel(model);
+  }
+
   Future<void> _makeDefault() async {
     final cave = widget.caveUuid;
     final model = widget.model;
@@ -733,7 +744,19 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
             ModelViewMenuButton(
               onSelected: (view) => _send(SetModelView(view)),
             ),
-          if (shown) _overflowMenu(settings),
+          if (shown)
+            _overflowMenu(
+              settings,
+              serverModels: switch (widget.caveUuid) {
+                final cave? =>
+                  ref
+                          .watch(caveServerModelsProvider(cave))
+                          .valueOrNull
+                          ?.length ??
+                      0,
+                null => 0,
+              },
+            ),
         ],
       ),
       backgroundColor: Colors.black,
@@ -804,7 +827,10 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
     ),
   };
 
-  Widget _overflowMenu(ModelViewerSettings settings) {
+  Widget _overflowMenu(
+    ModelViewerSettings settings, {
+    required int serverModels,
+  }) {
     final current = widget.model?.uuid;
     final canMakeDefault = _hasContext && current != _defaultModel;
     return PopupMenuButton<VoidCallback>(
@@ -827,7 +853,17 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
             value: () => unawaited(_makeDefault()),
             child: Text(LocServ.inst.t('model_make_default')),
           ),
-        if (_models.length > 1 || canMakeDefault) const PopupMenuDivider(),
+        if (serverModels > 0)
+          PopupMenuItem(
+            value: () => unawaited(_fetchServerModel()),
+            child: Text(
+              LocServ.inst.t('model_server_models_count', {
+                'count': '$serverModels',
+              }),
+            ),
+          ),
+        if (_models.length > 1 || canMakeDefault || serverModels > 0)
+          const PopupMenuDivider(),
         PopupMenuItem(
           value: () => _send(const ListModelStations()),
           child: Text(LocServ.inst.t('model_search_station')),

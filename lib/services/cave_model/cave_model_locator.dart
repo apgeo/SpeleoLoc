@@ -1,4 +1,5 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/current_survey_models.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 
 /// The model a cave opens in 3D, with the place's mapping in it when the
@@ -16,18 +17,21 @@ class CaveModelLocator {
     this._documents,
     this._defaults,
     this._mappings,
-    this._places,
-  );
+    this._places, {
+    CurrentSurveyModels server = const NoServerSurveyModels(),
+  }) : _server = server;
 
   final IDocumentationRepository _documents;
   final ICavePlaceRepository _places;
   final ICaveDefaultModelRepository _defaults;
   final IPlaceStationMappingRepository _mappings;
+  final CurrentSurveyModels _server;
 
   static const fileType = 'survey_model';
 
-  /// The models attached to the cave: the caver's default first, then the
-  /// rest newest first.
+  /// The models attached to the cave: the caver's default first, then one a
+  /// server marks as the cave's current line plot, then the rest newest
+  /// first.
   Future<List<DocumentationFile>> modelsOf(Uuid caveUuid) async {
     final attached = (await _documents.getDocumentationFiles(
       parentLink: DocumentationGeofeatureLink(
@@ -36,6 +40,9 @@ class CaveModelLocator {
       ),
     )).where((d) => d.fileType == fileType).toList();
     attached.sort((a, b) => (b.createdAt ?? 0).compareTo(a.createdAt ?? 0));
+    final current = await _server.currentModelDocuments(caveUuid);
+    final atCurrent = attached.indexWhere((d) => current.contains(d.uuid));
+    if (atCurrent > 0) attached.insert(0, attached.removeAt(atCurrent));
     final chosen = await _defaults.defaultModelOf(caveUuid);
     final at = attached.indexWhere((d) => d.uuid == chosen);
     if (at > 0) attached.insert(0, attached.removeAt(at));
