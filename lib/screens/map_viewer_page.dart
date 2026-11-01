@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/screens/cave_model/view_in_model_button.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
@@ -407,6 +408,10 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
         rasterMaps: _rasterMaps,
         isReadonly: true,
         debugUi: false,
+        placeActionsBuilder: (context, place) => [
+          if (_cavePlace?.caveUuid ?? widget.caveUuid case final cave?)
+            ViewInModelButton(caveUuid: cave, cavePlaceUuid: place),
+        ],
         onSortCavePlacesRequested: _showCavePlacesSortDialog,
         onSortRasterMapsRequested: _showSortDialog,
         onManageRasterMapsRequested: _openRasterMapsPage,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/screens/cave_model/view_in_model_button.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'dart:async';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -774,6 +775,7 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
           ],
         ),
         actions: [
+          ViewInModelButton(caveUuid: widget.caveUuid),
           // Documents linked to the cave itself (not to any individual place).
           IconButton(
             icon: const Icon(Icons.folder_open),

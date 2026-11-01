@@ -73,6 +73,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.onRemoveDefinitionRequested,
     this.onCavePlaceAdded,
     this.onSaveDefinitionRequested,
+    this.placeActionsBuilder,
     this.caveUuid,
     this.tripOverlay,
     this.caveAreaTitles = const {},
@@ -166,6 +167,11 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// Called when the user taps the save/define button. The parent should
   /// save the current point and optionally pop the page.
   final VoidCallback? onSaveDefinitionRequested;
+
+  /// More actions for the selected place, after the built-in view-mode ones
+  /// — "View in 3D", for one — supplied by the screen that knows about them.
+  final List<Widget> Function(BuildContext context, Uuid cavePlaceUuid)?
+  placeActionsBuilder;
 
   /// Cave id — needed for the add-cave-place popup to know which cave to add
   /// a place to. Only required when [onCavePlaceAdded] is provided.
@@ -1629,6 +1635,11 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
+      if ((widget.placeActionsBuilder, widget.controller?.cavePlaceUuid) case (
+        final build?,
+        final place?,
+      ))
+        ...build(context, place),
     ];
   }
 

@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speleoloc/screens/cave_model/view_in_model_button.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:flutter/rendering.dart';
@@ -969,6 +970,10 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
           : AppBar(
               title: Text(trip.title),
               actions: [
+                ViewInModelButton(
+                  caveUuid: trip.caveUuid,
+                  replayTripUuid: trip.uuid,
+                ),
                 KeyedSubtree(
                   key: tourKeys['menu'],
                   child: buildAppBarMenuButton(),
