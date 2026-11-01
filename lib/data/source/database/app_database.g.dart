@@ -23850,6 +23850,739 @@ class SilexgisRasterEntryCompanion
   }
 }
 
+class SilexgisSurveyModel extends Table
+    with TableInfo<SilexgisSurveyModel, SilexgisSurveyModelData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisSurveyModel(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> modelId =
+      GeneratedColumn<Uint8List>(
+        'model_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisSurveyModel.$convertermodelId);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveId =
+      GeneratedColumn<Uint8List>(
+        'cave_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisSurveyModel.$convertercaveId);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> documentId =
+      GeneratedColumn<Uint8List>(
+        'document_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(SilexgisSurveyModel.$converterdocumentId);
+  static const VerificationMeta _versionIdMeta = const VerificationMeta(
+    'versionId',
+  );
+  late final GeneratedColumn<String> versionId = GeneratedColumn<String>(
+    'version_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _formatMeta = const VerificationMeta('format');
+  late final GeneratedColumn<String> format = GeneratedColumn<String>(
+    'format',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _isCurrentMeta = const VerificationMeta(
+    'isCurrent',
+  );
+  late final GeneratedColumn<bool> isCurrent = GeneratedColumn<bool>(
+    'is_current',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  late final GeneratedColumn<String> revision = GeneratedColumn<String>(
+    'revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _fetchedVersionIdMeta = const VerificationMeta(
+    'fetchedVersionId',
+  );
+  late final GeneratedColumn<String> fetchedVersionId = GeneratedColumn<String>(
+    'fetched_version_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    modelId,
+    caveId,
+    documentId,
+    versionId,
+    name,
+    format,
+    isCurrent,
+    sizeBytes,
+    sha256,
+    revision,
+    fetchedVersionId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_survey_model';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisSurveyModelData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('version_id')) {
+      context.handle(
+        _versionIdMeta,
+        versionId.isAcceptableOrUnknown(data['version_id']!, _versionIdMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('format')) {
+      context.handle(
+        _formatMeta,
+        format.isAcceptableOrUnknown(data['format']!, _formatMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_formatMeta);
+    }
+    if (data.containsKey('is_current')) {
+      context.handle(
+        _isCurrentMeta,
+        isCurrent.isAcceptableOrUnknown(data['is_current']!, _isCurrentMeta),
+      );
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('fetched_version_id')) {
+      context.handle(
+        _fetchedVersionIdMeta,
+        fetchedVersionId.isAcceptableOrUnknown(
+          data['fetched_version_id']!,
+          _fetchedVersionIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, modelId};
+  @override
+  SilexgisSurveyModelData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisSurveyModelData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      modelId: SilexgisSurveyModel.$convertermodelId.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}model_id'],
+        )!,
+      ),
+      caveId: SilexgisSurveyModel.$convertercaveId.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_id'],
+        )!,
+      ),
+      documentId: SilexgisSurveyModel.$converterdocumentId.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}document_id'],
+        )!,
+      ),
+      versionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}version_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      format: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}format'],
+      )!,
+      isCurrent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_current'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      ),
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      ),
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}revision'],
+      ),
+      fetchedVersionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fetched_version_id'],
+      ),
+    );
+  }
+
+  @override
+  SilexgisSurveyModel createAlias(String alias) {
+    return SilexgisSurveyModel(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $convertermodelId =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveId =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterdocumentId =
+      const UuidConverter();
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, model_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisSurveyModelData extends DataClass
+    implements Insertable<SilexgisSurveyModelData> {
+  final String profileUuid;
+  final Uuid modelId;
+  final Uuid caveId;
+  final Uuid documentId;
+  final String? versionId;
+  final String? name;
+  final String format;
+  final bool isCurrent;
+  final int? sizeBytes;
+  final String? sha256;
+  final String? revision;
+  final String? fetchedVersionId;
+  const SilexgisSurveyModelData({
+    required this.profileUuid,
+    required this.modelId,
+    required this.caveId,
+    required this.documentId,
+    this.versionId,
+    this.name,
+    required this.format,
+    required this.isCurrent,
+    this.sizeBytes,
+    this.sha256,
+    this.revision,
+    this.fetchedVersionId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    {
+      map['model_id'] = Variable<Uint8List>(
+        SilexgisSurveyModel.$convertermodelId.toSql(modelId),
+      );
+    }
+    {
+      map['cave_id'] = Variable<Uint8List>(
+        SilexgisSurveyModel.$convertercaveId.toSql(caveId),
+      );
+    }
+    {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisSurveyModel.$converterdocumentId.toSql(documentId),
+      );
+    }
+    if (!nullToAbsent || versionId != null) {
+      map['version_id'] = Variable<String>(versionId);
+    }
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    map['format'] = Variable<String>(format);
+    map['is_current'] = Variable<bool>(isCurrent);
+    if (!nullToAbsent || sizeBytes != null) {
+      map['size_bytes'] = Variable<int>(sizeBytes);
+    }
+    if (!nullToAbsent || sha256 != null) {
+      map['sha256'] = Variable<String>(sha256);
+    }
+    if (!nullToAbsent || revision != null) {
+      map['revision'] = Variable<String>(revision);
+    }
+    if (!nullToAbsent || fetchedVersionId != null) {
+      map['fetched_version_id'] = Variable<String>(fetchedVersionId);
+    }
+    return map;
+  }
+
+  SilexgisSurveyModelCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisSurveyModelCompanion(
+      profileUuid: Value(profileUuid),
+      modelId: Value(modelId),
+      caveId: Value(caveId),
+      documentId: Value(documentId),
+      versionId: versionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(versionId),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      format: Value(format),
+      isCurrent: Value(isCurrent),
+      sizeBytes: sizeBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sizeBytes),
+      sha256: sha256 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sha256),
+      revision: revision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revision),
+      fetchedVersionId: fetchedVersionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fetchedVersionId),
+    );
+  }
+
+  factory SilexgisSurveyModelData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisSurveyModelData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      modelId: serializer.fromJson<Uuid>(json['model_id']),
+      caveId: serializer.fromJson<Uuid>(json['cave_id']),
+      documentId: serializer.fromJson<Uuid>(json['document_id']),
+      versionId: serializer.fromJson<String?>(json['version_id']),
+      name: serializer.fromJson<String?>(json['name']),
+      format: serializer.fromJson<String>(json['format']),
+      isCurrent: serializer.fromJson<bool>(json['is_current']),
+      sizeBytes: serializer.fromJson<int?>(json['size_bytes']),
+      sha256: serializer.fromJson<String?>(json['sha256']),
+      revision: serializer.fromJson<String?>(json['revision']),
+      fetchedVersionId: serializer.fromJson<String?>(
+        json['fetched_version_id'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'model_id': serializer.toJson<Uuid>(modelId),
+      'cave_id': serializer.toJson<Uuid>(caveId),
+      'document_id': serializer.toJson<Uuid>(documentId),
+      'version_id': serializer.toJson<String?>(versionId),
+      'name': serializer.toJson<String?>(name),
+      'format': serializer.toJson<String>(format),
+      'is_current': serializer.toJson<bool>(isCurrent),
+      'size_bytes': serializer.toJson<int?>(sizeBytes),
+      'sha256': serializer.toJson<String?>(sha256),
+      'revision': serializer.toJson<String?>(revision),
+      'fetched_version_id': serializer.toJson<String?>(fetchedVersionId),
+    };
+  }
+
+  SilexgisSurveyModelData copyWith({
+    String? profileUuid,
+    Uuid? modelId,
+    Uuid? caveId,
+    Uuid? documentId,
+    Value<String?> versionId = const Value.absent(),
+    Value<String?> name = const Value.absent(),
+    String? format,
+    bool? isCurrent,
+    Value<int?> sizeBytes = const Value.absent(),
+    Value<String?> sha256 = const Value.absent(),
+    Value<String?> revision = const Value.absent(),
+    Value<String?> fetchedVersionId = const Value.absent(),
+  }) => SilexgisSurveyModelData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    modelId: modelId ?? this.modelId,
+    caveId: caveId ?? this.caveId,
+    documentId: documentId ?? this.documentId,
+    versionId: versionId.present ? versionId.value : this.versionId,
+    name: name.present ? name.value : this.name,
+    format: format ?? this.format,
+    isCurrent: isCurrent ?? this.isCurrent,
+    sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
+    sha256: sha256.present ? sha256.value : this.sha256,
+    revision: revision.present ? revision.value : this.revision,
+    fetchedVersionId: fetchedVersionId.present
+        ? fetchedVersionId.value
+        : this.fetchedVersionId,
+  );
+  SilexgisSurveyModelData copyWithCompanion(SilexgisSurveyModelCompanion data) {
+    return SilexgisSurveyModelData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      modelId: data.modelId.present ? data.modelId.value : this.modelId,
+      caveId: data.caveId.present ? data.caveId.value : this.caveId,
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      versionId: data.versionId.present ? data.versionId.value : this.versionId,
+      name: data.name.present ? data.name.value : this.name,
+      format: data.format.present ? data.format.value : this.format,
+      isCurrent: data.isCurrent.present ? data.isCurrent.value : this.isCurrent,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      fetchedVersionId: data.fetchedVersionId.present
+          ? data.fetchedVersionId.value
+          : this.fetchedVersionId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisSurveyModelData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('modelId: $modelId, ')
+          ..write('caveId: $caveId, ')
+          ..write('documentId: $documentId, ')
+          ..write('versionId: $versionId, ')
+          ..write('name: $name, ')
+          ..write('format: $format, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('revision: $revision, ')
+          ..write('fetchedVersionId: $fetchedVersionId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    profileUuid,
+    modelId,
+    caveId,
+    documentId,
+    versionId,
+    name,
+    format,
+    isCurrent,
+    sizeBytes,
+    sha256,
+    revision,
+    fetchedVersionId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisSurveyModelData &&
+          other.profileUuid == this.profileUuid &&
+          other.modelId == this.modelId &&
+          other.caveId == this.caveId &&
+          other.documentId == this.documentId &&
+          other.versionId == this.versionId &&
+          other.name == this.name &&
+          other.format == this.format &&
+          other.isCurrent == this.isCurrent &&
+          other.sizeBytes == this.sizeBytes &&
+          other.sha256 == this.sha256 &&
+          other.revision == this.revision &&
+          other.fetchedVersionId == this.fetchedVersionId);
+}
+
+class SilexgisSurveyModelCompanion
+    extends UpdateCompanion<SilexgisSurveyModelData> {
+  final Value<String> profileUuid;
+  final Value<Uuid> modelId;
+  final Value<Uuid> caveId;
+  final Value<Uuid> documentId;
+  final Value<String?> versionId;
+  final Value<String?> name;
+  final Value<String> format;
+  final Value<bool> isCurrent;
+  final Value<int?> sizeBytes;
+  final Value<String?> sha256;
+  final Value<String?> revision;
+  final Value<String?> fetchedVersionId;
+  final Value<int> rowid;
+  const SilexgisSurveyModelCompanion({
+    this.profileUuid = const Value.absent(),
+    this.modelId = const Value.absent(),
+    this.caveId = const Value.absent(),
+    this.documentId = const Value.absent(),
+    this.versionId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.format = const Value.absent(),
+    this.isCurrent = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.fetchedVersionId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisSurveyModelCompanion.insert({
+    required String profileUuid,
+    required Uuid modelId,
+    required Uuid caveId,
+    required Uuid documentId,
+    this.versionId = const Value.absent(),
+    this.name = const Value.absent(),
+    required String format,
+    this.isCurrent = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.fetchedVersionId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       modelId = Value(modelId),
+       caveId = Value(caveId),
+       documentId = Value(documentId),
+       format = Value(format);
+  static Insertable<SilexgisSurveyModelData> custom({
+    Expression<String>? profileUuid,
+    Expression<Uint8List>? modelId,
+    Expression<Uint8List>? caveId,
+    Expression<Uint8List>? documentId,
+    Expression<String>? versionId,
+    Expression<String>? name,
+    Expression<String>? format,
+    Expression<bool>? isCurrent,
+    Expression<int>? sizeBytes,
+    Expression<String>? sha256,
+    Expression<String>? revision,
+    Expression<String>? fetchedVersionId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (modelId != null) 'model_id': modelId,
+      if (caveId != null) 'cave_id': caveId,
+      if (documentId != null) 'document_id': documentId,
+      if (versionId != null) 'version_id': versionId,
+      if (name != null) 'name': name,
+      if (format != null) 'format': format,
+      if (isCurrent != null) 'is_current': isCurrent,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (sha256 != null) 'sha256': sha256,
+      if (revision != null) 'revision': revision,
+      if (fetchedVersionId != null) 'fetched_version_id': fetchedVersionId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisSurveyModelCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<Uuid>? modelId,
+    Value<Uuid>? caveId,
+    Value<Uuid>? documentId,
+    Value<String?>? versionId,
+    Value<String?>? name,
+    Value<String>? format,
+    Value<bool>? isCurrent,
+    Value<int?>? sizeBytes,
+    Value<String?>? sha256,
+    Value<String?>? revision,
+    Value<String?>? fetchedVersionId,
+    Value<int>? rowid,
+  }) {
+    return SilexgisSurveyModelCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      modelId: modelId ?? this.modelId,
+      caveId: caveId ?? this.caveId,
+      documentId: documentId ?? this.documentId,
+      versionId: versionId ?? this.versionId,
+      name: name ?? this.name,
+      format: format ?? this.format,
+      isCurrent: isCurrent ?? this.isCurrent,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      sha256: sha256 ?? this.sha256,
+      revision: revision ?? this.revision,
+      fetchedVersionId: fetchedVersionId ?? this.fetchedVersionId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (modelId.present) {
+      map['model_id'] = Variable<Uint8List>(
+        SilexgisSurveyModel.$convertermodelId.toSql(modelId.value),
+      );
+    }
+    if (caveId.present) {
+      map['cave_id'] = Variable<Uint8List>(
+        SilexgisSurveyModel.$convertercaveId.toSql(caveId.value),
+      );
+    }
+    if (documentId.present) {
+      map['document_id'] = Variable<Uint8List>(
+        SilexgisSurveyModel.$converterdocumentId.toSql(documentId.value),
+      );
+    }
+    if (versionId.present) {
+      map['version_id'] = Variable<String>(versionId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (format.present) {
+      map['format'] = Variable<String>(format.value);
+    }
+    if (isCurrent.present) {
+      map['is_current'] = Variable<bool>(isCurrent.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<String>(revision.value);
+    }
+    if (fetchedVersionId.present) {
+      map['fetched_version_id'] = Variable<String>(fetchedVersionId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisSurveyModelCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('modelId: $modelId, ')
+          ..write('caveId: $caveId, ')
+          ..write('documentId: $documentId, ')
+          ..write('versionId: $versionId, ')
+          ..write('name: $name, ')
+          ..write('format: $format, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('revision: $revision, ')
+          ..write('fetchedVersionId: $fetchedVersionId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -23968,6 +24701,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_silexgis_raster_entry_map',
     'CREATE INDEX IF NOT EXISTS idx_silexgis_raster_entry_map ON silexgis_raster_entry (profile_uuid, map_uuid)',
   );
+  late final SilexgisSurveyModel silexgisSurveyModel = SilexgisSurveyModel(
+    this,
+  );
+  late final Index idxSilexgisSurveyModelDocument = Index(
+    'idx_silexgis_survey_model_document',
+    'CREATE INDEX IF NOT EXISTS idx_silexgis_survey_model_document ON silexgis_survey_model (profile_uuid, document_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -24025,6 +24765,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxSilexgisTripEntryRecording,
     silexgisRasterEntry,
     idxSilexgisRasterEntryMap,
+    silexgisSurveyModel,
+    idxSilexgisSurveyModelDocument,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -44307,6 +45049,357 @@ typedef $SilexgisRasterEntryProcessedTableManager =
       SilexgisRasterEntryData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisSurveyModelCreateCompanionBuilder =
+    SilexgisSurveyModelCompanion Function({
+      required String profileUuid,
+      required Uuid modelId,
+      required Uuid caveId,
+      required Uuid documentId,
+      Value<String?> versionId,
+      Value<String?> name,
+      required String format,
+      Value<bool> isCurrent,
+      Value<int?> sizeBytes,
+      Value<String?> sha256,
+      Value<String?> revision,
+      Value<String?> fetchedVersionId,
+      Value<int> rowid,
+    });
+typedef $SilexgisSurveyModelUpdateCompanionBuilder =
+    SilexgisSurveyModelCompanion Function({
+      Value<String> profileUuid,
+      Value<Uuid> modelId,
+      Value<Uuid> caveId,
+      Value<Uuid> documentId,
+      Value<String?> versionId,
+      Value<String?> name,
+      Value<String> format,
+      Value<bool> isCurrent,
+      Value<int?> sizeBytes,
+      Value<String?> sha256,
+      Value<String?> revision,
+      Value<String?> fetchedVersionId,
+      Value<int> rowid,
+    });
+
+class $SilexgisSurveyModelFilterComposer
+    extends Composer<_$AppDatabase, SilexgisSurveyModel> {
+  $SilexgisSurveyModelFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get modelId =>
+      $composableBuilder(
+        column: $table.modelId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get caveId =>
+      $composableBuilder(
+        column: $table.caveId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get versionId => $composableBuilder(
+    column: $table.versionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fetchedVersionId => $composableBuilder(
+    column: $table.fetchedVersionId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisSurveyModelOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisSurveyModel> {
+  $SilexgisSurveyModelOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get modelId => $composableBuilder(
+    column: $table.modelId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get caveId => $composableBuilder(
+    column: $table.caveId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get versionId => $composableBuilder(
+    column: $table.versionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fetchedVersionId => $composableBuilder(
+    column: $table.fetchedVersionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisSurveyModelAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisSurveyModel> {
+  $SilexgisSurveyModelAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get modelId =>
+      $composableBuilder(column: $table.modelId, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get caveId =>
+      $composableBuilder(column: $table.caveId, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get documentId =>
+      $composableBuilder(
+        column: $table.documentId,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get versionId =>
+      $composableBuilder(column: $table.versionId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get format =>
+      $composableBuilder(column: $table.format, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCurrent =>
+      $composableBuilder(column: $table.isCurrent, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<String> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get fetchedVersionId => $composableBuilder(
+    column: $table.fetchedVersionId,
+    builder: (column) => column,
+  );
+}
+
+class $SilexgisSurveyModelTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisSurveyModel,
+          SilexgisSurveyModelData,
+          $SilexgisSurveyModelFilterComposer,
+          $SilexgisSurveyModelOrderingComposer,
+          $SilexgisSurveyModelAnnotationComposer,
+          $SilexgisSurveyModelCreateCompanionBuilder,
+          $SilexgisSurveyModelUpdateCompanionBuilder,
+          (
+            SilexgisSurveyModelData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisSurveyModel,
+              SilexgisSurveyModelData
+            >,
+          ),
+          SilexgisSurveyModelData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisSurveyModelTableManager(_$AppDatabase db, SilexgisSurveyModel table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisSurveyModelFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisSurveyModelOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisSurveyModelAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<Uuid> modelId = const Value.absent(),
+                Value<Uuid> caveId = const Value.absent(),
+                Value<Uuid> documentId = const Value.absent(),
+                Value<String?> versionId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String> format = const Value.absent(),
+                Value<bool> isCurrent = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String?> sha256 = const Value.absent(),
+                Value<String?> revision = const Value.absent(),
+                Value<String?> fetchedVersionId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisSurveyModelCompanion(
+                profileUuid: profileUuid,
+                modelId: modelId,
+                caveId: caveId,
+                documentId: documentId,
+                versionId: versionId,
+                name: name,
+                format: format,
+                isCurrent: isCurrent,
+                sizeBytes: sizeBytes,
+                sha256: sha256,
+                revision: revision,
+                fetchedVersionId: fetchedVersionId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required Uuid modelId,
+                required Uuid caveId,
+                required Uuid documentId,
+                Value<String?> versionId = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                required String format,
+                Value<bool> isCurrent = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String?> sha256 = const Value.absent(),
+                Value<String?> revision = const Value.absent(),
+                Value<String?> fetchedVersionId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisSurveyModelCompanion.insert(
+                profileUuid: profileUuid,
+                modelId: modelId,
+                caveId: caveId,
+                documentId: documentId,
+                versionId: versionId,
+                name: name,
+                format: format,
+                isCurrent: isCurrent,
+                sizeBytes: sizeBytes,
+                sha256: sha256,
+                revision: revision,
+                fetchedVersionId: fetchedVersionId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisSurveyModelProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisSurveyModel,
+      SilexgisSurveyModelData,
+      $SilexgisSurveyModelFilterComposer,
+      $SilexgisSurveyModelOrderingComposer,
+      $SilexgisSurveyModelAnnotationComposer,
+      $SilexgisSurveyModelCreateCompanionBuilder,
+      $SilexgisSurveyModelUpdateCompanionBuilder,
+      (
+        SilexgisSurveyModelData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisSurveyModel,
+          SilexgisSurveyModelData
+        >,
+      ),
+      SilexgisSurveyModelData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -44399,4 +45492,6 @@ class $AppDatabaseManager {
       $SilexgisTripEntryTableManager(_db, _db.silexgisTripEntry);
   $SilexgisRasterEntryTableManager get silexgisRasterEntry =>
       $SilexgisRasterEntryTableManager(_db, _db.silexgisRasterEntry);
+  $SilexgisSurveyModelTableManager get silexgisSurveyModel =>
+      $SilexgisSurveyModelTableManager(_db, _db.silexgisSurveyModel);
 }

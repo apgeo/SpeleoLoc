@@ -844,3 +844,35 @@ CREATE TABLE IF NOT EXISTS silexgis_raster_entry (
 
 CREATE INDEX IF NOT EXISTS idx_silexgis_raster_entry_map
     ON silexgis_raster_entry(profile_uuid, map_uuid);
+
+-- Table: silexgis_survey_model
+-- LOCAL ONLY. The survey models (line plots, `.lox` / `.3d`) an installation
+-- hands this account, as the survey-models stream last listed them: one per
+-- model, whether or not its file is on this device.
+--
+-- `document_id` is the installation's document holding the file; a fetched
+-- copy is the `documentation_files` row of that same identifier, and
+-- `fetched_version_id` is the `version_id` its bytes are. Null while the file
+-- is still to fetch. `size_bytes` and `sha256` describe the listed version and
+-- are checked against what arrives.
+--
+-- `is_current` marks the model the browser represents the cave by; it is one
+-- of the hints that choose which model opens, after the phone's own default.
+CREATE TABLE IF NOT EXISTS silexgis_survey_model (
+    profile_uuid        TEXT(36) NOT NULL,
+    model_id            BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_id             BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    document_id         BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    version_id          TEXT(36),
+    name                TEXT,
+    format              TEXT(8) NOT NULL,
+    is_current          BOOLEAN NOT NULL DEFAULT 0,
+    size_bytes          INTEGER,
+    sha256              TEXT(64),
+    revision            TEXT,
+    fetched_version_id  TEXT(36),
+    PRIMARY KEY (profile_uuid, model_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_silexgis_survey_model_document
+    ON silexgis_survey_model(profile_uuid, document_id);

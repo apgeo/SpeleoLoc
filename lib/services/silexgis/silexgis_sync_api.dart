@@ -6,6 +6,7 @@ import 'package:speleoloc/services/silexgis/model/sync_people.dart';
 import 'package:speleoloc/services/silexgis/model/sync_rasters.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
+import 'package:speleoloc/services/silexgis/model/sync_survey_models.dart';
 import 'package:speleoloc/services/silexgis/model/sync_trips.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
@@ -140,6 +141,20 @@ class SilexgisSyncApi {
   }) async => SyncRastersPage.fromJson(
     await _http.getJson(
       SilexgisContract.rastersPath(setId),
+      query: <String, String>{
+        'cursor': ?cursor,
+        if (pageSize != null) 'pageSize': '$pageSize',
+      },
+    ),
+  );
+
+  Future<SyncSurveyModelsPage> surveyModels(
+    String setId, {
+    String? cursor,
+    int? pageSize,
+  }) async => SyncSurveyModelsPage.fromJson(
+    await _http.getJson(
+      SilexgisContract.surveyModelsPath(setId),
       query: <String, String>{
         'cursor': ?cursor,
         if (pageSize != null) 'pageSize': '$pageSize',

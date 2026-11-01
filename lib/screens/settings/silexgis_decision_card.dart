@@ -49,7 +49,7 @@ class SilexgisDecisionCard extends StatelessWidget {
               <String>[
                 _reason(decision),
                 if (held.isDelete) LocServ.inst.t('silexgis_review_removal'),
-                if (decision.isNew && !decision.isPinExists)
+                if (decision.isNew && !decision.canRemovePin)
                   LocServ.inst.t('silexgis_review_new_row'),
               ].join(' · '),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -77,7 +77,13 @@ class SilexgisDecisionCard extends StatelessWidget {
                 if (decision.canRemovePin)
                   TextButton(
                     onPressed: enabled ? onDelete : null,
-                    child: Text(LocServ.inst.t('silexgis_decision_remove_pin')),
+                    child: Text(
+                      LocServ.inst.t(
+                        decision.isPlaceStationExists
+                            ? 'silexgis_decision_remove_mapping'
+                            : 'silexgis_decision_remove_pin',
+                      ),
+                    ),
                   ),
                 TextButton(
                   onPressed: enabled ? onKeepMine : null,
@@ -106,6 +112,9 @@ class SilexgisDecisionCard extends StatelessWidget {
     if (decision.isPinExists) {
       return LocServ.inst.t('silexgis_decision_pin_exists');
     }
+    if (decision.isPlaceStationExists) {
+      return LocServ.inst.t('silexgis_decision_place_station_exists');
+    }
     if (decision.isConflict) return LocServ.inst.t('silexgis_conflict');
     return decision.held.outcome == SyncReviewOutcome.failed
         ? LocServ.inst.t('silexgis_review_failed')
@@ -125,5 +134,8 @@ class SilexgisDecisionCard extends StatelessWidget {
     SyncUploadSection.tripPoints => LocServ.inst.t('silexgis_decision_scan'),
     SyncUploadSection.rasterMaps => LocServ.inst.t('silexgis_decision_map'),
     SyncUploadSection.rasterPins => LocServ.inst.t('silexgis_decision_pin'),
+    SyncUploadSection.placeStations => LocServ.inst.t(
+      'silexgis_decision_place_station',
+    ),
   };
 }

@@ -8,6 +8,7 @@ import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 
 /// A documentation file this run has something to say about.
@@ -112,6 +113,7 @@ class SilexgisDocumentPlan {
 ///   the installation holds — and never for such a copy, whose edit says only
 ///   what is said about the file.
 /// - A file removed here goes up as a removal.
+/// - A file held only as an installation's survey model never goes up.
 /// - A link goes up when its document goes or is held there and its target
 ///   is such a target; a link the installation holds and this device no
 ///   longer has goes up as a removal.
@@ -127,6 +129,7 @@ class SilexgisDocumentUploadPlanner {
     required SilexgisDocumentCatalogueRepository catalogue,
     required SilexgisServerLinkRepository serverLinks,
     required String profileUuid,
+    SilexgisSurveyModelRepository? surveyModels,
   }) : _db = db,
        _localState = localState,
        _heldRows = heldRows,
@@ -134,7 +137,8 @@ class SilexgisDocumentUploadPlanner {
        _staged = staged,
        _catalogue = catalogue,
        _serverLinks = serverLinks,
-       _profileUuid = profileUuid;
+       _profileUuid = profileUuid,
+       _surveyModels = surveyModels ?? SilexgisSurveyModelRepository(db);
 
   final AppDatabase _db;
   final SilexgisLocalStateRepository _localState;
@@ -144,6 +148,7 @@ class SilexgisDocumentUploadPlanner {
   final SilexgisDocumentCatalogueRepository _catalogue;
   final SilexgisServerLinkRepository _serverLinks;
   final String _profileUuid;
+  final SilexgisSurveyModelRepository _surveyModels;
 
   static const String linkTable = 'documentation_files_to_geofeatures';
   static const String recordingLinkTable = 'documentation_files_to_cave_trips';
@@ -206,6 +211,7 @@ class SilexgisDocumentUploadPlanner {
       for (final row in rows)
         if (row.fileType == 'survey_model') row.uuid,
     };
+    final serverModels = await _surveyModels.serverDocuments();
 
     for (final row in rows) {
       final stored = _documentRevision(revisions[row.uuid]);
@@ -219,6 +225,9 @@ class SilexgisDocumentUploadPlanner {
 
       if (stored == null) {
         if (!mayCarryBytes || !linkedToServer.contains(row.uuid)) continue;
+        // Here because an installation lists it as a survey model: the
+        // server's file, which it deliberately files on no cave.
+        if (serverModels.contains(row.uuid)) continue;
         going.add(row.uuid);
         documents.add(
           SilexgisPlannedDocument(

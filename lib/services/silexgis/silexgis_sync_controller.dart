@@ -12,27 +12,28 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
-import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
-import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
-import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
-import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
-import 'package:speleoloc/services/silexgis/silexgis_files_network_gate.dart';
-import 'package:speleoloc/services/silexgis/silexgis_documents_upload_part.dart';
-import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
-import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_links_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
+import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_documents_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
-import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
+import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
+import 'package:speleoloc/services/silexgis/silexgis_files_network_gate.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
-import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
+import 'package:speleoloc/services/silexgis/silexgis_place_stations_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_applier.dart';
@@ -46,6 +47,12 @@ import 'package:speleoloc/services/silexgis/silexgis_review_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
 import 'package:speleoloc/services/silexgis/silexgis_session.dart';
+import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_applier.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_copies.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_fetcher.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_models_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_points_upload_part.dart';
@@ -84,6 +91,8 @@ class SilexgisSyncController extends ChangeNotifier {
     SilexgisStagedUploadRepository? staged,
     SilexgisTripStateRepository? trips,
     SilexgisRasterStateRepository? rasters,
+    SilexgisSurveyModelRepository? surveyModels,
+    Future<bool> Function()? fetchesModels,
     Future<Directory> Function() documentsDir =
         getApplicationDocumentsDirectory,
     NetworkKindProbe? networkProbe,
@@ -103,6 +112,8 @@ class SilexgisSyncController extends ChangeNotifier {
        _staged = staged ?? SilexgisStagedUploadRepository(db),
        _trips = trips ?? SilexgisTripStateRepository(db),
        _rasters = rasters ?? SilexgisRasterStateRepository(db),
+       _surveyModels = surveyModels ?? SilexgisSurveyModelRepository(db),
+       _fetchesModels = fetchesModels ?? _always,
        _documentsDir = documentsDir,
        _networkProbe = networkProbe ?? const _UnknownNetwork(),
        _sessionBuilder = sessionBuilder;
@@ -122,6 +133,12 @@ class SilexgisSyncController extends ChangeNotifier {
   final SilexgisStagedUploadRepository _staged;
   final SilexgisTripStateRepository _trips;
   final SilexgisRasterStateRepository _rasters;
+  final SilexgisSurveyModelRepository _surveyModels;
+
+  /// Whether this device fetches survey model files during a run, rather
+  /// than when the caver asks for one.
+  final Future<bool> Function() _fetchesModels;
+  static Future<bool> _always() async => true;
 
   /// The folder documentation files are stored relative to.
   final Future<Directory> Function() _documentsDir;
@@ -316,6 +333,20 @@ class SilexgisSyncController extends ChangeNotifier {
                 people: _people,
                 profileUuid: profile.profileUuid,
               ),
+            if (capabilities.servesSurveyModels)
+              SilexgisPlaceStationsUploadPart(
+                db: _db,
+                localState: _localState,
+                heldRows: _heldRows,
+                models: _surveyModels,
+                surveyModelsCursor: SilexgisStreamCursorStore(
+                  localState: _localState,
+                  profileUuid: profile.profileUuid,
+                  setId: setId,
+                  stream: SyncStream.surveyModels,
+                ),
+                profileUuid: profile.profileUuid,
+              ),
           ],
         ).run(setId, capabilities: capabilities);
       } on SilexgisProblemException catch (e) {
@@ -478,6 +509,53 @@ class SilexgisSyncController extends ChangeNotifier {
       });
     }
 
+    // After the features and the catalogue, so a model finds its cave and a
+    // mapping its place and its survey file.
+    if (capabilities.servesSurveyModels) {
+      await _readPart('the survey models', () async {
+        final copies = SilexgisSurveyModelCopies(
+          db: _db,
+          logger: _logger,
+          copies: _copies,
+          baseDir: _documentsDir,
+        );
+        final report = await SilexgisSurveyModelsRunner(
+          api: session.api,
+          localState: _localState,
+          models: _surveyModels,
+          applier: SilexgisSurveyModelApplier(
+            db: _db,
+            logger: _logger,
+            localState: _localState,
+            heldRows: _heldRows,
+            models: _surveyModels,
+            copies: copies,
+            profileUuid: profile.profileUuid,
+          ),
+          fetcher: await _mayFetchModels(profile)
+              ? SilexgisSurveyModelFetcher(
+                  db: _db,
+                  api: session.api,
+                  fetcher:
+                      session.files ??
+                      SilexgisFileFetcher(baseUri: profile.baseUri),
+                  store: SilexgisDocumentFileStore(baseDir: _documentsDir),
+                  models: _surveyModels,
+                  copies: copies,
+                  profileUuid: profile.profileUuid,
+                )
+              : null,
+          profileUuid: profile.profileUuid,
+        ).run(setId, capabilities: capabilities, fromBeginning: fromBeginning);
+        _emit(
+          _progress.copyWith(
+            rowsApplied: _progress.rowsApplied + report.applied.changed,
+            rowsDeleted: _progress.rowsDeleted + report.applied.removed,
+          ),
+        );
+      });
+    }
+
     // Last, so that an accepted revision lands on rows already here.
     if (capabilities.servesReviews) {
       await _readPart('the review decisions', () async {
@@ -510,6 +588,17 @@ class SilexgisSyncController extends ChangeNotifier {
         message: _summary(reviews),
       ),
     );
+  }
+
+  /// Model files are fetched by the run when the caver lets it, and only on a
+  /// network the profile's "only over Wi-Fi" allows. Nobody is asked: a model
+  /// that waits is fetched by a later run, or when the caver opens it.
+  Future<bool> _mayFetchModels(SilexgisProfile profile) async {
+    if (!await _fetchesModels()) return false;
+    final kind = profile.filesOnlyOverWifi
+        ? await _networkProbe.current()
+        : NetworkKind.unknown;
+    return silexgisFilesVerdict(profile, kind) == SilexgisFilesVerdict.send;
   }
 
   /// The two trip sections: recordings first, so a scan goes with a

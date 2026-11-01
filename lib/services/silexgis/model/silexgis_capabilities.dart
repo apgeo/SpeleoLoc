@@ -43,6 +43,8 @@ class SilexgisCapabilities {
   bool get servesReviews => features.contains(SilexgisContract.featureReviews);
   bool get servesRasters => features.contains(SilexgisContract.featureRasters);
   bool get servesPeople => features.contains(SilexgisContract.featurePeople);
+  bool get servesSurveyModels =>
+      features.contains(SilexgisContract.featureSurveyModels);
 
   /// True when this build's pinned version and the server's agree. A mismatch
   /// is refused rather than interpreted generously, so it is worth answering

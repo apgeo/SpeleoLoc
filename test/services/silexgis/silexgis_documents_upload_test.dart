@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_survey_models.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
@@ -25,6 +26,7 @@ import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_transfer_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
@@ -437,6 +439,28 @@ void main() {
 
       final link = sentSection(client, SyncUploadSection.documentLinks).single;
       expect(link['role'], 'surveyData');
+    });
+
+    test('a server\'s survey model held here never goes back up', () async {
+      final (id, _) = await photo('cave.lox', fileType: 'survey_model');
+      await SilexgisSurveyModelRepository(db).record(
+        profile,
+        Uuid.v7(),
+        caveId,
+        id,
+        const SyncSurveyModel(
+          id: 'unused',
+          caveId: 'unused',
+          documentId: 'unused',
+          format: 'lox',
+        ),
+      );
+      final client = ScriptedClient(<ScriptedResponse>[]);
+
+      final (report, _) = await run(client);
+
+      expect(report.isEmpty, isTrue);
+      expect(client.sent, isEmpty);
     });
 
     test('hung on nothing the installation holds, stays here', () async {

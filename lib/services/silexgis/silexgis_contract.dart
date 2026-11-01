@@ -57,6 +57,8 @@ class SilexgisContract {
   static String documentsPath(String setId) => '${setPath(setId)}/documents';
   static String tripsPath(String setId) => '${setPath(setId)}/trips';
   static String rastersPath(String setId) => '${setPath(setId)}/rasters';
+  static String surveyModelsPath(String setId) =>
+      '${setPath(setId)}/survey-models';
 
   /// The one anonymous route this integration calls. It carries no cave name
   /// and no coordinate — only which installation a scanned code resolves at.
@@ -91,6 +93,10 @@ class SilexgisContract {
   /// can switch it off, and it is named only to an account that may be told
   /// who people are.
   static const String featurePeople = 'people';
+
+  /// The survey-models stream, with its places at stations, and the upload's
+  /// `placeStations` section.
+  static const String featureSurveyModels = 'surveyModels';
 
   // ----- client features -----
 

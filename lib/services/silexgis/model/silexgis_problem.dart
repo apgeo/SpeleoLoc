@@ -152,6 +152,14 @@ class SilexgisCodes {
   /// and edit that pin.
   static const String pinExists = 'sync.pin_exists';
 
+  /// A place-at-station's survey is not here, not shown to this account, a
+  /// mesh, or filed elsewhere — answered alike.
+  static const String surveyNotFound = 'sync.survey_not_found';
+
+  /// Another live mapping already puts that place at a station of the same
+  /// survey. Read the stream again and edit that mapping.
+  static const String placeStationExists = 'sync.place_station_exists';
+
   // Sending file bytes ahead of an upload.
   static const String fileTooLarge = 'file.too_large';
   static const String fileTypeNotAccepted = 'file.type_not_accepted';

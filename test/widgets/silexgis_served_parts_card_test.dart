@@ -38,11 +38,12 @@ void main() {
       'Raster maps',
       'Review',
       'People',
+      '3D survey models',
     ]) {
       expect(find.text(part), findsOneWidget);
     }
     expect(find.textContaining('Offered'), findsNothing);
-    expect(find.byIcon(Icons.help_outline), findsNWidgets(6));
+    expect(find.byIcon(Icons.help_outline), findsNWidgets(7));
   });
 
   testWidgets('after a run each part says whether it was offered', (
@@ -62,7 +63,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.check_circle_outline), findsNWidgets(3));
-    expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(3));
+    expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(4));
     expect(
       find.text(
         'Offered · Files go over Wi-Fi; away from it, you are asked first.',

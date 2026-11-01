@@ -84,21 +84,20 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
 
   Future<void> _delete(SilexgisDecision decision) async {
     final pin = decision.canRemovePin;
+    final remove = decision.isPlaceStationExists
+        ? 'silexgis_decision_remove_mapping'
+        : 'silexgis_decision_remove_pin';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
           LocServ.inst.t(
-            pin
-                ? 'silexgis_decision_remove_pin_title'
-                : 'silexgis_review_delete_title',
+            pin ? '${remove}_title' : 'silexgis_review_delete_title',
           ),
         ),
         content: Text(
           LocServ.inst.t(
-            pin
-                ? 'silexgis_decision_remove_pin_body'
-                : 'silexgis_review_delete_body',
+            pin ? '${remove}_body' : 'silexgis_review_delete_body',
           ),
         ),
         actions: <Widget>[
@@ -109,9 +108,7 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
-              LocServ.inst.t(
-                pin ? 'silexgis_decision_remove_pin' : 'silexgis_review_delete',
-              ),
+              LocServ.inst.t(pin ? remove : 'silexgis_review_delete'),
             ),
           ),
         ],

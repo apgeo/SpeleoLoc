@@ -15,7 +15,8 @@ enum SyncUploadSection {
   tripRecordings('tripRecordings'),
   tripPoints('tripPoints'),
   documentLinks('documentLinks'),
-  rasterPins('rasterPins');
+  rasterPins('rasterPins'),
+  placeStations('placeStations');
 
   const SyncUploadSection(this.wireName);
   final String wireName;

@@ -1,5 +1,6 @@
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/place_station_mapping_repository.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_repository.dart';
@@ -17,6 +18,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_link_decisions.dar
 import 'package:speleoloc/services/silexgis/silexgis_feature_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_place_station_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
@@ -96,6 +98,17 @@ SilexgisDecisionsService buildDecisionsService({
         placer: placer,
         maps: RasterMapRepository(db, currentUser, logger, clock: clock),
         pins: DefinitionRepository(db, currentUser, logger, clock: clock),
+      ),
+      SilexgisPlaceStationDecisions(
+        db: db,
+        reread: reread,
+        placer: placer,
+        mappings: PlaceStationMappingRepository(
+          db,
+          currentUser,
+          logger,
+          clock: clock,
+        ),
       ),
     ],
   );

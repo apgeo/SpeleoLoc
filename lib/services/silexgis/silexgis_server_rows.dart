@@ -7,6 +7,7 @@ import 'package:speleoloc/services/silexgis/silexgis_document_server_row.dart';
 import 'package:speleoloc/services/silexgis/silexgis_feature_server_row.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_place_station_server_row.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_server_row.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_row_handler.dart';
@@ -72,6 +73,13 @@ SilexgisServerRowPlacer buildSilexgisServerRowPlacer({
       heldRows: heldRows,
       rasters: rasters,
       catalogue: catalogue,
+      clock: clock,
+    ),
+    SilexgisPlaceStationServerRow(
+      db: db,
+      logger: logger,
+      localState: localState,
+      heldRows: heldRows,
       clock: clock,
     ),
   ],

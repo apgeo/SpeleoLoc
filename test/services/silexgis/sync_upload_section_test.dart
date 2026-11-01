@@ -14,6 +14,7 @@ void main() {
       'tripPoints',
       'documentLinks',
       'rasterPins',
+      'placeStations',
     ]);
   });
 

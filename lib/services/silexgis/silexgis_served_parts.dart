@@ -9,7 +9,8 @@ enum SilexgisServedPart {
   trips(SilexgisContract.featureTrips),
   rasters(SilexgisContract.featureRasters),
   reviews(SilexgisContract.featureReviews),
-  people(SilexgisContract.featurePeople);
+  people(SilexgisContract.featurePeople),
+  surveyModels(SilexgisContract.featureSurveyModels);
 
   const SilexgisServedPart(this.feature);
   final String feature;

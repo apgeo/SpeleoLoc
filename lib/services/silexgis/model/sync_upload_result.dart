@@ -118,6 +118,7 @@ class SyncRowResult {
       case SilexgisCodes.areaNotFound:
       case SilexgisCodes.rasterMapNotFound:
       case SilexgisCodes.pinExists:
+      case SilexgisCodes.placeStationExists:
         return SilexgisAction.applyAndResubmit;
 
       case SilexgisCodes.idConflict:
@@ -129,6 +130,8 @@ class SyncRowResult {
       // A recording or a map in a cave this account does not have.
       case SilexgisCodes.caveNotFound:
       case SilexgisCodes.rasterNotAnImage:
+      // A mapping whose survey this account may not see exactly.
+      case SilexgisCodes.surveyNotFound:
         return SilexgisAction.surfaceToUser;
 
       case SilexgisCodes.rowForbidden:

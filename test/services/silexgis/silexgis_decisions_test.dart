@@ -6,6 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
+import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_review.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
@@ -438,6 +439,72 @@ void main() {
       expect(log.single.entityTable, SilexgisRasterTables.pins);
       expect(log.single.entityUuid, pinId);
       expect(await streamCursor(SyncStream.rasters), isNull);
+      expect(await heldRows.readAll(profile.profileUuid), isEmpty);
+    });
+  });
+
+  group('a mapping refused because the place has another on the server', () {
+    final modelId = Uuid.v7();
+    final mappingId = Uuid.v7();
+
+    setUp(() async {
+      final now = clock.nowMs();
+      await db
+          .into(db.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: modelId,
+              title: 'Invented survey',
+              fileName: 'documentation_files/invented.lox',
+              fileSize: 1,
+              fileType: 'survey_model',
+            ),
+          );
+      await db
+          .into(db.cavePlaceModelStations)
+          .insert(
+            CavePlaceModelStationsCompanion.insert(
+              uuid: mappingId,
+              cavePlaceUuid: placeId,
+              caveUuid: caveId,
+              documentationFileUuid: modelId,
+              station: '1.12',
+            ).copyWith(updatedAt: Value(now)),
+          );
+      await heldRows
+          .recordConflicts(profile.profileUuid, <SilexgisConflictEntry>[
+            SilexgisConflictEntry(
+              section: SyncUploadSection.placeStations,
+              entityUuid: mappingId,
+              entityTable: 'cave_place_model_stations',
+              code: SilexgisCodes.placeStationExists,
+              sentLocalUpdatedAt: now,
+            ),
+          ]);
+      await placeCursor(SyncStream.surveyModels);
+      await db.delete(db.changeLog).go();
+    });
+
+    test(
+      'offers to remove the caver\'s station, not the server\'s version',
+      () async {
+        final decision = await single();
+        expect(decision.title, 'Invented survey · Sump');
+        expect(decision.isPlaceStationExists, isTrue);
+        expect(decision.canRemovePin, isTrue);
+        expect(decision.canDelete, isFalse);
+        expect(decision.canUseServerVersion, isFalse);
+      },
+    );
+
+    test('removing it is the caver\'s own deletion, and the stream is read '
+        'again so the server\'s mapping can arrive', () async {
+      await decisions.delete(profile, await single());
+
+      expect(await db.select(db.cavePlaceModelStations).get(), isEmpty);
+      final log = await db.select(db.changeLog).get();
+      expect(log.single.entityTable, 'cave_place_model_stations');
+      expect(await streamCursor(SyncStream.surveyModels), isNull);
       expect(await heldRows.readAll(profile.profileUuid), isEmpty);
     });
   });

@@ -1111,6 +1111,22 @@ class V33ToV34Migration extends SchemaMigration {
   }
 }
 
+class V34ToV35Migration extends SchemaMigration {
+  const V34ToV35Migration();
+
+  @override
+  int get toVersion => 35;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisSurveyModel);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_survey_model_document '
+      'ON silexgis_survey_model(profile_uuid, document_id)',
+    );
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1168,6 +1184,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V31ToV32Migration(),
   V32ToV33Migration(),
   V33ToV34Migration(),
+  V34ToV35Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

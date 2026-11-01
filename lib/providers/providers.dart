@@ -3,43 +3,37 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
-import 'package:speleoloc/services/location/last_located_place.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/model_viewer_providers.dart';
+import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
-import 'package:speleoloc/services/ruuvi/ruuvi_history_repository.dart';
-import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
+import 'package:speleoloc/services/cave_document_import_service.dart';
+import 'package:speleoloc/services/cave_geo_service.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
-import 'package:speleoloc/services/cave_document_import_service.dart';
-import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/cave_trip_repository.dart';
+import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
-import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
-import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_byte_edit_service.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
-import 'package:speleoloc/services/cave_geo_service.dart';
-import 'package:speleoloc/services/location/location_service.dart';
-import 'package:speleoloc/services/network/connectivity_network_kind_probe.dart';
-import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/geo_transfer/place_transfer_service.dart';
+import 'package:speleoloc/services/location/last_located_place.dart';
+import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/tile_disk_cache.dart';
+import 'package:speleoloc/services/network/connectivity_network_kind_probe.dart';
+import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
-import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
+import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
-import 'package:speleoloc/services/sync/sync_archive_service.dart';
-import 'package:speleoloc/services/trip_media/media_scan_cache.dart';
-import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
-import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
-import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_history_repository.dart';
+import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
@@ -60,6 +54,7 @@ import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_place_station_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_decisions.dart';
@@ -67,14 +62,23 @@ import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dar
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
+import 'package:speleoloc/services/silexgis/silexgis_survey_model_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_origin_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
+import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/trip_media/media_scan_cache.dart';
+import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
+import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
+import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/state/app_notifiers.dart';
-import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
+import 'package:speleoloc/state/model_viewer_settings_notifier.dart';
 import 'package:speleoloc/utils/clock.dart';
+import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 
 /// Central place that wires all app-wide dependencies via Riverpod.
 ///
@@ -395,6 +399,12 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
         maps: ref.watch(rasterMapRepositoryProvider),
         pins: ref.watch(definitionRepositoryProvider),
       ),
+      SilexgisPlaceStationDecisions(
+        db: db,
+        reread: reread,
+        placer: placer,
+        mappings: ref.watch(placeStationMappingRepositoryProvider),
+      ),
     ],
   );
 });
@@ -436,8 +446,17 @@ final silexgisSyncControllerProvider =
         copies: ref.watch(silexgisFileCopyRepositoryProvider),
         serverLinks: ref.watch(silexgisServerLinksProvider),
         networkProbe: ref.watch(networkKindProbeProvider),
+        surveyModels: ref.watch(silexgisSurveyModelsProvider),
+        fetchesModels: () async => (await ref.read(
+          modelViewerSettingsProvider.future,
+        )).autoDownloadModels,
       ),
     );
+
+/// The survey models installations hand this account, as last read.
+final silexgisSurveyModelsProvider = Provider<SilexgisSurveyModelRepository>(
+  (ref) => SilexgisSurveyModelRepository(ref.watch(appDatabaseProvider)),
+);
 
 /// Which kind of network the device is on, for settings that keep files for
 /// Wi-Fi.

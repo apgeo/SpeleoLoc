@@ -70,6 +70,9 @@ class _PartTile extends StatelessWidget {
     SilexgisServedPart.rasters => LocServ.inst.t('silexgis_part_rasters'),
     SilexgisServedPart.reviews => LocServ.inst.t('silexgis_part_reviews'),
     SilexgisServedPart.people => LocServ.inst.t('silexgis_part_people'),
+    SilexgisServedPart.surveyModels => LocServ.inst.t(
+      'silexgis_part_survey_models',
+    ),
   };
 
   String _use(SilexgisServedPart part, {required bool served}) =>
@@ -105,6 +108,11 @@ class _PartTile extends StatelessWidget {
         ),
         SilexgisServedPart.people => LocServ.inst.t(
           served ? 'silexgis_part_people_on' : 'silexgis_part_people_off',
+        ),
+        SilexgisServedPart.surveyModels => LocServ.inst.t(
+          served
+              ? 'silexgis_part_survey_models_on'
+              : 'silexgis_part_survey_models_off',
         ),
       };
 }

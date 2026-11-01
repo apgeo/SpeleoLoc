@@ -8,6 +8,7 @@ enum SyncStream {
   documents('documents'),
   trips('trips'),
   rasters('rasters'),
+  surveyModels('survey-models'),
   reviews('reviews');
 
   const SyncStream(this.routeName);

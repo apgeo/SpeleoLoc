@@ -25,6 +25,13 @@ class SilexgisDecision {
   bool get isConflict => held.isConflict;
   bool get isPinExists => held.code == SilexgisCodes.pinExists;
 
+  /// Another mapping already puts the place at a station of the same survey
+  /// on the server. Like a second pin, it is not a version of this one.
+  bool get isPlaceStationExists =>
+      held.code == SilexgisCodes.placeStationExists;
+
+  bool get _isSecondOfPlace => isPinExists || isPlaceStationExists;
+
   /// Whether the server's version comes with it, so going back to it needs no
   /// further read.
   bool get hasServerRow => held.current != null;
@@ -32,14 +39,14 @@ class SilexgisDecision {
   /// A conflict means the server holds a later version, even of an item this
   /// device has no revision of. Another pin on the same place is not a version
   /// of this pin.
-  bool get canUseServerVersion => !isPinExists && (!isNew || isConflict);
+  bool get canUseServerVersion => !_isSecondOfPlace && (!isNew || isConflict);
 
   /// Only an item the server never had can be thrown away here without that
   /// being a removal to send.
-  bool get canDelete => isNew && !held.isDelete && !isPinExists;
+  bool get canDelete => isNew && !held.isDelete && !_isSecondOfPlace;
 
   /// The pin goes, so the one already on the server can take its place.
-  bool get canRemovePin => isPinExists && !held.isDelete;
+  bool get canRemovePin => _isSecondOfPlace && !held.isDelete;
 }
 
 /// One upload section's part in settling decisions: how its items are named,
