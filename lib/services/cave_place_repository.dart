@@ -1,5 +1,6 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:drift/drift.dart';
+import 'package:speleoloc/services/cave_model/model_links_cleanup.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -185,9 +186,9 @@ class CavePlaceRepository implements ICavePlaceRepository {
 
         // Captured before the physical delete so the tombstones carry the
         // identity peers need to remove the same rows on sync import.
-        final beacons = await (_database.select(_database.cavePlaceBeacons)
-              ..where((b) => b.cavePlaceUuid.equalsValue(id)))
-            .get();
+        final beacons = await (_database.select(
+          _database.cavePlaceBeacons,
+        )..where((b) => b.cavePlaceUuid.equalsValue(id))).get();
 
         // Remove direct FK references from map bindings.
         await (_database.delete(
@@ -208,12 +209,14 @@ class CavePlaceRepository implements ICavePlaceRepository {
               ))
             .go();
 
+        await deleteModelLinks(_database, _logger, cavePlaceUuid: id);
+
         // Unregistering a beacon is a soft delete, so both active and
         // already-unregistered rows still hold the FK into cave_places;
         // clear them all before removing the place row.
-        await (_database.delete(_database.cavePlaceBeacons)
-              ..where((b) => b.cavePlaceUuid.equalsValue(id)))
-            .go();
+        await (_database.delete(
+          _database.cavePlaceBeacons,
+        )..where((b) => b.cavePlaceUuid.equalsValue(id))).go();
 
         await (_database.delete(
           _database.cavePlaces,
@@ -403,9 +406,8 @@ class CavePlaceRepository implements ICavePlaceRepository {
   @override
   Future<List<CavePlace>> getCavePlacesWithCoordinates() async {
     try {
-      return await (_database.select(_database.cavePlaces)..where(
-            (cp) => cp.latitude.isNotNull() & cp.longitude.isNotNull(),
-          ))
+      return await (_database.select(_database.cavePlaces)
+            ..where((cp) => cp.latitude.isNotNull() & cp.longitude.isNotNull()))
           .get();
     } catch (e, st) {
       _log.severe('Failed to load cave places with coordinates', e, st);
