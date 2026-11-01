@@ -176,6 +176,7 @@ class SilexgisDocumentLinksUploadPart implements SilexgisUploadPart {
         documentId: link.documentId.toString(),
         targetKind: link.targetKind,
         targetId: link.targetId.toString(),
+        role: link.role,
         deleted: link.isDelete,
       );
 }

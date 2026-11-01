@@ -96,6 +96,7 @@ void main() {
     String name, {
     Uuid? target,
     String? description,
+    String fileType = 'photo',
   }) async {
     final id = Uuid.v7();
     final bytes = utf8.encode('invented picture $name');
@@ -112,7 +113,7 @@ void main() {
             title: name,
             fileName: relPath,
             fileSize: bytes.length,
-            fileType: 'photo',
+            fileType: fileType,
           ).copyWith(
             description: Value(description),
             fileHash: Value(sha256.convert(bytes).toString()),
@@ -419,6 +420,23 @@ void main() {
         (await serverLinks.readAll(profile))[(id, caveId)]!.linkId,
         'link-9',
       );
+    });
+
+    test('a survey model goes up filed as survey data', () async {
+      final (id, bytes) = await photo('cave.lox', fileType: 'survey_model');
+      final client = ScriptedClient(<ScriptedResponse>[
+        config(),
+        ...staging(bytes),
+        answer(
+          documents: <Map<String, Object?>>[verdict(id.toString(), 'created')],
+          links: <Map<String, Object?>>[verdict('link-9', 'created')],
+        ),
+      ]);
+
+      await run(client);
+
+      final link = sentSection(client, SyncUploadSection.documentLinks).single;
+      expect(link['role'], 'surveyData');
     });
 
     test('hung on nothing the installation holds, stays here', () async {
