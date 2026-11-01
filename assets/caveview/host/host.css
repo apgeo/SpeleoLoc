@@ -19,3 +19,23 @@ body {
   --cv-toolbar-border: 1px solid #1ab4e5;
   --cv-toolbar-active-background: #1ab4e5;
 }
+
+.splay-picker {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A finger-sized target around a small visible dot, centred on the point. */
+.splay-dot {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: radial-gradient(circle, #ffeb3b 0 7px, rgba(255, 235, 59, 0.25) 8px 12px, transparent 13px);
+  pointer-events: auto;
+  touch-action: none;
+}

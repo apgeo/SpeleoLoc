@@ -131,6 +131,57 @@ if (focus && settled?.type === 'loaded') {
   if (afterDrag !== 1) failed = true;
 }
 
+if (focus && settled?.type === 'loaded') {
+  const send = (command) => page.evaluate((text) => window.speleolocViewer.receive(text),
+    JSON.stringify({ v: 1, ...command }));
+  const answer = async (type) => {
+    const before = messages.filter((m) => m.type === type).length;
+    return () => waitFor((m, i) => m.type === type
+      && messages.filter((x) => x.type === type).indexOf(m) >= before, 5000);
+  };
+
+  let next = await answer('marksResolved');
+  await send({ type: 'setMarks', marks: [
+    { id: 'p1', station: focus, label: 'Mapped place', color: '#ff9800' },
+    { id: 'p2', station: 'no.such.station', label: 'Lost', color: '#ff9800' },
+  ] });
+  const resolved = await next();
+  const marksOk = resolved?.unresolved?.length === 1 && resolved.unresolved[0] === 'p2';
+  console.log(`marks: ${marksOk ? 'placed, the missing station reported' : 'wrong answer'}`);
+  if (!marksOk) failed = true;
+
+  next = await answer('stationInfo');
+  await send({ type: 'getStation', station: focus });
+  const info = await next();
+  console.log(`station info: ${info ? `${info.splays.length} splays` : 'none'}`);
+  if (!info) failed = true;
+
+  if (info?.splays.length > 0) {
+    await send({ type: 'focusStation', station: focus, span: 15 });
+    await page.waitForTimeout(2000);
+    await send({ type: 'showSplayPicker', station: focus });
+    await page.waitForTimeout(500);
+    const dots = page.locator('.splay-dot:not([hidden])');
+    const shown = await dots.count();
+    next = await answer('splayPicked');
+    if (shown > 0) {
+      const box = await dots.first().boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    }
+    const picked = await next();
+    const match = picked && info.splays.some((s) => s.every((v, i) => Math.abs(v - picked.offset[i]) < 1e-6));
+    console.log(`splay picker: ${shown} dots shown; ${match ? 'the tapped splay reported' : 'no splay reported'}`);
+    if (!match) failed = true;
+    await send({ type: 'hideSplayPicker' });
+  }
+
+  next = await answer('trailInfo');
+  await send({ type: 'setTrail', id: 't', stations: [focus, focus], color: '#00bcd4' });
+  const trail = await next();
+  console.log(`trail: ${trail ? `${trail.gaps} gaps` : 'none'}`);
+  if (!trail) failed = true;
+}
+
 if (screenshot) await page.screenshot({ path: screenshot });
 const errors = messages.filter((m) => m.type === 'error').length;
 console.log(`errors reported: ${errors}; requests outside the loopback origin: ${outside}`);

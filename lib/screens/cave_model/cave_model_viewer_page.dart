@@ -111,6 +111,8 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
         _log.warning('viewer reported ${event.code}');
       case ModelViewerStationTapped():
         unawaited(_showStation(event));
+      default:
+        break;
     }
   }
 
