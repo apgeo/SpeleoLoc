@@ -56,6 +56,7 @@ than read about it.
 - [The cave map](features/surface-map.md)
 - [Raster maps](features/raster-maps.md)
 - [Map viewer and point editor](features/map-viewer.md)
+- [3D survey models](features/3d-models.md)
 - [GPS and coordinates](features/gps-and-coordinates.md)
 
 **Identifying places**

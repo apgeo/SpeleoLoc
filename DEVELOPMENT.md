@@ -187,6 +187,30 @@ your code — reformatting everything would bury your real diff in thousands of 
 
 ---
 
+## The 3D model viewer
+
+The viewer is the SilexGIS fork of CaveView.js in a WebView (`webview_flutter`, Android and iOS
+only — the Linux build shows a placeholder). Three pieces are checked separately:
+
+- **The vendored build** in `assets/caveview/v<version>/` comes from
+  `tool/refresh_caveview.sh <fork-commit>`, which builds the fork at that commit and writes
+  `BUILD.txt` with checksums; `test/services/cave_model/caveview_assets_test.dart` fails if a file
+  was changed by hand or pubspec.yaml lists another version. Never edit the vendored files: change
+  the fork (`/home/devuser1/projects/caveview`, branch `silexgis`), stamp a new `slx.<n>`, refresh.
+- **The host page** `assets/caveview/host/` speaks the app's message protocol (header of
+  `bridge.js`). `node tool/caveview/host_page_check.mjs --focus test_cave.main.3` loads it in
+  headless Chromium with the invented survey and checks taps, marks, the splay picker and trails;
+  it needs Playwright, taken from the SilexGIS client's `node_modules` unless
+  `PLAYWRIGHT_NODE_MODULES` says otherwise. `--model <file>` checks another survey, printing counts
+  only.
+- **On a device**: `flutter test integration_test/cave_model_viewer_test.dart -d <device>` (draws
+  both formats, a real tap) and `integration_test/cave_model_mapping_test.dart` (maps a place).
+
+Store builds pass `FEATURE_MODEL_3D=false` (`build_settings.store*.json`) until the feature is
+released; that hides the entry points only.
+
+---
+
 ## Notes for this machine
 
 - **No GPU.** Everything renders through software GL. `flutter doctor` warns `Unable to access
