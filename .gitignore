@@ -108,3 +108,4 @@ test_data/ftp_test.json
 # Release builds kept per version, for checking the next release as an
 # update from the last one (tool/android/upgrade_check.sh). Machine-local.
 /build_archive/
+assets/test_archive_bk/
