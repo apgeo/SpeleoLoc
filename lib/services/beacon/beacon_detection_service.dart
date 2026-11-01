@@ -13,6 +13,8 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
+import 'package:speleoloc/services/location/last_located_place.dart';
+import 'package:speleoloc/services/map/best_raster_map_finder.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -21,7 +23,6 @@ import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
-import 'package:speleoloc/state/raster_map_sort_options.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Foreground automatic beacon detection (plan Phase 2).
@@ -63,6 +64,11 @@ class BeaconDetectionService {
   /// config. Kept current by [start] (which loads the config on every
   /// launch/resume) and [setEnabled].
   final ValueNotifier<bool> enabledListenable = ValueNotifier(false);
+
+  /// The place detection last opened, for "you are here" in the 3D viewer.
+  /// The app's one instance: QR scans record into it too, through
+  /// `lastLocatedPlaceProvider`.
+  final LastLocatedPlace lastLocated = LastLocatedPlace();
 
   StreamSubscription<RangingResult>? _rangingSub;
   StreamSubscription<RuuviSighting>? _ruuviSub;
@@ -452,9 +458,7 @@ class BeaconDetectionService {
               for (final r in rows) ?BeaconRepository.identityOf(r),
             };
             _engine?.updateRegistrations(_registeredIdentities);
-            _ruuviNeeded = rows.any(
-              (r) => r.beaconType == BeaconTypes.ruuvi,
-            );
+            _ruuviNeeded = rows.any((r) => r.beaconType == BeaconTypes.ruuvi);
             _syncRuuviSubscription();
             final proximityUuids = {
               for (final r in rows)
@@ -652,22 +656,11 @@ class BeaconDetectionService {
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
-    final allMaps = await rasterMapRepository.getRasterMaps(place.caveUuid);
-    Uuid? bestMapUuid;
-    if (allMaps.isNotEmpty) {
-      final sortOption = await RasterMapSortOption.load();
-      final sortedMaps = sortOption.apply(allMaps, []);
-      for (final rm in sortedMaps) {
-        final def = await definitionRepository.findDefinition(
-          place.uuid,
-          rm.uuid,
-        );
-        if (def != null) {
-          bestMapUuid = rm.uuid;
-          break;
-        }
-      }
-    }
+    lastLocated.record(place.uuid);
+    final bestMapUuid = await BestRasterMapFinder(
+      rasterMapRepository,
+      definitionRepository,
+    ).bestMapFor(place);
     if (!context.mounted) return;
     if (bestMapUuid != null) {
       await AppRoutes.pushCavePlaceView(
