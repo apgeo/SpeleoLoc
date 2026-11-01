@@ -35,6 +35,10 @@ class SilexgisFetchedDocument {
 
   /// The server's revision of the document, stored as its base revision.
   final String revision;
+
+  /// Filed on the server as survey data: a survey model, whatever its name
+  /// says, so it opens in the 3D viewer.
+  bool get surveyModel => links.any((l) => l.role == 'surveyData');
 }
 
 /// Writes a fetched file into the local database as the server's document:
@@ -98,6 +102,8 @@ class SilexgisDocumentImporter {
                 fileSize: fetched.sizeBytes,
                 fileType: detected != 'unknown'
                     ? detected
+                    : fetched.surveyModel
+                    ? 'survey_model'
                     : _typeOfKind[document.fileKind] ?? 'unknown',
               ).copyWith(
                 description: Value(document.description),
