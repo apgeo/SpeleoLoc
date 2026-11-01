@@ -76,9 +76,10 @@
     });
   }
 
-  // CaveView selects a station as the pointer goes down, so a turn of the
-  // model begun over a station would select it. A selection is passed on only
-  // once the same pointer lifts nearby and soon, which is what a tap is.
+  // Older builds select a station as the pointer goes down, so a turn of the
+  // model begun over a station would select it; a mouse still does. Such a
+  // selection is passed on only once the same pointer lifts nearby and soon,
+  // which is what a tap is.
   const TAP_SLOP_PX = 12;
   const TAP_MAX_MS = 600;
   let pendingTap = null;
@@ -88,6 +89,12 @@
     event.handled = true;
     const pointer = event.mouseEvent;
     if (!pointer) return;
+    // A build that selects under a finger only once a tap has ended needs no
+    // filter of ours for touch: the event is the tap.
+    if (CV2.STATION_SELECTED_ON_TAP && pointer.pointerType !== 'mouse') {
+      if (picker === null) postStation(event.node);
+      return;
+    }
     pendingTap = {
       station: event.node,
       pointerId: pointer.pointerId,
@@ -103,15 +110,13 @@
     if (tap === null || tap.pointerId !== event.pointerId || picker !== null) return;
     const moved = Math.hypot(event.clientX - tap.x, event.clientY - tap.y);
     if (moved > TAP_SLOP_PX || performance.now() - tap.at > TAP_MAX_MS) return;
-    const at = tap.station.coordinates();
-    post({
-      type: 'stationTapped',
-      station: tap.station.name(),
-      x: at.x,
-      y: at.y,
-      z: at.z,
-    });
+    postStation(tap.station);
   }, true);
+
+  function postStation(station) {
+    const at = station.coordinates();
+    post({ type: 'stationTapped', station: station.name(), x: at.x, y: at.y, z: at.z });
+  }
 
   container.addEventListener('pointercancel', function () {
     pendingTap = null;

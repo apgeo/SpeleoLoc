@@ -78,7 +78,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({
   args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--ignore-gpu-blocklist'],
 });
-const page = await browser.newPage({ viewport: { width: 412, height: 780 } });
+const page = await browser.newPage({ viewport: { width: 412, height: 780 }, hasTouch: true });
 const messages = [];
 let outside = 0;
 page.on('request', (request) => {
@@ -129,6 +129,15 @@ if (focus && settled?.type === 'loaded') {
   const afterDrag = messages.filter((m) => m.type === 'stationTapped').length;
   console.log(`a drag reported ${afterDrag - 1} station taps`);
   if (afterDrag !== 1) failed = true;
+  await page.evaluate((station) => window.speleolocViewer.receive(
+    JSON.stringify({ v: 1, type: 'focusStation', station, span: 20 })), focus);
+  await page.waitForTimeout(2500);
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(800);
+  const touched = messages.filter((m) => m.type === 'stationTapped');
+  const touchOk = touched.length === 2 && touched[1].station === focus;
+  console.log(`a finger's tap at the focused station: ${touchOk ? 'reported as that station' : `${touched.length - 1} reports`}`);
+  if (!touchOk) failed = true;
 }
 
 if (focus && settled?.type === 'loaded') {

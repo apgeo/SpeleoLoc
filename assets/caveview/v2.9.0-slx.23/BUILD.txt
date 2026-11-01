@@ -1,6 +1,6 @@
-version 2.9.0-slx.22
-commit b08ee2fd63099a9a3c9912a64004d77bd111c389
-dcffd1de184b8a790460add436695c721570b38dd6ccc43f66609b8d89d611ed  js/CaveView2.min.js
+version 2.9.0-slx.23
+commit e6363220eeb5fe3de252ff35e0e12225a5fa7e3c
+74be814f67c86a23cc93dee2f9e84939f60ffaf963b8ab0f35c1b41e34efcee9  js/CaveView2.min.js
 1c405a510b180cdcb8d501067bfb3e8adf0572879b9e5cff03d04575c34d92ef  css/caveview.css
 7adbcce8a689c5d2bbdb64bb7f59df4e37389c64ad22fc206a0645402b8df601  images/logo.svg
 2c5a6626f8d34f867522eca3188ea863afa5aa37932557864aeed35288feb896  lib/lang-ro.json

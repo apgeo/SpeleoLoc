@@ -179,8 +179,8 @@ flutter:
     # time, never replaced in place. Flutter bundles only the files directly in
     # a listed folder, so each sub-folder is named.
     - assets/caveview/host/
-    - assets/caveview/v2.9.0-slx.22/
-    - assets/caveview/v2.9.0-slx.22/js/
-    - assets/caveview/v2.9.0-slx.22/css/
-    - assets/caveview/v2.9.0-slx.22/images/
-    - assets/caveview/v2.9.0-slx.22/lib/
+    - assets/caveview/v2.9.0-slx.23/
+    - assets/caveview/v2.9.0-slx.23/js/
+    - assets/caveview/v2.9.0-slx.23/css/
+    - assets/caveview/v2.9.0-slx.23/images/
+    - assets/caveview/v2.9.0-slx.23/lib/
