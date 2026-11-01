@@ -44,7 +44,7 @@ const int kSyncArchiveVersion = 4;
 /// regardless of the app version that produced it. The import gate accepts
 /// any version in [kSyncArchiveMinImportSchemaVersion, this] (see below),
 /// so raising this to the true schema does not orphan those archives.
-const int kSyncArchiveDbSchemaVersion = 33;
+const int kSyncArchiveDbSchemaVersion = 34;
 
 /// Oldest archive `schema_version` this app still imports. The sync-v2
 /// format has only ever emitted `schema_version >= 9`, and every schema in
@@ -843,6 +843,10 @@ class SyncArchiveService {
     // caller holding a transaction with deferred FK checks.
     final deleteByTable = <String, Future<int> Function(Uuid, int)>{
       'users': (u, ts) => _deleteIfOlder(_db.users, u, ts),
+      'cave_place_model_stations': (u, ts) =>
+          _deleteIfOlder(_db.cavePlaceModelStations, u, ts),
+      'cave_default_survey_models': (u, ts) =>
+          _deleteIfOlder(_db.caveDefaultSurveyModels, u, ts),
       'cave_place_to_raster_map_definitions': (u, ts) =>
           _deleteIfOlder(_db.cavePlaceToRasterMapDefinitions, u, ts),
       'documentation_files_to_geofeatures': (u, ts) =>

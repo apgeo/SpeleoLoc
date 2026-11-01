@@ -11151,6 +11151,1375 @@ class DocumentationFilesToCaveTripPointsCompanion
   }
 }
 
+class CavePlaceModelStations extends Table
+    with TableInfo<CavePlaceModelStations, CavePlaceModelStation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  CavePlaceModelStations(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CavePlaceModelStations.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> cavePlaceUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_place_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES cave_places(uuid)',
+      ).withConverter<Uuid>(CavePlaceModelStations.$convertercavePlaceUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(CavePlaceModelStations.$convertercaveUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List>
+  documentationFileUuid = GeneratedColumn<Uint8List>(
+    'documentation_file_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES documentation_files(uuid)',
+  ).withConverter<Uuid>(CavePlaceModelStations.$converterdocumentationFileUuid);
+  static const VerificationMeta _stationMeta = const VerificationMeta(
+    'station',
+  );
+  late final GeneratedColumn<String> station = GeneratedColumn<String>(
+    'station',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _splayEastMeta = const VerificationMeta(
+    'splayEast',
+  );
+  late final GeneratedColumn<double> splayEast = GeneratedColumn<double>(
+    'splay_east',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _splayNorthMeta = const VerificationMeta(
+    'splayNorth',
+  );
+  late final GeneratedColumn<double> splayNorth = GeneratedColumn<double>(
+    'splay_north',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _splayUpMeta = const VerificationMeta(
+    'splayUp',
+  );
+  late final GeneratedColumn<double> splayUp = GeneratedColumn<double>(
+    'splay_up',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _needsReviewMeta = const VerificationMeta(
+    'needsReview',
+  );
+  late final GeneratedColumn<int> needsReview = GeneratedColumn<int>(
+    'needs_review',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 0',
+    defaultValue: const CustomExpression('0'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  createdByUserUuid = GeneratedColumn<Uint8List>(
+    'created_by_user_uuid',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    $customConstraints: 'REFERENCES users(uuid)',
+  ).withConverter<Uuid?>(CavePlaceModelStations.$convertercreatedByUserUuidn);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  lastModifiedByUserUuid =
+      GeneratedColumn<Uint8List>(
+        'last_modified_by_user_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES users(uuid)',
+      ).withConverter<Uuid?>(
+        CavePlaceModelStations.$converterlastModifiedByUserUuidn,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    uuid,
+    cavePlaceUuid,
+    caveUuid,
+    documentationFileUuid,
+    station,
+    splayEast,
+    splayNorth,
+    splayUp,
+    needsReview,
+    createdAt,
+    updatedAt,
+    createdByUserUuid,
+    lastModifiedByUserUuid,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cave_place_model_stations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CavePlaceModelStation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('station')) {
+      context.handle(
+        _stationMeta,
+        station.isAcceptableOrUnknown(data['station']!, _stationMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stationMeta);
+    }
+    if (data.containsKey('splay_east')) {
+      context.handle(
+        _splayEastMeta,
+        splayEast.isAcceptableOrUnknown(data['splay_east']!, _splayEastMeta),
+      );
+    }
+    if (data.containsKey('splay_north')) {
+      context.handle(
+        _splayNorthMeta,
+        splayNorth.isAcceptableOrUnknown(data['splay_north']!, _splayNorthMeta),
+      );
+    }
+    if (data.containsKey('splay_up')) {
+      context.handle(
+        _splayUpMeta,
+        splayUp.isAcceptableOrUnknown(data['splay_up']!, _splayUpMeta),
+      );
+    }
+    if (data.containsKey('needs_review')) {
+      context.handle(
+        _needsReviewMeta,
+        needsReview.isAcceptableOrUnknown(
+          data['needs_review']!,
+          _needsReviewMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {uuid};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {cavePlaceUuid, documentationFileUuid},
+  ];
+  @override
+  CavePlaceModelStation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CavePlaceModelStation(
+      uuid: CavePlaceModelStations.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      cavePlaceUuid: CavePlaceModelStations.$convertercavePlaceUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_place_uuid'],
+        )!,
+      ),
+      caveUuid: CavePlaceModelStations.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
+      documentationFileUuid: CavePlaceModelStations
+          .$converterdocumentationFileUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}documentation_file_uuid'],
+            )!,
+          ),
+      station: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}station'],
+      )!,
+      splayEast: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}splay_east'],
+      ),
+      splayNorth: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}splay_north'],
+      ),
+      splayUp: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}splay_up'],
+      ),
+      needsReview: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}needs_review'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+      createdByUserUuid: CavePlaceModelStations.$convertercreatedByUserUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}created_by_user_uuid'],
+            ),
+          ),
+      lastModifiedByUserUuid: CavePlaceModelStations
+          .$converterlastModifiedByUserUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}last_modified_by_user_uuid'],
+            ),
+          ),
+    );
+  }
+
+  @override
+  CavePlaceModelStations createAlias(String alias) {
+    return CavePlaceModelStations(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercavePlaceUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterdocumentationFileUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercreatedByUserUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercreatedByUserUuidn =
+      NullAwareTypeConverter.wrap($convertercreatedByUserUuid);
+  static TypeConverter<Uuid, Uint8List> $converterlastModifiedByUserUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $converterlastModifiedByUserUuidn =
+      NullAwareTypeConverter.wrap($converterlastModifiedByUserUuid);
+  @override
+  List<String> get customConstraints => const [
+    'UNIQUE(cave_place_uuid, documentation_file_uuid)ON CONFLICT ROLLBACK',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class CavePlaceModelStation extends DataClass
+    implements Insertable<CavePlaceModelStation> {
+  final Uuid uuid;
+  final Uuid cavePlaceUuid;
+  final Uuid caveUuid;
+  final Uuid documentationFileUuid;
+  final String station;
+  final double? splayEast;
+  final double? splayNorth;
+  final double? splayUp;
+  final int needsReview;
+  final int? createdAt;
+  final int? updatedAt;
+  final Uuid? createdByUserUuid;
+  final Uuid? lastModifiedByUserUuid;
+  const CavePlaceModelStation({
+    required this.uuid,
+    required this.cavePlaceUuid,
+    required this.caveUuid,
+    required this.documentationFileUuid,
+    required this.station,
+    this.splayEast,
+    this.splayNorth,
+    this.splayUp,
+    required this.needsReview,
+    this.createdAt,
+    this.updatedAt,
+    this.createdByUserUuid,
+    this.lastModifiedByUserUuid,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    {
+      map['uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$converteruuid.toSql(uuid),
+      );
+    }
+    {
+      map['cave_place_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$convertercavePlaceUuid.toSql(cavePlaceUuid),
+      );
+    }
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
+    {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid,
+        ),
+      );
+    }
+    map['station'] = Variable<String>(station);
+    if (!nullToAbsent || splayEast != null) {
+      map['splay_east'] = Variable<double>(splayEast);
+    }
+    if (!nullToAbsent || splayNorth != null) {
+      map['splay_north'] = Variable<double>(splayNorth);
+    }
+    if (!nullToAbsent || splayUp != null) {
+      map['splay_up'] = Variable<double>(splayUp);
+    }
+    map['needs_review'] = Variable<int>(needsReview);
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    if (!nullToAbsent || createdByUserUuid != null) {
+      map['created_by_user_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$convertercreatedByUserUuidn.toSql(
+          createdByUserUuid,
+        ),
+      );
+    }
+    if (!nullToAbsent || lastModifiedByUserUuid != null) {
+      map['last_modified_by_user_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$converterlastModifiedByUserUuidn.toSql(
+          lastModifiedByUserUuid,
+        ),
+      );
+    }
+    return map;
+  }
+
+  CavePlaceModelStationsCompanion toCompanion(bool nullToAbsent) {
+    return CavePlaceModelStationsCompanion(
+      uuid: Value(uuid),
+      cavePlaceUuid: Value(cavePlaceUuid),
+      caveUuid: Value(caveUuid),
+      documentationFileUuid: Value(documentationFileUuid),
+      station: Value(station),
+      splayEast: splayEast == null && nullToAbsent
+          ? const Value.absent()
+          : Value(splayEast),
+      splayNorth: splayNorth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(splayNorth),
+      splayUp: splayUp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(splayUp),
+      needsReview: Value(needsReview),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      createdByUserUuid: createdByUserUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdByUserUuid),
+      lastModifiedByUserUuid: lastModifiedByUserUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastModifiedByUserUuid),
+    );
+  }
+
+  factory CavePlaceModelStation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CavePlaceModelStation(
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      cavePlaceUuid: serializer.fromJson<Uuid>(json['cave_place_uuid']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
+      documentationFileUuid: serializer.fromJson<Uuid>(
+        json['documentation_file_uuid'],
+      ),
+      station: serializer.fromJson<String>(json['station']),
+      splayEast: serializer.fromJson<double?>(json['splay_east']),
+      splayNorth: serializer.fromJson<double?>(json['splay_north']),
+      splayUp: serializer.fromJson<double?>(json['splay_up']),
+      needsReview: serializer.fromJson<int>(json['needs_review']),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      updatedAt: serializer.fromJson<int?>(json['updated_at']),
+      createdByUserUuid: serializer.fromJson<Uuid?>(
+        json['created_by_user_uuid'],
+      ),
+      lastModifiedByUserUuid: serializer.fromJson<Uuid?>(
+        json['last_modified_by_user_uuid'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'cave_place_uuid': serializer.toJson<Uuid>(cavePlaceUuid),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
+      'documentation_file_uuid': serializer.toJson<Uuid>(documentationFileUuid),
+      'station': serializer.toJson<String>(station),
+      'splay_east': serializer.toJson<double?>(splayEast),
+      'splay_north': serializer.toJson<double?>(splayNorth),
+      'splay_up': serializer.toJson<double?>(splayUp),
+      'needs_review': serializer.toJson<int>(needsReview),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'updated_at': serializer.toJson<int?>(updatedAt),
+      'created_by_user_uuid': serializer.toJson<Uuid?>(createdByUserUuid),
+      'last_modified_by_user_uuid': serializer.toJson<Uuid?>(
+        lastModifiedByUserUuid,
+      ),
+    };
+  }
+
+  CavePlaceModelStation copyWith({
+    Uuid? uuid,
+    Uuid? cavePlaceUuid,
+    Uuid? caveUuid,
+    Uuid? documentationFileUuid,
+    String? station,
+    Value<double?> splayEast = const Value.absent(),
+    Value<double?> splayNorth = const Value.absent(),
+    Value<double?> splayUp = const Value.absent(),
+    int? needsReview,
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> updatedAt = const Value.absent(),
+    Value<Uuid?> createdByUserUuid = const Value.absent(),
+    Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+  }) => CavePlaceModelStation(
+    uuid: uuid ?? this.uuid,
+    cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
+    caveUuid: caveUuid ?? this.caveUuid,
+    documentationFileUuid: documentationFileUuid ?? this.documentationFileUuid,
+    station: station ?? this.station,
+    splayEast: splayEast.present ? splayEast.value : this.splayEast,
+    splayNorth: splayNorth.present ? splayNorth.value : this.splayNorth,
+    splayUp: splayUp.present ? splayUp.value : this.splayUp,
+    needsReview: needsReview ?? this.needsReview,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    createdByUserUuid: createdByUserUuid.present
+        ? createdByUserUuid.value
+        : this.createdByUserUuid,
+    lastModifiedByUserUuid: lastModifiedByUserUuid.present
+        ? lastModifiedByUserUuid.value
+        : this.lastModifiedByUserUuid,
+  );
+  CavePlaceModelStation copyWithCompanion(
+    CavePlaceModelStationsCompanion data,
+  ) {
+    return CavePlaceModelStation(
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      cavePlaceUuid: data.cavePlaceUuid.present
+          ? data.cavePlaceUuid.value
+          : this.cavePlaceUuid,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
+      documentationFileUuid: data.documentationFileUuid.present
+          ? data.documentationFileUuid.value
+          : this.documentationFileUuid,
+      station: data.station.present ? data.station.value : this.station,
+      splayEast: data.splayEast.present ? data.splayEast.value : this.splayEast,
+      splayNorth: data.splayNorth.present
+          ? data.splayNorth.value
+          : this.splayNorth,
+      splayUp: data.splayUp.present ? data.splayUp.value : this.splayUp,
+      needsReview: data.needsReview.present
+          ? data.needsReview.value
+          : this.needsReview,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      createdByUserUuid: data.createdByUserUuid.present
+          ? data.createdByUserUuid.value
+          : this.createdByUserUuid,
+      lastModifiedByUserUuid: data.lastModifiedByUserUuid.present
+          ? data.lastModifiedByUserUuid.value
+          : this.lastModifiedByUserUuid,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CavePlaceModelStation(')
+          ..write('uuid: $uuid, ')
+          ..write('cavePlaceUuid: $cavePlaceUuid, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('station: $station, ')
+          ..write('splayEast: $splayEast, ')
+          ..write('splayNorth: $splayNorth, ')
+          ..write('splayUp: $splayUp, ')
+          ..write('needsReview: $needsReview, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('createdByUserUuid: $createdByUserUuid, ')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    uuid,
+    cavePlaceUuid,
+    caveUuid,
+    documentationFileUuid,
+    station,
+    splayEast,
+    splayNorth,
+    splayUp,
+    needsReview,
+    createdAt,
+    updatedAt,
+    createdByUserUuid,
+    lastModifiedByUserUuid,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CavePlaceModelStation &&
+          other.uuid == this.uuid &&
+          other.cavePlaceUuid == this.cavePlaceUuid &&
+          other.caveUuid == this.caveUuid &&
+          other.documentationFileUuid == this.documentationFileUuid &&
+          other.station == this.station &&
+          other.splayEast == this.splayEast &&
+          other.splayNorth == this.splayNorth &&
+          other.splayUp == this.splayUp &&
+          other.needsReview == this.needsReview &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.createdByUserUuid == this.createdByUserUuid &&
+          other.lastModifiedByUserUuid == this.lastModifiedByUserUuid);
+}
+
+class CavePlaceModelStationsCompanion
+    extends UpdateCompanion<CavePlaceModelStation> {
+  final Value<Uuid> uuid;
+  final Value<Uuid> cavePlaceUuid;
+  final Value<Uuid> caveUuid;
+  final Value<Uuid> documentationFileUuid;
+  final Value<String> station;
+  final Value<double?> splayEast;
+  final Value<double?> splayNorth;
+  final Value<double?> splayUp;
+  final Value<int> needsReview;
+  final Value<int?> createdAt;
+  final Value<int?> updatedAt;
+  final Value<Uuid?> createdByUserUuid;
+  final Value<Uuid?> lastModifiedByUserUuid;
+  final Value<int> rowid;
+  const CavePlaceModelStationsCompanion({
+    this.uuid = const Value.absent(),
+    this.cavePlaceUuid = const Value.absent(),
+    this.caveUuid = const Value.absent(),
+    this.documentationFileUuid = const Value.absent(),
+    this.station = const Value.absent(),
+    this.splayEast = const Value.absent(),
+    this.splayNorth = const Value.absent(),
+    this.splayUp = const Value.absent(),
+    this.needsReview = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.createdByUserUuid = const Value.absent(),
+    this.lastModifiedByUserUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CavePlaceModelStationsCompanion.insert({
+    required Uuid uuid,
+    required Uuid cavePlaceUuid,
+    required Uuid caveUuid,
+    required Uuid documentationFileUuid,
+    required String station,
+    this.splayEast = const Value.absent(),
+    this.splayNorth = const Value.absent(),
+    this.splayUp = const Value.absent(),
+    this.needsReview = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.createdByUserUuid = const Value.absent(),
+    this.lastModifiedByUserUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       cavePlaceUuid = Value(cavePlaceUuid),
+       caveUuid = Value(caveUuid),
+       documentationFileUuid = Value(documentationFileUuid),
+       station = Value(station);
+  static Insertable<CavePlaceModelStation> custom({
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? cavePlaceUuid,
+    Expression<Uint8List>? caveUuid,
+    Expression<Uint8List>? documentationFileUuid,
+    Expression<String>? station,
+    Expression<double>? splayEast,
+    Expression<double>? splayNorth,
+    Expression<double>? splayUp,
+    Expression<int>? needsReview,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<Uint8List>? createdByUserUuid,
+    Expression<Uint8List>? lastModifiedByUserUuid,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (uuid != null) 'uuid': uuid,
+      if (cavePlaceUuid != null) 'cave_place_uuid': cavePlaceUuid,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
+      if (documentationFileUuid != null)
+        'documentation_file_uuid': documentationFileUuid,
+      if (station != null) 'station': station,
+      if (splayEast != null) 'splay_east': splayEast,
+      if (splayNorth != null) 'splay_north': splayNorth,
+      if (splayUp != null) 'splay_up': splayUp,
+      if (needsReview != null) 'needs_review': needsReview,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (createdByUserUuid != null) 'created_by_user_uuid': createdByUserUuid,
+      if (lastModifiedByUserUuid != null)
+        'last_modified_by_user_uuid': lastModifiedByUserUuid,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CavePlaceModelStationsCompanion copyWith({
+    Value<Uuid>? uuid,
+    Value<Uuid>? cavePlaceUuid,
+    Value<Uuid>? caveUuid,
+    Value<Uuid>? documentationFileUuid,
+    Value<String>? station,
+    Value<double?>? splayEast,
+    Value<double?>? splayNorth,
+    Value<double?>? splayUp,
+    Value<int>? needsReview,
+    Value<int?>? createdAt,
+    Value<int?>? updatedAt,
+    Value<Uuid?>? createdByUserUuid,
+    Value<Uuid?>? lastModifiedByUserUuid,
+    Value<int>? rowid,
+  }) {
+    return CavePlaceModelStationsCompanion(
+      uuid: uuid ?? this.uuid,
+      cavePlaceUuid: cavePlaceUuid ?? this.cavePlaceUuid,
+      caveUuid: caveUuid ?? this.caveUuid,
+      documentationFileUuid:
+          documentationFileUuid ?? this.documentationFileUuid,
+      station: station ?? this.station,
+      splayEast: splayEast ?? this.splayEast,
+      splayNorth: splayNorth ?? this.splayNorth,
+      splayUp: splayUp ?? this.splayUp,
+      needsReview: needsReview ?? this.needsReview,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdByUserUuid: createdByUserUuid ?? this.createdByUserUuid,
+      lastModifiedByUserUuid:
+          lastModifiedByUserUuid ?? this.lastModifiedByUserUuid,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$converteruuid.toSql(uuid.value),
+      );
+    }
+    if (cavePlaceUuid.present) {
+      map['cave_place_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$convertercavePlaceUuid.toSql(
+          cavePlaceUuid.value,
+        ),
+      );
+    }
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$convertercaveUuid.toSql(caveUuid.value),
+      );
+    }
+    if (documentationFileUuid.present) {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid.value,
+        ),
+      );
+    }
+    if (station.present) {
+      map['station'] = Variable<String>(station.value);
+    }
+    if (splayEast.present) {
+      map['splay_east'] = Variable<double>(splayEast.value);
+    }
+    if (splayNorth.present) {
+      map['splay_north'] = Variable<double>(splayNorth.value);
+    }
+    if (splayUp.present) {
+      map['splay_up'] = Variable<double>(splayUp.value);
+    }
+    if (needsReview.present) {
+      map['needs_review'] = Variable<int>(needsReview.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (createdByUserUuid.present) {
+      map['created_by_user_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$convertercreatedByUserUuidn.toSql(
+          createdByUserUuid.value,
+        ),
+      );
+    }
+    if (lastModifiedByUserUuid.present) {
+      map['last_modified_by_user_uuid'] = Variable<Uint8List>(
+        CavePlaceModelStations.$converterlastModifiedByUserUuidn.toSql(
+          lastModifiedByUserUuid.value,
+        ),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CavePlaceModelStationsCompanion(')
+          ..write('uuid: $uuid, ')
+          ..write('cavePlaceUuid: $cavePlaceUuid, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('station: $station, ')
+          ..write('splayEast: $splayEast, ')
+          ..write('splayNorth: $splayNorth, ')
+          ..write('splayUp: $splayUp, ')
+          ..write('needsReview: $needsReview, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('createdByUserUuid: $createdByUserUuid, ')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class CaveDefaultSurveyModels extends Table
+    with TableInfo<CaveDefaultSurveyModels, CaveDefaultSurveyModel> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  CaveDefaultSurveyModels(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> uuid =
+      GeneratedColumn<Uint8List>(
+        'uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(CaveDefaultSurveyModels.$converteruuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> caveUuid =
+      GeneratedColumn<Uint8List>(
+        'cave_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES caves(uuid)',
+      ).withConverter<Uuid>(CaveDefaultSurveyModels.$convertercaveUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List>
+  documentationFileUuid =
+      GeneratedColumn<Uint8List>(
+        'documentation_file_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL REFERENCES documentation_files(uuid)',
+      ).withConverter<Uuid>(
+        CaveDefaultSurveyModels.$converterdocumentationFileUuid,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  createdByUserUuid = GeneratedColumn<Uint8List>(
+    'created_by_user_uuid',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    $customConstraints: 'REFERENCES users(uuid)',
+  ).withConverter<Uuid?>(CaveDefaultSurveyModels.$convertercreatedByUserUuidn);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  lastModifiedByUserUuid =
+      GeneratedColumn<Uint8List>(
+        'last_modified_by_user_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+        $customConstraints: 'REFERENCES users(uuid)',
+      ).withConverter<Uuid?>(
+        CaveDefaultSurveyModels.$converterlastModifiedByUserUuidn,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    uuid,
+    caveUuid,
+    documentationFileUuid,
+    createdAt,
+    updatedAt,
+    createdByUserUuid,
+    lastModifiedByUserUuid,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cave_default_survey_models';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CaveDefaultSurveyModel> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {uuid};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {caveUuid},
+  ];
+  @override
+  CaveDefaultSurveyModel map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CaveDefaultSurveyModel(
+      uuid: CaveDefaultSurveyModels.$converteruuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}uuid'],
+        )!,
+      ),
+      caveUuid: CaveDefaultSurveyModels.$convertercaveUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}cave_uuid'],
+        )!,
+      ),
+      documentationFileUuid: CaveDefaultSurveyModels
+          .$converterdocumentationFileUuid
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}documentation_file_uuid'],
+            )!,
+          ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+      createdByUserUuid: CaveDefaultSurveyModels.$convertercreatedByUserUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}created_by_user_uuid'],
+            ),
+          ),
+      lastModifiedByUserUuid: CaveDefaultSurveyModels
+          .$converterlastModifiedByUserUuidn
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.blob,
+              data['${effectivePrefix}last_modified_by_user_uuid'],
+            ),
+          ),
+    );
+  }
+
+  @override
+  CaveDefaultSurveyModels createAlias(String alias) {
+    return CaveDefaultSurveyModels(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converteruuid = const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercaveUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $converterdocumentationFileUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercreatedByUserUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercreatedByUserUuidn =
+      NullAwareTypeConverter.wrap($convertercreatedByUserUuid);
+  static TypeConverter<Uuid, Uint8List> $converterlastModifiedByUserUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $converterlastModifiedByUserUuidn =
+      NullAwareTypeConverter.wrap($converterlastModifiedByUserUuid);
+  @override
+  List<String> get customConstraints => const [
+    'UNIQUE(cave_uuid)ON CONFLICT ROLLBACK',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class CaveDefaultSurveyModel extends DataClass
+    implements Insertable<CaveDefaultSurveyModel> {
+  final Uuid uuid;
+  final Uuid caveUuid;
+  final Uuid documentationFileUuid;
+  final int? createdAt;
+  final int? updatedAt;
+  final Uuid? createdByUserUuid;
+  final Uuid? lastModifiedByUserUuid;
+  const CaveDefaultSurveyModel({
+    required this.uuid,
+    required this.caveUuid,
+    required this.documentationFileUuid,
+    this.createdAt,
+    this.updatedAt,
+    this.createdByUserUuid,
+    this.lastModifiedByUserUuid,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    {
+      map['uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$converteruuid.toSql(uuid),
+      );
+    }
+    {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$convertercaveUuid.toSql(caveUuid),
+      );
+    }
+    {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid,
+        ),
+      );
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<int>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    if (!nullToAbsent || createdByUserUuid != null) {
+      map['created_by_user_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$convertercreatedByUserUuidn.toSql(
+          createdByUserUuid,
+        ),
+      );
+    }
+    if (!nullToAbsent || lastModifiedByUserUuid != null) {
+      map['last_modified_by_user_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$converterlastModifiedByUserUuidn.toSql(
+          lastModifiedByUserUuid,
+        ),
+      );
+    }
+    return map;
+  }
+
+  CaveDefaultSurveyModelsCompanion toCompanion(bool nullToAbsent) {
+    return CaveDefaultSurveyModelsCompanion(
+      uuid: Value(uuid),
+      caveUuid: Value(caveUuid),
+      documentationFileUuid: Value(documentationFileUuid),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      createdByUserUuid: createdByUserUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdByUserUuid),
+      lastModifiedByUserUuid: lastModifiedByUserUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastModifiedByUserUuid),
+    );
+  }
+
+  factory CaveDefaultSurveyModel.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CaveDefaultSurveyModel(
+      uuid: serializer.fromJson<Uuid>(json['uuid']),
+      caveUuid: serializer.fromJson<Uuid>(json['cave_uuid']),
+      documentationFileUuid: serializer.fromJson<Uuid>(
+        json['documentation_file_uuid'],
+      ),
+      createdAt: serializer.fromJson<int?>(json['created_at']),
+      updatedAt: serializer.fromJson<int?>(json['updated_at']),
+      createdByUserUuid: serializer.fromJson<Uuid?>(
+        json['created_by_user_uuid'],
+      ),
+      lastModifiedByUserUuid: serializer.fromJson<Uuid?>(
+        json['last_modified_by_user_uuid'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'uuid': serializer.toJson<Uuid>(uuid),
+      'cave_uuid': serializer.toJson<Uuid>(caveUuid),
+      'documentation_file_uuid': serializer.toJson<Uuid>(documentationFileUuid),
+      'created_at': serializer.toJson<int?>(createdAt),
+      'updated_at': serializer.toJson<int?>(updatedAt),
+      'created_by_user_uuid': serializer.toJson<Uuid?>(createdByUserUuid),
+      'last_modified_by_user_uuid': serializer.toJson<Uuid?>(
+        lastModifiedByUserUuid,
+      ),
+    };
+  }
+
+  CaveDefaultSurveyModel copyWith({
+    Uuid? uuid,
+    Uuid? caveUuid,
+    Uuid? documentationFileUuid,
+    Value<int?> createdAt = const Value.absent(),
+    Value<int?> updatedAt = const Value.absent(),
+    Value<Uuid?> createdByUserUuid = const Value.absent(),
+    Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+  }) => CaveDefaultSurveyModel(
+    uuid: uuid ?? this.uuid,
+    caveUuid: caveUuid ?? this.caveUuid,
+    documentationFileUuid: documentationFileUuid ?? this.documentationFileUuid,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    createdByUserUuid: createdByUserUuid.present
+        ? createdByUserUuid.value
+        : this.createdByUserUuid,
+    lastModifiedByUserUuid: lastModifiedByUserUuid.present
+        ? lastModifiedByUserUuid.value
+        : this.lastModifiedByUserUuid,
+  );
+  CaveDefaultSurveyModel copyWithCompanion(
+    CaveDefaultSurveyModelsCompanion data,
+  ) {
+    return CaveDefaultSurveyModel(
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      caveUuid: data.caveUuid.present ? data.caveUuid.value : this.caveUuid,
+      documentationFileUuid: data.documentationFileUuid.present
+          ? data.documentationFileUuid.value
+          : this.documentationFileUuid,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      createdByUserUuid: data.createdByUserUuid.present
+          ? data.createdByUserUuid.value
+          : this.createdByUserUuid,
+      lastModifiedByUserUuid: data.lastModifiedByUserUuid.present
+          ? data.lastModifiedByUserUuid.value
+          : this.lastModifiedByUserUuid,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaveDefaultSurveyModel(')
+          ..write('uuid: $uuid, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('createdByUserUuid: $createdByUserUuid, ')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    uuid,
+    caveUuid,
+    documentationFileUuid,
+    createdAt,
+    updatedAt,
+    createdByUserUuid,
+    lastModifiedByUserUuid,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CaveDefaultSurveyModel &&
+          other.uuid == this.uuid &&
+          other.caveUuid == this.caveUuid &&
+          other.documentationFileUuid == this.documentationFileUuid &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.createdByUserUuid == this.createdByUserUuid &&
+          other.lastModifiedByUserUuid == this.lastModifiedByUserUuid);
+}
+
+class CaveDefaultSurveyModelsCompanion
+    extends UpdateCompanion<CaveDefaultSurveyModel> {
+  final Value<Uuid> uuid;
+  final Value<Uuid> caveUuid;
+  final Value<Uuid> documentationFileUuid;
+  final Value<int?> createdAt;
+  final Value<int?> updatedAt;
+  final Value<Uuid?> createdByUserUuid;
+  final Value<Uuid?> lastModifiedByUserUuid;
+  final Value<int> rowid;
+  const CaveDefaultSurveyModelsCompanion({
+    this.uuid = const Value.absent(),
+    this.caveUuid = const Value.absent(),
+    this.documentationFileUuid = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.createdByUserUuid = const Value.absent(),
+    this.lastModifiedByUserUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CaveDefaultSurveyModelsCompanion.insert({
+    required Uuid uuid,
+    required Uuid caveUuid,
+    required Uuid documentationFileUuid,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.createdByUserUuid = const Value.absent(),
+    this.lastModifiedByUserUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       caveUuid = Value(caveUuid),
+       documentationFileUuid = Value(documentationFileUuid);
+  static Insertable<CaveDefaultSurveyModel> custom({
+    Expression<Uint8List>? uuid,
+    Expression<Uint8List>? caveUuid,
+    Expression<Uint8List>? documentationFileUuid,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<Uint8List>? createdByUserUuid,
+    Expression<Uint8List>? lastModifiedByUserUuid,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (uuid != null) 'uuid': uuid,
+      if (caveUuid != null) 'cave_uuid': caveUuid,
+      if (documentationFileUuid != null)
+        'documentation_file_uuid': documentationFileUuid,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (createdByUserUuid != null) 'created_by_user_uuid': createdByUserUuid,
+      if (lastModifiedByUserUuid != null)
+        'last_modified_by_user_uuid': lastModifiedByUserUuid,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CaveDefaultSurveyModelsCompanion copyWith({
+    Value<Uuid>? uuid,
+    Value<Uuid>? caveUuid,
+    Value<Uuid>? documentationFileUuid,
+    Value<int?>? createdAt,
+    Value<int?>? updatedAt,
+    Value<Uuid?>? createdByUserUuid,
+    Value<Uuid?>? lastModifiedByUserUuid,
+    Value<int>? rowid,
+  }) {
+    return CaveDefaultSurveyModelsCompanion(
+      uuid: uuid ?? this.uuid,
+      caveUuid: caveUuid ?? this.caveUuid,
+      documentationFileUuid:
+          documentationFileUuid ?? this.documentationFileUuid,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdByUserUuid: createdByUserUuid ?? this.createdByUserUuid,
+      lastModifiedByUserUuid:
+          lastModifiedByUserUuid ?? this.lastModifiedByUserUuid,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (uuid.present) {
+      map['uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$converteruuid.toSql(uuid.value),
+      );
+    }
+    if (caveUuid.present) {
+      map['cave_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$convertercaveUuid.toSql(caveUuid.value),
+      );
+    }
+    if (documentationFileUuid.present) {
+      map['documentation_file_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$converterdocumentationFileUuid.toSql(
+          documentationFileUuid.value,
+        ),
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (createdByUserUuid.present) {
+      map['created_by_user_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$convertercreatedByUserUuidn.toSql(
+          createdByUserUuid.value,
+        ),
+      );
+    }
+    if (lastModifiedByUserUuid.present) {
+      map['last_modified_by_user_uuid'] = Variable<Uint8List>(
+        CaveDefaultSurveyModels.$converterlastModifiedByUserUuidn.toSql(
+          lastModifiedByUserUuid.value,
+        ),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaveDefaultSurveyModelsCompanion(')
+          ..write('uuid: $uuid, ')
+          ..write('caveUuid: $caveUuid, ')
+          ..write('documentationFileUuid: $documentationFileUuid, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('createdByUserUuid: $createdByUserUuid, ')
+          ..write('lastModifiedByUserUuid: $lastModifiedByUserUuid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class MediaQrScanCache extends Table
     with TableInfo<MediaQrScanCache, MediaQrScanCacheData> {
   @override
@@ -22508,6 +23877,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       DocumentationFilesToCaveTrips(this);
   late final DocumentationFilesToCaveTripPoints
   documentationFilesToCaveTripPoints = DocumentationFilesToCaveTripPoints(this);
+  late final CavePlaceModelStations cavePlaceModelStations =
+      CavePlaceModelStations(this);
+  late final CaveDefaultSurveyModels caveDefaultSurveyModels =
+      CaveDefaultSurveyModels(this);
   late final MediaQrScanCache mediaQrScanCache = MediaQrScanCache(this);
   late final CavePlaceBeacons cavePlaceBeacons = CavePlaceBeacons(this);
   late final Index idxCavePlaceBeaconsIbeacon = Index(
@@ -22525,6 +23898,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxCavePlaceBeaconsPlace = Index(
     'idx_cave_place_beacons_place',
     'CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place ON cave_place_beacons (cave_place_uuid)',
+  );
+  late final Index idxCavePlaceModelStationsModel = Index(
+    'idx_cave_place_model_stations_model',
+    'CREATE INDEX IF NOT EXISTS idx_cave_place_model_stations_model ON cave_place_model_stations (documentation_file_uuid)',
   );
   late final RuuviSensorHistory ruuviSensorHistory = RuuviSensorHistory(this);
   late final TripReportTemplates tripReportTemplates = TripReportTemplates(
@@ -22613,12 +23990,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTripPoints,
     documentationFilesToCaveTrips,
     documentationFilesToCaveTripPoints,
+    cavePlaceModelStations,
+    caveDefaultSurveyModels,
     mediaQrScanCache,
     cavePlaceBeacons,
     idxCavePlaceBeaconsIbeacon,
     idxCavePlaceBeaconsRuuvi,
     idxCavePlaceBeaconsIdentity,
     idxCavePlaceBeaconsPlace,
+    idxCavePlaceModelStationsModel,
     ruuviSensorHistory,
     tripReportTemplates,
     changeLog,
@@ -23806,6 +25186,61 @@ final class $CavesReferences
     );
   }
 
+  static MultiTypedResultKey<
+    CavePlaceModelStations,
+    List<CavePlaceModelStation>
+  >
+  _cavePlaceModelStationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.cavePlaceModelStations,
+        aliasName: 'caves__uuid__cave_place_model_stations__cave_uuid',
+      );
+
+  $CavePlaceModelStationsProcessedTableManager get cavePlaceModelStationsRefs {
+    final manager =
+        $CavePlaceModelStationsTableManager(
+          $_db,
+          $_db.cavePlaceModelStations,
+        ).filter(
+          (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _cavePlaceModelStationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    CaveDefaultSurveyModels,
+    List<CaveDefaultSurveyModel>
+  >
+  _caveDefaultSurveyModelsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.caveDefaultSurveyModels,
+        aliasName: 'caves__uuid__cave_default_survey_models__cave_uuid',
+      );
+
+  $CaveDefaultSurveyModelsProcessedTableManager
+  get caveDefaultSurveyModelsRefs {
+    final manager =
+        $CaveDefaultSurveyModelsTableManager(
+          $_db,
+          $_db.caveDefaultSurveyModels,
+        ).filter(
+          (f) => f.caveUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _caveDefaultSurveyModelsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<CavePlaceBeacons, List<CavePlaceBeacon>>
   _cavePlaceBeaconsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.cavePlaceBeacons,
@@ -24056,6 +25491,56 @@ class $CavesFilterComposer extends Composer<_$AppDatabase, Caves> {
           }) => $CaveTripsFilterComposer(
             $db: $db,
             $table: $db.caveTrips,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cavePlaceModelStationsRefs(
+    Expression<bool> Function($CavePlaceModelStationsFilterComposer f) f,
+  ) {
+    final $CavePlaceModelStationsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.cavePlaceModelStations,
+      getReferencedColumn: (t) => t.caveUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlaceModelStationsFilterComposer(
+            $db: $db,
+            $table: $db.cavePlaceModelStations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> caveDefaultSurveyModelsRefs(
+    Expression<bool> Function($CaveDefaultSurveyModelsFilterComposer f) f,
+  ) {
+    final $CaveDefaultSurveyModelsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.caveDefaultSurveyModels,
+      getReferencedColumn: (t) => t.caveUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveDefaultSurveyModelsFilterComposer(
+            $db: $db,
+            $table: $db.caveDefaultSurveyModels,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -24431,6 +25916,57 @@ class $CavesAnnotationComposer extends Composer<_$AppDatabase, Caves> {
     return f(composer);
   }
 
+  Expression<T> cavePlaceModelStationsRefs<T extends Object>(
+    Expression<T> Function($CavePlaceModelStationsAnnotationComposer a) f,
+  ) {
+    final $CavePlaceModelStationsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.cavePlaceModelStations,
+      getReferencedColumn: (t) => t.caveUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlaceModelStationsAnnotationComposer(
+            $db: $db,
+            $table: $db.cavePlaceModelStations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> caveDefaultSurveyModelsRefs<T extends Object>(
+    Expression<T> Function($CaveDefaultSurveyModelsAnnotationComposer a) f,
+  ) {
+    final $CaveDefaultSurveyModelsAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.uuid,
+          referencedTable: $db.caveDefaultSurveyModels,
+          getReferencedColumn: (t) => t.caveUuid,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $CaveDefaultSurveyModelsAnnotationComposer(
+                $db: $db,
+                $table: $db.caveDefaultSurveyModels,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> cavePlaceBeaconsRefs<T extends Object>(
     Expression<T> Function($CavePlaceBeaconsAnnotationComposer a) f,
   ) {
@@ -24479,6 +26015,8 @@ class $CavesTableManager
             bool cavePlacesRefs,
             bool rasterMapsRefs,
             bool caveTripsRefs,
+            bool cavePlaceModelStationsRefs,
+            bool caveDefaultSurveyModelsRefs,
             bool cavePlaceBeaconsRefs,
           })
         > {
@@ -24558,6 +26096,8 @@ class $CavesTableManager
                 cavePlacesRefs = false,
                 rasterMapsRefs = false,
                 caveTripsRefs = false,
+                cavePlaceModelStationsRefs = false,
+                caveDefaultSurveyModelsRefs = false,
                 cavePlaceBeaconsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -24568,6 +26108,8 @@ class $CavesTableManager
                     if (cavePlacesRefs) db.cavePlaces,
                     if (rasterMapsRefs) db.rasterMaps,
                     if (caveTripsRefs) db.caveTrips,
+                    if (cavePlaceModelStationsRefs) db.cavePlaceModelStations,
+                    if (caveDefaultSurveyModelsRefs) db.caveDefaultSurveyModels,
                     if (cavePlaceBeaconsRefs) db.cavePlaceBeacons,
                   ],
                   addJoins:
@@ -24697,6 +26239,46 @@ class $CavesTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cavePlaceModelStationsRefs)
+                        await $_getPrefetchedData<
+                          Cave,
+                          Caves,
+                          CavePlaceModelStation
+                        >(
+                          currentTable: table,
+                          referencedTable: $CavesReferences
+                              ._cavePlaceModelStationsRefsTable(db),
+                          managerFromTypedResult: (p0) => $CavesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).cavePlaceModelStationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.caveUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (caveDefaultSurveyModelsRefs)
+                        await $_getPrefetchedData<
+                          Cave,
+                          Caves,
+                          CaveDefaultSurveyModel
+                        >(
+                          currentTable: table,
+                          referencedTable: $CavesReferences
+                              ._caveDefaultSurveyModelsRefsTable(db),
+                          managerFromTypedResult: (p0) => $CavesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).caveDefaultSurveyModelsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.caveUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
                       if (cavePlaceBeaconsRefs)
                         await $_getPrefetchedData<Cave, Caves, CavePlaceBeacon>(
                           currentTable: table,
@@ -24742,6 +26324,8 @@ typedef $CavesProcessedTableManager =
         bool cavePlacesRefs,
         bool rasterMapsRefs,
         bool caveTripsRefs,
+        bool cavePlaceModelStationsRefs,
+        bool caveDefaultSurveyModelsRefs,
         bool cavePlaceBeaconsRefs,
       })
     >;
@@ -27017,6 +28601,35 @@ final class $CavePlacesReferences
     );
   }
 
+  static MultiTypedResultKey<
+    CavePlaceModelStations,
+    List<CavePlaceModelStation>
+  >
+  _cavePlaceModelStationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.cavePlaceModelStations,
+        aliasName:
+            'cave_places__uuid__cave_place_model_stations__cave_place_uuid',
+      );
+
+  $CavePlaceModelStationsProcessedTableManager get cavePlaceModelStationsRefs {
+    final manager =
+        $CavePlaceModelStationsTableManager(
+          $_db,
+          $_db.cavePlaceModelStations,
+        ).filter(
+          (f) =>
+              f.cavePlaceUuid.uuid.sqlEquals($_itemColumn<Uint8List>('uuid')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _cavePlaceModelStationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<CavePlaceBeacons, List<CavePlaceBeacon>>
   _cavePlaceBeaconsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.cavePlaceBeacons,
@@ -27253,6 +28866,31 @@ class $CavePlacesFilterComposer extends Composer<_$AppDatabase, CavePlaces> {
           }) => $CaveTripPointsFilterComposer(
             $db: $db,
             $table: $db.caveTripPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cavePlaceModelStationsRefs(
+    Expression<bool> Function($CavePlaceModelStationsFilterComposer f) f,
+  ) {
+    final $CavePlaceModelStationsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.cavePlaceModelStations,
+      getReferencedColumn: (t) => t.cavePlaceUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlaceModelStationsFilterComposer(
+            $db: $db,
+            $table: $db.cavePlaceModelStations,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -27666,6 +29304,31 @@ class $CavePlacesAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> cavePlaceModelStationsRefs<T extends Object>(
+    Expression<T> Function($CavePlaceModelStationsAnnotationComposer a) f,
+  ) {
+    final $CavePlaceModelStationsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.cavePlaceModelStations,
+      getReferencedColumn: (t) => t.cavePlaceUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlaceModelStationsAnnotationComposer(
+            $db: $db,
+            $table: $db.cavePlaceModelStations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> cavePlaceBeaconsRefs<T extends Object>(
     Expression<T> Function($CavePlaceBeaconsAnnotationComposer a) f,
   ) {
@@ -27712,6 +29375,7 @@ class $CavePlacesTableManager
             bool lastModifiedByUserUuid,
             bool cavePlaceToRasterMapDefinitionsRefs,
             bool caveTripPointsRefs,
+            bool cavePlaceModelStationsRefs,
             bool cavePlaceBeaconsRefs,
           })
         > {
@@ -27824,6 +29488,7 @@ class $CavePlacesTableManager
                 lastModifiedByUserUuid = false,
                 cavePlaceToRasterMapDefinitionsRefs = false,
                 caveTripPointsRefs = false,
+                cavePlaceModelStationsRefs = false,
                 cavePlaceBeaconsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -27832,6 +29497,7 @@ class $CavePlacesTableManager
                     if (cavePlaceToRasterMapDefinitionsRefs)
                       db.cavePlaceToRasterMapDefinitions,
                     if (caveTripPointsRefs) db.caveTripPoints,
+                    if (cavePlaceModelStationsRefs) db.cavePlaceModelStations,
                     if (cavePlaceBeaconsRefs) db.cavePlaceBeacons,
                   ],
                   addJoins:
@@ -27947,6 +29613,26 @@ class $CavePlacesTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cavePlaceModelStationsRefs)
+                        await $_getPrefetchedData<
+                          CavePlace,
+                          CavePlaces,
+                          CavePlaceModelStation
+                        >(
+                          currentTable: table,
+                          referencedTable: $CavePlacesReferences
+                              ._cavePlaceModelStationsRefsTable(db),
+                          managerFromTypedResult: (p0) => $CavePlacesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).cavePlaceModelStationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cavePlaceUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
                       if (cavePlaceBeaconsRefs)
                         await $_getPrefetchedData<
                           CavePlace,
@@ -27994,6 +29680,7 @@ typedef $CavePlacesProcessedTableManager =
         bool lastModifiedByUserUuid,
         bool cavePlaceToRasterMapDefinitionsRefs,
         bool caveTripPointsRefs,
+        bool cavePlaceModelStationsRefs,
         bool cavePlaceBeaconsRefs,
       })
     >;
@@ -29782,6 +31469,69 @@ final class $DocumentationFilesReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    CavePlaceModelStations,
+    List<CavePlaceModelStation>
+  >
+  _cavePlaceModelStationsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.cavePlaceModelStations,
+    aliasName:
+        'documentation_files__uuid__cave_place_model_stations__documentation_file_uuid',
+  );
+
+  $CavePlaceModelStationsProcessedTableManager get cavePlaceModelStationsRefs {
+    final manager =
+        $CavePlaceModelStationsTableManager(
+          $_db,
+          $_db.cavePlaceModelStations,
+        ).filter(
+          (f) => f.documentationFileUuid.uuid.sqlEquals(
+            $_itemColumn<Uint8List>('uuid')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _cavePlaceModelStationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    CaveDefaultSurveyModels,
+    List<CaveDefaultSurveyModel>
+  >
+  _caveDefaultSurveyModelsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.caveDefaultSurveyModels,
+    aliasName:
+        'documentation_files__uuid__cave_default_survey_models__documentation_file_uuid',
+  );
+
+  $CaveDefaultSurveyModelsProcessedTableManager
+  get caveDefaultSurveyModelsRefs {
+    final manager =
+        $CaveDefaultSurveyModelsTableManager(
+          $_db,
+          $_db.caveDefaultSurveyModels,
+        ).filter(
+          (f) => f.documentationFileUuid.uuid.sqlEquals(
+            $_itemColumn<Uint8List>('uuid')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _caveDefaultSurveyModelsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $DocumentationFilesFilterComposer
@@ -29969,6 +31719,56 @@ class $DocumentationFilesFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> cavePlaceModelStationsRefs(
+    Expression<bool> Function($CavePlaceModelStationsFilterComposer f) f,
+  ) {
+    final $CavePlaceModelStationsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.cavePlaceModelStations,
+      getReferencedColumn: (t) => t.documentationFileUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlaceModelStationsFilterComposer(
+            $db: $db,
+            $table: $db.cavePlaceModelStations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> caveDefaultSurveyModelsRefs(
+    Expression<bool> Function($CaveDefaultSurveyModelsFilterComposer f) f,
+  ) {
+    final $CaveDefaultSurveyModelsFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.caveDefaultSurveyModels,
+      getReferencedColumn: (t) => t.documentationFileUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CaveDefaultSurveyModelsFilterComposer(
+            $db: $db,
+            $table: $db.caveDefaultSurveyModels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -30248,6 +32048,57 @@ class $DocumentationFilesAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> cavePlaceModelStationsRefs<T extends Object>(
+    Expression<T> Function($CavePlaceModelStationsAnnotationComposer a) f,
+  ) {
+    final $CavePlaceModelStationsAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.uuid,
+      referencedTable: $db.cavePlaceModelStations,
+      getReferencedColumn: (t) => t.documentationFileUuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlaceModelStationsAnnotationComposer(
+            $db: $db,
+            $table: $db.cavePlaceModelStations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> caveDefaultSurveyModelsRefs<T extends Object>(
+    Expression<T> Function($CaveDefaultSurveyModelsAnnotationComposer a) f,
+  ) {
+    final $CaveDefaultSurveyModelsAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.uuid,
+          referencedTable: $db.caveDefaultSurveyModels,
+          getReferencedColumn: (t) => t.documentationFileUuid,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $CaveDefaultSurveyModelsAnnotationComposer(
+                $db: $db,
+                $table: $db.caveDefaultSurveyModels,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $DocumentationFilesTableManager
@@ -30269,6 +32120,8 @@ class $DocumentationFilesTableManager
             bool documentationFilesToGeofeaturesRefs,
             bool documentationFilesToCaveTripsRefs,
             bool documentationFilesToCaveTripPointsRefs,
+            bool cavePlaceModelStationsRefs,
+            bool caveDefaultSurveyModelsRefs,
           })
         > {
   $DocumentationFilesTableManager(_$AppDatabase db, DocumentationFiles table)
@@ -30357,6 +32210,8 @@ class $DocumentationFilesTableManager
                 documentationFilesToGeofeaturesRefs = false,
                 documentationFilesToCaveTripsRefs = false,
                 documentationFilesToCaveTripPointsRefs = false,
+                cavePlaceModelStationsRefs = false,
+                caveDefaultSurveyModelsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -30367,6 +32222,8 @@ class $DocumentationFilesTableManager
                       db.documentationFilesToCaveTrips,
                     if (documentationFilesToCaveTripPointsRefs)
                       db.documentationFilesToCaveTripPoints,
+                    if (cavePlaceModelStationsRefs) db.cavePlaceModelStations,
+                    if (caveDefaultSurveyModelsRefs) db.caveDefaultSurveyModels,
                   ],
                   addJoins:
                       <
@@ -30482,6 +32339,48 @@ class $DocumentationFilesTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cavePlaceModelStationsRefs)
+                        await $_getPrefetchedData<
+                          DocumentationFile,
+                          DocumentationFiles,
+                          CavePlaceModelStation
+                        >(
+                          currentTable: table,
+                          referencedTable: $DocumentationFilesReferences
+                              ._cavePlaceModelStationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $DocumentationFilesReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cavePlaceModelStationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.documentationFileUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (caveDefaultSurveyModelsRefs)
+                        await $_getPrefetchedData<
+                          DocumentationFile,
+                          DocumentationFiles,
+                          CaveDefaultSurveyModel
+                        >(
+                          currentTable: table,
+                          referencedTable: $DocumentationFilesReferences
+                              ._caveDefaultSurveyModelsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $DocumentationFilesReferences(
+                                db,
+                                table,
+                                p0,
+                              ).caveDefaultSurveyModelsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.documentationFileUuid == item.uuid,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -30508,6 +32407,8 @@ typedef $DocumentationFilesProcessedTableManager =
         bool documentationFilesToGeofeaturesRefs,
         bool documentationFilesToCaveTripsRefs,
         bool documentationFilesToCaveTripPointsRefs,
+        bool cavePlaceModelStationsRefs,
+        bool caveDefaultSurveyModelsRefs,
       })
     >;
 typedef $DocumentationFilesToGeofeaturesCreateCompanionBuilder =
@@ -34417,6 +36318,1541 @@ typedef $DocumentationFilesToCaveTripPointsProcessedTableManager =
       PrefetchHooks Function({
         bool documentationFileUuid,
         bool caveTripPointUuid,
+        bool createdByUserUuid,
+        bool lastModifiedByUserUuid,
+      })
+    >;
+typedef $CavePlaceModelStationsCreateCompanionBuilder =
+    CavePlaceModelStationsCompanion Function({
+      required Uuid uuid,
+      required Uuid cavePlaceUuid,
+      required Uuid caveUuid,
+      required Uuid documentationFileUuid,
+      required String station,
+      Value<double?> splayEast,
+      Value<double?> splayNorth,
+      Value<double?> splayUp,
+      Value<int> needsReview,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<Uuid?> createdByUserUuid,
+      Value<Uuid?> lastModifiedByUserUuid,
+      Value<int> rowid,
+    });
+typedef $CavePlaceModelStationsUpdateCompanionBuilder =
+    CavePlaceModelStationsCompanion Function({
+      Value<Uuid> uuid,
+      Value<Uuid> cavePlaceUuid,
+      Value<Uuid> caveUuid,
+      Value<Uuid> documentationFileUuid,
+      Value<String> station,
+      Value<double?> splayEast,
+      Value<double?> splayNorth,
+      Value<double?> splayUp,
+      Value<int> needsReview,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<Uuid?> createdByUserUuid,
+      Value<Uuid?> lastModifiedByUserUuid,
+      Value<int> rowid,
+    });
+
+final class $CavePlaceModelStationsReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          CavePlaceModelStations,
+          CavePlaceModelStation
+        > {
+  $CavePlaceModelStationsReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static CavePlaces _cavePlaceUuidTable(_$AppDatabase db) =>
+      db.cavePlaces.createAlias(
+        'cave_place_model_stations__cave_place_uuid__cave_places__uuid',
+      );
+
+  $CavePlacesProcessedTableManager get cavePlaceUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_place_uuid')!;
+
+    final manager = $CavePlacesTableManager(
+      $_db,
+      $_db.cavePlaces,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cavePlaceUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Caves _caveUuidTable(_$AppDatabase db) =>
+      db.caves.createAlias('cave_place_model_stations__cave_uuid__caves__uuid');
+
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
+
+    final manager = $CavesTableManager(
+      $_db,
+      $_db.caves,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static DocumentationFiles _documentationFileUuidTable(
+    _$AppDatabase db,
+  ) => db.documentationFiles.createAlias(
+    'cave_place_model_stations__documentation_file_uuid__documentation_files__uuid',
+  );
+
+  $DocumentationFilesProcessedTableManager get documentationFileUuid {
+    final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
+
+    final manager = $DocumentationFilesTableManager(
+      $_db,
+      $_db.documentationFiles,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _documentationFileUuidTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Users _createdByUserUuidTable(_$AppDatabase db) =>
+      db.users.createAlias(
+        'cave_place_model_stations__created_by_user_uuid__users__uuid',
+      );
+
+  $UsersProcessedTableManager? get createdByUserUuid {
+    final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
+    if ($_column == null) return null;
+    final manager = $UsersTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByUserUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
+      db.users.createAlias(
+        'cave_place_model_stations__last_modified_by_user_uuid__users__uuid',
+      );
+
+  $UsersProcessedTableManager? get lastModifiedByUserUuid {
+    final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
+    if ($_column == null) return null;
+    final manager = $UsersTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _lastModifiedByUserUuidTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $CavePlaceModelStationsFilterComposer
+    extends Composer<_$AppDatabase, CavePlaceModelStations> {
+  $CavePlaceModelStationsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get station => $composableBuilder(
+    column: $table.station,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get splayEast => $composableBuilder(
+    column: $table.splayEast,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get splayNorth => $composableBuilder(
+    column: $table.splayNorth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get splayUp => $composableBuilder(
+    column: $table.splayUp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $CavePlacesFilterComposer get cavePlaceUuid {
+    final $CavePlacesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
+      referencedTable: $db.cavePlaces,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlacesFilterComposer(
+            $db: $db,
+            $table: $db.cavePlaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CavesFilterComposer get caveUuid {
+    final $CavesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveUuid,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesFilterComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $DocumentationFilesFilterComposer get documentationFileUuid {
+    final $DocumentationFilesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesFilterComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersFilterComposer get createdByUserUuid {
+    final $UsersFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersFilterComposer get lastModifiedByUserUuid {
+    final $UsersFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CavePlaceModelStationsOrderingComposer
+    extends Composer<_$AppDatabase, CavePlaceModelStations> {
+  $CavePlaceModelStationsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get station => $composableBuilder(
+    column: $table.station,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get splayEast => $composableBuilder(
+    column: $table.splayEast,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get splayNorth => $composableBuilder(
+    column: $table.splayNorth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get splayUp => $composableBuilder(
+    column: $table.splayUp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $CavePlacesOrderingComposer get cavePlaceUuid {
+    final $CavePlacesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
+      referencedTable: $db.cavePlaces,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlacesOrderingComposer(
+            $db: $db,
+            $table: $db.cavePlaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CavesOrderingComposer get caveUuid {
+    final $CavesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveUuid,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesOrderingComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $DocumentationFilesOrderingComposer get documentationFileUuid {
+    final $DocumentationFilesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesOrderingComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersOrderingComposer get createdByUserUuid {
+    final $UsersOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersOrderingComposer get lastModifiedByUserUuid {
+    final $UsersOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CavePlaceModelStationsAnnotationComposer
+    extends Composer<_$AppDatabase, CavePlaceModelStations> {
+  $CavePlaceModelStationsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get station =>
+      $composableBuilder(column: $table.station, builder: (column) => column);
+
+  GeneratedColumn<double> get splayEast =>
+      $composableBuilder(column: $table.splayEast, builder: (column) => column);
+
+  GeneratedColumn<double> get splayNorth => $composableBuilder(
+    column: $table.splayNorth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get splayUp =>
+      $composableBuilder(column: $table.splayUp, builder: (column) => column);
+
+  GeneratedColumn<int> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $CavePlacesAnnotationComposer get cavePlaceUuid {
+    final $CavePlacesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cavePlaceUuid,
+      referencedTable: $db.cavePlaces,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavePlacesAnnotationComposer(
+            $db: $db,
+            $table: $db.cavePlaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $CavesAnnotationComposer get caveUuid {
+    final $CavesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveUuid,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesAnnotationComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $DocumentationFilesAnnotationComposer get documentationFileUuid {
+    final $DocumentationFilesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesAnnotationComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersAnnotationComposer get createdByUserUuid {
+    final $UsersAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersAnnotationComposer get lastModifiedByUserUuid {
+    final $UsersAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CavePlaceModelStationsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          CavePlaceModelStations,
+          CavePlaceModelStation,
+          $CavePlaceModelStationsFilterComposer,
+          $CavePlaceModelStationsOrderingComposer,
+          $CavePlaceModelStationsAnnotationComposer,
+          $CavePlaceModelStationsCreateCompanionBuilder,
+          $CavePlaceModelStationsUpdateCompanionBuilder,
+          (CavePlaceModelStation, $CavePlaceModelStationsReferences),
+          CavePlaceModelStation,
+          PrefetchHooks Function({
+            bool cavePlaceUuid,
+            bool caveUuid,
+            bool documentationFileUuid,
+            bool createdByUserUuid,
+            bool lastModifiedByUserUuid,
+          })
+        > {
+  $CavePlaceModelStationsTableManager(
+    _$AppDatabase db,
+    CavePlaceModelStations table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $CavePlaceModelStationsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $CavePlaceModelStationsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $CavePlaceModelStationsAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> cavePlaceUuid = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
+                Value<Uuid> documentationFileUuid = const Value.absent(),
+                Value<String> station = const Value.absent(),
+                Value<double?> splayEast = const Value.absent(),
+                Value<double?> splayNorth = const Value.absent(),
+                Value<double?> splayUp = const Value.absent(),
+                Value<int> needsReview = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<Uuid?> createdByUserUuid = const Value.absent(),
+                Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CavePlaceModelStationsCompanion(
+                uuid: uuid,
+                cavePlaceUuid: cavePlaceUuid,
+                caveUuid: caveUuid,
+                documentationFileUuid: documentationFileUuid,
+                station: station,
+                splayEast: splayEast,
+                splayNorth: splayNorth,
+                splayUp: splayUp,
+                needsReview: needsReview,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                createdByUserUuid: createdByUserUuid,
+                lastModifiedByUserUuid: lastModifiedByUserUuid,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uuid uuid,
+                required Uuid cavePlaceUuid,
+                required Uuid caveUuid,
+                required Uuid documentationFileUuid,
+                required String station,
+                Value<double?> splayEast = const Value.absent(),
+                Value<double?> splayNorth = const Value.absent(),
+                Value<double?> splayUp = const Value.absent(),
+                Value<int> needsReview = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<Uuid?> createdByUserUuid = const Value.absent(),
+                Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CavePlaceModelStationsCompanion.insert(
+                uuid: uuid,
+                cavePlaceUuid: cavePlaceUuid,
+                caveUuid: caveUuid,
+                documentationFileUuid: documentationFileUuid,
+                station: station,
+                splayEast: splayEast,
+                splayNorth: splayNorth,
+                splayUp: splayUp,
+                needsReview: needsReview,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                createdByUserUuid: createdByUserUuid,
+                lastModifiedByUserUuid: lastModifiedByUserUuid,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $CavePlaceModelStationsReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                cavePlaceUuid = false,
+                caveUuid = false,
+                documentationFileUuid = false,
+                createdByUserUuid = false,
+                lastModifiedByUserUuid = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (cavePlaceUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cavePlaceUuid,
+                                    referencedTable:
+                                        $CavePlaceModelStationsReferences
+                                            ._cavePlaceUuidTable(db),
+                                    referencedColumn:
+                                        $CavePlaceModelStationsReferences
+                                            ._cavePlaceUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (caveUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveUuid,
+                                    referencedTable:
+                                        $CavePlaceModelStationsReferences
+                                            ._caveUuidTable(db),
+                                    referencedColumn:
+                                        $CavePlaceModelStationsReferences
+                                            ._caveUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (documentationFileUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.documentationFileUuid,
+                                    referencedTable:
+                                        $CavePlaceModelStationsReferences
+                                            ._documentationFileUuidTable(db),
+                                    referencedColumn:
+                                        $CavePlaceModelStationsReferences
+                                            ._documentationFileUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (createdByUserUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdByUserUuid,
+                                    referencedTable:
+                                        $CavePlaceModelStationsReferences
+                                            ._createdByUserUuidTable(db),
+                                    referencedColumn:
+                                        $CavePlaceModelStationsReferences
+                                            ._createdByUserUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (lastModifiedByUserUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.lastModifiedByUserUuid,
+                                    referencedTable:
+                                        $CavePlaceModelStationsReferences
+                                            ._lastModifiedByUserUuidTable(db),
+                                    referencedColumn:
+                                        $CavePlaceModelStationsReferences
+                                            ._lastModifiedByUserUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $CavePlaceModelStationsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      CavePlaceModelStations,
+      CavePlaceModelStation,
+      $CavePlaceModelStationsFilterComposer,
+      $CavePlaceModelStationsOrderingComposer,
+      $CavePlaceModelStationsAnnotationComposer,
+      $CavePlaceModelStationsCreateCompanionBuilder,
+      $CavePlaceModelStationsUpdateCompanionBuilder,
+      (CavePlaceModelStation, $CavePlaceModelStationsReferences),
+      CavePlaceModelStation,
+      PrefetchHooks Function({
+        bool cavePlaceUuid,
+        bool caveUuid,
+        bool documentationFileUuid,
+        bool createdByUserUuid,
+        bool lastModifiedByUserUuid,
+      })
+    >;
+typedef $CaveDefaultSurveyModelsCreateCompanionBuilder =
+    CaveDefaultSurveyModelsCompanion Function({
+      required Uuid uuid,
+      required Uuid caveUuid,
+      required Uuid documentationFileUuid,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<Uuid?> createdByUserUuid,
+      Value<Uuid?> lastModifiedByUserUuid,
+      Value<int> rowid,
+    });
+typedef $CaveDefaultSurveyModelsUpdateCompanionBuilder =
+    CaveDefaultSurveyModelsCompanion Function({
+      Value<Uuid> uuid,
+      Value<Uuid> caveUuid,
+      Value<Uuid> documentationFileUuid,
+      Value<int?> createdAt,
+      Value<int?> updatedAt,
+      Value<Uuid?> createdByUserUuid,
+      Value<Uuid?> lastModifiedByUserUuid,
+      Value<int> rowid,
+    });
+
+final class $CaveDefaultSurveyModelsReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          CaveDefaultSurveyModels,
+          CaveDefaultSurveyModel
+        > {
+  $CaveDefaultSurveyModelsReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static Caves _caveUuidTable(_$AppDatabase db) => db.caves.createAlias(
+    'cave_default_survey_models__cave_uuid__caves__uuid',
+  );
+
+  $CavesProcessedTableManager get caveUuid {
+    final $_column = $_itemColumn<Uint8List>('cave_uuid')!;
+
+    final manager = $CavesTableManager(
+      $_db,
+      $_db.caves,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_caveUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static DocumentationFiles _documentationFileUuidTable(
+    _$AppDatabase db,
+  ) => db.documentationFiles.createAlias(
+    'cave_default_survey_models__documentation_file_uuid__documentation_files__uuid',
+  );
+
+  $DocumentationFilesProcessedTableManager get documentationFileUuid {
+    final $_column = $_itemColumn<Uint8List>('documentation_file_uuid')!;
+
+    final manager = $DocumentationFilesTableManager(
+      $_db,
+      $_db.documentationFiles,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _documentationFileUuidTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Users _createdByUserUuidTable(_$AppDatabase db) =>
+      db.users.createAlias(
+        'cave_default_survey_models__created_by_user_uuid__users__uuid',
+      );
+
+  $UsersProcessedTableManager? get createdByUserUuid {
+    final $_column = $_itemColumn<Uint8List>('created_by_user_uuid');
+    if ($_column == null) return null;
+    final manager = $UsersTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByUserUuidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static Users _lastModifiedByUserUuidTable(_$AppDatabase db) =>
+      db.users.createAlias(
+        'cave_default_survey_models__last_modified_by_user_uuid__users__uuid',
+      );
+
+  $UsersProcessedTableManager? get lastModifiedByUserUuid {
+    final $_column = $_itemColumn<Uint8List>('last_modified_by_user_uuid');
+    if ($_column == null) return null;
+    final manager = $UsersTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.uuid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _lastModifiedByUserUuidTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $CaveDefaultSurveyModelsFilterComposer
+    extends Composer<_$AppDatabase, CaveDefaultSurveyModels> {
+  $CaveDefaultSurveyModelsFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get uuid =>
+      $composableBuilder(
+        column: $table.uuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $CavesFilterComposer get caveUuid {
+    final $CavesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveUuid,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesFilterComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $DocumentationFilesFilterComposer get documentationFileUuid {
+    final $DocumentationFilesFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesFilterComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersFilterComposer get createdByUserUuid {
+    final $UsersFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersFilterComposer get lastModifiedByUserUuid {
+    final $UsersFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveDefaultSurveyModelsOrderingComposer
+    extends Composer<_$AppDatabase, CaveDefaultSurveyModels> {
+  $CaveDefaultSurveyModelsOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $CavesOrderingComposer get caveUuid {
+    final $CavesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveUuid,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesOrderingComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $DocumentationFilesOrderingComposer get documentationFileUuid {
+    final $DocumentationFilesOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesOrderingComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersOrderingComposer get createdByUserUuid {
+    final $UsersOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersOrderingComposer get lastModifiedByUserUuid {
+    final $UsersOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveDefaultSurveyModelsAnnotationComposer
+    extends Composer<_$AppDatabase, CaveDefaultSurveyModels> {
+  $CaveDefaultSurveyModelsAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $CavesAnnotationComposer get caveUuid {
+    final $CavesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.caveUuid,
+      referencedTable: $db.caves,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $CavesAnnotationComposer(
+            $db: $db,
+            $table: $db.caves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $DocumentationFilesAnnotationComposer get documentationFileUuid {
+    final $DocumentationFilesAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.documentationFileUuid,
+      referencedTable: $db.documentationFiles,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DocumentationFilesAnnotationComposer(
+            $db: $db,
+            $table: $db.documentationFiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersAnnotationComposer get createdByUserUuid {
+    final $UsersAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $UsersAnnotationComposer get lastModifiedByUserUuid {
+    final $UsersAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lastModifiedByUserUuid,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.uuid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $UsersAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $CaveDefaultSurveyModelsTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          CaveDefaultSurveyModels,
+          CaveDefaultSurveyModel,
+          $CaveDefaultSurveyModelsFilterComposer,
+          $CaveDefaultSurveyModelsOrderingComposer,
+          $CaveDefaultSurveyModelsAnnotationComposer,
+          $CaveDefaultSurveyModelsCreateCompanionBuilder,
+          $CaveDefaultSurveyModelsUpdateCompanionBuilder,
+          (CaveDefaultSurveyModel, $CaveDefaultSurveyModelsReferences),
+          CaveDefaultSurveyModel,
+          PrefetchHooks Function({
+            bool caveUuid,
+            bool documentationFileUuid,
+            bool createdByUserUuid,
+            bool lastModifiedByUserUuid,
+          })
+        > {
+  $CaveDefaultSurveyModelsTableManager(
+    _$AppDatabase db,
+    CaveDefaultSurveyModels table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $CaveDefaultSurveyModelsFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $CaveDefaultSurveyModelsOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $CaveDefaultSurveyModelsAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<Uuid> uuid = const Value.absent(),
+                Value<Uuid> caveUuid = const Value.absent(),
+                Value<Uuid> documentationFileUuid = const Value.absent(),
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<Uuid?> createdByUserUuid = const Value.absent(),
+                Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CaveDefaultSurveyModelsCompanion(
+                uuid: uuid,
+                caveUuid: caveUuid,
+                documentationFileUuid: documentationFileUuid,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                createdByUserUuid: createdByUserUuid,
+                lastModifiedByUserUuid: lastModifiedByUserUuid,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uuid uuid,
+                required Uuid caveUuid,
+                required Uuid documentationFileUuid,
+                Value<int?> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<Uuid?> createdByUserUuid = const Value.absent(),
+                Value<Uuid?> lastModifiedByUserUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CaveDefaultSurveyModelsCompanion.insert(
+                uuid: uuid,
+                caveUuid: caveUuid,
+                documentationFileUuid: documentationFileUuid,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                createdByUserUuid: createdByUserUuid,
+                lastModifiedByUserUuid: lastModifiedByUserUuid,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $CaveDefaultSurveyModelsReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                caveUuid = false,
+                documentationFileUuid = false,
+                createdByUserUuid = false,
+                lastModifiedByUserUuid = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (caveUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.caveUuid,
+                                    referencedTable:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._caveUuidTable(db),
+                                    referencedColumn:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._caveUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (documentationFileUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.documentationFileUuid,
+                                    referencedTable:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._documentationFileUuidTable(db),
+                                    referencedColumn:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._documentationFileUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (createdByUserUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdByUserUuid,
+                                    referencedTable:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._createdByUserUuidTable(db),
+                                    referencedColumn:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._createdByUserUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+                        if (lastModifiedByUserUuid) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.lastModifiedByUserUuid,
+                                    referencedTable:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._lastModifiedByUserUuidTable(db),
+                                    referencedColumn:
+                                        $CaveDefaultSurveyModelsReferences
+                                            ._lastModifiedByUserUuidTable(db)
+                                            .uuid,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $CaveDefaultSurveyModelsProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      CaveDefaultSurveyModels,
+      CaveDefaultSurveyModel,
+      $CaveDefaultSurveyModelsFilterComposer,
+      $CaveDefaultSurveyModelsOrderingComposer,
+      $CaveDefaultSurveyModelsAnnotationComposer,
+      $CaveDefaultSurveyModelsCreateCompanionBuilder,
+      $CaveDefaultSurveyModelsUpdateCompanionBuilder,
+      (CaveDefaultSurveyModel, $CaveDefaultSurveyModelsReferences),
+      CaveDefaultSurveyModel,
+      PrefetchHooks Function({
+        bool caveUuid,
+        bool documentationFileUuid,
         bool createdByUserUuid,
         bool lastModifiedByUserUuid,
       })
@@ -40921,6 +44357,10 @@ class $AppDatabaseManager {
         _db,
         _db.documentationFilesToCaveTripPoints,
       );
+  $CavePlaceModelStationsTableManager get cavePlaceModelStations =>
+      $CavePlaceModelStationsTableManager(_db, _db.cavePlaceModelStations);
+  $CaveDefaultSurveyModelsTableManager get caveDefaultSurveyModels =>
+      $CaveDefaultSurveyModelsTableManager(_db, _db.caveDefaultSurveyModels);
   $MediaQrScanCacheTableManager get mediaQrScanCache =>
       $MediaQrScanCacheTableManager(_db, _db.mediaQrScanCache);
   $CavePlaceBeaconsTableManager get cavePlaceBeacons =>

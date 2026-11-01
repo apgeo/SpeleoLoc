@@ -1090,6 +1090,27 @@ class V32ToV33Migration extends SchemaMigration {
   );
 }
 
+/// v33 → v34.
+///
+/// Two synced tables for the 3D survey-model viewer: where each cave place
+/// is in a model, and the model a cave opens by default. New tables only.
+class V33ToV34Migration extends SchemaMigration {
+  const V33ToV34Migration();
+
+  @override
+  int get toVersion => 34;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.cavePlaceModelStations);
+    await migrator.createTable(db.caveDefaultSurveyModels);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_cave_place_model_stations_model '
+      'ON cave_place_model_stations(documentation_file_uuid)',
+    );
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1146,6 +1167,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V30ToV31Migration(),
   V31ToV32Migration(),
   V32ToV33Migration(),
+  V33ToV34Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

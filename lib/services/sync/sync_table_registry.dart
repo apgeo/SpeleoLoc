@@ -322,6 +322,36 @@ class SyncTableRegistry {
           ),
     ),
     SyncTableHandler(
+      name: 'cave_place_model_stations',
+      dump: () async => (await _db.select(_db.cavePlaceModelStations).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CavePlaceModelStation>(
+        rows,
+        (j) => CavePlaceModelStation.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.cavePlaceModelStations,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
+      name: 'cave_default_survey_models',
+      dump: () async => (await _db.select(_db.caveDefaultSurveyModels).get())
+          .map((r) => r.toJson(serializer: _serializer))
+          .toList(),
+      upsert: (rows, resolver) async => upsertRows<CaveDefaultSurveyModel>(
+        rows,
+        (j) => CaveDefaultSurveyModel.fromJson(j, serializer: _serializer),
+        (r) => r.toJson(serializer: _serializer),
+        (r) => r.uuid,
+        (r) => r.updatedAt ?? r.createdAt,
+        _db.caveDefaultSurveyModels,
+        resolver,
+      ),
+    ),
+    SyncTableHandler(
       name: 'trip_report_templates',
       dump: () async => (await _db.select(_db.tripReportTemplates).get())
           .map((r) => r.toJson(serializer: _serializer))

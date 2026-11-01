@@ -303,6 +303,44 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trip_points (
     UNIQUE(documentation_file_uuid, cave_trip_point_uuid) ON CONFLICT ROLLBACK
 );
 
+-- Table: cave_place_model_stations
+-- Where a cave place is in one survey model (a .lox/.3d documentation file):
+-- a station, by the 3D viewer's dotted name, or the far end of one of its
+-- splays, as an offset in metres east, north and up from that station. One
+-- per place per model; a new model of the cave starts unmapped. Splay
+-- mappings are written with needs_review = 1: how they are stored is to be
+-- redesigned.
+CREATE TABLE IF NOT EXISTS cave_place_model_stations (
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_place_uuid             BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES cave_places(uuid),
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    documentation_file_uuid     BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
+    station                     TEXT NOT NULL,
+    splay_east                  REAL,
+    splay_north                 REAL,
+    splay_up                    REAL,
+    needs_review                INTEGER NOT NULL DEFAULT 0,
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    UNIQUE(cave_place_uuid, documentation_file_uuid) ON CONFLICT ROLLBACK
+);
+
+-- Table: cave_default_survey_models
+-- The survey model a cave opens in 3D when a caver has chosen one; without a
+-- row the newest model attached to the cave opens.
+CREATE TABLE IF NOT EXISTS cave_default_survey_models (
+    uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    cave_uuid                   BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES caves(uuid),
+    documentation_file_uuid     BLOB NOT NULL MAPPED BY `const UuidConverter()` REFERENCES documentation_files(uuid),
+    created_at                  INTEGER,
+    updated_at                  INTEGER,
+    created_by_user_uuid        BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
+    UNIQUE(cave_uuid) ON CONFLICT ROLLBACK
+);
+
 -- Table: media_qr_scan_cache (local only, NOT synced)
 -- What reading each device picture for a QR label found, so that opening
 -- the points-from-pictures screen again does not decode the same pictures
@@ -373,6 +411,9 @@ CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_identity
     ON cave_place_beacons(proximity_uuid, major, minor);
 CREATE INDEX IF NOT EXISTS idx_cave_place_beacons_place
     ON cave_place_beacons(cave_place_uuid);
+
+CREATE INDEX IF NOT EXISTS idx_cave_place_model_stations_model
+    ON cave_place_model_stations(documentation_file_uuid);
 
 -- Table: ruuvi_sensor_history
 -- Downloaded Ruuvi on-tag measurement history. Local-only telemetry like
