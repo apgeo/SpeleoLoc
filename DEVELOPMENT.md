@@ -209,6 +209,15 @@ only — the Linux build shows a placeholder). Three pieces are checked separate
 Store builds pass `FEATURE_MODEL_3D=false` (`build_settings.store*.json`) until the feature is
 released; that hides the entry points only.
 
+With SilexGIS (`features` names `surveyModels`), the sync reads the survey-models stream into the
+local-only `silexgis_survey_model` table and fetches each model's file into a documentation file
+under the model's `documentId` (`silexgis_survey_model_fetcher.dart`, verified against the listed
+size and SHA-256). Such a copy is never uploaded back as a document. Place mappings travel in the
+`placeStations` upload section and come back on the same stream (`silexgis_survey_model_applier.dart`,
+`silexgis_place_stations_upload_part.dart`); a mapping arrives only once its model's file is here,
+so a run that fetched a new model reads the stream again from the beginning. The replays are
+`test/services/silexgis/contract_survey_models_test.dart`; the dev server seeds no model yet.
+
 ---
 
 ## Notes for this machine

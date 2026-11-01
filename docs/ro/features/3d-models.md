@@ -23,11 +23,28 @@ topografie**; atingerea lui deschide vizualizatorul. O peșteră poate avea
 mai multe modele.
 
 Se deschide primul modelul ales ca implicit (**⋮ → Fă-l modelul implicit
-al peșterii**), altfel cel mai nou. Meniul **⋮** le arată pe celelalte.
+al peșterii**), altfel cel pe care SilexGIS îl marchează drept modelul
+curent al peșterii, altfel cel mai nou. Meniul **⋮** le arată pe celelalte.
 
-Cu SilexGIS conectat, modelul păstrat acolo pentru peșteră vine odată cu
-documentele ei; un model atașat pe telefon pleacă spre SilexGIS ca date
-topografice.
+## Cu SilexGIS
+
+Cu SilexGIS conectat, modelele clubului pentru o peșteră vin la
+sincronizare — doar pentru peșterile pe care contul le poate vedea exact,
+fiindcă un model poartă poziția peșterii. Cu **Setări → Modele 3D →
+Descarcă automat modelele din SilexGIS** pornit (implicit), sincronizarea le descarcă,
+dar numai pe o rețea pe care profilul serverului permite fișiere. Altfel
+așteaptă: meniul **⋮** al vizualizatorului și butonul 3D al unei peșteri
+fără model pe telefon arată modelele rămase pe SilexGIS, iar o atingere
+descarcă unul.
+
+Punctele puse la stațiile unui model pleacă spre SilexGIS și ajung la
+celelalte telefoane ale clubului. Dacă SilexGIS are deja punctul la altă
+stație a aceluiași model, sincronizarea îl păstrează pe al dumneavoastră și
+vă întreabă pe pagina de decizii SilexGIS. Când SilexGIS nu mai oferă un
+model, acesta pleacă de pe telefon împreună cu punctele puse pe el.
+
+Un model atașat pe telefon pleacă spre SilexGIS ca date topografice; devine
+unul dintre modelele clubului doar când cineva îl face model în browser.
 
 ## Privitul
 

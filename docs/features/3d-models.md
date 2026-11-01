@@ -22,12 +22,29 @@ models**; tapping it opens the viewer. A cave may hold several models —
 this year's survey and an older one, a `.lox` and a `.3d` of the same data.
 
 Which one opens first: the one you marked as the cave's default (**⋮ →
-Make this the cave's default model** in the viewer), otherwise the newest.
-The **⋮** menu lists the others to switch to.
+Make this the cave's default model** in the viewer), otherwise the one
+SilexGIS marks as the cave's current model, otherwise the newest. The **⋮**
+menu lists the others to switch to.
 
-With SilexGIS connected, a model the club keeps there for the cave arrives
-with the cave's documents; one you attach on the phone goes up to SilexGIS
-filed as survey data.
+## With SilexGIS
+
+With SilexGIS connected, the club's models for a cave come down with the
+sync — only for caves your account may see exactly, since a model carries
+the cave's position. With **Settings → 3D models → Download models
+from SilexGIS automatically** on (the default), the sync downloads them, but only on a
+network your server profile allows files on. Otherwise they wait: the
+viewer's **⋮** menu, and the 3D button of a cave that has no model on the
+phone yet, list the models still on SilexGIS, and a tap downloads one.
+
+The places you put on a model's stations go up to SilexGIS and come back
+down to the club's other phones. If SilexGIS already has the place at
+another station of the same model, the sync keeps yours and asks you on the
+SilexGIS decisions page. When SilexGIS stops handing out a model, it leaves
+the phone together with the places marked on it.
+
+A model you attach on the phone goes up to SilexGIS filed as survey data;
+it becomes one of the club's models only when someone makes it one in the
+browser.
 
 ## Looking around
 
