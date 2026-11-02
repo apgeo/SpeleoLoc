@@ -4,9 +4,11 @@
 
 SpeleoLoc poate dialoga cu o instalare SilexGIS pe care o ține clubul
 dumneavoastră, astfel încât peșterile de pe telefon și peșterile din
-registrul clubului să rămână la pas. Pagina de față acoperă adăugarea unui
-server, autentificarea, alegerea a ceea ce poartă acest dispozitiv, rularea
-unei sincronizări și citirea rezultatului.
+registrul clubului să rămână la pas — și, acolo unde instalarea le oferă,
+fotografiile, turele și hărțile raster care merg cu ele. Pagina de față
+acoperă adăugarea unui server, autentificarea, alegerea a ceea ce poartă
+acest dispozitiv, ce circulă și cum, rularea unei sincronizări și citirea
+rezultatului.
 
 > **Este ceva nou.** Ecranul este o lucrare recentă și are asperități,
 > semnalate acolo unde contează. Nimic altceva din aplicație nu depinde de
@@ -20,8 +22,8 @@ propriul server, cu interfață web, conturi și permisiuni. Acolo unde un
 folder FTP doar păstrează fișiere, un registru păstrează *rânduri*: el știe
 cine poate vedea care peșteră, cărui club speologic îi aparține o peșteră și
 cine ce a modificat. A sincroniza cu el înseamnă că dispozitivul
-dumneavoastră și registrul schimbă între ele peșteri, zone de peșteră și
-locuri unul câte unul, fiecare cu răspunsul lui.
+dumneavoastră și registrul schimbă între ele peșteri, locuri, ture, hărți și
+celelalte unul câte unul, fiecare cu răspunsul lui.
 
 Aveți nevoie de unul doar dacă clubul dumneavoastră are deja o astfel de
 instalare. Când nu este configurat nimic, ecranul o spune deschis:
@@ -33,23 +35,49 @@ instalare. Când nu este configurat nimic, ecranul o spune deschis:
 
 Aceasta este starea obișnuită, nu o defecțiune. Tot ce se află pe
 dispozitivul dumneavoastră este al dumneavoastră, fie că există un server,
-fie că nu — aplicația nu are niciodată nevoie de unul ca să funcționeze, iar
-niciun alt ecran nu se schimbă când adăugați unul.
+fie că nu — aplicația nu are niciodată nevoie de unul ca să funcționeze.
+Alte ecrane se schimbă doar acolo unde serverul a adus ceva: o secțiune cu
+fișierele serverului sub documentele unei peșteri, turele altui telefon în
+lista de ture, un speolog de ales pentru un utilizator al telefonului.
 
 **Setări → Server de club (SilexGIS)** este singura cale de intrare. Nu
 există niciun buton de server de club în bara paginii principale și niciun
 card pentru el în meniul aplicației, așa că o sincronizare are loc
-întotdeauna doar pentru că ați deschis acest ecran și ați cerut una.
+întotdeauna doar pentru că ați deschis acest ecran și ați cerut una. Unele
+versiuni ale aplicației sunt construite fără serverul de club; în acestea
+intrarea lipsește pur și simplu din **Setări**.
 
-### Ce nu circulă niciodată
+## Ce circulă
 
-Se schimbă doar peșteri, zone de peșteră, locuri din peșteră și arii de
-suprafață, cu numele, descrierile, coordonatele, adâncimea, codurile de loc,
-conținutul codurilor QR și marcajul de intrare ale acestora. Documentele și
-fotografiile, hărțile raster, turele și rapoartele de tură, înregistrările
-beaconurilor, utilizatorii și istoricul modificărilor **nu** fac deloc parte
-din această sincronizare. Dacă aveți nevoie ca acestea să ajungă pe alt
-dispozitiv, folosiți una dintre cele două rute de mai jos.
+Peșterile, zonele de peșteră, locurile din peșteră și ariile de suprafață
+circulă întotdeauna, în ambele sensuri, cu numele, descrierile,
+coordonatele, adâncimea, codurile de loc, conținutul codurilor QR și
+marcajul de intrare ale acestora. Tot restul circulă doar când instalarea
+oferă acea parte:
+
+| Ce | În ce sens | Instalarea trebuie să ofere |
+|---|---|---|
+| Fotografii și documente | În jos la cerere; în sus în timpul unei sincronizări, dacă lăsați fișierele să plece | **Fotografii și documente** ca să le listeze și să le descarce; **Trimiterea fotografiilor și documentelor** ca să le trimită |
+| Ture și scanările lor | În ambele sensuri | **Ture** |
+| Hărți raster și punctele lor | În ambele sensuri | **Hărți raster**; imaginile lor coboară doar dacă este oferit și **Fotografii și documente** |
+| Ce speolog al clubului este un utilizator al telefonului | În ambele sensuri | **Persoane** |
+| Deciziile unui verificator despre ce ați trimis | În jos | **Verificare** |
+| Modele 3D ale topografiei și locurile puse la stațiile lor | În ambele sensuri | **Modele 3D ale topografiei** — vedeți [Modele 3D de topografie](3d-models.md#cu-silexgis) |
+
+Cardul **Ce oferă serverul** din josul ecranului enumeră aceste părți.
+Înainte de prima sincronizare scrie **Nu se știe până la prima
+sincronizare.**; după una scrie **La ultima sincronizare, și ce face acest
+dispozitiv cu fiecare parte.**, iar fiecare parte spune **Oferit** sau
+**Neoferit** și, într-un rând, ce face telefonul cu ea. Cardul păstrează
+doar ultimul răspuns: fiecare sincronizare întreabă din nou, iar o
+instalare poate opri o parte între două sincronizări. O parte care nu mai
+este oferită dispare și de pe celelalte ecrane — lista fișierelor de pe
+server, alegerea speologului.
+
+Ce nu circulă niciodată: înregistrările beaconurilor, istoricul
+modificărilor, lista participanților unei ture, utilizatorii de pe telefon
+(în afară de numele celor care au făcut ceva ce trimiteți — vedeți
+[Persoane](#persoane)) și setările dumneavoastră.
 
 ## Ce rută de sincronizare să folosiți
 
@@ -60,12 +88,19 @@ mult.
 |---|---|---|
 | [Sincronizare manuală](sync-and-change-log.md) | Un instantaneu complet al dispozitivului, cu documente și hărți raster incluse, sub forma unui fișier pe care îl duceți de mână | Predați date unei singure persoane, pe stick sau prin e-mail, ori vreți să importați o arhivă cu conflictele arătate |
 | [Sincronizare FTP / SFTP](ftp-sync.md) | Aceleași instantanee complete, printr-un folder partajat | O echipă de dispozitive SpeleoLoc se ține singură la pas și nu este implicat niciun registru — un NAS de club, o găzduire web |
-| **Server de club (SilexGIS)** | Peșteri, zone de peșteră, locuri și arii de suprafață, rând cu rând | Registrul clubului este copia de referință, mai multe persoane îl modifică prin interfața lui web, iar telefonul ar trebui să ducă o parte din el pe teren |
+| **Server de club (SilexGIS)** | Peșteri, zone de peșteră, locuri și arii de suprafață, rând cu rând; și, acolo unde instalarea le oferă, fotografii și documente, ture, hărți raster, persoane și modele 3D ale topografiei | Registrul clubului este copia de referință, mai multe persoane îl modifică prin interfața lui web, iar telefonul ar trebui să ducă o parte din el pe teren |
 
 Sunt independente și pot fi folosite împreună: o sincronizare cu serverul de
-club nu atinge profilurile dumneavoastră FTP și invers. Peșterile care sosesc
-de la serverul de club nu sunt înregistrate ca modificări proprii, așa că
-aducerea lor nu face de la sine ca dispozitivul să încarce o nouă arhivă FTP.
+club nu atinge profilurile dumneavoastră FTP și invers. Ce sosește de la
+serverul de club nu este înregistrat ca modificări proprii, așa că aducerea
+lui nu face de la sine ca dispozitivul să încarce o nouă arhivă FTP.
+
+O excepție de la „instantaneu complet”: un fișier descărcat de pe serverul
+de club ca o copie fără locație sau ca o imagine redusă rămâne pe telefonul
+care l-a descărcat, la fel și o hartă raster a cărei imagine este o astfel
+de copie, cu punctele ei. Arhivele sincronizării manuale și FTP le lasă
+deoparte. Alt dispozitiv le primește de la server sau deloc. Vedeți
+[Copiile de pe server](#copiile-de-pe-server).
 
 ## Adăugarea unui server
 
@@ -183,6 +218,9 @@ Selecțiile se fac pe server, nu în aplicație — acest ecran poate doar să
 aleagă dintre cele pe care contul dumneavoastră le are deja. Selecția
 altcuiva nu vă este arătată nici dacă îi puteți vedea peșterile.
 
+Selecția hotărăște mai mult decât peșterile: turele, hărțile, fotografiile
+și modelele care circulă sunt cele ale peșterilor pe care le poartă.
+
 ### Avertismentul despre clubul speologic
 
 O selecție poate exista fără să numească un club speologic. Acestea sunt
@@ -232,6 +270,192 @@ a încărcat-o nimeni nu poate fi niciodată adăugată într-o selecție.
 Porniți-l când contribuiți deliberat cu peșteri noi la registrul clubului și
 luați în calcul să îl opriți din nou după aceea.
 
+## Fotografii și documente
+
+### Trimiterea lor și datele mobile
+
+Trei comutatoare pe un card separat, sub selecție. Toate trei sunt
+**pornite implicit**.
+
+| Comutator | Ce face |
+|---|---|
+| **Trimite fotografiile și documentele** | *Oprit, se trimit doar peșterile și locurile; fotografiile și documentele rămân pe acest dispozitiv.* Oprit reține și o hartă raster nouă, a cărei imagine este un fișier. Turele, punctele și modificările hărților aflate deja pe server pleacă în continuare. |
+| **Doar prin Wi-Fi** | *Fișierele așteaptă Wi-Fi; tot ce nu are fișier pleacă oricum. Hotspotul unui telefon contează ca Wi-Fi.* Și un cablu contează ca Wi-Fi. |
+| **Întreabă înainte de a folosi datele mobile** | Folosit doar cât timp **Doar prin Wi-Fi** este pornit. *Oprit, fișierele doar așteaptă Wi-Fi.* |
+
+Cu toate trei pornite și telefonul departe de Wi-Fi, o sincronizare care are
+fișiere de trimis se oprește să întrebe:
+
+> **Trimiți fișierele prin date mobile?**
+> 3 fotografii și documente (12.4 MB) sunt gata de trimis, iar acest
+> dispozitiv nu este conectat la Wi-Fi.
+
+Apăsați **Trimite acum** sau **Așteaptă Wi-Fi**. Bifați întâi **Ține minte
+alegerea** și răspunsul devine o setare: **Trimite acum** ținut minte
+oprește **Doar prin Wi-Fi**, **Așteaptă Wi-Fi** ținut minte oprește
+**Întreabă înainte de a folosi datele mobile**. Amândouă se văd pe card,
+unde le puteți porni la loc. Sunteți întrebat cel mult o dată pe
+sincronizare, iar răspunsul acoperă la fel fotografiile, documentele și
+imaginile hărților. Dacă părăsiți ecranul înainte să vină întrebarea,
+fișierele așteaptă.
+
+Telefonul se ia după ce raportează sistemul. Wi-Fi-ul de la hotspotul unui
+telefon este Wi-Fi, iar un Wi-Fi taxat pe megabyte nu este deosebit. Când
+sistemul raportează date mobile alături de Wi-Fi sau nu poate spune ce rețea
+este — un VPN singur, de exemplu — telefonul o tratează ca date mobile și
+întreabă.
+
+Ce așteaptă apare la **Necesită atenția ta** ca **3 fotografii și documente
+nu au fost trimise**, cu motivele: așteaptă Wi-Fi, nu mai aveți spațiu pe
+server, sunt prea mari, sunt de un tip pe care serverul nu îl acceptă, nu
+mai sunt pe acest dispozitiv sau au fost întrerupte (**următoarea
+sincronizare continuă**). O peșteră, un loc sau o tură de care atârnă o
+fotografie care așteaptă pleacă oricum.
+
+### Ce pleacă în sus
+
+Fotografiile, documentele, înregistrările audio și filmele dumneavoastră
+pleacă în sus când atârnă de ceva ce serverul deține sau ce trimite aceeași
+sincronizare: o peșteră, o zonă, un loc, o tură sau una dintre scanările ei.
+După aceea, un titlu sau o descriere modificată pleacă drept modificare, iar
+un fișier pe care îl ștergeți aici pleacă drept ștergere.
+
+O fotografie pleacă așa cum este pe telefon, inclusiv locul unde a fost
+făcută, dacă fotografia îl înregistrează. Instalarea hotărăște cine poate
+vedea locația: un cont care nu are voie primește o copie fără ea.
+
+### Ce coboară
+
+Nimic nu se descarcă de la sine. Lista fotografiilor și documentelor de pe
+server coboară odată cu sincronizarea, iar lista de documente a unei
+peșteri, a unei zone de peșteră sau a unui loc primește la sfârșit o
+secțiune **Pe server**, sub numele instalării, cu fișierele de acolo pe care
+telefonul nu le are. Fiecare rând arată felul (**Fotografie**, **Video**,
+**Sunet**, **Document**, **Alt fișier**), mărimea acolo unde se știe și
+**Ai deja acest fișier** când telefonul are același fișier sub altă intrare
+(nu se descarcă din nou) sau **Nu îți este disponibil** când contul
+dumneavoastră nu îl poate descărca.
+
+Bifați ce vreți și apăsați **Descarcă (2)**, sau apăsați **Descarcă
+fișierele obișnuite** pentru cele pe care cel care îngrijește peștera le-a
+marcat ca demne de purtat. O întrebare **Descarcă la** cere apoi o mărime:
+**Original, la mărime completă** sau o imagine redusă de **2400 px**,
+**1200 px**, **480 px** ori **160 px** în lățime — sunt listate doar
+mărimile oferite. **Descarcă fișierele obișnuite** arată cât ar costa
+fiecare alegere, de exemplu *8 fișiere, 15.2 MB*; o copie pe care serverul o
+face la cerere nu are mărime până nu sosește.
+
+O descărcare merge prin orice rețea are telefonul — comutatoarele de Wi-Fi
+privesc trimiterea. La sfârșit, un mesaj numără ce s-a întâmplat: descărcate,
+deja pe acest dispozitiv, care nu mai sunt pe server pentru dumneavoastră,
+care nu sunt date acestui cont, sau care nu au putut fi descărcate
+(**încearcă din nou ca să continui**).
+
+### Copiile de pe server
+
+Ce primește contul dumneavoastră depinde de regulile instalării, fișier cu
+fișier:
+
+- **originalul**, fișierul exact cum este păstrat;
+- o copie **fără locație** — întreaga imagine, rescrisă fără locul unde a
+  fost făcută; astfel de fișiere poartă în listă eticheta **fără locație**;
+- doar **imagini reduse** pe care serverul le desenează la mărimile fixe de
+  mai sus.
+
+O copie fără locație și o imagine redusă rămân pe telefonul care le-a
+descărcat. Nu sunt trimise niciodată înapoi în sus ca și cum ar fi
+originalul, iar arhivele sincronizării manuale și FTP le lasă deoparte,
+împreună cu ce atârnă de ele.
+
+## Persoane
+
+Registrul clubului își cunoaște speologii; telefonul își cunoaște
+utilizatorii. Când instalarea oferă **Persoane**, puteți spune ce speolog
+este un utilizator al telefonului.
+
+Deschideți **Setări → Utilizatori** și apăsați pe un utilizator. Dialogul
+**Editează utilizator** se încheie atunci cu **Speolog pe Clubul Speo
+Example** — numele instalării — cu lista speologilor clubului; cel căruia îi
+aparține contul dumneavoastră este marcat *Invented Caver (tu)*. Alegeți
+unul. Sub căsuță aplicația scrie **Se trimite la următoarea sincronizare**
+până când a plecat, sau **Ales pe server** când legătura a fost făcută în
+interfața web.
+
+- Căsuța apare doar pentru un utilizator care există deja — salvați întâi
+  unul nou — și doar după ce o sincronizare a adus lista speologilor
+  clubului.
+- Alegerea nu poate fi ștearsă de pe telefon, doar înlocuită cu alt speolog.
+  O legătură se desface în interfața web.
+- Ce pleacă în sus despre un utilizator al telefonului este numele de
+  utilizator, prenumele și numele, și doar pentru utilizatorii care au
+  făcut ceva ce trimite sincronizarea sau pentru care ați ales un speolog.
+  Câmpul **Detalii** nu circulă niciodată.
+
+## Ture
+
+Când instalarea oferă **Ture**, turele dumneavoastră din peșterile purtate
+pleacă în sus cu scanările lor: titlul, detaliile, jurnalul turei, începutul
+și sfârșitul, iar pentru fiecare scanare locul, ora și notițele.
+Fotografiile și documentele făcute în timpul turei pleacă odată cu ele când
+**Trimite fotografiile și documentele** permite. Lista participanților nu
+circulă.
+
+Turele înregistrate pe alte telefoane coboară și ele, dar sunt ținute
+deoparte. În lista **Ture trecute / active** a unei peșteri, un comutator
+scrie **Arată turele de pe Clubul Speo Example**, cu **2 de pe Clubul Speo
+Example ascunse** sub el. Porniți-l ca să le listați. Fiecare poartă atunci
+o mică insignă cu un nor (**Înregistrată pe alt telefon, citită de pe
+Clubul Speo Example**), iar rândul de sub titlu scrie **înregistrată de
+Invented Caver** când lista speologilor clubului numește cine a înregistrat-o.
+O tură a altui telefon care încă rulează acolo apare cu **încă deschisă**.
+Comutatorul este din nou oprit de fiecare dată când deschideți lista.
+
+O tură care sosește cu numele uneia aflate deja pe telefon, sau o scanare
+a aceluiași loc în același moment, nu este salvată; cea de aici se păstrează,
+iar **Necesită atenția ta** scrie **2 ture sau scanări nu au fost salvate**.
+
+## Hărți raster
+
+Când instalarea oferă **Hărți raster**, hărțile peșterilor purtate coboară
+cu punctele lor, iar ale dumneavoastră pleacă în sus la fel. Punctele
+adăugate, mutate sau șterse în interfața web sosesc la următoarea
+sincronizare ca orice altă modificare — cu excepția unui punct pe care
+l-ați modificat aici și nu l-ați trimis încă, care rămâne cum l-ați lăsat.
+
+O hartă nouă pleacă în sus doar cât timp **Trimite fotografiile și
+documentele** este pornit, pentru că imaginea ei este un fișier; altfel
+așteaptă, cu punctele ei.
+
+Imaginea unei hărți coboară în timpul sincronizării, prin orice rețea, și
+doar dacă instalarea oferă și **Fotografii și documente**. Este originalul
+acolo unde contul dumneavoastră îl primește, altfel copia fără locație,
+altfel cea mai mare imagine redusă pe care o desenează serverul. Pe o
+imagine redusă aplicația scalează punctele ca să se potrivească, iar o notă
+deasupra hărții spune ce puteți face:
+
+- **Aceasta este o imagine redusă de pe server. Punctele sunt afișate pe ea,
+  dar nu pot fi plasate sau mutate.**
+- **Aceasta este o imagine redusă de pe server. Punctele nu pot fi afișate
+  sau plasate pe ea; punctele rămân salvate.** — când aplicația nu poate
+  spune unde merg, de exemplu la o imagine păstrată culcată pe o parte.
+
+Când imaginea unei hărți este rotită sau oglindită în interfața web,
+imaginea redusă este descărcată din nou, dacă nu ați modificat harta aici
+între timp.
+
+La **Necesită atenția ta**, **2 hărți raster sau puncte de pe hărți nu au
+fost salvate** înseamnă că pe telefon exista deja una cu același nume, sau
+un punct al aceluiași loc pe aceeași hartă, și a fost păstrată. **2 imagini
+de hartă nu au fost descărcate** înseamnă că acele hărți sunt aici fără
+imagine; următoarea sincronizare încearcă din nou.
+
+## Modele 3D ale topografiei
+
+Când instalarea oferă **Modele 3D ale topografiei**, circulă și modelele
+clubului pentru peșterile purtate, împreună cu locurile puse la stațiile
+lor. Au pagina lor: [Modele 3D de topografie — Cu
+SilexGIS](3d-models.md#cu-silexgis).
+
 ## Rularea unei sincronizări
 
 Două butoane pe cardul **Sincronizare**, ambele dezactivate până când este
@@ -241,7 +465,7 @@ indicator rotativ):
 | Buton | Ce face |
 |---|---|
 | **Sincronizează acum** | Rularea obișnuită. Trimite ce s-a schimbat aici, apoi citește ce s-a schimbat pe server de la ultima citire a acestui dispozitiv. |
-| **Citește tot** | Aceeași rulare, doar că jumătatea de citire pornește selecția de la început, nu de unde a rămas. |
+| **Citește tot** | Aceeași rulare, doar că jumătatea de citire pornește fiecare parte de la început, nu de unde a rămas. |
 
 Ambele **trimit întâi și citesc apoi**, intenționat: altfel, o peșteră pe
 care ați șters-o aici v-ar fi înapoiată direct de citirea care ar rula
@@ -261,12 +485,18 @@ numere:
 > 3 primite, 2 trimise, 1 șterse
 
 - **primite** — rânduri scrise în baza dumneavoastră de date, fie nou
-  adăugate, fie actualizate din versiunea serverului.
+  adăugate, fie actualizate din versiunea serverului: peșteri, locuri, ture,
+  scanări, hărți, puncte, modele.
 - **trimise** — rânduri pe care serverul le-a luat de la dumneavoastră.
 - **șterse** — rânduri șterse aici pentru că au fost șterse pe server.
 
-Când nu este nimic de făcut în niciun sens, fraza scrie **La același nivel cu
-serverul** [Already level with the server]. O rulare eșuată arată motivul cu
+Când încărcările unui cont așteaptă un verificator, fraza adaugă câte
+așteaptă (*2 așteaptă verificarea* [2 waiting for review]). Când nu este
+nimic de făcut în niciun sens, fraza scrie **La același nivel cu serverul**
+[Already level with the server]. O parte pe care instalarea a oprit-o în
+timpul rulării este numită la sfârșit — *Serverul nu oferă înregistrările
+turelor în acest moment.* [The server does not offer the trip recordings at
+the moment.] — iar restul rulării a mers mai departe. O rulare eșuată arată motivul cu
 roșu, în cuvintele serverului acolo unde există unele.
 
 Nu există bară de progres, nici detaliu pe fișier și nicio filă de jurnal
@@ -280,7 +510,9 @@ Aceasta este partea distructivă, în ambele sensuri.
 - O peșteră sau un loc **șters pe server** este șters și aici la următoarea
   citire, împreună cu ce atârnă de el pe acest dispozitiv — legăturile lui cu
   hărțile, punctele de tură, legăturile către documente și înregistrările
-  beaconurilor. Nu ajunge într-un coș; a dispărut.
+  beaconurilor. Nu ajunge într-un coș; a dispărut. Turele, hărțile și
+  punctele șterse pe server pleacă la fel; fișierul imagine al unei hărți
+  șterse rămâne.
 - O peșteră sau un loc **pe care îl ștergeți aici**, dacă serverul îl
   cunoștea deja, este trimis ca ștergere la următoarea rulare, iar serverul îl
   elimină *cu tot ce se află în el*.
@@ -292,13 +524,27 @@ date](database-export-import.md).
 
 ## Necesită atenția ta
 
-Când o rulare lasă ceva de decis pentru dumneavoastră, sub cardul de
-sincronizare apare un card **Necesită atenția ta**. Rămâne acolo cât timp
-aplicația rulează, inclusiv dacă părăsiți ecranul și reveniți, dar nu este
-consemnat: închiderea aplicației îl pierde, iar următoarea rulare va scoate
-din nou la suprafață tot ce este încă nerezolvat.
+Când o rulare lasă ceva de decis sau de știut pentru dumneavoastră, sub
+cardul de sincronizare apare un card **Necesită atenția ta**. Rămâne acolo
+cât timp aplicația rulează, inclusiv dacă părăsiți ecranul și reveniți, dar
+cardul în sine nu este consemnat: închiderea aplicației îl pierde. Ce
+așteaptă un verificator sau decizia dumneavoastră *este* consemnat, iar
+următoarea rulare îl numără din nou; refuzurile și rapoartele de apropiere
+nu sunt, iar următoarea rulare scoate la suprafață doar ce este încă
+nerezolvat.
 
-Pot apărea patru feluri de intrări.
+Intrările pe care le poate avea:
+
+- **2 așteaptă decizia ta** — deschide pagina **Necesită o decizie**;
+  vedeți [Verificări și decizii](#verificări-și-decizii).
+- **2 așteaptă verificarea** — vedeți
+  [Verificări și decizii](#verificări-și-decizii).
+- **3 fotografii și documente nu au fost trimise** — vedeți
+  [Trimiterea lor și datele mobile](#trimiterea-lor-și-datele-mobile).
+- **S-a schimbat și pe server**, **Refuzat**, **Exista deja ceva în
+  apropiere** și **rânduri care nu au putut fi salvate**, mai jos.
+- Ture, hărți și imagini de hartă nesalvate sau nedescărcate — vedeți
+  [Ture](#ture) și [Hărți raster](#hărți-raster).
 
 ### S-a schimbat și pe server
 
@@ -314,10 +560,14 @@ fie:
   versiunea lui, pentru că este posibil ca acel cont să nu aibă poziția acelei
   peșteri.
 
+Rândul ajunge totodată pe pagina **Necesită o decizie** și nu este trimis
+din nou până nu alegeți acolo: înapoi la versiunea serverului, sau o
+păstrați pe a dumneavoastră. La fel se întâmplă cu o tură, o hartă, o
+fotografie sau un punct care a întâlnit o versiune mai nouă pe server.
+
 În această versiune nu există o vedere de îmbinare: nimic nu arată cele două
-versiuni una lângă alta. Rezolvarea se reduce la a decide care text este cel
-corect și a modifica peștera aici până când scrie așa — iar când versiunea
-dorită este cea a serverului, la a o schimba acolo.
+versiuni una lângă alta. Ca să ajungeți la un amestec al celor două, luați
+versiunea serverului și apoi modificați-o aici.
 
 ### Refuzat
 
@@ -372,6 +622,70 @@ dumneavoastră nu au nimic în neregulă.
 Dacă ar trebui să aveți acces la acea peșteră, cereți-l pe server, apoi
 reveniți și apăsați **Citește tot** — o rulare obișnuită nu îl va prelua.
 
+## Verificări și decizii
+
+### Când încărcările așteaptă un verificator
+
+O instalare poate marca un cont astfel încât încărcările lui să fie
+verificate. Ce trimite acel cont este atunci reținut de server pentru un
+verificator, în loc să fie scris. Telefonul numără asta la **Necesită
+atenția ta**:
+
+> **2 așteaptă verificarea**
+> Ce trimite acest cont este verificat de cineva înainte să fie salvat pe
+> server. Până atunci vezi în continuare versiunea ta.
+
+O modificare reținută nu este trimisă din nou cât timp așteaptă. Modificați-o
+din nou și noua versiune pleacă în sus și așteaptă în locul ei.
+
+Când instalarea oferă **Verificare**, fiecare sincronizare citește la
+sfârșit deciziile verificatorilor. O modificare acceptată devine a
+serverului și nu vi se mai cere nimic; când verificatorul a acceptat doar o
+parte din ea, versiunea serverului o înlocuiește pe a dumneavoastră aici. O
+modificare respinsă, sau acceptată dar care nu a putut fi scrisă, ajunge pe
+pagina **Necesită o decizie**.
+
+### Pagina Necesită o decizie
+
+Se ajunge la ea din **2 așteaptă decizia ta** de pe cardul **Necesită
+atenția ta**:
+
+> Respinse de un verificator sau modificate și pe server. Alege ce faci cu
+> fiecare.
+
+Fiecare element își arată numele (sau **(fără nume)**), ce este —
+**Peșteră, zonă sau loc**, **Utilizator al telefonului**, **Fotografie sau
+document**, **Unde este atașată o fotografie sau un document**,
+**Înregistrare de tură**, **Scanare din tură**, **Hartă raster**, **Punct pe
+o hartă raster**, **Loc la o stație a unui model 3D** — și de ce se află
+acolo:
+
+- **Respins** — un verificator a spus nu, cu nota lui dedesubt când a scris
+  una;
+- **Nu a putut fi salvat** — acceptat, dar refuzat când serverul l-a scris,
+  cu codul serverului; adesea contul a pierdut un drept;
+- **S-a schimbat și pe server** — vedeți mai sus;
+- **Alt punct marchează acest loc pe harta de pe server** — punctul
+  dumneavoastră și unul aflat deja pe server stau pentru același loc;
+  perechea lui la modelele 3D este **Serverul pune deja acest loc la altă
+  stație a acestui model**.
+
+**Ștergerea ta** marchează o ștergere de-a dumneavoastră, iar **Nou aici;
+serverul nu l-a avut niciodată** ceva ce există doar pe telefon. Butoanele,
+după caz:
+
+| Buton | Ce se întâmplă |
+|---|---|
+| **Folosește versiunea serverului** | Versiunea dumneavoastră este înlocuită cu a serverului: **Versiunea serverului a fost pusă la loc.** Când telefonul nu a primit versiunea serverului, butonul scrie **Recitește de pe server**, iar răspunsul este **Versiunea serverului vine la următoarea sincronizare.** |
+| **Păstrează-o pe a mea, nu o trimite** | **Păstrată pe acest dispozitiv. Se trimite din nou când o modifici.** |
+| **Șterge** | Pentru ceva ce serverul nu a avut niciodată. **Ștergi această ciornă?** — *Serverul nu a avut-o niciodată. Dacă o ștergi, dispare de pe acest dispozitiv.* |
+| **Șterge punctul meu** | Pentru un al doilea punct pe același loc. Punctul dumneavoastră pleacă, iar cel al serverului sosește la următoarea sincronizare. Un loc la stația unui model 3D primește în schimb **Elimină stația mea**. |
+
+Nimic nu se hotărăște în locul dumneavoastră. Până alegeți, fiecare element
+rămâne pe telefon așa cum l-ați lăsat și nu este trimis din nou — o peșteră
+nouă respinsă rămâne o ciornă locală. Când nu mai rămâne nimic, pagina scrie
+**Nimic nu așteaptă decizia ta.**
+
 ## Uită
 
 **Uită** de pe cardul serverului întreabă mai întâi:
@@ -384,25 +698,35 @@ Apăsați **Uită** pentru a confirma sau **Anulează**.
 
 **Ce elimină:** numele și adresa serverului, autentificarea salvată pentru
 el, selecția pe care ați ales-o, setarea **Trimite peșterile explorate în
-altă parte**, poziția de citire a acestui dispozitiv și evidența
-dispozitivului despre ce rânduri deține deja serverul și la ce versiune.
+altă parte** și cele trei comutatoare pentru fișiere, pozițiile de citire
+ale acestui dispozitiv, evidența lui despre ce rânduri deține deja serverul
+și la ce versiune, modificările care așteaptă verificarea și elementele de
+pe **Necesită o decizie**, lista speologilor clubului și speologul ales
+pentru fiecare utilizator al telefonului, lista fotografiilor și
+documentelor de pe server, fișierele trimise pe jumătate și ce știa despre
+turele și hărțile pe care le au amândoi în comun.
 
 **Ce nu elimină:** nicio peșteră, zonă, loc, document, fotografie, hartă sau
-tură. Nu se șterge nimic din baza dumneavoastră de date și absolut nimic de
+tură — inclusiv fișierele descărcate și turele și hărțile citite de pe
+server. Nu se șterge nimic din baza dumneavoastră de date și absolut nimic de
 pe server — registrul clubului rămâne neatins, iar celelalte dispozitive
-autentificate la el merg mai departe ca înainte.
+autentificate la el merg mai departe ca înainte. O modificare reținută
+pentru un verificator rămâne reținută acolo; telefonul doar nu o mai
+numără.
 
 Nu se poate anula, dar nu se pierde nimic de valoare: puteți adăuga serverul
 din nou și vă puteți autentifica.
 
-Un lucru la care să vă așteptați dacă o faceți. Dispozitivul a uitat ce
-conveniseră el și serverul că spune fiecare peșteră comună, așa că următoarea
-sincronizare începe acea discuție de la zero, iar la acea primă citire
-versiunea serverului pentru un rând pe care îl dețin ambele părți se scrie
-peste cea locală. Acolo unde cele două copii au venit din aceeași origine —
-exact cazul de după o uitare și o readăugare — o modificare făcută între timp
-pe telefon poate fi înlocuită de textul serverului. Sincronizați înainte de a
-uita sau trimiteți din nou modificările în sus după aceea.
+Lucruri la care să vă așteptați dacă o faceți. Lista de ture nu mai
+deosebește turele altui telefon de ale dumneavoastră, așa că nu mai sunt
+ascunse. Iar dispozitivul a uitat ce conveniseră el și serverul că spune
+fiecare rând comun, așa că următoarea sincronizare începe acea discuție de
+la zero, iar la acea primă citire versiunea serverului pentru un rând pe
+care îl dețin ambele părți se scrie peste cea locală. Acolo unde cele două
+copii au venit din aceeași origine — exact cazul de după o uitare și o
+readăugare — o modificare făcută între timp pe telefon poate fi înlocuită de
+textul serverului. Sincronizați înainte de a uita sau trimiteți din nou
+modificările în sus după aceea.
 
 ## Depanare
 
@@ -424,11 +748,31 @@ uita sau trimiteți din nou modificările în sus după aceea.
   parte a registrului.
 - **Nimic din ce trimiteți nu ajunge, dar nici nu se refuză ceva** — o
   peșteră cu adevărat nouă nu este trimisă decât dacă **Trimite peșterile
-  explorate în altă parte** este pornit.
+  explorate în altă parte** este pornit. Dacă rezultatul spune că ceva
+  așteaptă verificarea, a ajuns pe server și așteaptă un verificator.
+- **Fotografiile nu pleacă niciodată** — verificați **Trimite fotografiile
+  și documentele** și că **Ce oferă serverul** arată **Trimiterea
+  fotografiilor și documentelor** ca **Oferit**. Departe de Wi-Fi, cu
+  **Întreabă înainte de a folosi datele mobile** oprit, ele așteaptă Wi-Fi.
+- **Nicio secțiune „Pe server” sub documentele unei peșteri** — instalarea
+  nu oferă **Fotografii și documente**, nu există acolo nimic ce nu aveți
+  deja sau nu a rulat nicio sincronizare de când a fost adăugat.
+- **Nicio căsuță „Speolog pe …” la editarea unui utilizator** — utilizatorul
+  este nou (salvați-l întâi) sau instalarea nu oferă **Persoane** contului
+  dumneavoastră. Rulați o sincronizare după ce începe să le ofere.
+- **Lipsesc turele altui telefon** — sunt ascunse; porniți **Arată turele
+  de pe …** în lista de ture.
+- **Lipsesc punctele de pe o hartă** — harta arată o imagine redusă de pe
+  server; nota de deasupra hărții o spune. Punctele sunt în continuare
+  salvate.
+- **Pagina Necesită o decizie nu poate fi găsită** — se deschide doar de pe
+  cardul **Necesită atenția ta**. Rulați o sincronizare; tot ce mai
+  așteaptă este numărat din nou.
 - **Numerele par mai mici decât v-ați așteptat** — cardul numără ce a fost
   primit, trimis și șters. Rândurile trimise de server pe care această
   versiune a aplicației nu le modelează și rândurile reținute pentru că aveți
-  o modificare proprie netrimisă nu sunt numărate nicăieri pe ecran.
+  o modificare proprie netrimisă nu sunt numărate nicăieri pe ecran. Nici
+  fișierele descărcate din **Pe server** nu sunt numărate.
 
 ## Asperități în această versiune
 
@@ -439,10 +783,18 @@ Spuse pe față, ca să nu fiți surprins:
 - După ce o selecție este aleasă, rândul arată identificatorul ei, nu numele.
 - Nu există detaliu de progres și nici jurnal al unei rulări — doar numerele
   finale.
-- Nu există vedere de îmbinare pentru o peșteră care s-a schimbat de ambele
+- Nu există vedere de îmbinare pentru un rând care s-a schimbat de ambele
   părți.
 - Rapoartele de duplicate și refuzurile trăiesc doar până la închiderea
   aplicației.
+- Pagina **Necesită o decizie** se deschide doar de pe cardul **Necesită
+  atenția ta**, așa că după repornirea aplicației aveți nevoie de o
+  sincronizare ca să ajungeți la ea.
+- Imaginile hărților coboară în timpul unei sincronizări prin orice rețea;
+  comutatoarele de Wi-Fi rețin doar ce se trimite.
+- Speologul ales pentru un utilizator al telefonului poate fi schimbat, dar
+  nu șters de pe telefon.
+- Comutatorul care arată turele altui telefon nu este ținut minte.
 - Seturile, rădăcinile și cluburile speologice se creează și se modifică în
   interfața web a instalării, niciodată aici.
 
@@ -453,4 +805,9 @@ Spuse pe față, ca să nu fiți surprins:
 - [Partajarea datelor între echipe](../workflows/sharing-data.md)
 - [Export, import și copie de siguranță a bazei de date](database-export-import.md)
 - [Peșteri și zone de peșteră](caves-and-areas.md)
+- [Documente](documents.md)
+- [Ture](trips.md)
+- [Hărți](raster-maps.md)
+- [Utilizatori](users.md)
+- [Modele 3D de topografie](3d-models.md)
 - [Setări](settings.md)
