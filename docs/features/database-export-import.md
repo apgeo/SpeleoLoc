@@ -207,8 +207,10 @@ templates, the shared settings and the change history.
 Left behind:
 
 - **Ruuvi sensor history**,
-- device-local settings such as which cave you had open, and which FTP
-  archives this device has already downloaded.
+- device-local settings such as which cave you had open, your FTP and
+  club-server profiles, and which FTP archives this device has already
+  downloaded. An archive cannot change these settings, even one edited
+  by hand to try.
 
 An archive made by a *newer* version of the app is refused; update the app
 first. One made by an older version is upgraded on the way in.

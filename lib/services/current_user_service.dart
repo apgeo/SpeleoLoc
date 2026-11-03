@@ -74,6 +74,19 @@ class ConfigKey {
   /// JSON-encoded QCRI hash configuration (length, retry settings). Synced.
   static const String qcriHashConfig = 'qcri_hash_config';
 
+  /// The only keys that travel between devices in sync and merge archives.
+  /// Everything else is device-only: sync endpoints and profiles, the device
+  /// and user identity, and sync bookkeeping. The receiving device decides
+  /// from this set alone, never from the `is_synced` flag on an incoming
+  /// row, so an archive cannot repoint a profile whose stored password or
+  /// token is keyed by its uuid.
+  static const Set<String> synced = {
+    placeCodeStrategy,
+    placeCodeStrategyConfig,
+    qcriMode,
+    qcriHashConfig,
+  };
+
   // ----- Archive / sync import-export behaviour -----
   /// JSON object controlling archive import/export behaviour.
   /// Schema: `{ "copy_device_uuid_from_archive_on_import": bool }`.

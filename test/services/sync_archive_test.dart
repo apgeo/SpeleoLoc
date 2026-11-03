@@ -567,6 +567,156 @@ void main() {
     await b.db.close();
   });
 
+  test(
+    'an archive cannot rewrite device-only settings, even flagged synced',
+    () async {
+      final a = await buildHarness();
+      final b = await buildHarness();
+      final aConfig = ConfigurationRepository(a.db);
+      final bConfig = ConfigurationRepository(b.db);
+
+      await aConfig.writeString(
+        ConfigKey.placeCodeStrategy,
+        'per_cave_sequential',
+        isSynced: true,
+      );
+      const localProfiles =
+          '[{"profileUuid":"00000000-0000-7000-8000-000000000001",'
+          '"host":"ftp.example.test"}]';
+      await bConfig.writeString(ConfigKey.ftpProfiles, localProfiles);
+      await bConfig.writeString(
+        ConfigKey.ftpDefaultProfileUuid,
+        '00000000-0000-7000-8000-000000000001',
+      );
+      final bDevice = await bConfig.readString(ConfigKey.deviceUuid);
+      final bUser = await bConfig.readString(ConfigKey.currentUserUuid);
+
+      final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+      final future = DateTime.now()
+          .add(const Duration(days: 1))
+          .millisecondsSinceEpoch;
+      Map<String, dynamic> hostile(String title, String value) => {
+        'title': title,
+        'value': value,
+        'is_synced': 1,
+        'created_at': future,
+        'updated_at': future,
+      };
+      final crafted = await _appendRowsToTable(
+        zip.path,
+        tempDir.path,
+        'configurations',
+        [
+          hostile(
+            ConfigKey.ftpProfiles,
+            '[{"profileUuid":"00000000-0000-7000-8000-000000000001",'
+            '"host":"attacker.example.test"}]',
+          ),
+          hostile(
+            ConfigKey.ftpDefaultProfileUuid,
+            '00000000-0000-7000-8000-000000000002',
+          ),
+          hostile(
+            ConfigKey.silexgisProfiles,
+            '[{"profileUuid":"x","baseUrl":"https://attacker.example.test"}]',
+          ),
+          hostile(ConfigKey.deviceUuid, '00000000-0000-7000-8000-00000000dead'),
+          hostile(
+            ConfigKey.currentUserUuid,
+            '00000000-0000-7000-8000-00000000beef',
+          ),
+        ],
+      );
+
+      await b.sync.importFromZip(crafted);
+
+      expect(await bConfig.readString(ConfigKey.ftpProfiles), localProfiles);
+      expect(
+        await bConfig.readString(ConfigKey.ftpDefaultProfileUuid),
+        '00000000-0000-7000-8000-000000000001',
+      );
+      expect(await bConfig.readString(ConfigKey.silexgisProfiles), isNull);
+      expect(await bConfig.readString(ConfigKey.deviceUuid), bDevice);
+      expect(await bConfig.readString(ConfigKey.currentUserUuid), bUser);
+      final flag = await b.db
+          .customSelect(
+            "SELECT is_synced FROM configurations WHERE title = 'ftp_profiles'",
+          )
+          .getSingle();
+      expect(
+        flag.data['is_synced'],
+        0,
+        reason: 'a device-only key must not be flipped into the synced set',
+      );
+      expect(
+        await bConfig.readString(ConfigKey.placeCodeStrategy),
+        'per_cave_sequential',
+        reason: 'a key this device syncs still merges from the same archive',
+      );
+
+      await a.db.close();
+      await b.db.close();
+    },
+  );
+
+  test('a device-only key flagged synced locally is not exported', () async {
+    final a = await buildHarness();
+    final aConfig = ConfigurationRepository(a.db);
+    await aConfig.writeString(ConfigKey.qcriMode, 'plain', isSynced: true);
+    // A row flipped to synced by an earlier, unfiltered import.
+    await aConfig.writeString(ConfigKey.ftpProfiles, '[]', isSynced: true);
+
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final entry = ZipDecoder()
+        .decodeBytes(await zip.readAsBytes())
+        .findFile('tables/configurations.jsonl')!;
+    final titles = utf8
+        .decode(entry.content as List<int>)
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .map((l) => (jsonDecode(l) as Map<String, dynamic>)['title'])
+        .toSet();
+    expect(titles, contains(ConfigKey.qcriMode));
+    expect(titles, isNot(contains(ConfigKey.ftpProfiles)));
+
+    await a.db.close();
+  });
+
+  test(
+    'merging a whole database file leaves device-only settings alone',
+    () async {
+      final b = await buildHarness();
+      final bConfig = ConfigurationRepository(b.db);
+      await bConfig.writeString(ConfigKey.ftpProfiles, '[]');
+
+      final sourceFile = File(p.join(tempDir.path, 'source.sqlite'));
+      final source = AppDatabase.file(sourceFile);
+      final sourceConfig = ConfigurationRepository(source);
+      await sourceConfig.writeString(
+        ConfigKey.qcriMode,
+        'hashed',
+        isSynced: true,
+      );
+      await sourceConfig.writeString(
+        ConfigKey.ftpProfiles,
+        '[{"profileUuid":"00000000-0000-7000-8000-000000000001",'
+        '"host":"attacker.example.test"}]',
+        isSynced: true,
+      );
+      await source.customStatement('UPDATE configurations SET updated_at = ?', [
+        DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch,
+      ]);
+      await source.close();
+
+      await b.sync.importFromDatabaseFile(sourceFile);
+
+      expect(await bConfig.readString(ConfigKey.ftpProfiles), '[]');
+      expect(await bConfig.readString(ConfigKey.qcriMode), 'hashed');
+
+      await b.db.close();
+    },
+  );
+
   test('a malformed JSONL line is skipped, not fatal to the import', () async {
     final a = await buildHarness();
     final b = await buildHarness();
@@ -629,6 +779,34 @@ Future<String> _rewriteSchemaVersion(
   final data = ZipEncoder().encode(out)!;
   final destPath = p.join(destDir, 'relabeled_$newSchema.zip');
   await File(destPath).writeAsBytes(data);
+  return destPath;
+}
+
+/// Appends [rows] as JSONL lines to `tables/<tableName>.jsonl` in a copy of
+/// the archive and returns the new zip path. Stands in for an archive written
+/// by a modified client.
+Future<String> _appendRowsToTable(
+  String srcZipPath,
+  String destDir,
+  String tableName,
+  List<Map<String, dynamic>> rows,
+) async {
+  final src = ZipDecoder().decodeBytes(await File(srcZipPath).readAsBytes());
+  final out = Archive();
+  final target = 'tables/$tableName.jsonl';
+  for (final f in src.files) {
+    if (!f.isFile) continue;
+    final content = (f.content as List<int>);
+    if (f.name == target) {
+      final extra = rows.map(jsonEncode).join('\n');
+      final appended = utf8.encode('${utf8.decode(content).trim()}\n$extra\n');
+      out.addFile(ArchiveFile(target, appended.length, appended));
+    } else {
+      out.addFile(ArchiveFile(f.name, content.length, content));
+    }
+  }
+  final destPath = p.join(destDir, 'appended_rows.zip');
+  await File(destPath).writeAsBytes(ZipEncoder().encode(out)!);
   return destPath;
 }
 

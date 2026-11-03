@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
@@ -368,11 +369,12 @@ class SyncTableRegistry {
     ),
     // `configurations` is the one syncable table with an INTEGER primary key
     // and no uuid/audit columns, so it can't use the generic uuid-keyed
-    // upsert. Only rows flagged `is_synced = 1` (the place-code strategy and
-    // QCRI settings) travel; device-local rows (device_uuid, current_user,
-    // last-open-cave, …) are is_synced = 0 and never exported. Keyed on the
-    // `title` UNIQUE, plain last-writer-wins on updated_at — a config setting
-    // is a "latest wins" value, so it is not routed through the resolver.
+    // upsert. Only the keys in [ConfigKey.synced] (the place-code strategy
+    // and QCRI settings) travel, on both export and import; a local
+    // `is_synced = 1` on any other key may have come from an older, unfiltered
+    // import, so the flag alone is not trusted. Keyed on the `title` UNIQUE,
+    // plain last-writer-wins on updated_at — a config setting is a "latest
+    // wins" value, so it is not routed through the resolver.
     SyncTableHandler(
       name: 'configurations',
       dump: () async {
@@ -382,15 +384,19 @@ class SyncTableRegistry {
               'FROM configurations WHERE is_synced = 1',
             )
             .get();
-        return rows.map((r) => Map<String, dynamic>.from(r.data)).toList();
+        return rows
+            .where((r) => ConfigKey.synced.contains(r.data['title']))
+            .map((r) => Map<String, dynamic>.from(r.data))
+            .toList();
       },
       upsert: (rows, _) => _upsertConfigurations(rows),
     ),
   ];
 
   /// Title-keyed LWW merge for the syncable `configurations` rows. Ignores
-  /// any incoming row not flagged `is_synced = 1` so a malformed or hostile
-  /// archive cannot flip a device-local key into the synced set.
+  /// any incoming row whose title is not in [ConfigKey.synced], whatever its
+  /// `is_synced` says, so a malformed or hostile archive can neither rewrite
+  /// a device-only key nor flip one into the synced set.
   Future<UpsertCounters> _upsertConfigurations(
     List<Map<String, dynamic>> rows,
   ) async {
@@ -399,8 +405,9 @@ class SyncTableRegistry {
     var skipped = 0;
 
     for (final row in rows) {
-      final title = row['title'] as String?;
-      if (title == null || (row['is_synced'] as int?) != 1) {
+      final title = row['title'];
+      if (title is! String || !ConfigKey.synced.contains(title)) {
+        _log.warning('ignoring incoming configuration row for "$title"');
         skipped++;
         continue;
       }
