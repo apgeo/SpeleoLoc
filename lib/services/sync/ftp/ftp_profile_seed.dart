@@ -95,9 +95,8 @@ Future<void> ensureSeededFtpProfile(
     ),
     password: seed.password,
   );
-  // Unconditional: a replace-import can bring its own default profile in
-  // from the archive's configurations, and the shipped endpoint has to be the
-  // active one on a hand-out build.
+  // Unconditional: another profile may already be the default, and the
+  // shipped endpoint has to be the active one on a hand-out build.
   await repository.setDefaultUuid(seededFtpProfileUuid);
   AppLogger.of(
     'FtpProfileSeed',

@@ -160,6 +160,12 @@ Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
 sync from getting confused afterwards.
 
+It also keeps its own [FTP server profiles](ftp-sync.md) and its choice of
+default profile; the archive's are not taken over. Saved passwords stay in
+each device's secure keystore, so a profile list from another device could
+otherwise send your password to a server it names. On a new phone this
+means setting the FTP profiles up again after the import.
+
 ### Merge with existing data
 
 A merge works exactly like importing a [manual sync](sync-and-change-log.md)
@@ -249,9 +255,9 @@ everything from an archive, use **Data Export / Import → Import Archive →
 Replace all data** instead.
 
 The chosen file then replaces the current database and the app restarts.
-Your device keeps its own identity. Any documentation
-files or map images the restored database refers to must already be on the
-device, or they will show as missing.
+Your device keeps its own identity and its FTP server profiles. Any
+documentation files or map images the restored database refers to must
+already be on the device, or they will show as missing.
 
 **This is destructive and irreversible.** The database you had is deleted,
 not archived.
@@ -265,7 +271,8 @@ data**, which wipes everything and loads the bundled sample dataset.
 
 Each asks twice: a first confirmation, then a bluntly worded second one
 warning that all data will be erased. After that the app restarts. Nothing
-is backed up on your behalf.
+is backed up on your behalf. The app language and your FTP server profiles
+are kept.
 
 ## Loading the ready-made test dataset
 
