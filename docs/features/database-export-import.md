@@ -166,6 +166,11 @@ each device's secure keystore, so a profile list from another device could
 otherwise send your password to a server it names. On a new phone this
 means setting the FTP profiles up again after the import.
 
+[SilexGIS servers](silexgis-sync.md) come from the archive, but a sign-in
+stays only for a server the archive names at the same address. If a server
+this device was signed in to is missing from the archive, or points somewhere
+else there, you sign in to it again.
+
 ### Merge with existing data
 
 A merge works exactly like importing a [manual sync](sync-and-change-log.md)
@@ -255,7 +260,8 @@ everything from an archive, use **Data Export / Import → Import Archive →
 Replace all data** instead.
 
 The chosen file then replaces the current database and the app restarts.
-Your device keeps its own identity and its FTP server profiles. Any
+Your device keeps its own identity and its FTP server profiles, and its
+SilexGIS sign-ins follow the same rule as on a replace. Any
 documentation files or map images the restored database refers to must
 already be on the device, or they will show as missing.
 

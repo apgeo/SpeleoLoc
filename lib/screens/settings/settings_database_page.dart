@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:drift/drift.dart' show Variable;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:file_picker/file_picker.dart';
@@ -19,16 +20,19 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/services/silexgis/silexgis_sign_in_carry_over.dart';
+import 'package:speleoloc/providers/providers.dart';
 
 /// Database management settings: reinitialize, export.
-class SettingsDatabasePage extends StatefulWidget {
+class SettingsDatabasePage extends ConsumerStatefulWidget {
   const SettingsDatabasePage({super.key});
 
   @override
-  State<SettingsDatabasePage> createState() => _SettingsDatabasePageState();
+  ConsumerState<SettingsDatabasePage> createState() =>
+      _SettingsDatabasePageState();
 }
 
-class _SettingsDatabasePageState extends State<SettingsDatabasePage>
+class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
     with
         AppBarMenuMixin<SettingsDatabasePage>,
         ProductTourMixin<SettingsDatabasePage> {
@@ -272,6 +276,11 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       final devicePreferences = await DevicePreferencesCarryOver.capture(
         appDatabase,
       );
+      final silexgisTokens = ref.read(silexgisTokenStoreProvider);
+      final silexgisSignIns = await SilexgisSignInCarryOver.capture(
+        appDatabase,
+        silexgisTokens,
+      );
 
       await appDatabase.close();
       final directory = await getApplicationDocumentsDirectory();
@@ -305,6 +314,7 @@ class _SettingsDatabasePageState extends State<SettingsDatabasePage>
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
       await devicePreferences.applyTo(appDatabase);
+      await silexgisSignIns.applyTo(appDatabase, silexgisTokens);
 
       if (context.mounted) {
         Navigator.pop(context);

@@ -354,6 +354,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       );
       await service.importArchiveReplace(
         zipPath: zipPath,
+        silexgisTokens: ref.read(silexgisTokenStoreProvider),
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
       );
 
@@ -458,6 +459,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     try {
       await TestArchiveImportService.importFrom(
         urlOrPath: testArchiveUrl,
+        silexgisTokens: ref.read(silexgisTokenStoreProvider),
         onProgress: (msg) => messageNotifier.value = msg,
       );
       if (context.mounted) Navigator.pop(context);
