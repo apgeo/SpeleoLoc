@@ -100,9 +100,10 @@ month's full archive. It is not a backup.
 appears only in special test builds, and ordinary builds refuse to write
 passwords into an archive even so. Where it does appear and is switched
 on, the archive carries your server logins in readable form, and importing
-it on another device installs them into that device's saved
+it on another special test build installs them into that device's saved
 [FTP profiles](ftp-sync.md) without asking, on **both** Replace and Merge
-imports. Never pass such an archive to anyone.
+imports. Never pass such an archive to anyone. An ordinary build ignores
+the logins in such an archive and imports the rest.
 
 The same rule applies in reverse: only import archives from people you
 would trust with your own server login.

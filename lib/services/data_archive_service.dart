@@ -17,6 +17,7 @@ import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
+import 'package:speleoloc/utils/constants.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
 // via data_archive_service.dart keep working after the Phase 2.4 split.
 export 'package:speleoloc/services/archive/archive_models.dart';
@@ -208,7 +209,10 @@ class DataArchiveService {
       // Restore FTP passwords from the archive's ftp_credentials.json into
       // the OS keystore (flutter_secure_storage). This must run after the
       // DB is re-opened so FtpProfileRepository can write to it.
-      await _restoreFtpPasswords(tempDir.path, onProgress: onProgress);
+      await _restoreFtpCredentialsIfAllowed(
+        tempDir.path,
+        onProgress: onProgress,
+      );
     } finally {
       try {
         await tempDir.delete(recursive: true);
@@ -251,8 +255,10 @@ class DataArchiveService {
       onProgress?.call('Copying files...');
       final filesCopied = await _copyNewFiles(tempDir.path, report.warnings);
 
-      // Restore FTP passwords from the archive's ftp_credentials.json.
-      await _restoreFtpPasswords(tempDir.path, onProgress: onProgress);
+      await _restoreFtpCredentialsIfAllowed(
+        tempDir.path,
+        onProgress: onProgress,
+      );
 
       return report.copyWith(filesCopied: filesCopied);
     } finally {
@@ -361,6 +367,25 @@ class DataArchiveService {
   // ---------------------------------------------------------------------------
   //  Misc helpers
   // ---------------------------------------------------------------------------
+
+  /// Restores `ftp_credentials.json` only on a build that can also export
+  /// it. The restore upserts profiles by uuid and keeps the stored password
+  /// of a profile whose host it replaces, so on any other build an archive
+  /// carrying the file could redirect a saved login to another server.
+  Future<void> _restoreFtpCredentialsIfAllowed(
+    String extractDir, {
+    ProgressCallback? onProgress,
+  }) async {
+    if (!exportFtpPasswordsEnabled) {
+      if (await File('$extractDir/ftp_credentials.json').exists()) {
+        _log.warning(
+          'archive carries ftp_credentials.json; ignored on this build',
+        );
+      }
+      return;
+    }
+    await _restoreFtpPasswords(extractDir, onProgress: onProgress);
+  }
 
   /// Reads `ftp_credentials.json` from [extractDir] (if present) and upserts
   /// each FTP profile together with its password into [FtpProfileRepository].

@@ -38,8 +38,9 @@ const double zoomTextThreshold = 2.0;
 const bool showCaveDeleteButtons = false;
 
 /// When true, the data export page shows an option to include FTP account
-/// passwords in the archive. Defaults to `false` in production builds; can
-/// be enabled at build time via
+/// passwords in the archive, and importing an archive restores them. When
+/// false an imported archive's passwords file is ignored. Defaults to `false`
+/// in production builds; can be enabled at build time via
 /// `--dart-define=EXPORT_FTP_PASSWORDS_ENABLED=true` (e.g. for QA archive
 /// round-trip testing). Never enable in shipping builds.
 const bool exportFtpPasswordsEnabled = bool.fromEnvironment(
