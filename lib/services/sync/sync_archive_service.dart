@@ -357,6 +357,24 @@ class SyncArchiveService {
               .where((name) => !local.contains(name)),
         );
       }
+      // File names arrive in rows from other devices; one naming a place
+      // outside the documents folder would otherwise be read and uploaded.
+      // A plain loop, not a closure: a closure here would capture `this` into
+      // the context the isolate job below is sent with.
+      final contained = <String>[];
+      for (final relPath in assetRelPaths) {
+        if (relPath.isEmpty || containedPath(baseDir.path, relPath) != null) {
+          contained.add(relPath);
+        } else {
+          _log.warning(
+            'not exporting a file named outside the documents folder: '
+            '$relPath',
+          );
+        }
+      }
+      assetRelPaths
+        ..clear()
+        ..addAll(contained);
     }
 
     final nowMs = _clock.nowMs();

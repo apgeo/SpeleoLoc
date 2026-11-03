@@ -971,6 +971,37 @@ void main() {
       expect(documents.files.waitingForNetwork, 1);
     });
   });
+
+  group('a row naming a file outside the documentation folder', () {
+    test('sends no bytes for it and counts it as missing', () async {
+      // Synced rows come from other devices; one naming the live database or
+      // a parent folder must never get that file uploaded as a document.
+      final (atRoot, _) = await photo('root.jpg');
+      final (escaping, _) = await photo('escape.jpg');
+      final outside = File('${base.path}_outside.sqlite');
+      await File('${base.path}/speleo_loc.sqlite').writeAsString('database');
+      await outside.writeAsString('outside');
+      addTearDown(() async {
+        if (await outside.exists()) await outside.delete();
+      });
+      for (final (id, name) in <(Uuid, String)>[
+        (atRoot, 'speleo_loc.sqlite'),
+        (escaping, '../${outside.uri.pathSegments.last}'),
+      ]) {
+        await (db.update(db.documentationFiles)
+              ..where((t) => t.uuid.equalsValue(id)))
+            .write(DocumentationFilesCompanion(fileName: Value(name)));
+      }
+
+      final client = ScriptedClient(<ScriptedResponse>[]);
+      final (_, documents) = await run(client);
+
+      expect(touchedTransfers(client), isFalse);
+      expect(sentSection(client, SyncUploadSection.documents), isEmpty);
+      expect(documents.keptBack, containsAll(<Uuid>[atRoot, escaping]));
+      expect(documents.files.missing, 2);
+    });
+  });
 }
 
 class _NotNow implements SilexgisFileSendingGate {

@@ -1,11 +1,13 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:path/path.dart' as p;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_documents.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
+import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_row_composer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_run.dart';
@@ -18,6 +20,7 @@ import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.da
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 
 /// The `documents` section: documentation files new to the installation,
 /// edited here, or removed here.
@@ -73,6 +76,17 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
   @override
   SyncUploadSection get section => SyncUploadSection.documents;
 
+  /// Where the bytes of a document whose row names [fileName] live, or null
+  /// when the name points anywhere but the documentation folder. Rows also
+  /// arrive from other devices, and one naming the database or a parent
+  /// folder must not get that file sent as a document.
+  static String? _documentPath(Directory base, String fileName) {
+    final path = containedPath(base.path, fileName);
+    if (path == null) return null;
+    final folder = p.join(base.path, SilexgisDocumentFileStore.storageSubDir);
+    return p.isWithin(folder, path) ? path : null;
+  }
+
   @override
   Future<List<SyncUploadItem>> build(SilexgisUploadContext context) async {
     final plan = _run.plan = await _planner.plan(context);
@@ -82,7 +96,14 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
     Directory? base;
     for (final document in plan.documents.where((d) => d.sendsBytes)) {
       base ??= await _baseDir();
-      final file = File('${base.path}/${document.row!.fileName}');
+      final path = _documentPath(base, document.row!.fileName);
+      if (path == null) {
+        _log.warning('a file to send is named outside the documents folder');
+        missing++;
+        _run.keptBack.add(document.id);
+        continue;
+      }
+      final file = File(path);
       if (!await file.exists()) {
         _log.warning('a file to send is no longer on this device');
         missing++;

@@ -99,6 +99,49 @@ void main() {
     await a.db.close();
     await b.db.close();
   });
+
+  test('export leaves out a file a synced row names outside the documents '
+      'folder', () async {
+    final a = await device('a');
+    // A file the app can read but that is no document: the row naming it
+    // came from another device.
+    await File(p.join(a.docs.parent.path, 'private.txt')).writeAsString('x');
+    final legit = File(p.join(a.docs.path, 'documentation_files', 'hall.txt'));
+    await legit.parent.create(recursive: true);
+    await legit.writeAsString('a legitimate document');
+    for (final name in [
+      '../private.txt',
+      '/${p.join(a.docs.parent.path, 'private.txt')}',
+      'documentation_files/hall.txt',
+    ]) {
+      await a.db
+          .into(a.db.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: Uuid.v7(),
+              title: 'Doc',
+              fileName: name,
+              fileSize: 1,
+              fileType: 'txt',
+            ),
+          );
+    }
+
+    final exported = await a.sync.exportToZip(root.path, filenameHint: 'a.zip');
+
+    final archive = ZipDecoder().decodeBytes(
+      await File(exported.path).readAsBytes(),
+    );
+    expect(
+      [
+        for (final f in archive.files)
+          if (f.name.startsWith('assets/')) f.name,
+      ],
+      ['assets/documentation_files/hall.txt'],
+    );
+
+    await a.db.close();
+  });
 }
 
 class _Device {
