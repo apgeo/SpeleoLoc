@@ -6,6 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/utils/clock.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 
 /// Says whether a documentation file is a copy that must never take new
 /// content in place.
@@ -59,9 +60,14 @@ class DocumentationByteEditService {
 
   Future<void> _overwrite(DocumentationFile document, Uint8List bytes) async {
     final base = await _baseDir();
-    await File(
-      '${base.path}/${document.fileName}',
-    ).writeAsBytes(bytes, flush: true);
+    final path = containedPath(base.path, document.fileName);
+    if (path == null) {
+      throw FileSystemException(
+        'documentation file name leaves the documents folder',
+        document.fileName,
+      );
+    }
+    await File(path).writeAsBytes(bytes, flush: true);
     final hash = sha256.convert(bytes).toString();
     final author = await _currentUser.currentOrSystem();
     await _db.transaction(() async {

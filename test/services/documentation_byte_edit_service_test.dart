@@ -170,4 +170,22 @@ void main() {
 
     expect(await service.save(original, edited), original.uuid);
   });
+
+  test(
+    'a file name that leaves the documents folder is never written',
+    () async {
+      final own = await picture();
+      final escaping = own.copyWith(fileName: '../outside.jpg');
+
+      await expectLater(
+        service.save(escaping, edited),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(await File('${base.parent.path}/outside.jpg').exists(), isFalse);
+      final row = await (db.select(
+        db.documentationFiles,
+      )..where((t) => t.uuid.equalsValue(own.uuid))).getSingle();
+      expect(row.fileHash, own.fileHash);
+    },
+  );
 }

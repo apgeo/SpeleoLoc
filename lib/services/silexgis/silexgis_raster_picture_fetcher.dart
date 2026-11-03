@@ -18,6 +18,7 @@ import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dar
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/image_format_sniffer.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 
 /// What fetching the map pictures did.
 class SilexgisMapPicturesReport {
@@ -215,8 +216,9 @@ class SilexgisRasterPictureFetcher {
     await partial.rename('${base.path}/$relative');
     if (relative != map.fileName && _isFetchedName(map, documentId)) {
       // The name given before the picture said what it is.
-      final earlier = File('${base.path}/${map.fileName}');
-      if (await earlier.exists()) await earlier.delete();
+      final earlierPath = containedPath(base.path, map.fileName);
+      final earlier = earlierPath == null ? null : File(earlierPath);
+      if (earlier != null && await earlier.exists()) await earlier.delete();
     }
 
     // The map's own stamp stays: the picture is the installation's, and the

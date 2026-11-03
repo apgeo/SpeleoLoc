@@ -19,6 +19,7 @@ import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
 // via data_archive_service.dart keep working after the Phase 2.4 split.
 export 'package:speleoloc/services/archive/archive_models.dart';
@@ -282,7 +283,14 @@ class DataArchiveService {
     List<String> relativePaths,
   ) async {
     for (final relPath in relativePaths) {
-      final file = File('$baseDir/$relPath');
+      final path = containedPath(baseDir, relPath);
+      if (path == null) {
+        _log.warning(
+          'not exporting a file outside the documents folder: $relPath',
+        );
+        continue;
+      }
+      final file = File(path);
       if (await file.exists()) {
         final bytes = await file.readAsBytes();
         archive.addFile(ArchiveFile(relPath, bytes.length, bytes));
