@@ -249,7 +249,6 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   late final TextEditingController _password;
   late final TextEditingController _remoteFolder;
   late bool _passiveMode;
-  late bool _allowInvalidCertificate;
   bool _passwordChanged = false;
   bool _showPassword = false;
   bool _testing = false;
@@ -278,7 +277,6 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     _password = TextEditingController(text: isEditing ? '********' : '');
     _remoteFolder = TextEditingController(text: e?.remoteFolder ?? '/');
     _passiveMode = e?.passiveMode ?? true;
-    _allowInvalidCertificate = e?.allowInvalidCertificate ?? false;
     _password.addListener(() {
       if (!_suppressPasswordListener) {
         _hasPlaceholder = false;
@@ -324,7 +322,8 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
           ? '/'
           : _remoteFolder.text.trim(),
       passiveMode: _passiveMode,
-      allowInvalidCertificate: _allowInvalidCertificate,
+      allowInvalidCertificate:
+          widget.existing?.allowInvalidCertificate ?? false,
     );
   }
 
@@ -590,13 +589,17 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                 value: _passiveMode,
                 onChanged: (v) => setState(() => _passiveMode = v),
               ),
+            // The FTP library accepts every server certificate and offers no
+            // way to change that, so a switch here could promise nothing. The
+            // profile keeps its stored choice for when verification exists.
             if (_protocol == FtpProtocol.ftps)
-              SwitchListTile(
+              ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(LocServ.inst.t('ftp_allow_invalid_cert')),
-                subtitle: Text(LocServ.inst.t('ftp_allow_invalid_cert_desc')),
-                value: _allowInvalidCertificate,
-                onChanged: (v) => setState(() => _allowInvalidCertificate = v),
+                leading: const Icon(Icons.warning_amber_outlined),
+                title: Text(LocServ.inst.t('ftp_ftps_cert_not_verified')),
+                subtitle: Text(
+                  LocServ.inst.t('ftp_ftps_cert_not_verified_desc'),
+                ),
               ),
             const SizedBox(height: 24),
             OutlinedButton.icon(

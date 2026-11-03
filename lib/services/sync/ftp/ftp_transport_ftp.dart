@@ -30,6 +30,11 @@ class FtpTransportFtp implements IFtpTransport {
         'SFTP profiles must use FtpTransportSftp, not FtpTransportFtp',
       );
     }
+    // ftpconnect accepts any server certificate (it passes
+    // `onBadCertificate: (_) => true`) and opens data connections without
+    // TLS, with no option to change either. FTPS here therefore protects the
+    // sign-in from eavesdropping only, and the profile editor says so rather
+    // than offering a certificate switch it could not honour.
     final security = profile.protocol == FtpProtocol.ftps
         ? SecurityType.ftpes
         : SecurityType.ftp;

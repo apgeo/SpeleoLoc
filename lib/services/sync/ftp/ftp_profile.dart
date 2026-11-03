@@ -40,8 +40,12 @@ class FtpProfile {
   /// sync-v2 dev log is applied within this folder.
   final String remoteFolder;
 
-  /// Whether to treat self-signed TLS certs as valid (FTPS only). Keep off by
-  /// default; turning on is a per-profile opt-in for lab environments.
+  /// Whether to treat self-signed TLS certs as valid (FTPS only).
+  ///
+  /// Not applied, and no longer offered in the editor: ftpconnect accepts
+  /// every server certificate and exposes no hook to change that. The field
+  /// stays so profiles keep the choice they were saved with until FTPS can
+  /// verify certificates.
   final bool allowInvalidCertificate;
 
   /// FTP passive mode (data channel initiated by client). Generally required

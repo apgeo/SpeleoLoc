@@ -55,7 +55,7 @@ replaces the whole database, such as restoring from a backup.
 | **Password** | Required on a new profile. It is kept in the device's secure keystore, not in the database. On a saved profile the box shows a `********` placeholder with the helper text **Leave blank to keep the current password** — tap it to type a new one, or leave it alone to keep the old one. |
 | **Remote folder** | The folder where SpeleoLoc reads and writes archives, for example `/speleo_loc/sync/`. Leave it empty and it falls back to the server root, `/`. Everyone on the team must point at the *same* folder. |
 | **Passive mode** | FTP and FTPS only, on by default. "Recommended when the server is behind NAT" — it is what makes FTP work through home routers and mobile networks. Turn it off only if your server insists on active mode. |
-| **Allow invalid TLS certificate** | FTPS only, off by default, meant for a trusted server with a self-signed certificate. In the current version this switch is remembered with the profile but is **not applied to the connection**, so a self-signed FTPS server may still be refused. |
+| **Server certificate not checked** | FTPS only. Not a setting but a warning: in this version FTPS encrypts the sign-in, yet it accepts any server certificate, so it does not stop someone on the network from posing as your server, and the archives themselves are not sent encrypted. There is therefore no "Allow invalid TLS certificate" switch. Use SFTP when this matters. |
 
 The eye button beside the password fetches the stored password and shows
 it on screen in clear, so use it only when nobody is looking over your
@@ -308,6 +308,10 @@ already handled — the most recent 500 — so it does not fetch them twice.
   and your entire caving database across the network in clear.
 - SFTP uses **password authentication only**; key files are not
   supported yet.
+- FTPS, in this version, does **not** check the server's certificate,
+  and only the sign-in is encrypted; the archives travel unencrypted.
+  It protects your password from someone who only listens, not from
+  someone who poses as the server.
 - Passwords go into the device's secure keystore, not the database, and
   are never written into a sync archive.
 - Data archives exported from the data export screen **never contain**

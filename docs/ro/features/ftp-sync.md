@@ -60,7 +60,7 @@ de date, cum ar fi restaurarea dintr-o copie de siguranță.
 | **Parolă** | Obligatorie la un profil nou. Se păstrează în seiful securizat al dispozitivului, nu în baza de date. La un profil salvat, căsuța arată un substituent `********`, cu textul ajutător **Lasă gol pentru a păstra parola curentă** — atingeți-o pentru a tasta una nouă sau lăsați-o în pace pentru a o păstra pe cea veche. |
 | **Folder pe server** | Folderul în care SpeleoLoc citește și scrie arhive, de exemplu `/speleo_loc/sync/`. Dacă îl lăsați gol, se folosește rădăcina serverului, `/`. Toți cei din echipă trebuie să indice *același* folder. |
 | **Mod pasiv** | Doar FTP și FTPS, pornit implicit. „Recomandat când serverul e în spatele NAT” — el este cel care face FTP-ul să meargă prin routerele de acasă și prin rețelele mobile. Opriți-l doar dacă serverul dumneavoastră insistă pe modul activ. |
-| **Acceptă certificat TLS invalid** | Doar FTPS, oprit implicit, gândit pentru un server de încredere cu certificat auto-semnat. În versiunea curentă acest comutator este reținut împreună cu profilul, dar **nu este aplicat conexiunii**, așa că un server FTPS auto-semnat poate fi în continuare refuzat. |
+| **Certificatul serverului nu este verificat** | Doar FTPS. Nu este o setare, ci un avertisment: în această versiune FTPS criptează autentificarea, dar acceptă orice certificat de server, deci nu împiedică pe cineva din rețea să se dea drept serverul dumneavoastră, iar arhivele însele nu sunt trimise criptat. De aceea nu există un comutator „Acceptă certificat TLS invalid”. Folosiți SFTP când contează acest lucru. |
 
 Butonul cu ochi de lângă parolă aduce parola stocată și o arată pe ecran
 în clar, așa că folosiți-l doar când nu se uită nimeni peste umărul
@@ -317,6 +317,10 @@ aducă de două ori.
   speologică.
 - SFTP folosește **doar autentificare cu parolă**; fișierele de cheie nu
   sunt încă acceptate.
+- FTPS, în această versiune, **nu** verifică certificatul serverului și
+  criptează doar autentificarea; arhivele circulă necriptate. Vă
+  protejează parola de cineva care doar ascultă, nu de cineva care se dă
+  drept server.
 - Parolele ajung în seiful securizat al dispozitivului, nu în baza de
   date, și nu sunt scrise niciodată într-o arhivă de sincronizare.
 - Arhivele de date exportate din ecranul de export al datelor **nu conțin
