@@ -325,10 +325,13 @@ class SyncArchiveService {
         assetRelPaths.addAll(
           (await _db
                   .customSelect(
+                    // By file name as well as by row: another device's row
+                    // naming a server copy's file must not carry it off.
                     'SELECT DISTINCT file_name FROM documentation_files '
-                    'WHERE deleted_at IS NULL AND uuid NOT IN ('
-                    'SELECT document_uuid FROM silexgis_file_copy '
-                    'WHERE held_as IN (${_placeholders(serverOnlyKinds)}))',
+                    'WHERE deleted_at IS NULL AND file_name NOT IN ('
+                    'SELECT d.file_name FROM documentation_files d '
+                    'JOIN silexgis_file_copy c ON c.document_uuid = d.uuid '
+                    'WHERE c.held_as IN (${_placeholders(serverOnlyKinds)}))',
                     variables: <Variable<Object>>[
                       for (final kind in serverOnlyKinds) Variable(kind),
                     ],
