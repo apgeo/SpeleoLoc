@@ -216,7 +216,7 @@ class SilexgisRasterPictureFetcher {
     await partial.rename('${base.path}/$relative');
     if (relative != map.fileName && _isFetchedName(map, documentId)) {
       // The name given before the picture said what it is.
-      final earlierPath = containedPath(base.path, map.fileName);
+      final earlierPath = containedDocumentsPath(base.path, map.fileName);
       final earlier = earlierPath == null ? null : File(earlierPath);
       if (earlier != null && await earlier.exists()) await earlier.delete();
     }

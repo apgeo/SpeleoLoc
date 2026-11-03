@@ -8,7 +8,7 @@ import 'package:speleoloc/utils/contained_path.dart';
 /// that directory: names come from synced rows, which another device wrote.
 Future<String> getDocumentsFilePath(String fileName) async {
   final directory = await getApplicationDocumentsDirectory();
-  final path = containedPath(directory.path, fileName);
+  final path = containedDocumentsPath(directory.path, fileName);
   if (path == null) {
     throw FileSystemException(
       'file name leaves the documents folder',
@@ -23,7 +23,7 @@ Future<String> getDocumentsFilePath(String fileName) async {
 /// directory.
 Future<File?> getDocumentsFile(String fileName) async {
   final directory = await getApplicationDocumentsDirectory();
-  final path = containedPath(directory.path, fileName);
+  final path = containedDocumentsPath(directory.path, fileName);
   if (path == null) return null;
   final file = File(path);
   return file.existsSync() ? file : null;

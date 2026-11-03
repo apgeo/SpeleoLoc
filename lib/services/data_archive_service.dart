@@ -283,7 +283,7 @@ class DataArchiveService {
     List<String> relativePaths,
   ) async {
     for (final relPath in relativePaths) {
-      final path = containedPath(baseDir, relPath);
+      final path = containedDocumentsPath(baseDir, relPath);
       if (path == null) {
         _log.warning(
           'not exporting a file outside the documents folder: $relPath',
@@ -327,7 +327,12 @@ class DataArchiveService {
             relPath == 'ftp_credentials.json') {
           continue;
         }
-        final dest = File('${docsDir.path}/$relPath');
+        final destPath = containedDocumentsPath(docsDir.path, relPath);
+        if (destPath == null) {
+          _log.warning('not restoring a file named as the database: $relPath');
+          continue;
+        }
+        final dest = File(destPath);
         await dest.parent.create(recursive: true);
         await entity.copy(dest.path);
       }
@@ -350,7 +355,12 @@ class DataArchiveService {
             relPath == 'ftp_credentials.json') {
           continue;
         }
-        final dest = File('${docsDir.path}/$relPath');
+        final destPath = containedDocumentsPath(docsDir.path, relPath);
+        if (destPath == null) {
+          warnings.add('Skipped $relPath: named as the database');
+          continue;
+        }
+        final dest = File(destPath);
         if (!await dest.exists()) {
           try {
             await dest.parent.create(recursive: true);

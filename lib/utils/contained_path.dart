@@ -42,3 +42,22 @@ bool isPlainFileName(String name) =>
     !name.contains('/') &&
     !name.contains(r'\') &&
     _relativeSegments(name) != null;
+
+/// The live database's file name at the top of the documents folder.
+const String databaseFileName = 'speleo_loc.sqlite';
+
+/// Like [containedPath] for the documents folder, which also holds the live
+/// database: refuses the database file and its SQLite sidecars (`-journal`,
+/// `-wal`, `-shm`). A synced row naming the database would otherwise have it
+/// uploaded, and an archive entry written as its rollback journal would be
+/// replayed into it on the next read, replacing the whole database. Compared
+/// without regard to case, since iOS file systems ignore it.
+String? containedDocumentsPath(String documentsDir, String relativeName) {
+  final path = containedPath(documentsDir, relativeName);
+  if (path == null) return null;
+  final top = p.split(p.relative(path, from: documentsDir)).first.toLowerCase();
+  if (top == databaseFileName || top.startsWith('$databaseFileName-')) {
+    return null;
+  }
+  return path;
+}

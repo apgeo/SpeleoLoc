@@ -65,6 +65,10 @@ void main() {
       'assets//${p.join(root.path, 'escape_5.txt')}',
       'assets/.',
       'assets/documentation_files/..',
+      // The live database's sidecars: a planted rollback journal would be
+      // replayed into the database on its next read.
+      'assets/speleo_loc.sqlite-journal',
+      'assets/SPELEO_LOC.SQLITE-wal',
     ];
     final crafted = await _withExtraEntries(exported.path, root.path, {
       'assets/documentation_files/hall.txt': 'a legitimate nested asset',
@@ -92,6 +96,14 @@ void main() {
       expect(_existsAnywhere(root, 'escape_$i.txt'), isFalse, reason: '$i');
     }
     expect(
+      File(p.join(b.docs.path, 'speleo_loc.sqlite-journal')).existsSync(),
+      isFalse,
+    );
+    expect(
+      File(p.join(b.docs.path, 'SPELEO_LOC.SQLITE-wal')).existsSync(),
+      isFalse,
+    );
+    expect(
       report.warnings.where((w) => w.contains('outside the documents folder')),
       hasLength(hostile.length),
     );
@@ -109,7 +121,10 @@ void main() {
     final legit = File(p.join(a.docs.path, 'documentation_files', 'hall.txt'));
     await legit.parent.create(recursive: true);
     await legit.writeAsString('a legitimate document');
+    // Stands in for the live database, which sits in the documents folder.
+    await File(p.join(a.docs.path, 'speleo_loc.sqlite')).writeAsString('db');
     for (final name in [
+      'speleo_loc.sqlite',
       '../private.txt',
       '/${p.join(a.docs.parent.path, 'private.txt')}',
       'documentation_files/hall.txt',

@@ -60,7 +60,7 @@ class DocumentationByteEditService {
 
   Future<void> _overwrite(DocumentationFile document, Uint8List bytes) async {
     final base = await _baseDir();
-    final path = containedPath(base.path, document.fileName);
+    final path = containedDocumentsPath(base.path, document.fileName);
     if (path == null) {
       throw FileSystemException(
         'documentation file name leaves the documents folder',

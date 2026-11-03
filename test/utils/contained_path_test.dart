@@ -91,4 +91,31 @@ void main() {
       }
     });
   });
+
+  group('containedDocumentsPath', () {
+    test('refuses the database and its sidecars, in any letter case', () {
+      for (final name in [
+        'speleo_loc.sqlite',
+        'speleo_loc.sqlite-journal',
+        'speleo_loc.sqlite-wal',
+        'speleo_loc.sqlite-shm',
+        'SPELEO_LOC.SQLITE-journal',
+        './speleo_loc.sqlite',
+      ]) {
+        expect(containedDocumentsPath(base, name), isNull, reason: name);
+      }
+    });
+
+    test('keeps documents, including nested names that merely look alike', () {
+      expect(
+        containedDocumentsPath(base, 'documentation_files/a.jpg'),
+        p.join(base, 'documentation_files', 'a.jpg'),
+      );
+      expect(
+        containedDocumentsPath(base, 'documentation_files/speleo_loc.sqlite'),
+        p.join(base, 'documentation_files', 'speleo_loc.sqlite'),
+      );
+      expect(containedDocumentsPath(base, '../x'), isNull);
+    });
+  });
 }

@@ -9,6 +9,7 @@ import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 import 'package:speleoloc/data/source/database/test_data_helper.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 export 'package:speleoloc/utils/uuid.dart' show Uuid, UuidConverter;
@@ -753,7 +754,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final filePath = File(p.join(dbFolder.path, 'speleo_loc.sqlite'));
+    final filePath = File(p.join(dbFolder.path, databaseFileName));
     return NativeDatabase.createInBackground(filePath, enableMigrations: true);
   });
 }

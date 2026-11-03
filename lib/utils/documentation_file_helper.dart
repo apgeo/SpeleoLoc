@@ -215,7 +215,7 @@ class DocumentationFileHelper {
   // never trusted to stay inside the documents folder on its own.
   static Future<String> _existingFilePath(String relativePath) async {
     final dir = await getApplicationDocumentsDirectory();
-    final path = containedPath(dir.path, relativePath);
+    final path = containedDocumentsPath(dir.path, relativePath);
     if (path == null) {
       throw FileSystemException(
         'file name leaves the documents folder',
