@@ -109,10 +109,12 @@ de siguranță.
 normală — apare doar în versiuni speciale de test, iar versiunile
 obișnuite refuză oricum să scrie parole într-o arhivă. Acolo unde apare și
 este pornit, arhiva poartă datele dumneavoastră de autentificare la server
-în formă lizibilă, iar importarea ei pe alt dispozitiv le instalează în
-[profilurile FTP](ftp-sync.md) salvate ale acelui dispozitiv fără să
-întrebe, la **ambele** tipuri de import, Înlocuire și Îmbinare. Nu dați
-niciodată o astfel de arhivă nimănui.
+în formă lizibilă, iar importarea ei pe o altă versiune specială de test
+le instalează în [profilurile FTP](ftp-sync.md) salvate ale acelui
+dispozitiv fără să întrebe, la **ambele** tipuri de import, Înlocuire și
+Îmbinare. Nu dați niciodată o astfel de arhivă nimănui. O versiune
+obișnuită ignoră datele de autentificare dintr-o astfel de arhivă și
+importă restul.
 
 Aceeași regulă se aplică și invers: importați arhive doar de la oameni
 cărora le-ați încredința propriile date de autentificare la server.
@@ -172,6 +174,18 @@ Dispozitivul dumneavoastră își păstrează propria identitate printr-o
 arhiva, iar asta este ceea ce împiedică sincronizarea să se încurce după
 aceea.
 
+Își păstrează și propriile [profiluri de server FTP](ftp-sync.md) și
+profilul ales implicit; cele din arhivă nu sunt preluate. Parolele salvate
+rămân în depozitul securizat al fiecărui dispozitiv, așa că o listă de
+profiluri venită de pe alt dispozitiv v-ar putea trimite altfel parola la
+un server pe care îl numește ea. Pe un telefon nou, asta înseamnă că
+profilurile FTP se configurează din nou după import.
+
+[Serverele SilexGIS](silexgis-sync.md) vin din arhivă, dar o autentificare
+rămâne valabilă doar pentru un server pe care arhiva îl numește la aceeași
+adresă. Dacă un server la care acest dispozitiv era autentificat lipsește
+din arhivă sau indică acolo altă adresă, vă autentificați din nou.
+
 ### Îmbinare cu datele existente
 
 O îmbinare funcționează exact ca importul unei arhive de
@@ -227,7 +241,10 @@ Rămân în urmă:
 
 - **istoricul senzorilor Ruuvi**,
 - setările locale ale dispozitivului, cum ar fi peștera pe care o aveați
-  deschisă și arhivele FTP pe care acest dispozitiv le-a descărcat deja.
+  deschisă, profilurile de server FTP și ale serverului clubului și
+  arhivele FTP pe care acest dispozitiv le-a descărcat deja. O arhivă nu
+  poate schimba aceste setări, nici măcar una modificată de mână în acest
+  scop.
 
 O arhivă făcută de o versiune *mai nouă* a aplicației este refuzată;
 actualizați întâi aplicația. Una făcută de o versiune mai veche este adusă
@@ -270,8 +287,9 @@ a restaura totul dintr-o arhivă, folosiți în schimb **Export / Import Date
 → Importă Arhivă → Înlocuire totală**.
 
 Fișierul ales înlocuiește apoi baza de date curentă, iar aplicația
-repornește. Dispozitivul dumneavoastră își păstrează propria identitate.
-Orice fișiere de documentație sau imagini de hărți la care se referă baza
+repornește. Dispozitivul dumneavoastră își păstrează propria identitate și
+profilurile de server FTP, iar autentificările SilexGIS urmează aceeași
+regulă ca la o înlocuire. Orice fișiere de documentație sau imagini de hărți la care se referă baza
 de date restaurată trebuie să fie deja pe dispozitiv, altfel vor apărea ca
 lipsă.
 
@@ -288,7 +306,8 @@ goală. Versiunile de dezvoltare adaugă deasupra lui un al doilea,
 
 Fiecare întreabă de două ori: o primă confirmare, apoi una formulată fără
 menajamente, care avertizează că toate datele vor fi șterse. După aceea
-aplicația repornește. Nimic nu este salvat în locul dumneavoastră.
+aplicația repornește. Nimic nu este salvat în locul dumneavoastră. Limba
+aplicației și profilurile de server FTP se păstrează.
 
 ## Încărcarea setului de date de test gata făcut
 
