@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:archive/archive.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -49,13 +50,25 @@ class TripReportExportService {
     return destName;
   }
 
-  /// Deletes a template file from the templates directory.
+  /// Deletes a template file from the templates directory. A name that is
+  /// not a plain file name is left alone: template rows sync from other
+  /// devices, and joined as it is such a name can reach any file.
   Future<void> deleteTemplateFile(String fileName) async {
-    final dir = await getTemplatesDir();
-    final file = File(p.join(dir, fileName));
+    final file = await _templateFile(fileName);
+    if (file == null) {
+      log.warning('not deleting a template named outside its folder');
+      return;
+    }
     if (file.existsSync()) {
       await file.delete();
     }
+  }
+
+  /// The template called [fileName] inside the templates directory, or null
+  /// when the name is not a plain file name.
+  Future<File?> _templateFile(String fileName) async {
+    if (!isPlainFileName(fileName)) return null;
+    return File(p.join(await getTemplatesDir(), fileName));
   }
 
   /// Detects the format from a file extension.
@@ -73,9 +86,8 @@ class TripReportExportService {
     required String templateFileName,
     required String text,
   }) async {
-    final dir = await getTemplatesDir();
-    final templateFile = File(p.join(dir, templateFileName));
-    if (!templateFile.existsSync()) {
+    final templateFile = await _templateFile(templateFileName);
+    if (templateFile == null || !templateFile.existsSync()) {
       throw StateError('Template file not found: $templateFileName');
     }
 
