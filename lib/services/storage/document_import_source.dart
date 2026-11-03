@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 
 /// A subdirectory of the user-picked bulk-import root, holding the files for
 /// one cave.
@@ -50,8 +51,7 @@ class DocumentImportSourcePicker {
       final children = await saf.listChildren(picked.treeUri);
       final dirs = [
         for (final entry in children)
-          if (entry.isDirectory)
-            _SafImportDirectory(saf, picked.treeUri, entry),
+          if (entry.isDirectory) SafImportDirectory(saf, picked.treeUri, entry),
       ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       return ImportRoot(name: picked.name, directories: dirs);
     }
@@ -124,8 +124,9 @@ class _IoImportableFile implements ImportableFile {
 //  SAF implementation (Android)
 // ---------------------------------------------------------------------------
 
-class _SafImportDirectory implements ImportDirectory {
-  _SafImportDirectory(this._saf, this._treeUri, this._entry);
+/// A folder inside a document tree the user picked through SAF.
+class SafImportDirectory implements ImportDirectory {
+  SafImportDirectory(this._saf, this._treeUri, this._entry);
 
   final SafStorageService _saf;
   final String _treeUri;
@@ -142,12 +143,20 @@ class _SafImportDirectory implements ImportDirectory {
         _treeUri,
         documentId: _entry.documentId,
       );
-      final files = [
-        for (final child in children)
-          if (!child.isDirectory && !child.name.startsWith('.'))
-            _SafImportableFile(_saf, _treeUri, child),
-      ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      return files;
+      final files = <_SafImportableFile>[];
+      for (final child in children) {
+        if (child.isDirectory || child.name.startsWith('.')) continue;
+        // The display name is whatever the providing app reports, and it
+        // becomes the name of the local copy; one carrying a path would
+        // write that copy outside its temp folder.
+        if (!isPlainFileName(child.name)) {
+          _log.warning('Skipping a file whose name is not a plain file name');
+          continue;
+        }
+        files.add(_SafImportableFile(_saf, _treeUri, child));
+      }
+      return files
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     } catch (e, st) {
       _log.warning('Could not list SAF directory ${_entry.name}', e, st);
       return const [];
