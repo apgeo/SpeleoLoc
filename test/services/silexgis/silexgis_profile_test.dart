@@ -8,6 +8,7 @@ import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 
 void main() {
   late AppDatabase db;
@@ -214,4 +215,144 @@ void main() {
       },
     );
   });
+
+  group('pointing a profile at another server', () {
+    final rowId = Uuid.v7();
+
+    /// A profile that has been signed in and has synced: everything the old
+    /// installation issued is on the device.
+    Future<SilexgisProfile> boundProfile() async {
+      final bound = profile.copyWith(
+        syncSetId: 'set-1',
+        uploadsNewRoots: true,
+        sendsFiles: false,
+        servedFeatures: <String>['trips'],
+      );
+      await repo.save(bound);
+      await tokens.write('p-1', 'refresh-token');
+      await localState.writeSetState(
+        'p-1',
+        'set-1',
+        cursor: 'MXwxNjM4',
+        setRevision: 4,
+      );
+      await localState.writeRevision(
+        'p-1',
+        rowId,
+        entityTable: 'caves',
+        revision: 'r1',
+      );
+      return bound;
+    }
+
+    test(
+      'drops the old server\'s credential and everything it issued',
+      () async {
+        final bound = await boundProfile();
+
+        await repo.save(bound.copyWith(baseUrl: 'https://test.example.org'));
+
+        // The next run must not present the old installation's 45-day refresh
+        // token to whatever answers at the new address.
+        expect(await tokens.read('p-1'), isNull);
+        expect((await localState.readSetState('p-1', 'set-1')).cursor, isNull);
+        expect(await localState.readRevision('p-1', rowId), isNull);
+
+        final stored = (await repo.find('p-1'))!;
+        expect(stored.baseUrl, 'https://test.example.org');
+        // The selection and what was offered are the old server's; the account
+        // was an account there.
+        expect(stored.syncSetId, isNull);
+        expect(stored.servedFeatures, isNull);
+        expect(stored.accountEmail, isEmpty);
+        // Off again until the caver turns it on for this server: what the
+        // device publishes by default is decided per installation.
+        expect(stored.uploadsNewRoots, isFalse);
+        // The device's own preferences and the caver's name for it stay.
+        expect(stored.displayName, 'Clubul Speo Example');
+        expect(stored.sendsFiles, isFalse);
+        expect(await repo.getDefaultUuid(), 'p-1');
+      },
+    );
+
+    test('another port, scheme or path prefix is another server', () async {
+      for (final address in <String>[
+        'https://speo.example.org:8443',
+        'http://speo.example.org',
+        'https://speo.example.org/other',
+      ]) {
+        final bound = await boundProfile();
+        await repo.save(bound.copyWith(baseUrl: address));
+        expect(await tokens.read('p-1'), isNull, reason: address);
+        expect((await repo.find('p-1'))!.syncSetId, isNull, reason: address);
+      }
+    });
+
+    test('renaming keeps the sign-in and the conversation', () async {
+      final bound = await boundProfile();
+
+      await repo.save(bound.copyWith(displayName: 'Renamed'));
+
+      expect(await tokens.read('p-1'), 'refresh-token');
+      expect(
+        (await localState.readSetState('p-1', 'set-1')).cursor,
+        'MXwxNjM4',
+      );
+      expect(await localState.readRevision('p-1', rowId), 'r1');
+      final stored = (await repo.find('p-1'))!;
+      expect(stored.syncSetId, 'set-1');
+      expect(stored.accountEmail, 'caver@example.org');
+      expect(stored.uploadsNewRoots, isTrue);
+    });
+
+    test(
+      'a trailing slash or a change of letter case is the same server',
+      () async {
+        final bound = await boundProfile();
+
+        await repo.save(bound.copyWith(baseUrl: 'https://Speo.Example.org/'));
+
+        expect(await tokens.read('p-1'), 'refresh-token');
+        expect(await localState.readRevision('p-1', rowId), 'r1');
+        expect((await repo.find('p-1'))!.syncSetId, 'set-1');
+      },
+    );
+
+    test(
+      'keeps every local row: only the binding to the server goes',
+      () async {
+        final bound = await boundProfile();
+        await db.into(db.caves).insert(Cave(uuid: rowId, title: 'Test Cave'));
+
+        await repo.save(bound.copyWith(baseUrl: 'https://test.example.org'));
+
+        final caves = await db.select(db.caves).get();
+        expect(caves.map((c) => c.title), <String>['Test Cave']);
+      },
+    );
+
+    test('a credential the keystore will not let go of keeps the old '
+        'address', () async {
+      final stuck = _UndeletableTokenStore();
+      final guarded = SilexgisProfileRepository(
+        ConfigurationRepository(db),
+        stuck,
+        localState,
+      );
+      await guarded.save(profile);
+      await stuck.write('p-1', 'refresh-token');
+
+      await expectLater(
+        guarded.save(profile.copyWith(baseUrl: 'https://test.example.org')),
+        throwsA(isA<IoException>()),
+      );
+      expect((await guarded.find('p-1'))!.baseUrl, 'https://speo.example.org');
+    });
+  });
+}
+
+/// A keystore whose delete fails the way the platform one does: quietly.
+class _UndeletableTokenStore extends InMemoryRefreshTokenStore {
+  @override
+  Future<void> delete(String profileUuid) async {}
 }

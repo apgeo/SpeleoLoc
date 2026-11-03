@@ -14,6 +14,7 @@ import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/uuid.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -78,7 +79,12 @@ class _SilexgisSyncSettingsPageState
                 else ...<Widget>[
                   _ServerCard(
                     profile: profile,
-                    onEdit: () => _editProfile(profile),
+                    // A run holds the old address and keeps writing its
+                    // credential and state under this profile, which would
+                    // undo the reset an address change makes.
+                    onEdit: progress.isRunning
+                        ? null
+                        : () => _editProfile(profile),
                     onSignIn: () => _signIn(profile),
                     onForget: () => _forget(profile),
                   ),
@@ -144,9 +150,41 @@ class _SilexgisSyncSettingsPageState
       context: context,
       builder: (_) => _ProfileDialog(existing: existing),
     );
-    if (edited == null) return;
-    await ref.read(silexgisProfileRepositoryProvider).save(edited);
-    await _reload();
+    if (edited == null || !mounted) return;
+    // The repository drops the old server's sign-in and state on its own;
+    // asking here is so the caver is not surprised by the sign-in prompt.
+    if (existing != null &&
+        !existing.isSameServerAs(edited) &&
+        !await _confirmServerChange()) {
+      return;
+    }
+    try {
+      await ref.read(silexgisProfileRepositoryProvider).save(edited);
+    } on IoException catch (e) {
+      if (mounted) SnackBarService.showError(e.message);
+    }
+    if (mounted) await _reload();
+  }
+
+  Future<bool> _confirmServerChange() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(LocServ.inst.t('silexgis_server_change_title')),
+        content: Text(LocServ.inst.t('silexgis_server_change_body')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(LocServ.inst.t('silexgis_server_change_confirm')),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
   }
 
   /// Signs in and stores the refresh token. The password is collected here,
@@ -325,7 +363,7 @@ class _ServerCard extends StatelessWidget {
   });
 
   final SilexgisProfile profile;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
   final VoidCallback onSignIn;
   final VoidCallback onForget;
 
@@ -546,13 +584,7 @@ class _ProfileDialogState extends State<_ProfileDialog> {
               displayName: _name.text.trim(),
               baseUrl: address,
             )
-          : existing.copyWith(
-              displayName: _name.text.trim(),
-              baseUrl: address,
-              // Another address may be another installation, which has
-              // offered nothing yet.
-              clearServedFeatures: address != existing.baseUrl,
-            ),
+          : existing.copyWith(displayName: _name.text.trim(), baseUrl: address),
     );
   }
 

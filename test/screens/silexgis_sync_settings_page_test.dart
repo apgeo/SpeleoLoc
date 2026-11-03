@@ -199,6 +199,53 @@ void main() {
     Future<SilexgisProfile> stored() async =>
         (await container.read(silexgisProfileRepositoryProvider).find('p-1'))!;
 
+    testWidgets('another address asks first, and cancelling changes nothing', (
+      tester,
+    ) async {
+      await pumpSignedIn(tester);
+
+      await edit(tester, address: 'https://test.example.org');
+      expect(find.text('silexgis_server_change_title'), findsOneWidget);
+      expect(find.text('silexgis_server_change_body'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'cancel'));
+      await tester.pumpAndSettle();
+
+      expect(await tokens.read('p-1'), 'refresh-token');
+      expect((await stored()).baseUrl, 'https://speo.example.org');
+      expect((await stored()).syncSetId, 'set-1');
+    });
+
+    testWidgets('confirming another address signs the profile out', (
+      tester,
+    ) async {
+      await pumpSignedIn(tester);
+
+      await edit(tester, address: 'https://test.example.org/');
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'silexgis_server_change_confirm'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(await tokens.read('p-1'), isNull);
+      final profile = await stored();
+      expect(profile.baseUrl, 'https://test.example.org');
+      expect(profile.syncSetId, isNull);
+      expect(find.text('silexgis_selection_none'), findsOneWidget);
+    });
+
+    testWidgets('renaming does not ask, and keeps the sign-in', (tester) async {
+      await pumpSignedIn(tester);
+
+      await edit(tester, name: 'Renamed', address: 'https://speo.example.org/');
+
+      expect(find.text('silexgis_server_change_title'), findsNothing);
+      expect(await tokens.read('p-1'), 'refresh-token');
+      final profile = await stored();
+      expect(profile.displayName, 'Renamed');
+      expect(profile.syncSetId, 'set-1');
+    });
+
     testWidgets('a plain http address is refused and the dialog stays open', (
       tester,
     ) async {

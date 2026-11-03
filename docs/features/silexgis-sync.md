@@ -125,7 +125,32 @@ Signing in is the first thing that actually contacts the server.
 it, but the app no longer contacts it: the server card says **This address
 is no longer accepted. Edit it so that it starts with https:// before you
 sign in or sync.**, and a sign-in or a sync stops with the same advice.
-Nothing is sent to the old address. Correct it with the pencil.
+Nothing is sent to the old address. Correct it with the pencil; that counts
+as a change of server, below.
+
+### Changing the address
+
+Pressing the pencil and saving a different server — another host, port,
+`http`/`https`, or subdirectory — asks first:
+
+> **Point this profile at another server?**
+> The new address may be a different installation. The stored sign-in, the
+> chosen selection and everything this device remembers about its
+> conversation with the old address are removed, and you will need to sign
+> in again. Your caves stay on this device.
+
+**Change address** goes ahead; **Cancel** leaves the profile as it was.
+What goes is what [Forget](#forget) removes, except the profile itself: the
+name and the photo and Wi-Fi settings stay, while **Send caves I survey
+elsewhere** goes back to off, because what to publish is decided per
+server. Then sign in, choose a selection, and sync; the first run behaves
+like the first run after a forget and re-add, so read the note at the end
+of [Forget](#forget) before you change the address of a server you still
+have unsent edits for.
+
+Changing only the name, or the address's letter case or trailing slash,
+asks nothing and keeps you signed in. The pencil is greyed out while a sync
+is running.
 
 The screen works with **one** server. Adding a second is not offered.
 

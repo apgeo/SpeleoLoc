@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
+
 /// A SilexGIS installation this device is configured to talk to.
 ///
 /// **Its own configuration key, deliberately not a member of the FTP protocol
@@ -87,6 +89,28 @@ class SilexgisProfile {
   Uri get baseUri => Uri.parse(baseUrl);
 
   bool get isReadyToSync => syncSetId != null && syncSetId!.isNotEmpty;
+
+  /// Whether [other] still points at the server this profile points at. A
+  /// profile that stops doing so has to drop everything the old server issued
+  /// — see [unboundFromServer].
+  bool isSameServerAs(SilexgisProfile other) =>
+      SilexgisServerAddress.sameServer(baseUrl, other.baseUrl);
+
+  /// This profile once its address names another server.
+  ///
+  /// Another address may be another installation, so what belonged to the old
+  /// one goes: the chosen selection, what it offered, and the account signed
+  /// in there. Sending caves surveyed elsewhere goes back to off, because
+  /// whether to publish them is decided per installation. The caver's name
+  /// for it and the device's own file and network preferences stay.
+  SilexgisProfile unboundFromServer() => SilexgisProfile(
+    profileUuid: profileUuid,
+    displayName: displayName,
+    baseUrl: baseUrl,
+    sendsFiles: sendsFiles,
+    filesOnlyOverWifi: filesOnlyOverWifi,
+    asksBeforeMobileData: asksBeforeMobileData,
+  );
 
   SilexgisProfile copyWith({
     String? displayName,

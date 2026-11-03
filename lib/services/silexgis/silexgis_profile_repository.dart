@@ -5,6 +5,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// Persists the configured SilexGIS installations.
@@ -52,13 +53,25 @@ class SilexgisProfileRepository {
     return null;
   }
 
+  /// Stores [profile], replacing the one with its uuid.
+  ///
+  /// When the address now names another server, the stored credential and
+  /// everything the old installation issued are dropped first, and the caver
+  /// signs in again. Here rather than in whatever edits the address, so no way
+  /// of changing it can carry a 45-day refresh token to another host.
   Future<void> save(SilexgisProfile profile) async {
     final current = await list();
+    final previous = current
+        .where((p) => p.profileUuid == profile.profileUuid)
+        .firstOrNull;
+    final moved = previous != null && !previous.isSameServerAs(profile);
+    if (moved) await _unbind(profile.profileUuid);
+    final stored = moved ? profile.unboundFromServer() : profile;
     final updated = <SilexgisProfile>[
       for (final existing in current)
         if (existing.profileUuid != profile.profileUuid) existing,
     ];
-    updated.add(profile);
+    updated.add(stored);
     await _write(updated);
     if (updated.length == 1) {
       await setDefaultUuid(profile.profileUuid);
@@ -100,6 +113,23 @@ class SilexgisProfileRepository {
         await setDefaultUuid(updated.first.profileUuid);
       }
     }
+  }
+
+  /// Drops the credential and the conversation before the new address is
+  /// written, so an interruption in between can never leave the old
+  /// installation's refresh token stored next to another server's address.
+  Future<void> _unbind(String profileUuid) async {
+    await _tokens.delete(profileUuid);
+    // The keystore reports a failed delete only to the log; checked here,
+    // because an address change on top of one would hand the token on.
+    final left = await _tokens.read(profileUuid);
+    if (left != null && left.isNotEmpty) {
+      throw const IoException(
+        'The stored sign-in could not be removed, so the address was not '
+        'changed.',
+      );
+    }
+    await _localState.forgetProfile(profileUuid);
   }
 
   Future<String?> getDefaultUuid() =>

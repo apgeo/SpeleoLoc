@@ -138,7 +138,33 @@ păstrează, dar aplicația nu o mai contactează: cardul serverului scrie
 **Această adresă nu mai este acceptată. Modific-o astfel încât să înceapă cu
 https:// înainte să te autentifici sau să sincronizezi.**, iar o
 autentificare sau o sincronizare se oprește cu același sfat. Nimic nu este
-trimis la vechea adresă. Corectați-o cu creionul.
+trimis la vechea adresă. Corectați-o cu creionul; asta contează ca o
+schimbare de server, mai jos.
+
+### Schimbarea adresei
+
+Dacă apăsați creionul și salvați alt server — altă gazdă, alt port,
+`http`/`https` sau alt subdirector — aplicația întreabă întâi:
+
+> **Muți profilul pe alt server?**
+> Noua adresă poate fi o altă instalare. Se șterg autentificarea salvată,
+> selecția aleasă și tot ce ține minte dispozitivul despre discuția cu vechea
+> adresă, iar tu va trebui să te autentifici din nou. Peșterile rămân pe
+> acest dispozitiv.
+
+**Schimbă adresa** merge mai departe; **Anulează** lasă profilul cum era. Se
+șterge ce șterge și [Uită](#uită), mai puțin profilul însuși: numele și
+setările pentru fotografii și Wi-Fi rămân, iar **Trimite peșterile explorate
+în altă parte** revine la oprit, pentru că ce se publică se decide pentru
+fiecare server în parte. Apoi autentificați-vă, alegeți o selecție și
+sincronizați; prima rulare se poartă ca prima rulare după ce ați uitat
+serverul și l-ați adăugat din nou, așa că citiți nota de la finalul
+secțiunii [Uită](#uită) înainte să schimbați adresa unui server pentru care
+mai aveți modificări netrimise.
+
+Schimbarea doar a numelui, a literelor mari și mici din adresă sau a barei
+de la final nu întreabă nimic și vă păstrează autentificat. Creionul este
+inactiv cât timp rulează o sincronizare.
 
 Ecranul lucrează cu **un singur** server. Adăugarea unui al doilea nu este
 oferită.
