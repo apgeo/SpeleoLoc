@@ -10,6 +10,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_model/survey_model_format.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 
@@ -210,14 +211,27 @@ class DocumentationFileHelper {
     );
   }
 
+  // The stored name may come from another device's synced row, so it is
+  // never trusted to stay inside the documents folder on its own.
+  static Future<String> _existingFilePath(String relativePath) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final path = containedPath(dir.path, relativePath);
+    if (path == null) {
+      throw FileSystemException(
+        'file name leaves the documents folder',
+        relativePath,
+      );
+    }
+    return path;
+  }
+
   /// Overwrites the content of an **existing** file identified by its
   /// [relativePath] (as stored in the DB) and returns updated [SavedFileInfo].
   static Future<SavedFileInfo> overwriteText({
     required String relativePath,
     required String content,
   }) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final absPath = '${dir.path}/$relativePath';
+    final absPath = await _existingFilePath(relativePath);
     final bytes = Uint8List.fromList(utf8.encode(content));
     await File(absPath).writeAsBytes(bytes, flush: true);
     return SavedFileInfo(
@@ -234,8 +248,7 @@ class DocumentationFileHelper {
     required String relativePath,
     required Uint8List bytes,
   }) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final absPath = '${dir.path}/$relativePath';
+    final absPath = await _existingFilePath(relativePath);
     await File(absPath).writeAsBytes(bytes, flush: true);
     return SavedFileInfo(
       relativePath: relativePath,
