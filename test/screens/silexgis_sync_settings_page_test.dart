@@ -13,18 +13,21 @@ import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 /// look like an invitation rather than a fault.
 void main() {
   late AppDatabase db;
+  late InMemoryRefreshTokenStore tokens;
+  late ProviderContainer container;
 
-  setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
+  setUp(() {
+    db = AppDatabase.forTesting(NativeDatabase.memory());
+    tokens = InMemoryRefreshTokenStore();
+  });
   tearDown(() => db.close());
 
   Future<void> pump(WidgetTester tester, {SilexgisProfile? profile}) async {
-    final container = ProviderContainer(
+    container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
         // The real one reaches for the platform keystore, which no test has.
-        silexgisTokenStoreProvider.overrideWithValue(
-          InMemoryRefreshTokenStore(),
-        ),
+        silexgisTokenStoreProvider.overrideWithValue(tokens),
       ],
     );
     addTearDown(container.dispose);
@@ -154,5 +157,74 @@ void main() {
     // The caver's caves stay on the device; what goes is the stored sign-in
     // and this device's memory of the conversation.
     expect(find.text('silexgis_forget_body'), findsOneWidget);
+  });
+
+  group('editing the server', () {
+    const signedIn = SilexgisProfile(
+      profileUuid: 'p-1',
+      displayName: 'Clubul Speo Example',
+      baseUrl: 'https://speo.example.org',
+      accountEmail: 'caver@example.org',
+      syncSetId: 'set-1',
+    );
+
+    Future<void> pumpSignedIn(WidgetTester tester) async {
+      await pump(tester, profile: signedIn);
+      await tokens.write('p-1', 'refresh-token');
+    }
+
+    Future<void> edit(
+      WidgetTester tester, {
+      String? name,
+      String? address,
+    }) async {
+      await tester.tap(find.byTooltip('edit'));
+      await tester.pumpAndSettle();
+      if (name != null) {
+        await tester.enterText(
+          find.widgetWithText(TextField, 'silexgis_server_name'),
+          name,
+        );
+      }
+      if (address != null) {
+        await tester.enterText(
+          find.widgetWithText(TextField, 'silexgis_server_url'),
+          address,
+        );
+      }
+      await tester.tap(find.widgetWithText(FilledButton, 'save'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<SilexgisProfile> stored() async =>
+        (await container.read(silexgisProfileRepositoryProvider).find('p-1'))!;
+
+    testWidgets('a plain http address is refused and the dialog stays open', (
+      tester,
+    ) async {
+      await pumpSignedIn(tester);
+
+      await edit(tester, address: 'http://speo.example.org');
+
+      expect(find.text('silexgis_url_not_https'), findsOneWidget);
+      expect(find.text('silexgis_server_change_title'), findsNothing);
+      expect(await tokens.read('p-1'), 'refresh-token');
+      expect((await stored()).baseUrl, 'https://speo.example.org');
+    });
+  });
+
+  testWidgets('a stored plain http address says it has to be corrected', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      profile: const SilexgisProfile(
+        profileUuid: 'p-1',
+        displayName: 'Clubul Speo Example',
+        baseUrl: 'http://speo.example.org',
+      ),
+    );
+
+    expect(find.text('silexgis_url_needs_fixing'), findsOneWidget);
   });
 }

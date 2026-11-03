@@ -114,17 +114,31 @@ scurt.
 | **Adresă** | Adresa web completă a instalării, începând cu `https://` — căsuța este precompletată cu atât. Dacă stă sub un subdirector, păstrați subdirectorul: calea este folosită așa cum este dată. |
 
 O adresă greșită este refuzată când apăsați **Salvează**: căsuța de sub câmp
-devine roșie și scrie **Introdu o adresă completă, de exemplu
-https://speo.example.org**, iar dialogul rămâne deschis până o corectați. Se
-verifică doar *forma* — că există o schemă și o gazdă. O adresă bine formată,
-dar care nu indică nimic sau indică ceva ce nu este o instalare SilexGIS,
-este acceptată în tăcere; aflați abia când încercați să vă autentificați.
+devine roșie și spune motivul, iar dialogul rămâne deschis până o corectați.
+
+| Ce este greșit | Ce scrie sub căsuță |
+|---|---|
+| Lipsește gazda, căsuța e goală sau adresa conține un spațiu | **Introdu o adresă completă, de exemplu https://speo.example.org** |
+| Nu începe cu `https://` — inclusiv o adresă simplă `http://` | **Adresa trebuie să înceapă cu https://** |
+| Conține un nume de utilizator sau o parolă (`https://nume:parola@…`) ori o parte după `?` sau `#` | **Lasă deoparte numele de utilizator, parola și orice parte de după ? sau #** |
+
+O adresă `http://` este refuzată pentru că parola și acreditarea primită de
+la server ar traversa rețeaua în clar. O bară oblică de la final este
+eliminată la salvare.
+
+În rest se verifică doar *forma*. O adresă bine formată, dar care nu indică
+nimic sau indică ceva ce nu este o instalare SilexGIS, este acceptată în
+tăcere; aflați abia când încercați să vă autentificați.
 
 Aici nu există buton **Testează conexiunea**, așa cum există pe ecranul FTP.
 Autentificarea este primul lucru care contactează efectiv serverul.
 
-Preferați `https://`. O adresă simplă `http://` este acceptată și ar trimite
-parola și peșterile dumneavoastră prin rețea în clar.
+**Un profil salvat cu o adresă `http://` de o versiune mai veche** o
+păstrează, dar aplicația nu o mai contactează: cardul serverului scrie
+**Această adresă nu mai este acceptată. Modific-o astfel încât să înceapă cu
+https:// înainte să te autentifici sau să sincronizezi.**, iar o
+autentificare sau o sincronizare se oprește cu același sfat. Nimic nu este
+trimis la vechea adresă. Corectați-o cu creionul.
 
 Ecranul lucrează cu **un singur** server. Adăugarea unui al doilea nu este
 oferită.

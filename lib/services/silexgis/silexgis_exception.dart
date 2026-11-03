@@ -49,6 +49,23 @@ class SilexgisTransportException extends SilexgisException {
   SilexgisAction get action => SilexgisAction.retry;
 }
 
+/// A request was about to go to an address that may not carry credentials.
+///
+/// Raised before anything is sent, so the password or token it would have
+/// carried never leaves the device. A profile saved before addresses were
+/// checked meets it on its next run, and the cure is the caver's: correct the
+/// address.
+class SilexgisInsecureAddressException extends SilexgisException {
+  const SilexgisInsecureAddressException()
+    : super(
+        'The server address must start with https://. '
+        'Edit the server and correct its address.',
+      );
+
+  @override
+  SilexgisAction get action => SilexgisAction.surfaceToUser;
+}
+
 /// Signing in failed.
 ///
 /// The sign-in routes answer with their own vocabulary — the `auth.*` codes on

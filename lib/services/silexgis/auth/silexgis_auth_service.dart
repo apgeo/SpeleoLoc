@@ -9,6 +9,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
 
@@ -405,6 +406,9 @@ class SilexgisAuthService implements SilexgisTokenSource {
   }
 
   Future<http.Response> _send(http.Request request) async {
+    // Outside the catch below, so the refusal reaches the caver as itself
+    // rather than as an unreachable server.
+    SilexgisServerAddress.requireSecure(request.url);
     try {
       return await _client
           .send(request)

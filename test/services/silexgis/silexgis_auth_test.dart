@@ -536,6 +536,45 @@ void main() {
       ),
     );
   });
+
+  group('a plain http address to another machine', () {
+    SilexgisAuthService cleartext(
+      ScriptedClient client,
+      SilexgisRefreshTokenStore store,
+    ) => SilexgisAuthService(
+      baseUri: Uri.parse('http://club.example.org'),
+      profileUuid: profile,
+      store: store,
+      client: client,
+      clock: clock,
+    );
+
+    test('never carries the password', () async {
+      final client = signInScript();
+      await expectLater(
+        cleartext(
+          client,
+          InMemoryRefreshTokenStore(),
+        ).signIn(email: 'someone@example.org', password: 'secret'),
+        throwsA(isA<SilexgisInsecureAddressException>()),
+      );
+      expect(client.sent, isEmpty);
+    });
+
+    test('never carries the stored refresh token, and keeps it', () async {
+      final store = InMemoryRefreshTokenStore();
+      await store.write(profile, 'refresh-1');
+      final client = ScriptedClient(<ScriptedResponse>[tokenOk()]);
+      await expectLater(
+        cleartext(client, store).restore(),
+        throwsA(isA<SilexgisInsecureAddressException>()),
+      );
+      expect(client.sent, isEmpty);
+      // Not spent and not refused, so not the caver's to lose: once the
+      // address is corrected it is dropped with the rest of that binding.
+      expect(await store.read(profile), 'refresh-1');
+    });
+  });
 }
 
 /// The S256 derivation, spelled out here rather than reused from the source,

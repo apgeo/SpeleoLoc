@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// What arrived, measured on the device.
@@ -90,6 +91,8 @@ class SilexgisFileFetcher {
     while (true) {
       final have = await target.exists() ? await target.length() : 0;
       final request = http.Request('GET', resolve(url));
+      // The address's own token is the whole credential for the file.
+      SilexgisServerAddress.requireSecure(request.url);
       if (have > 0) request.headers['Range'] = 'bytes=$have-';
 
       final http.StreamedResponse response;

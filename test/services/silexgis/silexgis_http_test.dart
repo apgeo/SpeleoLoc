@@ -255,4 +255,24 @@ void main() {
       throwsA(isA<SilexgisTransportException>()),
     );
   });
+
+  test('sends nothing, bearer token included, to a plain http address '
+      'on another machine', () async {
+    final client = ScriptedClient(<ScriptedResponse>[
+      ScriptedResponse.json(
+        path: SilexgisContract.capabilitiesPath,
+        json: const <String, Object?>{},
+      ),
+    ]);
+    final http = SilexgisHttp(
+      baseUri: Uri.parse('http://club.example.org'),
+      tokens: _FakeTokens(),
+      client: client,
+    );
+    await expectLater(
+      http.getJson(SilexgisContract.capabilitiesPath),
+      throwsA(isA<SilexgisInsecureAddressException>()),
+    );
+    expect(client.sent, isEmpty);
+  });
 }

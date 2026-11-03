@@ -102,18 +102,30 @@ to change one you already have. The form is short.
 | **Address** | The installation's full web address, starting with `https://` — the box is pre-filled with that much. If it sits under a subdirectory, keep the subdirectory: the path is used as given. |
 
 A bad address is refused when you press **Save**: the box turns red under
-the field and reads **Enter a full address, for example
-https://speo.example.org**, and the dialog stays open until you fix it.
-Only the *shape* is checked — that there is a scheme and a host. An address
-that is well formed but points at nothing, or at something that is not a
-SilexGIS installation, is accepted quietly; you find out when you try to
-sign in.
+the field with the reason, and the dialog stays open until you fix it.
+
+| What is wrong | What the box says |
+|---|---|
+| No host, an empty box, or a space in the address | **Enter a full address, for example https://speo.example.org** |
+| It does not start with `https://` — plain `http://` included | **The address must start with https://** |
+| It carries a user name or password (`https://name:pass@…`), or a part after `?` or `#` | **Leave out any user name, password, and any part after ? or #** |
+
+Plain `http://` is refused because your password and the credential the
+server hands back would cross the network in clear. A trailing slash is
+dropped when the address is saved.
+
+Beyond that only the *shape* is checked. An address that is well formed but
+points at nothing, or at something that is not a SilexGIS installation, is
+accepted quietly; you find out when you try to sign in.
 
 There is no **Test connection** button here, as there is on the FTP screen.
 Signing in is the first thing that actually contacts the server.
 
-Prefer `https://`. A plain `http://` address is accepted, and it would send
-your password and your caves across the network in clear.
+**A profile saved with an `http://` address by an older version** keeps
+it, but the app no longer contacts it: the server card says **This address
+is no longer accepted. Edit it so that it starts with https:// before you
+sign in or sync.**, and a sign-in or a sync stops with the same advice.
+Nothing is sent to the old address. Correct it with the pencil.
 
 The screen works with **one** server. Adding a second is not offered.
 

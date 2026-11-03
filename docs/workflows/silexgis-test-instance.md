@@ -63,6 +63,16 @@ The server card shows what the installation offers. On this one all of it is
 on: caves and places both ways, photos and documents, people, trips, raster
 maps and reviews.
 
+### A development server on this machine
+
+The address must start with `https://`, with one exception for
+development: a **debug** build also accepts plain `http://` to the machine
+it runs on — `127.0.0.1`, `localhost` or `[::1]` — which is how a local
+SilexGIS development server on `http://127.0.0.1:5205` is reached, from a
+desktop build or from an emulator after `adb reverse tcp:5205 tcp:5205`. A
+release or profile build refuses every `http://` address, loopback
+included.
+
 ## Trying the review hold
 
 1. In a browser, sign in as `admin@test.local` and, in user administration,

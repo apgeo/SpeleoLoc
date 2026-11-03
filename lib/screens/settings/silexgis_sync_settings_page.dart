@@ -11,6 +11,7 @@ import 'package:speleoloc/services/silexgis/model/sync_set.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -347,6 +348,16 @@ class _ServerCard extends StatelessWidget {
             tooltip: LocServ.inst.t('edit'),
           ),
         ),
+        // A profile saved before addresses were checked: every request to it
+        // is refused, so say why before the caver meets a failed sign-in.
+        if (!SilexgisServerAddress.check(profile.baseUrl).isAccepted)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              LocServ.inst.t('silexgis_url_needs_fixing'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
         OverflowBar(
           alignment: MainAxisAlignment.end,
           children: <Widget>[
@@ -520,9 +531,10 @@ class _ProfileDialogState extends State<_ProfileDialog> {
   }
 
   void _save() {
-    final uri = Uri.tryParse(_url.text.trim());
-    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      setState(() => _urlError = LocServ.inst.t('silexgis_url_invalid'));
+    final verdict = SilexgisServerAddress.check(_url.text);
+    final address = verdict.address;
+    if (address == null) {
+      setState(() => _urlError = LocServ.inst.t(_messageFor(verdict.problem)));
       return;
     }
     final existing = widget.existing;
@@ -532,17 +544,24 @@ class _ProfileDialogState extends State<_ProfileDialog> {
           ? SilexgisProfile(
               profileUuid: Uuid.v7().toString(),
               displayName: _name.text.trim(),
-              baseUrl: _url.text.trim(),
+              baseUrl: address,
             )
           : existing.copyWith(
               displayName: _name.text.trim(),
-              baseUrl: _url.text.trim(),
+              baseUrl: address,
               // Another address may be another installation, which has
               // offered nothing yet.
-              clearServedFeatures: _url.text.trim() != existing.baseUrl,
+              clearServedFeatures: address != existing.baseUrl,
             ),
     );
   }
+
+  static String _messageFor(SilexgisAddressProblem? problem) =>
+      switch (problem) {
+        SilexgisAddressProblem.notHttps => 'silexgis_url_not_https',
+        SilexgisAddressProblem.extraParts => 'silexgis_url_extra_parts',
+        SilexgisAddressProblem.malformed || null => 'silexgis_url_invalid',
+      };
 
   @override
   Widget build(BuildContext context) => AlertDialog(

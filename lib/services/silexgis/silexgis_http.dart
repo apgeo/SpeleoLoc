@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// Supplies the bearer token for one installation, and renews it.
@@ -156,6 +157,9 @@ class SilexgisHttp {
     Duration timeout,
   ) async {
     final request = build();
+    // Before the token is even read: asking for one may redeem the refresh
+    // token, and neither may go out in cleartext.
+    SilexgisServerAddress.requireSecure(request.url);
     final token = await _tokens.accessToken();
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
