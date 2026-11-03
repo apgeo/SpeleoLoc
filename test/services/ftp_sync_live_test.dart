@@ -14,6 +14,7 @@ import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
@@ -118,7 +119,9 @@ void main() {
     // Leave nothing behind on the shared server: the run's files, then its
     // folder (FTP only — the transports have no folder removal, and SFTP
     // servers are left as they are).
-    final transport = defaultTransportBuilder(_profileFor(cfg, remoteFolder));
+    final transport = ftpTransportBuilder(hostKeys: FtpHostKeyStore())(
+      _profileFor(cfg, remoteFolder),
+    );
     try {
       await transport.connect(password: cfg.password);
       for (final e in await transport.listFolder()) {
@@ -198,7 +201,7 @@ void main() {
       '-',
       '',
     );
-    final probe = defaultTransportBuilder(profile);
+    final probe = ftpTransportBuilder(hostKeys: FtpHostKeyStore())(profile);
     await probe.connect(password: cfg.password);
     final names = (await probe.listFolder())
         .map((e) => e.name)

@@ -67,6 +67,7 @@ import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_origin_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
@@ -158,10 +159,18 @@ final syncArchiveServiceProvider = Provider<SyncArchiveService>(
   ),
 );
 
+/// The SSH host key each SFTP profile trusts. Device-only, in the OS keystore.
+final ftpHostKeyStoreProvider = Provider<FtpHostKeyStore>(
+  (ref) => FtpHostKeyStore(),
+);
+
 /// Stores configured FTP/SFTP endpoints plus their passwords (passwords are
 /// kept in the OS keystore, not in the SQLite DB).
 final ftpProfileRepositoryProvider = Provider<FtpProfileRepository>(
-  (ref) => FtpProfileRepository(ref.watch(appDatabaseProvider)),
+  (ref) => FtpProfileRepository(
+    ref.watch(appDatabaseProvider),
+    hostKeys: ref.watch(ftpHostKeyStoreProvider),
+  ),
 );
 
 /// Singleton orchestrator for one-tap FTP sync. Exposed as a ChangeNotifier
@@ -172,6 +181,7 @@ final ftpSyncControllerProvider = ChangeNotifierProvider<FtpSyncController>(
     profileRepository: ref.watch(ftpProfileRepositoryProvider),
     archiveService: ref.watch(syncArchiveServiceProvider),
     currentUserService: ref.watch(currentUserServiceProvider),
+    hostKeyStore: ref.watch(ftpHostKeyStoreProvider),
   ),
 );
 

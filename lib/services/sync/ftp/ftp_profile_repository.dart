@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
@@ -23,12 +24,20 @@ import 'package:speleoloc/utils/app_logger.dart';
 class FtpProfileRepository {
   final AppDatabase _db;
   final FlutterSecureStorage _storage;
+
+  /// Deleting a profile also forgets the host key it trusted, so a new
+  /// profile can never inherit it.
+  final FtpHostKeyStore _hostKeys;
   final _log = AppLogger.of('FtpProfileRepository');
 
   static const String _passwordKeyPrefix = 'ftp_password_';
 
-  FtpProfileRepository(this._db, {FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage();
+  FtpProfileRepository(
+    this._db, {
+    FlutterSecureStorage? storage,
+    FtpHostKeyStore? hostKeys,
+  }) : _storage = storage ?? const FlutterSecureStorage(),
+       _hostKeys = hostKeys ?? FtpHostKeyStore(storage: storage);
 
   // ---- profile list ----
 
@@ -87,6 +96,11 @@ class FtpProfileRepository {
       await _storage.delete(key: _passwordKey(profileUuid));
     } catch (e) {
       _log.warning('Secure-storage delete failed for $profileUuid: $e');
+    }
+    try {
+      await _hostKeys.forget(profileUuid);
+    } catch (e) {
+      _log.warning('Host-key forget failed for $profileUuid: $e');
     }
     final defaultUuid = await getDefaultUuid();
     if (defaultUuid == profileUuid) {

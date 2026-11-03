@@ -61,6 +61,7 @@ de date, cum ar fi restaurarea dintr-o copie de siguranță.
 | **Folder pe server** | Folderul în care SpeleoLoc citește și scrie arhive, de exemplu `/speleo_loc/sync/`. Dacă îl lăsați gol, se folosește rădăcina serverului, `/`. Toți cei din echipă trebuie să indice *același* folder. |
 | **Mod pasiv** | Doar FTP și FTPS, pornit implicit. „Recomandat când serverul e în spatele NAT” — el este cel care face FTP-ul să meargă prin routerele de acasă și prin rețelele mobile. Opriți-l doar dacă serverul dumneavoastră insistă pe modul activ. |
 | **Certificatul serverului nu este verificat** | Doar FTPS. Nu este o setare, ci un avertisment: în această versiune FTPS criptează autentificarea, dar acceptă orice certificat de server, deci nu împiedică pe cineva din rețea să se dea drept serverul dumneavoastră, iar arhivele însele nu sunt trimise criptat. De aceea nu există un comutator „Acceptă certificat TLS invalid”. Folosiți SFTP când contează acest lucru. |
+| **Cheia de gazdă a serverului** | Doar SFTP. Cheia cu care s-a identificat serverul, înregistrată la prima conectare, sub forma `ssh-ed25519 SHA256:…`, împreună cu adresa și data pentru care a fost înregistrată. Înainte de prima conectare scrie **Încă neînregistrată**. **Uită cheia de gazdă** o șterge, iar următoarea conectare înregistrează cheia pe care o prezintă serverul. |
 
 Butonul cu ochi de lângă parolă aduce parola stocată și o arată pe ecran
 în clar, așa că folosiți-l doar când nu se uită nimeni peste umărul
@@ -81,6 +82,17 @@ apare ca un mesaj verde **Conexiune reușită** sau ca unul roșu
 **Conexiune eșuată** / **Autentificare eșuată** în partea de jos a
 ecranului. La un profil nou-nouț trebuie să tastați parola înainte ca
 testul să pornească, altfel primiți **Parola este obligatorie**.
+
+La un profil SFTP care nu are încă o cheie de gazdă înregistrată, testul
+întreabă mai întâi **Aveți încredere în acest server?** și arată cheia
+prezentată de server, de exemplu `ssh-ed25519 SHA256:Ok29…sZI`.
+Comparați-o cu amprenta primită de la administratorul serverului (pe
+server, `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` o afișează în
+aceeași formă) și apăsați **Am încredere**. **Anulează** oprește testul cu
+**Cheia serverului nu a fost acceptată; nu i s-a trimis nimic** — parola
+nu este trimisă înainte ca cheia să fie acceptată. Aceeași întrebare
+revine după ce schimbați serverul sau portul profilului, pentru că poate
+fi vorba de alt server.
 
 > 📷 [Editarea unui profil FTP](../screenshots/06-sync-and-sharing.md#ftp-sync-profile-edit) — Editarea unui profil de sincronizare FTP după un test de conexiune reușit.
 
@@ -317,6 +329,14 @@ aducă de două ori.
   speologică.
 - SFTP folosește **doar autentificare cu parolă**; fișierele de cheie nu
   sunt încă acceptate.
+- SFTP verifică identitatea serverului. Prima conectare a unui profil
+  înregistrează cheia de gazdă a serverului — după ce vă întreabă, dacă
+  se întâmplă în **Testează conexiunea**, sau fără întrebare, dacă se
+  întâmplă într-o sincronizare, cu un rând portocaliu în fila **Jurnal**
+  care numește cheia. Fiecare conectare ulterioară trebuie să prezinte
+  aceeași cheie, altfel se oprește înainte de a trimite parola. Cheia
+  înregistrată rămâne doar pe acest dispozitiv: nu este în baza de date,
+  în arhivele de sincronizare sau în exporturi.
 - FTPS, în această versiune, **nu** verifică certificatul serverului și
   criptează doar autentificarea; arhivele circulă necriptate. Vă
   protejează parola de cineva care doar ascultă, nu de cineva care se dă
@@ -334,6 +354,13 @@ aducă de două ori.
   pentru SFTP asigurați-vă că serverul permite autentificarea cu parolă.
   Rețineți că la un profil salvat căsuța de parolă arată doar un
   substituent: butonul cu ochi dezvăluie ce este stocat de fapt.
+- **Cheia de gazdă a serverului s-a schimbat** — serverul SFTP a
+  prezentat altă cheie decât cea înregistrată pentru acest profil.
+  Mesajul le numește pe amândouă. Fie cineva se dă drept server, fie
+  serverul chiar a primit o cheie nouă (reinstalat, mutat pe altă
+  mașină). Întrebați-i administratorul; doar după ce confirmă cheia nouă,
+  deschideți profilul și apăsați **Uită cheia de gazdă**, apoi
+  **Testează conexiunea** pentru a o înregistra pe cea nouă.
 - **Folderul de pe server nu poate fi listat sau scris** — folder greșit
   sau un cont fără drept de scriere acolo. SpeleoLoc trebuie să listeze,
   să descarce *și* să încarce în acel folder, așa că **Testează

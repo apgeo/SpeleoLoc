@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/sftp_host_key_dialogs.dart';
+import 'package:speleoloc/screens/settings/sftp_host_key_tile.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport_factory.dart';
+import 'package:speleoloc/services/sync/ftp/sftp_host_key.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/uuid.dart';
@@ -50,11 +56,15 @@ class _FtpSyncSettingsPageState extends ConsumerState<FtpSyncSettingsPage>
 
   Future<void> _edit({FtpProfile? existing}) async {
     final repo = ref.read(ftpProfileRepositoryProvider);
+    final hostKeys = ref.read(ftpHostKeyStoreProvider);
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            _FtpProfileEditPage(existing: existing, repository: repo),
+        builder: (_) => _FtpProfileEditPage(
+          existing: existing,
+          repository: repo,
+          hostKeys: hostKeys,
+        ),
       ),
     );
     if (result == true) {
@@ -231,8 +241,13 @@ class _EmptyState extends StatelessWidget {
 class _FtpProfileEditPage extends StatefulWidget {
   final FtpProfile? existing;
   final FtpProfileRepository repository;
+  final FtpHostKeyStore hostKeys;
 
-  const _FtpProfileEditPage({required this.existing, required this.repository});
+  const _FtpProfileEditPage({
+    required this.existing,
+    required this.repository,
+    required this.hostKeys,
+  });
 
   @override
   State<_FtpProfileEditPage> createState() => _FtpProfileEditPageState();
@@ -249,6 +264,22 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   late final TextEditingController _password;
   late final TextEditingController _remoteFolder;
   late bool _passiveMode;
+
+  /// Fixed for the page's lifetime so that a host key trusted during a
+  /// connection test of a new profile is stored under the uuid it is saved
+  /// with.
+  late final String _profileUuid =
+      widget.existing?.profileUuid ?? Uuid.v7().toString();
+  SftpHostKey? _hostKey;
+  bool _hostKeyUnreadable = false;
+
+  /// A connection test trusts keys for the address typed in the form, which
+  /// only becomes the profile's on save. Leaving without saving puts back
+  /// [_hostKeyBeforeTest], so the stored profile keeps the key of the
+  /// address it still points at.
+  bool _hostKeyTrustedByTest = false;
+  SftpHostKey? _hostKeyBeforeTest;
+  bool _saved = false;
   bool _passwordChanged = false;
   bool _showPassword = false;
   bool _testing = false;
@@ -292,10 +323,54 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
         // _passwordChanged intentionally stays false until the user actually types.
       }
     });
+    unawaited(_loadHostKey());
+  }
+
+  Future<void> _loadHostKey() async {
+    SftpHostKey? key;
+    var unreadable = false;
+    try {
+      key = await widget.hostKeys.read(_profileUuid);
+    } catch (e, st) {
+      AppLogger.of('FtpSyncSettings').warning('host key unreadable', e, st);
+      unreadable = true;
+    }
+    if (!mounted) return;
+    setState(() {
+      _hostKey = key;
+      _hostKeyUnreadable = unreadable;
+    });
+  }
+
+  Future<void> _forgetHostKey() async {
+    if (!await confirmForgetSftpHostKey(context)) return;
+    await widget.hostKeys.forget(_profileUuid);
+    _hostKeyTrustedByTest = false;
+    _hostKeyBeforeTest = null;
+    await _loadHostKey();
+  }
+
+  Future<void> _restoreHostKeyBeforeTest() {
+    final before = _hostKeyBeforeTest;
+    return before == null
+        ? widget.hostKeys.forget(_profileUuid)
+        : widget.hostKeys.write(_profileUuid, before);
+  }
+
+  Future<bool> _confirmFirstUse(
+    FtpProfile profile,
+    SftpHostKey presented,
+    SftpHostKey? previous,
+  ) async {
+    if (!mounted) return false;
+    return confirmTrustSftpHostKey(context, presented, previous);
   }
 
   @override
   void dispose() {
+    if (_hostKeyTrustedByTest && !_saved) {
+      unawaited(_restoreHostKeyBeforeTest());
+    }
     _displayName.dispose();
     _host.dispose();
     _port.dispose();
@@ -309,10 +384,9 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
   /// Resolves an [FtpProfile] from the current form fields, preserving the
   /// existing UUID on edit.
   FtpProfile _currentProfile() {
-    final existing = widget.existing;
     final portText = _port.text.trim();
     return FtpProfile(
-      profileUuid: existing?.profileUuid ?? Uuid.v7().toString(),
+      profileUuid: _profileUuid,
       displayName: _displayName.text.trim(),
       protocol: _protocol,
       host: _host.text.trim(),
@@ -380,12 +454,20 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
       }
       return;
     }
-    final transport = defaultTransportBuilder(profile);
+    if (!_hostKeyTrustedByTest) _hostKeyBeforeTest = _hostKey;
+    final transport = ftpTransportBuilder(
+      hostKeys: widget.hostKeys,
+      confirmFirstUse: _confirmFirstUse,
+    )(profile);
     String? errorMsg;
     try {
       await transport.connect(password: password);
       await transport.listFolder();
       await transport.verifyReadWriteAccess();
+    } on FtpHostKeyMismatchException catch (e) {
+      errorMsg = '${LocServ.inst.t('ftp_host_key_changed')}: ${e.message}';
+    } on FtpHostKeyNotTrustedException {
+      errorMsg = LocServ.inst.t('ftp_host_key_not_trusted');
     } on FtpAuthException catch (e) {
       errorMsg = '${LocServ.inst.t('ftp_auth_failed')}: ${e.message}';
     } on FtpTransportException catch (e) {
@@ -403,6 +485,24 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
     }
     if (!mounted) return;
     setState(() => _testing = false);
+    if (profile.protocol == FtpProtocol.sftp) {
+      await _loadHostKey();
+      final saved = widget.existing;
+      final addressIsSaved =
+          saved != null &&
+          saved.host == profile.host &&
+          saved.effectivePort == profile.effectivePort;
+      final now = _hostKey;
+      final before = _hostKeyBeforeTest;
+      if (!addressIsSaved &&
+          now != null &&
+          (before == null ||
+              !now.sameKeyAs(before) ||
+              now.endpoint != before.endpoint)) {
+        _hostKeyTrustedByTest = true;
+      }
+    }
+    if (!mounted) return;
     if (errorMsg == null) {
       _showSnack(LocServ.inst.t('ftp_connection_ok'));
     } else {
@@ -425,6 +525,7 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
       profile,
       password: _passwordChanged ? _password.text : null,
     );
+    _saved = true;
     if (!mounted) return;
     Navigator.pop(context, true);
   }
@@ -601,6 +702,14 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                   LocServ.inst.t('ftp_ftps_cert_not_verified_desc'),
                 ),
               ),
+            if (_protocol == FtpProtocol.sftp) ...[
+              const SizedBox(height: 8),
+              SftpHostKeyTile(
+                hostKey: _hostKey,
+                unreadable: _hostKeyUnreadable,
+                onForget: _testing || _saving ? null : _forgetHostKey,
+              ),
+            ],
             const SizedBox(height: 24),
             OutlinedButton.icon(
               icon: _testing

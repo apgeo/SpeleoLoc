@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
+import 'package:speleoloc/services/sync/ftp/sftp_host_key.dart';
 
 /// Minimal remote-entry description for listing archive folders.
 class RemoteFileEntry {
@@ -122,6 +123,40 @@ class FtpTransportException implements Exception {
   String toString() =>
       'FtpTransportException: $message'
       '${cause != null ? ' (cause: $cause)' : ''}';
+}
+
+/// Thrown when an SFTP server presents a host key other than the one the
+/// profile trusts. The connection is refused before the password is sent.
+class FtpHostKeyMismatchException implements Exception {
+  final SftpHostKey expected;
+  final SftpHostKey received;
+  const FtpHostKeyMismatchException({
+    required this.expected,
+    required this.received,
+  });
+
+  String get message =>
+      'The server at ${received.endpoint} presented host key '
+      '${received.display}, but this profile trusts ${expected.display} '
+      '(recorded for ${expected.endpoint}). Someone may be impersonating the '
+      'server, or its key was replaced. If the server administrator confirms '
+      'the new key, open the profile in Settings > FTP / SFTP sync and press '
+      'Forget host key.';
+
+  @override
+  String toString() => 'FtpHostKeyMismatchException: $message';
+}
+
+/// Thrown when the user declines to trust a server's host key on first use.
+class FtpHostKeyNotTrustedException implements Exception {
+  final SftpHostKey presented;
+  const FtpHostKeyNotTrustedException(this.presented);
+
+  String get message =>
+      'Host key ${presented.display} of ${presented.endpoint} was not trusted';
+
+  @override
+  String toString() => 'FtpHostKeyNotTrustedException: $message';
 }
 
 /// Convenience: generate a 16-byte random payload for a write-read-delete

@@ -13,11 +13,13 @@ import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_progress.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport.dart';
+import 'package:speleoloc/services/sync/ftp/sftp_host_key.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
@@ -110,6 +112,42 @@ class _FakeTransport implements IFtpTransport {
     }
     await localFile.writeAsBytes(bytes);
     onProgress?.call(bytes.length, bytes.length);
+  }
+}
+
+/// Connects like an SFTP server whose key this device trusts on first use:
+/// the key is recorded in [hostKeys] during the handshake.
+class _FirstUseSftpTransport extends _FakeTransport {
+  _FirstUseSftpTransport(super.profile, this.hostKeys, this.fingerprint);
+  final FtpHostKeyStore hostKeys;
+  final String fingerprint;
+
+  @override
+  Future<void> connect({required String password}) async {
+    await hostKeys.write(
+      profile.profileUuid,
+      SftpHostKey(
+        host: profile.host,
+        port: profile.effectivePort,
+        keyType: 'ssh-ed25519',
+        fingerprint: fingerprint,
+        recordedAt: DateTime.now(),
+      ),
+    );
+    await super.connect(password: password);
+  }
+}
+
+/// An SFTP server presenting a key other than the trusted one.
+class _ChangedHostKeyTransport extends _FakeTransport {
+  _ChangedHostKeyTransport(super.profile, this.expected, this.received);
+  final SftpHostKey expected;
+  final SftpHostKey received;
+
+  @override
+  Future<void> connect({required String password}) async {
+    connectCalls++;
+    throw FtpHostKeyMismatchException(expected: expected, received: received);
   }
 }
 
@@ -1079,4 +1117,119 @@ void main() {
       expect(controller.timestampOfArchiveName('garbage.txt'), 0);
     },
   );
+
+  group('SFTP host key', () {
+    const sftpProfile = FtpProfile(
+      profileUuid: 'sftp-uuid',
+      displayName: 'Test SFTP',
+      protocol: FtpProtocol.sftp,
+      host: 'sftp.example.test',
+      port: 22,
+      username: 'u',
+      remoteFolder: '/',
+    );
+    SftpHostKey keyWith(String fingerprint) => SftpHostKey(
+      host: 'sftp.example.test',
+      port: 22,
+      keyType: 'ssh-ed25519',
+      fingerprint: fingerprint,
+      recordedAt: DateTime.now(),
+    );
+    const trustedFp = 'SHA256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const otherFp = 'SHA256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+    Future<FtpProfileRepository> saveDefault(_Harness h) async {
+      final repo = FtpProfileRepository(h.db);
+      await repo.save(sftpProfile, password: 'pw');
+      await repo.setDefaultUuid(sftpProfile.profileUuid);
+      return repo;
+    }
+
+    test('a changed key fails the sync, naming both fingerprints', () async {
+      final h = await _buildHarness();
+      final repo = await saveDefault(h);
+      final transport = _ChangedHostKeyTransport(
+        sftpProfile,
+        keyWith(trustedFp),
+        keyWith(otherFp),
+      );
+      final controller = FtpSyncController(
+        db: h.db,
+        profileRepository: repo,
+        archiveService: h.sync,
+        currentUserService: h.currentUser,
+        transportBuilder: (_) => transport,
+      );
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.failed);
+      expect(end.statusMessage, 'ftp_host_key_changed');
+      expect(end.errorMessage, contains(trustedFp));
+      expect(end.errorMessage, contains(otherFp));
+      final logText = end.log.map((e) => e.message).join('\n');
+      expect(logText, contains(trustedFp));
+      expect(logText, contains(otherFp));
+      expect(transport.uploadedNames, isEmpty);
+    });
+
+    test('a key trusted on first use is reported in the log', () async {
+      final h = await _buildHarness();
+      final repo = await saveDefault(h);
+      final hostKeys = FtpHostKeyStore();
+      await hostKeys.forget(sftpProfile.profileUuid);
+      final controller = FtpSyncController(
+        db: h.db,
+        profileRepository: repo,
+        archiveService: h.sync,
+        currentUserService: h.currentUser,
+        hostKeyStore: hostKeys,
+        transportBuilder: (p) => _FirstUseSftpTransport(p, hostKeys, trustedFp),
+      );
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      final firstUse = end.log.where(
+        (e) => e.message.contains('trusted its host key'),
+      );
+      expect(firstUse.single.message, contains(trustedFp));
+      expect(firstUse.single.message, contains('sftp.example.test:22'));
+    });
+
+    test('an already trusted key is not reported again', () async {
+      final h = await _buildHarness();
+      final repo = await saveDefault(h);
+      final hostKeys = FtpHostKeyStore();
+      await hostKeys.write(
+        sftpProfile.profileUuid,
+        SftpHostKey(
+          host: 'sftp.example.test',
+          port: 22,
+          keyType: 'ssh-ed25519',
+          fingerprint: trustedFp,
+          recordedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+      final controller = FtpSyncController(
+        db: h.db,
+        profileRepository: repo,
+        archiveService: h.sync,
+        currentUserService: h.currentUser,
+        hostKeyStore: hostKeys,
+        transportBuilder: (p) => _FakeTransport(p),
+      );
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      expect(
+        end.log.where((e) => e.message.contains('trusted its host key')),
+        isEmpty,
+      );
+    });
+  });
 }

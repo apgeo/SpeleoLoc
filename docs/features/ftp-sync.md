@@ -56,6 +56,7 @@ replaces the whole database, such as restoring from a backup.
 | **Remote folder** | The folder where SpeleoLoc reads and writes archives, for example `/speleo_loc/sync/`. Leave it empty and it falls back to the server root, `/`. Everyone on the team must point at the *same* folder. |
 | **Passive mode** | FTP and FTPS only, on by default. "Recommended when the server is behind NAT" — it is what makes FTP work through home routers and mobile networks. Turn it off only if your server insists on active mode. |
 | **Server certificate not checked** | FTPS only. Not a setting but a warning: in this version FTPS encrypts the sign-in, yet it accepts any server certificate, so it does not stop someone on the network from posing as your server, and the archives themselves are not sent encrypted. There is therefore no "Allow invalid TLS certificate" switch. Use SFTP when this matters. |
+| **Server host key** | SFTP only. The key your server identified itself with, recorded on the first connection, as `ssh-ed25519 SHA256:…` with the address and date it was recorded for. Before the first connection it reads **Not recorded yet**. **Forget host key** drops it, so the next connection records whatever key the server presents. |
 
 The eye button beside the password fetches the stored password and shows
 it on screen in clear, so use it only when nobody is looking over your
@@ -76,6 +77,16 @@ writes a tiny probe file and deletes it again — so it proves you can
 **Authentication failed** message at the bottom of the screen. On a
 brand-new profile you must type the password before the test will run,
 otherwise you get **Password is required**.
+
+On an SFTP profile that has no host key recorded yet, the test first
+asks **Trust this server?** and shows the key the server presented, for
+example `ssh-ed25519 SHA256:Ok29…sZI`. Compare it with the fingerprint
+your server's administrator gives you (on the server,
+`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` prints it in the same
+form) and press **Trust**. **Cancel** stops the test with **Server key not
+trusted; nothing was sent to it** — your password is not sent before the
+key is accepted. The same question comes back after you change the
+profile's host or port, since that may be a different server.
 
 > 📷 [Editing an FTP profile](../screenshots/06-sync-and-sharing.md#ftp-sync-profile-edit) — Editing an FTP sync profile after a successful connection test.
 
@@ -308,6 +319,13 @@ already handled — the most recent 500 — so it does not fetch them twice.
   and your entire caving database across the network in clear.
 - SFTP uses **password authentication only**; key files are not
   supported yet.
+- SFTP checks the server's identity. The first connection of a profile
+  records the server's host key — after asking you when it happens in
+  **Test connection**, silently when it happens during a sync, with an
+  orange line in the sync's **Log** tab naming the key. Every later
+  connection must present the same key, otherwise it stops before your
+  password is sent. The recorded key stays on this device only: it is
+  not in the database, in sync archives or in exports.
 - FTPS, in this version, does **not** check the server's certificate,
   and only the sign-in is encrypted; the archives travel unencrypted.
   It protects your password from someone who only listens, not from
@@ -325,6 +343,12 @@ already handled — the most recent 500 — so it does not fetch them twice.
   make sure the server allows password logins. Remember that on a saved
   profile the password box only shows a placeholder: the eye button
   reveals what is actually stored.
+- **Server host key changed** — the SFTP server presented a different
+  key from the one recorded for this profile. The message names both.
+  Either someone is posing as the server, or the server really got a new
+  key (reinstalled, moved to a new machine). Ask its administrator; only
+  when they confirm the new key, open the profile and press **Forget host
+  key**, then **Test connection** to record the new one.
 - **Cannot list or write the remote folder** — wrong folder, or an
   account with no write permission there. SpeleoLoc must list, download
   *and* upload in that folder, so **Test connection** fails if its probe

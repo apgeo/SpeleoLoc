@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_progress.dart';
@@ -71,7 +72,13 @@ class FtpSyncController extends ChangeNotifier {
   final FtpProfileRepository _profileRepo;
   final SyncArchiveService _archiveService;
   final CurrentUserService _currentUser;
-  final FtpTransportBuilder _transportBuilder;
+  final FtpHostKeyStore _hostKeys;
+  final FtpTransportBuilder? _transportBuilderOverride;
+
+  // Syncs run without a dialog, so a server's first host key is trusted
+  // without asking and reported in the log instead.
+  late final FtpTransportBuilder _transportBuilder =
+      _transportBuilderOverride ?? ftpTransportBuilder(hostKeys: _hostKeys);
 
   final _log = AppLogger.of('FtpSyncController');
 
@@ -96,12 +103,14 @@ class FtpSyncController extends ChangeNotifier {
     required FtpProfileRepository profileRepository,
     required SyncArchiveService archiveService,
     required CurrentUserService currentUserService,
+    FtpHostKeyStore? hostKeyStore,
     FtpTransportBuilder? transportBuilder,
   }) : _db = db,
        _profileRepo = profileRepository,
        _archiveService = archiveService,
        _currentUser = currentUserService,
-       _transportBuilder = transportBuilder ?? defaultTransportBuilder;
+       _hostKeys = hostKeyStore ?? FtpHostKeyStore(),
+       _transportBuilderOverride = transportBuilder;
 
   /// Latest live progress snapshot. Listeners are notified via
   /// [ChangeNotifier.notifyListeners] on every change.
@@ -213,9 +222,13 @@ class FtpSyncController extends ChangeNotifier {
     final transport = _transportBuilder(profile);
     final tempDir = await _syncWorkspace();
     try {
+      final connectStartedAt = DateTime.now();
       await transport.connect(password: password);
       token.throwIfCancelled();
       _appendLog(FtpSyncLogLevel.info, 'Connected');
+      if (profile.protocol == FtpProtocol.sftp) {
+        await _logNewlyTrustedHostKey(profile, connectStartedAt);
+      }
 
       _emit(
         (s) => s.copyWith(
@@ -914,6 +927,18 @@ class FtpSyncController extends ChangeNotifier {
           ),
         );
       }
+    } on FtpHostKeyMismatchException catch (e) {
+      _appendLog(
+        FtpSyncLogLevel.error,
+        'Server host key changed: ${e.message}',
+      );
+      _emit(
+        (s) => s.copyWith(
+          phase: FtpSyncPhase.failed,
+          statusMessage: 'ftp_host_key_changed',
+          errorMessage: e.message,
+        ),
+      );
     } on FtpAuthException catch (e) {
       _appendLog(FtpSyncLogLevel.error, 'Auth failed: ${e.message}');
       _emit(
@@ -951,6 +976,26 @@ class FtpSyncController extends ChangeNotifier {
       _cancelToken = null;
       _runCompleter = null;
       if (!completer.isCompleted) completer.complete();
+    }
+  }
+
+  /// A host key recorded during this connection was trusted without asking,
+  /// so the log is where the user can compare it with the server's.
+  Future<void> _logNewlyTrustedHostKey(
+    FtpProfile profile,
+    DateTime connectStartedAt,
+  ) async {
+    try {
+      final key = await _hostKeys.read(profile.profileUuid);
+      if (key == null || key.recordedAt.isBefore(connectStartedAt)) return;
+      _appendLog(
+        FtpSyncLogLevel.warning,
+        'First connection to ${key.endpoint}: trusted its host key '
+        '${key.display}. Compare it with the fingerprint from the server '
+        'administrator; later connections must present the same key.',
+      );
+    } catch (e, st) {
+      _log.fine('could not read the recorded host key', e, st);
     }
   }
 

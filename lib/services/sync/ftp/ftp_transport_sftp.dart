@@ -4,21 +4,28 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:path/path.dart' as p;
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport.dart';
+import 'package:speleoloc/services/sync/ftp/sftp_host_key_verifier.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// [IFtpTransport] implementation over SFTP (SSH) using `dartssh2`.
 ///
 /// Password authentication only for now; public-key auth is a sensible
 /// follow-up but adds a key-management UI out of scope for Phase A.
+///
+/// The server's host key is checked by [hostKeyVerifier] during the
+/// handshake, before the password is sent. Without that check dartssh2
+/// accepts any key, so the verifier is required.
 class FtpTransportSftp implements IFtpTransport {
   @override
   final FtpProfile profile;
+
+  final SftpHostKeyVerifier hostKeyVerifier;
 
   final _log = AppLogger.of('FtpTransportSftp');
   SSHClient? _ssh;
   SftpClient? _sftp;
 
-  FtpTransportSftp(this.profile);
+  FtpTransportSftp(this.profile, {required this.hostKeyVerifier});
 
   @override
   Future<void> connect({required String password}) async {
@@ -37,6 +44,7 @@ class FtpTransportSftp implements IFtpTransport {
         socket,
         username: profile.username,
         onPasswordRequest: () => password,
+        onVerifyHostKey: hostKeyVerifier.verify,
       );
       await client.authenticated;
       final sftp = await client.sftp();
@@ -55,6 +63,8 @@ class FtpTransportSftp implements IFtpTransport {
     } on SSHAuthFailError catch (e) {
       throw FtpAuthException(e.toString());
     } catch (e) {
+      final rejection = hostKeyVerifier.rejection;
+      if (rejection != null) throw rejection;
       throw FtpTransportException('SFTP connect failed', e);
     }
   }
