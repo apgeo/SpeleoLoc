@@ -12,6 +12,7 @@ import 'package:speleoloc/services/device_preferences_carry_over.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
 import 'package:speleoloc/services/service_locator.dart';
 
+import 'package:speleoloc/services/archive/archive_extraction.dart';
 import 'package:speleoloc/services/archive/archive_models.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
@@ -296,16 +297,8 @@ class DataArchiveService {
 
     final tempDir = await Directory.systemTemp.createTemp('speleo_loc_import_');
 
-    for (final file in archive) {
-      final name = file.name.replaceAll('\\', '/');
-      if (file.isFile) {
-        final content = file.content;
-        if (content != null) {
-          final outFile = File('${tempDir.path}/$name');
-          await outFile.parent.create(recursive: true);
-          await outFile.writeAsBytes(content as List<int>);
-        }
-      }
+    for (final name in await extractArchiveInto(archive, tempDir)) {
+      _log.warning('skipping archive entry outside the import folder: $name');
     }
     return tempDir;
   }

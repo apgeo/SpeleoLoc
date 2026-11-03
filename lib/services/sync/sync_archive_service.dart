@@ -17,6 +17,7 @@ import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 import 'package:sqlite3/sqlite3.dart' show OpenMode, sqlite3;
 
 /// Current on-disk sync archive format version. Bump when the layout
@@ -987,11 +988,17 @@ class SyncArchiveService {
     // isolate, so we resolve all paths here before spawning.
     final toExtract = <List<String>>[];
     for (final entryName in assetEntryNames) {
-      final relPath = entryName
-          .substring(_assetsPrefix.length)
-          .replaceAll('/', Platform.pathSeparator);
-      if (relPath.isEmpty) continue;
-      final dest = File('${baseDir.path}${Platform.pathSeparator}$relPath');
+      final destPath = containedPath(
+        baseDir.path,
+        entryName.substring(_assetsPrefix.length),
+      );
+      if (destPath == null) {
+        warnings.add(
+          'skipping archive entry outside the documents folder: $entryName',
+        );
+        continue;
+      }
+      final dest = File(destPath);
       if (await dest.exists()) {
         skipped++;
         continue;
