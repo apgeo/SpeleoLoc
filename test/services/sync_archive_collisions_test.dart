@@ -224,6 +224,33 @@ void main() {
       },
     );
 
+    test('to merge, taken on both phones the opposite way, ends with the '
+        'later merge on both, holding what was inside either', () async {
+      final column = await placeIn(b, 'Column', bHall);
+      await tick();
+      await b.sendTo(a, tmp, 'b1.zip');
+      await tick();
+      // Each caver keeps their own Hall before hearing of the other's choice.
+      await a.decisions.mergeIntoLocal(await onlyDecision(a));
+      await tick();
+      await b.decisions.mergeIntoLocal(await onlyDecision(b));
+      await tick();
+
+      for (var round = 0; round < 2; round++) {
+        await a.sendTo(b, tmp, 'a2_$round.zip');
+        await tick();
+        await b.sendTo(a, tmp, 'b2_$round.zip');
+        await tick();
+      }
+
+      for (final d in [a, b]) {
+        expect(await d.uuidsOf('cave_areas'), {bHall});
+        expect(await areaOf(d, inside), bHall.toString());
+        expect(await areaOf(d, column), bHall.toString());
+        expect(await d.held.readAll(), isEmpty);
+      }
+    });
+
     test(
       'to keep both writes the incoming record renamed, on both phones',
       () async {

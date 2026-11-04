@@ -6,6 +6,7 @@ import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/sync/archive_held_row_repository.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_merge_state.dart';
+import 'package:speleoloc/services/sync/sync_merge_targets.dart';
 import 'package:speleoloc/services/sync/sync_row_merger.dart';
 import 'package:speleoloc/services/sync/sync_schema.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
@@ -152,19 +153,23 @@ class SyncMergeEngine {
     };
     _addHeldRows(rowsByTable, await _heldRows.readAll());
 
-    state.tombstones.addAll(await _localDeletes());
-    final (incomingDeletes, changeLogMerged) = await _mergeChangeLog(
+    final localDeletes = await _localDeletes();
+    final (newDeletes, changeLogMerged) = await _mergeChangeLog(
       logRows,
       fieldRows,
       warnings,
     );
-    incomingDeletes.removeWhere((uuid, _) => state.carried.contains(uuid));
+    final merges = await SyncMergeTargets.read(_db);
+    state.tombstones.addAll(
+      _newest(localDeletes, merges.overruled).map((r, d) => MapEntry(r, d.$2)),
+    );
+    final incomingDeletes = _newest(newDeletes, merges.overruled)
+      ..removeWhere((uuid, _) => state.carried.contains(uuid));
     for (final MapEntry(key: uuid, value: (_, at)) in incomingDeletes.entries) {
       final known = state.tombstones[uuid];
       if (known == null || at > known) state.tombstones[uuid] = at;
     }
-    for (final MapEntry(key: from, value: into)
-        in (await _mergeTargets()).entries) {
+    for (final MapEntry(key: from, value: into) in merges.targets.entries) {
       if (!state.carried.contains(from)) state.mergedInto[from] = into;
     }
     _stampSubtrees(handlers, schema, state, rowsByTable);
@@ -261,49 +266,42 @@ class SyncMergeEngine {
   static int _stampOfJson(Map<String, dynamic> row) =>
       (row['updated_at'] as int?) ?? (row['created_at'] as int?) ?? 0;
 
-  /// The newest deletion of each record in the local change log.
-  Future<Map<Uuid, int>> _localDeletes() async => <Uuid, int>{
+  /// Every deletion in the local change log, merges among them.
+  Future<List<_Deletion>> _localDeletes() async => <_Deletion>[
     for (final row
         in await _db
             .customSelect(
-              'SELECT entity_uuid, MAX(changed_at) AS at FROM change_log '
-              'WHERE change_type = ? GROUP BY entity_uuid',
+              'SELECT uuid, entity_table, entity_uuid, changed_at '
+              'FROM change_log WHERE change_type = ?',
               variables: const [Variable<int>(ChangeType.delete)],
             )
             .get())
-      Uuid.fromBytes(row.read<Uint8List>('entity_uuid')): row.read<int>('at'),
-  };
+      (
+        entry: Uuid.fromBytes(row.read<Uint8List>('uuid')),
+        table: row.read<String>('entity_table'),
+        record: Uuid.fromBytes(row.read<Uint8List>('entity_uuid')),
+        at: row.read<int>('changed_at'),
+      ),
+  ];
 
-  /// Records merged into another, with that record, from every merge entry
-  /// in the change log; a later merge of the same record wins.
-  Future<Map<Uuid, Uuid>> _mergeTargets() async {
-    final rows = await _db
-        .customSelect(
-          'SELECT l.entity_uuid AS entity, f.old_value_short AS target '
-          'FROM change_log l JOIN change_log_field f ON f.change_uuid = l.uuid '
-          'WHERE l.change_type = ? AND f.field_name = ? '
-          'ORDER BY l.changed_at',
-          variables: const [
-            Variable<int>(ChangeType.delete),
-            Variable<String>(kMergedIntoField),
-          ],
-        )
-        .get();
-    final targets = <Uuid, Uuid>{};
-    for (final row in rows) {
-      final target = row.read<Uint8List?>('target');
-      if (target == null || target.length != 16) continue;
-      targets[Uuid.fromBytes(row.read<Uint8List>('entity'))] = Uuid.fromBytes(
-        target,
-      );
+  /// The newest of [deletions] for each record, by record with its table and
+  /// time, leaving out the [overruled] merges.
+  static Map<Uuid, (String, int)> _newest(
+    Iterable<_Deletion> deletions,
+    Set<Uuid> overruled,
+  ) {
+    final newest = <Uuid, (String, int)>{};
+    for (final d in deletions) {
+      if (overruled.contains(d.entry)) continue;
+      final known = newest[d.record];
+      if (known == null || d.at > known.$2) newest[d.record] = (d.table, d.at);
     }
-    return targets;
+    return newest;
   }
 
   /// Stores the change-log rows this device does not have yet. Returns the
-  /// deletions among them, by record with its table and newest time, and how
-  /// many rows were stored.
-  Future<(Map<Uuid, (String, int)>, int)> _mergeChangeLog(
+  /// deletions among them and how many rows were stored.
+  Future<(List<_Deletion>, int)> _mergeChangeLog(
     List<Map<String, dynamic>> logRows,
     List<Map<String, dynamic>> fieldRows,
     List<String> warnings,
@@ -313,7 +311,7 @@ class SyncMergeEngine {
           in await _db.customSelect('SELECT uuid FROM change_log').get())
         Uuid.fromBytes(row.read<Uint8List>('uuid')),
     };
-    final deletes = <Uuid, (String, int)>{};
+    final deletes = <_Deletion>[];
     var merged = 0;
     for (final row in logRows) {
       final ChangeLogData data;
@@ -327,10 +325,12 @@ class SyncMergeEngine {
       await _db.into(_db.changeLog).insert(data);
       merged++;
       if (data.changeType == ChangeType.delete) {
-        final known = deletes[data.entityUuid];
-        if (known == null || data.changedAt > known.$2) {
-          deletes[data.entityUuid] = (data.entityTable, data.changedAt);
-        }
+        deletes.add((
+          entry: data.uuid,
+          table: data.entityTable,
+          record: data.entityUuid,
+          at: data.changedAt,
+        ));
       }
     }
     for (final row in fieldRows) {
@@ -376,3 +376,7 @@ class SyncMergeEngine {
     }
   }
 }
+
+/// One deletion entry of the change log: the entry itself, and the record
+/// it deleted, with its table and time.
+typedef _Deletion = ({Uuid entry, String table, Uuid record, int at});
