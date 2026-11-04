@@ -27,6 +27,7 @@ class SilexgisHeldItem {
     this.isConflict = false,
     this.isDeletedOnServer = false,
     this.isRefused = false,
+    this.isResentAsNew = false,
   });
 
   final SyncUploadSection section;
@@ -75,14 +76,28 @@ class SilexgisHeldItem {
   /// sending it again as it is cannot succeed. No reviewer is involved.
   final bool isRefused;
 
+  /// The caver sent the row again as new, under a new identifier, after the
+  /// installation removed the old one. It goes up even as a new root, which
+  /// the upload otherwise leaves to the caver's setting, and nobody waits on
+  /// it: the entry goes with the row's first answer.
+  final bool isResentAsNew;
+
   bool get isWaiting =>
-      outcome == null && !isConflict && !isDeletedOnServer && !isRefused;
+      outcome == null &&
+      !isConflict &&
+      !isDeletedOnServer &&
+      !isRefused &&
+      !isResentAsNew;
 
   /// Decided against, in conflict, refused or removed on the server, and the
   /// caver has not yet said what to do about it.
   bool get awaitsCaver =>
       (outcome != null || isConflict || isDeletedOnServer || isRefused) &&
       keptAt == null;
+
+  /// Removed on the server and kept here by the caver: neither sent nor
+  /// asked about, until the caver edits it or sends it again as new.
+  bool get isKeptAfterRemoval => isDeletedOnServer && keptAt != null;
 
   /// Whether the local row still says what was sent for review.
   ///
@@ -166,7 +181,11 @@ class SilexgisRefusedEntry {
 
 /// How many held rows there are, by what they wait on.
 class SilexgisReviewCounts {
-  const SilexgisReviewCounts({this.waiting = 0, this.toDecide = 0});
+  const SilexgisReviewCounts({
+    this.waiting = 0,
+    this.toDecide = 0,
+    this.keptAfterRemoval = 0,
+  });
 
   /// Waiting for a reviewer.
   final int waiting;
@@ -174,7 +193,10 @@ class SilexgisReviewCounts {
   /// Turned down, failed or in conflict, and waiting for the caver.
   final int toDecide;
 
-  bool get isEmpty => waiting == 0 && toDecide == 0;
+  /// Removed on the server and kept on this device only.
+  final int keptAfterRemoval;
+
+  bool get isEmpty => waiting == 0 && toDecide == 0 && keptAfterRemoval == 0;
 }
 
 /// The device's local-only record of rows held for review on an installation.
@@ -199,6 +221,10 @@ class SilexgisHeldRowRepository {
   /// What `outcome` holds for a row the installation refused outright. Not a
   /// reviewer's word either.
   static const String refusedOutcome = 'refused';
+
+  /// What `outcome` holds for a row the caver sent again as new. Not a
+  /// reviewer's word either.
+  static const String resentAsNewOutcome = 'resent';
 
   /// Every held row of one section, by row identifier. Read once per run.
   Future<Map<Uuid, SilexgisHeldItem>> readSection(
@@ -371,6 +397,30 @@ class SilexgisHeldRowRepository {
         );
   }
 
+  /// Records that the caver sends the feature row [entityUuid] again as new.
+  Future<void> recordResentAsNew(
+    String profileUuid,
+    Uuid entityUuid, {
+    required String entityTable,
+    String? wireKind,
+  }) async {
+    await _db
+        .into(_db.silexgisHeldRow)
+        .insert(
+          SilexgisHeldRowCompanion.insert(
+            profileUuid: profileUuid,
+            section: SyncUploadSection.rows.wireName,
+            entityUuid: entityUuid,
+            entityTable: entityTable,
+            wireKind: Value(wireKind),
+            reviewId: '',
+            heldAt: Value(_clock.nowMs()),
+            outcome: const Value(resentAsNewOutcome),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  }
+
   /// Records a reviewer's decision against the row waiting under [reviewId].
   /// The last decision read for a review is the one that stands.
   Future<void> recordDecision(
@@ -431,11 +481,17 @@ class SilexgisHeldRowRepository {
   Future<SilexgisReviewCounts> counts(String profileUuid) async {
     var waiting = 0;
     var toDecide = 0;
+    var kept = 0;
     for (final row in await readAll(profileUuid)) {
       if (row.isWaiting) waiting++;
       if (row.awaitsCaver) toDecide++;
+      if (row.isKeptAfterRemoval) kept++;
     }
-    return SilexgisReviewCounts(waiting: waiting, toDecide: toDecide);
+    return SilexgisReviewCounts(
+      waiting: waiting,
+      toDecide: toDecide,
+      keptAfterRemoval: kept,
+    );
   }
 
   Expression<bool> Function(SilexgisHeldRow) _key(
@@ -456,6 +512,7 @@ class SilexgisHeldRowRepository {
     final isConflict = row.outcome == conflictOutcome;
     final isDeletedOnServer = row.outcome == deletedOnServerOutcome;
     final isRefused = row.outcome == refusedOutcome;
+    final isResentAsNew = row.outcome == resentAsNewOutcome;
     return SilexgisHeldItem(
       section: section,
       entityUuid: row.entityUuid,
@@ -465,7 +522,7 @@ class SilexgisHeldRowRepository {
       isDelete: row.isDelete,
       sentLocalUpdatedAt: row.sentLocalUpdatedAt,
       heldAt: row.heldAt,
-      outcome: isConflict || isDeletedOnServer || isRefused
+      outcome: isConflict || isDeletedOnServer || isRefused || isResentAsNew
           ? null
           : SyncReviewOutcome.tryParse(row.outcome),
       note: row.note,
@@ -478,6 +535,7 @@ class SilexgisHeldRowRepository {
       isConflict: isConflict,
       isDeletedOnServer: isDeletedOnServer,
       isRefused: isRefused,
+      isResentAsNew: isResentAsNew,
     );
   }
 }

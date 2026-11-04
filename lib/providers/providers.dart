@@ -38,6 +38,8 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_conflict_override.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_rekeyer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_resend_as_new.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
@@ -431,6 +433,16 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
         placer: placer,
         override: SilexgisConflictOverride(
           localState: localState,
+          heldRows: heldRows,
+        ),
+        resend: SilexgisResendAsNew(
+          rekeyer: SilexgisFeatureRekeyer(
+            db: db,
+            logger: logger,
+            localState: localState,
+            heldRows: heldRows,
+            serverLinks: ref.watch(silexgisServerLinksProvider),
+          ),
           heldRows: heldRows,
         ),
         caves: caves,

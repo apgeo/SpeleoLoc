@@ -49,6 +49,7 @@ void main() {
             onUseServer: () => pressed.add('server'),
             onKeepMine: () => pressed.add('keep'),
             onSendMine: () => pressed.add('send'),
+            onSendAgain: () => pressed.add('again'),
             onDelete: () => pressed.add('delete'),
           ),
         ),
@@ -208,6 +209,7 @@ void main() {
         // The device holds no revision for it any more.
         isNew: true,
         title: 'Invented cave',
+        canSendAgainAsNew: true,
       ),
     );
 
@@ -219,6 +221,33 @@ void main() {
     expect(find.text('Re-read from the server'), findsNothing);
     await tester.tap(find.text('Delete'));
     await tester.tap(find.text('Keep mine, don\'t send'));
-    expect(pressed, <String>['delete', 'keep']);
+    await tester.tap(find.text('Send again as new'));
+    expect(pressed, <String>['delete', 'keep', 'again']);
+  });
+
+  testWidgets('a cave removed on the server and kept here no longer offers to '
+      'keep it', (tester) async {
+    final pressed = await pump(
+      tester,
+      SilexgisDecision(
+        held: SilexgisHeldItem(
+          section: SyncUploadSection.rows,
+          entityUuid: Uuid.v7(),
+          entityTable: 'caves',
+          reviewId: '',
+          isDeletedOnServer: true,
+          keptAt: 1,
+        ),
+        isNew: true,
+        title: 'Invented cave',
+        canSendAgainAsNew: true,
+      ),
+    );
+
+    expect(find.textContaining('Kept on this device only'), findsOneWidget);
+    expect(find.text('Keep mine, don\'t send'), findsNothing);
+    await tester.tap(find.text('Send again as new'));
+    await tester.tap(find.text('Delete'));
+    expect(pressed, <String>['again', 'delete']);
   });
 }

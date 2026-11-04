@@ -52,7 +52,9 @@ class PendingUploadRow {
 /// A row the installation removed while this device kept work in it is not
 /// sent, and neither is anything inside it: there is nothing there to write
 /// to or to hang a new row under, and every one would only be refused. They
-/// stay on the device until the caver decides.
+/// stay on the device until the caver decides. When the caver sends one again
+/// as new, under a new identifier, it goes even as a new root: that was their
+/// explicit choice for this row.
 ///
 /// Live rows come in containment order — surface areas, caves, cave areas,
 /// then places — because a batch is applied in the order it is given and a
@@ -95,6 +97,7 @@ class SilexgisUploadBuilder {
     bool awaitsReview(Uuid uuid, int? updatedAt) =>
         held[uuid]?.stillAsSent(updatedAt) ?? false;
     bool goneThere(Uuid? uuid) => held[uuid]?.isDeletedOnServer ?? false;
+    bool resentAsNew(Uuid uuid) => held[uuid]?.isResentAsNew ?? false;
     final pending = <PendingUploadRow>[];
 
     // A row is known to this installation when the device holds a revision for
@@ -107,7 +110,9 @@ class SilexgisUploadBuilder {
       final stored = revisions[area.uuid];
       // A surface area sits at the top of everything, so a new one is a new
       // root and only travels when the caver asked for that.
-      if (stored == null && !_uploadsNewRoots) continue;
+      if (stored == null && !_uploadsNewRoots && !resentAsNew(area.uuid)) {
+        continue;
+      }
       if (stored != null && !_isDirty(area.updatedAt, stored)) continue;
       known.add(area.uuid);
       if (awaitsReview(area.uuid, area.updatedAt)) continue;
@@ -127,7 +132,12 @@ class SilexgisUploadBuilder {
       if (goneThere(cave.uuid) || goneThere(parent)) continue;
       final stored = revisions[cave.uuid];
       final containerIsThere = parent != null && known.contains(parent);
-      if (stored == null && !containerIsThere && !_uploadsNewRoots) continue;
+      if (stored == null &&
+          !containerIsThere &&
+          !_uploadsNewRoots &&
+          !resentAsNew(cave.uuid)) {
+        continue;
+      }
 
       sendableCaves[cave.uuid] = cave;
       known.add(cave.uuid);

@@ -15,6 +15,7 @@ class SilexgisDecision {
     required this.isNew,
     this.title,
     this.canSendMineAnyway = false,
+    this.canSendAgainAsNew = false,
   });
 
   final SilexgisHeldItem held;
@@ -30,6 +31,14 @@ class SilexgisDecision {
   /// conflict came back with that version, so the device knows which
   /// revision it overwrites.
   final bool canSendMineAnyway;
+
+  /// The installation removed the row, and the caver may send it up again
+  /// as a new one, with everything inside it, under new identifiers.
+  final bool canSendAgainAsNew;
+
+  /// Removed on the server and already kept here: it no longer asks, and
+  /// stays listed only so that it can still be sent again or deleted.
+  bool get isKept => held.isKeptAfterRemoval;
 
   SyncUploadSection get section => held.section;
   bool get isConflict => held.isConflict;
@@ -90,6 +99,16 @@ abstract interface class SilexgisDecisionResolver {
   /// Throws the local item away — the caver's own deletion, logged like any
   /// other.
   Future<void> delete(SilexgisProfile profile, SilexgisHeldItem held);
+}
+
+/// A section whose rows the installation can remove while this device keeps
+/// work in them, so the caver may send them up again as new.
+abstract interface class SilexgisResendResolver {
+  bool canSendAgainAsNew(SilexgisHeldItem held);
+
+  /// Gives the row and everything inside it new identifiers and has the next
+  /// run send them as new rows.
+  Future<void> sendAgainAsNew(String profileUuid, SilexgisHeldItem held);
 }
 
 /// A section whose conflicts come back with the server's row, so the caver's

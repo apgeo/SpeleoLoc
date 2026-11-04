@@ -11,6 +11,9 @@ import 'package:speleoloc/services/definition_repository.dart';
 import 'package:speleoloc/services/documentation_repository.dart';
 import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_conflict_override.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_rekeyer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_resend_as_new.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
@@ -73,6 +76,17 @@ SilexgisDecisionsService buildDecisionsService({
         placer: placer,
         override: SilexgisConflictOverride(
           localState: localState,
+          heldRows: heldRows,
+        ),
+        resend: SilexgisResendAsNew(
+          rekeyer: SilexgisFeatureRekeyer(
+            db: db,
+            logger: logger,
+            localState: localState,
+            heldRows: heldRows,
+            serverLinks: SilexgisServerLinkRepository(db, clock: clock),
+            clock: clock,
+          ),
           heldRows: heldRows,
         ),
         caves: caves,
