@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
@@ -20,11 +21,21 @@ import 'package:speleoloc/utils/app_logger.dart';
 /// Thin on purpose, like its FTP counterpart: no caching and no change
 /// streams. The settings UI reads on open and writes on an explicit action.
 class SilexgisProfileRepository {
-  SilexgisProfileRepository(this._configs, this._tokens, this._localState);
+  SilexgisProfileRepository(
+    this._configs,
+    this._tokens,
+    this._localState, {
+    SilexgisAuthRegistry? signIns,
+  }) : _signIns = signIns;
 
   final IConfigurationRepository _configs;
   final SilexgisRefreshTokenStore _tokens;
   final SilexgisLocalStateRepository _localState;
+
+  /// The live sign-ins, ended before a profile's credential is removed so
+  /// that a refresh still on its way cannot store it again. Null where
+  /// nothing signs in, as in a database being replaced.
+  final SilexgisAuthRegistry? _signIns;
   final _log = AppLogger.of('SilexgisProfileRepository');
 
   Future<List<SilexgisProfile>> list() async {
@@ -98,6 +109,7 @@ class SilexgisProfileRepository {
   /// device no longer talks to is at best dead weight and at worst something
   /// to be sent back after the account changed.
   Future<void> delete(String profileUuid) async {
+    _signIns?.retire(profileUuid);
     final updated = <SilexgisProfile>[
       for (final existing in await list())
         if (existing.profileUuid != profileUuid) existing,
@@ -119,6 +131,7 @@ class SilexgisProfileRepository {
   /// written, so an interruption in between can never leave the old
   /// installation's refresh token stored next to another server's address.
   Future<void> _unbind(String profileUuid) async {
+    _signIns?.retire(profileUuid);
     await _tokens.delete(profileUuid);
     // The keystore reports a failed delete only to the log; checked here,
     // because an address change on top of one would hand the token on.

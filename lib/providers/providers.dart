@@ -444,6 +444,7 @@ final silexgisProfileRepositoryProvider = Provider<SilexgisProfileRepository>(
     ref.watch(configurationRepositoryProvider),
     ref.watch(silexgisTokenStoreProvider),
     ref.watch(silexgisLocalStateProvider),
+    signIns: ref.watch(silexgisAuthRegistryProvider),
   ),
 );
 

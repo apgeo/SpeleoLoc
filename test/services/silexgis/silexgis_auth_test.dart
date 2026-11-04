@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
+import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
@@ -13,7 +16,9 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/utils/clock.dart';
 
@@ -794,6 +799,41 @@ void main() {
     });
 
     group('a refresh still on its way', () {
+      late AppDatabase db;
+      setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
+      tearDown(() => db.close());
+
+      test('stores nothing once the server was forgotten', () async {
+        final store = InMemoryRefreshTokenStore();
+        final client = _HoldsRefresh(
+          ScriptedClient(<ScriptedResponse>[
+            tokenOk(access: 'access-2', refresh: 'refresh-2'),
+          ]),
+        );
+        final registry = registryOn(store, client);
+        final profiles = SilexgisProfileRepository(
+          ConfigurationRepository(db),
+          store,
+          SilexgisLocalStateRepository(db),
+          signIns: registry,
+        );
+        await profiles.save(club);
+        await store.write(profile, 'refresh-1');
+
+        final auth = registry.forProfile(club);
+        final refreshing = auth.restore();
+        await client.requested;
+        await profiles.delete(profile);
+        client.release();
+
+        expect(await refreshing, isFalse);
+        // A live 45-day credential under a profile nothing refers to any
+        // more, which nothing would ever delete.
+        expect(await store.read(profile), isNull);
+        expect(await auth.accessToken(), isNull);
+        expect(await profiles.list(), isEmpty);
+      });
+
       test('stores nothing once the sign-in was removed elsewhere', () async {
         // A replaced database drops the sign-in straight from the keystore.
         final store = InMemoryRefreshTokenStore();
