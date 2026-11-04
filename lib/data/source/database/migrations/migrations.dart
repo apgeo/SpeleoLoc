@@ -1127,6 +1127,24 @@ class V34ToV35Migration extends SchemaMigration {
   }
 }
 
+/// v35 → v36.
+///
+/// Adds the local-only table of the rows a SilexGIS download page carried
+/// before their container, so a read cut short between two pages does not
+/// lose them. Local only, like the other SilexGIS state tables; nothing is
+/// moved into it.
+class V35ToV36Migration extends SchemaMigration {
+  const V35ToV36Migration();
+
+  @override
+  int get toVersion => 36;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisDeferredRow);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1185,6 +1203,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V32ToV33Migration(),
   V33ToV34Migration(),
   V34ToV35Migration(),
+  V35ToV36Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

@@ -89,7 +89,10 @@ class SilexgisApplyReport {
 ///
 /// One instance per sync run. It holds the rows whose container has not
 /// arrived yet, because a page can carry a child a whole page before its
-/// parent and the two are only related by containment, never by order.
+/// parent and the two are only related by containment, never by order. They
+/// are stored with each page's cursor, which is already past them, so a read
+/// cut short between the two pages still places the child when its parent
+/// comes on a later run.
 class SilexgisDownloadApplier {
   SilexgisDownloadApplier({
     required AppDatabase db,
@@ -124,6 +127,10 @@ class SilexgisDownloadApplier {
   /// account may not read.
   final List<MappedFeature> _pending = <MappedFeature>[];
 
+  /// The set whose stored rows [_pending] has taken up, so they are read back
+  /// once per run rather than once per page.
+  String? _deferredOf;
+
   int get pendingCount => _pending.length;
 
   /// What the two sides last agreed each local row said, read once per page.
@@ -141,6 +148,13 @@ class SilexgisDownloadApplier {
   }) async {
     late SilexgisApplyReport report;
     await _suspendedTransaction(() async {
+      await _restoreDeferred(setId);
+      // A row waiting since an earlier page is not placed once it has gone:
+      // its tombstone here is the later change.
+      final gone = <String>{
+        for (final tombstone in page.tombstones) tombstone.id,
+      };
+      _pending.removeWhere((mapped) => gone.contains(mapped.row.id));
       report = await _applyRows(page.features);
       final deletes = await _applyTombstones(page.tombstones);
       report = SilexgisApplyReport(
@@ -156,8 +170,38 @@ class SilexgisDownloadApplier {
         cursor: page.nextCursor,
         setRevision: page.setRevision,
       );
+      // A read that has reached its end keeps nothing back: a row still
+      // waiting then sits inside a cave this account may not read, and is
+      // reported rather than carried into the next run.
+      await _localState.writeDeferredRows(
+        _profileUuid,
+        setId,
+        page.hasMore
+            ? <SyncFeatureRow>[for (final mapped in _pending) mapped.row]
+            : const <SyncFeatureRow>[],
+      );
     });
     return report;
+  }
+
+  /// Lets go of the rows waiting for their container once the position they
+  /// were stored with has been dropped: the read from the beginning that
+  /// follows carries every live row of the set again.
+  void discardDeferred() {
+    _pending.clear();
+    _deferredOf = null;
+  }
+
+  /// Takes up what an earlier read of [setId], cut short, was still waiting to
+  /// place, before this run's first page is applied.
+  Future<void> _restoreDeferred(String setId) async {
+    if (_deferredOf == setId) return;
+    _deferredOf = setId;
+    _pending.clear();
+    for (final row in await _localState.readDeferredRows(_profileUuid, setId)) {
+      final mapped = _mapper.read(row);
+      if (mapped is! UnmappedFeature) _pending.add(mapped);
+    }
   }
 
   /// Writes rows that did not come on a page — the server's own version of a
@@ -205,8 +249,7 @@ class SilexgisDownloadApplier {
     void skip(SilexgisSkipReason reason) =>
         skipped[reason] = (skipped[reason] ?? 0) + 1;
 
-    final queue = <MappedFeature>[..._pending];
-    _pending.clear();
+    final arrived = <MappedFeature>[];
     for (final row in features) {
       final mapped = _mapper.read(row);
       if (mapped is UnmappedFeature) {
@@ -219,8 +262,17 @@ class SilexgisDownloadApplier {
         skip(SilexgisSkipReason.unmodelledKind);
         continue;
       }
-      queue.add(mapped);
+      arrived.add(mapped);
     }
+    // A row read again while it waited is a later version of itself, and only
+    // that one is written.
+    final readAgain = <String>{for (final mapped in arrived) mapped.row.id};
+    final queue = <MappedFeature>[
+      for (final mapped in _pending)
+        if (!readAgain.contains(mapped.row.id)) mapped,
+      ...arrived,
+    ];
+    _pending.clear();
 
     // Repeated passes rather than one, because the order is the change order:
     // within a single page a child may precede its parent, and sorting the

@@ -92,13 +92,14 @@ void main() {
     List<Map<String, Object?>> tombstones = const <Map<String, Object?>>[],
     String? cursor = 'cursor-1',
     int setRevision = 1,
+    bool hasMore = false,
   }) => SyncDownloadPage.fromJson(<String, Object?>{
     'setRevision': setRevision,
     'settings': const <String, Object?>{},
     'features': features,
     'tombstones': tombstones,
     'nextCursor': cursor,
-    'hasMore': false,
+    'hasMore': hasMore,
   });
 
   final caveId = Uuid.v7();
@@ -551,6 +552,75 @@ void main() {
       expect(place.caveAreaUuid, areaId);
       // The place's cave comes from the area, because a local place names both.
       expect(place.caveUuid, caveId);
+    });
+
+    test('a row waiting for its container is kept with the position', () async {
+      // The cursor stored with the page is already past it.
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aPlace()], hasMore: true),
+        setId: setId,
+      );
+      expect(
+        (await localState.readDeferredRows(profile, setId)).single.id,
+        placeId.toString(),
+      );
+
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave()], hasMore: true),
+        setId: setId,
+      );
+      expect(await localState.readDeferredRows(profile, setId), isEmpty);
+    });
+
+    test('a waiting row read again is written as its later version', () async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aPlace()], hasMore: true),
+        setId: setId,
+      );
+      final renamed = aPlace()
+        ..['name'] = 'Sala Mare, renamed'
+        ..['updatedAt'] = '2026-08-31T09:00:00.000Z';
+      await applier.applyPage(
+        page(<Map<String, Object?>>[renamed], hasMore: true),
+        setId: setId,
+      );
+      expect(await localState.readDeferredRows(profile, setId), hasLength(1));
+
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[aCave()]),
+        setId: setId,
+      );
+      expect(report.inserted, 2);
+      final place = await (db.select(
+        db.cavePlaces,
+      )..where((t) => t.uuid.equalsValue(placeId))).getSingle();
+      expect(place.title, 'Sala Mare, renamed');
+      expect(
+        await localState.readRevision(profile, placeId),
+        '2026-08-31T09:00:00.000Z',
+      );
+    });
+
+    test('a waiting row deleted on the server is never placed', () async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aPlace()], hasMore: true),
+        setId: setId,
+      );
+      final report = await applier.applyPage(
+        page(
+          <Map<String, Object?>>[aCave()],
+          tombstones: <Map<String, Object?>>[
+            <String, Object?>{
+              'id': placeId.toString(),
+              'deletedAt': '2026-08-30T09:00:00.000Z',
+            },
+          ],
+        ),
+        setId: setId,
+      );
+      expect(report.inserted, 1);
+      expect(await db.select(db.cavePlaces).get(), isEmpty);
+      expect(applier.takeUnresolved(), isEmpty);
     });
 
     test('a container that never arrives leaves the row unresolved', () async {

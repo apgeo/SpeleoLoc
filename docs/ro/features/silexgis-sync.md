@@ -659,6 +659,12 @@ fără peșteră nu este ceva ce SpeleoLoc poate păstra, așa că acele rândur
 fost aduse și abandonate, în loc să fie salvate pe jumătate. Datele
 dumneavoastră nu au nimic în neregulă.
 
+Serverul poate trimite un loc cu o pagină sau mai multe înaintea peșterii
+lui. O sincronizare întreruptă între ele — o conexiune pierdută, aplicația
+închisă — păstrează un astfel de rând și îl salvează când peștera sosește la
+o sincronizare ulterioară; doar o sincronizare care citește până la capăt
+numără aici ce încă așteaptă.
+
 Dacă ar trebui să aveți acces la acea peșteră, cereți-l pe server, apoi
 reveniți și apăsați **Citește tot** — o rulare obișnuită nu îl va prelua.
 

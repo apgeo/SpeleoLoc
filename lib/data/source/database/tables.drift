@@ -559,6 +559,27 @@ CREATE TABLE IF NOT EXISTS silexgis_stream_cursor (
     PRIMARY KEY (profile_uuid, set_id, stream)
 );
 
+-- Table: silexgis_deferred_row
+-- LOCAL ONLY, and part of the download position kept in
+-- `silexgis_sync_state`: the rows a page carried whose container had not
+-- arrived yet. The order is the change order, so a place can come a whole page
+-- before its cave, and the cursor stored with that page is already past it.
+-- Written in the page's own transaction, so a read cut short between the two
+-- pages still places the row when its cave arrives on a later run.
+--
+-- `row_json` is the row as the download carried it; `position` is the order
+-- the rows were read in. Emptied when a read reaches its end, since what is
+-- still waiting then sits inside a cave this account may not read, and with
+-- the cursor whenever the set is to be read from the beginning.
+CREATE TABLE IF NOT EXISTS silexgis_deferred_row (
+    profile_uuid  TEXT(36) NOT NULL,   -- the local server profile, not an account
+    set_id        TEXT(36) NOT NULL,   -- the sync set on that installation
+    row_id        TEXT(36) NOT NULL,   -- the row's identifier, as on the wire
+    position      INTEGER NOT NULL,
+    row_json      TEXT NOT NULL,
+    PRIMARY KEY (profile_uuid, set_id, row_id)
+);
+
 -- Table: silexgis_held_row
 -- LOCAL ONLY, like the other `silexgis_*` tables: a review is a fact about one
 -- account's uploads to one installation, and nothing a second device could act

@@ -36,6 +36,7 @@ void main() {
   late AppDatabase db;
   late SilexgisLocalStateRepository localState;
   late SilexgisDownloadApplier applier;
+  late SilexgisDownloadApplier Function() newApplier;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -49,7 +50,8 @@ void main() {
     await currentUser.initialize();
     final logger = loggerRef = ChangeLogger(db, currentUser);
     localState = SilexgisLocalStateRepository(db);
-    applier = SilexgisDownloadApplier(
+    // One per run, as the controller builds it.
+    newApplier = () => SilexgisDownloadApplier(
       db: db,
       logger: logger,
       localState: localState,
@@ -58,22 +60,25 @@ void main() {
       places: CavePlaceRepository(db, currentUser, logger),
       profileUuid: profile,
     );
+    applier = newApplier();
   });
   tearDown(() => db.close());
 
-  SilexgisDownloadRunner runnerFor(ScriptedClient client) =>
-      SilexgisDownloadRunner(
-        api: SilexgisSyncApi(
-          SilexgisHttp(
-            baseUri: Uri.parse('https://club.example.org'),
-            tokens: FixedTokenSource(),
-            client: client,
-          ),
-        ),
-        applier: applier,
-        localState: localState,
-        profileUuid: profile,
-      );
+  SilexgisDownloadRunner runnerFor(
+    ScriptedClient client, {
+    SilexgisDownloadApplier? using,
+  }) => SilexgisDownloadRunner(
+    api: SilexgisSyncApi(
+      SilexgisHttp(
+        baseUri: Uri.parse('https://club.example.org'),
+        tokens: FixedTokenSource(),
+        client: client,
+      ),
+    ),
+    applier: using ?? applier,
+    localState: localState,
+    profileUuid: profile,
+  );
 
   ScriptedResponse pageOf({
     required List<Map<String, Object?>> features,
@@ -100,6 +105,25 @@ void main() {
     'properties': const <String, Object?>{},
     'parents': const <Object?>[],
   };
+
+  Map<String, Object?> place(Uuid id, {required Uuid inCave}) =>
+      <String, Object?>{
+        'id': id.toString(),
+        'kind': 'generic',
+        'featureTypeCode': 'cave_place',
+        'name': 'Invented place',
+        'updatedAt': '2026-08-21T09:00:00.000Z',
+        'properties': const <String, Object?>{},
+        'parents': <Object?>[
+          <String, Object?>{'parentId': inCave.toString(), 'isPrimary': true},
+        ],
+      };
+
+  ScriptedResponse droppedPage() => ScriptedResponse(
+    path: SilexgisContract.downloadPath(setId),
+    status: 502,
+    body: '<html><h1>502 Bad Gateway</h1></html>',
+  );
 
   test('reads until the server says it is level, and no further', () async {
     final client = ScriptedClient(<ScriptedResponse>[
@@ -280,6 +304,87 @@ void main() {
       client.sent.single.url.queryParameters.containsKey('cursor'),
       isFalse,
     );
+  });
+
+  group('a read cut short between pages', () {
+    final caveId = Uuid.v7();
+    final placeId = Uuid.v7();
+
+    /// A first run whose page carries a place a page before its cave, and
+    /// whose next page never arrives.
+    Future<void> interruptedRun() async {
+      final client = ScriptedClient(<ScriptedResponse>[
+        pageOf(
+          features: <Map<String, Object?>>[place(placeId, inCave: caveId)],
+          cursor: 'c1',
+          hasMore: true,
+        ),
+        droppedPage(),
+      ]);
+      await expectLater(
+        runnerFor(client).run(setId, capabilities: capabilities),
+        throwsA(isA<SilexgisTransportException>()),
+      );
+      expect((await localState.readSetState(profile, setId)).cursor, 'c1');
+    }
+
+    test('still places a row whose container comes on the next run', () async {
+      // The cursor stored with the first page is already past the place, so
+      // the next run never reads it again: it has to have been kept.
+      await interruptedRun();
+
+      final client = ScriptedClient(<ScriptedResponse>[
+        pageOf(
+          features: <Map<String, Object?>>[cave(caveId, 'Invented cave')],
+          cursor: 'c2',
+        ),
+      ]);
+      final report = await runnerFor(
+        client,
+        using: newApplier(),
+      ).run(setId, capabilities: capabilities);
+
+      expect(client.sent.single.url.queryParameters['cursor'], 'c1');
+      expect(report.applied.inserted, 2);
+      expect(report.unresolved, isEmpty);
+      final stored = await (db.select(
+        db.cavePlaces,
+      )..where((t) => t.uuid.equalsValue(placeId))).getSingle();
+      expect(stored.caveUuid, caveId);
+    });
+
+    test('and the end of the next read reports one that never comes', () async {
+      await interruptedRun();
+
+      final client = ScriptedClient(<ScriptedResponse>[
+        pageOf(features: const <Map<String, Object?>>[], cursor: 'c2'),
+      ]);
+      final report = await runnerFor(
+        client,
+        using: newApplier(),
+      ).run(setId, capabilities: capabilities);
+
+      expect(report.unresolved.single.id, placeId.toString());
+      // Told once, then let go of rather than carried for ever.
+      expect(await localState.readDeferredRows(profile, setId), isEmpty);
+    });
+
+    test('a read from the beginning starts without them', () async {
+      // It carries every live row of the set again, so an old copy of a row
+      // that has since left the set is not placed.
+      await interruptedRun();
+
+      final client = ScriptedClient(<ScriptedResponse>[
+        pageOf(features: const <Map<String, Object?>>[], cursor: 'c2'),
+      ]);
+      final report = await runnerFor(
+        client,
+        using: newApplier(),
+      ).run(setId, capabilities: capabilities, fromBeginning: true);
+
+      expect(report.unresolved, isEmpty);
+      expect(await localState.readDeferredRows(profile, setId), isEmpty);
+    });
   });
 
   test(

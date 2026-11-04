@@ -609,6 +609,11 @@ because your account may not read that cave. A place with no cave is not
 something SpeleoLoc can hold, so those rows were carried and dropped rather
 than half-stored. Nothing is wrong with your data.
 
+The server may send a place a page or more before its cave. A sync that is
+cut short in between — a lost connection, the app closed — keeps such a row
+and stores it when its cave arrives on a later sync; only a sync that reads
+to the end counts what is still waiting here.
+
 If you should have access to that cave, ask for it on the server, then come
 back and press **Read everything** — an ordinary run will not pick it up.
 

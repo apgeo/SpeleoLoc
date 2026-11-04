@@ -26,6 +26,11 @@ class FeatureParent {
     parentId: json['parentId']! as String,
     isPrimary: json['isPrimary'] as bool? ?? false,
   );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'parentId': parentId,
+    'isPrimary': isPrimary,
+  };
 }
 
 /// A feature row as the download and the conflict echo deliver it.
@@ -134,6 +139,29 @@ class SyncFeatureRow {
     updatedAt: json['updatedAt']! as String,
     clientUpdatedAt: json['clientUpdatedAt'] as String?,
   );
+
+  /// The row in the shape the download delivers it, so a row kept on this
+  /// device between runs reads back as it arrived.
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'kind': kind,
+    'featureTypeCode': featureTypeCode,
+    'category': category,
+    'name': name,
+    'description': description,
+    'geometry': geometry?.toJson(),
+    'properties': properties,
+    'propertiesSchemaVersion': propertiesSchemaVersion,
+    'locationProtected': locationProtected,
+    'protectedEffective': protectedEffective,
+    'visibility': visibility,
+    'parents': <Map<String, Object?>>[
+      for (final parent in parents) parent.toJson(),
+    ],
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+    'clientUpdatedAt': clientUpdatedAt,
+  };
 
   /// The primary containment edge, or null when the caller may read none of
   /// this row's parents.

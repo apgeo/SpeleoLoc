@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/utils/clock.dart';
 
@@ -23,7 +26,8 @@ class SilexgisSetState {
 }
 
 /// The device's local-only record of its conversations with SilexGIS
-/// installations: the download cursor per sync set, one cursor per further
+/// installations: the download cursor per sync set with the rows read before
+/// it that are still waiting for their container, one cursor per further
 /// stream of that set, and the server revision of every row it has seen.
 ///
 /// **None of this ever leaves the device except back to the server that issued
@@ -99,12 +103,78 @@ class SilexgisLocalStateRepository {
   /// is always correct, and is also how a device picks up a row that became
   /// readable — being granted the right to place a cave writes nothing to that
   /// cave's row, so no incremental read will ever carry it.
+  ///
+  /// The rows waiting for their container go with it: a read from the
+  /// beginning carries every live row of the set again, and a row that has
+  /// left the set since must not be placed from an old copy.
   Future<void> dropCursor(String profileUuid, String setId) async {
-    await (_db.update(_db.silexgisSyncState)..where(
-          (t) => t.profileUuid.equals(profileUuid) & t.setId.equals(setId),
-        ))
-        .write(const SilexgisSyncStateCompanion(cursor: Value(null)));
+    await _db.transaction(() async {
+      await (_db.update(_db.silexgisSyncState)..where(
+            (t) => t.profileUuid.equals(profileUuid) & t.setId.equals(setId),
+          ))
+          .write(const SilexgisSyncStateCompanion(cursor: Value(null)));
+      await _deleteDeferredRows(profileUuid, setId);
+    });
   }
+
+  // ------------------------------------------------------------ deferred rows
+
+  /// The rows of [setId] read before the stored cursor whose container had
+  /// not arrived yet, in the order they were read.
+  Future<List<SyncFeatureRow>> readDeferredRows(
+    String profileUuid,
+    String setId,
+  ) async {
+    final rows =
+        await (_db.select(_db.silexgisDeferredRow)
+              ..where(
+                (t) =>
+                    t.profileUuid.equals(profileUuid) & t.setId.equals(setId),
+              )
+              ..orderBy(<OrderClauseGenerator<SilexgisDeferredRow>>[
+                (t) => OrderingTerm.asc(t.position),
+              ]))
+            .get();
+    return <SyncFeatureRow>[
+      for (final row in rows)
+        SyncFeatureRow.fromJson(
+          Map<String, Object?>.from(jsonDecode(row.rowJson) as Map),
+        ),
+    ];
+  }
+
+  /// Replaces the rows of [setId] waiting for their container with [rows].
+  /// Called in the transaction that stores the page and its cursor, so the two
+  /// always describe the same position.
+  Future<void> writeDeferredRows(
+    String profileUuid,
+    String setId,
+    List<SyncFeatureRow> rows,
+  ) async {
+    await _deleteDeferredRows(profileUuid, setId);
+    if (rows.isEmpty) return;
+    await _db.batch((batch) {
+      for (var i = 0; i < rows.length; i++) {
+        batch.insert(
+          _db.silexgisDeferredRow,
+          SilexgisDeferredRowCompanion.insert(
+            profileUuid: profileUuid,
+            setId: setId,
+            rowId: rows[i].id,
+            position: i,
+            rowJson: jsonEncode(rows[i].toJson()),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+  }
+
+  Future<void> _deleteDeferredRows(String profileUuid, String setId) =>
+      (_db.delete(_db.silexgisDeferredRow)..where(
+            (t) => t.profileUuid.equals(profileUuid) & t.setId.equals(setId),
+          ))
+          .go();
 
   // ---------------------------------------------------------- stream positions
 
@@ -195,6 +265,9 @@ class SilexgisLocalStateRepository {
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
         _db.silexgisStreamCursor,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
+        _db.silexgisDeferredRow,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
         _db.silexgisRowRevision,

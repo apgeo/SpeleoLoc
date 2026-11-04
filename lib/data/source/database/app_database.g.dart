@@ -17516,6 +17516,392 @@ class SilexgisStreamCursorCompanion
   }
 }
 
+class SilexgisDeferredRow extends Table
+    with TableInfo<SilexgisDeferredRow, SilexgisDeferredRowData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisDeferredRow(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  late final GeneratedColumn<String> setId = GeneratedColumn<String>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _rowIdMeta = const VerificationMeta('rowId');
+  late final GeneratedColumn<String> rowId = GeneratedColumn<String>(
+    'row_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _rowJsonMeta = const VerificationMeta(
+    'rowJson',
+  );
+  late final GeneratedColumn<String> rowJson = GeneratedColumn<String>(
+    'row_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    setId,
+    rowId,
+    position,
+    rowJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_deferred_row';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisDeferredRowData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
+    }
+    if (data.containsKey('row_id')) {
+      context.handle(
+        _rowIdMeta,
+        rowId.isAcceptableOrUnknown(data['row_id']!, _rowIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rowIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('row_json')) {
+      context.handle(
+        _rowJsonMeta,
+        rowJson.isAcceptableOrUnknown(data['row_json']!, _rowJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rowJsonMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, setId, rowId};
+  @override
+  SilexgisDeferredRowData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisDeferredRowData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_id'],
+      )!,
+      rowId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}row_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      rowJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}row_json'],
+      )!,
+    );
+  }
+
+  @override
+  SilexgisDeferredRow createAlias(String alias) {
+    return SilexgisDeferredRow(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, set_id, row_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisDeferredRowData extends DataClass
+    implements Insertable<SilexgisDeferredRowData> {
+  final String profileUuid;
+
+  /// the local server profile, not an account
+  final String setId;
+
+  /// the sync set on that installation
+  final String rowId;
+
+  /// the row's identifier, as on the wire
+  final int position;
+  final String rowJson;
+  const SilexgisDeferredRowData({
+    required this.profileUuid,
+    required this.setId,
+    required this.rowId,
+    required this.position,
+    required this.rowJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['set_id'] = Variable<String>(setId);
+    map['row_id'] = Variable<String>(rowId);
+    map['position'] = Variable<int>(position);
+    map['row_json'] = Variable<String>(rowJson);
+    return map;
+  }
+
+  SilexgisDeferredRowCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisDeferredRowCompanion(
+      profileUuid: Value(profileUuid),
+      setId: Value(setId),
+      rowId: Value(rowId),
+      position: Value(position),
+      rowJson: Value(rowJson),
+    );
+  }
+
+  factory SilexgisDeferredRowData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisDeferredRowData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      setId: serializer.fromJson<String>(json['set_id']),
+      rowId: serializer.fromJson<String>(json['row_id']),
+      position: serializer.fromJson<int>(json['position']),
+      rowJson: serializer.fromJson<String>(json['row_json']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'set_id': serializer.toJson<String>(setId),
+      'row_id': serializer.toJson<String>(rowId),
+      'position': serializer.toJson<int>(position),
+      'row_json': serializer.toJson<String>(rowJson),
+    };
+  }
+
+  SilexgisDeferredRowData copyWith({
+    String? profileUuid,
+    String? setId,
+    String? rowId,
+    int? position,
+    String? rowJson,
+  }) => SilexgisDeferredRowData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    setId: setId ?? this.setId,
+    rowId: rowId ?? this.rowId,
+    position: position ?? this.position,
+    rowJson: rowJson ?? this.rowJson,
+  );
+  SilexgisDeferredRowData copyWithCompanion(SilexgisDeferredRowCompanion data) {
+    return SilexgisDeferredRowData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      setId: data.setId.present ? data.setId.value : this.setId,
+      rowId: data.rowId.present ? data.rowId.value : this.rowId,
+      position: data.position.present ? data.position.value : this.position,
+      rowJson: data.rowJson.present ? data.rowJson.value : this.rowJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisDeferredRowData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('rowId: $rowId, ')
+          ..write('position: $position, ')
+          ..write('rowJson: $rowJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(profileUuid, setId, rowId, position, rowJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisDeferredRowData &&
+          other.profileUuid == this.profileUuid &&
+          other.setId == this.setId &&
+          other.rowId == this.rowId &&
+          other.position == this.position &&
+          other.rowJson == this.rowJson);
+}
+
+class SilexgisDeferredRowCompanion
+    extends UpdateCompanion<SilexgisDeferredRowData> {
+  final Value<String> profileUuid;
+  final Value<String> setId;
+  final Value<String> rowId;
+  final Value<int> position;
+  final Value<String> rowJson;
+  final Value<int> rowid;
+  const SilexgisDeferredRowCompanion({
+    this.profileUuid = const Value.absent(),
+    this.setId = const Value.absent(),
+    this.rowId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.rowJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisDeferredRowCompanion.insert({
+    required String profileUuid,
+    required String setId,
+    required String rowId,
+    required int position,
+    required String rowJson,
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       setId = Value(setId),
+       rowId = Value(rowId),
+       position = Value(position),
+       rowJson = Value(rowJson);
+  static Insertable<SilexgisDeferredRowData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? setId,
+    Expression<String>? rowId,
+    Expression<int>? position,
+    Expression<String>? rowJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (setId != null) 'set_id': setId,
+      if (rowId != null) 'row_id': rowId,
+      if (position != null) 'position': position,
+      if (rowJson != null) 'row_json': rowJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisDeferredRowCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? setId,
+    Value<String>? rowId,
+    Value<int>? position,
+    Value<String>? rowJson,
+    Value<int>? rowid,
+  }) {
+    return SilexgisDeferredRowCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      setId: setId ?? this.setId,
+      rowId: rowId ?? this.rowId,
+      position: position ?? this.position,
+      rowJson: rowJson ?? this.rowJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<String>(setId.value);
+    }
+    if (rowId.present) {
+      map['row_id'] = Variable<String>(rowId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (rowJson.present) {
+      map['row_json'] = Variable<String>(rowJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisDeferredRowCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('rowId: $rowId, ')
+          ..write('position: $position, ')
+          ..write('rowJson: $rowJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class SilexgisHeldRow extends Table
     with TableInfo<SilexgisHeldRow, SilexgisHeldRowData> {
   @override
@@ -24665,6 +25051,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final SilexgisStreamCursor silexgisStreamCursor = SilexgisStreamCursor(
     this,
   );
+  late final SilexgisDeferredRow silexgisDeferredRow = SilexgisDeferredRow(
+    this,
+  );
   late final SilexgisHeldRow silexgisHeldRow = SilexgisHeldRow(this);
   late final Index idxSilexgisHeldRowReview = Index(
     'idx_silexgis_held_row_review',
@@ -24750,6 +25139,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     silexgisRowRevision,
     idxSilexgisRowRevisionTable,
     silexgisStreamCursor,
+    silexgisDeferredRow,
     silexgisHeldRow,
     idxSilexgisHeldRowReview,
     silexgisPerson,
@@ -41964,6 +42354,216 @@ typedef $SilexgisStreamCursorProcessedTableManager =
       SilexgisStreamCursorData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisDeferredRowCreateCompanionBuilder =
+    SilexgisDeferredRowCompanion Function({
+      required String profileUuid,
+      required String setId,
+      required String rowId,
+      required int position,
+      required String rowJson,
+      Value<int> rowid,
+    });
+typedef $SilexgisDeferredRowUpdateCompanionBuilder =
+    SilexgisDeferredRowCompanion Function({
+      Value<String> profileUuid,
+      Value<String> setId,
+      Value<String> rowId,
+      Value<int> position,
+      Value<String> rowJson,
+      Value<int> rowid,
+    });
+
+class $SilexgisDeferredRowFilterComposer
+    extends Composer<_$AppDatabase, SilexgisDeferredRow> {
+  $SilexgisDeferredRowFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rowId => $composableBuilder(
+    column: $table.rowId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rowJson => $composableBuilder(
+    column: $table.rowJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisDeferredRowOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisDeferredRow> {
+  $SilexgisDeferredRowOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rowId => $composableBuilder(
+    column: $table.rowId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rowJson => $composableBuilder(
+    column: $table.rowJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisDeferredRowAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisDeferredRow> {
+  $SilexgisDeferredRowAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get setId =>
+      $composableBuilder(column: $table.setId, builder: (column) => column);
+
+  GeneratedColumn<String> get rowId =>
+      $composableBuilder(column: $table.rowId, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get rowJson =>
+      $composableBuilder(column: $table.rowJson, builder: (column) => column);
+}
+
+class $SilexgisDeferredRowTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisDeferredRow,
+          SilexgisDeferredRowData,
+          $SilexgisDeferredRowFilterComposer,
+          $SilexgisDeferredRowOrderingComposer,
+          $SilexgisDeferredRowAnnotationComposer,
+          $SilexgisDeferredRowCreateCompanionBuilder,
+          $SilexgisDeferredRowUpdateCompanionBuilder,
+          (
+            SilexgisDeferredRowData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisDeferredRow,
+              SilexgisDeferredRowData
+            >,
+          ),
+          SilexgisDeferredRowData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisDeferredRowTableManager(_$AppDatabase db, SilexgisDeferredRow table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisDeferredRowFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisDeferredRowOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisDeferredRowAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> setId = const Value.absent(),
+                Value<String> rowId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> rowJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisDeferredRowCompanion(
+                profileUuid: profileUuid,
+                setId: setId,
+                rowId: rowId,
+                position: position,
+                rowJson: rowJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String setId,
+                required String rowId,
+                required int position,
+                required String rowJson,
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisDeferredRowCompanion.insert(
+                profileUuid: profileUuid,
+                setId: setId,
+                rowId: rowId,
+                position: position,
+                rowJson: rowJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisDeferredRowProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisDeferredRow,
+      SilexgisDeferredRowData,
+      $SilexgisDeferredRowFilterComposer,
+      $SilexgisDeferredRowOrderingComposer,
+      $SilexgisDeferredRowAnnotationComposer,
+      $SilexgisDeferredRowCreateCompanionBuilder,
+      $SilexgisDeferredRowUpdateCompanionBuilder,
+      (
+        SilexgisDeferredRowData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisDeferredRow,
+          SilexgisDeferredRowData
+        >,
+      ),
+      SilexgisDeferredRowData,
+      PrefetchHooks Function()
+    >;
 typedef $SilexgisHeldRowCreateCompanionBuilder =
     SilexgisHeldRowCompanion Function({
       required String profileUuid,
@@ -45472,6 +46072,8 @@ class $AppDatabaseManager {
       $SilexgisRowRevisionTableManager(_db, _db.silexgisRowRevision);
   $SilexgisStreamCursorTableManager get silexgisStreamCursor =>
       $SilexgisStreamCursorTableManager(_db, _db.silexgisStreamCursor);
+  $SilexgisDeferredRowTableManager get silexgisDeferredRow =>
+      $SilexgisDeferredRowTableManager(_db, _db.silexgisDeferredRow);
   $SilexgisHeldRowTableManager get silexgisHeldRow =>
       $SilexgisHeldRowTableManager(_db, _db.silexgisHeldRow);
   $SilexgisPersonTableManager get silexgisPerson =>

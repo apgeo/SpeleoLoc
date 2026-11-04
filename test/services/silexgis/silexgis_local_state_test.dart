@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
@@ -45,6 +46,7 @@ void main() {
       expect(exported, isNot(contains('silexgis_server_link')));
       expect(exported, isNot(contains('silexgis_trip_entry')));
       expect(exported, isNot(contains('silexgis_raster_entry')));
+      expect(exported, isNot(contains('silexgis_deferred_row')));
     });
 
     test('writing to them logs no change', () async {
@@ -200,6 +202,68 @@ void main() {
       expect((await repo.readSetState(profile, setId)).cursor, 'c1');
       expect((await repo.readSetState(other, setId)).cursor, 'c2');
       expect((await repo.readSetState(profile, 'set-2')).cursor, 'c3');
+    });
+  });
+
+  group('rows waiting for their container', () {
+    SyncFeatureRow row(String name) =>
+        SyncFeatureRow.fromJson(<String, Object?>{
+          'id': Uuid.v7().toString(),
+          'kind': 'generic',
+          'featureTypeCode': 'cave_place',
+          'name': name,
+          'geometry': <String, Object?>{
+            'type': 'Point',
+            'coordinates': <double>[25.441, 45.531, 1240],
+          },
+          'properties': const <String, Object?>{'speleolocPci': 'AB-0007'},
+          'protectedEffective': true,
+          'updatedAt': '2026-08-28T09:14:52.113Z',
+          'parents': <Object?>[
+            <String, Object?>{
+              'parentId': Uuid.v7().toString(),
+              'isPrimary': true,
+            },
+          ],
+        });
+
+    test('read back as they arrived, in the order they were read', () async {
+      final first = row('Sala Mare');
+      final second = row('Galeria');
+      await repo.writeDeferredRows(profile, setId, <SyncFeatureRow>[
+        first,
+        second,
+      ]);
+
+      final read = await repo.readDeferredRows(profile, setId);
+      expect(read.map((r) => r.toJson()), <Map<String, Object?>>[
+        first.toJson(),
+        second.toJson(),
+      ]);
+    });
+
+    test('are replaced whole by each page', () async {
+      await repo.writeDeferredRows(profile, setId, <SyncFeatureRow>[
+        row('One'),
+        row('Two'),
+      ]);
+      final kept = row('Three');
+      await repo.writeDeferredRows(profile, setId, <SyncFeatureRow>[kept]);
+
+      expect((await repo.readDeferredRows(profile, setId)).single.id, kept.id);
+    });
+
+    test('go with the cursor, and only that set\'s', () async {
+      await repo.writeSetState(profile, setId, cursor: 'c1', setRevision: 1);
+      await repo.writeDeferredRows(profile, setId, <SyncFeatureRow>[row('A')]);
+      await repo.writeDeferredRows(profile, 'set-2', <SyncFeatureRow>[
+        row('B'),
+      ]);
+
+      await repo.dropCursor(profile, setId);
+
+      expect(await repo.readDeferredRows(profile, setId), isEmpty);
+      expect(await repo.readDeferredRows(profile, 'set-2'), hasLength(1));
     });
   });
 
@@ -410,9 +474,18 @@ void main() {
           ),
         );
 
+    await repo.writeDeferredRows(profile, setId, <SyncFeatureRow>[
+      SyncFeatureRow(
+        id: Uuid.v7().toString(),
+        kind: 'generic',
+        updatedAt: 'r1',
+      ),
+    ]);
+
     await repo.forgetProfile(profile);
 
     expect((await repo.readSetState(profile, setId)).cursor, isNull);
+    expect(await repo.readDeferredRows(profile, setId), isEmpty);
     expect(await repo.readRevision(profile, id), isNull);
     expect(
       (await repo.readStreamCursor(

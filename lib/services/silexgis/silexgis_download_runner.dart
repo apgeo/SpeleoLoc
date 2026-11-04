@@ -78,7 +78,7 @@ class SilexgisDownloadRunner {
     var applied = const SilexgisApplyReport();
     final read = await SilexgisPagedStreamRunner<SyncDownloadPage>(
       name: 'download',
-      cursors: _FeatureCursorStore(_localState, _profileUuid, setId),
+      cursors: _FeatureCursorStore(_localState, _applier, _profileUuid, setId),
       fetch: (cursor) =>
           _api.download(setId, cursor: cursor, pageSize: pageSize),
       apply: (page) async {
@@ -98,11 +98,18 @@ class SilexgisDownloadRunner {
   }
 }
 
-/// The feature download's position, kept per set beside the set's revision.
+/// The feature download's position, kept per set beside the set's revision,
+/// together with the rows read before it that wait for their container.
 class _FeatureCursorStore implements SilexgisCursorStore {
-  const _FeatureCursorStore(this._localState, this._profileUuid, this._setId);
+  const _FeatureCursorStore(
+    this._localState,
+    this._applier,
+    this._profileUuid,
+    this._setId,
+  );
 
   final SilexgisLocalStateRepository _localState;
+  final SilexgisDownloadApplier _applier;
   final String _profileUuid;
   final String _setId;
 
@@ -111,5 +118,8 @@ class _FeatureCursorStore implements SilexgisCursorStore {
       (await _localState.readSetState(_profileUuid, _setId)).cursor;
 
   @override
-  Future<void> drop() => _localState.dropCursor(_profileUuid, _setId);
+  Future<void> drop() async {
+    _applier.discardDeferred();
+    await _localState.dropCursor(_profileUuid, _setId);
+  }
 }
