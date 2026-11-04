@@ -164,7 +164,9 @@ mai aveți modificări netrimise.
 
 Schimbarea doar a numelui, a literelor mari și mici din adresă sau a barei
 de la final nu întreabă nimic și vă păstrează autentificat. Creionul este
-inactiv cât timp rulează o sincronizare.
+inactiv cât timp rulează o sincronizare, la fel ca **Autentificare**,
+**Uită**, **Alege** și comutatoarele — vedeți
+[Rularea unei sincronizări](#rularea-unei-sincronizări).
 
 Ecranul lucrează cu **un singur** server. Adăugarea unui al doilea nu este
 oferită.
@@ -514,6 +516,13 @@ indicator rotativ):
 |---|---|
 | **Sincronizează acum** | Rularea obișnuită. Trimite ce s-a schimbat aici, apoi citește ce s-a schimbat pe server de la ultima citire a acestui dispozitiv. |
 | **Citește tot** | Aceeași rulare, doar că jumătatea de citire pornește fiecare parte de la început, nu de unde a rămas. |
+
+Cât timp o rulare este în curs, restul ecranului o așteaptă și el:
+creionul, **Autentificare**, **Uită**, **Alege** și comutatoarele sunt
+inactive până la sfârșitul rulării. Rularea continuă cu serverul,
+autentificarea și setările cu care a pornit, așa că o schimbare făcută la
+jumătate ar fi anulată de ea sau ar lăsa-o să scrie sub un server pe care
+tocmai l-ați uitat.
 
 Ambele **trimit întâi și citesc apoi**, intenționat: altfel, o peșteră pe
 care ați șters-o aici v-ar fi înapoiată direct de citirea care ar rula

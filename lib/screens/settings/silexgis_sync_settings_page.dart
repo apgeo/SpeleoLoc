@@ -59,6 +59,10 @@ class _SilexgisSyncSettingsPageState
   @override
   Widget build(BuildContext context) {
     final progress = ref.watch(silexgisSyncControllerProvider).progress;
+    // A run holds the profile it started with and keeps writing its
+    // credential and state under it, so nothing that changes the profile
+    // or its sign-in is offered until it ends.
+    final running = progress.isRunning;
     final profile = _profile;
 
     return Scaffold(
@@ -78,35 +82,34 @@ class _SilexgisSyncSettingsPageState
                 else ...<Widget>[
                   _ServerCard(
                     profile: profile,
-                    // A run holds the old address and keeps writing its
-                    // credential and state under this profile, which would
-                    // undo the reset an address change makes.
-                    onEdit: progress.isRunning
-                        ? null
-                        : () => _editProfile(profile),
-                    onSignIn: () => _signIn(profile),
-                    onForget: () => _forget(profile),
+                    onEdit: running ? null : () => _editProfile(profile),
+                    onSignIn: running ? null : () => _signIn(profile),
+                    onForget: running ? null : () => _forget(profile),
                   ),
                   const SizedBox(height: 12),
                   _SelectionCard(
                     profile: profile,
-                    onChoose: () => _chooseSet(profile),
-                    onCarryOwnChanged: (value) async {
-                      await ref
-                          .read(silexgisProfileRepositoryProvider)
-                          .save(profile.copyWith(uploadsNewRoots: value));
-                      await _reload();
-                    },
+                    onChoose: running ? null : () => _chooseSet(profile),
+                    onCarryOwnChanged: running
+                        ? null
+                        : (value) async {
+                            await ref
+                                .read(silexgisProfileRepositoryProvider)
+                                .save(profile.copyWith(uploadsNewRoots: value));
+                            await _reload();
+                          },
                   ),
                   const SizedBox(height: 12),
                   SilexgisFilesCard(
                     profile: profile,
-                    onChanged: (changed) async {
-                      await ref
-                          .read(silexgisProfileRepositoryProvider)
-                          .save(changed);
-                      await _reload();
-                    },
+                    onChanged: running
+                        ? null
+                        : (changed) async {
+                            await ref
+                                .read(silexgisProfileRepositoryProvider)
+                                .save(changed);
+                            await _reload();
+                          },
                   ),
                   const SizedBox(height: 12),
                   _RunCard(
@@ -209,9 +212,10 @@ class _SilexgisSyncSettingsPageState
           LocServ.inst.t('silexgis_no_offline_access'),
         );
       }
-      await ref
-          .read(silexgisProfileRepositoryProvider)
-          .save(profile.copyWith(accountEmail: credentials.email));
+      await _saveCurrent(
+        profile,
+        (current) => current.copyWith(accountEmail: credentials.email),
+      );
       if (!mounted) return;
       SnackBarService.showSuccess(LocServ.inst.t('silexgis_signed_in'));
       await _reload();
@@ -219,6 +223,19 @@ class _SilexgisSyncSettingsPageState
       // The server's own sentence, not a diagnosis this application invented.
       if (mounted) SnackBarService.showError(e.message);
     }
+  }
+
+  /// Saves one change on the stored profile rather than on the page's copy,
+  /// which a dialog or a sign-in may have outlived: saving that copy would
+  /// undo what was written meanwhile, or bring back a forgotten server.
+  Future<void> _saveCurrent(
+    SilexgisProfile profile,
+    SilexgisProfile Function(SilexgisProfile current) change,
+  ) async {
+    final repository = ref.read(silexgisProfileRepositoryProvider);
+    final current = await repository.find(profile.profileUuid);
+    if (current == null) return;
+    await repository.save(change(current));
   }
 
   /// Drives the two-factor exchange when the account asks for one.
@@ -268,9 +285,10 @@ class _SilexgisSyncSettingsPageState
         builder: (_) => _SetPickerDialog(sets: sets),
       );
       if (chosen == null) return;
-      await ref
-          .read(silexgisProfileRepositoryProvider)
-          .save(profile.copyWith(syncSetId: chosen.id));
+      await _saveCurrent(
+        profile,
+        (current) => current.copyWith(syncSetId: chosen.id),
+      );
       if (!mounted) return;
       if (chosen.cavingGroupId == null) {
         // A selection with no caving group refuses every row this account
@@ -353,8 +371,8 @@ class _ServerCard extends StatelessWidget {
 
   final SilexgisProfile profile;
   final VoidCallback? onEdit;
-  final VoidCallback onSignIn;
-  final VoidCallback onForget;
+  final VoidCallback? onSignIn;
+  final VoidCallback? onForget;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -413,8 +431,8 @@ class _SelectionCard extends StatelessWidget {
   });
 
   final SilexgisProfile profile;
-  final VoidCallback onChoose;
-  final ValueChanged<bool> onCarryOwnChanged;
+  final VoidCallback? onChoose;
+  final ValueChanged<bool>? onCarryOwnChanged;
 
   @override
   Widget build(BuildContext context) => Card(

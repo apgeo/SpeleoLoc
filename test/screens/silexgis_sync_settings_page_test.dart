@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -260,6 +262,96 @@ void main() {
     });
   });
 
+  testWidgets(
+    'while a sync runs, nothing that changes the server or its sign-in is '
+    'offered',
+    (tester) async {
+      // The run holds the profile it started with and keeps writing its
+      // credential and state under it.
+      final held = tokens = _HeldTokenStore();
+      await held.write('p-1', 'refresh-token');
+      await pump(
+        tester,
+        profile: const SilexgisProfile(
+          profileUuid: 'p-1',
+          displayName: 'Clubul Speo Example',
+          baseUrl: 'https://speo.example.org',
+          accountEmail: 'caver@example.org',
+          syncSetId: 'set-1',
+        ),
+      );
+
+      // The run stops at signing in until the keystore answers.
+      final release = held.hold = Completer<void>();
+      await scrollToRun(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'silexgis_sync_now'));
+      await tester.pump();
+      await tester.pump();
+
+      void expectOffered({required bool offered}) {
+        final matcher = offered ? isNotNull : isNull;
+        expect(
+          tester
+              .widget<TextButton>(
+                find.widgetWithText(TextButton, 'silexgis_sign_in'),
+              )
+              .onPressed,
+          matcher,
+        );
+        expect(
+          tester
+              .widget<TextButton>(
+                find.widgetWithText(TextButton, 'silexgis_forget'),
+              )
+              .onPressed,
+          matcher,
+        );
+        expect(
+          tester
+              .widget<IconButton>(
+                find.ancestor(
+                  of: find.byIcon(Icons.edit_outlined),
+                  matching: find.byType(IconButton),
+                ),
+              )
+              .onPressed,
+          matcher,
+        );
+        expect(
+          tester
+              .widget<TextButton>(find.widgetWithText(TextButton, 'choose'))
+              .onPressed,
+          matcher,
+        );
+        for (final label in <String>[
+          'silexgis_send_new_caves',
+          'silexgis_files_send',
+        ]) {
+          expect(
+            tester
+                .widget<SwitchListTile>(
+                  find.widgetWithText(SwitchListTile, label),
+                )
+                .onChanged,
+            matcher,
+            reason: label,
+          );
+        }
+      }
+
+      await tester.scrollUntilVisible(
+        find.text('silexgis_forget'),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expectOffered(offered: false);
+
+      release.complete();
+      await tester.pumpAndSettle();
+      expectOffered(offered: true);
+    },
+  );
+
   testWidgets('a stored plain http address says it has to be corrected', (
     tester,
   ) async {
@@ -274,4 +366,15 @@ void main() {
 
     expect(find.text('silexgis_url_needs_fixing'), findsOneWidget);
   });
+}
+
+/// A keystore that keeps every read waiting while [hold] is open.
+class _HeldTokenStore extends InMemoryRefreshTokenStore {
+  Completer<void>? hold;
+
+  @override
+  Future<String?> read(String profileUuid) async {
+    await hold?.future;
+    return super.read(profileUuid);
+  }
 }

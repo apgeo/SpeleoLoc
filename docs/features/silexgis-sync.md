@@ -150,7 +150,8 @@ have unsent edits for.
 
 Changing only the name, or the address's letter case or trailing slash,
 asks nothing and keeps you signed in. The pencil is greyed out while a sync
-is running.
+is running, as are **Sign in**, **Forget**, **Choose** and the switches —
+see [Running a sync](#running-a-sync).
 
 The screen works with **one** server. Adding a second is not offered.
 
@@ -473,6 +474,12 @@ and while a run is in progress (a small spinner shows beside the heading):
 |---|---|
 | **Sync now** | The ordinary run. Sends what changed here, then reads what has changed on the server since this device last read it. |
 | **Read everything** | The same run, except the reading half starts every part from the beginning instead of from where it left off. |
+
+While a run is in progress, the rest of the screen waits for it as well:
+the pencil, **Sign in**, **Forget**, **Choose** and the switches are greyed
+out until the run ends. The run carries on with the server, the sign-in and
+the settings it started with, so a change made halfway would be undone by
+it, or would leave it writing under a server you had just forgotten.
 
 Both **send first and read second**, on purpose: a cave you deleted here
 would otherwise be handed straight back to you by the read that ran before

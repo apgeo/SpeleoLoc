@@ -12,8 +12,9 @@ class SilexgisFilesCard extends StatelessWidget {
 
   final SilexgisProfile profile;
 
-  /// The profile with one setting changed, to be saved.
-  final ValueChanged<SilexgisProfile> onChanged;
+  /// The profile with one setting changed, to be saved. Null while the
+  /// settings cannot be changed, which greys every switch out.
+  final ValueChanged<SilexgisProfile>? onChanged;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -22,15 +23,17 @@ class SilexgisFilesCard extends StatelessWidget {
         SwitchListTile(
           secondary: const Icon(Icons.photo_library_outlined),
           value: profile.sendsFiles,
-          onChanged: (v) => onChanged(profile.copyWith(sendsFiles: v)),
+          onChanged: onChanged == null
+              ? null
+              : (v) => onChanged!(profile.copyWith(sendsFiles: v)),
           title: Text(LocServ.inst.t('silexgis_files_send')),
           subtitle: Text(LocServ.inst.t('silexgis_files_send_desc')),
         ),
         SwitchListTile(
           secondary: const Icon(Icons.wifi),
           value: profile.filesOnlyOverWifi,
-          onChanged: profile.sendsFiles
-              ? (v) => onChanged(profile.copyWith(filesOnlyOverWifi: v))
+          onChanged: onChanged != null && profile.sendsFiles
+              ? (v) => onChanged!(profile.copyWith(filesOnlyOverWifi: v))
               : null,
           title: Text(LocServ.inst.t('silexgis_files_wifi_only')),
           subtitle: Text(LocServ.inst.t('silexgis_files_wifi_only_desc')),
@@ -38,8 +41,11 @@ class SilexgisFilesCard extends StatelessWidget {
         SwitchListTile(
           secondary: const Icon(Icons.help_outline),
           value: profile.asksBeforeMobileData,
-          onChanged: profile.sendsFiles && profile.filesOnlyOverWifi
-              ? (v) => onChanged(profile.copyWith(asksBeforeMobileData: v))
+          onChanged:
+              onChanged != null &&
+                  profile.sendsFiles &&
+                  profile.filesOnlyOverWifi
+              ? (v) => onChanged!(profile.copyWith(asksBeforeMobileData: v))
               : null,
           title: Text(LocServ.inst.t('silexgis_files_ask')),
           subtitle: Text(LocServ.inst.t('silexgis_files_ask_desc')),
