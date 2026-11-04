@@ -894,6 +894,34 @@ void main() {
       expect(await localState.readUploadAttempts(profile, setId), isEmpty);
     });
 
+    test(
+      'one this build cannot read is dropped, not met on every run',
+      () async {
+        await localState.writeUploadAttempt(
+          profile,
+          setId,
+          batchId: 'from-another-version',
+          attempt: <String, Object?>{
+            'batchId': 'from-another-version',
+            'rows': <Object?>[
+              <String, Object?>{
+                'row': <String, Object?>{'id': placeId.toString(), 'kind': 'x'},
+                'entityTable': 'cave_places',
+                'entityUuid': placeId.toString(),
+              },
+            ],
+          },
+        );
+
+        final report = await runner.run(setId, capabilities: capabilities);
+
+        expect(report.replayed, 0);
+        expect(report.written, 1);
+        expect(server.sent.single.batchId, isNot('from-another-version'));
+        expect(await localState.readUploadAttempts(profile, setId), isEmpty);
+      },
+    );
+
     test('is applied then, when the first one never arrived', () async {
       server.dropRequests = 1;
       await expectLater(

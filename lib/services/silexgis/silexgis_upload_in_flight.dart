@@ -57,26 +57,39 @@ class SilexgisUploadInFlight {
     ],
   };
 
-  static SilexgisUploadInFlight fromJson(Map<String, Object?> json) =>
-      SilexgisUploadInFlight(
-        batchId: json['batchId']! as String,
-        clientFeatures: <String>[
-          for (final name
-              in json['clientFeatures'] as List? ?? const <Object?>[])
-            name as String,
-        ],
-        rows: <PendingUploadRow>[
-          for (final entry
-              in (json['rows'] as List? ?? const <Object?>[])
-                  .cast<Map<Object?, Object?>>())
-            PendingUploadRow(
-              row: SyncUploadRow.fromJson(
-                Map<String, Object?>.from(entry['row']! as Map),
-              ),
-              entityTable: entry['entityTable']! as String,
-              entityUuid: Uuid.parse(entry['entityUuid']! as String),
-              localUpdatedAt: (entry['localUpdatedAt'] as num?)?.toInt(),
+  /// Throws a [FormatException] for a record this build cannot read.
+  static SilexgisUploadInFlight fromJson(Map<String, Object?> json) {
+    final rows = json['rows'];
+    if (json['batchId'] is! String ||
+        rows is! List ||
+        rows.any(
+          (r) =>
+              r is! Map ||
+              r['row'] is! Map ||
+              r['entityTable'] is! String ||
+              r['entityUuid'] is! String,
+        )) {
+      throw const FormatException('not a stored upload');
+    }
+    return SilexgisUploadInFlight(
+      batchId: json['batchId']! as String,
+      clientFeatures: <String>[
+        for (final name in json['clientFeatures'] as List? ?? const <Object?>[])
+          name as String,
+      ],
+      rows: <PendingUploadRow>[
+        for (final entry
+            in (json['rows'] as List? ?? const <Object?>[])
+                .cast<Map<Object?, Object?>>())
+          PendingUploadRow(
+            row: SyncUploadRow.fromJson(
+              Map<String, Object?>.from(entry['row']! as Map),
             ),
-        ],
-      );
+            entityTable: entry['entityTable']! as String,
+            entityUuid: Uuid.parse(entry['entityUuid']! as String),
+            localUpdatedAt: (entry['localUpdatedAt'] as num?)?.toInt(),
+          ),
+      ],
+    );
+  }
 }

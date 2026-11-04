@@ -145,6 +145,7 @@ class SyncUploadRow implements SyncUploadItem {
     final id = json['id']! as String;
     final kind = SyncUploadKind.values.firstWhere(
       (k) => k.wireName == json['kind'],
+      orElse: () => throw FormatException('unknown kind', json['kind']),
     );
     final baseRevision = json['baseRevision'] as String?;
     if (json['deleted'] == true) {
@@ -170,7 +171,11 @@ class SyncUploadRow implements SyncUploadItem {
       altitude: (json['altitude'] as num?)?.toDouble(),
       positionQuality: quality == null
           ? null
-          : PositionQuality.values.firstWhere((q) => q.wireName == quality),
+          : PositionQuality.values.firstWhere(
+              (q) => q.wireName == quality,
+              orElse: () =>
+                  throw FormatException('unknown position quality', quality),
+            ),
       properties: json['properties'] is Map
           ? Map<String, Object?>.from(json['properties']! as Map)
           : const <String, Object?>{},

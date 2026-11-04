@@ -261,14 +261,28 @@ class SilexgisUploadRunner {
   }
 
   /// The uploads to [setId] sent on an earlier run whose answer never came.
-  Future<List<SilexgisUploadInFlight>> _unanswered(String setId) async =>
-      <SilexgisUploadInFlight>[
-        for (final json in await _localState.readUploadAttempts(
-          _profileUuid,
-          setId,
-        ))
-          SilexgisUploadInFlight.fromJson(json),
-      ];
+  ///
+  /// One this build cannot read — written by another version, say — is
+  /// dropped rather than failing every run at this point: its rows then go
+  /// again under a new identifier, as they did before attempts were kept.
+  Future<List<SilexgisUploadInFlight>> _unanswered(String setId) async {
+    final attempts = <SilexgisUploadInFlight>[];
+    for (final json in await _localState.readUploadAttempts(
+      _profileUuid,
+      setId,
+    )) {
+      try {
+        attempts.add(SilexgisUploadInFlight.fromJson(json));
+      } on FormatException catch (e) {
+        _log.warning('dropping a stored upload this build cannot read: $e');
+        final batchId = json['batchId'];
+        if (batchId is String) {
+          await _localState.dropUploadAttempt(_profileUuid, batchId);
+        }
+      }
+    }
+    return attempts;
+  }
 
   /// Sends [batch], keeping [attempt] for as long as the batch may yet be
   /// applied.
