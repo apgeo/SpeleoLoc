@@ -198,6 +198,12 @@ class SilexgisAuthService implements SilexgisTokenSource {
         _log.info('Refresh refused: the account is locked; keeping the tokens');
         throw SilexgisAccountLockedException(code: e.code, status: e.status);
       }
+      if (e.code != _invalidGrant) {
+        // The server found the request itself wrong and said nothing about
+        // the token, which stays the caver's.
+        _log.info('Refresh refused (${e.code}); keeping the tokens');
+        rethrow;
+      }
       // `invalid_grant` here is spent, expired, replayed — or the account's
       // password was changed or reset, which revokes every token that account
       // holds on every device. All of them mean: ask for a password.
@@ -354,6 +360,12 @@ class SilexgisAuthService implements SilexgisTokenSource {
   /// The one route on this server that is form-encoded rather than JSON, and
   /// the one that answers `error`/`error_description` rather than a problem
   /// document. A JSON body here is refused outright.
+  ///
+  /// Only that `error` answer is the server's verdict. A `5xx` or a `429`, a
+  /// redirect, or a page in some other shape comes from whatever stands in
+  /// front of the server — a proxy while the server restarts, a captive
+  /// portal — and says nothing about the token, so it is a transport failure
+  /// to try again later.
   Future<SilexgisTokens> _tokenEndpoint(Map<String, String> form) async {
     final response = await _post(
       _uri(SilexgisContract.tokenPath),
@@ -368,27 +380,41 @@ class SilexgisAuthService implements SilexgisTokenSource {
           )
           .join('&'),
     );
+    final status = response.statusCode;
     final body = _decodeObject(response);
-    if (response.statusCode != 200) {
-      final error = body?['error'] as String?;
+    if (status == 200) {
+      final tokens = body == null
+          ? null
+          : SilexgisTokens.tryParse(body, _clock.now());
+      if (tokens == null) {
+        throw const SilexgisTransportException(
+          'The server answered the sign-in with something that is not a token',
+          status: 200,
+        );
+      }
+      return tokens;
+    }
+    final error = body?['error'];
+    final description = body?['error_description'];
+    if (status >= 400 && status < 500 && status != 429 && error is String) {
       throw SilexgisAuthException(
         // Shown verbatim: an administrator can turn on confirmed-email
         // enforcement at any time and refreshes then start failing for an
         // account that had been working, with no client-side symptom and
         // nothing the client can do. Inventing a diagnosis leaves the
         // resulting support call with nothing to go on.
-        (body?['error_description'] as String?) ??
-            error ??
-            'The token endpoint refused the request',
+        description is String ? description : error,
         code: error,
-        status: response.statusCode,
-        action: SilexgisAction.reAuth,
+        status: status,
+        action: error == _invalidGrant
+            ? SilexgisAction.reAuth
+            : SilexgisAction.surfaceToUser,
       );
     }
-    if (body == null) {
-      throw const SilexgisAuthException('The token endpoint answered no body');
-    }
-    return SilexgisTokens.fromJson(body, _clock.now());
+    throw SilexgisTransportException(
+      'The server could not answer the sign-in just now',
+      status: status,
+    );
   }
 
   // ----------------------------------------------------------------- plumbing

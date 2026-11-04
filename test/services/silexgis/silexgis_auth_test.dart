@@ -437,6 +437,99 @@ void main() {
       expect(await store.read(profile), 'refresh-1');
     });
 
+    group('an answer that is not the server refusing the token', () {
+      // A server restart ends no session, and what stands in front of the
+      // server while it restarts answers in its own words. Only the token
+      // endpoint's own refusal says anything about the token.
+      final answers = <String, ScriptedResponse Function()>{
+        'a 503 page from a proxy': () => ScriptedResponse(
+          path: SilexgisContract.tokenPath,
+          status: 503,
+          body: '<html><body>Service Unavailable</body></html>',
+          headers: const <String, String>{'content-type': 'text/html'},
+        ),
+        'a 502 with no body': () =>
+            ScriptedResponse(path: SilexgisContract.tokenPath, status: 502),
+        'a 429': () =>
+            ScriptedResponse(path: SilexgisContract.tokenPath, status: 429),
+        'a redirect': () => ScriptedResponse(
+          path: SilexgisContract.tokenPath,
+          status: 301,
+          headers: const <String, String>{
+            'location': 'https://elsewhere.example.test/connect/token',
+          },
+        ),
+        'a 404 page that is not the token endpoint\'s': () => ScriptedResponse(
+          path: SilexgisContract.tokenPath,
+          status: 404,
+          body: '<html>Not Found</html>',
+        ),
+        'a 200 that is not JSON': () => ScriptedResponse(
+          path: SilexgisContract.tokenPath,
+          status: 200,
+          body: '<html>Sign in to the hotel Wi-Fi</html>',
+        ),
+        'a 200 with no access token in it': () => ScriptedResponse.json(
+          path: SilexgisContract.tokenPath,
+          json: <String, Object?>{'token_type': 'Bearer'},
+        ),
+      };
+
+      for (final entry in answers.entries) {
+        test('${entry.key} keeps the sign-in, to try again later', () async {
+          final store = InMemoryRefreshTokenStore();
+          await store.write(profile, 'refresh-1');
+          final client = ScriptedClient(<ScriptedResponse>[entry.value()]);
+          final auth = build(client, store: store);
+
+          await expectLater(
+            auth.restore(),
+            throwsA(
+              isA<SilexgisTransportException>().having(
+                (e) => e.action,
+                'action',
+                SilexgisAction.retry,
+              ),
+            ),
+          );
+          expect(await store.read(profile), 'refresh-1');
+          // The server answered, so this is no lost answer to repeat at once.
+          expect(client.sent, hasLength(1));
+        });
+      }
+
+      test('a malformed-request refusal keeps the token', () async {
+        // The server read the request and found it malformed; it said
+        // nothing about the token, which is still the caver's.
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = ScriptedClient(<ScriptedResponse>[
+          ScriptedResponse.json(
+            path: SilexgisContract.tokenPath,
+            status: 400,
+            json: <String, Object?>{
+              'error': 'invalid_request',
+              'error_description': 'The mandatory parameter is missing.',
+            },
+          ),
+        ]);
+
+        await expectLater(
+          build(client, store: store).restore(),
+          throwsA(
+            isA<SilexgisAuthException>()
+                .having((e) => e.code, 'code', 'invalid_request')
+                .having(
+                  (e) => e.message,
+                  'message',
+                  'The mandatory parameter is missing.',
+                ),
+          ),
+        );
+        expect(await store.read(profile), 'refresh-1');
+      });
+    });
+
     test('renews an access token before it lapses mid-request', () async {
       final store = InMemoryRefreshTokenStore();
       await store.write(profile, 'refresh-1');

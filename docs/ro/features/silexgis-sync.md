@@ -233,6 +233,12 @@ pe dispozitiv. Schimbarea sau resetarea parolei contului pe server
 invalidează acreditarea pe **fiecare** dispozitiv autentificat cu ea, așa că
 așteptați-vă să vă autentificați din nou după o schimbare de parolă.
 
+Un server care repornește, este ocupat sau inaccesibil nu vă deconectează.
+Rularea se oprește și spune că serverul nu a putut fi contactat sau nu a
+putut răspunde acum; acreditarea salvată este păstrată, iar rularea
+următoare continuă cu ea. Parola vă este cerută doar atunci când serverul
+spune că acreditarea nu mai este valabilă.
+
 ## Peșterile purtate de dispozitiv
 
 Un telefon nu poartă întregul registru. Ce poartă este o **selecție** — o

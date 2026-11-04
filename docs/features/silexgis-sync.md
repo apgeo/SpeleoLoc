@@ -211,6 +211,12 @@ caves are on the device regardless. Changing or resetting the account's
 password on the server also invalidates the credential on **every** device
 signed in with it, so expect to sign in again after a password change.
 
+A server that is restarting, busy or unreachable does not sign you out. The
+run stops, saying that the server could not be reached or could not answer
+just now; the stored credential is kept, and the next run carries on with
+it. Only the server saying that the credential is no longer valid asks for
+your password.
+
 ## Caves this device carries
 
 A phone does not carry the whole registry. What it carries is a

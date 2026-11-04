@@ -33,6 +33,21 @@ class SilexgisTokens {
     Duration margin = const Duration(minutes: 1),
   }) => !now.add(margin).isBefore(expiresAt);
 
+  /// Null when [json] is not a token answer at all — something in front of
+  /// the server can answer `200` with a page of its own, and that says
+  /// nothing about the token that was presented.
+  static SilexgisTokens? tryParse(Map<String, Object?> json, DateTime now) {
+    final access = json['access_token'];
+    final refresh = json['refresh_token'];
+    final expiresIn = json['expires_in'];
+    final scope = json['scope'];
+    if (access is! String || access.isEmpty) return null;
+    if (refresh != null && refresh is! String) return null;
+    if (expiresIn != null && expiresIn is! num) return null;
+    if (scope != null && scope is! String) return null;
+    return fromJson(json, now);
+  }
+
   static SilexgisTokens fromJson(Map<String, Object?> json, DateTime now) {
     final expiresIn = (json['expires_in'] as num?)?.toInt() ?? 0;
     return SilexgisTokens(
