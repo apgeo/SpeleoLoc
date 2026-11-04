@@ -345,10 +345,17 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expectOffered(offered: false);
+      // Greyed-out controls alone read as broken; each card says they come
+      // back once the run ends.
+      expect(
+        find.text('silexgis_available_after_sync'),
+        findsAtLeastNWidgets(2),
+      );
 
       release.complete();
       await tester.pumpAndSettle();
       expectOffered(offered: true);
+      expect(find.text('silexgis_available_after_sync'), findsNothing);
     },
   );
 

@@ -526,7 +526,8 @@ indicator rotativ):
 
 Cât timp o rulare este în curs, restul ecranului o așteaptă și el:
 creionul, **Autentificare**, **Uită**, **Alege** și comutatoarele sunt
-inactive până la sfârșitul rulării. Rularea continuă cu serverul,
+inactive până la sfârșitul rulării, iar între timp fiecare card scrie sub
+ele *Disponibil după ce se termină sincronizarea*. Rularea continuă cu serverul,
 autentificarea și setările cu care a pornit, așa că o schimbare făcută la
 jumătate ar fi anulată de ea sau ar lăsa-o să scrie sub un server pe care
 tocmai l-ați uitat.

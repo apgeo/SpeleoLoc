@@ -1626,6 +1626,7 @@
   "silexgis_files_wifi_only_desc": "Files wait for Wi-Fi; everything without a file still goes. A phone's hotspot counts as Wi-Fi.",
   "silexgis_files_ask": "Ask before using mobile data",
   "silexgis_files_ask_desc": "Off, files simply wait for Wi-Fi.",
+  "silexgis_available_after_sync": "Available when the sync finishes",
   "silexgis_parts_title": "What the server offers",
   "silexgis_parts_as_of": "As of the last sync, and what this device does with each part.",
   "silexgis_parts_unknown": "Not known until the first sync.",

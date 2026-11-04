@@ -482,7 +482,8 @@ and while a run is in progress (a small spinner shows beside the heading):
 
 While a run is in progress, the rest of the screen waits for it as well:
 the pencil, **Sign in**, **Forget**, **Choose** and the switches are greyed
-out until the run ends. The run carries on with the server, the sign-in and
+out until the run ends, and each card says *Available when the sync
+finishes* under them meanwhile. The run carries on with the server, the sign-in and
 the settings it started with, so a change made halfway would be undone by
 it, or would leave it writing under a server you had just forgotten.
 

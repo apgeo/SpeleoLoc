@@ -606,11 +606,28 @@ void main() {
             build(client, store: store).restore(),
             throwsA(isA<SilexgisTransportException>()),
           );
-          expect(client.presented, hasLength(3));
+          expect(client.presented, hasLength(2));
           expect(client.presented.toSet(), <String>{'refresh-1'});
           expect(await store.read(profile), 'refresh-1');
         },
       );
+
+      test('starts its every repeat inside the window the server keeps the '
+          'spent token for', () {
+        // Measured from the start of the first attempt, which the server may
+        // have redeemed the moment it arrived: each repeat waits out one
+        // timed-out attempt and one pause before it starts.
+        final lastStart =
+            (SilexgisAuthService.defaultRefreshTimeout +
+                SilexgisAuthService.defaultRefreshRetryPause) *
+            (SilexgisAuthService.refreshAttempts - 1);
+        expect(SilexgisAuthService.refreshAttempts, greaterThan(1));
+        expect(lastStart, lessThan(SilexgisAuthService.serverGraceWindow));
+        expect(
+          SilexgisAuthService.defaultRefreshTimeout,
+          const Duration(seconds: 20),
+        );
+      });
     });
 
     test('presents the stored successor when another client of this profile '

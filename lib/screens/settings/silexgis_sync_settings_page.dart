@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/silexgis_after_sync_hint.dart';
 import 'package:speleoloc/screens/settings/silexgis_files_card.dart';
 import 'package:speleoloc/screens/settings/silexgis_mobile_data_dialog.dart';
 import 'package:speleoloc/screens/settings/silexgis_served_parts_card.dart';
@@ -418,6 +419,8 @@ class _ServerCard extends StatelessWidget {
             ),
           ],
         ),
+        // The actions are withheld only while a sync runs.
+        if (onSignIn == null) const SilexgisAfterSyncHint(),
       ],
     ),
   );
@@ -458,6 +461,7 @@ class _SelectionCard extends StatelessWidget {
           title: Text(LocServ.inst.t('silexgis_send_new_caves')),
           subtitle: Text(LocServ.inst.t('silexgis_send_new_caves_desc')),
         ),
+        if (onChoose == null) const SilexgisAfterSyncHint(),
       ],
     ),
   );

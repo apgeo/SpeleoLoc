@@ -41,8 +41,8 @@ class SilexgisAuthService implements SilexgisTokenSource {
     http.Client? client,
     Clock clock = const SystemClock(),
     Duration timeout = const Duration(seconds: 30),
-    Duration refreshTimeout = const Duration(seconds: 8),
-    Duration refreshRetryPause = const Duration(seconds: 1),
+    Duration refreshTimeout = defaultRefreshTimeout,
+    Duration refreshRetryPause = defaultRefreshRetryPause,
   }) : _baseUri = baseUri,
        _profileUuid = profileUuid,
        _store = store,
@@ -68,15 +68,25 @@ class SilexgisAuthService implements SilexgisTokenSource {
   final Clock _clock;
   final Duration _timeout;
 
-  /// The server accepts a spent refresh token again for about thirty seconds
-  /// after redeeming it, so that a client whose answer was lost can repeat
-  /// the same request. With these values the last of [_refreshAttempts]
-  /// starts at most 18 s after the first, inside that window even when the
-  /// first one was redeemed the moment it arrived; the ordinary 30 s timeout
-  /// alone would already have used the window up.
+  /// How long the server keeps accepting a spent refresh token after
+  /// redeeming it, so that a client whose answer was lost can repeat the same
+  /// request. The contract says "about thirty seconds"; a repeat that starts
+  /// later presents a spent token and revokes the whole chain.
+  static const Duration serverGraceWindow = Duration(seconds: 30);
+
+  /// Long enough for a slow mobile link to get its answer through, which an
+  /// eight-second limit cut off often enough to cost a needless repeat.
+  static const Duration defaultRefreshTimeout = Duration(seconds: 20);
+  static const Duration defaultRefreshRetryPause = Duration(seconds: 1);
+
+  /// Every attempt has to start inside [serverGraceWindow] measured from the
+  /// first, even when the first was redeemed the moment it arrived. With the
+  /// defaults the repeat starts at most 21 s after the first; a third would
+  /// start at 42 s, past the window, so there is none.
+  static const int refreshAttempts = 2;
+
   final Duration _refreshTimeout;
   final Duration _refreshRetryPause;
-  static const int _refreshAttempts = 3;
 
   final _log = AppLogger.of('SilexgisAuthService');
 
@@ -305,7 +315,7 @@ class SilexgisAuthService implements SilexgisTokenSource {
       try {
         return await _tokenEndpoint(form, timeout: _refreshTimeout);
       } on SilexgisTransportException catch (e) {
-        if (e.status != null || attempt >= _refreshAttempts) rethrow;
+        if (e.status != null || attempt >= refreshAttempts) rethrow;
         _log.info('A refresh got no answer; repeating it at once');
         await Future<void>.delayed(_refreshRetryPause);
       }

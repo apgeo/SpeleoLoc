@@ -1625,6 +1625,7 @@
   "silexgis_files_wifi_only_desc": "Fișierele așteaptă Wi-Fi; tot ce nu are fișier pleacă oricum. Hotspotul unui telefon contează ca Wi-Fi.",
   "silexgis_files_ask": "Întreabă înainte de a folosi datele mobile",
   "silexgis_files_ask_desc": "Oprit, fișierele doar așteaptă Wi-Fi.",
+  "silexgis_available_after_sync": "Disponibil după ce se termină sincronizarea",
   "silexgis_parts_title": "Ce oferă serverul",
   "silexgis_parts_as_of": "La ultima sincronizare, și ce face acest dispozitiv cu fiecare parte.",
   "silexgis_parts_unknown": "Nu se știe până la prima sincronizare.",
