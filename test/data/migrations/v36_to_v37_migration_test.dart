@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
+import 'package:speleoloc/services/current_user_service.dart';
 
 /// Functional coverage for [V36ToV37Migration] on the shapes a database
 /// upgraded from v7 still has, and a second run changing nothing. Values are
@@ -185,6 +186,46 @@ void main() {
           reason: query,
         );
       }
+    });
+  });
+
+  test('clears is_synced on every configuration key outside the synced '
+      'set', () async {
+    const syncedKeys = [
+      ConfigKey.placeCodeStrategy,
+      ConfigKey.placeCodeStrategyConfig,
+      ConfigKey.qcriMode,
+      ConfigKey.qcriHashConfig,
+    ];
+    const deviceOnlyKeys = [
+      ConfigKey.ftpProfiles,
+      ConfigKey.deviceUuid,
+      'invented_device_key',
+    ];
+    await db.customStatement('DELETE FROM configurations');
+    for (final key in [...syncedKeys, ...deviceOnlyKeys]) {
+      await db.customStatement(
+        'INSERT INTO configurations (title, value, is_synced) VALUES (?, ?, 1)',
+        [key, 'invented'],
+      );
+    }
+    await db.customStatement(
+      'INSERT INTO configurations (title, value, is_synced) VALUES (?, ?, 0)',
+      ['invented_unflagged_key', 'invented'],
+    );
+
+    await migrate();
+
+    final flags = {
+      for (final r in await pragma(
+        'SELECT title, is_synced, value FROM configurations',
+      ))
+        r['title']: (r['is_synced'], r['value']),
+    };
+    expect(flags, {
+      for (final key in syncedKeys) key: (1, 'invented'),
+      for (final key in deviceOnlyKeys) key: (0, 'invented'),
+      'invented_unflagged_key': (0, 'invented'),
     });
   });
 

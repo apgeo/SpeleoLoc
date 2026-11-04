@@ -1179,6 +1179,8 @@ class V35ToV36Migration extends SchemaMigration {
 ///   which a fresh install does not have.
 /// - The index on `documentation_files_to_cave_trip_points` by point, which
 ///   only upgraded databases got from v20 → v21, is created on the rest.
+/// - `configurations.is_synced` is cleared on every key outside the synced
+///   set.
 ///
 /// It also adds the indexes the hot lookups were scanning whole tables for:
 /// places by cave and by either code, map definitions by map and documents
@@ -1200,7 +1202,19 @@ class V36ToV37Migration extends SchemaMigration {
     if (await _configurationsHasUniqueId(db)) {
       await _recreateConfigurations(db, migrator);
     }
-    await _createIndexIfTableExists(
+    // Imports by earlier builds took an incoming row's is_synced as it came,
+    // so a crafted archive could leave device-only keys flagged as synced.
+    // Export and import now go by the key alone; this makes the flag say the
+    // same again.
+    await _executeIfTableExists(
+      db,
+      'configurations',
+      'UPDATE configurations SET is_synced = 0 '
+          'WHERE is_synced <> 0 AND title NOT IN '
+          '(${List.filled(_syncedConfigurationKeys.length, '?').join(', ')})',
+      _syncedConfigurationKeys,
+    );
+    await _executeIfTableExists(
       db,
       'documentation_files_to_cave_trip_points',
       'CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point '
@@ -1234,9 +1248,20 @@ class V36ToV37Migration extends SchemaMigration {
             'ON documentation_files(file_hash)',
       ),
     ]) {
-      await _createIndexIfTableExists(db, table, createIndex);
+      await _executeIfTableExists(db, table, createIndex);
     }
   }
+
+  /// The configuration keys that travel between devices, as of v37. Written
+  /// out rather than taken from the services layer's live set: the data
+  /// layer does not reach up into it, and this step must not change meaning
+  /// when that set changes later.
+  static const _syncedConfigurationKeys = [
+    'place_code_strategy',
+    'place_code_strategy_config',
+    'qcri_mode',
+    'qcri_hash_config',
+  ];
 
   static Future<bool> _entranceFlagsNullable(AppDatabase db) async {
     final columns = await db
@@ -1342,13 +1367,14 @@ class V36ToV37Migration extends SchemaMigration {
   }
 }
 
-/// Runs [createIndex] unless [table] is absent, which only a deliberately
-/// partial database is, as [_addColumnIfMissing] explains.
-Future<void> _createIndexIfTableExists(
+/// Runs [statement] on [table] unless the table is absent, which only a
+/// deliberately partial database is, as [_addColumnIfMissing] explains.
+Future<void> _executeIfTableExists(
   AppDatabase db,
   String table,
-  String createIndex,
-) async {
+  String statement, [
+  List<Object?> args = const [],
+]) async {
   final found = await db
       .customSelect(
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
@@ -1356,7 +1382,7 @@ Future<void> _createIndexIfTableExists(
       )
       .get();
   if (found.isEmpty) return;
-  await db.customStatement(createIndex);
+  await db.customStatement(statement, args);
 }
 
 /// Adds [column] to [table] unless it is already there — or unless the
