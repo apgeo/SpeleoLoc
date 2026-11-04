@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_tokens.dart';
@@ -66,7 +69,7 @@ void main() {
   );
 
   SilexgisAuthService build(
-    ScriptedClient client, {
+    http.Client client, {
     SilexgisRefreshTokenStore? store,
   }) => SilexgisAuthService(
     baseUri: base,
@@ -74,6 +77,7 @@ void main() {
     store: store ?? InMemoryRefreshTokenStore(),
     client: client,
     clock: clock,
+    refreshRetryPause: Duration.zero,
   );
 
   ScriptedClient signInScript({
@@ -530,6 +534,78 @@ void main() {
       });
     });
 
+    group('a refresh whose answer was lost', () {
+      // The server may have redeemed the token before the answer was lost.
+      // It accepts the spent token again for about thirty seconds so that a
+      // client can repeat the same request; presented later, the spent token
+      // revokes the whole chain.
+      test('is repeated at once with the same token', () async {
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = _LosesAnswers(
+          ScriptedClient(<ScriptedResponse>[
+            tokenOk(access: 'access-2', refresh: 'refresh-2'),
+          ]),
+          lose: 1,
+        );
+        final auth = build(client, store: store);
+
+        expect(await auth.restore(), isTrue);
+        expect(client.presented, <String>['refresh-1', 'refresh-1']);
+        expect(await store.read(profile), 'refresh-2');
+        expect(await auth.accessToken(), 'access-2');
+      });
+
+      test('is cut short when it stalls, rather than waiting the window '
+          'out', () async {
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = _LosesAnswers(
+          ScriptedClient(<ScriptedResponse>[
+            tokenOk(access: 'access-2', refresh: 'refresh-2'),
+          ]),
+          lose: 1,
+          stall: true,
+        );
+        final auth = SilexgisAuthService(
+          baseUri: base,
+          profileUuid: profile,
+          store: store,
+          client: client,
+          clock: clock,
+          // The ordinary timeout would let a stalled refresh use up the
+          // server's whole window before the repeat is sent.
+          timeout: const Duration(hours: 1),
+          refreshTimeout: const Duration(milliseconds: 50),
+          refreshRetryPause: Duration.zero,
+        );
+
+        expect(await auth.restore(), isTrue);
+        expect(client.presented, <String>['refresh-1', 'refresh-1']);
+        expect(await store.read(profile), 'refresh-2');
+      });
+
+      test(
+        'is given up on after a few prompt tries, keeping the token',
+        () async {
+          final store = InMemoryRefreshTokenStore();
+          await store.write(profile, 'refresh-1');
+          final client = _LosesAnswers(
+            ScriptedClient(<ScriptedResponse>[]),
+            lose: 10,
+          );
+
+          await expectLater(
+            build(client, store: store).restore(),
+            throwsA(isA<SilexgisTransportException>()),
+          );
+          expect(client.presented, hasLength(3));
+          expect(client.presented.toSet(), <String>{'refresh-1'});
+          expect(await store.read(profile), 'refresh-1');
+        },
+      );
+    });
+
     test('renews an access token before it lapses mid-request', () async {
       final store = InMemoryRefreshTokenStore();
       await store.write(profile, 'refresh-1');
@@ -676,3 +752,35 @@ void main() {
 String _s256(String verifier) => base64Url
     .encode(sha256.convert(ascii.encode(verifier)).bytes)
     .replaceAll('=', '');
+
+/// Loses the answer to the first [lose] refreshes, as a dropped connection
+/// does after the server already acted on the request, and records each
+/// refresh token presented.
+class _LosesAnswers extends http.BaseClient {
+  _LosesAnswers(this._inner, {required int lose, this.stall = false})
+    : _toLose = lose;
+
+  final ScriptedClient _inner;
+  int _toLose;
+
+  /// Never answers a lost request, rather than failing it at once.
+  final bool stall;
+  final List<String> presented = <String>[];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request is http.Request &&
+        request.url.path == SilexgisContract.tokenPath) {
+      final form = Uri.splitQueryString(request.body);
+      if (form['grant_type'] == 'refresh_token') {
+        presented.add(form['refresh_token'] ?? '');
+        if (_toLose > 0) {
+          _toLose--;
+          if (stall) return Completer<http.StreamedResponse>().future;
+          throw const SocketException('Connection reset by peer');
+        }
+      }
+    }
+    return _inner.send(request);
+  }
+}

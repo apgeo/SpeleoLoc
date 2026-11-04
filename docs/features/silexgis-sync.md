@@ -215,7 +215,8 @@ A server that is restarting, busy or unreachable does not sign you out. The
 run stops, saying that the server could not be reached or could not answer
 just now; the stored credential is kept, and the next run carries on with
 it. Only the server saying that the credential is no longer valid asks for
-your password.
+your password. If the answer to a renewal is lost on a poor connection, the
+device repeats it at once, while the server still accepts it.
 
 ## Caves this device carries
 

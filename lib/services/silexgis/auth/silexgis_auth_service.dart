@@ -41,12 +41,16 @@ class SilexgisAuthService implements SilexgisTokenSource {
     http.Client? client,
     Clock clock = const SystemClock(),
     Duration timeout = const Duration(seconds: 30),
+    Duration refreshTimeout = const Duration(seconds: 8),
+    Duration refreshRetryPause = const Duration(seconds: 1),
   }) : _baseUri = baseUri,
        _profileUuid = profileUuid,
        _store = store,
        _client = client ?? http.Client(),
        _clock = clock,
-       _timeout = timeout;
+       _timeout = timeout,
+       _refreshTimeout = refreshTimeout,
+       _refreshRetryPause = refreshRetryPause;
 
   /// The registered loopback callback.
   ///
@@ -63,6 +67,17 @@ class SilexgisAuthService implements SilexgisTokenSource {
   final http.Client _client;
   final Clock _clock;
   final Duration _timeout;
+
+  /// The server accepts a spent refresh token again for about thirty seconds
+  /// after redeeming it, so that a client whose answer was lost can repeat
+  /// the same request. With these values the last of [_refreshAttempts]
+  /// starts at most 18 s after the first, inside that window even when the
+  /// first one was redeemed the moment it arrived; the ordinary 30 s timeout
+  /// alone would already have used the window up.
+  final Duration _refreshTimeout;
+  final Duration _refreshRetryPause;
+  static const int _refreshAttempts = 3;
+
   final _log = AppLogger.of('SilexgisAuthService');
 
   SilexgisTokens? _tokens;
@@ -183,11 +198,7 @@ class SilexgisAuthService implements SilexgisTokenSource {
 
   Future<bool> _redeem(String refreshToken) async {
     try {
-      final tokens = await _tokenEndpoint(<String, String>{
-        'grant_type': 'refresh_token',
-        'refresh_token': refreshToken,
-        'client_id': SilexgisContract.clientId,
-      });
+      final tokens = await _refreshWithinGrace(refreshToken);
       await _adopt(tokens);
       return true;
     } on SilexgisAuthException catch (e) {
@@ -215,6 +226,26 @@ class SilexgisAuthService implements SilexgisTokenSource {
       // The credential may still be good; the network was not. Leave the
       // stored token alone so the next run can try again.
       rethrow;
+    }
+  }
+
+  /// Repeats a refresh that got no answer at all, promptly and with the same
+  /// token, while the server still accepts it. An answer that did arrive —
+  /// a refusal, or a proxy's page — is not repeated here.
+  Future<SilexgisTokens> _refreshWithinGrace(String refreshToken) async {
+    final form = <String, String>{
+      'grant_type': 'refresh_token',
+      'refresh_token': refreshToken,
+      'client_id': SilexgisContract.clientId,
+    };
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await _tokenEndpoint(form, timeout: _refreshTimeout);
+      } on SilexgisTransportException catch (e) {
+        if (e.status != null || attempt >= _refreshAttempts) rethrow;
+        _log.info('A refresh got no answer; repeating it at once');
+        await Future<void>.delayed(_refreshRetryPause);
+      }
     }
   }
 
@@ -366,7 +397,10 @@ class SilexgisAuthService implements SilexgisTokenSource {
   /// front of the server — a proxy while the server restarts, a captive
   /// portal — and says nothing about the token, so it is a transport failure
   /// to try again later.
-  Future<SilexgisTokens> _tokenEndpoint(Map<String, String> form) async {
+  Future<SilexgisTokens> _tokenEndpoint(
+    Map<String, String> form, {
+    Duration? timeout,
+  }) async {
     final response = await _post(
       _uri(SilexgisContract.tokenPath),
       headers: <String, String>{
@@ -379,6 +413,7 @@ class SilexgisAuthService implements SilexgisTokenSource {
                 '${Uri.encodeQueryComponent(e.value)}',
           )
           .join('&'),
+      timeout: timeout,
     );
     final status = response.statusCode;
     final body = _decodeObject(response);
@@ -423,15 +458,16 @@ class SilexgisAuthService implements SilexgisTokenSource {
     Uri uri, {
     required Map<String, String> headers,
     required String body,
+    Duration? timeout,
   }) {
     final request = http.Request('POST', uri)
       ..followRedirects = false
       ..body = body;
     request.headers.addAll(headers);
-    return _send(request);
+    return _send(request, timeout: timeout);
   }
 
-  Future<http.Response> _send(http.Request request) async {
+  Future<http.Response> _send(http.Request request, {Duration? timeout}) async {
     // Outside the catch below, so the refusal reaches the caver as itself
     // rather than as an unreachable server.
     SilexgisServerAddress.requireSecure(request.url);
@@ -439,7 +475,7 @@ class SilexgisAuthService implements SilexgisTokenSource {
       return await _client
           .send(request)
           .then(http.Response.fromStream)
-          .timeout(_timeout);
+          .timeout(timeout ?? _timeout);
     } on Object catch (e, st) {
       throw SilexgisTransportException(
         'Could not reach the server',

@@ -237,7 +237,9 @@ Un server care repornește, este ocupat sau inaccesibil nu vă deconectează.
 Rularea se oprește și spune că serverul nu a putut fi contactat sau nu a
 putut răspunde acum; acreditarea salvată este păstrată, iar rularea
 următoare continuă cu ea. Parola vă este cerută doar atunci când serverul
-spune că acreditarea nu mai este valabilă.
+spune că acreditarea nu mai este valabilă. Dacă răspunsul la o reînnoire se
+pierde pe o conexiune slabă, dispozitivul o repetă imediat, cât timp serverul
+încă o acceptă.
 
 ## Peșterile purtate de dispozitiv
 
