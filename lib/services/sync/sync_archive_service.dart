@@ -252,12 +252,6 @@ class SyncArchiveService {
   // ---------------------------------------------------------------------------
 
   /// Writes a sync archive to [outputDir] and returns the file.
-
-  // ---------------------------------------------------------------------------
-  //  EXPORT
-  // ---------------------------------------------------------------------------
-
-  /// Writes a sync archive to [outputDir] and returns the file.
   ///
   /// Optionally bundles asset files (documentation files, raster map images)
   /// under `assets/<relative path>` in the zip, mirroring the app's documents
@@ -275,6 +269,78 @@ class SyncArchiveService {
     // asset file paths. The CPU-bound zip compression (and the asset file
     // reads) then run in a background isolate so a large export never blocks
     // the UI thread (Android ANR — see the class doc-comment).
+    // The asset folder comes from a platform channel, so it is resolved
+    // before the snapshot is opened rather than while it holds the database.
+    Directory? baseDir;
+    try {
+      baseDir = await _assetsBaseDirResolver();
+    } catch (e) {
+      _log.warning('assets base dir unavailable, skipping asset files: $e');
+    }
+
+    // Every read below runs in one transaction, so the archive is a single
+    // snapshot. Read table by table on the live database, an edit made while
+    // the export runs could leave a row in the archive without the row it
+    // hangs on, or a row alive beside its own delete entry; a peer then drops
+    // that entry as stale and the deletion never reaches it.
+    final (jsonlEntries, changeLogCount, assetRelPaths) = await _db.transaction(
+      () => _readSnapshot(
+        tables,
+        baseDir,
+        includeDocumentationFiles: includeDocumentationFiles,
+        includeRasterMaps: includeRasterMaps,
+      ),
+    );
+
+    final nowMs = _clock.nowMs();
+    final pkgInfo = await _safeReadPackageInfo();
+    // asset_count is filled in by the isolate once it knows how many files
+    // actually existed on disk.
+    final manifest = <String, dynamic>{
+      'format': 'speleo_loc_sync',
+      'format_version': kSyncArchiveVersion,
+      'schema_version': kSyncArchiveDbSchemaVersion,
+      'app_version': pkgInfo?.version,
+      'app_build_number': pkgInfo?.buildNumber,
+      'exported_at': nowMs,
+      'tables': tables.map((t) => t.name).toList(),
+      'includes_documentation_files': includeDocumentationFiles,
+      'includes_raster_maps': includeRasterMaps,
+    };
+
+    final dir = Directory(outputDir);
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
+    final out = File('${dir.path}${Platform.pathSeparator}$name');
+
+    final job = _EncodeArchiveJob(
+      jsonlEntries: jsonlEntries,
+      assetBaseDir: baseDir?.path,
+      assetRelPaths: assetRelPaths,
+      manifest: manifest,
+      outputPath: out.path,
+    );
+    final assetCount = await _encodeInBackground(job);
+
+    final size = await out.length();
+    _log.info(
+      'Sync archive exported: ${out.path} '
+      '($size bytes, ${tables.length} tables, '
+      '$changeLogCount change-log entries, '
+      '$assetCount asset files)',
+    );
+    return out;
+  }
+
+  /// Reads everything an archive carries: each table and the change log as
+  /// JSONL bytes, how many change-log rows went in, and the relative paths of
+  /// the asset files to bundle. Run inside one transaction by [exportToZip].
+  Future<(List<(String, Uint8List)>, int, List<String>)> _readSnapshot(
+    List<SyncTableHandler> tables,
+    Directory? baseDir, {
+    required bool includeDocumentationFiles,
+    required bool includeRasterMaps,
+  }) async {
     final jsonlEntries = <(String, Uint8List)>[];
     for (final t in tables) {
       jsonlEntries.add(('tables/${t.name}.jsonl', _jsonlBytes(await t.dump())));
@@ -309,7 +375,6 @@ class SyncArchiveService {
     final changeLogRows = keptLog
         .map((r) => r.toJson(serializer: _serializer))
         .toList();
-    final changeLogCount = changeLogRows.length;
     jsonlEntries.add(('change_log.jsonl', _jsonlBytes(changeLogRows)));
 
     final fieldRows = (await _db.select(_db.changeLogField).get())
@@ -321,12 +386,6 @@ class SyncArchiveService {
     // Resolve the asset relative paths (the isolate reads the files itself,
     // so no file bytes cross the isolate boundary).
     final assetRelPaths = <String>[];
-    Directory? baseDir;
-    try {
-      baseDir = await _assetsBaseDirResolver();
-    } catch (e) {
-      _log.warning('assets base dir unavailable, skipping asset files: $e');
-    }
     if (baseDir != null) {
       final serverOnlyKinds = <String>[
         for (final kind in SilexgisHeldAs.serverOnlyCopies) kind.wireName,
@@ -374,7 +433,7 @@ class SyncArchiveService {
       // outside the documents folder, or the database itself, would
       // otherwise be read and uploaded.
       // A plain loop, not a closure: a closure here would capture `this` into
-      // the context the isolate job below is sent with.
+      // the context the isolate job in [exportToZip] is sent with.
       final contained = <String>[];
       for (final relPath in assetRelPaths) {
         if (relPath.isEmpty ||
@@ -392,46 +451,14 @@ class SyncArchiveService {
         ..clear()
         ..addAll(contained);
     }
-
-    final nowMs = _clock.nowMs();
-    final pkgInfo = await _safeReadPackageInfo();
-    // asset_count is filled in by the isolate once it knows how many files
-    // actually existed on disk.
-    final manifest = <String, dynamic>{
-      'format': 'speleo_loc_sync',
-      'format_version': kSyncArchiveVersion,
-      'schema_version': kSyncArchiveDbSchemaVersion,
-      'app_version': pkgInfo?.version,
-      'app_build_number': pkgInfo?.buildNumber,
-      'exported_at': nowMs,
-      'tables': tables.map((t) => t.name).toList(),
-      'includes_documentation_files': includeDocumentationFiles,
-      'includes_raster_maps': includeRasterMaps,
-    };
-
-    final dir = Directory(outputDir);
-    if (!await dir.exists()) await dir.create(recursive: true);
-    final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
-    final out = File('${dir.path}${Platform.pathSeparator}$name');
-
-    final job = _EncodeArchiveJob(
-      jsonlEntries: jsonlEntries,
-      assetBaseDir: baseDir?.path,
-      assetRelPaths: assetRelPaths,
-      manifest: manifest,
-      outputPath: out.path,
-    );
-    final assetCount = await Isolate.run(() => _encodeSyncArchive(job));
-
-    final size = await out.length();
-    _log.info(
-      'Sync archive exported: ${out.path} '
-      '($size bytes, ${tables.length} tables, '
-      '$changeLogCount change-log entries, '
-      '$assetCount asset files)',
-    );
-    return out;
+    return (jsonlEntries, changeLogRows.length, assetRelPaths);
   }
+
+  /// Static, so the closure sent to the isolate captures [job] alone: one
+  /// built inside [exportToZip] would share that method's context, which
+  /// also holds `this`, and the database cannot be sent to an isolate.
+  static Future<int> _encodeInBackground(_EncodeArchiveJob job) =>
+      Isolate.run(() => _encodeSyncArchive(job));
 
   static String _placeholders(List<Object> values) =>
       List<String>.filled(values.length, '?').join(', ');
