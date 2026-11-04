@@ -167,8 +167,16 @@ sync from getting confused afterwards.
 It also keeps its own [FTP server profiles](ftp-sync.md) and its choice of
 default profile; the archive's are not taken over. Saved passwords stay in
 each device's secure keystore, so a profile list from another device could
-otherwise send your password to a server it names. On a new phone this
-means setting the FTP profiles up again after the import.
+otherwise send your password to a server it names.
+
+The exception is a device with **no** FTP profiles yet, such as a new
+phone: it takes the archive's profiles and default profile, so you need not
+type the servers in again. Passwords never come with them — open each
+profile and enter its password before the first sync. Any password or SFTP
+server key the device still had saved under one of those profiles is
+forgotten first, so an SFTP profile asks you to confirm its server's key
+again on the first connection. The sample dataset never brings FTP
+profiles.
 
 [SilexGIS servers](silexgis-sync.md) come from the archive, but a sign-in
 stays only for a server the archive names at the same address. If a server
@@ -271,8 +279,9 @@ everything from an archive, use **Data Export / Import → Import Archive →
 Replace all data** instead.
 
 The chosen file then replaces the current database and the app restarts.
-Your device keeps its own identity and its FTP server profiles, and its
-SilexGIS sign-ins follow the same rule as on a replace. Any
+Your device keeps its own identity and its FTP server profiles — or, if it
+had none, takes the restored database's, without passwords, as on a
+replace — and its SilexGIS sign-ins follow the same rule as on a replace. Any
 documentation files or map images the restored database refers to must
 already be on the device, or they will show as missing.
 

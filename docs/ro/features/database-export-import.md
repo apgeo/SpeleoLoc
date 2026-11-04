@@ -182,8 +182,17 @@ aceea.
 profilul ales implicit; cele din arhivă nu sunt preluate. Parolele salvate
 rămân în depozitul securizat al fiecărui dispozitiv, așa că o listă de
 profiluri venită de pe alt dispozitiv v-ar putea trimite altfel parola la
-un server pe care îl numește ea. Pe un telefon nou, asta înseamnă că
-profilurile FTP se configurează din nou după import.
+un server pe care îl numește ea.
+
+Excepția este un dispozitiv care **nu are încă niciun** profil FTP, cum
+este un telefon nou: acesta preia profilurile și profilul implicit din
+arhivă, ca să nu fie nevoie să introduceți din nou serverele. Parolele nu
+vin niciodată cu ele — deschideți fiecare profil și introduceți-i parola
+înainte de prima sincronizare. Orice parolă sau cheie de server SFTP pe
+care dispozitivul o mai avea salvată sub unul dintre acele profiluri este
+uitată mai întâi, așa că un profil SFTP vă cere să confirmați din nou cheia
+serverului la prima conectare. Setul de date de exemplu nu aduce niciodată
+profiluri FTP.
 
 [Serverele SilexGIS](silexgis-sync.md) vin din arhivă, dar o autentificare
 rămâne valabilă doar pentru un server pe care arhiva îl numește la aceeași
@@ -298,8 +307,9 @@ a restaura totul dintr-o arhivă, folosiți în schimb **Export / Import Date
 
 Fișierul ales înlocuiește apoi baza de date curentă, iar aplicația
 repornește. Dispozitivul dumneavoastră își păstrează propria identitate și
-profilurile de server FTP, iar autentificările SilexGIS urmează aceeași
-regulă ca la o înlocuire. Orice fișiere de documentație sau imagini de hărți la care se referă baza
+profilurile de server FTP — sau, dacă nu avea niciunul, le preia pe cele ale
+bazei de date restaurate, fără parole, ca la o înlocuire — iar
+autentificările SilexGIS urmează aceeași regulă ca la o înlocuire. Orice fișiere de documentație sau imagini de hărți la care se referă baza
 de date restaurată trebuie să fie deja pe dispozitiv, altfel vor apărea ca
 lipsă.
 

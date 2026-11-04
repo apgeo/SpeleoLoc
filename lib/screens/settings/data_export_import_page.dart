@@ -357,6 +357,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
         zipPath: zipPath,
         silexgisTokens: ref.read(silexgisTokenStoreProvider),
         silexgisSignInRegistry: ref.read(silexgisAuthRegistryProvider),
+        adoptFtpProfiles: ref.read(ftpProfileRepositoryProvider).forgetSecrets,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
       );
 

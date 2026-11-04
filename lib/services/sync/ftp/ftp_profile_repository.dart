@@ -112,6 +112,15 @@ class FtpProfileRepository {
     }
   }
 
+  /// Drops the stored password and trusted host key under [profileUuid]
+  /// without touching the profile list. Failures are thrown, not logged:
+  /// a caller adopting a profile list from elsewhere must know that nothing
+  /// of this device's is left to attach to it.
+  Future<void> forgetSecrets(String profileUuid) async {
+    await _storage.delete(key: _passwordKey(profileUuid));
+    await _hostKeys.forget(profileUuid);
+  }
+
   Future<String?> readPassword(String profileUuid) async {
     try {
       return await _storage.read(key: _passwordKey(profileUuid));

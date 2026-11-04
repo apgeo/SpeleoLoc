@@ -281,6 +281,8 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
       );
       final silexgisTokens = ref.read(silexgisTokenStoreProvider);
       final silexgisSignInRegistry = ref.read(silexgisAuthRegistryProvider);
+      // Read before the database is swapped; it touches only the keystore.
+      final ftpSecrets = ref.read(ftpProfileRepositoryProvider);
       final silexgisSignIns = await SilexgisSignInCarryOver.capture(
         appDatabase,
         silexgisTokens,
@@ -317,7 +319,10 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
         );
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
-      await devicePreferences.applyTo(appDatabase);
+      await devicePreferences.applyTo(
+        appDatabase,
+        adoptFtpProfiles: ftpSecrets.forgetSecrets,
+      );
       await silexgisSignIns.applyTo(
         appDatabase,
         silexgisTokens,
