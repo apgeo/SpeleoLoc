@@ -209,28 +209,28 @@ class SyncRowMerger {
       }
 
       final values = sqlValuesOf(incoming);
-      var clash = await _schema.findCollision(name, values, uuid);
-      if (clash != null && await _mergedAway(name, clash.$1, uuid, values)) {
-        clash = null;
-      }
-      if (clash != null) {
-        if (_neverHeld.contains(name)) {
-          skipped++;
-          _state.dropped.add(uuid);
+      final clash = await _schema.findCollision(name, values, uuid);
+      Future<void> insert() =>
+          _db.into(table).insert(incoming, mode: InsertMode.insertOrAbort);
+      try {
+        if (clash == null) {
+          await insert();
+        } else if (!await _mergedAway(name, clash.$1, uuid, values, insert)) {
+          if (_neverHeld.contains(name)) {
+            skipped++;
+            _state.dropped.add(uuid);
+            continue;
+          }
+          _hold(
+            name,
+            uuid,
+            row,
+            group: uuid,
+            collidesWith: clash.$1,
+            blocks: true,
+          );
           continue;
         }
-        _hold(
-          name,
-          uuid,
-          row,
-          group: uuid,
-          collidesWith: clash.$1,
-          blocks: true,
-        );
-        continue;
-      }
-      try {
-        await _db.into(table).insert(incoming, mode: InsertMode.insertOrAbort);
         inserted++;
         _state.markPresent(name, uuid);
       } on Exception catch (e) {
@@ -278,13 +278,16 @@ class SyncRowMerger {
   }
 
   /// When the local record [local] holding [uuid]'s key was merged into
-  /// [uuid] on the archive's side, carries that merge out here so [uuid] can
-  /// be written. Only done when nothing else holds the key.
+  /// [uuid] on the archive's side, carries that merge out here and writes
+  /// [uuid] with [insert]. Only done when nothing else holds the key. Should
+  /// the database refuse [uuid], the merge is undone with it and the refusal
+  /// propagates.
   Future<bool> _mergedAway(
     String name,
     Uuid local,
     Uuid uuid,
     Map<String, Object?> values,
+    Future<void> Function() insert,
   ) async {
     final pending = _tombstones.pendingMerges[local];
     if (pending == null || pending.$2 != uuid) return false;
@@ -295,7 +298,9 @@ class SyncRowMerger {
       ignore: <Uuid>{local},
     );
     if (other != null) return false;
-    if (!await _tombstones.mergeInto(name, local, uuid)) return false;
+    if (!await _tombstones.mergeIntoBefore(name, local, uuid, insert)) {
+      return false;
+    }
     _tombstones.pendingMerges.remove(local);
     return true;
   }

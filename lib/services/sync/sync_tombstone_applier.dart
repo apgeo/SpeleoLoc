@@ -149,6 +149,40 @@ class SyncTombstoneApplier {
     return true;
   }
 
+  /// [mergeInto], and [write] once it moved everything, as one step: in a
+  /// savepoint, so that should the database refuse [write], what was moved
+  /// to [into] is back on [from] rather than left pointing at a record that
+  /// is not there, which would fail the whole import at its end. This
+  /// merge's own record of [from] is put back too, and the refusal
+  /// propagates.
+  Future<bool> mergeIntoBefore(
+    String table,
+    Uuid from,
+    Uuid into,
+    Future<void> Function() write,
+  ) async {
+    final mergedBefore = _state.mergedInto[from];
+    final deletesBefore = _state.deletesApplied;
+    try {
+      return await _db.transaction(() async {
+        if (!await mergeInto(table, from, into)) return false;
+        await write();
+        return true;
+      });
+    } on Exception {
+      _state
+        ..markPresent(table, from)
+        ..deletesApplied = deletesBefore
+        ..dropped.remove(from);
+      if (mergedBefore == null) {
+        _state.mergedInto.remove(from);
+      } else {
+        _state.mergedInto[from] = mergedBefore;
+      }
+      rethrow;
+    }
+  }
+
   /// The rows a deletion of [uuid] at [at] reaches; [_Kept] with the newest
   /// stamp among them when one of them was added or changed after it; null
   /// when one could not be detached.

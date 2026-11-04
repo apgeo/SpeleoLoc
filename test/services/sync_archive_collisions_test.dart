@@ -224,6 +224,23 @@ void main() {
       },
     );
 
+    test('to merge, reaching a phone whose database refuses the record '
+        'merged into, leaves that phone as it was', () async {
+      await b.decisions.mergeIntoLocal(await onlyDecision(b));
+      await tick();
+      // A refuses B's Hall, as a stricter constraint there would.
+      await a.db.customStatement(
+        'CREATE TRIGGER refuse_new_hall BEFORE INSERT ON cave_areas '
+        "WHEN NEW.title = 'Hall' BEGIN SELECT RAISE(ABORT, 'refused'); END",
+      );
+
+      final onA = await b.sendTo(a, tmp, 'b1.zip');
+
+      expect(onA.warnings, contains(contains('could not insert cave_areas')));
+      expect(await a.uuidsOf('cave_areas'), {aHall});
+      expect(await areaOf(a, inside), aHall.toString());
+    });
+
     test('to merge is not asked again when the other phone, not having heard '
         'of it, adds inside its record', () async {
       await b.decisions.mergeIntoLocal(await onlyDecision(b));
