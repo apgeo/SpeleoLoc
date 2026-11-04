@@ -47,6 +47,7 @@ void main() {
       expect(exported, isNot(contains('silexgis_trip_entry')));
       expect(exported, isNot(contains('silexgis_raster_entry')));
       expect(exported, isNot(contains('silexgis_deferred_row')));
+      expect(exported, isNot(contains('silexgis_upload_attempt')));
     });
 
     test('writing to them logs no change', () async {
@@ -267,6 +268,53 @@ void main() {
     });
   });
 
+  group('uploads waiting for their answer', () {
+    Map<String, Object?> attempt(String batchId) => <String, Object?>{
+      'batchId': batchId,
+      'rows': const <Object?>[],
+    };
+
+    test('are kept per set, oldest first, until dropped', () async {
+      await repo.writeUploadAttempt(
+        profile,
+        setId,
+        batchId: 'b1',
+        attempt: attempt('b1'),
+      );
+      clock.advance(const Duration(seconds: 1));
+      await repo.writeUploadAttempt(
+        profile,
+        setId,
+        batchId: 'b2',
+        attempt: attempt('b2'),
+      );
+      await repo.writeUploadAttempt(
+        profile,
+        'set-2',
+        batchId: 'b3',
+        attempt: attempt('b3'),
+      );
+
+      expect(
+        (await repo.readUploadAttempts(
+          profile,
+          setId,
+        )).map((a) => a['batchId']),
+        <String>['b1', 'b2'],
+      );
+
+      await repo.dropUploadAttempt(profile, 'b1');
+      expect(
+        (await repo.readUploadAttempts(
+          profile,
+          setId,
+        )).map((a) => a['batchId']),
+        <String>['b2'],
+      );
+      expect(await repo.readUploadAttempts(profile, 'set-2'), hasLength(1));
+    });
+  });
+
   group('row revisions', () {
     test('a row with none is new to that installation', () async {
       expect(await repo.readRevision(profile, Uuid.v7()), isNull);
@@ -482,10 +530,18 @@ void main() {
       ),
     ]);
 
+    await repo.writeUploadAttempt(
+      profile,
+      setId,
+      batchId: 'b1',
+      attempt: const <String, Object?>{'batchId': 'b1'},
+    );
+
     await repo.forgetProfile(profile);
 
     expect((await repo.readSetState(profile, setId)).cursor, isNull);
     expect(await repo.readDeferredRows(profile, setId), isEmpty);
+    expect(await repo.readUploadAttempts(profile, setId), isEmpty);
     expect(await repo.readRevision(profile, id), isNull);
     expect(
       (await repo.readStreamCursor(

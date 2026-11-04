@@ -580,6 +580,28 @@ CREATE TABLE IF NOT EXISTS silexgis_deferred_row (
     PRIMARY KEY (profile_uuid, set_id, row_id)
 );
 
+-- Table: silexgis_upload_attempt
+-- LOCAL ONLY. The feature rows of an upload that was sent and not answered,
+-- under the batch identifier they went with. An answer lost on the way back
+-- is the ordinary case on a mobile connection, and the installation keeps the
+-- decisions of every batch it applied under its identifier: sending the same
+-- one again returns them and writes nothing. So the rows go again under that
+-- identifier at the start of the next run, before anything new is built. A
+-- new identifier would have every edit among them meet the revision it had
+-- itself written, and come back to the caver as a conflict.
+--
+-- `attempt_json` holds the rows as sent, with the local table and the stamp
+-- each was sent at. Removed once the answer is stored, or once the server
+-- refuses the batch whole.
+CREATE TABLE IF NOT EXISTS silexgis_upload_attempt (
+    profile_uuid  TEXT(36) NOT NULL,   -- the local server profile, not an account
+    set_id        TEXT(36) NOT NULL,   -- the sync set the rows went to
+    batch_id      TEXT(36) NOT NULL,   -- minted per attempt, sent again verbatim
+    attempt_json  TEXT NOT NULL,
+    created_at    INTEGER NOT NULL,
+    PRIMARY KEY (profile_uuid, batch_id)
+);
+
 -- Table: silexgis_held_row
 -- LOCAL ONLY, like the other `silexgis_*` tables: a review is a fact about one
 -- account's uploads to one installation, and nothing a second device could act

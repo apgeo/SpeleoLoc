@@ -17902,6 +17902,402 @@ class SilexgisDeferredRowCompanion
   }
 }
 
+class SilexgisUploadAttempt extends Table
+    with TableInfo<SilexgisUploadAttempt, SilexgisUploadAttemptData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  SilexgisUploadAttempt(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileUuidMeta = const VerificationMeta(
+    'profileUuid',
+  );
+  late final GeneratedColumn<String> profileUuid = GeneratedColumn<String>(
+    'profile_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  late final GeneratedColumn<String> setId = GeneratedColumn<String>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _batchIdMeta = const VerificationMeta(
+    'batchId',
+  );
+  late final GeneratedColumn<String> batchId = GeneratedColumn<String>(
+    'batch_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _attemptJsonMeta = const VerificationMeta(
+    'attemptJson',
+  );
+  late final GeneratedColumn<String> attemptJson = GeneratedColumn<String>(
+    'attempt_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    profileUuid,
+    setId,
+    batchId,
+    attemptJson,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'silexgis_upload_attempt';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SilexgisUploadAttemptData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_uuid')) {
+      context.handle(
+        _profileUuidMeta,
+        profileUuid.isAcceptableOrUnknown(
+          data['profile_uuid']!,
+          _profileUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_profileUuidMeta);
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
+    }
+    if (data.containsKey('batch_id')) {
+      context.handle(
+        _batchIdMeta,
+        batchId.isAcceptableOrUnknown(data['batch_id']!, _batchIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_batchIdMeta);
+    }
+    if (data.containsKey('attempt_json')) {
+      context.handle(
+        _attemptJsonMeta,
+        attemptJson.isAcceptableOrUnknown(
+          data['attempt_json']!,
+          _attemptJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_attemptJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileUuid, batchId};
+  @override
+  SilexgisUploadAttemptData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SilexgisUploadAttemptData(
+      profileUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_uuid'],
+      )!,
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_id'],
+      )!,
+      batchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}batch_id'],
+      )!,
+      attemptJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}attempt_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  SilexgisUploadAttempt createAlias(String alias) {
+    return SilexgisUploadAttempt(attachedDatabase, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(profile_uuid, batch_id)',
+  ];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class SilexgisUploadAttemptData extends DataClass
+    implements Insertable<SilexgisUploadAttemptData> {
+  final String profileUuid;
+
+  /// the local server profile, not an account
+  final String setId;
+
+  /// the sync set the rows went to
+  final String batchId;
+
+  /// minted per attempt, sent again verbatim
+  final String attemptJson;
+  final int createdAt;
+  const SilexgisUploadAttemptData({
+    required this.profileUuid,
+    required this.setId,
+    required this.batchId,
+    required this.attemptJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_uuid'] = Variable<String>(profileUuid);
+    map['set_id'] = Variable<String>(setId);
+    map['batch_id'] = Variable<String>(batchId);
+    map['attempt_json'] = Variable<String>(attemptJson);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  SilexgisUploadAttemptCompanion toCompanion(bool nullToAbsent) {
+    return SilexgisUploadAttemptCompanion(
+      profileUuid: Value(profileUuid),
+      setId: Value(setId),
+      batchId: Value(batchId),
+      attemptJson: Value(attemptJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SilexgisUploadAttemptData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SilexgisUploadAttemptData(
+      profileUuid: serializer.fromJson<String>(json['profile_uuid']),
+      setId: serializer.fromJson<String>(json['set_id']),
+      batchId: serializer.fromJson<String>(json['batch_id']),
+      attemptJson: serializer.fromJson<String>(json['attempt_json']),
+      createdAt: serializer.fromJson<int>(json['created_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profile_uuid': serializer.toJson<String>(profileUuid),
+      'set_id': serializer.toJson<String>(setId),
+      'batch_id': serializer.toJson<String>(batchId),
+      'attempt_json': serializer.toJson<String>(attemptJson),
+      'created_at': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  SilexgisUploadAttemptData copyWith({
+    String? profileUuid,
+    String? setId,
+    String? batchId,
+    String? attemptJson,
+    int? createdAt,
+  }) => SilexgisUploadAttemptData(
+    profileUuid: profileUuid ?? this.profileUuid,
+    setId: setId ?? this.setId,
+    batchId: batchId ?? this.batchId,
+    attemptJson: attemptJson ?? this.attemptJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SilexgisUploadAttemptData copyWithCompanion(
+    SilexgisUploadAttemptCompanion data,
+  ) {
+    return SilexgisUploadAttemptData(
+      profileUuid: data.profileUuid.present
+          ? data.profileUuid.value
+          : this.profileUuid,
+      setId: data.setId.present ? data.setId.value : this.setId,
+      batchId: data.batchId.present ? data.batchId.value : this.batchId,
+      attemptJson: data.attemptJson.present
+          ? data.attemptJson.value
+          : this.attemptJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisUploadAttemptData(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('batchId: $batchId, ')
+          ..write('attemptJson: $attemptJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(profileUuid, setId, batchId, attemptJson, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SilexgisUploadAttemptData &&
+          other.profileUuid == this.profileUuid &&
+          other.setId == this.setId &&
+          other.batchId == this.batchId &&
+          other.attemptJson == this.attemptJson &&
+          other.createdAt == this.createdAt);
+}
+
+class SilexgisUploadAttemptCompanion
+    extends UpdateCompanion<SilexgisUploadAttemptData> {
+  final Value<String> profileUuid;
+  final Value<String> setId;
+  final Value<String> batchId;
+  final Value<String> attemptJson;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const SilexgisUploadAttemptCompanion({
+    this.profileUuid = const Value.absent(),
+    this.setId = const Value.absent(),
+    this.batchId = const Value.absent(),
+    this.attemptJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SilexgisUploadAttemptCompanion.insert({
+    required String profileUuid,
+    required String setId,
+    required String batchId,
+    required String attemptJson,
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : profileUuid = Value(profileUuid),
+       setId = Value(setId),
+       batchId = Value(batchId),
+       attemptJson = Value(attemptJson),
+       createdAt = Value(createdAt);
+  static Insertable<SilexgisUploadAttemptData> custom({
+    Expression<String>? profileUuid,
+    Expression<String>? setId,
+    Expression<String>? batchId,
+    Expression<String>? attemptJson,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (profileUuid != null) 'profile_uuid': profileUuid,
+      if (setId != null) 'set_id': setId,
+      if (batchId != null) 'batch_id': batchId,
+      if (attemptJson != null) 'attempt_json': attemptJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SilexgisUploadAttemptCompanion copyWith({
+    Value<String>? profileUuid,
+    Value<String>? setId,
+    Value<String>? batchId,
+    Value<String>? attemptJson,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return SilexgisUploadAttemptCompanion(
+      profileUuid: profileUuid ?? this.profileUuid,
+      setId: setId ?? this.setId,
+      batchId: batchId ?? this.batchId,
+      attemptJson: attemptJson ?? this.attemptJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileUuid.present) {
+      map['profile_uuid'] = Variable<String>(profileUuid.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<String>(setId.value);
+    }
+    if (batchId.present) {
+      map['batch_id'] = Variable<String>(batchId.value);
+    }
+    if (attemptJson.present) {
+      map['attempt_json'] = Variable<String>(attemptJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SilexgisUploadAttemptCompanion(')
+          ..write('profileUuid: $profileUuid, ')
+          ..write('setId: $setId, ')
+          ..write('batchId: $batchId, ')
+          ..write('attemptJson: $attemptJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class SilexgisHeldRow extends Table
     with TableInfo<SilexgisHeldRow, SilexgisHeldRowData> {
   @override
@@ -25054,6 +25450,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final SilexgisDeferredRow silexgisDeferredRow = SilexgisDeferredRow(
     this,
   );
+  late final SilexgisUploadAttempt silexgisUploadAttempt =
+      SilexgisUploadAttempt(this);
   late final SilexgisHeldRow silexgisHeldRow = SilexgisHeldRow(this);
   late final Index idxSilexgisHeldRowReview = Index(
     'idx_silexgis_held_row_review',
@@ -25140,6 +25538,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxSilexgisRowRevisionTable,
     silexgisStreamCursor,
     silexgisDeferredRow,
+    silexgisUploadAttempt,
     silexgisHeldRow,
     idxSilexgisHeldRowReview,
     silexgisPerson,
@@ -42564,6 +42963,220 @@ typedef $SilexgisDeferredRowProcessedTableManager =
       SilexgisDeferredRowData,
       PrefetchHooks Function()
     >;
+typedef $SilexgisUploadAttemptCreateCompanionBuilder =
+    SilexgisUploadAttemptCompanion Function({
+      required String profileUuid,
+      required String setId,
+      required String batchId,
+      required String attemptJson,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $SilexgisUploadAttemptUpdateCompanionBuilder =
+    SilexgisUploadAttemptCompanion Function({
+      Value<String> profileUuid,
+      Value<String> setId,
+      Value<String> batchId,
+      Value<String> attemptJson,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $SilexgisUploadAttemptFilterComposer
+    extends Composer<_$AppDatabase, SilexgisUploadAttempt> {
+  $SilexgisUploadAttemptFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get batchId => $composableBuilder(
+    column: $table.batchId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get attemptJson => $composableBuilder(
+    column: $table.attemptJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $SilexgisUploadAttemptOrderingComposer
+    extends Composer<_$AppDatabase, SilexgisUploadAttempt> {
+  $SilexgisUploadAttemptOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setId => $composableBuilder(
+    column: $table.setId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get batchId => $composableBuilder(
+    column: $table.batchId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get attemptJson => $composableBuilder(
+    column: $table.attemptJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $SilexgisUploadAttemptAnnotationComposer
+    extends Composer<_$AppDatabase, SilexgisUploadAttempt> {
+  $SilexgisUploadAttemptAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get profileUuid => $composableBuilder(
+    column: $table.profileUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get setId =>
+      $composableBuilder(column: $table.setId, builder: (column) => column);
+
+  GeneratedColumn<String> get batchId =>
+      $composableBuilder(column: $table.batchId, builder: (column) => column);
+
+  GeneratedColumn<String> get attemptJson => $composableBuilder(
+    column: $table.attemptJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $SilexgisUploadAttemptTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          SilexgisUploadAttempt,
+          SilexgisUploadAttemptData,
+          $SilexgisUploadAttemptFilterComposer,
+          $SilexgisUploadAttemptOrderingComposer,
+          $SilexgisUploadAttemptAnnotationComposer,
+          $SilexgisUploadAttemptCreateCompanionBuilder,
+          $SilexgisUploadAttemptUpdateCompanionBuilder,
+          (
+            SilexgisUploadAttemptData,
+            BaseReferences<
+              _$AppDatabase,
+              SilexgisUploadAttempt,
+              SilexgisUploadAttemptData
+            >,
+          ),
+          SilexgisUploadAttemptData,
+          PrefetchHooks Function()
+        > {
+  $SilexgisUploadAttemptTableManager(
+    _$AppDatabase db,
+    SilexgisUploadAttempt table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $SilexgisUploadAttemptFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $SilexgisUploadAttemptOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $SilexgisUploadAttemptAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> profileUuid = const Value.absent(),
+                Value<String> setId = const Value.absent(),
+                Value<String> batchId = const Value.absent(),
+                Value<String> attemptJson = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisUploadAttemptCompanion(
+                profileUuid: profileUuid,
+                setId: setId,
+                batchId: batchId,
+                attemptJson: attemptJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String profileUuid,
+                required String setId,
+                required String batchId,
+                required String attemptJson,
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SilexgisUploadAttemptCompanion.insert(
+                profileUuid: profileUuid,
+                setId: setId,
+                batchId: batchId,
+                attemptJson: attemptJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $SilexgisUploadAttemptProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      SilexgisUploadAttempt,
+      SilexgisUploadAttemptData,
+      $SilexgisUploadAttemptFilterComposer,
+      $SilexgisUploadAttemptOrderingComposer,
+      $SilexgisUploadAttemptAnnotationComposer,
+      $SilexgisUploadAttemptCreateCompanionBuilder,
+      $SilexgisUploadAttemptUpdateCompanionBuilder,
+      (
+        SilexgisUploadAttemptData,
+        BaseReferences<
+          _$AppDatabase,
+          SilexgisUploadAttempt,
+          SilexgisUploadAttemptData
+        >,
+      ),
+      SilexgisUploadAttemptData,
+      PrefetchHooks Function()
+    >;
 typedef $SilexgisHeldRowCreateCompanionBuilder =
     SilexgisHeldRowCompanion Function({
       required String profileUuid,
@@ -46074,6 +46687,8 @@ class $AppDatabaseManager {
       $SilexgisStreamCursorTableManager(_db, _db.silexgisStreamCursor);
   $SilexgisDeferredRowTableManager get silexgisDeferredRow =>
       $SilexgisDeferredRowTableManager(_db, _db.silexgisDeferredRow);
+  $SilexgisUploadAttemptTableManager get silexgisUploadAttempt =>
+      $SilexgisUploadAttemptTableManager(_db, _db.silexgisUploadAttempt);
   $SilexgisHeldRowTableManager get silexgisHeldRow =>
       $SilexgisHeldRowTableManager(_db, _db.silexgisHeldRow);
   $SilexgisPersonTableManager get silexgisPerson =>

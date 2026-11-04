@@ -471,6 +471,12 @@ Both **send first and read second**, on purpose: a cave you deleted here
 would otherwise be handed straight back to you by the read that ran before
 it.
 
+When a sync is cut short after sending — the connection drops before the
+server's answer arrives — the next sync first sends the same caves and
+places again in the same request. The server recognises it and answers what
+it decided the first time, so your own edits do not come back to you as
+**Changed on the server as well**.
+
 Use **Read everything** when something you expect is missing — above all
 after somebody grants your account access to a cave. Being given permission
 does not change the cave itself, so an ordinary run has no reason to notice

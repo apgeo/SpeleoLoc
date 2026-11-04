@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/services/silexgis/model/geo_json_geometry.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -8,6 +10,8 @@ import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_row_composer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_upload_planner.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_in_flight.dart';
 
 import 'contract_fixtures.dart';
 
@@ -102,6 +106,37 @@ void main() {
       );
     });
 
+    test('is what a stored attempt sends when its answer was lost', () {
+      // The rows are kept from just before the first send, through the
+      // database, and sent again under the identifier they first went with.
+      final first = ContractExchange('11-upload-create').requestBody;
+      final kept = SilexgisUploadInFlight(
+        batchId: first['batchId']! as String,
+        rows: <PendingUploadRow>[
+          for (final row
+              in (first['rows']! as List).cast<Map<String, Object?>>())
+            PendingUploadRow(
+              row: SyncUploadRow.fromJson(row),
+              entityTable: 'cave_places',
+              entityUuid: Uuid.v7(),
+              localUpdatedAt: 1,
+            ),
+        ],
+      );
+      final stored = SilexgisUploadInFlight.fromJson(
+        jsonDecode(jsonEncode(kept.toJson())) as Map<String, Object?>,
+      );
+      final again = stored.batch.toJson();
+      expect(again, kept.batch.toJson());
+      expect(again.keys.toList(), exchange.requestBody.keys.toList());
+      expect(again['batchId'], exchange.requestBody['batchId']);
+      expectComposes(
+        (again['rows']! as List).single as Map<String, Object?>,
+        (exchange.requestBody['rows']! as List).single as Map<String, Object?>,
+        deliberateAdditions: <String>{'description'},
+      );
+    });
+
     test('returns the first answer and writes nothing a second time', () {
       final result = SyncUploadResult.fromJson(exchange.responseBody);
       final first = SyncUploadResult.fromJson(
@@ -169,6 +204,35 @@ void main() {
       expect(result.conflictFor(withheld), isNull);
       expect(result.rows[1].action, SilexgisAction.applyAndResubmit);
     });
+  });
+
+  group('a row kept to be sent again', () {
+    // The recordings whose rows this client composes as recorded; the
+    // conflict recordings state create-only members on an edit, which this
+    // client leaves out.
+    for (final name in <String>[
+      '11-upload-create',
+      '15-upload-delete',
+      '20-upload-held',
+    ]) {
+      test('$name: reads back as it was composed', () {
+        for (final row
+            in (ContractExchange(name).requestBody['rows']! as List)
+                .cast<Map<String, Object?>>()) {
+          final ours = SyncUploadRow.fromJson(row).toJson();
+          expectComposes(
+            ours,
+            row,
+            // Stated on every live row; see `11-upload-create`.
+            deliberateAdditions: <String>{
+              if (row['deleted'] != true && !row.containsKey('description'))
+                'description',
+            },
+          );
+          expect(SyncUploadRow.fromJson(ours).toJson(), ours);
+        }
+      });
+    }
   });
 
   group('a partial row', () {

@@ -5,7 +5,9 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
@@ -793,4 +795,249 @@ void main() {
       });
     });
   });
+
+  group('an answer lost on the way back', () {
+    late _ContractServer server;
+    late SilexgisUploadRunner runner;
+
+    // Every row was exchanged earlier; the caver has since renamed the place
+    // offline. Edits are the case that breaks: a create sent again is
+    // answered `unchanged`, but an edit sent again under a new identifier
+    // meets the revision it wrote itself.
+    setUp(() async {
+      final t0 = clock.nowMs();
+      await insertArea(updatedAt: t0);
+      await insertCave(updatedAt: t0);
+      await insertPlace(placeId, title: 'Sala Mare', updatedAt: t0);
+      await known(areaId, table: 'surface_areas', localUpdatedAt: t0);
+      await known(caveId, table: 'caves', kind: 'cave', localUpdatedAt: t0);
+      await known(
+        placeId,
+        table: 'cave_places',
+        kind: 'generic',
+        localUpdatedAt: t0,
+      );
+      clock.advance(const Duration(minutes: 5));
+      await (db.update(
+        db.cavePlaces,
+      )..where((t) => t.uuid.equalsValue(placeId))).write(
+        CavePlacesCompanion(
+          title: const Value('Sala Mare, renamed'),
+          updatedAt: Value(clock.nowMs()),
+        ),
+      );
+
+      server = _ContractServer(<String, String>{
+        areaId.toString(): '2026-08-28T09:00:00.000Z',
+        caveId.toString(): '2026-08-28T09:00:00.000Z',
+        placeId.toString(): '2026-08-28T09:00:00.000Z',
+      });
+      runner = SilexgisUploadRunner(
+        api: server,
+        builder: builder,
+        localState: localState,
+        heldRows: heldRows,
+        profileUuid: profile,
+      );
+    });
+
+    Future<int> recordedConflicts() async => (await heldRows.readSection(
+      profile,
+      SyncUploadSection.rows,
+    )).values.where((h) => h.isConflict).length;
+
+    test('is asked for again under the same identifier, and the caver\'s '
+        'edit is no conflict', () async {
+      server.loseAnswers = 1;
+      await expectLater(
+        runner.run(setId, capabilities: capabilities),
+        throwsA(isA<SilexgisTransportException>()),
+      );
+
+      final report = await runner.run(setId, capabilities: capabilities);
+
+      expect(server.sent, hasLength(2));
+      expect(server.sent[1].batchId, server.sent[0].batchId);
+      expect(server.sent[1].toJson(), server.sent[0].toJson());
+      expect(report.replayed, 1);
+      expect(report.refusals, isEmpty);
+      expect(await recordedConflicts(), 0);
+      expect(
+        await localState.readRevision(profile, placeId),
+        server.revisions[placeId.toString()],
+      );
+      expect(await builder.build(), isEmpty);
+      expect(await localState.readUploadAttempts(profile, setId), isEmpty);
+    });
+
+    test('is applied then, when the first one never arrived', () async {
+      server.dropRequests = 1;
+      await expectLater(
+        runner.run(setId, capabilities: capabilities),
+        throwsA(isA<SilexgisTransportException>()),
+      );
+
+      final report = await runner.run(setId, capabilities: capabilities);
+
+      expect(server.sent.map((b) => b.batchId).toSet(), hasLength(1));
+      expect(report.replayed, 0);
+      expect(report.written, 1);
+      expect(await recordedConflicts(), 0);
+      expect(await builder.build(), isEmpty);
+    });
+
+    test(
+      'is kept for the next run while the server cannot be reached',
+      () async {
+        server.loseAnswers = 1;
+        server.dropRequests = 0;
+        await expectLater(
+          runner.run(setId, capabilities: capabilities),
+          throwsA(isA<SilexgisTransportException>()),
+        );
+        server.dropRequests = 1;
+        await expectLater(
+          runner.run(setId, capabilities: capabilities),
+          throwsA(isA<SilexgisTransportException>()),
+        );
+        expect(
+          (await localState.readUploadAttempts(
+            profile,
+            setId,
+          )).single['batchId'],
+          server.sent.first.batchId,
+        );
+
+        await runner.run(setId, capabilities: capabilities);
+
+        expect(server.sent.map((b) => b.batchId).toSet(), hasLength(1));
+        expect(await recordedConflicts(), 0);
+        expect(await localState.readUploadAttempts(profile, setId), isEmpty);
+      },
+    );
+
+    test('is let go of once refused whole, and its rows go as new', () async {
+      // Nothing of a batch refused whole was written, and sending it again
+      // cannot change that, so it is not sent a third time.
+      server.dropRequests = 1;
+      await expectLater(
+        runner.run(setId, capabilities: capabilities),
+        throwsA(isA<SilexgisTransportException>()),
+      );
+      server.refuseNext = const SilexgisProblem(
+        status: 400,
+        code: SilexgisCodes.validationFailed,
+      );
+
+      final report = await runner.run(setId, capabilities: capabilities);
+
+      expect(server.sent, hasLength(3));
+      expect(server.sent[2].batchId, isNot(server.sent[0].batchId));
+      expect(report.written, 1);
+      expect(await localState.readUploadAttempts(profile, setId), isEmpty);
+      expect(await builder.build(), isEmpty);
+    });
+
+    test('an answer that arrives leaves nothing waiting', () async {
+      await runner.run(setId, capabilities: capabilities);
+      expect(server.sent, hasLength(1));
+      expect(await localState.readUploadAttempts(profile, setId), isEmpty);
+    });
+  });
+}
+
+/// An invented installation that keeps the rules a resend depends on: a batch
+/// identifier it has applied is answered with its first decisions and writes
+/// nothing, and an edit or a removal is arbitrated on its base revision alone.
+class _ContractServer extends SilexgisSyncApi {
+  _ContractServer(this.revisions)
+    : super(
+        SilexgisHttp(
+          baseUri: Uri.parse('https://club.example.org'),
+          tokens: FixedTokenSource(),
+        ),
+      );
+
+  /// The revision each row has on the server now.
+  final Map<String, String> revisions;
+
+  final List<SyncUploadBatch> sent = <SyncUploadBatch>[];
+  final Map<String, Map<String, Object?>> _answered =
+      <String, Map<String, Object?>>{};
+
+  /// Requests that are lost before they arrive.
+  int dropRequests = 0;
+
+  /// Batches that are applied and whose answer is lost on the way back.
+  int loseAnswers = 0;
+
+  /// A whole-batch refusal for the next request that arrives.
+  SilexgisProblem? refuseNext;
+
+  var _writes = 0;
+
+  @override
+  Future<SyncUploadResult> upload(String setId, SyncUploadBatch batch) async {
+    sent.add(batch);
+    if (dropRequests > 0) {
+      dropRequests--;
+      throw const SilexgisTransportException('connection reset');
+    }
+    final refusal = refuseNext;
+    if (refusal != null) {
+      refuseNext = null;
+      throw SilexgisProblemException(refusal);
+    }
+    final stored = _answered[batch.batchId];
+    if (stored != null) {
+      return SyncUploadResult.fromJson(<String, Object?>{
+        ...stored,
+        'replayed': true,
+      });
+    }
+
+    final rows = <Map<String, Object?>>[
+      for (final row in batch.rows) _arbitrate(row),
+    ];
+    final answer = <String, Object?>{
+      'batchId': batch.batchId,
+      'importBatchId': 'import-${_answered.length}',
+      'replayed': false,
+      'written': rows.where((r) => r['status'] != 'conflict').length,
+      'refused': rows.where((r) => r['status'] == 'conflict').length,
+      'rows': rows,
+      'conflicts': const <Object?>[],
+      'duplicates': const <Object?>[],
+    };
+    _answered[batch.batchId] = answer;
+    if (loseAnswers > 0) {
+      loseAnswers--;
+      throw const SilexgisTransportException('timed out reading the answer');
+    }
+    return SyncUploadResult.fromJson(answer);
+  }
+
+  Map<String, Object?> _arbitrate(SyncUploadRow row) {
+    final current = revisions[row.id];
+    final String status;
+    if (row.isNew) {
+      status = current == null ? 'created' : 'unchanged';
+    } else if (row.baseRevision != current) {
+      status = 'conflict';
+    } else {
+      status = row.deleted ? 'deleted' : 'updated';
+    }
+    if (status == 'created' || status == 'updated') {
+      revisions[row.id] = '2026-09-01T12:00:0${_writes++}.000Z';
+    } else if (status == 'deleted') {
+      revisions.remove(row.id);
+    }
+    return <String, Object?>{
+      'id': row.id,
+      'status': status,
+      'revision': revisions[row.id],
+      'code': status == 'conflict' ? SilexgisCodes.conflict : null,
+      'detail': null,
+    };
+  }
 }

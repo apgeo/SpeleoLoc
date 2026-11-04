@@ -511,6 +511,12 @@ Ambele **trimit întâi și citesc apoi**, intenționat: altfel, o peșteră pe
 care ați șters-o aici v-ar fi înapoiată direct de citirea care ar rula
 înaintea trimiterii.
 
+Când o sincronizare este întreruptă după trimitere — conexiunea cade înainte
+să sosească răspunsul serverului — următoarea sincronizare trimite întâi din
+nou aceleași peșteri și locuri, în aceeași cerere. Serverul o recunoaște și
+răspunde ce a hotărât prima dată, așa că propriile modificări nu vi se
+întorc ca **S-a schimbat și pe server**.
+
 Folosiți **Citește tot** când lipsește ceva la care vă așteptați — mai ales
 după ce cineva acordă contului dumneavoastră acces la o peșteră. Primirea
 permisiunii nu schimbă peștera în sine, așa că o rulare obișnuită nu are

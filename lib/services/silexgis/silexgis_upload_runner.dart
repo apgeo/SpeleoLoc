@@ -6,9 +6,11 @@ import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_result.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
+import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_in_flight.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -114,6 +116,51 @@ class SilexgisUploadRunner {
     String setId, {
     required SilexgisCapabilities capabilities,
   }) async {
+    var batches = 0;
+    var written = 0;
+    var refused = 0;
+    var replayed = 0;
+    var held = 0;
+    final refusals = <SilexgisRefusal>[];
+    final duplicates = <SyncDuplicateReport>[];
+
+    /// Counts one answered batch and stores its feature rows' verdicts.
+    Future<void> take(
+      SyncUploadResult result,
+      List<PendingUploadRow> rows,
+    ) async {
+      batches++;
+      if (result.replayed) replayed++;
+      written += result.written;
+      refused += result.refused;
+      duplicates.addAll(result.duplicates);
+      if (rows.isEmpty) return;
+      held += result.rows.where((r) => r.status == SyncRowStatus.held).length;
+      refusals.addAll(await _applyAnswers(rows, result));
+    }
+
+    // Rows whose answer was lost go again first, under the identifier they
+    // went with, and before the builder looks at anything: until their
+    // verdicts are stored, the builder would take them for edits still to
+    // send.
+    for (final attempt in await _unanswered(setId)) {
+      final SyncUploadResult result;
+      try {
+        result = await _send(setId, attempt.batch, attempt);
+      } on SilexgisProblemException catch (e) {
+        if (_staysSendable(e)) rethrow;
+        // Refused whole, so this request wrote nothing. Whatever of it is
+        // still to send goes in this run's own batches.
+        _log.info(
+          'an unanswered upload was refused whole (${e.code}); its rows go '
+          'again as new',
+        );
+        continue;
+      }
+      await take(result, attempt.rows);
+      await _localState.dropUploadAttempt(_profileUuid, attempt.batchId);
+    }
+
     final pending = await _builder.build();
     final context = SilexgisUploadContext(
       rowsSent: <Uuid>{
@@ -125,17 +172,9 @@ class SilexgisUploadRunner {
       SyncUploadSection.rows: pending,
       for (final part in _parts) part.section: await part.build(context),
     };
-    if (items.values.every((i) => i.isEmpty)) {
+    if (batches == 0 && items.values.every((i) => i.isEmpty)) {
       return const SilexgisUploadReport.nothingToSend();
     }
-
-    var batches = 0;
-    var written = 0;
-    var refused = 0;
-    var replayed = 0;
-    var held = 0;
-    final refusals = <SilexgisRefusal>[];
-    final duplicates = <SyncDuplicateReport>[];
 
     Future<Map<SyncUploadSection, List<SyncUploadItem>>> send(
       Map<SyncUploadSection, List<Object>> items, {
@@ -167,18 +206,25 @@ class SilexgisUploadRunner {
                 part.section: sent.cast<SyncUploadItem>(),
           },
         );
-        final result = await _api.upload(setId, batch);
-        batches++;
-        if (result.replayed) replayed++;
-
-        written += result.written;
-        refused += result.refused;
-        duplicates.addAll(result.duplicates);
-        if (rows.isNotEmpty) {
-          held += result.rows
-              .where((r) => r.status == SyncRowStatus.held)
-              .length;
-          refusals.addAll(await _applyAnswers(rows, result));
+        final attempt = rows.isEmpty
+            ? null
+            : SilexgisUploadInFlight(
+                batchId: batch.batchId,
+                clientFeatures: batch.clientFeatures,
+                rows: rows,
+              );
+        if (attempt != null) {
+          await _localState.writeUploadAttempt(
+            _profileUuid,
+            setId,
+            batchId: attempt.batchId,
+            attempt: attempt.toJson(),
+          );
+        }
+        final result = await _send(setId, batch, attempt);
+        await take(result, rows);
+        if (attempt != null) {
+          await _localState.dropUploadAttempt(_profileUuid, attempt.batchId);
         }
         for (final part in _parts) {
           final sent = batch.sections[part.section];
@@ -213,6 +259,42 @@ class SilexgisUploadRunner {
       held: held,
     );
   }
+
+  /// The uploads to [setId] sent on an earlier run whose answer never came.
+  Future<List<SilexgisUploadInFlight>> _unanswered(String setId) async =>
+      <SilexgisUploadInFlight>[
+        for (final json in await _localState.readUploadAttempts(
+          _profileUuid,
+          setId,
+        ))
+          SilexgisUploadInFlight.fromJson(json),
+      ];
+
+  /// Sends [batch], keeping [attempt] for as long as the batch may yet be
+  /// applied.
+  ///
+  /// A refusal of the whole batch that nothing can retry is the one answer
+  /// saying it never will be: nothing was written, and sending it again
+  /// cannot change that. Every other failure — an answer lost on the way, a
+  /// busy server, a lapsed sign-in, the same identifier still being applied —
+  /// leaves the attempt for the next run to send again.
+  Future<SyncUploadResult> _send(
+    String setId,
+    SyncUploadBatch batch,
+    SilexgisUploadInFlight? attempt,
+  ) async {
+    try {
+      return await _api.upload(setId, batch);
+    } on SilexgisProblemException catch (e) {
+      if (attempt != null && !_staysSendable(e)) {
+        await _localState.dropUploadAttempt(_profileUuid, attempt.batchId);
+      }
+      rethrow;
+    }
+  }
+
+  static bool _staysSendable(SilexgisProblemException e) =>
+      e.action == SilexgisAction.retry || e.action == SilexgisAction.reAuth;
 
   /// Stores each row's verdict.
   ///

@@ -28,7 +28,8 @@ class SilexgisSetState {
 /// The device's local-only record of its conversations with SilexGIS
 /// installations: the download cursor per sync set with the rows read before
 /// it that are still waiting for their container, one cursor per further
-/// stream of that set, and the server revision of every row it has seen.
+/// stream of that set, the server revision of every row it has seen, and the
+/// uploads sent and not yet answered.
 ///
 /// **None of this ever leaves the device except back to the server that issued
 /// it.** It is not a column on any synced row, it is not in the change log, it
@@ -270,6 +271,9 @@ class SilexgisLocalStateRepository {
         _db.silexgisDeferredRow,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
+        _db.silexgisUploadAttempt,
+      )..where((t) => t.profileUuid.equals(profileUuid))).go();
+      await (_db.delete(
         _db.silexgisRowRevision,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
       await (_db.delete(
@@ -300,6 +304,60 @@ class SilexgisLocalStateRepository {
         _db.silexgisRasterEntry,
       )..where((t) => t.profileUuid.equals(profileUuid))).go();
     });
+  }
+
+  // ------------------------------------------------------ unanswered uploads
+
+  /// Keeps [attempt], an upload about to go to [setId] under [batchId], until
+  /// its answer is stored. Written before the batch is sent, so an answer lost
+  /// on the way back finds it here on the next run.
+  Future<void> writeUploadAttempt(
+    String profileUuid,
+    String setId, {
+    required String batchId,
+    required Map<String, Object?> attempt,
+  }) async {
+    await _db
+        .into(_db.silexgisUploadAttempt)
+        .insertOnConflictUpdate(
+          SilexgisUploadAttemptCompanion.insert(
+            profileUuid: profileUuid,
+            setId: setId,
+            batchId: batchId,
+            attemptJson: jsonEncode(attempt),
+            createdAt: _clock.nowMs(),
+          ),
+        );
+  }
+
+  /// The uploads to [setId] still waiting for their answer, oldest first.
+  Future<List<Map<String, Object?>>> readUploadAttempts(
+    String profileUuid,
+    String setId,
+  ) async {
+    final rows =
+        await (_db.select(_db.silexgisUploadAttempt)
+              ..where(
+                (t) =>
+                    t.profileUuid.equals(profileUuid) & t.setId.equals(setId),
+              )
+              ..orderBy(<OrderClauseGenerator<SilexgisUploadAttempt>>[
+                (t) => OrderingTerm.asc(t.createdAt),
+              ]))
+            .get();
+    return <Map<String, Object?>>[
+      for (final row in rows)
+        Map<String, Object?>.from(jsonDecode(row.attemptJson) as Map),
+    ];
+  }
+
+  /// Forgets the upload sent under [batchId]: its answer is stored, or the
+  /// server refused it whole and it can never be applied.
+  Future<void> dropUploadAttempt(String profileUuid, String batchId) async {
+    await (_db.delete(_db.silexgisUploadAttempt)..where(
+          (t) => t.profileUuid.equals(profileUuid) & t.batchId.equals(batchId),
+        ))
+        .go();
   }
 
   // ---------------------------------------------------------- row revisions

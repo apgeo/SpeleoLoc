@@ -1129,10 +1129,11 @@ class V34ToV35Migration extends SchemaMigration {
 
 /// v35 → v36.
 ///
-/// Adds the local-only table of the rows a SilexGIS download page carried
-/// before their container, so a read cut short between two pages does not
-/// lose them. Local only, like the other SilexGIS state tables; nothing is
-/// moved into it.
+/// Adds two local-only SilexGIS tables that let a sync run cut short carry on
+/// where it stopped: the rows a download page carried before their container,
+/// and the feature rows of an upload sent and not answered, so they go again
+/// under the same batch identifier. Local only, like the other SilexGIS state
+/// tables; nothing is moved into them.
 class V35ToV36Migration extends SchemaMigration {
   const V35ToV36Migration();
 
@@ -1142,6 +1143,7 @@ class V35ToV36Migration extends SchemaMigration {
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
     await migrator.createTable(db.silexgisDeferredRow);
+    await migrator.createTable(db.silexgisUploadAttempt);
   }
 }
 
