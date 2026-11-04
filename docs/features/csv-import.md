@@ -265,6 +265,10 @@ button and no "revert last import". Take a
 [database export](database-export-import.md) first if the file is
 large or you are unsure of it.
 
+Everything the import creates or changes is recorded in the change
+history like an edit made by hand, so the next
+[FTP sync](ftp-sync.md) uploads it and other devices receive it.
+
 ## Rows that are dropped without comment
 
 A row with no cave name (caves import) or no place name (places

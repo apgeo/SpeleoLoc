@@ -60,6 +60,7 @@ class _CSVCavesImportPageState extends ConsumerState<CSVCavesImportPage> {
       ref.read(appDatabaseProvider),
       ref.read(currentUserServiceProvider),
       ref.read(cavePlaceRepositoryProvider),
+      ref.read(changeLoggerProvider),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }

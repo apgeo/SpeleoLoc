@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/csv_cave_import_snapshot.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
@@ -124,16 +125,22 @@ class CSVCaveImportResult {
 /// planning ([planCaveUpdates]) and the import itself ([importRows]) —
 /// resolve areas and match caves through one [CaveImportSnapshot], so
 /// what the preview reports is exactly what the import will do.
+///
+/// Every row written is logged in the change log like a repository write:
+/// the log is what the FTP upload gate and the change history read, so an
+/// unlogged import would never be uploaded to other devices.
 class CSVCaveImporter {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final ICavePlaceRepository _cavePlaces;
+  final ChangeLogger _logger;
   final Clock _clock;
 
   CSVCaveImporter(
     this._database,
     this._currentUser,
-    this._cavePlaces, {
+    this._cavePlaces,
+    this._logger, {
     Clock clock = const SystemClock(),
   }) : _clock = clock;
 
@@ -358,6 +365,12 @@ class CSVCaveImporter {
                 lastModifiedByUserUuid: Value(author),
               ),
             );
+            await _logger.logUpdate(
+              'surface_areas',
+              existing.uuid,
+              oldValues: const {'general_area_identifier': null},
+              newValues: {'general_area_identifier': identifier},
+            );
             snapshot.backfillAreaIdentifier(existing, identifier);
           }
           return existing.uuid;
@@ -377,6 +390,7 @@ class CSVCaveImporter {
                 lastModifiedByUserUuid: Value(author),
               ),
             );
+        await _logger.logInsert('surface_areas', newUuid);
         snapshot.registerArea(
           AreaSnapshotEntry(
             uuid: newUuid,
@@ -438,6 +452,18 @@ class CSVCaveImporter {
             lastModifiedByUserUuid: Value(author),
           ),
         );
+        await _logger.logUpdate(
+          'caves',
+          cave.uuid,
+          oldValues: {
+            'description': cave.description,
+            'cave_local_index': cave.caveLocalIndex,
+          },
+          newValues: {
+            'description': newDescription ?? cave.description,
+            'cave_local_index': newIndex ?? cave.caveLocalIndex,
+          },
+        );
         if (newDescription != null) cave.description = newDescription;
         if (newIndex != null) snapshot.setCaveLocalIndex(cave, newIndex);
         return true;
@@ -467,6 +493,10 @@ class CSVCaveImporter {
             final moveArea =
                 rowNamesArea(row) &&
                 (occupant == null || occupant.uuid == candidate.caveUuid);
+            final old =
+                await (_database.select(_database.caves)
+                      ..where((c) => c.uuid.equalsValue(candidate.caveUuid)))
+                    .getSingleOrNull();
             await (_database.update(
               _database.caves,
             )..where((c) => c.uuid.equalsValue(candidate.caveUuid))).write(
@@ -484,6 +514,24 @@ class CSVCaveImporter {
                 lastModifiedByUserUuid: Value(author),
               ),
             );
+            if (old != null) {
+              await _logger.logUpdate(
+                'caves',
+                old.uuid,
+                oldValues: {
+                  'description': old.description,
+                  'cave_local_index': old.caveLocalIndex,
+                  'surface_area_uuid': old.surfaceAreaUuid,
+                },
+                newValues: {
+                  'description': row.description ?? old.description,
+                  'cave_local_index': row.caveLocalIndex ?? old.caveLocalIndex,
+                  'surface_area_uuid': moveArea
+                      ? surfaceAreaUuid
+                      : old.surfaceAreaUuid,
+                },
+              );
+            }
             final entry = snapshot.caveByUuid(candidate.caveUuid);
             if (entry != null) {
               if (row.description != null) {
@@ -542,6 +590,7 @@ class CSVCaveImporter {
                 lastModifiedByUserUuid: Value(author),
               ),
             );
+        await _logger.logInsert('caves', newUuid);
         snapshot.registerCave(
           CaveSnapshotEntry(
             uuid: newUuid,

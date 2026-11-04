@@ -279,6 +279,11 @@ buton de anulare și nici „revino la ultimul import”. Faceți întâi un
 [export al bazei de date](database-export-import.md) dacă fișierul este
 mare sau dacă nu sunteți sigur de el.
 
+Tot ce creează sau modifică importul este înregistrat în istoricul
+modificărilor ca o editare făcută manual, așa că următoarea
+[sincronizare FTP](ftp-sync.md) îl încarcă, iar celelalte dispozitive îl
+primesc.
+
 ## Rânduri lăsate deoparte fără niciun comentariu
 
 Un rând fără nume de peșteră (importul de peșteri) sau fără nume de loc
