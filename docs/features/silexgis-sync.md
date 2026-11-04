@@ -606,6 +606,13 @@ saying what moves it forward:
 A refusal is per row. Forty caves edited underground and one refused means
 thirty-nine went up.
 
+A cave, area or place refused with **This one cannot be sent as it is.** is
+also put on the **Needs a decision** page as **Could not be written**, and is
+not sent again until you edit it or choose there. An edit of a row the server
+turns out not to have goes up as a new row on the next sync. An edit of a row
+the server deleted meanwhile is kept here and put on that page as **Deleted
+on the server, but holds work of yours it never had**.
+
 ### Something was already nearby
 
 Not a refusal at all — the entry says so:
@@ -680,8 +687,9 @@ raster map**, **Place at a station of a 3D model** — and why it is there:
 
 - **Turned down** — a reviewer said no, with their note under it when they
   wrote one;
-- **Could not be written** — accepted, but refused when the server wrote it,
-  with the server's code; often the account has lost a right;
+- **Could not be written** — refused when the server wrote it, with the
+  server's code: straight away, or after a reviewer accepted it; often the
+  account lacks a right, or has lost one;
 - **Changed on the server as well** — see above;
 - **Deleted on the server, but holds work of yours it never had** — see
   [Deletions travel](#deletions-travel-and-they-take-things-with-them);

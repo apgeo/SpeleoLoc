@@ -19,16 +19,18 @@ void main() {
     SyncReviewOutcome? outcome,
     bool conflict = false,
     bool deletedOnServer = false,
+    bool refused = false,
     String? code,
     Map<String, Object?>? current,
   }) => SilexgisHeldItem(
     section: section,
     entityUuid: Uuid.v7(),
     entityTable: 'invented',
-    reviewId: conflict || deletedOnServer ? '' : 'review-1',
+    reviewId: conflict || deletedOnServer || refused ? '' : 'review-1',
     outcome: outcome,
     isConflict: conflict,
     isDeletedOnServer: deletedOnServer,
+    isRefused: refused,
     code: code,
     current: current,
   );
@@ -145,6 +147,28 @@ void main() {
     expect(find.text('Delete'), findsOneWidget);
     expect(find.text('Use the server\'s version'), findsNothing);
     expect(find.text('Re-read from the server'), findsNothing);
+  });
+
+  testWidgets('an edit the server refused outright shows the server\'s code', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      SilexgisDecision(
+        held: held(
+          SyncUploadSection.rows,
+          refused: true,
+          code: 'sync.row_forbidden',
+        ),
+        isNew: false,
+        title: 'Invented place',
+      ),
+    );
+
+    expect(find.text('Could not be written'), findsOneWidget);
+    expect(find.text('sync.row_forbidden'), findsOneWidget);
+    expect(find.text('Re-read from the server'), findsOneWidget);
+    expect(find.text('Keep mine, don\'t send'), findsOneWidget);
   });
 
   testWidgets('a cave removed on the server with work of the caver\'s in it is '

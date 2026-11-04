@@ -121,7 +121,8 @@ class SilexgisDecisionCard extends StatelessWidget {
     if (decision.isDeletedOnServer) {
       return LocServ.inst.t('silexgis_decision_deleted_on_server');
     }
-    return decision.held.outcome == SyncReviewOutcome.failed
+    return decision.held.isRefused ||
+            decision.held.outcome == SyncReviewOutcome.failed
         ? LocServ.inst.t('silexgis_review_failed')
         : LocServ.inst.t('silexgis_review_rejected');
   }

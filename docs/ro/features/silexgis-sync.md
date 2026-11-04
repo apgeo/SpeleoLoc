@@ -658,6 +658,15 @@ serverului plus un rând care spune ce duce lucrurile mai departe:
 Un refuz este pe rând. Patruzeci de peșteri modificate în subteran și una
 refuzată înseamnă că treizeci și nouă au plecat în sus.
 
+O peșteră, o zonă sau un loc refuzat cu **Acesta nu poate fi trimis așa cum
+este.** ajunge și pe pagina **Necesită o decizie** ca **Nu a putut fi
+salvat** și nu se mai trimite până nu îl modificați sau nu alegeți acolo. O
+modificare a unui rând pe care serverul se dovedește că nu îl are pleacă în
+sus ca rând nou la următoarea sincronizare. O modificare a unui rând pe care
+serverul l-a șters între timp este păstrată aici și pusă pe acea pagină ca
+**Ștearsă pe server, dar conține lucru de-al tău pe care serverul nu l-a
+avut**.
+
 ### Exista deja ceva în apropiere
 
 Nu este nicidecum un refuz — intrarea o spune:
@@ -739,8 +748,9 @@ acolo:
 
 - **Respins** — un verificator a spus nu, cu nota lui dedesubt când a scris
   una;
-- **Nu a putut fi salvat** — acceptat, dar refuzat când serverul l-a scris,
-  cu codul serverului; adesea contul a pierdut un drept;
+- **Nu a putut fi salvat** — refuzat când serverul l-a scris, cu codul
+  serverului: pe loc sau după ce un verificator l-a acceptat; adesea contului
+  îi lipsește un drept sau l-a pierdut;
 - **S-a schimbat și pe server** — vedeți mai sus;
 - **Ștearsă pe server, dar conține lucru de-al tău pe care serverul nu l-a
   avut** — vedeți [Ștergerile circulă](#ștergerile-circulă-și-iau-lucruri-cu-ele);

@@ -326,6 +326,8 @@ class SilexgisUploadRunner {
     final refusals = <SilexgisRefusal>[];
     final heldNow = <SilexgisHeldEntry>[];
     final conflicts = <SilexgisConflictEntry>[];
+    final refusedNow = <SilexgisRefusedEntry>[];
+    final removedThere = <PendingUploadRow>[];
     // Any other answer is the row's news now, whatever an earlier review said.
     final answeredOtherwise = <Uuid>[];
 
@@ -410,16 +412,43 @@ class SilexgisUploadRunner {
               serverRow: result.conflictFor(answer.id),
             ),
           );
-        case SyncRowStatus.rejected:
-        case null:
-          refusals.add(
-            SilexgisRefusal(
+        case SyncRowStatus.rejected
+            when sentRow.isDelete &&
+                (answer.code == SilexgisCodes.rowNotFound ||
+                    answer.code == SilexgisCodes.rowDeleted):
+          // The removal has nothing left to remove there: gone on both sides.
+          forgotten.add(sentRow.entityUuid);
+        case SyncRowStatus.rejected
+            when answer.code == SilexgisCodes.rowNotFound:
+          // The server never had the row after all, or no longer has any
+          // record of it: forgotten, it goes as a new row next time.
+          forgotten.add(sentRow.entityUuid);
+          refusals.add(_refusal(sentRow, answer, result));
+        case SyncRowStatus.rejected
+            when answer.code == SilexgisCodes.rowDeleted:
+          // Removed there while this device held an edit of it, exactly as a
+          // tombstone over unsent work: kept here, and put to the caver, who
+          // alone may send it again as a new row.
+          removedThere.add(sentRow);
+          refusals.add(_refusal(sentRow, answer, result));
+        case SyncRowStatus.rejected when answer.action == SilexgisAction.stop:
+          // Sent again as it is, it can only be refused again: kept for the
+          // caver, and not sent until they edit it.
+          refusedNow.add(
+            SilexgisRefusedEntry(
+              section: SyncUploadSection.rows,
               entityUuid: sentRow.entityUuid,
               entityTable: sentRow.entityTable,
-              result: answer,
-              serverRow: result.conflictFor(answer.id),
+              wireKind: sentRow.row.kind.wireName,
+              code: answer.code ?? '',
+              isDelete: sentRow.isDelete,
+              sentLocalUpdatedAt: sentRow.localUpdatedAt,
             ),
           );
+          refusals.add(_refusal(sentRow, answer, result));
+        case SyncRowStatus.rejected:
+        case null:
+          refusals.add(_refusal(sentRow, answer, result));
       }
     }
 
@@ -432,6 +461,30 @@ class SilexgisUploadRunner {
     );
     await _heldRows.recordHeld(_profileUuid, heldNow);
     await _heldRows.recordConflicts(_profileUuid, conflicts);
+    await _heldRows.recordRefused(_profileUuid, refusedNow);
+    for (final row in removedThere) {
+      await _heldRows.recordDeletedOnServer(
+        _profileUuid,
+        row.entityUuid,
+        entityTable: row.entityTable,
+        wireKind: row.row.kind.wireName,
+        localUpdatedAt: row.localUpdatedAt,
+      );
+    }
+    await _localState.forgetRevisions(_profileUuid, <Uuid>[
+      for (final row in removedThere) row.entityUuid,
+    ]);
     return refusals;
   }
+
+  static SilexgisRefusal _refusal(
+    PendingUploadRow sentRow,
+    SyncRowResult answer,
+    SyncUploadResult result,
+  ) => SilexgisRefusal(
+    entityUuid: sentRow.entityUuid,
+    entityTable: sentRow.entityTable,
+    result: answer,
+    serverRow: result.conflictFor(answer.id),
+  );
 }

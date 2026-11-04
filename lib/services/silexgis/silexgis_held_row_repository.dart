@@ -26,6 +26,7 @@ class SilexgisHeldItem {
     this.keptAt,
     this.isConflict = false,
     this.isDeletedOnServer = false,
+    this.isRefused = false,
   });
 
   final SyncUploadSection section;
@@ -70,12 +71,18 @@ class SilexgisHeldItem {
   /// whether it goes here too.
   final bool isDeletedOnServer;
 
-  bool get isWaiting => outcome == null && !isConflict && !isDeletedOnServer;
+  /// The installation refused the row outright, with a [code] that says
+  /// sending it again as it is cannot succeed. No reviewer is involved.
+  final bool isRefused;
 
-  /// Decided against, in conflict or removed on the server, and the caver has
-  /// not yet said what to do about it.
+  bool get isWaiting =>
+      outcome == null && !isConflict && !isDeletedOnServer && !isRefused;
+
+  /// Decided against, in conflict, refused or removed on the server, and the
+  /// caver has not yet said what to do about it.
   bool get awaitsCaver =>
-      (outcome != null || isConflict || isDeletedOnServer) && keptAt == null;
+      (outcome != null || isConflict || isDeletedOnServer || isRefused) &&
+      keptAt == null;
 
   /// Whether the local row still says what was sent for review.
   ///
@@ -135,6 +142,28 @@ class SilexgisConflictEntry {
   final Map<String, Object?>? current;
 }
 
+/// A row an upload refused for a reason sending it again cannot change, ready
+/// to be recorded.
+class SilexgisRefusedEntry {
+  const SilexgisRefusedEntry({
+    required this.section,
+    required this.entityUuid,
+    required this.entityTable,
+    required this.code,
+    this.wireKind,
+    this.isDelete = false,
+    this.sentLocalUpdatedAt,
+  });
+
+  final SyncUploadSection section;
+  final Uuid entityUuid;
+  final String entityTable;
+  final String code;
+  final String? wireKind;
+  final bool isDelete;
+  final int? sentLocalUpdatedAt;
+}
+
 /// How many held rows there are, by what they wait on.
 class SilexgisReviewCounts {
   const SilexgisReviewCounts({this.waiting = 0, this.toDecide = 0});
@@ -166,6 +195,10 @@ class SilexgisHeldRowRepository {
   /// What `outcome` holds for a row the installation removed while this
   /// device held unsent work on it. Not a reviewer's word either.
   static const String deletedOnServerOutcome = 'deleted';
+
+  /// What `outcome` holds for a row the installation refused outright. Not a
+  /// reviewer's word either.
+  static const String refusedOutcome = 'refused';
 
   /// Every held row of one section, by row identifier. Read once per run.
   Future<Map<Uuid, SilexgisHeldItem>> readSection(
@@ -270,6 +303,38 @@ class SilexgisHeldRowRepository {
             outcome: const Value(conflictOutcome),
             code: Value(entry.code),
             currentJson: Value(current == null ? null : jsonEncode(current)),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+  }
+
+  /// Records rows an upload refused for a reason that sending them again as
+  /// they are cannot change. Like a conflict, a row recorded here is not sent
+  /// again while it says what was sent, and waits for the caver.
+  Future<void> recordRefused(
+    String profileUuid,
+    Iterable<SilexgisRefusedEntry> entries,
+  ) async {
+    if (entries.isEmpty) return;
+    final now = _clock.nowMs();
+    await _db.batch((batch) {
+      for (final entry in entries) {
+        batch.insert(
+          _db.silexgisHeldRow,
+          SilexgisHeldRowCompanion.insert(
+            profileUuid: profileUuid,
+            section: entry.section.wireName,
+            entityUuid: entry.entityUuid,
+            entityTable: entry.entityTable,
+            wireKind: Value(entry.wireKind),
+            reviewId: '',
+            isDelete: Value(entry.isDelete),
+            sentLocalUpdatedAt: Value(entry.sentLocalUpdatedAt),
+            heldAt: Value(now),
+            outcome: const Value(refusedOutcome),
+            code: Value(entry.code),
           ),
           mode: InsertMode.insertOrReplace,
         );
@@ -390,6 +455,7 @@ class SilexgisHeldRowRepository {
     final json = row.currentJson;
     final isConflict = row.outcome == conflictOutcome;
     final isDeletedOnServer = row.outcome == deletedOnServerOutcome;
+    final isRefused = row.outcome == refusedOutcome;
     return SilexgisHeldItem(
       section: section,
       entityUuid: row.entityUuid,
@@ -399,7 +465,7 @@ class SilexgisHeldRowRepository {
       isDelete: row.isDelete,
       sentLocalUpdatedAt: row.sentLocalUpdatedAt,
       heldAt: row.heldAt,
-      outcome: isConflict || isDeletedOnServer
+      outcome: isConflict || isDeletedOnServer || isRefused
           ? null
           : SyncReviewOutcome.tryParse(row.outcome),
       note: row.note,
@@ -411,6 +477,7 @@ class SilexgisHeldRowRepository {
       keptAt: row.keptAt,
       isConflict: isConflict,
       isDeletedOnServer: isDeletedOnServer,
+      isRefused: isRefused,
     );
   }
 }

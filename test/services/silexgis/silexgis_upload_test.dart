@@ -595,6 +595,125 @@ void main() {
       expect(refusal.result.code, SilexgisCodes.setUnbound);
     });
 
+    group('a row refused outright', () {
+      /// A cave and a place both sides agreed on, with the place edited here
+      /// since.
+      Future<void> editedPlace() async {
+        final t0 = clock.nowMs();
+        await insertArea(updatedAt: t0);
+        await insertCave(updatedAt: t0);
+        await insertPlace(placeId, title: 'Sala Mare', updatedAt: t0);
+        await known(areaId, table: 'surface_areas', localUpdatedAt: t0);
+        await known(caveId, table: 'caves', kind: 'cave', localUpdatedAt: t0);
+        await known(placeId, table: 'cave_places', localUpdatedAt: t0);
+        clock.advance(const Duration(minutes: 5));
+        await (db.update(
+          db.cavePlaces,
+        )..where((t) => t.uuid.equalsValue(placeId))).write(
+          CavePlacesCompanion(
+            title: const Value('Sala Mare, renamed'),
+            updatedAt: Value(clock.nowMs()),
+          ),
+        );
+      }
+
+      Map<String, Object?> rejected(String code) => <String, Object?>{
+        'id': placeId.toString(),
+        'status': 'rejected',
+        'revision': null,
+        'code': code,
+        'detail': 'Invented refusal.',
+      };
+
+      test('is not sent again when sending it again cannot help', () async {
+        await editedPlace();
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[rejected(SilexgisCodes.rowForbidden)]),
+        ]);
+        final report = await runner.run(setId, capabilities: capabilities);
+        expect(report.refusals.single.action, SilexgisAction.stop);
+
+        expect(await builder.build(), isEmpty);
+        final held = (await heldRows.readSection(
+          profile,
+          SyncUploadSection.rows,
+        ))[placeId]!;
+        expect(held.isRefused, isTrue);
+        expect(held.awaitsCaver, isTrue);
+        expect(held.code, SilexgisCodes.rowForbidden);
+      });
+
+      test('is sent again once the caver edits it', () async {
+        await editedPlace();
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[rejected(SilexgisCodes.rowForbidden)]),
+        ]);
+        await runner.run(setId, capabilities: capabilities);
+        clock.advance(const Duration(minutes: 5));
+        await (db.update(db.cavePlaces)
+              ..where((t) => t.uuid.equalsValue(placeId)))
+            .write(CavePlacesCompanion(updatedAt: Value(clock.nowMs())));
+
+        expect((await builder.build()).map((p) => p.entityUuid), <Uuid>[
+          placeId,
+        ]);
+      });
+
+      test('a removal that may not be made is not sent again', () async {
+        await known(placeId, table: 'cave_places', kind: 'generic');
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[
+            rejected(SilexgisCodes.rowDeleteForbidden),
+          ]),
+        ]);
+        await runner.run(setId, capabilities: capabilities);
+        expect(await builder.build(), isEmpty);
+      });
+
+      test('an edit of a row the server does not have goes as new', () async {
+        await editedPlace();
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[rejected(SilexgisCodes.rowNotFound)]),
+        ]);
+        await runner.run(setId, capabilities: capabilities);
+
+        final pending = await builder.build();
+        expect(pending.map((p) => p.entityUuid), <Uuid>[placeId]);
+        expect(pending.single.row.baseRevision, isNull);
+      });
+
+      test(
+        'an edit of a row removed there is kept and put to the caver',
+        () async {
+          await editedPlace();
+          arm(<ScriptedResponse>[
+            answer(<Map<String, Object?>>[rejected(SilexgisCodes.rowDeleted)]),
+          ]);
+          await runner.run(setId, capabilities: capabilities);
+
+          expect(await builder.build(), isEmpty);
+          expect(await localState.readRevision(profile, placeId), isNull);
+          final held = (await heldRows.readSection(
+            profile,
+            SyncUploadSection.rows,
+          ))[placeId]!;
+          expect(held.isDeletedOnServer, isTrue);
+          expect(await db.select(db.cavePlaces).get(), hasLength(1));
+        },
+      );
+
+      test('a removal of a row already gone there is done with', () async {
+        await known(placeId, table: 'cave_places', kind: 'generic');
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[rejected(SilexgisCodes.rowDeleted)]),
+        ]);
+        final report = await runner.run(setId, capabilities: capabilities);
+        expect(report.refusals, isEmpty);
+        expect(await localState.readRevision(profile, placeId), isNull);
+        expect(await builder.build(), isEmpty);
+      });
+    });
+
     test(
       'a batch over the ceiling is split, each part its own attempt',
       () async {
