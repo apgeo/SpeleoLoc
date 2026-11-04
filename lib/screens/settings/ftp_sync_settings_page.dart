@@ -594,7 +594,16 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                     ),
               ],
               onChanged: (v) {
-                if (v != null) setState(() => _protocol = v);
+                if (v == null) return;
+                setState(() {
+                  // An FTP or FTPS port carried into SFTP only fails to
+                  // connect; empty means SFTP's own default.
+                  if (v == FtpProtocol.sftp &&
+                      const {'21', '990'}.contains(_port.text.trim())) {
+                    _port.clear();
+                  }
+                  _protocol = v;
+                });
               },
             ),
             if (_protocol == FtpProtocol.ftps) ...[

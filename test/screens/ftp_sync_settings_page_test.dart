@@ -233,6 +233,23 @@ void main() {
     expect(saved.single.effectivePort, 22);
   });
 
+  testWidgets('switching an FTPS profile to SFTP drops its FTPS port', (
+    tester,
+  ) async {
+    await openEditor(tester, ftps.copyWith(port: 990));
+
+    await tester.tap(find.byType(DropdownButtonFormField<FtpProtocol>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ftp_protocol_sftp').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.save).first);
+    await tester.pumpAndSettle();
+
+    final saved = await FtpProfileRepository(db, hostKeys: hostKeys).list();
+    expect(saved.single.port, isNull);
+    expect(saved.single.effectivePort, 22);
+  });
+
   testWidgets('an FTPS profile lists FTPS only as its current, unselectable '
       'value', (tester) async {
     await openEditor(tester, ftps);
