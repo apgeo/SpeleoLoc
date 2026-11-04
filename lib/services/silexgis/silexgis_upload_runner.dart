@@ -329,6 +329,10 @@ class SilexgisUploadRunner {
         answeredOtherwise.add(sentRow.entityUuid);
       }
       switch (answer.status) {
+        case SyncRowStatus.unchanged when sentRow.isDelete:
+          // Already gone there, or never received: gone on both sides, as
+          // after `deleted`.
+          forgotten.add(sentRow.entityUuid);
         case SyncRowStatus.created:
         case SyncRowStatus.updated:
         case SyncRowStatus.unchanged:

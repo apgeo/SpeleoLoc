@@ -438,6 +438,30 @@ void main() {
       },
     );
 
+    test(
+      'a removal of a row already gone there forgets its revision too',
+      () async {
+        // A row already gone answers `unchanged`. Kept, the revision would
+        // send the same removal again on every run.
+        await known(placeId, table: 'cave_places', kind: 'generic');
+        arm(<ScriptedResponse>[
+          answer(<Map<String, Object?>>[
+            <String, Object?>{
+              'id': placeId.toString(),
+              'status': 'unchanged',
+              'revision': null,
+              'code': null,
+              'detail': null,
+            },
+          ]),
+        ]);
+
+        await runner.run(setId, capabilities: capabilities);
+        expect(await localState.readRevision(profile, placeId), isNull);
+        expect(await builder.build(), isEmpty);
+      },
+    );
+
     test('a conflict is kept with the server\'s own row beside it', () async {
       await known(placeId, table: 'cave_places', kind: 'generic');
       arm(<ScriptedResponse>[
