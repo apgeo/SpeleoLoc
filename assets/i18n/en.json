@@ -1520,6 +1520,7 @@
   "silexgis_decision_deleted_title": "Delete it here too?",
   "silexgis_decision_deleted_body": "The server no longer has it. Deleting it removes it from this device, with everything inside it and your unsent changes.",
   "silexgis_decision_deleted_kept": "Kept on this device only. It is not sent to the server.",
+  "silexgis_delete_travels": "{server} holds it too. The next sync deletes it there as well, for everyone who reads it, including whoever made it.",
   "silexgis_decision_pin_exists": "Another point marks this place on the server's map",
   "silexgis_decision_remove_pin": "Remove my point",
   "silexgis_decision_remove_pin_title": "Remove your point?",

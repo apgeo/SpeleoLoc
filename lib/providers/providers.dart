@@ -61,6 +61,7 @@ import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_decisions.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_presence.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_rows.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 import 'package:speleoloc/services/silexgis/silexgis_survey_model_repository.dart';
@@ -212,6 +213,15 @@ final silexgisLocalStateProvider = Provider<SilexgisLocalStateRepository>(
   (ref) => SilexgisLocalStateRepository(
     ref.watch(appDatabaseProvider),
     clock: ref.watch(clockProvider),
+  ),
+);
+
+/// Whether an item about to be deleted is also held by the active
+/// installation, so the deletion can say it travels.
+final silexgisServerPresenceProvider = Provider<SilexgisServerPresence>(
+  (ref) => SilexgisServerPresence(
+    profiles: ref.watch(silexgisProfileRepositoryProvider),
+    localState: ref.watch(silexgisLocalStateProvider),
   ),
 );
 

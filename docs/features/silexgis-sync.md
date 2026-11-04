@@ -544,7 +544,12 @@ This is the destructive part, in both directions.
   never had**; see [The Needs a decision page](#the-needs-a-decision-page).
 - A cave or place **you delete here**, if the server already knew it, is
   sent as a deletion on the next run, and the server removes it *with
-  everything inside it*.
+  everything inside it*. Trips and raster maps go the same way, also one
+  that came from another phone: the server removes it for everyone, and the
+  phone that made it deletes its own copy when it next syncs. Deleting a
+  trip or a raster map the server holds says so in its confirmation: *Clubul
+  Speo Example holds it too. The next sync deletes it there as well, for
+  everyone who reads it, including whoever made it.*
 
 Neither asks for confirmation at sync time. The confirmation was the delete
 itself. If you are unsure, take a backup before syncing — see

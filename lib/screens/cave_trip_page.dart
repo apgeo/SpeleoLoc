@@ -597,11 +597,23 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   }
 
   Future<void> _deleteTrip() async {
+    final installation = await ref
+        .read(silexgisServerPresenceProvider)
+        .holdingInstallation(widget.tripUuid);
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('trip_delete_confirm')),
+        content: Text(
+          <String>[
+            LocServ.inst.t('trip_delete_confirm'),
+            if (installation != null)
+              LocServ.inst.t('silexgis_delete_travels', <String, String>{
+                'server': installation,
+              }),
+          ].join('\n\n'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

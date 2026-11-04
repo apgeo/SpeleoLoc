@@ -93,14 +93,23 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
     final count = await ref
         .read(definitionRepositoryProvider)
         .countDefinitionsForRasterMap(id);
+    final installation = await ref
+        .read(silexgisServerPresenceProvider)
+        .holdingInstallation(id);
     if (!mounted) return;
+    final travels = installation == null
+        ? ''
+        : '\n\n${loc.t('silexgis_delete_travels', <String, String>{'server': installation})}';
     if (count > 0) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(loc.t('confirm')),
           content: Text(
-            loc.t('raster_map_has_definitions').replaceAll('{count}', '$count'),
+            loc
+                    .t('raster_map_has_definitions')
+                    .replaceAll('{count}', '$count') +
+                travels,
           ),
           actions: [
             TextButton(
@@ -123,7 +132,7 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
         context: context,
         builder: (context) => AlertDialog(
           title: Text(loc.t('confirm')),
-          content: Text('${loc.t('delete')}?'),
+          content: Text('${loc.t('delete')}?$travels'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
