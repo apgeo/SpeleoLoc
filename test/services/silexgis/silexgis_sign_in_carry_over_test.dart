@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
@@ -44,13 +45,14 @@ void main() {
   Future<void> replaceWith(
     List<SilexgisProfile> incoming, {
     InMemoryRefreshTokenStore? store,
+    SilexgisAuthRegistry? signIns,
   }) async {
     final keystore = store ?? tokens;
     final carry = await SilexgisSignInCarryOver.capture(before, keystore);
     for (final p in incoming) {
       await profiles(after).save(p);
     }
-    await carry.applyTo(after, keystore);
+    await carry.applyTo(after, keystore, signIns: signIns);
   }
 
   test(
@@ -76,6 +78,15 @@ void main() {
       expect(await tokens.read(mine.profileUuid), isNull);
     },
   );
+
+  test('a dropped sign-in is retired while it is still live', () async {
+    final signIns = SilexgisAuthRegistry(store: tokens);
+    final live = signIns.forProfile(mine);
+
+    await replaceWith(const [], signIns: signIns);
+
+    expect(identical(signIns.forProfile(mine), live), isFalse);
+  });
 
   test('a database without this profile drops its sign-in', () async {
     await replaceWith(const []);

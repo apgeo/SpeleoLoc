@@ -419,6 +419,7 @@ class _HomePageState extends ConsumerState<HomePage>
       await TestArchiveImportService.importFrom(
         urlOrPath: testArchiveUrl,
         silexgisTokens: ref.read(silexgisTokenStoreProvider),
+        silexgisSignIns: ref.read(silexgisAuthRegistryProvider),
         onProgress: (msg) => messageNotifier.value = msg,
       );
       if (mounted) Navigator.pop(context); // close progress

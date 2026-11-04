@@ -9,6 +9,7 @@ import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 
 /// Fetches a test-data archive (zip exported by [DataArchiveService]) from a
 /// remote `http(s)` URL, a local filesystem path, or a build-embedded asset
@@ -93,6 +94,7 @@ class TestArchiveImportService {
   static Future<void> importFrom({
     required String urlOrPath,
     required SilexgisRefreshTokenStore silexgisTokens,
+    SilexgisAuthRegistry? silexgisSignIns,
     void Function(String message)? onProgress,
   }) async {
     onProgress?.call('Downloading test archive...');
@@ -114,6 +116,7 @@ class TestArchiveImportService {
       await service.importArchiveReplace(
         zipPath: tempFile.path,
         silexgisTokens: silexgisTokens,
+        silexgisSignInRegistry: silexgisSignIns,
         onProgress: onProgress,
       );
     } finally {

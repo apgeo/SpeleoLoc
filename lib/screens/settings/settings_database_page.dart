@@ -277,6 +277,7 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
         appDatabase,
       );
       final silexgisTokens = ref.read(silexgisTokenStoreProvider);
+      final silexgisSignInRegistry = ref.read(silexgisAuthRegistryProvider);
       final silexgisSignIns = await SilexgisSignInCarryOver.capture(
         appDatabase,
         silexgisTokens,
@@ -314,7 +315,11 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
       await devicePreferences.applyTo(appDatabase);
-      await silexgisSignIns.applyTo(appDatabase, silexgisTokens);
+      await silexgisSignIns.applyTo(
+        appDatabase,
+        silexgisTokens,
+        signIns: silexgisSignInRegistry,
+      );
 
       if (context.mounted) {
         Navigator.pop(context);

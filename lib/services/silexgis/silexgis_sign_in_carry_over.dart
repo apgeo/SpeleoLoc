@@ -5,6 +5,7 @@ import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 
 /// Keeps this device's SilexGIS sign-ins from following a replace of the
 /// whole database file to another host.
@@ -29,13 +30,19 @@ class SilexgisSignInCarryOver {
   /// Drops the stored token of every profile the new database [db] no longer
   /// has, or has pointed at another server. A token the keystore will not
   /// let go of takes its profile out of the new list instead, so nothing can
-  /// send it.
-  Future<void> applyTo(AppDatabase db, SilexgisRefreshTokenStore tokens) async {
+  /// send it. The live sign-in of each such profile in [signIns] is retired
+  /// first, so a refresh already on its way cannot store a token afterwards.
+  Future<void> applyTo(
+    AppDatabase db,
+    SilexgisRefreshTokenStore tokens, {
+    SilexgisAuthRegistry? signIns,
+  }) async {
     final profiles = _profiles(db, tokens);
     final after = {for (final p in await profiles.list()) p.profileUuid: p};
     for (final old in _before) {
       final now = after[old.profileUuid];
       if (now != null && old.isSameServerAs(now)) continue;
+      signIns?.retire(old.profileUuid);
       await tokens.delete(old.profileUuid);
       final left = await tokens.read(old.profileUuid);
       if (now != null && left != null && left.isNotEmpty) {

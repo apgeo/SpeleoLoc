@@ -22,6 +22,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/contained_path.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sign_in_carry_over.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 // Re-export so existing callers (e.g. UI code, tests) that import models
 // via data_archive_service.dart keep working after the Phase 2.4 split.
 export 'package:speleoloc/services/archive/archive_models.dart';
@@ -160,6 +161,7 @@ class DataArchiveService {
   Future<void> importArchiveReplace({
     required String zipPath,
     required SilexgisRefreshTokenStore silexgisTokens,
+    SilexgisAuthRegistry? silexgisSignInRegistry,
     ProgressCallback? onProgress,
   }) async {
     onProgress?.call('Extracting archive...');
@@ -214,7 +216,11 @@ class DataArchiveService {
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
       await devicePreferences.applyTo(appDatabase);
-      await silexgisSignIns.applyTo(appDatabase, silexgisTokens);
+      await silexgisSignIns.applyTo(
+        appDatabase,
+        silexgisTokens,
+        signIns: silexgisSignInRegistry,
+      );
 
       // Restore FTP passwords from the archive's ftp_credentials.json into
       // the OS keystore (flutter_secure_storage). This must run after the
