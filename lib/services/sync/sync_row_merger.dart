@@ -121,7 +121,7 @@ class SyncRowMerger {
         continue;
       }
 
-      final D incoming;
+      D incoming;
       try {
         incoming = fromJson(row);
       } catch (e) {
@@ -198,6 +198,14 @@ class SyncRowMerger {
         skipped++;
         _state.dropped.add(uuid);
         continue;
+      }
+      // Brought back by work done inside it after the deletion: stamped with
+      // that work, it reaches every device that applied the deletion too,
+      // even once that work is gone.
+      if (deletedAt != null &&
+          incomingTs <= deletedAt &&
+          row.containsKey('updated_at')) {
+        incoming = fromJson(row..['updated_at'] = touched);
       }
 
       final values = sqlValuesOf(incoming);

@@ -86,7 +86,15 @@ class SyncTombstoneApplier {
     }
 
     final plan = await _cascadeOf(table, uuid, tombstone.at);
-    if (plan == null) {
+    if (plan case _Kept(:final since)) {
+      // Every device that applied the deletion compares the record's own
+      // stamp with it; stamped with the work that kept it, the record
+      // reaches them again, even once that work is gone.
+      await _restamp(table, uuid, since);
+      _state.skipped++;
+      return;
+    }
+    if (plan is! _Cascade) {
       _state.skipped++;
       return;
     }
@@ -141,13 +149,15 @@ class SyncTombstoneApplier {
     return true;
   }
 
-  /// The rows a deletion of [uuid] at [at] reaches, or null when one of them
-  /// was added or changed after it, or could not be detached.
-  Future<_Cascade?> _cascadeOf(String table, Uuid uuid, int at) async {
+  /// The rows a deletion of [uuid] at [at] reaches; [_Kept] with the newest
+  /// stamp among them when one of them was added or changed after it; null
+  /// when one could not be detached.
+  Future<_Plan?> _cascadeOf(String table, Uuid uuid, int at) async {
     final remove = <(String, Uuid)>[];
     final detach = <(String, Uuid, String)>[];
     final removed = <Uuid>{uuid};
     final queue = <(String, Uuid)>[(table, uuid)];
+    int? newest;
     while (queue.isNotEmpty) {
       final (parentTable, parent) = queue.removeLast();
       for (final (childTable, fk) in _schema.childrenOf(parentTable)) {
@@ -160,12 +170,15 @@ class SyncTombstoneApplier {
             .get();
         for (final row in rows) {
           final child = Uuid.fromBytes(row.read<Uint8List>('uuid'));
-          if (row.read<int>('ts') > at) {
-            _state.warnings.add(
-              'kept $table $uuid: $childTable $child was added or changed '
-              'after its deletion',
-            );
-            return null;
+          final ts = row.read<int>('ts');
+          if (ts > at) {
+            if (newest == null) {
+              _state.warnings.add(
+                'kept $table $uuid: $childTable $child was added or changed '
+                'after its deletion',
+              );
+            }
+            if (newest == null || ts > newest) newest = ts;
           }
           if (fk.nullable) {
             detach.add((childTable, child, fk.column));
@@ -176,6 +189,7 @@ class SyncTombstoneApplier {
         }
       }
     }
+    if (newest != null) return _Kept(newest);
     final kept = <(String, Uuid, String)>[];
     for (final d in detach) {
       final (childTable, child, column) = d;
@@ -213,6 +227,16 @@ class SyncTombstoneApplier {
     _state.deletesApplied++;
   }
 
+  Future<void> _restamp(String table, Uuid uuid, int at) async {
+    if (!_schema.columnsOf(table).contains('updated_at')) return;
+    await _db.customUpdate(
+      'UPDATE $table SET updated_at = ? WHERE uuid = ?',
+      variables: [Variable<int>(at), Variable<Uint8List>(uuid.bytes)],
+      updates: {_tableInfos[table]!},
+      updateKind: UpdateKind.update,
+    );
+  }
+
   Future<int?> _stampOf(String table, Uuid uuid) async {
     final row = await _db
         .customSelect(
@@ -224,9 +248,21 @@ class SyncTombstoneApplier {
   }
 }
 
-class _Cascade {
+sealed class _Plan {
+  const _Plan();
+}
+
+class _Cascade extends _Plan {
   const _Cascade(this.remove, this.detach);
 
   final List<(String, Uuid)> remove;
   final List<(String, Uuid, String)> detach;
+}
+
+/// The record stays: something it holds was added or changed [since] after
+/// the deletion.
+class _Kept extends _Plan {
+  const _Kept(this.since);
+
+  final int since;
 }

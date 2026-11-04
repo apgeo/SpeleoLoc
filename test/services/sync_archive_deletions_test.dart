@@ -194,6 +194,71 @@ void main() {
     expect(arrived.cavePlaceUuid, p);
   });
 
+  group('a place kept for a visit recorded after its deletion', () {
+    late SyncTestDevice c;
+    late Uuid cave;
+    late Uuid p;
+    late Uuid t;
+    late File deletion;
+
+    setUp(() async {
+      c = await SyncTestDevice.create();
+      cave = await a.caves.addCave('Invented Cave');
+      await a.places.addCavePlace(cave, 'P');
+      p = await a.placeUuid(cave, 'P');
+      await a.sendTo(b, tmp, 'a0.zip');
+      await a.sendTo(c, tmp, 'a0c.zip');
+
+      await tick();
+      await a.places.deleteCavePlace(p);
+      await tick();
+      deletion = await a.export(tmp, 'a1.zip');
+      await c.sync.importFromZip(deletion.path);
+      expect(await c.uuidsOf('cave_places'), isEmpty);
+
+      // B, still offline, records a visit at P after A's delete.
+      await tick();
+      t = await trip(b, cave, 'Invented trip B');
+      await b.db.insertTripPoint(
+        tripUuid: t,
+        cavePlaceUuid: p,
+        authorUuid: b.author,
+      );
+      await tick();
+    });
+    tearDown(() => c.db.close());
+
+    test('comes back on every phone, also once the visit is deleted', () async {
+      await b.sync.importFromZip(deletion.path);
+      expect(await b.uuidsOf('cave_places'), {p});
+
+      await tick();
+      await b.trips.deleteCaveTrip(t);
+      await tick();
+      await b.sendTo(c, tmp, 'b1.zip');
+      await b.sendTo(a, tmp, 'b1a.zip');
+
+      for (final d in [a, b, c]) {
+        expect(await d.uuidsOf('cave_places'), {p});
+      }
+    });
+
+    test('is passed on by the phone that deleted it, once it took it back, '
+        'also after the visit is deleted', () async {
+      await b.sendTo(a, tmp, 'b1.zip');
+      expect(await a.uuidsOf('cave_places'), {p});
+
+      await tick();
+      await b.trips.deleteCaveTrip(t);
+      await tick();
+      await b.sendTo(a, tmp, 'b2.zip');
+      expect(await a.uuidsOf('cave_trips'), isEmpty);
+      await a.sendTo(c, tmp, 'a2.zip');
+
+      expect(await c.uuidsOf('cave_places'), {p});
+    });
+  });
+
   test('what the deleting phone never saw goes with the record, as it would '
       'have there', () async {
     final cave = await a.caves.addCave('Invented Cave');
