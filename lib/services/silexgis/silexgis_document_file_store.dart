@@ -54,8 +54,12 @@ class SilexgisDocumentFileStore {
   }
 
   /// The file name a fetched document is stored under: its title, with the
-  /// extension its type implies when the title has none, and the size for a
-  /// picture the server drew.
+  /// extension its type implies, and the size for a picture the server drew.
+  ///
+  /// A title's own suffix is kept only when it looks like an extension and
+  /// agrees with the type: the viewer is chosen by the name's extension alone,
+  /// and a title such as "Topo v2.3" or "Plan 1.500" ends in a version or a
+  /// scale, not in one.
   static String fileNameFor({
     required String title,
     required String? mimeType,
@@ -64,10 +68,13 @@ class SilexgisDocumentFileStore {
     final extension = extensionFor(mimeType);
     var stem = title.trim();
     var ext = '';
-    final dot = stem.lastIndexOf('.');
-    if (dot > 0 && stem.length - dot <= 6) {
-      ext = stem.substring(dot);
-      stem = stem.substring(0, dot);
+    final suffix = _titleExtension(stem);
+    if (suffix != null &&
+        (extension == null ||
+            !rendition.isOriginal ||
+            _sameType(suffix, extension))) {
+      ext = '.$suffix';
+      stem = stem.substring(0, stem.length - ext.length);
     }
     if (ext.isEmpty && extension != null) ext = '.$extension';
     if (!rendition.isOriginal) {
@@ -79,6 +86,32 @@ class SilexgisDocumentFileStore {
     if (stem.length > 80) stem = stem.substring(0, 80);
     return '$stem$ext';
   }
+
+  /// What follows a title's last dot when it could be an extension: a few
+  /// letters or digits, at least one of them a letter.
+  static String? _titleExtension(String title) {
+    final dot = title.lastIndexOf('.');
+    if (dot <= 0) return null;
+    final suffix = title.substring(dot + 1);
+    final shaped = RegExp(r'^[A-Za-z0-9]{1,5}$').hasMatch(suffix);
+    final named = RegExp('[A-Za-z]').hasMatch(suffix);
+    return shaped && named ? suffix : null;
+  }
+
+  /// Whether [suffix] names the same type as the usual [extension].
+  static bool _sameType(String suffix, String extension) {
+    final lower = suffix.toLowerCase();
+    return lower == extension ||
+        (_spellings[extension]?.contains(lower) ?? false);
+  }
+
+  static const Map<String, Set<String>> _spellings = <String, Set<String>>{
+    'jpg': <String>{'jpeg', 'jpe'},
+    'heic': <String>{'heif'},
+    'mov': <String>{'qt'},
+    'mp4': <String>{'m4v'},
+    'txt': <String>{'text'},
+  };
 
   /// The usual extension for [mimeType], or null for one not known here.
   static String? extensionFor(String? mimeType) {
