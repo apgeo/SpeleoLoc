@@ -34,7 +34,7 @@ void main() {
         raw.execute('CREATE TABLE users (uuid BLOB PRIMARY KEY NOT NULL)');
         raw.execute('CREATE TABLE caves (uuid BLOB PRIMARY KEY NOT NULL)');
         // Stub carries the columns V16ToV17's twin-rename pass reads and the
-        // ones V36ToV37 indexes, so the full ladder can run over this fixture.
+        // ones V34ToV37 indexes, so the full ladder can run over this fixture.
         raw.execute(
           'CREATE TABLE cave_places (uuid BLOB PRIMARY KEY NOT NULL, '
           "title TEXT NOT NULL DEFAULT '', cave_uuid BLOB, "

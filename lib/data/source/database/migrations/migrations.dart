@@ -1128,48 +1128,18 @@ class V33ToV34Migration extends SchemaMigration {
   }
 }
 
-class V34ToV35Migration extends SchemaMigration {
-  const V34ToV35Migration();
-
-  @override
-  int get toVersion => 35;
-
-  @override
-  Future<void> apply(AppDatabase db, Migrator migrator) async {
-    await migrator.createTable(db.silexgisSurveyModel);
-    await db.customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_silexgis_survey_model_document '
-      'ON silexgis_survey_model(profile_uuid, document_id)',
-    );
-  }
-}
-
-/// v35 → v36.
+/// v34 → v37: every change since the last released schema, in one step.
 ///
-/// Adds two local-only SilexGIS tables that let a sync run cut short carry on
-/// where it stopped: the rows a download page carried before their container,
-/// and the feature rows of an upload sent and not answered, so they go again
-/// under the same batch identifier. Local only, like the other SilexGIS state
-/// tables; nothing is moved into them.
-class V35ToV36Migration extends SchemaMigration {
-  const V35ToV36Migration();
-
-  @override
-  int get toVersion => 36;
-
-  @override
-  Future<void> apply(AppDatabase db, Migrator migrator) async {
-    await migrator.createTable(db.silexgisDeferredRow);
-    await migrator.createTable(db.silexgisUploadAttempt);
-  }
-}
-
-/// v36 → v37.
+/// It is written so that it can run over a database at 34, 35 or 36 — the
+/// numbers development builds stamped while these changes were made — and
+/// does nothing a second time: tables and indexes are created only where
+/// missing, and each rebuild checks first.
 ///
-/// Brings databases upgraded from older schemas to the shape a fresh install
-/// gets. Each part checks before it changes anything, so it does nothing on a
-/// database that is already right.
-///
+/// - Local-only tables: the installation's SilexGIS survey models, the rows
+///   a download page carried before their container, the feature rows of an
+///   upload sent and not answered, and the archive rows that wait for a
+///   person to decide (a record whose unique name another record here
+///   already holds, and the rows that hang on it).
 /// - `cave_places.is_entrance` and `is_main_entrance` are still nullable with
 ///   no default on databases that came up from v7, where a fresh install has
 ///   them NOT NULL DEFAULT 0. An insert that leaves them out stored NULL
@@ -1181,21 +1151,28 @@ class V35ToV36Migration extends SchemaMigration {
 ///   only upgraded databases got from v20 → v21, is created on the rest.
 /// - `configurations.is_synced` is cleared on every key outside the synced
 ///   set.
-///
-/// It also adds the indexes the hot lookups were scanning whole tables for:
-/// places by cave and by either code, map definitions by map and documents
-/// by file hash.
+/// - Indexes for the hot lookups that were scanning whole tables: places by
+///   cave and by either code, map definitions by map and documents by file
+///   hash.
 ///
 /// Archived tables keep their columns, so the sync archive schema version
 /// stays where it is.
-class V36ToV37Migration extends SchemaMigration {
-  const V36ToV37Migration();
+class V34ToV37Migration extends SchemaMigration {
+  const V34ToV37Migration();
 
   @override
   int get toVersion => 37;
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.silexgisSurveyModel);
+    await db.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_silexgis_survey_model_document '
+      'ON silexgis_survey_model(profile_uuid, document_id)',
+    );
+    await migrator.createTable(db.silexgisDeferredRow);
+    await migrator.createTable(db.silexgisUploadAttempt);
+    await migrator.createTable(db.archiveHeldRow);
     if (await _entranceFlagsNullable(db)) {
       await _recreateCavePlaces(db, migrator);
     }
@@ -1385,26 +1362,6 @@ Future<void> _executeIfTableExists(
   await db.customStatement(statement, args);
 }
 
-/// v37 → v38.
-///
-/// Adds the local-only table where an archive merge keeps the rows that wait
-/// for a person to decide: a record whose unique name another record here
-/// already holds, and the rows that hang on it. New table only.
-///
-/// The table is local-only, so the sync archive schema version stays where it
-/// is.
-class V37ToV38Migration extends SchemaMigration {
-  const V37ToV38Migration();
-
-  @override
-  int get toVersion => 38;
-
-  @override
-  Future<void> apply(AppDatabase db, Migrator migrator) async {
-    await migrator.createTable(db.archiveHeldRow);
-  }
-}
-
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1462,10 +1419,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V31ToV32Migration(),
   V32ToV33Migration(),
   V33ToV34Migration(),
-  V34ToV35Migration(),
-  V35ToV36Migration(),
-  V36ToV37Migration(),
-  V37ToV38Migration(),
+  V34ToV37Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

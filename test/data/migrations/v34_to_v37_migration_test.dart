@@ -4,9 +4,9 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 
-/// Functional coverage for [V36ToV37Migration] on the shapes a database
-/// upgraded from v7 still has, and a second run changing nothing. Values are
-/// invented.
+/// Functional coverage for [V34ToV37Migration]: the local-only tables it
+/// adds, the shapes a database upgraded from v7 still has, and a second run
+/// changing nothing. Values are invented.
 void main() {
   late AppDatabase db;
 
@@ -18,7 +18,7 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> migrate() =>
-      const V36ToV37Migration().apply(db, db.createMigrator());
+      const V34ToV37Migration().apply(db, db.createMigrator());
 
   Future<List<Map<String, Object?>>> pragma(String sql) async => [
     for (final r in await db.customSelect(sql).get()) r.data,
@@ -238,5 +238,59 @@ void main() {
       await pragma('SELECT type, name, sql FROM sqlite_master ORDER BY name'),
       before,
     );
+  });
+
+  group('local-only tables', () {
+    const added = {
+      'silexgis_survey_model',
+      'silexgis_deferred_row',
+      'silexgis_upload_attempt',
+      'archive_held_row',
+    };
+
+    Future<Set<String>> present() async => {
+      for (final r in await pragma(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN "
+        "(${added.map((t) => "'$t'").join(', ')})",
+      ))
+        r['name']! as String,
+    };
+
+    test('creates each one, empty, with the survey model index', () async {
+      for (final table in added) {
+        await db.customStatement('DROP TABLE $table');
+      }
+      expect(await present(), isEmpty);
+      await migrate();
+      expect(await present(), added);
+      expect(
+        await indexNames(),
+        contains('idx_silexgis_survey_model_document'),
+      );
+      expect(await db.select(db.archiveHeldRow).get(), isEmpty);
+    });
+
+    test('leaves the ones a development build already made, with their rows, '
+        'and adds the rest', () async {
+      // A database stamped 35 has the survey models but not the others.
+      for (final table in added.difference({'silexgis_survey_model'})) {
+        await db.customStatement('DROP TABLE $table');
+      }
+      await migrate();
+      await db
+          .into(db.archiveHeldRow)
+          .insert(
+            ArchiveHeldRowCompanion.insert(
+              entityUuid: Uuid.v7(),
+              entityTable: 'cave_areas',
+              groupUuid: Uuid.v7(),
+              rowJson: '{}',
+              heldAt: 1,
+            ),
+          );
+      await migrate();
+      expect(await present(), added);
+      expect(await db.select(db.archiveHeldRow).get(), hasLength(1));
+    });
   });
 }
