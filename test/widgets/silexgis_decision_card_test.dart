@@ -48,6 +48,7 @@ void main() {
             enabled: true,
             onUseServer: () => pressed.add('server'),
             onKeepMine: () => pressed.add('keep'),
+            onSendMine: () => pressed.add('send'),
             onDelete: () => pressed.add('delete'),
           ),
         ),
@@ -74,6 +75,8 @@ void main() {
     expect(find.text('Trip recording'), findsOneWidget);
     expect(find.text('Changed on the server as well'), findsOneWidget);
     expect(find.text('Delete'), findsNothing);
+    // No server row came back, so there is no revision to send over.
+    expect(find.text('Send mine anyway'), findsNothing);
     await tester.tap(find.text('Re-read from the server'));
     await tester.tap(find.text('Keep mine, don\'t send'));
     expect(pressed, <String>['server', 'keep']);
@@ -98,6 +101,31 @@ void main() {
 
     expect(find.text('Use the server\'s version'), findsOneWidget);
     expect(find.text('Re-read from the server'), findsNothing);
+  });
+
+  testWidgets('a feature in conflict can also be sent over the server\'s row', (
+    tester,
+  ) async {
+    final pressed = await pump(
+      tester,
+      SilexgisDecision(
+        held: held(
+          SyncUploadSection.rows,
+          conflict: true,
+          code: 'sync.conflict',
+          current: const <String, Object?>{
+            'name': 'Server name',
+            'updatedAt': '2026-10-28T07:00:00Z',
+          },
+        ),
+        isNew: false,
+        title: 'Mine',
+        canSendMineAnyway: true,
+      ),
+    );
+
+    await tester.tap(find.text('Send mine anyway'));
+    expect(pressed, <String>['send']);
   });
 
   testWidgets('a pin another marks the place of is removed, not deleted', (

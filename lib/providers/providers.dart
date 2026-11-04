@@ -37,6 +37,7 @@ import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_conflict_override.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
@@ -428,6 +429,10 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
         db: db,
         reread: reread,
         placer: placer,
+        override: SilexgisConflictOverride(
+          localState: localState,
+          heldRows: heldRows,
+        ),
         caves: caves,
         places: places,
       ),

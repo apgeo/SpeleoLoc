@@ -52,6 +52,9 @@ class SilexgisDecisionsService {
           held: held,
           isNew: await resolver.isNew(held, revisions),
           title: title,
+          canSendMineAnyway:
+              resolver is SilexgisOverwriteResolver &&
+              (resolver as SilexgisOverwriteResolver).canSendMineAnyway(held),
         ),
       );
     }
@@ -70,6 +73,22 @@ class SilexgisDecisionsService {
     final resolver = _resolvers[decision.section];
     if (resolver == null || !decision.canUseServerVersion) return false;
     return resolver.useServerVersion(profile, decision.held);
+  }
+
+  /// Sends the caver's version over the server's newer one with the next
+  /// run.
+  Future<void> sendMineAnyway(
+    String profileUuid,
+    SilexgisDecision decision,
+  ) async {
+    final resolver = _resolvers[decision.section];
+    if (resolver is! SilexgisOverwriteResolver || !decision.canSendMineAnyway) {
+      return;
+    }
+    await (resolver as SilexgisOverwriteResolver).sendMineAnyway(
+      profileUuid,
+      decision.held,
+    );
   }
 
   /// Keeps the caver's version on the device, unsent until they edit it.

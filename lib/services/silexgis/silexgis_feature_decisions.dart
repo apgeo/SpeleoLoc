@@ -1,6 +1,7 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
+import 'package:speleoloc/services/silexgis/silexgis_conflict_override.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_row_lookup.dart';
@@ -10,22 +11,30 @@ import 'package:speleoloc/services/silexgis/silexgis_server_row_placer.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_version_reread.dart';
 
 /// Decisions about feature rows: caves, areas and places.
-class SilexgisFeatureDecisions implements SilexgisDecisionResolver {
+///
+/// A conflict on a feature row comes back with the server's row, so the
+/// caver may also send theirs over it: everything the device owns of the row
+/// — name, description, properties, position — then replaces the server's.
+class SilexgisFeatureDecisions
+    implements SilexgisDecisionResolver, SilexgisOverwriteResolver {
   SilexgisFeatureDecisions({
     required AppDatabase db,
     required SilexgisServerVersionReread reread,
     required SilexgisServerRowPlacer placer,
+    required SilexgisConflictOverride override,
     required ICaveRepository caves,
     required ICavePlaceRepository places,
   }) : _db = db,
        _reread = reread,
        _placer = placer,
+       _override = override,
        _caves = caves,
        _places = places,
        _rows = SilexgisLocalRowLookup(db, tables: tables);
 
   final AppDatabase _db;
   final SilexgisServerVersionReread _reread;
+  final SilexgisConflictOverride _override;
   final SilexgisServerRowPlacer _placer;
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
@@ -75,6 +84,14 @@ class SilexgisFeatureDecisions implements SilexgisDecisionResolver {
       held.current,
     );
   }
+
+  @override
+  bool canSendMineAnyway(SilexgisHeldItem held) =>
+      SilexgisConflictOverride.serverRevisionOf(held) != null;
+
+  @override
+  Future<void> sendMineAnyway(String profileUuid, SilexgisHeldItem held) =>
+      _override.sendMineAnyway(profileUuid, held);
 
   @override
   Future<void> delete(SilexgisProfile profile, SilexgisHeldItem held) async {

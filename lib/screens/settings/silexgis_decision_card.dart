@@ -12,6 +12,7 @@ class SilexgisDecisionCard extends StatelessWidget {
     required this.enabled,
     required this.onUseServer,
     required this.onKeepMine,
+    required this.onSendMine,
     required this.onDelete,
     super.key,
   });
@@ -20,6 +21,9 @@ class SilexgisDecisionCard extends StatelessWidget {
   final bool enabled;
   final VoidCallback onUseServer;
   final VoidCallback onKeepMine;
+
+  /// Sends the caver's version over the server's newer one.
+  final VoidCallback onSendMine;
 
   /// Deletes a draft, or removes a pin another already stands for.
   final VoidCallback onDelete;
@@ -91,6 +95,11 @@ class SilexgisDecisionCard extends StatelessWidget {
                   onPressed: enabled ? onKeepMine : null,
                   child: Text(LocServ.inst.t('silexgis_review_keep_mine')),
                 ),
+                if (decision.canSendMineAnyway)
+                  TextButton(
+                    onPressed: enabled ? onSendMine : null,
+                    child: Text(LocServ.inst.t('silexgis_review_send_mine')),
+                  ),
                 if (decision.canUseServerVersion)
                   FilledButton(
                     onPressed: enabled ? onUseServer : null,

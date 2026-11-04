@@ -20,7 +20,10 @@ void main() {
   setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => db.close());
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    Map<String, Object?>? current,
+  }) async {
     container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
@@ -65,6 +68,7 @@ void main() {
             entityTable: 'caves',
             wireKind: 'cave',
             code: 'sync.conflict',
+            current: current,
           ),
         ]);
 
@@ -107,6 +111,38 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(await tester.runAsync(stillToDecide), isFalse);
+  });
+
+  testWidgets('sending mine anyway says what it overwrites, and asks first', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      current: <String, Object?>{
+        'id': caveId.toString(),
+        'name': 'Theirs',
+        'updatedAt': '2026-10-28T07:30:00Z',
+      },
+    );
+
+    await tester.tap(find.text('silexgis_review_send_mine'));
+    await tester.pumpAndSettle();
+    expect(find.text('silexgis_review_send_mine_title'), findsOneWidget);
+    expect(find.text('silexgis_review_send_mine_body'), findsOneWidget);
+    await tester.tap(find.text('cancel'));
+    await tester.pumpAndSettle();
+    expect(await tester.runAsync(stillToDecide), isTrue);
+
+    await tester.tap(find.text('silexgis_review_send_mine'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('silexgis_review_send_mine'),
+      ),
+    );
+    await tester.pumpAndSettle();
     expect(await tester.runAsync(stillToDecide), isFalse);
   });
 }

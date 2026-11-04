@@ -339,6 +339,73 @@ void main() {
     });
   });
 
+  group('a cave edit that met a later version', () {
+    const serverRevision = '2026-10-28T07:30:00Z';
+
+    Future<void> conflicted({Map<String, Object?>? current}) async {
+      clock.advance(const Duration(minutes: 5));
+      final edited = clock.nowMs();
+      await (db.update(
+        db.caves,
+      )..where((t) => t.uuid.equalsValue(caveId))).write(
+        CavesCompanion(title: const Value('Mine'), updatedAt: Value(edited)),
+      );
+      await heldRows
+          .recordConflicts(profile.profileUuid, <SilexgisConflictEntry>[
+            SilexgisConflictEntry(
+              section: SyncUploadSection.rows,
+              entityUuid: caveId,
+              entityTable: 'caves',
+              wireKind: 'cave',
+              code: SilexgisCodes.conflict,
+              sentLocalUpdatedAt: edited,
+              current: current,
+            ),
+          ]);
+    }
+
+    Future<List<PendingUploadRow>> pending() => SilexgisUploadBuilder(
+      db: db,
+      localState: localState,
+      heldRows: heldRows,
+      profileUuid: profile.profileUuid,
+    ).build();
+
+    test('sent anyway, goes with the next run against the server\'s '
+        'revision', () async {
+      await conflicted(
+        current: <String, Object?>{
+          'id': caveId.toString(),
+          'name': 'Theirs',
+          'updatedAt': serverRevision,
+        },
+      );
+      expect(await pending(), isEmpty);
+
+      final decision = await single();
+      expect(decision.canSendMineAnyway, isTrue);
+      await decisions.sendMineAnyway(profile.profileUuid, decision);
+
+      expect(await decisions.decisions(profile.profileUuid), isEmpty);
+      final row = (await pending()).single;
+      expect(row.entityUuid, caveId);
+      expect(row.row.baseRevision, serverRevision);
+      expect(row.row.name, 'Mine');
+    });
+
+    test('with no server row to say which revision it overwrites, is not '
+        'offered', () async {
+      // The account may not have the row's position: re-reading is the way.
+      await conflicted();
+
+      final decision = await single();
+      expect(decision.canSendMineAnyway, isFalse);
+      await decisions.sendMineAnyway(profile.profileUuid, decision);
+      expect(await pending(), isEmpty);
+      expect(await decisions.decisions(profile.profileUuid), hasLength(1));
+    });
+  });
+
   group('a recording that met a later version', () {
     test('is not sent into the same conflict again, run after run', () async {
       final trip = await editedRecording();

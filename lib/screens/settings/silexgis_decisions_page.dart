@@ -103,6 +103,38 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
     return confirmed == true;
   }
 
+  /// Overwriting the server's newer version loses whatever was changed there,
+  /// so the caver is told what goes before choosing it.
+  Future<void> _sendMine(SilexgisDecision decision) async {
+    final server = _profile?.displayName ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(LocServ.inst.t('silexgis_review_send_mine_title')),
+        content: Text(
+          LocServ.inst.t('silexgis_review_send_mine_body', <String, String>{
+            'server': server,
+          }),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(LocServ.inst.t('silexgis_review_send_mine')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _act((p) async {
+      await _service.sendMineAnyway(p.profileUuid, decision);
+      return LocServ.inst.t('silexgis_review_send_mine_done');
+    });
+  }
+
   Future<void> _keepMine(SilexgisDecision decision) => _act((p) async {
     await _service.keepMine(p.profileUuid, decision);
     return LocServ.inst.t(
@@ -168,6 +200,7 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
                     enabled: !_busy,
                     onUseServer: () => _useServer(decision),
                     onKeepMine: () => _keepMine(decision),
+                    onSendMine: () => _sendMine(decision),
                     onDelete: () => _delete(decision),
                   ),
               ],
