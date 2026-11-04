@@ -318,10 +318,12 @@ send stops to ask:
 Press **Send now** or **Wait for Wi-Fi**. Tick **Remember my choice** first
 and the answer becomes a setting: remembering **Send now** turns **Only over
 Wi-Fi** off, remembering **Wait for Wi-Fi** turns **Ask before using mobile
-data** off. Both show on the card, where you can switch them back. You are
-asked at most once per sync, and the answer covers photos, documents and map
-pictures alike. If you leave the screen before the question comes, the files
-wait.
+data** off. Both show on the card, where you can switch them back.
+**Wait for Wi-Fi** holds for the rest of the sync. **Send now** covers the
+files the question counted: when a sync has map pictures and then photos and
+documents to send, each group is asked about in its turn, with its own count
+and size. A remembered answer holds for the rest of the sync either way. If
+you leave the screen before the question comes, the files wait.
 
 The phone goes by what the system reports. Wi-Fi from a phone's hotspot is
 Wi-Fi, and a Wi-Fi that charges by the megabyte is not told apart. When the

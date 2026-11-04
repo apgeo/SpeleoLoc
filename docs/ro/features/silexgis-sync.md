@@ -344,10 +344,13 @@ Apăsați **Trimite acum** sau **Așteaptă Wi-Fi**. Bifați întâi **Ține min
 alegerea** și răspunsul devine o setare: **Trimite acum** ținut minte
 oprește **Doar prin Wi-Fi**, **Așteaptă Wi-Fi** ținut minte oprește
 **Întreabă înainte de a folosi datele mobile**. Amândouă se văd pe card,
-unde le puteți porni la loc. Sunteți întrebat cel mult o dată pe
-sincronizare, iar răspunsul acoperă la fel fotografiile, documentele și
-imaginile hărților. Dacă părăsiți ecranul înainte să vină întrebarea,
-fișierele așteaptă.
+unde le puteți porni la loc. **Așteaptă Wi-Fi** rămâne valabil până la
+sfârșitul sincronizării. **Trimite acum** acoperă fișierele numărate în
+întrebare: când o sincronizare are de trimis imagini de hărți și apoi
+fotografii și documente, fiecare grup este întrebat la rândul lui, cu
+numărul și mărimea lui. Un răspuns ținut minte rămâne valabil până la
+sfârșitul sincronizării în ambele cazuri. Dacă părăsiți ecranul înainte să
+vină întrebarea, fișierele așteaptă.
 
 Telefonul se ia după ce raportează sistemul. Wi-Fi-ul de la hotspotul unui
 telefon este Wi-Fi, iar un Wi-Fi taxat pe megabyte nu este deosebit. Când

@@ -181,6 +181,41 @@ void main() {
       expect(no.asked, 1);
     });
 
+    test(
+      'a "send" covers the files it named; a later part asks again',
+      () async {
+        // The question named the map pictures' count and size, so the photos
+        // that come after them are not taken as agreed.
+        final yes = _Decider(const SilexgisMobileDataAnswer(send: true));
+        final gate = SilexgisFilesNetworkGate(
+          profile: base,
+          profiles: profiles,
+          probe: const _Probe(NetworkKind.mobile),
+          decider: yes,
+        );
+        expect(await gate.mayFilesGo(files: 1, bytes: 3), isTrue);
+        expect(await gate.mayFilesGo(files: 150, bytes: 600), isTrue);
+        expect(yes.asked, 2);
+        expect(yes.files, 150);
+        expect(yes.bytes, 600);
+      },
+    );
+
+    test('a remembered "send" stands for the rest of the run', () async {
+      final yes = _Decider(
+        const SilexgisMobileDataAnswer(send: true, remember: true),
+      );
+      final gate = SilexgisFilesNetworkGate(
+        profile: base,
+        profiles: profiles,
+        probe: const _Probe(NetworkKind.mobile),
+        decider: yes,
+      );
+      expect(await gate.mayFilesGo(files: 1, bytes: 3), isTrue);
+      expect(await gate.mayFilesGo(files: 150, bytes: 600), isTrue);
+      expect(yes.asked, 1);
+    });
+
     test('when not to be asked, nobody is', () async {
       final decider = _Decider(const SilexgisMobileDataAnswer(send: true));
       expect(

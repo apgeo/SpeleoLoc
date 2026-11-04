@@ -48,15 +48,17 @@ SilexgisFilesVerdict silexgisFilesVerdict(
       : SilexgisFilesVerdict.wait;
 }
 
-/// The profile's "only over Wi-Fi" setting, applied once per run.
+/// The profile's "only over Wi-Fi" setting, applied across one run.
 ///
 /// One gate serves every part of a run that sends bytes — photos, documents
-/// and map pictures — and decides once: the first part's answer stands for
-/// the rest, so the caver is never asked twice in one run.
+/// and map pictures. The network is looked at once. A "wait" stands for the
+/// rest of the run, so the caver is not asked again after saying no; a "send"
+/// covers only the files it was asked about, because the question named their
+/// number and size, and a later part's files are asked about in their turn.
 ///
 /// An answer the caver asks to remember is written to the profile: "send"
 /// turns "only over Wi-Fi" off, "wait" stops the asking and lets files wait
-/// for Wi-Fi from then on.
+/// for Wi-Fi from then on. Either then stands for the rest of the run.
 class SilexgisFilesNetworkGate implements SilexgisFileSendingGate {
   SilexgisFilesNetworkGate({
     required SilexgisProfile profile,
@@ -72,14 +74,22 @@ class SilexgisFilesNetworkGate implements SilexgisFileSendingGate {
   final SilexgisProfileRepository _profiles;
   final NetworkKindProbe _probe;
   final SilexgisMobileDataDecider? _decider;
-  Future<bool>? _decided;
+
+  /// What the network allows, or what the caver settled for the whole run.
+  SilexgisFilesVerdict? _verdict;
+
+  /// Parts ask one after another; a question still open is answered before
+  /// the next part's is considered, whatever became of it.
+  Future<bool> _last = Future<bool>.value(true);
 
   @override
-  Future<bool> mayFilesGo({required int files, required int bytes}) =>
-      _decided ??= _decide(files: files, bytes: bytes);
+  Future<bool> mayFilesGo({required int files, required int bytes}) {
+    Future<bool> decide(Object? _) => _decide(files: files, bytes: bytes);
+    return _last = _last.then(decide, onError: decide);
+  }
 
   Future<bool> _decide({required int files, required int bytes}) async {
-    final verdict = silexgisFilesVerdict(
+    final verdict = _verdict ??= silexgisFilesVerdict(
       _profile,
       _profile.filesOnlyOverWifi ? await _probe.current() : NetworkKind.unknown,
     );
@@ -95,8 +105,16 @@ class SilexgisFilesNetworkGate implements SilexgisFileSendingGate {
       files: files,
       bytes: bytes,
     );
-    if (answer == null) return false;
+    if (answer == null) {
+      _verdict = SilexgisFilesVerdict.wait;
+      return false;
+    }
     if (answer.remember) await _remember(answer.send);
+    if (!answer.send || answer.remember) {
+      _verdict = answer.send
+          ? SilexgisFilesVerdict.send
+          : SilexgisFilesVerdict.wait;
+    }
     return answer.send;
   }
 
