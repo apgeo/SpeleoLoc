@@ -259,6 +259,32 @@ void main() {
     });
   });
 
+  // No screen writes cave entrances any more, and they do not sync; a
+  // database upgraded from an older app can still hold one.
+  test('a deleted cave goes with an entrance an older app left on the '
+      'peer', () async {
+    final cave = await a.caves.addCave('Invented Cave');
+    await a.sendTo(b, tmp, 'a0.zip');
+    await b.db
+        .into(b.db.caveEntrances)
+        .insert(
+          CaveEntrancesCompanion.insert(
+            uuid: Uuid.v7(),
+            caveUuid: cave,
+            title: const Value('Invented entrance'),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
+
+    await tick();
+    await a.caves.deleteCave(cave);
+    await tick();
+    await a.sendTo(b, tmp, 'a1.zip');
+
+    expect(await b.uuidsOf('caves'), isEmpty);
+    expect(await b.uuidsOf('cave_entrances'), isEmpty);
+  });
+
   test('what the deleting phone never saw goes with the record, as it would '
       'have there', () async {
     final cave = await a.caves.addCave('Invented Cave');

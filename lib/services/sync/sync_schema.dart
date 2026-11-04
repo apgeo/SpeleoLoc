@@ -36,6 +36,13 @@ class SyncUniqueKey {
 /// References to `users` are authorship: a user is matched by name across
 /// devices and never removed by a merge, so they are left out of [parentsOf]
 /// and [childrenOf].
+///
+/// A table outside the merge whose rows refer to a merged one is read too,
+/// so that [childrenOf] lists it: a deletion or merge of the record its rows
+/// need reaches them like any other, or the import would end on the foreign
+/// key check. Its rows are only ever removed, detached or moved, never
+/// merged. A database upgraded from an older app can still hold such rows
+/// (`cave_entrances` naming a cave).
 class SyncSchema {
   SyncSchema._(this._db, this._tables);
 
@@ -48,8 +55,9 @@ class SyncSchema {
     AppDatabase db,
     Iterable<String> tables,
   ) async {
+    final merged = tables.toSet();
     final shapes = <String, _TableShape>{};
-    for (final table in tables) {
+    for (final table in [...merged, ...await _referring(db, merged)]) {
       final columns = <String, bool>{
         for (final row
             in await db.customSelect('PRAGMA table_info($table)').get())
@@ -93,6 +101,27 @@ class SyncSchema {
     }
     return SyncSchema._(db, shapes);
   }
+
+  /// The tables outside [merged], keyed by uuid, with a foreign key into
+  /// one of them other than authorship.
+  static Future<List<String>> _referring(
+    AppDatabase db,
+    Set<String> merged,
+  ) async => <String>[
+    for (final info in db.allTables)
+      if (!merged.contains(info.actualTableName) &&
+          info.columnsByName.containsKey('uuid') &&
+          (await db
+                  .customSelect(
+                    'PRAGMA foreign_key_list(${info.actualTableName})',
+                  )
+                  .get())
+              .map((row) => row.read<String>('table'))
+              .any(
+                (parent) => parent != _authorTable && merged.contains(parent),
+              ))
+        info.actualTableName,
+  ];
 
   static String? _partialCondition(String? sql) {
     if (sql == null) return null;
