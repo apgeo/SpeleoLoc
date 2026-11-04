@@ -8,6 +8,7 @@ import 'package:speleoloc/services/cave_place_repository.dart';
 import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -23,6 +24,7 @@ import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart
 import 'package:speleoloc/services/silexgis/silexgis_people_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_transfer_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_controller.dart';
@@ -76,37 +78,40 @@ void main() {
   });
   tearDown(() => db.close());
 
-  SilexgisSyncController controllerFor(ScriptedClient client) =>
-      SilexgisSyncController(
-        db: db,
-        profiles: profiles,
-        localState: localState,
-        heldRows: heldRows,
-        people: SilexgisPeopleRepository(db),
-        catalogue: SilexgisDocumentCatalogueRepository(db),
-        logger: logger,
-        caves: caves,
-        places: places,
-        tokens: tokens,
-        sessionBuilder: (p) {
-          final auth = SilexgisAuthService(
-            baseUri: p.baseUri,
-            profileUuid: p.profileUuid,
-            store: tokens,
-            client: client,
-          );
-          final http = SilexgisHttp(
-            baseUri: p.baseUri,
-            tokens: auth,
-            client: client,
-          );
-          return SilexgisSession(
-            auth: auth,
-            api: SilexgisSyncApi(http),
-            transfers: SilexgisTransferApi(http),
-          );
-        },
+  SilexgisSyncController controllerFor(
+    ScriptedClient client, {
+    NetworkKindProbe? networkProbe,
+  }) => SilexgisSyncController(
+    db: db,
+    profiles: profiles,
+    localState: localState,
+    heldRows: heldRows,
+    people: SilexgisPeopleRepository(db),
+    catalogue: SilexgisDocumentCatalogueRepository(db),
+    logger: logger,
+    caves: caves,
+    places: places,
+    tokens: tokens,
+    networkProbe: networkProbe,
+    sessionBuilder: (p) {
+      final auth = SilexgisAuthService(
+        baseUri: p.baseUri,
+        profileUuid: p.profileUuid,
+        store: tokens,
+        client: client,
       );
+      final http = SilexgisHttp(
+        baseUri: p.baseUri,
+        tokens: auth,
+        client: client,
+      );
+      return SilexgisSession(
+        auth: auth,
+        api: SilexgisSyncApi(http),
+        transfers: SilexgisTransferApi(http),
+      );
+    },
+  );
 
   ScriptedResponse refreshed() => ScriptedResponse.json(
     path: SilexgisContract.tokenPath,
@@ -629,6 +634,97 @@ void main() {
     });
   });
 
+  group('map pictures', () {
+    /// A map received earlier whose picture this device has not fetched.
+    Future<void> mapWithoutItsPicture() async {
+      final cave = Uuid.v7();
+      final map = Uuid.v7();
+      await db
+          .into(db.caves)
+          .insert(CavesCompanion.insert(uuid: cave, title: 'Invented cave'));
+      await db
+          .into(db.rasterMaps)
+          .insert(
+            RasterMapsCompanion.insert(
+              uuid: map,
+              title: 'Plan',
+              mapType: 'plane view',
+              fileName: 'cave_$cave/raster_1.jpg',
+              caveUuid: cave,
+            ),
+          );
+      await SilexgisRasterStateRepository(db).recordDownloaded(
+        'p-1',
+        SilexgisRasterState(
+          entityUuid: map,
+          mapUuid: map,
+          received: true,
+          documentId: Uuid.v7(),
+        ),
+      );
+    }
+
+    ScriptedClient run() => ScriptedClient(<ScriptedResponse>[
+      refreshed(),
+      capabilities(
+        features: const <String>['download', 'upload', 'documents', 'rasters'],
+      ),
+      emptyPage(),
+      ScriptedResponse.json(
+        path: SilexgisContract.documentsPath(setId),
+        json: const <String, Object?>{
+          'setRevision': 1,
+          'links': <Object?>[],
+          'tombstones': <Object?>[],
+          'nextCursor': null,
+          'hasMore': false,
+        },
+      ),
+      ScriptedResponse.json(
+        path: SilexgisContract.rastersPath(setId),
+        json: const <String, Object?>{
+          'setRevision': 1,
+          'maps': <Object?>[],
+          'tombstones': <Object?>[],
+          'pinTombstones': <Object?>[],
+          'nextCursor': null,
+          'hasMore': false,
+        },
+      ),
+    ]);
+
+    bool askedForFiles(ScriptedClient client) =>
+        client.sent.any((r) => r.url.path == SilexgisContract.fileLinksPath);
+
+    test('wait for Wi-Fi when the profile keeps files for it', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      await mapWithoutItsPicture();
+      final client = run();
+
+      await controllerFor(
+        client,
+        networkProbe: const _Network(NetworkKind.mobile),
+      ).syncDefault();
+
+      expect(askedForFiles(client), isFalse);
+    });
+
+    test('come down on Wi-Fi', () async {
+      await profiles.save(profile);
+      await tokens.write('p-1', 'refresh-1');
+      await mapWithoutItsPicture();
+      final client = run();
+
+      await controllerFor(
+        client,
+        networkProbe: const _Network(NetworkKind.wifi),
+      ).syncDefault();
+
+      expect(askedForFiles(client), isTrue);
+    });
+  });
+
   group('the documents catalogue', () {
     test('is read after the people and before the reviews', () async {
       await profiles.save(profile);
@@ -732,4 +828,12 @@ void main() {
       );
     });
   });
+}
+
+class _Network implements NetworkKindProbe {
+  const _Network(this.kind);
+  final NetworkKind kind;
+
+  @override
+  Future<NetworkKind> current() async => kind;
 }

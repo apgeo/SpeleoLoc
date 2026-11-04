@@ -487,7 +487,11 @@ class SilexgisSyncController extends ChangeNotifier {
             catalogue: _catalogue,
             profileUuid: profile.profileUuid,
           ),
-          pictures: capabilities.servesDocuments
+          // Map pictures are files, and wait for a network the profile's
+          // "only over Wi-Fi" allows; a later run fetches what still lacks
+          // one.
+          pictures:
+              capabilities.servesDocuments && await _filesMayComeDown(profile)
               ? SilexgisRasterPictureFetcher(
                   db: _db,
                   logger: _logger,
@@ -599,8 +603,13 @@ class SilexgisSyncController extends ChangeNotifier {
   /// Model files are fetched by the run when the caver lets it, and only on a
   /// network the profile's "only over Wi-Fi" allows. Nobody is asked: a model
   /// that waits is fetched by a later run, or when the caver opens it.
-  Future<bool> _mayFetchModels(SilexgisProfile profile) async {
-    if (!await _fetchesModels()) return false;
+  Future<bool> _mayFetchModels(SilexgisProfile profile) async =>
+      await _fetchesModels() && await _filesMayComeDown(profile);
+
+  /// Whether a run may fetch files over the network the device is on now,
+  /// by the profile's "only over Wi-Fi". Nobody is asked: the question is
+  /// about sending, and what a run fetches can wait for a later run.
+  Future<bool> _filesMayComeDown(SilexgisProfile profile) async {
     final kind = profile.filesOnlyOverWifi
         ? await _networkProbe.current()
         : NetworkKind.unknown;

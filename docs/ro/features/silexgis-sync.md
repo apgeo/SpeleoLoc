@@ -352,6 +352,10 @@ numărul și mărimea lui. Un răspuns ținut minte rămâne valabil până la
 sfârșitul sincronizării în ambele cazuri. Dacă părăsiți ecranul înainte să
 vină întrebarea, fișierele așteaptă.
 
+Imaginile hărților pe care le aduce o sincronizare respectă și ele **Doar
+prin Wi-Fi**. Departe de Wi-Fi așteaptă, fără nicio întrebare, iar o
+sincronizare prin Wi-Fi le aduce.
+
 Telefonul se ia după ce raportează sistemul. Wi-Fi-ul de la hotspotul unui
 telefon este Wi-Fi, iar un Wi-Fi taxat pe megabyte nu este deosebit. Când
 sistemul raportează date mobile alături de Wi-Fi sau nu poate spune ce rețea
@@ -883,8 +887,6 @@ Spuse pe față, ca să nu fiți surprins:
 - Pagina **Necesită o decizie** se deschide doar de pe cardul **Necesită
   atenția ta**, așa că după repornirea aplicației aveți nevoie de o
   sincronizare ca să ajungeți la ea.
-- Imaginile hărților coboară în timpul unei sincronizări prin orice rețea;
-  comutatoarele de Wi-Fi rețin doar ce se trimite.
 - Speologul ales pentru un utilizator al telefonului poate fi schimbat, dar
   nu șters de pe telefon.
 - Comutatorul care arată turele altui telefon nu este ținut minte.

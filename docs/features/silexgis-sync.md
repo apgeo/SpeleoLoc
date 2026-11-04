@@ -325,6 +325,9 @@ documents to send, each group is asked about in its turn, with its own count
 and size. A remembered answer holds for the rest of the sync either way. If
 you leave the screen before the question comes, the files wait.
 
+Map pictures a sync fetches follow **Only over Wi-Fi** too. Away from Wi-Fi
+they wait, without a question, and a sync on Wi-Fi fetches them.
+
 The phone goes by what the system reports. Wi-Fi from a phone's hotspot is
 Wi-Fi, and a Wi-Fi that charges by the megabyte is not told apart. When the
 system reports mobile data alongside Wi-Fi, or cannot say what the network
@@ -808,8 +811,6 @@ Said plainly, so you are not surprised:
 - Duplicate reports and refusals live only until the app closes.
 - The **Needs a decision** page opens only from the **Needs your attention**
   card, so after the app restarts you need a sync to reach it.
-- Map pictures come down during a sync on any network; the Wi-Fi switches
-  only hold back what is sent.
 - A caver chosen for a phone user can be changed but not cleared from the
   phone.
 - The switch that shows another phone's trips is not remembered.
