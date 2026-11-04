@@ -303,6 +303,12 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trip_points (
     UNIQUE(documentation_file_uuid, cave_trip_point_uuid) ON CONFLICT ROLLBACK
 );
 
+-- The trip rebuild reads every link of a point, and the cascade on point
+-- delete looks rows up the same way; the UNIQUE above leads with the
+-- document, so it cannot serve either.
+CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point
+    ON documentation_files_to_cave_trip_points(cave_trip_point_uuid);
+
 -- Table: cave_place_model_stations
 -- Where a cave place is in one survey model (a .lox/.3d documentation file):
 -- a station, by the 3D viewer's dotted name, or the far end of one of its

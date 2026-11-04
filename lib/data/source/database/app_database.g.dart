@@ -25392,6 +25392,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       DocumentationFilesToCaveTrips(this);
   late final DocumentationFilesToCaveTripPoints
   documentationFilesToCaveTripPoints = DocumentationFilesToCaveTripPoints(this);
+  late final Index idxDocFilesToTripPointsPoint = Index(
+    'idx_doc_files_to_trip_points_point',
+    'CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point ON documentation_files_to_cave_trip_points (cave_trip_point_uuid)',
+  );
   late final CavePlaceModelStations cavePlaceModelStations =
       CavePlaceModelStations(this);
   late final CaveDefaultSurveyModels caveDefaultSurveyModels =
@@ -25517,6 +25521,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     caveTripPoints,
     documentationFilesToCaveTrips,
     documentationFilesToCaveTripPoints,
+    idxDocFilesToTripPointsPoint,
     cavePlaceModelStations,
     caveDefaultSurveyModels,
     mediaQrScanCache,

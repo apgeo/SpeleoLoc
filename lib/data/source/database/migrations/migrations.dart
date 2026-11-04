@@ -1164,6 +1164,167 @@ class V35ToV36Migration extends SchemaMigration {
   }
 }
 
+/// v36 → v37.
+///
+/// Brings databases upgraded from older schemas to the shape a fresh install
+/// gets. Each part checks before it changes anything, so it does nothing on a
+/// database that is already right.
+///
+/// - `cave_places.is_entrance` and `is_main_entrance` are still nullable with
+///   no default on databases that came up from v7, where a fresh install has
+///   them NOT NULL DEFAULT 0. An insert that leaves them out stored NULL
+///   there, and reading that place back then failed. The table is recreated
+///   with NULLs turned into 0.
+/// - `configurations` from v7 still carries a UNIQUE on its integer key,
+///   which a fresh install does not have.
+/// - The index on `documentation_files_to_cave_trip_points` by point, which
+///   only upgraded databases got from v20 → v21, is created on the rest.
+///
+/// Archived tables keep their columns, so the sync archive schema version
+/// stays where it is.
+class V36ToV37Migration extends SchemaMigration {
+  const V36ToV37Migration();
+
+  @override
+  int get toVersion => 37;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    if (await _entranceFlagsNullable(db)) {
+      await _recreateCavePlaces(db, migrator);
+    }
+    if (await _configurationsHasUniqueId(db)) {
+      await _recreateConfigurations(db, migrator);
+    }
+    await _createIndexIfTableExists(
+      db,
+      'documentation_files_to_cave_trip_points',
+      'CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point '
+          'ON documentation_files_to_cave_trip_points(cave_trip_point_uuid)',
+    );
+  }
+
+  static Future<bool> _entranceFlagsNullable(AppDatabase db) async {
+    final columns = await db
+        .customSelect('PRAGMA table_info(cave_places)')
+        .get();
+    return columns.any(
+      (c) =>
+          const {
+            'is_entrance',
+            'is_main_entrance',
+          }.contains(c.read<String>('name')) &&
+          c.read<int>('notnull') == 0,
+    );
+  }
+
+  static Future<void> _recreateCavePlaces(
+    AppDatabase db,
+    Migrator migrator,
+  ) async {
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.cavePlaces,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO cave_places '
+          '(uuid, title, description, cave_uuid, place_code_identifier, '
+          'qr_code_resource_identifier, cave_area_uuid, latitude, longitude, '
+          'altitude, depth_in_cave, is_entrance, is_main_entrance, '
+          'created_at, updated_at, deleted_at, '
+          'created_by_user_uuid, last_modified_by_user_uuid) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            d['uuid'],
+            d['title'],
+            d['description'],
+            d['cave_uuid'],
+            d['place_code_identifier'],
+            d['qr_code_resource_identifier'],
+            d['cave_area_uuid'],
+            d['latitude'],
+            d['longitude'],
+            d['altitude'],
+            d['depth_in_cave'],
+            d['is_entrance'] ?? 0,
+            d['is_main_entrance'] ?? 0,
+            d['created_at'],
+            d['updated_at'],
+            d['deleted_at'],
+            d['created_by_user_uuid'],
+            d['last_modified_by_user_uuid'],
+          ],
+        );
+      },
+    );
+    // The recreate drops the table's indexes with it.
+    await db.customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area '
+      'ON cave_places(title, cave_uuid) WHERE cave_area_uuid IS NULL',
+    );
+  }
+
+  static Future<bool> _configurationsHasUniqueId(AppDatabase db) async {
+    final indexes = await db
+        .customSelect('PRAGMA index_list(configurations)')
+        .get();
+    for (final index in indexes) {
+      if (index.read<int>('unique') != 1) continue;
+      final columns = await db
+          .customSelect("PRAGMA index_info('${index.read<String>('name')}')")
+          .get();
+      if (columns.length == 1 && columns.single.read<String>('name') == 'id') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static Future<void> _recreateConfigurations(
+    AppDatabase db,
+    Migrator migrator,
+  ) async {
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.configurations,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO configurations '
+          '(id, title, value, is_synced, created_at, updated_at) '
+          'VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            d['id'],
+            d['title'],
+            d['value'],
+            d['is_synced'] ?? 0,
+            d['created_at'],
+            d['updated_at'],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Runs [createIndex] unless [table] is absent, which only a deliberately
+/// partial database is, as [_addColumnIfMissing] explains.
+Future<void> _createIndexIfTableExists(
+  AppDatabase db,
+  String table,
+  String createIndex,
+) async {
+  final found = await db
+      .customSelect(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        variables: [Variable.withString(table)],
+      )
+      .get();
+  if (found.isEmpty) return;
+  await db.customStatement(createIndex);
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1223,6 +1384,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V33ToV34Migration(),
   V34ToV35Migration(),
   V35ToV36Migration(),
+  V36ToV37Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the
