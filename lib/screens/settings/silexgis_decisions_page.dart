@@ -79,7 +79,11 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
 
   Future<void> _keepMine(SilexgisDecision decision) => _act((p) async {
     await _service.keepMine(p.profileUuid, decision);
-    return LocServ.inst.t('silexgis_review_kept');
+    return LocServ.inst.t(
+      decision.isDeletedOnServer
+          ? 'silexgis_decision_deleted_kept'
+          : 'silexgis_review_kept',
+    );
   });
 
   Future<void> _delete(SilexgisDecision decision) async {
@@ -87,19 +91,14 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
     final remove = decision.isPlaceStationExists
         ? 'silexgis_decision_remove_mapping'
         : 'silexgis_decision_remove_pin';
+    final draft = decision.isDeletedOnServer
+        ? 'silexgis_decision_deleted'
+        : 'silexgis_review_delete';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(
-          LocServ.inst.t(
-            pin ? '${remove}_title' : 'silexgis_review_delete_title',
-          ),
-        ),
-        content: Text(
-          LocServ.inst.t(
-            pin ? '${remove}_body' : 'silexgis_review_delete_body',
-          ),
-        ),
+        title: Text(LocServ.inst.t(pin ? '${remove}_title' : '${draft}_title')),
+        content: Text(LocServ.inst.t(pin ? '${remove}_body' : '${draft}_body')),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),

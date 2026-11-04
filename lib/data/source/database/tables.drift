@@ -628,6 +628,11 @@ CREATE TABLE IF NOT EXISTS silexgis_upload_attempt (
 -- answer echoed it. Like a decided proposal it waits for the caver, and while
 -- it still carries the stamp it was sent at it is neither sent again nor
 -- overwritten by a read.
+--
+-- A feature row the installation removed while this device held work on it,
+-- or inside it, that the server never had is recorded with `outcome`
+-- `deleted` and an empty `review_id`. The row stays, is not sent, and nothing
+-- inside it is sent, until the caver deletes it here too or keeps it.
 CREATE TABLE IF NOT EXISTS silexgis_held_row (
     profile_uuid          TEXT(36) NOT NULL,
     section               TEXT(32) NOT NULL,   -- the upload array the row went in

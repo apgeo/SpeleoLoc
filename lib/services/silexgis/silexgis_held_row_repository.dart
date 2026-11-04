@@ -25,6 +25,7 @@ class SilexgisHeldItem {
     this.current,
     this.keptAt,
     this.isConflict = false,
+    this.isDeletedOnServer = false,
   });
 
   final SyncUploadSection section;
@@ -63,11 +64,18 @@ class SilexgisHeldItem {
   /// can settle it.
   final bool isConflict;
 
-  bool get isWaiting => outcome == null && !isConflict;
+  /// The installation removed the row while this device still held work on
+  /// it, or inside it, that the server never had. The row is kept, and is not
+  /// sent: there is nothing there left to write to. Only the caver can say
+  /// whether it goes here too.
+  final bool isDeletedOnServer;
 
-  /// Decided against, or in conflict, and the caver has not yet said what to
-  /// do about it.
-  bool get awaitsCaver => (outcome != null || isConflict) && keptAt == null;
+  bool get isWaiting => outcome == null && !isConflict && !isDeletedOnServer;
+
+  /// Decided against, in conflict or removed on the server, and the caver has
+  /// not yet said what to do about it.
+  bool get awaitsCaver =>
+      (outcome != null || isConflict || isDeletedOnServer) && keptAt == null;
 
   /// Whether the local row still says what was sent for review.
   ///
@@ -154,6 +162,10 @@ class SilexgisHeldRowRepository {
   /// What `outcome` holds for a conflict. Never a reviewer's word, so it
   /// cannot be mistaken for one.
   static const String conflictOutcome = 'conflict';
+
+  /// What `outcome` holds for a row the installation removed while this
+  /// device held unsent work on it. Not a reviewer's word either.
+  static const String deletedOnServerOutcome = 'deleted';
 
   /// Every held row of one section, by row identifier. Read once per run.
   Future<Map<Uuid, SilexgisHeldItem>> readSection(
@@ -265,6 +277,35 @@ class SilexgisHeldRowRepository {
     });
   }
 
+  /// Records that the installation removed a feature row this device keeps,
+  /// because the row or something inside it holds work the server never had.
+  /// Replaces whatever was held for the row: the version it waited on is gone.
+  /// [localUpdatedAt] is the row's stamp now.
+  Future<void> recordDeletedOnServer(
+    String profileUuid,
+    Uuid entityUuid, {
+    required String entityTable,
+    String? wireKind,
+    int? localUpdatedAt,
+  }) async {
+    await _db
+        .into(_db.silexgisHeldRow)
+        .insert(
+          SilexgisHeldRowCompanion.insert(
+            profileUuid: profileUuid,
+            section: SyncUploadSection.rows.wireName,
+            entityUuid: entityUuid,
+            entityTable: entityTable,
+            wireKind: Value(wireKind),
+            reviewId: '',
+            sentLocalUpdatedAt: Value(localUpdatedAt),
+            heldAt: Value(_clock.nowMs()),
+            outcome: const Value(deletedOnServerOutcome),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  }
+
   /// Records a reviewer's decision against the row waiting under [reviewId].
   /// The last decision read for a review is the one that stands.
   Future<void> recordDecision(
@@ -348,6 +389,7 @@ class SilexgisHeldRowRepository {
     if (section == null) return null;
     final json = row.currentJson;
     final isConflict = row.outcome == conflictOutcome;
+    final isDeletedOnServer = row.outcome == deletedOnServerOutcome;
     return SilexgisHeldItem(
       section: section,
       entityUuid: row.entityUuid,
@@ -357,7 +399,9 @@ class SilexgisHeldRowRepository {
       isDelete: row.isDelete,
       sentLocalUpdatedAt: row.sentLocalUpdatedAt,
       heldAt: row.heldAt,
-      outcome: isConflict ? null : SyncReviewOutcome.tryParse(row.outcome),
+      outcome: isConflict || isDeletedOnServer
+          ? null
+          : SyncReviewOutcome.tryParse(row.outcome),
       note: row.note,
       code: row.code,
       decidedAt: row.decidedAt,
@@ -366,6 +410,7 @@ class SilexgisHeldRowRepository {
           : Map<String, Object?>.from(jsonDecode(json) as Map),
       keptAt: row.keptAt,
       isConflict: isConflict,
+      isDeletedOnServer: isDeletedOnServer,
     );
   }
 }

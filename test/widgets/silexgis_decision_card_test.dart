@@ -18,15 +18,17 @@ void main() {
     SyncUploadSection section, {
     SyncReviewOutcome? outcome,
     bool conflict = false,
+    bool deletedOnServer = false,
     String? code,
     Map<String, Object?>? current,
   }) => SilexgisHeldItem(
     section: section,
     entityUuid: Uuid.v7(),
     entityTable: 'invented',
-    reviewId: conflict ? '' : 'review-1',
+    reviewId: conflict || deletedOnServer ? '' : 'review-1',
     outcome: outcome,
     isConflict: conflict,
+    isDeletedOnServer: deletedOnServer,
     code: code,
     current: current,
   );
@@ -143,5 +145,28 @@ void main() {
     expect(find.text('Delete'), findsOneWidget);
     expect(find.text('Use the server\'s version'), findsNothing);
     expect(find.text('Re-read from the server'), findsNothing);
+  });
+
+  testWidgets('a cave removed on the server with work of the caver\'s in it is '
+      'deleted here too, or kept', (tester) async {
+    final pressed = await pump(
+      tester,
+      SilexgisDecision(
+        held: held(SyncUploadSection.rows, deletedOnServer: true),
+        // The device holds no revision for it any more.
+        isNew: true,
+        title: 'Invented cave',
+      ),
+    );
+
+    expect(
+      find.text('Deleted on the server, but holds work of yours it never had'),
+      findsOneWidget,
+    );
+    expect(find.text('Use the server\'s version'), findsNothing);
+    expect(find.text('Re-read from the server'), findsNothing);
+    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('Keep mine, don\'t send'));
+    expect(pressed, <String>['delete', 'keep']);
   });
 }

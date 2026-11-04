@@ -49,6 +49,11 @@ class PendingUploadRow {
 /// proposal. It still counts as a container for what is sent beneath it — the
 /// server checks a new place against the account's waiting cave.
 ///
+/// A row the installation removed while this device kept work in it is not
+/// sent, and neither is anything inside it: there is nothing there to write
+/// to or to hang a new row under, and every one would only be refused. They
+/// stay on the device until the caver decides.
+///
 /// Live rows come in containment order — surface areas, caves, cave areas,
 /// then places — because a batch is applied in the order it is given and a
 /// container has to exist before the row that hangs under it.
@@ -89,6 +94,7 @@ class SilexgisUploadBuilder {
     );
     bool awaitsReview(Uuid uuid, int? updatedAt) =>
         held[uuid]?.stillAsSent(updatedAt) ?? false;
+    bool goneThere(Uuid? uuid) => held[uuid]?.isDeletedOnServer ?? false;
     final pending = <PendingUploadRow>[];
 
     // A row is known to this installation when the device holds a revision for
@@ -97,6 +103,7 @@ class SilexgisUploadBuilder {
     final known = revisions.keys.toSet();
 
     for (final area in await _db.select(_db.surfaceAreas).get()) {
+      if (goneThere(area.uuid)) continue;
       final stored = revisions[area.uuid];
       // A surface area sits at the top of everything, so a new one is a new
       // root and only travels when the caver asked for that.
@@ -116,8 +123,9 @@ class SilexgisUploadBuilder {
 
     final sendableCaves = <Uuid, Cave>{};
     for (final cave in await _db.select(_db.caves).get()) {
-      final stored = revisions[cave.uuid];
       final parent = cave.surfaceAreaUuid;
+      if (goneThere(cave.uuid) || goneThere(parent)) continue;
+      final stored = revisions[cave.uuid];
       final containerIsThere = parent != null && known.contains(parent);
       if (stored == null && !containerIsThere && !_uploadsNewRoots) continue;
 
@@ -142,6 +150,7 @@ class SilexgisUploadBuilder {
     final sendableCaveAreas = <Uuid, CaveArea>{};
     for (final area in await _db.select(_db.caveAreas).get()) {
       if (!sendableCaves.containsKey(area.caveUuid)) continue;
+      if (goneThere(area.uuid)) continue;
       sendableCaveAreas[area.uuid] = area;
       known.add(area.uuid);
 
@@ -170,6 +179,7 @@ class SilexgisUploadBuilder {
     for (final place in await _db.select(_db.cavePlaces).get()) {
       final cave = sendableCaves[place.caveUuid];
       if (cave == null) continue;
+      if (goneThere(place.uuid) || goneThere(place.caveAreaUuid)) continue;
 
       final stored = revisions[place.uuid];
       if (stored != null && !_isDirty(place.updatedAt, stored)) continue;

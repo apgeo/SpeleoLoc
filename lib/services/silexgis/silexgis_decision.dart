@@ -7,8 +7,8 @@ import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 
 /// Something an installation did not write that only the caver can settle: a
 /// row a reviewer turned down or that failed when written, a row that met a
-/// later version on the server, or a pin whose place another pin already
-/// marks.
+/// later version on the server, a pin whose place another pin already marks,
+/// or a row the server removed while this device kept work in it.
 class SilexgisDecision {
   const SilexgisDecision({required this.held, required this.isNew, this.title});
 
@@ -32,6 +32,10 @@ class SilexgisDecision {
 
   bool get _isSecondOfPlace => isPinExists || isPlaceStationExists;
 
+  /// The installation removed the row while this device kept work in it that
+  /// the server never had. There is no server version to go back to.
+  bool get isDeletedOnServer => held.isDeletedOnServer;
+
   /// Whether the server's version comes with it, so going back to it needs no
   /// further read.
   bool get hasServerRow => held.current != null;
@@ -39,11 +43,13 @@ class SilexgisDecision {
   /// A conflict means the server holds a later version, even of an item this
   /// device has no revision of. Another pin on the same place is not a version
   /// of this pin.
-  bool get canUseServerVersion => !_isSecondOfPlace && (!isNew || isConflict);
+  bool get canUseServerVersion =>
+      !_isSecondOfPlace && !isDeletedOnServer && (!isNew || isConflict);
 
-  /// Only an item the server never had can be thrown away here without that
-  /// being a removal to send.
-  bool get canDelete => isNew && !held.isDelete && !_isSecondOfPlace;
+  /// Only an item the server never had, or no longer has, can be thrown away
+  /// here without that being a removal to send.
+  bool get canDelete =>
+      (isNew || isDeletedOnServer) && !held.isDelete && !_isSecondOfPlace;
 
   /// The pin goes, so the one already on the server can take its place.
   bool get canRemovePin => _isSecondOfPlace && !held.isDelete;

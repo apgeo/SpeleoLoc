@@ -554,11 +554,19 @@ o frază.
 Aceasta este partea distructivă, în ambele sensuri.
 
 - O peșteră sau un loc **șters pe server** este șters și aici la următoarea
-  citire, împreună cu ce atârnă de el pe acest dispozitiv — legăturile lui cu
-  hărțile, punctele de tură, legăturile către documente și înregistrările
-  beaconurilor. Nu ajunge într-un coș; a dispărut. Turele, hărțile și
-  punctele șterse pe server pleacă la fel; fișierul imagine al unei hărți
-  șterse rămâne.
+  citire, împreună cu ce conține și cu ce atârnă de el pe acest dispozitiv —
+  locurile și zonele lui, legăturile cu hărțile, punctele de tură,
+  legăturile către documente și înregistrările beaconurilor. Nu ajunge
+  într-un coș; a dispărut. Turele, hărțile și punctele șterse pe server
+  pleacă la fel; fișierul imagine al unei hărți șterse rămâne.
+- În afară de cazul în care conține muncă de-a dumneavoastră pe care
+  serverul nu a avut-o niciodată: o modificare încă netrimisă sau care
+  așteaptă un verificator, un loc ridicat aici și netrimis, o tură sau o
+  hartă neîncărcată, înregistrarea unui beacon. Atunci nu se șterge nimic.
+  Peștera sau locul rămâne așa cum este, nu este trimis și ajunge pe pagina
+  **Necesită o decizie** ca **Ștearsă pe server, dar conține lucru de-al tău
+  pe care serverul nu l-a avut**; vedeți [Pagina Necesită o
+  decizie](#pagina-necesită-o-decizie).
 - O peșteră sau un loc **pe care îl ștergeți aici**, dacă serverul îl
   cunoștea deja, este trimis ca ștergere la următoarea rulare, iar serverul îl
   elimină *cu tot ce se află în el*.
@@ -702,8 +710,8 @@ pagina **Necesită o decizie**.
 Se ajunge la ea din **2 așteaptă decizia ta** de pe cardul **Necesită
 atenția ta**:
 
-> Respinse de un verificator sau modificate și pe server. Alege ce faci cu
-> fiecare.
+> Respinse de un verificator, modificate și pe server sau șterse acolo.
+> Alege ce faci cu fiecare.
 
 Fiecare element își arată numele (sau **(fără nume)**), ce este —
 **Peșteră, zonă sau loc**, **Utilizator al telefonului**, **Fotografie sau
@@ -717,6 +725,8 @@ acolo:
 - **Nu a putut fi salvat** — acceptat, dar refuzat când serverul l-a scris,
   cu codul serverului; adesea contul a pierdut un drept;
 - **S-a schimbat și pe server** — vedeți mai sus;
+- **Ștearsă pe server, dar conține lucru de-al tău pe care serverul nu l-a
+  avut** — vedeți [Ștergerile circulă](#ștergerile-circulă-și-iau-lucruri-cu-ele);
 - **Alt punct marchează acest loc pe harta de pe server** — punctul
   dumneavoastră și unul aflat deja pe server stau pentru același loc;
   perechea lui la modelele 3D este **Serverul pune deja acest loc la altă
@@ -729,8 +739,8 @@ după caz:
 | Buton | Ce se întâmplă |
 |---|---|
 | **Folosește versiunea serverului** | Versiunea dumneavoastră este înlocuită cu a serverului: **Versiunea serverului a fost pusă la loc.** Când telefonul nu a primit versiunea serverului, butonul scrie **Recitește de pe server**, iar răspunsul este **Versiunea serverului vine la următoarea sincronizare.** |
-| **Păstrează-o pe a mea, nu o trimite** | **Păstrată pe acest dispozitiv. Se trimite din nou când o modifici.** |
-| **Șterge** | Pentru ceva ce serverul nu a avut niciodată. **Ștergi această ciornă?** — *Serverul nu a avut-o niciodată. Dacă o ștergi, dispare de pe acest dispozitiv.* |
+| **Păstrează-o pe a mea, nu o trimite** | **Păstrată pe acest dispozitiv. Se trimite din nou când o modifici.** Pentru ceva șters pe server: **Păstrată doar pe acest dispozitiv. Nu se trimite la server.** |
+| **Șterge** | Pentru ceva ce serverul nu a avut niciodată. **Ștergi această ciornă?** — *Serverul nu a avut-o niciodată. Dacă o ștergi, dispare de pe acest dispozitiv.* Pentru ceva șters pe server: **O ștergi și de aici?** — *Serverul nu o mai are. Dacă o ștergi, dispare de pe acest dispozitiv, cu tot ce conține și cu modificările tale netrimise.* |
 | **Șterge punctul meu** | Pentru un al doilea punct pe același loc. Punctul dumneavoastră pleacă, iar cel al serverului sosește la următoarea sincronizare. Un loc la stația unui model 3D primește în schimb **Elimină stația mea**. |
 
 Nimic nu se hotărăște în locul dumneavoastră. Până alegeți, fiecare element

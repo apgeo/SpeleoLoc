@@ -49,7 +49,9 @@ class SilexgisDecisionCard extends StatelessWidget {
               <String>[
                 _reason(decision),
                 if (held.isDelete) LocServ.inst.t('silexgis_review_removal'),
-                if (decision.isNew && !decision.canRemovePin)
+                if (decision.isNew &&
+                    !decision.canRemovePin &&
+                    !decision.isDeletedOnServer)
                   LocServ.inst.t('silexgis_review_new_row'),
               ].join(' · '),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -116,6 +118,9 @@ class SilexgisDecisionCard extends StatelessWidget {
       return LocServ.inst.t('silexgis_decision_place_station_exists');
     }
     if (decision.isConflict) return LocServ.inst.t('silexgis_conflict');
+    if (decision.isDeletedOnServer) {
+      return LocServ.inst.t('silexgis_decision_deleted_on_server');
+    }
     return decision.held.outcome == SyncReviewOutcome.failed
         ? LocServ.inst.t('silexgis_review_failed')
         : LocServ.inst.t('silexgis_review_rejected');

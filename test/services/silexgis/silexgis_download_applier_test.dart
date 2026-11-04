@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
@@ -715,6 +715,273 @@ void main() {
       );
       expect(report.deleted, 0);
     });
+  });
+
+  group('a tombstone over work the server never had', () {
+    // Both rows were exchanged; what the caver did here since is set up by
+    // each test.
+    setUp(() async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave(), aPlace()]),
+        setId: setId,
+      );
+    });
+
+    Map<String, Object?> tombstone(Uuid id) => <String, Object?>{
+      'id': id.toString(),
+      'deletedAt': '2026-08-30T09:00:00.000Z',
+    };
+
+    Future<bool> holds<T extends Table, D>(
+      TableInfo<T, D> table,
+      Uuid id,
+    ) async =>
+        (await db
+                .customSelect(
+                  'SELECT 1 FROM ${table.actualTableName} WHERE uuid = ?',
+                  variables: <Variable<Object>>[Variable<Uint8List>(id.bytes)],
+                )
+                .get())
+            .isNotEmpty;
+
+    Future<SilexgisHeldItem?> decisionFor(Uuid id) async =>
+        (await heldRows.readSection(profile, SyncUploadSection.rows))[id];
+
+    SilexgisUploadBuilder builder() => SilexgisUploadBuilder(
+      db: db,
+      localState: localState,
+      heldRows: heldRows,
+      profileUuid: profile,
+    );
+
+    test(
+      'keeps a place edited here and not yet sent, and asks the caver',
+      () async {
+        await (db.update(
+          db.cavePlaces,
+        )..where((t) => t.uuid.equalsValue(placeId))).write(
+          CavePlacesCompanion(
+            title: const Value('Renamed on this device'),
+            updatedAt: Value(clock.nowMs() + 1000),
+          ),
+        );
+
+        final report = await applier.applyPage(
+          page(
+            const <Map<String, Object?>>[],
+            tombstones: <Map<String, Object?>>[tombstone(placeId)],
+          ),
+          setId: setId,
+        );
+
+        expect(report.deleted, 0);
+        expect(report.skipped[SilexgisSkipReason.unsentLocalEdit], 1);
+        expect(await holds(db.cavePlaces, placeId), isTrue);
+        final decision = (await decisionFor(placeId))!;
+        expect(decision.isDeletedOnServer, isTrue);
+        expect(decision.awaitsCaver, isTrue);
+        expect(decision.entityTable, 'cave_places');
+        // Nothing is left there to write to, so nothing of it goes up.
+        expect(await localState.readRevision(profile, placeId), isNull);
+        expect(await builder().build(), isEmpty);
+      },
+    );
+
+    test(
+      'does not ask again when a full read hands the tombstone over again',
+      () async {
+        await (db.update(db.cavePlaces)
+              ..where((t) => t.uuid.equalsValue(placeId)))
+            .write(CavePlacesCompanion(updatedAt: Value(clock.nowMs() + 1000)));
+        final removal = page(
+          const <Map<String, Object?>>[],
+          tombstones: <Map<String, Object?>>[tombstone(placeId)],
+        );
+        await applier.applyPage(removal, setId: setId);
+        await heldRows.markKept(profile, SyncUploadSection.rows, placeId);
+
+        await applier.applyPage(removal, setId: setId);
+
+        final decision = (await decisionFor(placeId))!;
+        expect(decision.keptAt, isNotNull);
+        expect(decision.awaitsCaver, isFalse);
+        expect(await holds(db.cavePlaces, placeId), isTrue);
+      },
+    );
+
+    test('keeps a cave holding a place surveyed here and never sent', () async {
+      final newPlace = Uuid.v7();
+      await db
+          .into(db.cavePlaces)
+          .insert(
+            CavePlace(
+              uuid: newPlace,
+              title: 'Found today',
+              caveUuid: caveId,
+              isEntrance: 0,
+              isMainEntrance: 0,
+              updatedAt: clock.nowMs(),
+            ),
+          );
+
+      final report = await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          tombstones: <Map<String, Object?>>[tombstone(caveId)],
+        ),
+        setId: setId,
+      );
+
+      expect(report.deleted, 0);
+      expect(await holds(db.caves, caveId), isTrue);
+      expect(await holds(db.cavePlaces, newPlace), isTrue);
+      expect((await decisionFor(caveId))!.isDeletedOnServer, isTrue);
+      // The new place is not sent under a cave the server no longer has.
+      expect(await builder().build(), isEmpty);
+    });
+
+    test('keeps a place carrying a beacon registration', () async {
+      // No server holds a registration; only the caver can let it go.
+      await db
+          .into(db.cavePlaceBeacons)
+          .insert(
+            CavePlaceBeaconsCompanion.insert(
+              uuid: Uuid.v7(),
+              cavePlaceUuid: placeId,
+              caveUuid: caveId,
+            ),
+          );
+
+      await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          tombstones: <Map<String, Object?>>[tombstone(placeId)],
+        ),
+        setId: setId,
+      );
+
+      expect(await holds(db.cavePlaces, placeId), isTrue);
+      expect(await db.select(db.cavePlaceBeacons).get(), hasLength(1));
+    });
+
+    test('removes a cave as the server has it, with what is inside', () async {
+      final report = await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          tombstones: <Map<String, Object?>>[tombstone(caveId)],
+        ),
+        setId: setId,
+      );
+
+      expect(report.deleted, 1);
+      expect(await holds(db.caves, caveId), isFalse);
+      expect(await holds(db.cavePlaces, placeId), isFalse);
+      // A revision left for the place would read as a removal of the
+      // caver's still to send.
+      expect(await localState.readRevisions(profile), isEmpty);
+      expect(await builder().build(), isEmpty);
+    });
+
+    test(
+      'removes an area with its places before their own tombstones come',
+      () async {
+        // The places' tombstones may be a page later; left behind, they would
+        // still name the area and the page could not be stored at all.
+        final areaPlace = Uuid.v7();
+        await applier.applyPage(
+          page(<Map<String, Object?>>[
+            feature(
+              id: areaId.toString(),
+              kind: 'generic',
+              featureTypeCode: 'cave_area',
+              name: 'Galeria',
+              parentId: caveId.toString(),
+            ),
+            feature(
+              id: areaPlace.toString(),
+              kind: 'generic',
+              featureTypeCode: 'cave_place',
+              name: 'In the gallery',
+              parentId: areaId.toString(),
+            ),
+          ]),
+          setId: setId,
+        );
+
+        final report = await applier.applyPage(
+          page(
+            const <Map<String, Object?>>[],
+            tombstones: <Map<String, Object?>>[tombstone(areaId)],
+          ),
+          setId: setId,
+        );
+
+        expect(report.deleted, 1);
+        expect(await holds(db.caveAreas, areaId), isFalse);
+        expect(await holds(db.cavePlaces, areaPlace), isFalse);
+        expect(await holds(db.cavePlaces, placeId), isTrue);
+        expect(await localState.readRevision(profile, areaPlace), isNull);
+      },
+    );
+
+    test('removes a surface area with the caves inside it', () async {
+      final surfaceId = Uuid.v7();
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          feature(
+            id: surfaceId.toString(),
+            kind: 'generic',
+            featureTypeCode: 'surface_area',
+            name: 'Invented massif',
+          ),
+        ]),
+        setId: setId,
+      );
+      await (db.update(db.caves)..where((t) => t.uuid.equalsValue(caveId)))
+          .write(CavesCompanion(surfaceAreaUuid: Value(surfaceId)));
+
+      final report = await applier.applyPage(
+        page(
+          const <Map<String, Object?>>[],
+          tombstones: <Map<String, Object?>>[tombstone(surfaceId)],
+        ),
+        setId: setId,
+      );
+
+      expect(report.deleted, 1);
+      expect(await holds(db.surfaceAreas, surfaceId), isFalse);
+      expect(await holds(db.caves, caveId), isFalse);
+    });
+
+    test(
+      'settles a removal of the caver\'s that waited on a conflict',
+      () async {
+        await db.delete(db.cavePlaces).go();
+        await heldRows.recordConflicts(profile, <SilexgisConflictEntry>[
+          SilexgisConflictEntry(
+            section: SyncUploadSection.rows,
+            entityUuid: placeId,
+            entityTable: 'cave_places',
+            wireKind: 'generic',
+            code: 'sync.conflict',
+            isDelete: true,
+          ),
+        ]);
+
+        await applier.applyPage(
+          page(
+            const <Map<String, Object?>>[],
+            tombstones: <Map<String, Object?>>[tombstone(placeId)],
+          ),
+          setId: setId,
+        );
+
+        // What the caver asked for has happened there too.
+        expect(await decisionFor(placeId), isNull);
+        expect(await localState.readRevision(profile, placeId), isNull);
+        expect(await builder().build(), isEmpty);
+      },
+    );
   });
 
   group('the position it leaves behind', () {

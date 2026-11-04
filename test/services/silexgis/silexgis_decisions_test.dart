@@ -266,6 +266,79 @@ void main() {
 
   // ------------------------------------------------------------------- tests
 
+  group('a cave removed on the server with a place never sent in it', () {
+    // What the download leaves when the cave's tombstone meets a place
+    // surveyed here: the cave kept, put to the caver, and its revision gone.
+    late Uuid newPlace;
+    setUp(() async {
+      newPlace = Uuid.v7();
+      await db
+          .into(db.cavePlaces)
+          .insert(
+            CavePlace(
+              uuid: newPlace,
+              title: 'Found today',
+              caveUuid: caveId,
+              isEntrance: 0,
+              isMainEntrance: 0,
+              updatedAt: clock.nowMs(),
+            ),
+          );
+      await heldRows.recordDeletedOnServer(
+        profile.profileUuid,
+        caveId,
+        entityTable: 'caves',
+        wireKind: 'cave',
+        localUpdatedAt: clock.nowMs(),
+      );
+      await localState.forgetRevisions(profile.profileUuid, <Uuid>[caveId]);
+    });
+
+    test('can be deleted here too, and nothing else', () async {
+      final decision = await single();
+      expect(decision.title, 'Invented');
+      expect(decision.isDeletedOnServer, isTrue);
+      expect(decision.canDelete, isTrue);
+      expect(decision.canUseServerVersion, isFalse);
+    });
+
+    test('deleted, it goes with what is inside, as the caver\'s own '
+        'deletion', () async {
+      await decisions.delete(profile, await single());
+
+      expect(await db.select(db.caves).get(), isEmpty);
+      expect(await db.select(db.cavePlaces).get(), isEmpty);
+      expect(await decisions.decisions(profile.profileUuid), isEmpty);
+      // Logged, so a device sharing archives with this one drops it too.
+      final logged = await db.select(db.changeLog).get();
+      expect(
+        logged.where(
+          (e) =>
+              e.entityTable == 'caves' &&
+              e.entityUuid == caveId &&
+              e.changeType == ChangeType.delete,
+        ),
+        hasLength(1),
+      );
+    });
+
+    test('kept, it stays here, unsent, and no longer asks', () async {
+      await decisions.keepMine(profile.profileUuid, await single());
+
+      expect(await decisions.decisions(profile.profileUuid), isEmpty);
+      expect((await heldRows.counts(profile.profileUuid)).isEmpty, isTrue);
+      expect(await db.select(db.cavePlaces).get(), hasLength(2));
+      final pending = await SilexgisUploadBuilder(
+        db: db,
+        localState: localState,
+        heldRows: heldRows,
+        profileUuid: profile.profileUuid,
+      ).build();
+      expect(pending.where((p) => p.entityUuid == newPlace), isEmpty);
+      expect(pending.where((p) => p.entityUuid == caveId), isEmpty);
+    });
+  });
+
   group('a recording that met a later version', () {
     test('is not sent into the same conflict again, run after run', () async {
       final trip = await editedRecording();

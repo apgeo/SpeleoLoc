@@ -8,6 +8,7 @@ import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_feature_mapper.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_tombstone_guard.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
 /// Why a downloaded row was not written.
@@ -36,7 +37,8 @@ enum SilexgisSkipReason {
   /// A row held for a reviewer is one of these too, so the caver keeps seeing
   /// their own version while it waits; and so is a row removed here whose
   /// removal the server has not settled, which the download does not put
-  /// back.
+  /// back, and a row removed on the server while it held work the server
+  /// never had, which the download does not take away.
   unsentLocalEdit,
 }
 
@@ -156,13 +158,22 @@ class SilexgisDownloadApplier {
       };
       _pending.removeWhere((mapped) => gone.contains(mapped.row.id));
       report = await _applyRows(page.features);
-      final deletes = await _applyTombstones(page.tombstones);
+      final tombstones = await _applyTombstones(page.tombstones);
       report = SilexgisApplyReport(
         inserted: report.inserted,
         updated: report.updated,
-        deleted: deletes,
+        deleted: tombstones.deleted,
         deferred: _pending.length,
-        skipped: report.skipped,
+        skipped: report
+            .plus(
+              SilexgisApplyReport(
+                skipped: <SilexgisSkipReason, int>{
+                  if (tombstones.kept > 0)
+                    SilexgisSkipReason.unsentLocalEdit: tombstones.kept,
+                },
+              ),
+            )
+            .skipped,
       );
       await _localState.writeSetState(
         _profileUuid,
@@ -537,46 +548,149 @@ class SilexgisDownloadApplier {
   /// tombstone is what stops a row this club removed from being re-uploaded by
   /// this device on its next run.
   ///
+  /// It does not remove what the server never had. A row that holds the
+  /// caver's unsent work, or contains any, is kept and put to the caver
+  /// instead; see [SilexgisTombstoneGuard].
+  ///
   /// The repositories do the removal, inside the same suspended block, because
   /// they also detach the map bindings, trip points, document links and beacon
-  /// registrations that hang off a place. A tombstone for an identifier this
-  /// device does not hold is a no-op.
-  Future<int> _applyTombstones(List<SyncTombstone> tombstones) async {
-    var applied = 0;
+  /// registrations that hang off a place.
+  Future<({int deleted, int kept})> _applyTombstones(
+    List<SyncTombstone> tombstones,
+  ) async {
+    if (tombstones.isEmpty) return (deleted: 0, kept: 0);
+    // Read afresh: this page's rows have stored revisions since it began.
+    final agreed = await _localState.readRevisions(_profileUuid);
+    final held = await _heldRows.readAll(_profileUuid);
+    final guard = SilexgisTombstoneGuard(
+      _db,
+      agreed: agreed,
+      held: <Uuid>{for (final item in held) item.entityUuid},
+    );
+    // A full read hands over tombstones again; one already put to the caver
+    // is left as they left it, kept or still to decide.
+    final alreadyAsked = <Uuid>{
+      for (final item in held)
+        if (item.isDeletedOnServer) item.entityUuid,
+    };
+    var deleted = 0;
+    var kept = 0;
     for (final tombstone in tombstones) {
       final uuid = Uuid.tryParse(tombstone.id);
       if (uuid == null) continue;
+      if (alreadyAsked.contains(uuid)) {
+        kept++;
+        continue;
+      }
+      final table = await _tableHolding(uuid);
+      if (table == null) {
+        // Either never sent here — the withholding of a position applies to
+        // live rows only, and a deletion that failed to propagate would be
+        // permanent — or removed here already, and that removal, sent or
+        // still to send, has now happened there as well.
+        await _forget(<Uuid>[uuid]);
+        continue;
+      }
+      final scan = await guard.scan(table, uuid);
+      if (scan.holdsUnsentWork) {
+        await _keepRemovedThere(table, uuid, wireKind: agreed[uuid]?.wireKind);
+        kept++;
+        continue;
+      }
       try {
-        if (await _exists(_db.cavePlaces, uuid)) {
-          await _places.deleteCavePlace(uuid);
-        } else if (await _exists(_db.caveAreas, uuid)) {
-          final area = await (_db.select(
-            _db.caveAreas,
-          )..where((t) => t.uuid.equalsValue(uuid))).getSingle();
-          await _caves.deleteCaveArea(area);
-        } else if (await _exists(_db.caves, uuid)) {
-          await _caves.deleteCave(uuid);
-        } else if (await _exists(_db.surfaceAreas, uuid)) {
-          final area = await (_db.select(
-            _db.surfaceAreas,
-          )..where((t) => t.uuid.equalsValue(uuid))).getSingle();
-          await _caves.deleteSurfaceArea(area);
-        } else {
-          // A tombstone can arrive for a row this device was never sent: the
-          // withholding of a position applies to live rows only, and a
-          // deletion that failed to propagate would be permanent.
-          continue;
-        }
+        await _remove(table, uuid);
       } on Exception catch (e) {
         _log.warning('could not apply the tombstone for $uuid: $e');
         continue;
       }
-      // The identifier stays this row's identity for ever, but its revision on
-      // this installation is gone: if the caver recreates it, it is new there.
-      await _localState.forgetRevisions(_profileUuid, <Uuid>[uuid]);
-      applied++;
+      // The identifiers stay these rows' identity for ever, but their
+      // revisions on this installation are gone: left behind, each would read
+      // as a removal of the caver's still to send, and if the caver recreates
+      // one it is new there.
+      await _forget(scan.rows);
+      deleted++;
     }
-    return applied;
+    return (deleted: deleted, kept: kept);
+  }
+
+  Future<String?> _tableHolding(Uuid uuid) async {
+    if (await _exists(_db.cavePlaces, uuid)) return 'cave_places';
+    if (await _exists(_db.caveAreas, uuid)) return 'cave_areas';
+    if (await _exists(_db.caves, uuid)) return 'caves';
+    if (await _exists(_db.surfaceAreas, uuid)) return 'surface_areas';
+    return null;
+  }
+
+  /// Removes the row with everything inside it, as the server removed it.
+  ///
+  /// The contents go first. The tombstones of the rows inside may come on a
+  /// later page, and a place or cave left behind would still name the
+  /// container it is in and fail the whole page at commit. A raster map only
+  /// names the area it is drawn for, so it stays, in the cave.
+  Future<void> _remove(String table, Uuid uuid) async {
+    switch (table) {
+      case 'cave_places':
+        await _places.deleteCavePlace(uuid);
+      case 'cave_areas':
+        final places = await (_db.select(
+          _db.cavePlaces,
+        )..where((t) => t.caveAreaUuid.equalsValue(uuid))).get();
+        for (final place in places) {
+          await _places.deleteCavePlace(place.uuid);
+        }
+        await (_db.update(_db.rasterMaps)
+              ..where((t) => t.caveAreaUuid.equalsValue(uuid)))
+            .write(const RasterMapsCompanion(caveAreaUuid: Value(null)));
+        await _caves.deleteCaveArea(
+          await (_db.select(
+            _db.caveAreas,
+          )..where((t) => t.uuid.equalsValue(uuid))).getSingle(),
+        );
+      case 'caves':
+        await _caves.deleteCave(uuid);
+      case 'surface_areas':
+        final caves = await (_db.select(
+          _db.caves,
+        )..where((t) => t.surfaceAreaUuid.equalsValue(uuid))).get();
+        for (final cave in caves) {
+          await _caves.deleteCave(cave.uuid);
+        }
+        await _caves.deleteSurfaceArea(
+          await (_db.select(
+            _db.surfaceAreas,
+          )..where((t) => t.uuid.equalsValue(uuid))).getSingle(),
+        );
+    }
+  }
+
+  /// Keeps a row the server removed while it holds unsent work, and puts it to
+  /// the caver. Its revision goes with the server's row: there is nothing left
+  /// there to write to, so nothing of it is sent while the caver decides.
+  Future<void> _keepRemovedThere(
+    String table,
+    Uuid uuid, {
+    String? wireKind,
+  }) async {
+    final stamp = await _db
+        .customSelect(
+          'SELECT updated_at FROM $table WHERE uuid = ?',
+          variables: <Variable<Object>>[Variable<Uint8List>(uuid.bytes)],
+        )
+        .getSingle();
+    await _heldRows.recordDeletedOnServer(
+      _profileUuid,
+      uuid,
+      entityTable: table,
+      wireKind: wireKind,
+      localUpdatedAt: stamp.readNullable<int>('updated_at'),
+    );
+    await _localState.forgetRevisions(_profileUuid, <Uuid>[uuid]);
+  }
+
+  /// Forgets what this installation knew of rows that are gone from it.
+  Future<void> _forget(List<Uuid> uuids) async {
+    await _localState.forgetRevisions(_profileUuid, uuids);
+    await _heldRows.clear(_profileUuid, SyncUploadSection.rows, uuids);
   }
 
   // ---------------------------------------------------------------- plumbing

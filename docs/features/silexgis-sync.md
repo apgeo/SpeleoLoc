@@ -512,10 +512,17 @@ the FTP screen; a run either finishes with counts or fails with a sentence.
 This is the destructive part, in both directions.
 
 - A cave or place **deleted on the server** is deleted here on the next
-  read, together with what hangs off it on this device — its map bindings,
-  trip points, document links and beacon registrations. It is not put in a
-  bin; it is gone. Trips, maps and points deleted on the server go the same
-  way; a deleted map's picture file stays.
+  read, together with what is inside it and what hangs off it on this
+  device — its places and areas, map bindings, trip points, document links
+  and beacon registrations. It is not put in a bin; it is gone. Trips, maps
+  and points deleted on the server go the same way; a deleted map's picture
+  file stays.
+- Unless it holds work of yours the server never had: an edit not yet sent
+  or still waiting for a reviewer, a place surveyed here and never sent, a
+  trip or map never uploaded, a beacon registration. Then nothing is deleted.
+  The cave or place stays as it is, is not sent, and goes on the **Needs a
+  decision** page as **Deleted on the server, but holds work of yours it
+  never had**; see [The Needs a decision page](#the-needs-a-decision-page).
 - A cave or place **you delete here**, if the server already knew it, is
   sent as a deletion on the next run, and the server removes it *with
   everything inside it*.
@@ -649,8 +656,8 @@ page.
 
 Reached from **2 need your decision** on the **Needs your attention** card:
 
-> Turned down by a reviewer, or changed on the server as well. Choose what
-> to do with each one.
+> Turned down by a reviewer, changed on the server as well, or deleted
+> there. Choose what to do with each one.
 
 Each item shows its name (or **(no name)**), what it is — **Cave, area or
 place**, **Phone user**, **Photo or document**, **Where a photo or document
@@ -662,6 +669,8 @@ raster map**, **Place at a station of a 3D model** — and why it is there:
 - **Could not be written** — accepted, but refused when the server wrote it,
   with the server's code; often the account has lost a right;
 - **Changed on the server as well** — see above;
+- **Deleted on the server, but holds work of yours it never had** — see
+  [Deletions travel](#deletions-travel-and-they-take-things-with-them);
 - **Another point marks this place on the server's map** — your point and
   one already on the server stand for the same place; its 3D counterpart is
   **The server already puts this place at another station of this model**.
@@ -673,8 +682,8 @@ apply:
 | Button | What happens |
 |---|---|
 | **Use the server's version** | Your version is replaced by the server's: **The server's version is back.** When the phone was not handed the server's version, the button reads **Re-read from the server** and the answer is **The server's version arrives with the next sync.** |
-| **Keep mine, don't send** | **Kept on this device. It is sent again when you edit it.** |
-| **Delete** | For something the server never had. **Delete this draft?** — *The server never had it. Deleting it removes it from this device.* |
+| **Keep mine, don't send** | **Kept on this device. It is sent again when you edit it.** For something deleted on the server: **Kept on this device only. It is not sent to the server.** |
+| **Delete** | For something the server never had. **Delete this draft?** — *The server never had it. Deleting it removes it from this device.* For something deleted on the server: **Delete it here too?** — *The server no longer has it. Deleting it removes it from this device, with everything inside it and your unsent changes.* |
 | **Remove my point** | For a second point on the same place. Your point goes, and the server's arrives with the next sync. A place at a 3D model's station gets **Remove my station** instead. |
 
 Nothing is decided for you. Until you choose, each item stays on the phone
