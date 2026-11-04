@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
+import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
@@ -197,6 +198,57 @@ void main() {
       throwsA(isA<SilexgisTransportException>()),
     );
     expect(client.sent, hasLength(1));
+  });
+
+  group('a 200 whose body is not the shape the contract promises', () {
+    // Retried as any request the transport could not complete, rather than
+    // reaching the caver as a raw type error.
+    test('an upload answer with nothing in it', () {
+      final client = ScriptedClient(<ScriptedResponse>[
+        ScriptedResponse.json(
+          path: SilexgisContract.uploadPath('set-1'),
+          json: const <String, Object?>{},
+        ),
+      ]);
+      return expectLater(
+        SilexgisSyncApi(build(client, _FakeTokens())).upload(
+          'set-1',
+          SyncUploadBatch(
+            batchId: 'batch-1',
+            clientFeatures: SilexgisContract.clientFeatures,
+            rows: const <SyncUploadRow>[],
+          ),
+        ),
+        throwsA(
+          isA<SilexgisTransportException>().having(
+            (e) => e.action,
+            'action',
+            SilexgisAction.retry,
+          ),
+        ),
+      );
+    });
+
+    test('a page with a row of the wrong type', () {
+      final client = ScriptedClient(<ScriptedResponse>[
+        ScriptedResponse.json(
+          path: SilexgisContract.downloadPath('set-1'),
+          json: const <String, Object?>{
+            'setRevision': 1,
+            'features': <Object?>[
+              <String, Object?>{'id': 42, 'kind': 'cave'},
+            ],
+            'tombstones': <Object?>[],
+            'nextCursor': null,
+            'hasMore': false,
+          },
+        ),
+      ]);
+      return expectLater(
+        SilexgisSyncApi(build(client, _FakeTokens())).download('set-1'),
+        throwsA(isA<SilexgisTransportException>()),
+      );
+    });
   });
 
   test('a download names its cursor and page size in the query', () async {

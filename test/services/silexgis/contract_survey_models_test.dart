@@ -79,6 +79,22 @@ void main() {
     });
   });
 
+  test(
+    'a splay of other than three offsets leaves the place at its station',
+    () {
+      final mapping = SyncPlaceStation.fromJson(<String, Object?>{
+        'id': 'm-1',
+        'placeId': 'p-1',
+        'documentId': 'd-1',
+        'station': 'A.3',
+        'splay': <Object?>[1.5, -2],
+        'revision': 'r-1',
+      });
+      expect(mapping.station, 'A.3');
+      expect(mapping.splay, isNull);
+    },
+  );
+
   group('32-upload-place-stations', () {
     final exchange = ContractExchange('32-upload-place-stations');
 

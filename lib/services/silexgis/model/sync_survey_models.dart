@@ -106,11 +106,17 @@ class SyncPlaceStation {
         surveyModelId: json['surveyModelId'] as String?,
         documentId: json['documentId'] as String?,
         station: json['station']! as String,
-        splay: (json['splay'] as List?)
-            ?.map((e) => (e! as num).toDouble())
-            .toList(growable: false),
+        splay: _splay(json['splay'] as List?),
         revision: json['revision'] as String?,
       );
+
+  /// Exactly three offsets, or none. Anything else is not a splay this
+  /// contract describes, and the mapping is kept at its station rather than
+  /// placed somewhere made up.
+  static List<double>? _splay(List<Object?>? json) {
+    if (json == null || json.length != 3) return null;
+    return json.map((e) => (e! as num).toDouble()).toList(growable: false);
+  }
 }
 
 /// One page of the survey-models stream, on its own cursor.
