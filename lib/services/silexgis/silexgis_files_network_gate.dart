@@ -101,8 +101,10 @@ class SilexgisFilesNetworkGate implements SilexgisFileSendingGate {
   }
 
   Future<void> _remember(bool send) async {
-    // Read again: the caver may have changed another setting meanwhile.
-    final current = await _profiles.find(_profile.profileUuid) ?? _profile;
+    // Read again: the caver may have changed another setting meanwhile, or
+    // forgotten the server, which saving the run's copy would bring back.
+    final current = await _profiles.find(_profile.profileUuid);
+    if (current == null) return;
     await _profiles.save(
       send
           ? current.copyWith(filesOnlyOverWifi: false)

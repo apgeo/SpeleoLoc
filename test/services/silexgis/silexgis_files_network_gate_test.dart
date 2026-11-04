@@ -35,7 +35,7 @@ void main() {
   Future<bool> mayGo(
     SilexgisProfile profile,
     NetworkKind kind, {
-    _Decider? decider,
+    SilexgisMobileDataDecider? decider,
   }) => SilexgisFilesNetworkGate(
     profile: profile,
     profiles: profiles,
@@ -150,6 +150,14 @@ void main() {
       expect((await profiles.find('p-1'))!.uploadsNewRoots, isTrue);
     });
 
+    test('an answer remembered after the server was forgotten brings nothing '
+        'back', () async {
+      final decider = _ForgetsWhileAsking(profiles);
+      expect(await mayGo(base, NetworkKind.mobile, decider: decider), isTrue);
+      expect(await profiles.find('p-1'), isNull);
+      expect(await profiles.list(), isEmpty);
+    });
+
     test('with nobody to ask, files wait', () async {
       expect(await mayGo(base, NetworkKind.mobile), isFalse);
       // The screen was gone by the time the question came.
@@ -194,6 +202,22 @@ class _Probe implements NetworkKindProbe {
 
   @override
   Future<NetworkKind> current() async => kind;
+}
+
+/// The caver forgets the server while the question is open, then answers
+/// "send" and asks for it to be remembered.
+class _ForgetsWhileAsking implements SilexgisMobileDataDecider {
+  _ForgetsWhileAsking(this._profiles);
+  final SilexgisProfileRepository _profiles;
+
+  @override
+  Future<SilexgisMobileDataAnswer?> askToSendOverMobileData({
+    required int files,
+    required int bytes,
+  }) async {
+    await _profiles.delete('p-1');
+    return const SilexgisMobileDataAnswer(send: true, remember: true);
+  }
 }
 
 class _Decider implements SilexgisMobileDataDecider {
