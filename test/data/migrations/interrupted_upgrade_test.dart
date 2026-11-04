@@ -80,6 +80,35 @@ void main() {
       );
     });
   });
+
+  // Files left behind by builds that committed each step on its own.
+  group('a file an earlier build left half-upgraded', () {
+    test('a v7 file that already has the v8 column opens, twice', () async {
+      final f = await freshFile('v7_column_added.sqlite');
+      _raw(f, (d) => d.execute('PRAGMA user_version = 7'));
+
+      expect(await _tryOpen(f), isNull);
+      expect(await _tryOpen(f), isNull);
+      expect(_userVersion(f), latest);
+    });
+
+    test('a pre-v7 file already re-keyed opens with its rows', () async {
+      final f = await freshFile('v6_rekeyed.sqlite');
+      _raw(f, (d) {
+        d.execute(
+          'INSERT INTO caves (uuid, title, created_at, updated_at) '
+          'VALUES (?, ?, 1700000000000, 1700000000000)',
+          [Uuid.v7().bytes, 'Invented Cave'],
+        );
+        d.execute('PRAGMA user_version = 5');
+      });
+
+      expect(await _tryOpen(f), isNull);
+      expect(await _tryOpen(f), isNull);
+      expect(_userVersion(f), latest);
+      expect(_count(f, 'caves'), 1);
+    });
+  });
 }
 
 /// Opens [f] through [AppDatabase] and returns the error, or null when the
@@ -109,6 +138,15 @@ int _userVersion(File f) {
   final d = sqlite3.open(f.path, mode: OpenMode.readOnly);
   try {
     return d.userVersion;
+  } finally {
+    d.close();
+  }
+}
+
+int _count(File f, String table) {
+  final d = sqlite3.open(f.path, mode: OpenMode.readOnly);
+  try {
+    return d.select('SELECT COUNT(*) AS n FROM $table').first['n'] as int;
   } finally {
     d.close();
   }

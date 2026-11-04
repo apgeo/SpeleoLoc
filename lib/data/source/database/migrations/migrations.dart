@@ -14,6 +14,12 @@ class LegacyV6ToV7Migration extends SchemaMigration {
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
+    // Builds before the upgrade ran in one transaction committed the
+    // re-keying on its own, so a later failure left files stamped below 7
+    // that already hold the uuid-keyed tables and their rows. Snapshotting
+    // those again fails on the missing integer ids; the remaining steps are
+    // idempotent and finish them.
+    if (await _isUuidKeyed(db)) return;
     final snap = await snapshotLegacyV6(db);
     await dropLegacyV6Tables(db);
     await migrator.createAll();
@@ -27,6 +33,11 @@ class LegacyV6ToV7Migration extends SchemaMigration {
     if (snap.totalRows > 0) {
       await reinsertLegacyData(db, snap);
     }
+  }
+
+  static Future<bool> _isUuidKeyed(AppDatabase db) async {
+    final columns = await db.customSelect('PRAGMA table_info(caves)').get();
+    return columns.any((c) => c.read<String>('name') == 'uuid');
   }
 }
 
@@ -49,7 +60,11 @@ class V7ToV8Migration extends SchemaMigration {
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
-    await migrator.addColumn(
+    // Guarded: builds before the upgrade ran in one transaction could leave
+    // a file stamped 7 with this column already added.
+    await _addColumnIfMissing(
+      db,
+      migrator,
       db.documentationFilesToGeofeatures,
       db.documentationFilesToGeofeatures.createdAt,
     );
