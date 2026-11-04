@@ -665,7 +665,8 @@ modificare a unui rând pe care serverul se dovedește că nu îl are pleacă î
 sus ca rând nou la următoarea sincronizare. O modificare a unui rând pe care
 serverul l-a șters între timp este păstrată aici și pusă pe acea pagină ca
 **Ștearsă pe server, dar conține lucru de-al tău pe care serverul nu l-a
-avut**.
+avut**. O ștergere pe care contul dumneavoastră nu are voie să o facă este
+abandonată, iar rândul de pe server revine la aceeași sincronizare.
 
 ### Exista deja ceva în apropiere
 

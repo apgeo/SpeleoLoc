@@ -611,7 +611,8 @@ also put on the **Needs a decision** page as **Could not be written**, and is
 not sent again until you edit it or choose there. An edit of a row the server
 turns out not to have goes up as a new row on the next sync. An edit of a row
 the server deleted meanwhile is kept here and put on that page as **Deleted
-on the server, but holds work of yours it never had**.
+on the server, but holds work of yours it never had**. A deletion your account
+may not make is dropped, and the server's row comes back with the same sync.
 
 ### Something was already nearby
 

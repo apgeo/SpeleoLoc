@@ -465,6 +465,18 @@ void main() {
       expect(await placeIsBack(), isFalse);
     });
 
+    test('but gives way once the server refused it for good', () async {
+      // The upload forgets the revision of a removal the account may not
+      // make, and the read from the beginning brings the row back.
+      await localState.forgetRevisions(profile, <Uuid>[placeId]);
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[aPlace()]),
+        setId: setId,
+      );
+      expect(report.inserted, 1);
+      expect(await placeIsBack(), isTrue);
+    });
+
     test('while it waits on a conflict the caver has to settle', () async {
       await heldRows.recordConflicts(profile, <SilexgisConflictEntry>[
         SilexgisConflictEntry(

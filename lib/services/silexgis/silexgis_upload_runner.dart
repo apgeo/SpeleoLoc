@@ -136,7 +136,7 @@ class SilexgisUploadRunner {
       duplicates.addAll(result.duplicates);
       if (rows.isEmpty) return;
       held += result.rows.where((r) => r.status == SyncRowStatus.held).length;
-      refusals.addAll(await _applyAnswers(rows, result));
+      refusals.addAll(await _applyAnswers(setId, rows, result));
     }
 
     // Rows whose answer was lost go again first, under the identifier they
@@ -315,6 +315,7 @@ class SilexgisUploadRunner {
   /// A verdict rides a `200` and is per row: a device that edited forty caves
   /// offline and lost one to a conflict keeps the other thirty-nine.
   Future<List<SilexgisRefusal>> _applyAnswers(
+    String setId,
     List<PendingUploadRow> sent,
     SyncUploadResult result,
   ) async {
@@ -328,6 +329,7 @@ class SilexgisUploadRunner {
     final conflicts = <SilexgisConflictEntry>[];
     final refusedNow = <SilexgisRefusedEntry>[];
     final removedThere = <PendingUploadRow>[];
+    var readAgain = false;
     // Any other answer is the row's news now, whatever an earlier review said.
     final answeredOtherwise = <Uuid>[];
 
@@ -431,6 +433,15 @@ class SilexgisUploadRunner {
           // alone may send it again as a new row.
           removedThere.add(sentRow);
           refusals.add(_refusal(sentRow, answer, result));
+        case SyncRowStatus.rejected
+            when sentRow.isDelete && answer.action == SilexgisAction.stop:
+          // A removal this account may not make: the server's row stands.
+          // Forgotten, the removal stops; the read that follows starts from
+          // the beginning, because only that brings back a row that did not
+          // change there.
+          forgotten.add(sentRow.entityUuid);
+          readAgain = true;
+          refusals.add(_refusal(sentRow, answer, result));
         case SyncRowStatus.rejected when answer.action == SilexgisAction.stop:
           // Sent again as it is, it can only be refused again: kept for the
           // caver, and not sent until they edit it.
@@ -474,6 +485,7 @@ class SilexgisUploadRunner {
     await _localState.forgetRevisions(_profileUuid, <Uuid>[
       for (final row in removedThere) row.entityUuid,
     ]);
+    if (readAgain) await _localState.dropCursor(_profileUuid, setId);
     return refusals;
   }
 

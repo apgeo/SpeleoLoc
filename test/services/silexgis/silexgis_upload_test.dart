@@ -659,16 +659,37 @@ void main() {
         ]);
       });
 
-      test('a removal that may not be made is not sent again', () async {
-        await known(placeId, table: 'cave_places', kind: 'generic');
-        arm(<ScriptedResponse>[
-          answer(<Map<String, Object?>>[
-            rejected(SilexgisCodes.rowDeleteForbidden),
-          ]),
-        ]);
-        await runner.run(setId, capabilities: capabilities);
-        expect(await builder.build(), isEmpty);
-      });
+      for (final code in <String>[
+        SilexgisCodes.rowDeleteForbidden,
+        SilexgisCodes.rowForbidden,
+      ]) {
+        test(
+          'a removal refused $code gives way to the server\'s row',
+          () async {
+            await known(placeId, table: 'cave_places', kind: 'generic');
+            await localState.writeSetState(
+              profile,
+              setId,
+              cursor: 'c-9',
+              setRevision: 1,
+            );
+            arm(<ScriptedResponse>[
+              answer(<Map<String, Object?>>[rejected(code)]),
+            ]);
+            final report = await runner.run(setId, capabilities: capabilities);
+            expect(report.refusals.single.result.code, code);
+
+            expect(await builder.build(), isEmpty);
+            expect(await localState.readRevision(profile, placeId), isNull);
+            // The row did not change there, so only a read from the beginning
+            // brings it back.
+            expect(
+              (await localState.readSetState(profile, setId)).cursor,
+              isNull,
+            );
+          },
+        );
+      }
 
       test('an edit of a row the server does not have goes as new', () async {
         await editedPlace();
