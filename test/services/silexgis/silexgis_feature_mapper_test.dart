@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/sync_feature_row.dart';
@@ -281,6 +282,61 @@ void main() {
           }),
         ),
       );
+    });
+  });
+
+  group('a cleared description', () {
+    // An absent member and null are the same bytes to the server, and both
+    // leave its stored text alone; a space is how a device clears it.
+    test('goes up as a space on a row the server already holds', () {
+      final place = aPlace().copyWith(description: const Value(null));
+      final row = mapper.cavePlaceRow(
+        CavePlaceUpload(place: place),
+        baseRevision: '2026-08-28T09:14:52.113Z',
+        parentId: caveUuid.toString(),
+      );
+      expect(row.toJson()['description'], ' ');
+
+      final cave = mapper.caveRow(
+        aCave().copyWith(description: const Value('')),
+        baseRevision: '2026-08-28T09:14:52.113Z',
+      );
+      expect(cave.toJson()['description'], ' ');
+    });
+
+    test('states none on a new row, which has nothing to clear', () {
+      final row = mapper.cavePlaceRow(
+        CavePlaceUpload(
+          place: aPlace().copyWith(description: const Value(null)),
+        ),
+        baseRevision: null,
+        parentId: caveUuid.toString(),
+      );
+      expect(row.toJson()['description'], isNull);
+    });
+
+    test('a description with text goes up as written', () {
+      final row = mapper.cavePlaceRow(
+        CavePlaceUpload(place: aPlace()),
+        baseRevision: '2026-08-28T09:14:52.113Z',
+        parentId: caveUuid.toString(),
+      );
+      expect(row.toJson()['description'], 'Large chamber.');
+    });
+
+    test('comes back down as no description', () {
+      final mapped =
+          mapper.read(
+                SyncFeatureRow.fromJson(<String, Object?>{
+                  'id': placeUuid.toString(),
+                  'kind': SilexgisKinds.generic,
+                  'featureTypeCode': 'cave_place',
+                  'updatedAt': '2026-08-28T09:14:52.113Z',
+                  'description': ' ',
+                }),
+              )
+              as MappedCavePlace;
+      expect(mapped.description, isNull);
     });
   });
 

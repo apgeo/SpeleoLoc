@@ -45,8 +45,8 @@ is simply missing from **Settings**.
 
 Caves, cave areas, cave places and surface areas always travel, both ways,
 with their names, descriptions, coordinates, depth, place codes, QR payloads
-and the entrance flag. Everything else travels only when the installation
-offers that part:
+and the entrance flag. A description you empty is emptied on the server too.
+Everything else travels only when the installation offers that part:
 
 | What | Which way | The installation must offer |
 |---|---|---|

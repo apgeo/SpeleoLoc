@@ -100,7 +100,7 @@ class SilexgisFeatureMapper {
     baseRevision: baseRevision,
     parentId: parentSurfaceAreaId,
     name: cave.title,
-    description: cave.description,
+    description: _description(cave.description, baseRevision: baseRevision),
     caveTypeCode: kDefaultCaveTypeCode,
     // A cave's kind carries no schema, so the closed key set does not reach it
     // and these are stored unread. They are still the right place for them:
@@ -122,7 +122,7 @@ class SilexgisFeatureMapper {
     kind: SyncUploadKind.generic,
     baseRevision: baseRevision,
     name: area.title,
-    description: area.description,
+    description: _description(area.description, baseRevision: baseRevision),
     featureTypeCode: SilexgisFeatureTypes.surfaceArea,
     // Its identifier is one segment of every place code allocated beneath it,
     // so it has to survive a round trip byte for byte or devices re-reading
@@ -147,7 +147,7 @@ class SilexgisFeatureMapper {
     baseRevision: baseRevision,
     parentId: parentCaveId,
     name: area.title,
-    description: area.description,
+    description: _description(area.description, baseRevision: baseRevision),
     featureTypeCode: SilexgisFeatureTypes.caveArea,
     clientUpdatedAt: _clientStamp(area.updatedAt ?? area.createdAt),
   );
@@ -174,7 +174,7 @@ class SilexgisFeatureMapper {
       baseRevision: baseRevision,
       parentId: parentId,
       name: place.title,
-      description: place.description,
+      description: _description(place.description, baseRevision: baseRevision),
       featureTypeCode: isEntrance ? null : SilexgisFeatureTypes.cavePlace,
       entranceTypeCode: isEntrance ? kDefaultEntranceTypeCode : null,
       isMain: isEntrance && place.isMainEntrance != 0,
@@ -222,7 +222,7 @@ class SilexgisFeatureMapper {
         return MappedCave(
           row: row,
           title: row.name,
-          description: row.description,
+          description: _readDescription(row.description),
           caveLocalIndex: _string(
             row.properties[SpeleolocPropertyKeys.caveLocalIndex],
           ),
@@ -239,13 +239,13 @@ class SilexgisFeatureMapper {
             return MappedCaveArea(
               row: row,
               title: row.name,
-              description: row.description,
+              description: _readDescription(row.description),
             );
           case SilexgisFeatureTypes.surfaceArea:
             return MappedSurfaceArea(
               row: row,
               title: row.name,
-              description: row.description,
+              description: _readDescription(row.description),
               generalAreaIdentifier: _string(
                 row.properties[SpeleolocPropertyKeys.generalAreaIdentifier],
               ),
@@ -260,7 +260,7 @@ class SilexgisFeatureMapper {
     return MappedCavePlace(
       row: row,
       title: row.name,
-      description: row.description,
+      description: _readDescription(row.description),
       isEntrance: isEntrance,
       latitude: geometry?.latitude,
       longitude: geometry?.longitude,
@@ -291,6 +291,25 @@ class SilexgisFeatureMapper {
           if (entry.value != null) entry.key: entry.value,
         SpeleolocPropertyKeys.schemaVersion: kSpeleolocPropertySchemaVersion,
       };
+
+  /// What a description goes up as.
+  ///
+  /// An absent member and `null` arrive at the server as the same value, and
+  /// both leave the stored description alone, so emptying one here would never
+  /// clear it there — and the next read would bring the old text back over the
+  /// caver's edit. A space is what the contract offers to clear it. A new row
+  /// has nothing to clear, so it states none.
+  static String? _description(String? text, {required String? baseRevision}) {
+    if (text != null && text.trim().isNotEmpty) return text;
+    return baseRevision == null ? null : _clearedDescription;
+  }
+
+  static const String _clearedDescription = ' ';
+
+  /// A description that is only blanks is the cleared one, from this device or
+  /// another, and is stored here as none.
+  static String? _readDescription(String? text) =>
+      text == null || text.trim().isEmpty ? null : text;
 
   /// The device's belief about when it last wrote the row, as provenance. It
   /// never decides which write the server keeps — a phone's clock is

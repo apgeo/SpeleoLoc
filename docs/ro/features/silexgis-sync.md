@@ -52,8 +52,8 @@ intrarea lipsește pur și simplu din **Setări**.
 Peșterile, zonele de peșteră, locurile din peșteră și ariile de suprafață
 circulă întotdeauna, în ambele sensuri, cu numele, descrierile,
 coordonatele, adâncimea, codurile de loc, conținutul codurilor QR și
-marcajul de intrare ale acestora. Tot restul circulă doar când instalarea
-oferă acea parte:
+marcajul de intrare ale acestora. O descriere pe care o golești se golește
+și pe server. Tot restul circulă doar când instalarea oferă acea parte:
 
 | Ce | În ce sens | Instalarea trebuie să ofere |
 |---|---|---|
