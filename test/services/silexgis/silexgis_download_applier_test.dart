@@ -13,6 +13,7 @@ import 'package:speleoloc/services/silexgis/model/sync_upload_section.dart';
 import 'package:speleoloc/services/silexgis/silexgis_download_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/clock.dart';
 
@@ -390,6 +391,104 @@ void main() {
         expect(report.inserted, 1);
         expect((await localState.readSetState(profile, setId)).cursor, 'kept');
         expect(await db.select(db.changeLog).get(), isEmpty);
+      },
+    );
+  });
+
+  group('a removal made here is not undone by the download', () {
+    // Both rows were exchanged earlier; the caver has since deleted the
+    // place, and the removal has not been settled with the server.
+    setUp(() async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave(), aPlace()]),
+        setId: setId,
+      );
+      await db.delete(db.cavePlaces).go();
+    });
+
+    Map<String, Object?> placeChangedOnServer() => feature(
+      id: placeId.toString(),
+      kind: 'generic',
+      featureTypeCode: 'cave_place',
+      name: 'Sala Mare, edited in the browser',
+      parentId: caveId.toString(),
+      updatedAt: '2026-08-31T09:00:00.000Z',
+    );
+
+    Future<bool> placeIsBack() async =>
+        (await (db.select(
+          db.cavePlaces,
+        )..where((t) => t.uuid.equalsValue(placeId))).getSingleOrNull()) !=
+        null;
+
+    test('while it has not been sent', () async {
+      // An installation that does not take uploads never hears of it, and
+      // the row's next change on the server must not quietly bring it back.
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[placeChangedOnServer()]),
+        setId: setId,
+      );
+      expect(report.inserted, 0);
+      expect(report.skipped[SilexgisSkipReason.unsentLocalEdit], 1);
+      expect(await placeIsBack(), isFalse);
+    });
+
+    test('while it waits on a conflict the caver has to settle', () async {
+      await heldRows.recordConflicts(profile, <SilexgisConflictEntry>[
+        SilexgisConflictEntry(
+          section: SyncUploadSection.rows,
+          entityUuid: placeId,
+          entityTable: 'cave_places',
+          wireKind: 'generic',
+          code: 'sync.conflict',
+          isDelete: true,
+        ),
+      ]);
+      // The server's version comes back only through the caver's choice.
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[placeChangedOnServer()]),
+        setId: setId,
+      );
+      expect(report.inserted, 0);
+      expect(await placeIsBack(), isFalse);
+      expect(
+        (await localState.readRevision(profile, placeId)),
+        isNot('2026-08-31T09:00:00.000Z'),
+      );
+    });
+
+    test(
+      'while it waits for a reviewer, nor once the reviewer accepts it',
+      () async {
+        await heldRows.recordHeld(profile, <SilexgisHeldEntry>[
+          SilexgisHeldEntry(
+            section: SyncUploadSection.rows,
+            entityUuid: placeId,
+            entityTable: 'cave_places',
+            wireKind: 'generic',
+            reviewId: 'review-1',
+            isDelete: true,
+          ),
+        ]);
+        // A full read, after a stale cursor, carries the row as it stands.
+        await applier.applyPage(
+          page(<Map<String, Object?>>[aPlace()]),
+          setId: setId,
+        );
+        expect(await placeIsBack(), isFalse);
+
+        // What the review runner does when the removal is accepted.
+        await localState.forgetRevisions(profile, <Uuid>[placeId]);
+        await heldRows.clear(profile, SyncUploadSection.rows, <Uuid>[placeId]);
+        final pending = await SilexgisUploadBuilder(
+          db: db,
+          localState: localState,
+          heldRows: heldRows,
+          profileUuid: profile,
+        ).build();
+        // A row put back by the read would now go up as a new one, recreating
+        // what the reviewer has just removed.
+        expect(pending.where((p) => p.entityUuid == placeId), isEmpty);
       },
     );
   });

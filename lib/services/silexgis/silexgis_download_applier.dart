@@ -34,7 +34,9 @@ enum SilexgisSkipReason {
   /// than something to settle by overwriting.
   ///
   /// A row held for a reviewer is one of these too, so the caver keeps seeing
-  /// their own version while it waits.
+  /// their own version while it waits; and so is a row removed here whose
+  /// removal the server has not settled, which the download does not put
+  /// back.
   unsentLocalEdit,
 }
 
@@ -312,6 +314,7 @@ class SilexgisDownloadApplier {
     )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
 
     if (local == null) {
+      if (_awaitsRemoval(uuid)) return _Outcome.heldBack;
       return _insert(
         _db.surfaceAreas,
         SurfaceArea(
@@ -345,6 +348,7 @@ class SilexgisDownloadApplier {
     )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
 
     if (local == null) {
+      if (_awaitsRemoval(uuid)) return _Outcome.heldBack;
       return _insert(
         _db.caves,
         Cave(
@@ -378,6 +382,7 @@ class SilexgisDownloadApplier {
     )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
 
     if (local == null) {
+      if (_awaitsRemoval(uuid)) return _Outcome.heldBack;
       final cave = mapped.parentUuid;
       if (!await _exists(_db.caves, cave)) return _Outcome.deferred;
       return _insert(
@@ -411,6 +416,7 @@ class SilexgisDownloadApplier {
     )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
 
     if (local == null) {
+      if (_awaitsRemoval(uuid)) return _Outcome.heldBack;
       // The container is either the cave or an area inside it. A place hung
       // under an area needs the area's cave too, which is why the area has to
       // be here first.
@@ -588,6 +594,18 @@ class SilexgisDownloadApplier {
     final agreed = _agreed[uuid];
     return agreed != null && !agreed.agreesWith(localUpdatedAt);
   }
+
+  /// Whether a row that is not here was removed here, with the removal not yet
+  /// settled: still to be sent, or sent and waiting on a reviewer or on the
+  /// caver's answer to a conflict.
+  ///
+  /// A stored revision for an absent row is exactly the record of such a
+  /// removal. Writing the row back would undo it before the server answered,
+  /// and a revision written with it would leave the builder nothing to send.
+  /// The server's version returns through the caver's choice, or as a new row
+  /// once the removal is accepted or given up and both records are cleared.
+  bool _awaitsRemoval(Uuid uuid) =>
+      _held.contains(uuid) || _agreed.containsKey(uuid);
 
   /// The server's own stamp, as local epoch milliseconds.
   ///
