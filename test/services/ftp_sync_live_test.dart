@@ -131,15 +131,13 @@ void main() {
     } finally {
       await transport.disconnect();
     }
-    if (cfg.protocol != FtpProtocol.sftp) {
+    if (cfg.protocol == FtpProtocol.ftp) {
       final client = FTPConnect(
         cfg.host,
         port: cfg.port,
         user: cfg.username,
         pass: cfg.password,
-        securityType: cfg.protocol == FtpProtocol.ftps
-            ? SecurityType.ftpes
-            : SecurityType.ftp,
+        securityType: SecurityType.ftp,
       );
       await client.connect();
       await client.deleteEmptyDirectory(remoteFolder);

@@ -316,7 +316,7 @@ Istoricul modificărilor nu are noțiunea de sesiune — este o listă continuă
 Vedeți [Sincronizare FTP / SFTP](features/ftp-sync.md).
 
 ### Profil de server
-Un punct final FTP, FTPS sau SFTP salvat — nume, server, port, credențiale și
+Un punct final FTP sau SFTP salvat — nume, server, port, credențiale și
 folder pe server — adăugat din **Setări → Sincronizare FTP / SFTP**. Un
 profil este marcat ca implicit, iar acela este cel folosit de o rulare de
 sincronizare.

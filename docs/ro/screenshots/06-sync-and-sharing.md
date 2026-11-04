@@ -101,7 +101,7 @@ profilului și un subtitlu care combină protocolul, utilizatorul, serverul,
 portul și folderul de pe server; cardul evidențiat este profilul stabilit acum
 ca implicit. Meniul suplimentar al fiecărui rând oferă Setează ca implicit,
 Editează și Șterge, iar apăsarea unui card deschide editorul de profil. Butonul
-Adaugă profil, din dreapta jos, creează un profil nou FTP, FTPS sau SFTP.
+Adaugă profil, din dreapta jos, creează un profil nou FTP sau SFTP.
 
 <details><summary>Textul de pe ecran (română → engleză)</summary>
 
@@ -126,7 +126,7 @@ Adaugă profil, din dreapta jos, creează un profil nou FTP, FTPS sau SFTP.
 *Editarea unui profil de sincronizare FTP după un test de conexiune reușit.*
 
 Editorul de profil FTP, la care se ajunge din Setări → Setări sincronizare FTP
-apăsând un profil existent. Completați Nume, Protocol (FTP, FTPS sau SFTP),
+apăsând un profil existent. Completați Nume, Protocol (FTP sau SFTP),
 Server și Port, Utilizator și Parolă, plus Folder pe server, folderul din care
 aplicația citește și în care scrie arhivele; Mod pasiv este pornit, ceea ce se
 recomandă când serverul e în spatele NAT. Apăsați Testează conexiunea pentru a

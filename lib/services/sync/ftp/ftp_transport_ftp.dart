@@ -6,7 +6,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
-/// [IFtpTransport] over plain FTP or FTPES using the `ftpconnect` package.
+/// [IFtpTransport] over plain FTP using the `ftpconnect` package.
 ///
 /// `ftpconnect`'s upload/download APIs already take a progress callback; we
 /// wrap them so the sync engine can speak a transport-agnostic progress
@@ -25,25 +25,25 @@ class FtpTransportFtp implements IFtpTransport {
 
   @override
   Future<void> connect({required String password}) async {
-    if (profile.protocol == FtpProtocol.sftp) {
-      throw const FtpTransportException(
-        'SFTP profiles must use FtpTransportSftp, not FtpTransportFtp',
-      );
+    switch (profile.protocol) {
+      case FtpProtocol.ftp:
+        break;
+      // ftpconnect accepts any server certificate (it passes
+      // `onBadCertificate: (_) => true`) with no option to change that, so
+      // the password would go to whoever answers. Refuse before dialling.
+      case FtpProtocol.ftps:
+        throw const FtpsUnsupportedException();
+      case FtpProtocol.sftp:
+        throw const FtpTransportException(
+          'SFTP profiles must use FtpTransportSftp, not FtpTransportFtp',
+        );
     }
-    // ftpconnect accepts any server certificate (it passes
-    // `onBadCertificate: (_) => true`) and opens data connections without
-    // TLS, with no option to change either. FTPS here therefore protects the
-    // sign-in from eavesdropping only, and the profile editor says so rather
-    // than offering a certificate switch it could not honour.
-    final security = profile.protocol == FtpProtocol.ftps
-        ? SecurityType.ftpes
-        : SecurityType.ftp;
     final client = FTPConnect(
       profile.host,
       port: profile.effectivePort,
       user: profile.username,
       pass: password,
-      securityType: security,
+      securityType: SecurityType.ftp,
       timeout: 30,
     );
     if (profile.passiveMode) {

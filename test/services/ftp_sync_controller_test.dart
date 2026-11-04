@@ -446,6 +446,49 @@ void main() {
     expect(controller.progress.errorMessage, 'no_default_profile');
   });
 
+  test('an FTPS profile fails before any connection, pointing to the '
+      'profile editor', () async {
+    final h = await _buildHarness();
+    final profileRepo = FtpProfileRepository(h.db);
+    const ftps = FtpProfile(
+      profileUuid: 'ftps-uuid',
+      displayName: 'Old FTPS',
+      protocol: FtpProtocol.ftps,
+      host: 'ftps.example.test',
+      port: null,
+      username: 'u',
+      remoteFolder: '/',
+    );
+    await profileRepo.save(ftps, password: 'pw');
+    await profileRepo.setDefaultUuid(ftps.profileUuid);
+    final built = <_FakeTransport>[];
+    final controller = FtpSyncController(
+      db: h.db,
+      profileRepository: profileRepo,
+      archiveService: h.sync,
+      currentUserService: h.currentUser,
+      transportBuilder: (p) {
+        final t = _FakeTransport(p);
+        built.add(t);
+        return t;
+      },
+    );
+
+    await controller.startDefault();
+    final end = controller.progress;
+
+    expect(end.phase, FtpSyncPhase.failed);
+    expect(end.statusMessage, 'ftp_ftps_unsupported');
+    expect(end.errorMessage, 'ftp_ftps_unsupported_sync');
+    expect(end.profileName, 'Old FTPS');
+    expect(end.failureFixableInSettings, isTrue);
+    expect(
+      built.fold<int>(0, (n, t) => n + t.connectCalls),
+      0,
+      reason: 'no transport may connect for an FTPS profile',
+    );
+  });
+
   test('uploads a fresh archive when the remote is empty', () async {
     final h = await _buildHarness();
     await h.caveRepo.addCave('Alpha');
@@ -1166,6 +1209,7 @@ void main() {
 
       expect(end.phase, FtpSyncPhase.failed);
       expect(end.statusMessage, 'ftp_host_key_changed');
+      expect(end.failureFixableInSettings, isTrue);
       expect(end.errorMessage, contains(trustedFp));
       expect(end.errorMessage, contains(otherFp));
       final logText = end.log.map((e) => e.message).join('\n');

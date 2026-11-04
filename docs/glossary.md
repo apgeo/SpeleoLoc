@@ -305,7 +305,7 @@ session — it is one continuous list.
 See [FTP / SFTP sync](features/ftp-sync.md).
 
 ### Server profile
-A saved FTP, FTPS or SFTP endpoint — name, host, port, credentials and
+A saved FTP or SFTP endpoint — name, host, port, credentials and
 remote folder — added under **Settings → FTP / SFTP sync**. One profile
 is marked as the default, and that is the one a sync run uses.
 See [FTP / SFTP sync](features/ftp-sync.md).

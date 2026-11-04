@@ -79,7 +79,7 @@ The Change log tab of the Man. sync dashboard, a read-only audit trail of every 
 
 *The FTP / SFTP sync settings screen listing the configured server profiles.*
 
-This screen manages the server profiles used for FTP sync. Each profile is a card showing a protocol icon, the profile's display name and a subtitle combining protocol, user, host, port and remote folder; the highlighted card is the profile currently set as default. The per-row overflow menu offers Use as default, Edit and Delete, and tapping a card opens the profile editor. The Add profile button at the bottom right creates a new FTP, FTPS or SFTP profile.
+This screen manages the server profiles used for FTP sync. Each profile is a card showing a protocol icon, the profile's display name and a subtitle combining protocol, user, host, port and remote folder; the highlighted card is the profile currently set as default. The per-row overflow menu offers Use as default, Edit and Delete, and tapping a card opens the profile editor. The Add profile button at the bottom right creates a new FTP or SFTP profile.
 
 <details><summary>On-screen wording (Romanian → English)</summary>
 
@@ -103,7 +103,7 @@ This screen manages the server profiles used for FTP sync. Each profile is a car
 
 *Editing an FTP sync profile after a successful connection test.*
 
-The FTP profile editor, reached from Settings → FTP sync settings by tapping an existing profile. The user fills in Name, Protocol (FTP, FTPS or SFTP), Host and Port, Username and Password, and the Remote folder the app reads and writes archives in; Passive mode is enabled, which is recommended when the server is behind NAT. Tapping Test connection dials the server without saving, and the green snackbar confirms 'Connection successful'. The save icon in the app bar stores the profile; leaving the password blank keeps the stored one.
+The FTP profile editor, reached from Settings → FTP sync settings by tapping an existing profile. The user fills in Name, Protocol (FTP or SFTP), Host and Port, Username and Password, and the Remote folder the app reads and writes archives in; Passive mode is enabled, which is recommended when the server is behind NAT. Tapping Test connection dials the server without saving, and the green snackbar confirms 'Connection successful'. The save icon in the app bar stores the profile; leaving the password blank keeps the stored one.
 
 <details><summary>On-screen wording (Romanian → English)</summary>
 

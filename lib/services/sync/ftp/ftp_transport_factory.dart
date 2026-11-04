@@ -19,6 +19,7 @@ FtpTransportBuilder ftpTransportBuilder({
   return (profile) {
     switch (profile.protocol) {
       case FtpProtocol.ftp:
+      // Refuses an FTPS profile on connect, before dialling.
       case FtpProtocol.ftps:
         return FtpTransportFtp(profile);
       case FtpProtocol.sftp:

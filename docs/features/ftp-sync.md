@@ -2,12 +2,12 @@
 
 [← Back to index](../README.md)
 
-SpeleoLoc can keep a whole team in step through an ordinary FTP, FTPS or
-SFTP folder: each device leaves a snapshot of its database there and
+SpeleoLoc can keep a whole team in step through an ordinary FTP or SFTP
+folder: each device leaves a snapshot of its database there and
 picks up the snapshots the others left. This page covers setting up a
 server profile, running a sync, and reading what came of it.
 
-> There is no SpeleoLoc server. Any FTP, FTPS or SFTP account will do — a
+> There is no SpeleoLoc server. Any FTP or SFTP account will do — a
 > club NAS, a web host, a machine at home — as long as everyone on the
 > team can read **and write** in the same folder.
 
@@ -48,14 +48,13 @@ replaces the whole database, such as restoring from a backup.
 | Field | What to put in it |
 |---|---|
 | **Name** | Required free-form label, e.g. "Team NAS". It shows on the profile row, on the sync card in the app menu, and under the heading on the sync screen. |
-| **Protocol** | **FTP**, **FTPS (explicit TLS)** or **SFTP (over SSH)**. FTPS here means explicit TLS on the normal FTP port; implicit FTPS on port 990 is not supported. |
+| **Protocol** | **FTP** or **SFTP (over SSH)**. FTPS is no longer offered — see [Moving an FTPS profile to SFTP](#moving-an-ftps-profile-to-sftp). |
 | **Host** | Required. The server name or address, without a protocol prefix. |
-| **Port** | Leave empty to use the protocol's default — 21 for FTP and FTPS, 22 for SFTP. The box is not filled in for you: the default appears only as grey hint text. A number outside 1–65535 is rejected with **Invalid port**. |
+| **Port** | Leave empty to use the protocol's default — 21 for FTP, 22 for SFTP. The box is not filled in for you: the default appears only as grey hint text. A number outside 1–65535 is rejected with **Invalid port**. |
 | **Username** | Required. |
 | **Password** | Required on a new profile. It is kept in the device's secure keystore, not in the database. On a saved profile the box shows a `********` placeholder with the helper text **Leave blank to keep the current password** — tap it to type a new one, or leave it alone to keep the old one. |
 | **Remote folder** | The folder where SpeleoLoc reads and writes archives, for example `/speleo_loc/sync/`. Leave it empty and it falls back to the server root, `/`. Everyone on the team must point at the *same* folder. |
-| **Passive mode** | FTP and FTPS only, on by default. "Recommended when the server is behind NAT" — it is what makes FTP work through home routers and mobile networks. Turn it off only if your server insists on active mode. |
-| **Server certificate not checked** | FTPS only. Not a setting but a warning: in this version FTPS encrypts the sign-in, yet it accepts any server certificate, so it does not stop someone on the network from posing as your server, and the archives themselves are not sent encrypted. There is therefore no "Allow invalid TLS certificate" switch. Use SFTP when this matters. |
+| **Passive mode** | FTP only, on by default. "Recommended when the server is behind NAT" — it is what makes FTP work through home routers and mobile networks. Turn it off only if your server insists on active mode. |
 | **Server host key** | SFTP only. The key your server identified itself with, recorded on the first connection, as `ssh-ed25519 SHA256:…` with the address and date it was recorded for. Before the first connection it reads **Not recorded yet**. **Forget host key** drops it, so the next connection records whatever key the server presents. |
 
 The eye button beside the password fetches the stored password and shows
@@ -104,6 +103,39 @@ Your **first** profile becomes the default automatically, and if you
 delete the default another profile is promoted in its place. Since every
 sync uses the default and there is no picker anywhere, make sure the
 right profile is the marked one before you start.
+
+### Moving an FTPS profile to SFTP
+
+Earlier versions also offered **FTPS**. It is gone because the FTP
+library the app uses cannot check an FTPS server's certificate, so
+anyone on the network path could pose as your server and collect your
+password.
+
+A profile saved with FTPS stays in the list, with a warning icon, but it
+no longer connects. A sync with it stops at once with **This profile
+uses FTPS, which is no longer supported…**, before anything — your
+password included — is sent; the red banner has **Open Settings**.
+**Test connection** stops the same way with **FTPS is no longer
+supported**.
+
+To move the profile, open it. The editor shows the same notice under the
+protocol. Then:
+
+1. Choose **SFTP (over SSH)** as the protocol. FTPS cannot be picked
+   again once you leave it.
+2. Set the port to **22**, or leave it empty for the default. A port
+   kept from FTPS, such as 21 or 990, will not work for SFTP.
+3. Check the username and password: some servers use a different
+   account for SFTP. Ask the server's administrator if unsure.
+4. Press **Test connection**. It shows the server's host key and asks
+   you to trust it, as on any first SFTP connection — compare it with the
+   fingerprint from the administrator.
+5. Save. If you save without testing, the next sync records the host key
+   without asking and names it in its **Log** tab.
+
+If the server offers no SFTP, ask its administrator to enable it. Plain
+**FTP** remains possible, but it sends the password and the whole
+database in clear.
 
 ## Running a sync
 
@@ -266,8 +298,9 @@ not mean nothing worked: read the Log tab to see what did. Everything
 that failed is deliberately left unmarked, so simply running the sync
 again retries it.
 
-For a connection or sign-in failure the red banner also carries an
-**Open Settings** button that jumps straight to the profile list.
+For a connection or sign-in failure, a changed SFTP host key or an FTPS
+profile, the red banner also carries an **Open Settings** button that
+jumps straight to the profile list.
 
 > 📷 [A completed sync run](../screenshots/06-sync-and-sharing.md#ftp-sync-complete) — The Progress tab after a successful FTP sync run.
 
@@ -314,8 +347,7 @@ already handled — the most recent 500 — so it does not fetch them twice.
 
 ## Security
 
-- Prefer **SFTP (over SSH)** or **FTPS (explicit TLS)**. Plain **FTP**
-  is there for old servers, but it sends your username, your password
+- Prefer **SFTP (over SSH)**. Plain **FTP** is there for old servers, but it sends your username, your password
   and your entire caving database across the network in clear.
 - SFTP uses **password authentication only**; key files are not
   supported yet.
@@ -326,10 +358,10 @@ already handled — the most recent 500 — so it does not fetch them twice.
   connection must present the same key, otherwise it stops before your
   password is sent. The recorded key stays on this device only: it is
   not in the database, in sync archives or in exports.
-- FTPS, in this version, does **not** check the server's certificate,
-  and only the sign-in is encrypted; the archives travel unencrypted.
-  It protects your password from someone who only listens, not from
-  someone who poses as the server.
+- FTPS is no longer supported: the library the app uses cannot check
+  the server's certificate. An FTPS profile from an earlier version
+  sends nothing; see [Moving an FTPS profile to
+  SFTP](#moving-an-ftps-profile-to-sftp).
 - Passwords go into the device's secure keystore, not the database, and
   are never written into a sync archive.
 - Data archives exported from the data export screen **never contain**
@@ -349,6 +381,10 @@ already handled — the most recent 500 — so it does not fetch them twice.
   key (reinstalled, moved to a new machine). Ask its administrator; only
   when they confirm the new key, open the profile and press **Forget host
   key**, then **Test connection** to record the new one.
+- **FTPS is no longer supported** — the profile was saved with FTPS by an
+  earlier version. Nothing was sent to the server. Open it and switch it
+  to SFTP, as in [Moving an FTPS profile to
+  SFTP](#moving-an-ftps-profile-to-sftp).
 - **Cannot list or write the remote folder** — wrong folder, or an
   account with no write permission there. SpeleoLoc must list, download
   *and* upload in that folder, so **Test connection** fails if its probe

@@ -2,13 +2,13 @@
 
 [← Înapoi la cuprins](../README.md)
 
-SpeleoLoc poate ține o echipă întreagă la zi printr-un simplu folder FTP,
-FTPS sau SFTP: fiecare dispozitiv lasă acolo un instantaneu al bazei sale
+SpeleoLoc poate ține o echipă întreagă la zi printr-un simplu folder FTP
+sau SFTP: fiecare dispozitiv lasă acolo un instantaneu al bazei sale
 de date și le preia pe cele lăsate de ceilalți. Pagina de față acoperă
 configurarea unui profil de server, rularea unei sincronizări și citirea
 rezultatului.
 
-> Nu există niciun server SpeleoLoc. Orice cont FTP, FTPS sau SFTP este
+> Nu există niciun server SpeleoLoc. Orice cont FTP sau SFTP este
 > bun — un NAS de club, o găzduire web, o mașină de acasă — atâta timp cât
 > toți cei din echipă pot citi **și scrie** în același folder.
 
@@ -53,14 +53,13 @@ de date, cum ar fi restaurarea dintr-o copie de siguranță.
 | Câmp | Ce puneți în el |
 |---|---|
 | **Nume** | Etichetă liberă, obligatorie, de exemplu „NAS-ul echipei”. Apare pe rândul profilului, pe cardul de sincronizare din meniul aplicației și sub titlul de pe ecranul de sincronizare. |
-| **Protocol** | **FTP**, **FTPS (TLS explicit)** sau **SFTP (prin SSH)**. FTPS înseamnă aici TLS explicit pe portul FTP obișnuit; FTPS implicit pe portul 990 nu este acceptat. |
+| **Protocol** | **FTP** sau **SFTP (prin SSH)**. FTPS nu mai este oferit — vedeți [Mutarea unui profil FTPS pe SFTP](#mutarea-unui-profil-ftps-pe-sftp). |
 | **Server** | Obligatoriu. Numele sau adresa serverului, fără prefix de protocol. |
-| **Port** | Lăsați-l gol pentru a folosi valoarea implicită a protocolului — 21 pentru FTP și FTPS, 22 pentru SFTP. Căsuța nu se completează singură: valoarea implicită apare doar ca text gri de sugestie. Un număr în afara intervalului 1–65535 este respins cu **Port invalid**. |
+| **Port** | Lăsați-l gol pentru a folosi valoarea implicită a protocolului — 21 pentru FTP, 22 pentru SFTP. Căsuța nu se completează singură: valoarea implicită apare doar ca text gri de sugestie. Un număr în afara intervalului 1–65535 este respins cu **Port invalid**. |
 | **Utilizator** | Obligatoriu. |
 | **Parolă** | Obligatorie la un profil nou. Se păstrează în seiful securizat al dispozitivului, nu în baza de date. La un profil salvat, căsuța arată un substituent `********`, cu textul ajutător **Lasă gol pentru a păstra parola curentă** — atingeți-o pentru a tasta una nouă sau lăsați-o în pace pentru a o păstra pe cea veche. |
 | **Folder pe server** | Folderul în care SpeleoLoc citește și scrie arhive, de exemplu `/speleo_loc/sync/`. Dacă îl lăsați gol, se folosește rădăcina serverului, `/`. Toți cei din echipă trebuie să indice *același* folder. |
-| **Mod pasiv** | Doar FTP și FTPS, pornit implicit. „Recomandat când serverul e în spatele NAT” — el este cel care face FTP-ul să meargă prin routerele de acasă și prin rețelele mobile. Opriți-l doar dacă serverul dumneavoastră insistă pe modul activ. |
-| **Certificatul serverului nu este verificat** | Doar FTPS. Nu este o setare, ci un avertisment: în această versiune FTPS criptează autentificarea, dar acceptă orice certificat de server, deci nu împiedică pe cineva din rețea să se dea drept serverul dumneavoastră, iar arhivele însele nu sunt trimise criptat. De aceea nu există un comutator „Acceptă certificat TLS invalid”. Folosiți SFTP când contează acest lucru. |
+| **Mod pasiv** | Doar FTP, pornit implicit. „Recomandat când serverul e în spatele NAT” — el este cel care face FTP-ul să meargă prin routerele de acasă și prin rețelele mobile. Opriți-l doar dacă serverul dumneavoastră insistă pe modul activ. |
 | **Cheia de gazdă a serverului** | Doar SFTP. Cheia cu care s-a identificat serverul, înregistrată la prima conectare, sub forma `ssh-ed25519 SHA256:…`, împreună cu adresa și data pentru care a fost înregistrată. Înainte de prima conectare scrie **Încă neînregistrată**. **Uită cheia de gazdă** o șterge, iar următoarea conectare înregistrează cheia pe care o prezintă serverul. |
 
 Butonul cu ochi de lângă parolă aduce parola stocată și o arată pe ecran
@@ -111,6 +110,40 @@ de profil:
 ștergeți profilul implicit, altul îi ia locul. Cum orice sincronizare
 folosește profilul implicit și nu există niciun selector nicăieri,
 asigurați-vă că profilul potrivit este cel marcat înainte să porniți.
+
+### Mutarea unui profil FTPS pe SFTP
+
+Versiunile anterioare ofereau și **FTPS**. A dispărut pentru că
+biblioteca FTP folosită de aplicație nu poate verifica certificatul unui
+server FTPS, așa că oricine de pe drumul din rețea s-ar putea da drept
+serverul dumneavoastră și v-ar putea culege parola.
+
+Un profil salvat cu FTPS rămâne în listă, cu o pictogramă de avertizare,
+dar nu se mai conectează. O sincronizare cu el se oprește imediat cu
+**Acest profil folosește FTPS, care nu mai este acceptat…**, înainte de a
+trimite ceva — inclusiv parola; bannerul roșu are **Deschide setări**.
+**Testează conexiunea** se oprește la fel, cu **FTPS nu mai este
+acceptat**.
+
+Pentru a muta profilul, deschideți-l. Editorul arată același aviz sub
+protocol. Apoi:
+
+1. Alegeți **SFTP (prin SSH)** ca protocol. După ce l-ați părăsit, FTPS
+   nu mai poate fi ales din nou.
+2. Setați portul **22** sau lăsați-l gol pentru valoarea implicită. Un
+   port rămas de la FTPS, cum ar fi 21 sau 990, nu merge pentru SFTP.
+3. Verificați numele de utilizator și parola: unele servere folosesc alt
+   cont pentru SFTP. Întrebați administratorul serverului dacă nu sunteți
+   sigur.
+4. Apăsați **Testează conexiunea**. Vă arată cheia de gazdă a serverului
+   și vă întreabă dacă aveți încredere în ea, ca la orice primă conectare
+   SFTP — comparați-o cu amprenta primită de la administrator.
+5. Salvați. Dacă salvați fără test, următoarea sincronizare înregistrează
+   cheia de gazdă fără să întrebe și o numește în fila **Jurnal**.
+
+Dacă serverul nu oferă SFTP, cereți administratorului să îl activeze.
+**FTP**-ul simplu rămâne posibil, dar trimite parola și întreaga bază de
+date în clar.
 
 ## Rularea unei sincronizări
 
@@ -274,8 +307,9 @@ rezultat roșu nu înseamnă că nu a mers nimic: citiți fila Jurnal ca să
 vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că e
 destul să rulați sincronizarea din nou ca să se reîncerce.
 
-La o eșuare de conexiune sau de autentificare, bannerul roșu poartă și un
-buton **Deschide setări**, care sare direct la lista de profiluri.
+La o eșuare de conexiune sau de autentificare, la o cheie de gazdă SFTP
+schimbată sau la un profil FTPS, bannerul roșu poartă și un buton
+**Deschide setări**, care sare direct la lista de profiluri.
 
 > 📷 [O rulare de sincronizare încheiată](../screenshots/06-sync-and-sharing.md#ftp-sync-complete) — Fila Progres după o rulare de sincronizare FTP reușită.
 
@@ -323,8 +357,7 @@ aducă de două ori.
 
 ## Securitate
 
-- Preferați **SFTP (prin SSH)** sau **FTPS (TLS explicit)**. **FTP**-ul
-  simplu există pentru servere vechi, dar trimite prin rețea, în clar,
+- Preferați **SFTP (prin SSH)**. **FTP**-ul simplu există pentru servere vechi, dar trimite prin rețea, în clar,
   numele dumneavoastră de utilizator, parola și întreaga bază de date
   speologică.
 - SFTP folosește **doar autentificare cu parolă**; fișierele de cheie nu
@@ -337,10 +370,10 @@ aducă de două ori.
   aceeași cheie, altfel se oprește înainte de a trimite parola. Cheia
   înregistrată rămâne doar pe acest dispozitiv: nu este în baza de date,
   în arhivele de sincronizare sau în exporturi.
-- FTPS, în această versiune, **nu** verifică certificatul serverului și
-  criptează doar autentificarea; arhivele circulă necriptate. Vă
-  protejează parola de cineva care doar ascultă, nu de cineva care se dă
-  drept server.
+- FTPS nu mai este acceptat: biblioteca folosită de aplicație nu poate
+  verifica certificatul serverului. Un profil FTPS dintr-o versiune
+  anterioară nu trimite nimic; vedeți [Mutarea unui profil FTPS pe
+  SFTP](#mutarea-unui-profil-ftps-pe-sftp).
 - Parolele ajung în seiful securizat al dispozitivului, nu în baza de
   date, și nu sunt scrise niciodată într-o arhivă de sincronizare.
 - Arhivele de date exportate din ecranul de export al datelor **nu conțin
@@ -361,6 +394,10 @@ aducă de două ori.
   mașină). Întrebați-i administratorul; doar după ce confirmă cheia nouă,
   deschideți profilul și apăsați **Uită cheia de gazdă**, apoi
   **Testează conexiunea** pentru a o înregistra pe cea nouă.
+- **FTPS nu mai este acceptat** — profilul a fost salvat cu FTPS de o
+  versiune anterioară. Serverului nu i s-a trimis nimic. Deschideți-l și
+  treceți-l pe SFTP, ca în [Mutarea unui profil FTPS pe
+  SFTP](#mutarea-unui-profil-ftps-pe-sftp).
 - **Folderul de pe server nu poate fi listat sau scris** — folder greșit
   sau un cont fără drept de scriere acolo. SpeleoLoc trebuie să listeze,
   să descarce *și* să încarce în acel folder, așa că **Testează

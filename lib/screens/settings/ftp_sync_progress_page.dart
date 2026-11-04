@@ -157,10 +157,7 @@ class _ProgressTab extends StatelessWidget {
           const SizedBox(height: 12),
           _MessageBanner(
             message: progress.errorMessage!,
-            onOpenSettings:
-                (progress.statusMessage == 'ftp_connection_failed' ||
-                    progress.statusMessage == 'ftp_auth_failed' ||
-                    progress.statusMessage == 'ftp_host_key_changed')
+            onOpenSettings: progress.failureFixableInSettings
                 ? () => Navigator.push(
                     context,
                     MaterialPageRoute(

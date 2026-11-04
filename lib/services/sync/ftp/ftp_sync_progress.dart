@@ -171,6 +171,17 @@ class FtpSyncProgress {
   /// True when the run is suspended but resumable.
   bool get isPaused => phase == FtpSyncPhase.paused;
 
+  /// True when the run failed for a reason the user fixes in the profile
+  /// editor, so the progress screen offers a way there.
+  bool get failureFixableInSettings =>
+      phase == FtpSyncPhase.failed &&
+      const {
+        'ftp_connection_failed',
+        'ftp_auth_failed',
+        'ftp_host_key_changed',
+        'ftp_ftps_unsupported',
+      }.contains(statusMessage);
+
   /// Best-effort "X of N" overall position, 0.0..1.0, for the mini card's
   /// coarse progress bar. Not meant to be linear in time.
   double get overallProgress {

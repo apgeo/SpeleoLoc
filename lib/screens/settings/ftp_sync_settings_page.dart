@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/ftps_unsupported_notice.dart';
 import 'package:speleoloc/screens/settings/sftp_host_key_dialogs.dart';
 import 'package:speleoloc/screens/settings/sftp_host_key_tile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
@@ -189,7 +190,7 @@ class _FtpSyncSettingsPageState extends ConsumerState<FtpSyncSettingsPage>
       case FtpProtocol.ftp:
         return Icons.cloud_outlined;
       case FtpProtocol.ftps:
-        return Icons.cloud_done_outlined;
+        return Icons.warning_amber_outlined;
       case FtpProtocol.sftp:
         return Icons.lock_outline;
     }
@@ -468,6 +469,8 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
       errorMsg = '${LocServ.inst.t('ftp_host_key_changed')}: ${e.message}';
     } on FtpHostKeyNotTrustedException {
       errorMsg = LocServ.inst.t('ftp_host_key_not_trusted');
+    } on FtpsUnsupportedException {
+      errorMsg = LocServ.inst.t('ftp_ftps_unsupported');
     } on FtpAuthException catch (e) {
       errorMsg = '${LocServ.inst.t('ftp_auth_failed')}: ${e.message}';
     } on FtpTransportException catch (e) {
@@ -580,18 +583,26 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
                 labelText: LocServ.inst.t('ftp_protocol'),
                 border: const OutlineInputBorder(),
               ),
-              items: FtpProtocol.values
-                  .map(
-                    (p) => DropdownMenuItem(
+              items: [
+                for (final p in FtpProtocol.values)
+                  // FTPS stays listed only so a stored FTPS profile can
+                  // show what it is; it cannot be picked.
+                  if (p != FtpProtocol.ftps ||
+                      widget.existing?.protocol == FtpProtocol.ftps)
+                    DropdownMenuItem(
                       value: p,
+                      enabled: p != FtpProtocol.ftps,
                       child: Text(LocServ.inst.t('ftp_protocol_${p.name}')),
                     ),
-                  )
-                  .toList(),
+              ],
               onChanged: (v) {
                 if (v != null) setState(() => _protocol = v);
               },
             ),
+            if (_protocol == FtpProtocol.ftps) ...[
+              const SizedBox(height: 8),
+              const FtpsUnsupportedNotice(),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [
@@ -682,25 +693,13 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
               ),
             ),
             const SizedBox(height: 8),
-            if (_protocol != FtpProtocol.sftp)
+            if (_protocol == FtpProtocol.ftp)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(LocServ.inst.t('ftp_passive_mode')),
                 subtitle: Text(LocServ.inst.t('ftp_passive_mode_desc')),
                 value: _passiveMode,
                 onChanged: (v) => setState(() => _passiveMode = v),
-              ),
-            // The FTP library accepts every server certificate and offers no
-            // way to change that, so a switch here could promise nothing. The
-            // profile keeps its stored choice for when verification exists.
-            if (_protocol == FtpProtocol.ftps)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.warning_amber_outlined),
-                title: Text(LocServ.inst.t('ftp_ftps_cert_not_verified')),
-                subtitle: Text(
-                  LocServ.inst.t('ftp_ftps_cert_not_verified_desc'),
-                ),
               ),
             if (_protocol == FtpProtocol.sftp) ...[
               const SizedBox(height: 8),

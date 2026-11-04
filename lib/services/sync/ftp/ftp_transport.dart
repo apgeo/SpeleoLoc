@@ -125,6 +125,20 @@ class FtpTransportException implements Exception {
       '${cause != null ? ' (cause: $cause)' : ''}';
 }
 
+/// Thrown for a profile stored with [FtpProtocol.ftps], before any socket is
+/// opened. The FTP library accepts every server certificate and offers no way
+/// to check it, so FTPS would send the password to whoever answers.
+class FtpsUnsupportedException implements Exception {
+  const FtpsUnsupportedException();
+
+  String get message =>
+      'FTPS is no longer supported: the server certificate cannot be '
+      'checked. Switch the profile to SFTP in Settings > FTP / SFTP sync.';
+
+  @override
+  String toString() => 'FtpsUnsupportedException: $message';
+}
+
 /// Thrown when an SFTP server presents a host key other than the one the
 /// profile trusts. The connection is refused before the password is sent.
 class FtpHostKeyMismatchException implements Exception {

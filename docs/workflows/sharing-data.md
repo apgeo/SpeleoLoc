@@ -119,7 +119,7 @@ uploads its own archive to a folder on a server you control and imports
 the ones the others left there.
 
 1. **Settings → FTP / SFTP sync** → **Add profile**. Fill in **Name**,
-   **Protocol** (FTP, FTPS (explicit TLS) or SFTP (over SSH)), **Host**,
+   **Protocol** (FTP or SFTP (over SSH)), **Host**,
    **Port**, **Username**, **Password** and **Remote folder**, then use
    **Test connection** before saving.
 2. With more than one profile, open a profile's ⋮ menu and pick

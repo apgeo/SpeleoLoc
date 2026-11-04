@@ -10,6 +10,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/sftp_host_key.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class _MemoryHostKeyStore implements FtpHostKeyStore {
   final Map<String, SftpHostKey> keys = {};
@@ -31,8 +32,8 @@ class _MemoryHostKeyStore implements FtpHostKeyStore {
 const _fingerprint = 'SHA256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 /// The profile editor shows what the connection checks: the SFTP host key it
-/// trusts, with a way to forget it, and for FTPS a warning instead of a
-/// certificate switch that would change nothing.
+/// trusts, with a way to forget it, and for an FTPS profile, which no longer
+/// connects, how to move it to SFTP.
 void main() {
   late AppDatabase db;
   late _MemoryHostKeyStore hostKeys;
@@ -65,7 +66,12 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Future<void> openEditor(WidgetTester tester, FtpProfile profile) async {
+  Future<void> openEditor(
+    WidgetTester tester,
+    FtpProfile profile, {
+    bool withToasts = false,
+    String? password,
+  }) async {
     final container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
@@ -73,12 +79,25 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    await FtpProfileRepository(db, hostKeys: hostKeys).save(profile);
+    await FtpProfileRepository(
+      db,
+      hostKeys: hostKeys,
+    ).save(profile, password: password);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: FtpSyncSettingsPage()),
+        child: MaterialApp(
+          home: const FtpSyncSettingsPage(),
+          builder: withToasts
+              ? (context, child) => Stack(
+                  children: [
+                    SizedBox.expand(child: child),
+                    const AppToastHost(),
+                  ],
+                )
+              : null,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -151,26 +170,102 @@ void main() {
     );
   });
 
-  testWidgets('an FTPS profile warns that certificates are not checked and '
-      'offers no certificate switch', (tester) async {
-    await openEditor(
-      tester,
-      const FtpProfile(
-        profileUuid: 'ftps-1',
-        displayName: 'Test FTPS',
-        protocol: FtpProtocol.ftps,
-        host: 'ftps.example.test',
-        port: null,
-        username: 'caver',
-        remoteFolder: '/',
+  const ftps = FtpProfile(
+    profileUuid: 'ftps-1',
+    displayName: 'Test FTPS',
+    protocol: FtpProtocol.ftps,
+    host: 'ftps.example.test',
+    port: null,
+    username: 'caver',
+    remoteFolder: '/',
+  );
+
+  testWidgets('a new profile is not offered FTPS', (tester) async {
+    final container = ProviderContainer(
+      overrides: <Override>[
+        appDatabaseProvider.overrideWithValue(db),
+        ftpHostKeyStoreProvider.overrideWithValue(hostKeys),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: FtpSyncSettingsPage()),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
 
-    await scrollTo(tester, find.text('ftp_ftps_cert_not_verified'));
-    expect(find.text('ftp_ftps_cert_not_verified'), findsOneWidget);
-    expect(find.text('ftp_allow_invalid_cert'), findsNothing);
-    // Passive mode is the only switch an FTPS profile has.
-    expect(find.byType(SwitchListTile), findsOneWidget);
-    expect(find.text('ftp_host_key_title'), findsNothing);
+    await tester.tap(find.byType(DropdownButtonFormField<FtpProtocol>));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ftp_protocol_sftp'), findsOneWidget);
+    expect(find.text('ftp_protocol_ftps'), findsNothing);
+    expect(find.text('ftp_ftps_unsupported'), findsNothing);
+  });
+
+  testWidgets('an FTPS profile says FTPS is no longer supported and can be '
+      'switched to SFTP', (tester) async {
+    await openEditor(tester, ftps);
+
+    expect(find.text('ftp_ftps_unsupported'), findsOneWidget);
+    expect(find.text('ftp_ftps_unsupported_desc'), findsOneWidget);
+    // No FTP-only switch for a protocol that no longer connects.
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    await tester.tap(find.byType(DropdownButtonFormField<FtpProtocol>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ftp_protocol_sftp').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('ftp_ftps_unsupported'), findsNothing);
+    await scrollTo(tester, find.text('ftp_host_key_none'));
+    expect(find.text('ftp_host_key_none'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.save).first);
+    await tester.pumpAndSettle();
+
+    final saved = await FtpProfileRepository(db, hostKeys: hostKeys).list();
+    expect(saved.single.profileUuid, 'ftps-1');
+    expect(saved.single.protocol, FtpProtocol.sftp);
+    expect(saved.single.effectivePort, 22);
+  });
+
+  testWidgets('an FTPS profile lists FTPS only as its current, unselectable '
+      'value', (tester) async {
+    await openEditor(tester, ftps);
+    await tester.tap(find.byType(DropdownButtonFormField<FtpProtocol>));
+    await tester.pumpAndSettle();
+
+    final items = tester
+        .widgetList<DropdownMenuItem<FtpProtocol>>(
+          find.byType(DropdownMenuItem<FtpProtocol>),
+        )
+        .toList();
+    final ftpsItems = items.where((i) => i.value == FtpProtocol.ftps);
+    expect(ftpsItems, isNotEmpty);
+    expect(ftpsItems.every((i) => !i.enabled), isTrue);
+    expect(items.where((i) => i.enabled).map((i) => i.value).toSet(), {
+      FtpProtocol.ftp,
+      FtpProtocol.sftp,
+    });
+  });
+
+  testWidgets('testing an FTPS profile reports it unsupported', (tester) async {
+    await openEditor(tester, ftps, withToasts: true, password: 'pw');
+
+    final test = find.text('ftp_test_connection');
+    await tester.ensureVisible(test);
+    await tester.pumpAndSettle();
+    await tester.tap(test);
+    await tester.pumpAndSettle();
+
+    // Once in the notice, once in the toast.
+    expect(find.text('ftp_ftps_unsupported'), findsNWidgets(2));
+    // Let the toast expire so no timer outlives the test.
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
   });
 }

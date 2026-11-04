@@ -16,6 +16,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_transport.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_transport_factory.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/localization.dart';
 
 /// Archive filename prefix (see [SyncArchiveService.exportToZip]).
 const String _archivePrefix = 'speleo_loc_sync_';
@@ -131,6 +132,13 @@ class FtpSyncController extends ChangeNotifier {
     final profile = await _profileRepo.getDefaultProfile();
     if (profile == null) {
       _fail('no_default_profile');
+      return;
+    }
+    // Checked before the password is read and before any transport exists:
+    // FTPS cannot authenticate the server, and an injected transport must not
+    // get the chance to dial either.
+    if (profile.protocol == FtpProtocol.ftps) {
+      _failFtpsUnsupported(profile.displayName);
       return;
     }
     final password = await _profileRepo.readPassword(profile.profileUuid);
@@ -939,6 +947,8 @@ class FtpSyncController extends ChangeNotifier {
           errorMessage: e.message,
         ),
       );
+    } on FtpsUnsupportedException {
+      _failFtpsUnsupported(profile.displayName);
     } on FtpAuthException catch (e) {
       _appendLog(FtpSyncLogLevel.error, 'Auth failed: ${e.message}');
       _emit(
@@ -1236,6 +1246,19 @@ class FtpSyncController extends ChangeNotifier {
     }
     _emit((s) => s.copyWith(log: nextLog));
     _log.info('[sync] ${level.name}: $message');
+  }
+
+  void _failFtpsUnsupported(String profileName) {
+    _appendLog(FtpSyncLogLevel.error, const FtpsUnsupportedException().message);
+    _emit(
+      (s) => s.copyWith(
+        phase: FtpSyncPhase.failed,
+        statusMessage: 'ftp_ftps_unsupported',
+        errorMessage: LocServ.inst.t('ftp_ftps_unsupported_sync'),
+        startedAt: DateTime.now(),
+        profileName: profileName,
+      ),
+    );
   }
 
   void _fail(String messageKey) {

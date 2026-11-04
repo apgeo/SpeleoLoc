@@ -132,7 +132,7 @@ fiecare telefon își încarcă propria arhivă într-un folder de pe un server
 pe care îl controlați și le importă pe cele lăsate acolo de ceilalți.
 
 1. **Setări → Sincronizare FTP / SFTP** → **Adaugă profil**. Completați
-   **Nume**, **Protocol** (FTP, FTPS (TLS explicit) sau SFTP (prin SSH)),
+   **Nume**, **Protocol** (FTP sau SFTP (prin SSH)),
    **Server**, **Port**, **Utilizator**, **Parolă** și **Folder pe
    server**, apoi folosiți **Testează conexiunea** înainte de a salva.
 2. Cu mai multe profiluri, deschideți meniul ⋮ al unui profil și alegeți
