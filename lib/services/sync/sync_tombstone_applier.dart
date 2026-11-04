@@ -45,6 +45,18 @@ class SyncTombstoneApplier {
   /// author, so a merge never removes one.
   static const _neverRemoved = <String>{'users'};
 
+  /// Document links name the feature they document without a foreign key,
+  /// so the schema does not list them among what hangs on it. They go with
+  /// it all the same: a merge moves them, and a deletion removes them as
+  /// the deleting device's own delete does.
+  static const _featureLinks = 'documentation_files_to_geofeatures';
+  static const _linkedFeatures = <String>{
+    'surface_areas',
+    'caves',
+    'cave_areas',
+    'cave_places',
+  };
+
   late final Map<String, TableInfo> _tableInfos = <String, TableInfo>{
     for (final t in _db.allTables) t.actualTableName: t,
   };
@@ -116,7 +128,7 @@ class SyncTombstoneApplier {
   /// unique key a row of [into] already holds.
   Future<bool> mergeInto(String table, Uuid from, Uuid into) async {
     final moves = <(String, String)>[];
-    for (final (childTable, fk) in _schema.childrenOf(table)) {
+    for (final (childTable, fk) in _childrenOf(table)) {
       final rows = await _db
           .customSelect(
             'SELECT * FROM $childTable WHERE ${fk.column} = ?',
@@ -194,7 +206,7 @@ class SyncTombstoneApplier {
     int? newest;
     while (queue.isNotEmpty) {
       final (parentTable, parent) = queue.removeLast();
-      for (final (childTable, fk) in _schema.childrenOf(parentTable)) {
+      for (final (childTable, fk) in _childrenOf(parentTable)) {
         final rows = await _db
             .customSelect(
               'SELECT uuid, ${_schema.stampOf(childTable)} AS ts '
@@ -246,6 +258,20 @@ class SyncTombstoneApplier {
     }
     return _Cascade(remove, kept);
   }
+
+  /// Every reference into [table], document links included.
+  List<(String, SyncForeignKey)> _childrenOf(String table) => [
+    ..._schema.childrenOf(table),
+    if (_linkedFeatures.contains(table) && _schema.has(_featureLinks))
+      (
+        _featureLinks,
+        SyncForeignKey(
+          column: 'geofeature_uuid',
+          parentTable: table,
+          nullable: false,
+        ),
+      ),
+  ];
 
   Future<void> _remove(String table, Uuid uuid) async {
     // customUpdate rather than customStatement: it tells drift which table

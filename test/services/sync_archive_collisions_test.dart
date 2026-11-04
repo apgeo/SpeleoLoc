@@ -224,6 +224,41 @@ void main() {
       },
     );
 
+    test('to merge moves a document linked to the incoming record on the '
+        'other phone', () async {
+      final plan = await a.db.insertDocumentationFile(
+        companion: DocumentationFilesCompanion.insert(
+          uuid: Uuid.v7(),
+          title: 'Invented plan',
+          fileName: 'plan.txt',
+          fileSize: 1,
+          fileType: 'text_document',
+        ),
+      );
+      final link = Uuid.v7();
+      await a.db
+          .into(a.db.documentationFilesToGeofeatures)
+          .insert(
+            DocumentationFilesToGeofeaturesCompanion.insert(
+              uuid: link,
+              geofeatureType: GeofeatureType.caveArea.dbValue,
+              documentationFileUuid: plan,
+              geofeatureUuid: Value(aHall),
+              createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+            ),
+          );
+      await tick();
+      await b.decisions.mergeIntoLocal(await onlyDecision(b));
+      await tick();
+
+      await b.sendTo(a, tmp, 'b1.zip');
+
+      final moved = await (a.db.select(
+        a.db.documentationFilesToGeofeatures,
+      )..where((l) => l.uuid.equalsValue(link))).getSingle();
+      expect(moved.geofeatureUuid, bHall);
+    });
+
     test('to merge, reaching a phone whose database refuses the record '
         'merged into, leaves that phone as it was', () async {
       await b.decisions.mergeIntoLocal(await onlyDecision(b));

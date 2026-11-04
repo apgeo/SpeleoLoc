@@ -259,6 +259,35 @@ void main() {
     });
   });
 
+  test('a deleted place goes with a document link the deleting phone never '
+      'saw, and the document stays', () async {
+    final cave = await a.caves.addCave('Invented Cave');
+    await a.places.addCavePlace(cave, 'P');
+    final p = await a.placeUuid(cave, 'P');
+    await a.sendTo(b, tmp, 'a0.zip');
+    final photo = await doc(b, 'photo');
+    await b.db
+        .into(b.db.documentationFilesToGeofeatures)
+        .insert(
+          DocumentationFilesToGeofeaturesCompanion.insert(
+            uuid: Uuid.v7(),
+            geofeatureType: GeofeatureType.cavePlace.dbValue,
+            documentationFileUuid: photo,
+            geofeatureUuid: Value(p),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
+
+    await tick();
+    await a.places.deleteCavePlace(p);
+    await tick();
+    await a.sendTo(b, tmp, 'a1.zip');
+
+    expect(await b.uuidsOf('cave_places'), isEmpty);
+    expect(await b.uuidsOf('documentation_files_to_geofeatures'), isEmpty);
+    expect(await b.uuidsOf('documentation_files'), {photo});
+  });
+
   // No screen writes cave entrances any more, and they do not sync; a
   // database upgraded from an older app can still hold one.
   test('a deleted cave goes with an entrance an older app left on the '
