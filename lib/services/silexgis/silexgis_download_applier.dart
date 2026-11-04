@@ -157,7 +157,7 @@ class SilexgisDownloadApplier {
         for (final tombstone in page.tombstones) tombstone.id,
       };
       _pending.removeWhere((mapped) => gone.contains(mapped.row.id));
-      report = await _applyRows(page.features);
+      report = await _applyRows(page.features, settles: !page.hasMore);
       final tombstones = await _applyTombstones(page.tombstones);
       report = SilexgisApplyReport(
         inserted: report.inserted,
@@ -221,7 +221,7 @@ class SilexgisDownloadApplier {
   Future<SilexgisApplyReport> applyRows(List<SyncFeatureRow> rows) async {
     late SilexgisApplyReport report;
     await _suspendedTransaction(() async {
-      report = await _applyRows(rows);
+      report = await _applyRows(rows, settles: true);
     });
     return report;
   }
@@ -253,7 +253,12 @@ class SilexgisDownloadApplier {
 
   // ------------------------------------------------------------------- rows
 
-  Future<SilexgisApplyReport> _applyRows(List<SyncFeatureRow> features) async {
+  /// [settles] when no later page follows to bring a container that is still
+  /// missing.
+  Future<SilexgisApplyReport> _applyRows(
+    List<SyncFeatureRow> features, {
+    required bool settles,
+  }) async {
     var inserted = 0;
     var updated = 0;
     final skipped = <SilexgisSkipReason, int>{};
@@ -289,26 +294,36 @@ class SilexgisDownloadApplier {
     // within a single page a child may precede its parent, and sorting the
     // arrays would break the cursor's meaning.
     final revisions = <SilexgisRevisionEntry>[];
-    var progressed = true;
-    while (progressed && queue.isNotEmpty) {
-      progressed = false;
-      for (final mapped in List<MappedFeature>.from(queue)) {
-        final outcome = await _write(mapped, revisions);
-        switch (outcome) {
-          case _Outcome.inserted:
-            inserted++;
-          case _Outcome.updated:
-            updated++;
-          case _Outcome.collided:
-            skip(SilexgisSkipReason.uniqueCollision);
-          case _Outcome.heldBack:
-            skip(SilexgisSkipReason.unsentLocalEdit);
-          case _Outcome.deferred:
-            continue;
+    Future<void> drain({required bool settling}) async {
+      var progressed = true;
+      while (progressed && queue.isNotEmpty) {
+        progressed = false;
+        for (final mapped in List<MappedFeature>.from(queue)) {
+          final outcome = await _write(mapped, revisions, settling: settling);
+          switch (outcome) {
+            case _Outcome.inserted:
+              inserted++;
+            case _Outcome.updated:
+              updated++;
+            case _Outcome.collided:
+              skip(SilexgisSkipReason.uniqueCollision);
+            case _Outcome.heldBack:
+              skip(SilexgisSkipReason.unsentLocalEdit);
+            case _Outcome.deferred:
+              continue;
+          }
+          queue.remove(mapped);
+          progressed = true;
         }
-        queue.remove(mapped);
-        progressed = true;
       }
+    }
+
+    await drain(settling: false);
+    // A cave can stand without its surface area, so one whose area never came
+    // is stored without it once nothing more is coming, and the rows waiting
+    // on it go in after it.
+    if (settles && queue.any((mapped) => mapped is MappedCave)) {
+      await drain(settling: true);
     }
     _pending.addAll(queue);
 
@@ -322,8 +337,9 @@ class SilexgisDownloadApplier {
 
   Future<_Outcome> _write(
     MappedFeature mapped,
-    List<SilexgisRevisionEntry> revisions,
-  ) async {
+    List<SilexgisRevisionEntry> revisions, {
+    required bool settling,
+  }) async {
     final uuid = mapped.uuid;
     if (uuid == null) return _Outcome.collided;
 
@@ -335,7 +351,7 @@ class SilexgisDownloadApplier {
         outcome = await _writeSurfaceArea(mapped, uuid);
       case MappedCave():
         table = 'caves';
-        outcome = await _writeCave(mapped, uuid);
+        outcome = await _writeCave(mapped, uuid, settling: settling);
       case MappedCaveArea():
         table = 'cave_areas';
         outcome = await _writeCaveArea(mapped, uuid);
@@ -402,25 +418,33 @@ class SilexgisDownloadApplier {
     );
   }
 
-  Future<_Outcome> _writeCave(MappedCave mapped, Uuid uuid) async {
+  /// [settling] once no later page can bring a surface area still missing.
+  Future<_Outcome> _writeCave(
+    MappedCave mapped,
+    Uuid uuid, {
+    required bool settling,
+  }) async {
     // A cave's container is a surface area. Unlike a place's, it is optional
     // locally, so a cave whose area this caller cannot read is still a cave.
+    // One whose area is named but not here yet waits for it as a place waits
+    // for its cave — the area may come a row or a page later — because the
+    // link is set only when the cave is first stored here.
     final parent = mapped.parentUuid;
+    final areaIsHere = await _exists(_db.surfaceAreas, parent);
     final local = await (_db.select(
       _db.caves,
     )..where((t) => t.uuid.equalsValue(uuid))).getSingleOrNull();
 
     if (local == null) {
       if (_awaitsRemoval(uuid)) return _Outcome.heldBack;
+      if (parent != null && !areaIsHere && !settling) return _Outcome.deferred;
       return _insert(
         _db.caves,
         Cave(
           uuid: uuid,
           title: mapped.title ?? '',
           description: mapped.description,
-          surfaceAreaUuid: await _exists(_db.surfaceAreas, parent)
-              ? parent
-              : null,
+          surfaceAreaUuid: areaIsHere ? parent : null,
           caveLocalIndex: mapped.caveLocalIndex,
           createdAt: _epoch(mapped.row.createdAt),
           updatedAt: _epoch(mapped.row.updatedAt),
@@ -433,6 +457,12 @@ class SilexgisDownloadApplier {
       local.copyWith(
         title: mapped.title ?? local.title,
         description: Value(mapped.description),
+        // Containment is not carried after a row is created, so an area
+        // already set stays. One that is missing because the cave arrived
+        // before its area is filled in: that is the same edge, not a move.
+        surfaceAreaUuid: Value(
+          local.surfaceAreaUuid ?? (areaIsHere ? parent : null),
+        ),
         caveLocalIndex: Value(mapped.caveLocalIndex),
         updatedAt: Value(_epoch(mapped.row.updatedAt)),
       ),

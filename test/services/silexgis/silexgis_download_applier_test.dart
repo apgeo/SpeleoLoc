@@ -642,6 +642,89 @@ void main() {
     });
   });
 
+  group('a cave can arrive before its surface area', () {
+    final surfaceId = Uuid.v7();
+    Map<String, Object?> aSurfaceArea() => feature(
+      id: surfaceId.toString(),
+      kind: 'generic',
+      featureTypeCode: 'surface_area',
+      name: 'Munții Inventați',
+      properties: const <String, Object?>{
+        'speleolocGeneralAreaIdentifier': 'MI',
+      },
+    );
+    Future<Cave> storedCave() => (db.select(
+      db.caves,
+    )..where((t) => t.uuid.equalsValue(caveId))).getSingle();
+
+    test('within one page, and is stored inside it', () async {
+      // Rename an area after creating a cave in it and the cave is the older
+      // change, so it arrives first.
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          aCave(parent: surfaceId.toString()),
+          aSurfaceArea(),
+        ]),
+        setId: setId,
+      );
+      expect((await storedCave()).surfaceAreaUuid, surfaceId);
+    });
+
+    test('a whole page earlier, and is stored inside it', () async {
+      final first = await applier.applyPage(
+        page(<Map<String, Object?>>[
+          aCave(parent: surfaceId.toString()),
+          aPlace(),
+        ], hasMore: true),
+        setId: setId,
+      );
+      expect(first.deferred, 2);
+
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aSurfaceArea()]),
+        setId: setId,
+      );
+      expect((await storedCave()).surfaceAreaUuid, surfaceId);
+      expect(await db.select(db.cavePlaces).get(), hasLength(1));
+      expect(applier.takeUnresolved(), isEmpty);
+    });
+
+    test(
+      'an area that never comes leaves the cave stored without one',
+      () async {
+        // A cave is still a cave without its area, unlike a place without its
+        // cave; so is what waited on it.
+        final report = await applier.applyPage(
+          page(<Map<String, Object?>>[
+            aCave(parent: surfaceId.toString()),
+            aPlace(),
+          ]),
+          setId: setId,
+        );
+        expect(report.inserted, 2);
+        expect((await storedCave()).surfaceAreaUuid, isNull);
+        expect(applier.takeUnresolved(), isEmpty);
+      },
+    );
+
+    test('a cave stored without its area is put inside it later', () async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave(parent: surfaceId.toString())]),
+        setId: setId,
+      );
+      expect((await storedCave()).surfaceAreaUuid, isNull);
+
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          aSurfaceArea(),
+          aCave(parent: surfaceId.toString()),
+        ]),
+        setId: setId,
+      );
+      expect((await storedCave()).surfaceAreaUuid, surfaceId);
+    });
+  });
+
   group('rows this build does not model', () {
     test('are skipped without an error', () async {
       final report = await applier.applyPage(
