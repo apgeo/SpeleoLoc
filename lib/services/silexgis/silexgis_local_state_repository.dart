@@ -69,6 +69,10 @@ class SilexgisLocalStateRepository {
 
   /// Records the position a page handed back. Called once per page, so a lost
   /// connection costs the page in flight rather than the whole sync.
+  ///
+  /// A null [cursor] keeps the stored one: the server names no position only
+  /// when there was nothing at or after the one asked from, so the device is
+  /// still exactly there. Storing the null would make the next run a full read.
   Future<void> writeSetState(
     String profileUuid,
     String setId, {
@@ -81,7 +85,7 @@ class SilexgisLocalStateRepository {
           SilexgisSyncStateCompanion.insert(
             profileUuid: profileUuid,
             setId: setId,
-            cursor: Value(cursor),
+            cursor: _keptUnlessNamed(cursor),
             setRevision: Value(setRevision),
             lastSyncedAt: Value(_clock.nowMs()),
           ),
@@ -124,7 +128,8 @@ class SilexgisLocalStateRepository {
   }
 
   /// Records the position a page of [stream] handed back. Called with the
-  /// page's own writes, so the two land together or not at all.
+  /// page's own writes, so the two land together or not at all. A null
+  /// [cursor] keeps the stored one, as [writeSetState] explains.
   Future<void> writeStreamCursor(
     String profileUuid,
     String setId,
@@ -139,7 +144,7 @@ class SilexgisLocalStateRepository {
             profileUuid: profileUuid,
             setId: setId,
             stream: stream.routeName,
-            cursor: Value(cursor),
+            cursor: _keptUnlessNamed(cursor),
             setRevision: Value(setRevision),
             lastSyncedAt: Value(_clock.nowMs()),
           ),
@@ -158,6 +163,11 @@ class SilexgisLocalStateRepository {
           ..where(_streamKey(profileUuid, setId, stream)))
         .write(const SilexgisStreamCursorCompanion(cursor: Value(null)));
   }
+
+  /// Left out of the write when the page named no position, so an existing
+  /// row keeps its cursor and a new one starts with none.
+  static Value<String?> _keptUnlessNamed(String? cursor) =>
+      cursor == null ? const Value<String?>.absent() : Value<String?>(cursor);
 
   Expression<bool> Function(SilexgisStreamCursor) _streamKey(
     String profileUuid,

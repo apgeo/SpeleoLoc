@@ -563,6 +563,25 @@ void main() {
       expect(state.setRevision, 4);
     });
 
+    test('is kept when a caught-up page names none', () async {
+      // A cursor is null only when there was nothing at or after the position
+      // asked from. Storing that null would start the next run from the
+      // beginning, so every run after an idle one would be a full read.
+      await localState.writeSetState(
+        profile,
+        setId,
+        cursor: 'MXwxNjM4',
+        setRevision: 4,
+      );
+      await applier.applyPage(
+        page(const <Map<String, Object?>>[], cursor: null, setRevision: 4),
+        setId: setId,
+      );
+      final state = await localState.readSetState(profile, setId);
+      expect(state.cursor, 'MXwxNjM4');
+      expect(state.setRevision, 4);
+    });
+
     test(
       'records a revision for every row it wrote, and none it did not',
       () async {

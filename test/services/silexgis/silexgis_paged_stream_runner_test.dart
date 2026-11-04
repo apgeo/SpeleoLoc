@@ -179,6 +179,30 @@ void main() {
     expect(await stored(SyncStream.reviews), 'kept');
   });
 
+  for (final stream in SyncStream.values) {
+    test('${stream.routeName}: a caught-up page that names no position keeps '
+        'the stored one', () async {
+      // A cursor is null only when there was nothing at or after the position
+      // asked from. Storing that null would start the next run from the
+      // beginning, so every run after an idle one would be a full read.
+      await localState.writeStreamCursor(
+        profile,
+        setId,
+        stream,
+        cursor: 'watermark-7',
+        setRevision: 3,
+      );
+      final read = streamOf(stream, <Object>[
+        const _Page(cursor: null, more: false, revision: 3),
+      ]);
+
+      await read.runner.run();
+
+      expect(read.asked, <String?>['watermark-7']);
+      expect(await stored(stream), 'watermark-7');
+    });
+  }
+
   test('a full read drops the stored position first', () async {
     await localState.writeStreamCursor(
       profile,
