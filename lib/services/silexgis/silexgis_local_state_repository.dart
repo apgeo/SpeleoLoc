@@ -491,13 +491,11 @@ class StoredRevision {
   /// in the same millisecond as an upload is missed, and a server whose clock
   /// runs ahead makes a freshly downloaded row look edited for ever.
   ///
-  /// A row that has never carried a stamp is treated as changed: there is
-  /// nothing to compare, and one `unchanged` answer per run costs less than an
-  /// edit that never leaves the device.
-  bool agreesWith(int? updatedAt) {
-    if (updatedAt == null && localUpdatedAt == null) return false;
-    return updatedAt == localUpdatedAt;
-  }
+  /// A row with no stamp agrees with an entry recorded while it had none.
+  /// Every edit made here stamps the row, so a stamp still absent is a row
+  /// nobody here has changed since; taken for an edit instead, it would go up
+  /// on every run and never take the server's version again.
+  bool agreesWith(int? updatedAt) => updatedAt == localUpdatedAt;
 }
 
 /// One row's revision on one installation.

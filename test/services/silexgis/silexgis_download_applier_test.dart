@@ -335,6 +335,37 @@ void main() {
     );
   });
 
+  test(
+    'a row agreed while it had no stamp takes the server\'s version',
+    () async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave()]),
+        setId: setId,
+      );
+      await (db.update(db.caves)..where((t) => t.uuid.equalsValue(caveId)))
+          .write(const CavesCompanion(updatedAt: Value(null)));
+      await localState.writeRevision(
+        profile,
+        caveId,
+        entityTable: 'caves',
+        revision: '2026-08-28T09:00:00.000Z',
+      );
+
+      final renamed = aCave()
+        ..['name'] = 'Peștera Mică, renamed'
+        ..['updatedAt'] = '2026-08-31T09:00:00.000Z';
+      final report = await applier.applyPage(
+        page(<Map<String, Object?>>[renamed]),
+        setId: setId,
+      );
+      expect(report.updated, 1);
+      final cave = await (db.select(
+        db.caves,
+      )..where((t) => t.uuid.equalsValue(caveId))).getSingle();
+      expect(cave.title, 'Peștera Mică, renamed');
+    },
+  );
+
   group('a row held for a reviewer is not written over', () {
     Future<void> hold(Uuid uuid, {required int? sentAt}) =>
         heldRows.recordHeld(profile, <SilexgisHeldEntry>[

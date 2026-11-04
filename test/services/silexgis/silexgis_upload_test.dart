@@ -416,6 +416,31 @@ void main() {
       expect(await builder.build(), isEmpty);
     });
 
+    test('a row that never carried a stamp goes once, not every run', () async {
+      // Rows brought over from an older archive may have no stamp at all.
+      final t0 = clock.nowMs();
+      await insertArea(updatedAt: t0);
+      await insertCave(updatedAt: t0);
+      await known(areaId, table: 'surface_areas', localUpdatedAt: t0);
+      await known(caveId, table: 'caves', kind: 'cave', localUpdatedAt: t0);
+      await insertPlace(placeId, title: 'Sala Mare');
+
+      arm(<ScriptedResponse>[
+        answer(<Map<String, Object?>>[
+          <String, Object?>{
+            'id': placeId.toString(),
+            'status': 'created',
+            'revision': '2026-09-01T12:05:00.000Z',
+            'code': null,
+            'detail': null,
+          },
+        ]),
+      ]);
+      await runner.run(setId, capabilities: capabilities);
+
+      expect(await builder.build(), isEmpty);
+    });
+
     test(
       'a deleted row forgets its revision, so the tombstone stops',
       () async {
