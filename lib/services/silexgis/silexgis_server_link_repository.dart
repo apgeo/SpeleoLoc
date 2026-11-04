@@ -84,4 +84,14 @@ class SilexgisServerLinkRepository {
           .go();
     }
   }
+
+  /// The installation no longer holds [documentUuid], and so none of the links
+  /// that hung it anywhere.
+  Future<void> forgetDocument(String profileUuid, Uuid documentUuid) =>
+      (_db.delete(_db.silexgisServerLink)..where(
+            (t) =>
+                t.profileUuid.equals(profileUuid) &
+                t.documentUuid.equalsValue(documentUuid),
+          ))
+          .go();
 }

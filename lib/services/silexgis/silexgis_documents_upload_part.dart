@@ -16,6 +16,7 @@ import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
@@ -38,6 +39,7 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
     required SilexgisStagedUploadRepository staged,
     required SilexgisLocalStateRepository localState,
     required SilexgisHeldRowRepository heldRows,
+    required SilexgisServerLinkRepository serverLinks,
     required Future<Directory> Function() baseDir,
     required String profileUuid,
     SilexgisDocumentRowComposer composer = const SilexgisDocumentRowComposer(),
@@ -48,6 +50,7 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
        _staged = staged,
        _localState = localState,
        _heldRows = heldRows,
+       _serverLinks = serverLinks,
        _baseDir = baseDir,
        _profileUuid = profileUuid,
        _composer = composer;
@@ -59,6 +62,7 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
   final SilexgisStagedUploadRepository _staged;
   final SilexgisLocalStateRepository _localState;
   final SilexgisHeldRowRepository _heldRows;
+  final SilexgisServerLinkRepository _serverLinks;
   final Future<Directory> Function() _baseDir;
   final String _profileUuid;
   final SilexgisDocumentRowComposer _composer;
@@ -211,6 +215,7 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
     };
     final revisions = <SilexgisRevisionEntry>[];
     final forgotten = <Uuid>[];
+    final linksGone = <Uuid>[];
     final heldNow = <SilexgisHeldEntry>[];
     final conflicts = <SilexgisConflictEntry>[];
     final answeredOtherwise = <Uuid>[];
@@ -287,8 +292,10 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
         case SyncRowStatus.rejected
             when answer.code == SilexgisCodes.rowNotFound:
           // Not there after all: forgotten, it goes as a new document next
-          // time, bytes and all.
+          // time, bytes and all — and with its links, which went there with
+          // it.
           forgotten.add(document.id);
+          linksGone.add(document.id);
           refusals.add(_refusal(document, answer));
         case SyncRowStatus.conflict:
           // Somebody wrote the document, or gave it new bytes, since: kept for
@@ -316,6 +323,9 @@ class SilexgisDocumentsUploadPart implements SilexgisUploadPart {
     await _localState.forgetRevisions(_profileUuid, forgotten);
     for (final id in forgotten) {
       await _staged.delete(_profileUuid, id);
+    }
+    for (final id in linksGone) {
+      await _serverLinks.forgetDocument(_profileUuid, id);
     }
     await _heldRows.clear(_profileUuid, section, answeredOtherwise);
     await _heldRows.recordHeld(_profileUuid, heldNow);

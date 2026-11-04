@@ -711,6 +711,7 @@ class SilexgisSyncController extends ChangeNotifier {
       staged: _staged,
       localState: _localState,
       heldRows: _heldRows,
+      serverLinks: _serverLinks,
       baseDir: _documentsDir,
       profileUuid: profile.profileUuid,
     ),

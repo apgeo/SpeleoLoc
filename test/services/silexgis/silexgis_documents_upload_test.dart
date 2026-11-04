@@ -298,6 +298,7 @@ void main() {
           staged: staged,
           localState: localState,
           heldRows: heldRows,
+          serverLinks: serverLinks,
           baseDir: () async => base,
           profileUuid: profile,
         ),
@@ -504,6 +505,52 @@ void main() {
       // the same.
       expect(row['sha256'], sha256.convert(bytes).toString());
       expect(sentSection(client, SyncUploadSection.documentLinks), isEmpty);
+    });
+
+    test('one the server no longer has goes again with its links', () async {
+      // Undone on the server, the document took its links with it.
+      final (id, bytes) = await photo('IMG_0004.jpg');
+      await agreed(id);
+      await staged.write(
+        profile,
+        SilexgisStagedFile(
+          documentUuid: id,
+          sha256: sha256.convert(bytes).toString(),
+          sizeBytes: bytes.length,
+          state: SilexgisStagedState.adopted,
+          transferId: transferId,
+        ),
+      );
+      await editCaption(id, 'Looking up');
+      await run(
+        ScriptedClient(<ScriptedResponse>[
+          answer(
+            documents: <Map<String, Object?>>[
+              verdict(
+                id.toString(),
+                'rejected',
+                code: SilexgisCodes.rowNotFound,
+              ),
+            ],
+          ),
+        ]),
+      );
+
+      final client = ScriptedClient(<ScriptedResponse>[
+        config(),
+        ...staging(bytes),
+        answer(
+          documents: <Map<String, Object?>>[verdict(id.toString(), 'created')],
+          links: <Map<String, Object?>>[verdict('link-2', 'created')],
+        ),
+      ]);
+      await run(client);
+
+      final row = sentSection(client, SyncUploadSection.documents).single;
+      expect(row['baseRevision'], isNull);
+      final link = sentSection(client, SyncUploadSection.documentLinks).single;
+      expect(link['documentId'], id.toString());
+      expect((link['target']! as Map)['id'], caveId.toString());
     });
 
     test(
