@@ -6,5 +6,5 @@
   "FEATURE_SILEXGIS": "false",
   "FEATURE_BEACONS": "false",
   "DEFAULT_LOCALE": "en",
-  "FEATURE_MODEL_3D": "false"
+  "FEATURE_MODEL_3D": "true"
 }

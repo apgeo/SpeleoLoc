@@ -206,8 +206,8 @@ only — the Linux build shows a placeholder). Three pieces are checked separate
 - **On a device**: `flutter test integration_test/cave_model_viewer_test.dart -d <device>` (draws
   both formats, a real tap) and `integration_test/cave_model_mapping_test.dart` (maps a place).
 
-Store builds pass `FEATURE_MODEL_3D=false` (`build_settings.store*.json`) until the feature is
-released; that hides the entry points only.
+`FEATURE_MODEL_3D` (`build_settings*.json`) shows or hides the entry points only. Store builds
+have passed `true` since 2026-11-04; set it to `false` there to ship a build without the viewer.
 
 With SilexGIS (`features` names `surveyModels`), the sync reads the survey-models stream into the
 local-only `silexgis_survey_model` table and fetches each model's file into a documentation file
