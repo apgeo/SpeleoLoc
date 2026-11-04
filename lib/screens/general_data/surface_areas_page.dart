@@ -209,7 +209,12 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
     );
 
     if (confirmed == true) {
-      await ref.read(caveRepositoryProvider).deleteSurfaceArea(area);
+      try {
+        await ref.read(caveRepositoryProvider).deleteSurfaceArea(area);
+      } on Exception {
+        SnackBarService.showError(LocServ.inst.t('delete_area_failed'));
+        return;
+      }
       _changed = true;
       _loadAreas();
       if (!mounted) return;

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_area_title_clash_exception.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class CaveAreasPage extends ConsumerStatefulWidget {
   const CaveAreasPage({super.key, required this.caveUuid});
@@ -137,7 +139,19 @@ class _CaveAreasPageState extends ConsumerState<CaveAreasPage>
     );
 
     if (confirmed == true) {
-      await ref.read(caveRepositoryProvider).deleteCaveArea(area);
+      try {
+        await ref.read(caveRepositoryProvider).deleteCaveArea(area);
+      } on CaveAreaTitleClashException catch (e) {
+        SnackBarService.showError(
+          LocServ.inst.t('delete_area_place_title_taken', {
+            'title': e.placeTitle,
+          }),
+        );
+        return;
+      } on Exception {
+        SnackBarService.showError(LocServ.inst.t('delete_area_failed'));
+        return;
+      }
       _changed = true;
       _loadAreas();
       if (!mounted) return;

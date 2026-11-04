@@ -107,14 +107,9 @@ Apăsați pictograma **coș** și confirmați. Ștergerea unei arii nu poate fi
 anulată — aria este scoasă din baza de date, nu arhivată, iar scoaterea
 ajunge pe celelalte dispozitive la următoarea sincronizare.
 
-O arie poate fi ștearsă doar când **nicio peșteră nu îi mai este
-atribuită**. Mutați întâi acele peșteri în altă parte sau puneți-le
-**Titlul ariei (opțional)** înapoi pe *Niciuna*. Ștergerea unei arii încă
-folosite eșuează deocamdată fără să vă spună: confirmarea se închide, nu
-apare niciun mesaj, iar aria este tot în listă. Dacă se întâmplă asta,
-acesta este motivul.
-
-Ștergerea unei arii nu șterge niciodată peșterile din ea.
+Ștergerea unei arii nu șterge niciodată peșterile din ea. Peșterile încă
+atribuite ei rămân, cu **Titlul ariei (opțional)** pus înapoi pe *Niciuna*,
+pe acest dispozitiv și, după următoarea lor sincronizare, pe celelalte.
 
 > Notă: textul de confirmare de pe acest ecran spune *„Aceasta va șterge
 > aria. Sigur doriți să continuați?”*. Este formularea dialogului de zonă

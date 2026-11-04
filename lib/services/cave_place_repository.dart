@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:speleoloc/services/cave_model/model_links_cleanup.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/delete_cascades.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -190,24 +191,20 @@ class CavePlaceRepository implements ICavePlaceRepository {
           _database.cavePlaceBeacons,
         )..where((b) => b.cavePlaceUuid.equalsValue(id))).get();
 
-        // Remove direct FK references from map bindings.
-        await (_database.delete(
-          _database.cavePlaceToRasterMapDefinitions,
-        )..where((d) => d.cavePlaceUuid.equalsValue(id))).go();
-
-        // Keep trip points but detach from removed cave place.
-        await (_database.update(_database.caveTripPoints)
-              ..where((tp) => tp.cavePlaceUuid.equalsValue(id)))
-            .write(const CaveTripPointsCompanion(cavePlaceUuid: Value(null)));
-
-        // Remove pseudo links to this cave place from documentation links table.
-        await (_database.delete(_database.documentationFilesToGeofeatures)
-              ..where(
-                (g) =>
-                    g.geofeatureType.equals('cave_place') &
-                    g.geofeatureUuid.equalsValue(id),
-              ))
-            .go();
+        await deletePlaceMapDefinitions(_database, _logger, placeUuids: [id]);
+        await detachTripPointsFromPlaces(
+          _database,
+          _logger,
+          placeUuids: [id],
+          now: _clock.nowMs(),
+          author: await _currentUser.currentOrSystem(),
+        );
+        await deleteGeofeatureLinks(
+          _database,
+          _logger,
+          GeofeatureType.cavePlace,
+          [id],
+        );
 
         await deleteModelLinks(_database, _logger, cavePlaceUuid: id);
 

@@ -196,6 +196,8 @@
   "delete_area_confirm": "Aceasta va șterge aria. Sigur doriți să continuați?",
   "area_saved": "Aria a fost salvată",
   "area_deleted": "Aria a fost ștearsă",
+  "delete_area_failed": "Aria nu a putut fi ștearsă",
+  "delete_area_place_title_taken": "Aria nu poate fi ștearsă: locul „{title}” ar avea același nume cu un loc din afara oricărei arii a acestei peșteri. Redenumiți mai întâi unul dintre ele.",
   "enter_area_title": "Introduceți titlul ariei",
   "manage_surface_areas": "Arii de suprafață",
   "add_surface_area": "Adaugă arie de suprafață",
