@@ -99,6 +99,8 @@ class FtpSyncController extends ChangeNotifier {
   // Rolling log buffer cap.
   static const int _maxLogEntries = 200;
 
+  static const int _maxWarningsPerArchive = 20;
+
   FtpSyncController({
     required AppDatabase db,
     required FtpProfileRepository profileRepository,
@@ -436,6 +438,7 @@ class FtpSyncController extends ChangeNotifier {
       // misleadingly green-ticked `completed`.
       var importErrors = 0;
       String? firstImportError;
+      var importWarnings = 0;
 
       for (var i = 0; i < unseen.length; i++) {
         token.throwIfCancelled();
@@ -618,6 +621,32 @@ class FtpSyncController extends ChangeNotifier {
               'for a decision: Man. sync → Archive sync → Needs a decision',
             );
           }
+          importWarnings += report.warnings.length;
+          _logImportWarnings(entry.name, report.warnings);
+          if (report.filesFailed > 0) {
+            // The rows are in, but the files they point to are not. Left
+            // unseen, so the next run imports it again; files already
+            // written are not extracted twice.
+            importErrors++;
+            final reason =
+                '${report.filesFailed} file(s) could not be written on '
+                'this device';
+            firstImportError ??= '${entry.name}: $reason';
+            _appendLog(
+              FtpSyncLogLevel.error,
+              'Imported ${entry.name} without its files: $reason. It will '
+              'be imported again on the next sync.',
+            );
+            _emit(
+              (s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0),
+            );
+            try {
+              await File(localPath).delete();
+            } catch (e, st) {
+              _log.fine('best-effort delete failed: $localPath', e, st);
+            }
+            continue;
+          }
         } on SyncArchiveSchemaMismatchException catch (e) {
           // Make the message actionable: tell the user the minimum app
           // version they need to update to. We deliberately *do not* mark
@@ -734,7 +763,10 @@ class FtpSyncController extends ChangeNotifier {
           final summary =
               'Sync finished with $importErrors import error(s); '
               'first: ${firstImportError ?? '<unknown>'}';
-          _appendLog(FtpSyncLogLevel.error, summary);
+          _appendLog(
+            FtpSyncLogLevel.error,
+            _withWarningCount(summary, importWarnings),
+          );
           _emit(
             (s) => s.copyWith(
               phase: FtpSyncPhase.failed,
@@ -759,9 +791,12 @@ class FtpSyncController extends ChangeNotifier {
         );
         _appendLog(
           FtpSyncLogLevel.info,
-          unseen.isEmpty
-              ? 'Sync complete — already in sync, no transfer needed'
-              : 'Sync complete — downloaded ${unseen.length} archive(s); no upload needed',
+          _withWarningCount(
+            unseen.isEmpty
+                ? 'Sync complete — already in sync, no transfer needed'
+                : 'Sync complete — downloaded ${unseen.length} archive(s); no upload needed',
+            importWarnings,
+          ),
         );
         return;
       }
@@ -898,7 +933,10 @@ class FtpSyncController extends ChangeNotifier {
         final summary =
             'Sync finished with $importErrors import error(s); '
             'first: ${firstImportError ?? '<unknown>'}';
-        _appendLog(FtpSyncLogLevel.error, summary);
+        _appendLog(
+          FtpSyncLogLevel.error,
+          _withWarningCount(summary, importWarnings),
+        );
         _emit(
           (s) => s.copyWith(
             phase: FtpSyncPhase.failed,
@@ -919,7 +957,10 @@ class FtpSyncController extends ChangeNotifier {
           warningMessage: warning,
         ),
       );
-      _appendLog(FtpSyncLogLevel.info, 'Sync complete');
+      _appendLog(
+        FtpSyncLogLevel.info,
+        _withWarningCount('Sync complete', importWarnings),
+      );
     } on TransferCancelledException {
       if (_pauseRequested) {
         _pauseRequested = false;
@@ -1097,6 +1138,30 @@ class FtpSyncController extends ChangeNotifier {
         '${skipped.join('; ')}';
     _appendLog(FtpSyncLogLevel.warning, summary);
     return summary;
+  }
+
+  /// [line] with the run's import-warning count appended. The count is kept
+  /// out of the banner: some warnings, such as a user matched by name,
+  /// come with nearly every import and would turn every run orange.
+  static String _withWarningCount(String line, int importWarnings) =>
+      importWarnings == 0
+      ? line
+      : '$line ($importWarnings import warning(s), listed above)';
+
+  /// Each warning an import reported, so a skipped row or a file that did
+  /// not arrive is visible where the sync explains itself. Capped per
+  /// archive: a systematic problem repeats one line for every row.
+  void _logImportWarnings(String archiveName, List<String> warnings) {
+    for (final w in warnings.take(_maxWarningsPerArchive)) {
+      _appendLog(FtpSyncLogLevel.warning, '$archiveName: $w');
+    }
+    final more = warnings.length - _maxWarningsPerArchive;
+    if (more > 0) {
+      _appendLog(
+        FtpSyncLogLevel.warning,
+        '$archiveName: $more more warning(s) not shown',
+      );
+    }
   }
 
   // ---------------------------------------------------------------------

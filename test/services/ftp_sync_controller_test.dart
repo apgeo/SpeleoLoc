@@ -283,6 +283,40 @@ class _BlockingTransport implements IFtpTransport {
   }
 }
 
+/// Archive service whose imports return what a test scripts, without
+/// reading the downloaded file.
+class _ScriptedArchiveService extends SyncArchiveService {
+  _ScriptedArchiveService(super.db, super.logger, this.onImport);
+
+  Future<SyncImportReport> Function(String zipPath) onImport;
+  final List<String> imported = <String>[];
+
+  @override
+  Future<SyncImportReport> importFromZip(
+    String zipPath, {
+    ConflictResolver? conflictResolver,
+  }) {
+    imported.add(zipPath.split(Platform.pathSeparator).last);
+    return onImport(zipPath);
+  }
+}
+
+SyncImportReport _report({
+  List<String> warnings = const [],
+  int filesFailed = 0,
+  int deletes = 0,
+}) => SyncImportReport(
+  rowsInserted: 1,
+  rowsUpdated: 0,
+  rowsSkipped: 0,
+  deletesApplied: deletes,
+  changeLogMerged: 0,
+  filesCopied: 0,
+  filesSkipped: 0,
+  filesFailed: filesFailed,
+  warnings: warnings,
+);
+
 class _Harness {
   _Harness(
     this.db,
@@ -403,6 +437,7 @@ void main() {
   Future<(FtpSyncController, _FakeTransport)> makeController(
     _Harness h, {
     Map<String, List<int>>? seedFromHarnessExports,
+    SyncArchiveService? archiveService,
   }) async {
     final profileRepo = FtpProfileRepository(h.db);
     const profile = FtpProfile(
@@ -424,12 +459,26 @@ void main() {
     final controller = FtpSyncController(
       db: h.db,
       profileRepository: profileRepo,
-      archiveService: h.sync,
+      archiveService: archiveService ?? h.sync,
       currentUserService: h.currentUser,
       transportBuilder: (_) => fake,
     );
     return (controller, fake);
   }
+
+  Future<Set<String>> seenArchives(_Harness h) async {
+    final rows = await h.db
+        .customSelect(
+          'SELECT value FROM configurations WHERE title = ?',
+          variables: [const Variable<String>(ConfigKey.ftpSeenArchives)],
+        )
+        .get();
+    if (rows.isEmpty) return {};
+    return rows.single.read<String>('value').split('\n').toSet();
+  }
+
+  Iterable<String> logLines(FtpSyncProgress p, FtpSyncLogLevel level) =>
+      p.log.where((e) => e.level == level).map((e) => e.message);
 
   test('fails cleanly when no default profile is set', () async {
     final h = await _buildHarness();
@@ -1160,6 +1209,74 @@ void main() {
       expect(controller.timestampOfArchiveName('garbage.txt'), 0);
     },
   );
+
+  group('import report', () {
+    const peerArchive = 'speleo_loc_sync_1000_deadbeef.zip';
+
+    test('every import warning reaches the log, and the run says so', () async {
+      final h = await _buildHarness();
+      final service = _ScriptedArchiveService(
+        h.db,
+        h.logger,
+        (_) async =>
+            _report(warnings: [for (var i = 0; i < 30; i++) 'row $i skipped']),
+      );
+      final (controller, fake) = await makeController(
+        h,
+        archiveService: service,
+      );
+      fake.publish(peerArchive, [1, 2, 3]);
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      final warnings = logLines(end, FtpSyncLogLevel.warning).toList();
+      expect(warnings, contains(contains('row 0 skipped')));
+      expect(warnings, contains(contains('row 19 skipped')));
+      expect(warnings, isNot(contains(contains('row 20 skipped'))));
+      expect(warnings, contains(contains('10 more')));
+      expect(end.log.last.message, contains('30 import warning(s)'));
+      expect(end.warningMessage, isNull);
+      expect(await seenArchives(h), contains(peerArchive));
+    });
+
+    test('an archive whose files could not be written stays unseen', () async {
+      final h = await _buildHarness();
+      final service = _ScriptedArchiveService(
+        h.db,
+        h.logger,
+        (_) async => _report(
+          filesFailed: 3,
+          warnings: ['asset extraction failed: disk full'],
+        ),
+      );
+      final (controller, fake) = await makeController(
+        h,
+        archiveService: service,
+      );
+      fake.publish(peerArchive, [1, 2, 3]);
+
+      await controller.startDefault();
+      final first = await _waitForTerminal(controller);
+
+      expect(first.phase, FtpSyncPhase.failed);
+      expect(first.errorMessage, contains(peerArchive));
+      expect(
+        logLines(first, FtpSyncLogLevel.error),
+        contains(contains('3 file(s)')),
+      );
+      expect(await seenArchives(h), isNot(contains(peerArchive)));
+
+      // Space was freed: the next run imports it again and completes.
+      service.onImport = (_) async => _report();
+      await controller.startDefault();
+      final second = await _waitForTerminal(controller);
+      expect(service.imported, [peerArchive, peerArchive]);
+      expect(second.phase, FtpSyncPhase.completed, reason: second.errorMessage);
+      expect(await seenArchives(h), contains(peerArchive));
+    });
+  });
 
   group('SFTP host key', () {
     const sftpProfile = FtpProfile(

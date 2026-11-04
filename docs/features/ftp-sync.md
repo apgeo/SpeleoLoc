@@ -186,7 +186,9 @@ What happens then:
 
 The **Log** tab is where a sync explains itself: how many new archives
 were found, each file downloaded with its size, each checksum verified,
-how many rows an import added, changed and skipped, and every archive
+how many rows an import added, changed and skipped, every warning an
+import raised — a record it could not take in, a deletion it could not
+apply, a file it could not write, up to 20 per archive — and every archive
 that was skipped and why. When a run did not do what you expected, look
 there first.
 
@@ -285,7 +287,11 @@ The last line of the **Log** tab is more precise, and says one of:
   new and published your own snapshot.
 
 That last distinction matters when you want to be sure your work has
-actually reached the server.
+actually reached the server. When imports raised warnings, the line ends
+with their number, for example *(3 import warning(s), listed above)*;
+the warnings themselves are the orange lines above it. Some are routine —
+a user matched by name to one you already have — so they do not turn the
+banner orange.
 
 A run that skipped unreadable archives still ends as **Sync complete**,
 with an orange banner listing them.
@@ -297,6 +303,12 @@ not stop your own upload. So a red result does
 not mean nothing worked: read the Log tab to see what did. Everything
 that failed is deliberately left unmarked, so simply running the sync
 again retries it.
+
+An archive whose files could not be written on this device — the phone's
+storage is full, for instance — also counts as failed. Its records are
+imported, but the photos and maps they point to are missing, so it is
+imported again on the next sync; files that did arrive are not written a
+second time. Free some space and sync again.
 
 For a connection or sign-in failure, a changed SFTP host key or an FTPS
 profile, the red banner also carries an **Open Settings** button that

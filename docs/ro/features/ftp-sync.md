@@ -196,8 +196,11 @@ Ce se întâmplă apoi:
 Fila **Jurnal** este locul unde o sincronizare se explică pe sine: câte
 arhive noi au fost găsite, fiecare fișier descărcat cu dimensiunea lui,
 fiecare sumă de control verificată, câte rânduri a adăugat, a schimbat și
-a sărit un import și fiecare arhivă sărită, cu motivul. Când o rulare nu a
-făcut ce vă așteptați, acolo să vă uitați întâi.
+a sărit un import, fiecare avertisment al unui import — o înregistrare pe
+care nu a putut-o prelua, o ștergere pe care nu a putut-o aplica, un
+fișier pe care nu l-a putut scrie, cel mult 20 pentru fiecare arhivă — și
+fiecare arhivă sărită, cu motivul. Când o rulare nu a făcut ce vă
+așteptați, acolo să vă uitați întâi.
 
 > 📷 [Fila de jurnal a sincronizării](../screenshots/06-sync-and-sharing.md#ftp-sync-log-tab) — Fila Jurnal listând fiecare pas al ultimei sincronizări FTP, cea mai nouă prima.
 
@@ -294,7 +297,11 @@ dintre:
   ce era nou și v-ați publicat propriul instantaneu.
 
 Ultima distincție contează când vreți să fiți siguri că munca
-dumneavoastră a ajuns într-adevăr pe server.
+dumneavoastră a ajuns într-adevăr pe server. Când importurile au dat
+avertismente, linia se termină cu numărul lor, de exemplu *(3 import
+warning(s), listed above)*; avertismentele sunt rândurile portocalii de
+deasupra. Unele sunt obișnuite — un utilizator potrivit după nume cu unul
+pe care îl aveți deja — așa că nu fac bannerul portocaliu.
 
 O rulare care a sărit arhive ilizibile se încheie tot cu **Sincronizare
 reușită**, cu un banner portocaliu care le enumeră.
@@ -306,6 +313,13 @@ oprește restul și nu vă oprește nici propria încărcare. Așadar, un
 rezultat roșu nu înseamnă că nu a mers nimic: citiți fila Jurnal ca să
 vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că e
 destul să rulați sincronizarea din nou ca să se reîncerce.
+
+O arhivă ale cărei fișiere nu au putut fi scrise pe acest dispozitiv — de
+exemplu pentru că memoria telefonului este plină — contează și ea ca
+eșuată. Înregistrările ei sunt importate, dar fotografiile și hărțile la
+care trimit lipsesc, așa că este importată din nou la următoarea
+sincronizare; fișierele care au ajuns nu sunt scrise a doua oară.
+Eliberați spațiu și sincronizați din nou.
 
 La o eșuare de conexiune sau de autentificare, la o cheie de gazdă SFTP
 schimbată sau la un profil FTPS, bannerul roșu poartă și un buton

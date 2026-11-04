@@ -340,6 +340,48 @@ void main() {
     await b.db.close();
   });
 
+  test('an asset file that cannot be written is counted as failed', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+    const relPath = 'documentation/doc1.txt';
+    final payload = utf8.encode('hello cave');
+    final src = File('${a.assetsDir.path}${Platform.pathSeparator}$relPath');
+    await src.parent.create(recursive: true);
+    await src.writeAsBytes(payload);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await a.db
+        .into(a.db.documentationFiles)
+        .insert(
+          DocumentationFilesCompanion.insert(
+            uuid: Uuid.v7(),
+            title: 'Doc 1',
+            fileName: relPath,
+            fileSize: payload.length,
+            fileType: 'txt',
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+    final zip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'assets.zip',
+    );
+    // A folder where the file should go: writing it fails on B.
+    await Directory(
+      '${b.assetsDir.path}${Platform.pathSeparator}$relPath',
+    ).create(recursive: true);
+
+    final report = await b.sync.importFromZip(zip.path);
+
+    expect(report.rowsInserted, greaterThan(0));
+    expect(report.filesCopied, 0);
+    expect(report.filesFailed, 1);
+    expect(report.warnings, isNotEmpty);
+
+    await a.db.close();
+    await b.db.close();
+  });
+
   test('manual resolver keepLocal overrides LWW', () async {
     final a = await buildHarness();
     final b = await buildHarness();

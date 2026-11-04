@@ -76,6 +76,11 @@ class SyncImportReport {
   final int filesCopied;
   final int filesSkipped; // already present locally
 
+  /// Asset files the archive carries that could not be written on this
+  /// device (disk full, extraction failure). Their rows are imported, so a
+  /// caller that wants the files must import the archive again.
+  final int filesFailed;
+
   /// Records waiting, after this import, for a person to decide about: each
   /// a record whose unique name a different record here already holds.
   /// Counts those held by earlier imports too.
@@ -90,31 +95,37 @@ class SyncImportReport {
     required this.changeLogMerged,
     required this.filesCopied,
     required this.filesSkipped,
+    this.filesFailed = 0,
     required this.warnings,
     this.decisionsPending = 0,
   });
 
   /// Returns a copy with the asset-file counts filled in — used by
   /// `importFromZip`, which runs asset extraction after the DB merge.
-  SyncImportReport copyWith({int? filesCopied, int? filesSkipped}) =>
-      SyncImportReport(
-        rowsInserted: rowsInserted,
-        rowsUpdated: rowsUpdated,
-        rowsSkipped: rowsSkipped,
-        deletesApplied: deletesApplied,
-        changeLogMerged: changeLogMerged,
-        filesCopied: filesCopied ?? this.filesCopied,
-        filesSkipped: filesSkipped ?? this.filesSkipped,
-        warnings: warnings,
-        decisionsPending: decisionsPending,
-      );
+  SyncImportReport copyWith({
+    int? filesCopied,
+    int? filesSkipped,
+    int? filesFailed,
+  }) => SyncImportReport(
+    rowsInserted: rowsInserted,
+    rowsUpdated: rowsUpdated,
+    rowsSkipped: rowsSkipped,
+    deletesApplied: deletesApplied,
+    changeLogMerged: changeLogMerged,
+    filesCopied: filesCopied ?? this.filesCopied,
+    filesSkipped: filesSkipped ?? this.filesSkipped,
+    filesFailed: filesFailed ?? this.filesFailed,
+    warnings: warnings,
+    decisionsPending: decisionsPending,
+  );
 
   @override
   String toString() =>
       'SyncImportReport(inserted=$rowsInserted, updated=$rowsUpdated, '
       'skipped=$rowsSkipped, deletes=$deletesApplied, '
       'changeLog=$changeLogMerged, filesCopied=$filesCopied, '
-      'filesSkipped=$filesSkipped, decisionsPending=$decisionsPending, '
+      'filesSkipped=$filesSkipped, filesFailed=$filesFailed, '
+      'decisionsPending=$decisionsPending, '
       'warnings=${warnings.length})';
 }
 
@@ -547,6 +558,7 @@ class SyncArchiveService {
     return partial.copyWith(
       filesCopied: assetResult.copied,
       filesSkipped: assetResult.skipped,
+      filesFailed: assetResult.failed,
     );
   }
 
@@ -807,7 +819,11 @@ class SyncArchiveService {
       baseDir = await _assetsBaseDirResolver();
     } catch (e) {
       warnings.add('assets base dir unavailable: $e');
-      return const _AssetResult(copied: 0, skipped: 0);
+      return _AssetResult(
+        copied: 0,
+        skipped: 0,
+        failed: assetEntryNames.length,
+      );
     }
     var skipped = 0;
 
@@ -847,17 +863,21 @@ class SyncArchiveService {
     // raster-map file, triggering Android ANR.  Offloading to Isolate.run()
     // keeps the UI thread completely free during the entire extraction.
     try {
-      final (copied, isolateWarnings) = await Isolate.run(
+      final (copied, failed, isolateWarnings) = await Isolate.run(
         () => _extractAssetsInBackground(zipPath, toExtract),
       );
       warnings.addAll(isolateWarnings);
-      return _AssetResult(copied: copied, skipped: skipped);
+      return _AssetResult(copied: copied, skipped: skipped, failed: failed);
     } catch (e) {
       warnings.add(
         'asset extraction failed: $e '
         '(— skipping ${toExtract.length} file(s))',
       );
-      return _AssetResult(copied: 0, skipped: skipped);
+      return _AssetResult(
+        copied: 0,
+        skipped: skipped,
+        failed: toExtract.length,
+      );
     }
   }
 
@@ -884,13 +904,16 @@ class SyncArchiveService {
 /// [entries] is a list of `[entryName, outputPath]` pairs; output parent
 /// directories must already exist (created by the caller on the main isolate).
 ///
-/// Returns `(copied, warnings)` — number of files successfully written and
-/// any per-file error messages.
-Future<(int, List<String>)> _extractAssetsInBackground(
+/// Returns `(copied, failed, warnings)` — files successfully written, files
+/// that could not be written here, and any per-file error messages. An entry
+/// missing from the archive is a defect of the archive, not a failure of this
+/// device, so it is only warned about.
+Future<(int, int, List<String>)> _extractAssetsInBackground(
   String zipPath,
   List<List<String>> entries,
 ) async {
   var copied = 0;
+  var failed = 0;
   final warnings = <String>[];
   final input = InputFileStream(zipPath);
   try {
@@ -912,19 +935,25 @@ Future<(int, List<String>)> _extractAssetsInBackground(
         }
         copied++;
       } catch (e) {
+        failed++;
         warnings.add('$name → $outputPath: $e');
       }
     }
   } finally {
     await input.close();
   }
-  return (copied, warnings);
+  return (copied, failed, warnings);
 }
 
 class _AssetResult {
   final int copied;
   final int skipped;
-  const _AssetResult({required this.copied, required this.skipped});
+  final int failed;
+  const _AssetResult({
+    required this.copied,
+    required this.skipped,
+    this.failed = 0,
+  });
 }
 
 /// Payload for [_encodeSyncArchive] — everything the background isolate needs
