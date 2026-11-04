@@ -835,7 +835,8 @@ void main() {
       });
 
       test('stores nothing once the sign-in was removed elsewhere', () async {
-        // A replaced database drops the sign-in straight from the keystore.
+        // A replaced database retires the sign-in, then drops it from the
+        // keystore.
         final store = InMemoryRefreshTokenStore();
         await store.write(profile, 'refresh-1');
         final client = _HoldsRefresh(
@@ -843,16 +844,35 @@ void main() {
             tokenOk(access: 'access-2', refresh: 'refresh-2'),
           ]),
         );
-        final auth = build(client, store: store);
+        final registry = registryOn(store, client);
+        final auth = registry.forProfile(club);
 
         final refreshing = auth.restore();
         await client.requested;
+        registry.retire(profile);
         await store.delete(profile);
         client.release();
 
         expect(await refreshing, isFalse);
         expect(await store.read(profile), isNull);
         expect(await auth.accessToken(), isNull);
+      });
+
+      test('keeps the successor when the keystore fails to read', () async {
+        // The platform keystore reports a failed read as nothing. Taking
+        // that for a dropped sign-in would throw the successor away and
+        // leave only the spent token stored.
+        final store = _FailsReadsAfter(2);
+        await store.write(profile, 'refresh-1');
+        final client = ScriptedClient(<ScriptedResponse>[
+          tokenOk(access: 'access-2', refresh: 'refresh-2'),
+        ]);
+        final auth = registryOn(store, client).forProfile(club);
+
+        expect(await auth.restore(), isTrue);
+        store.failing = false;
+        expect(await store.read(profile), 'refresh-2');
+        expect(await auth.accessToken(), 'access-2');
       });
 
       test('does not undo a sign-in made meanwhile', () async {
@@ -981,5 +1001,22 @@ class _LosesAnswers extends http.BaseClient {
       }
     }
     return _inner.send(request);
+  }
+}
+
+/// A keystore whose reads come back empty after the first [okReads], the
+/// way the platform one answers a read it failed.
+class _FailsReadsAfter extends InMemoryRefreshTokenStore {
+  _FailsReadsAfter(this.okReads);
+
+  final int okReads;
+  bool failing = true;
+  int _reads = 0;
+
+  @override
+  Future<String?> read(String profileUuid) async {
+    _reads++;
+    if (failing && _reads > okReads) return null;
+    return super.read(profileUuid);
   }
 }

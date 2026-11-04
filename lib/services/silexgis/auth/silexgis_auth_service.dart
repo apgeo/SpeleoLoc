@@ -273,9 +273,14 @@ class SilexgisAuthService implements SilexgisTokenSource {
     }
 
     if (_isStale(generation)) return _tokens != null;
-    if (await _store.read(_profileUuid) != refreshToken) {
-      // The sign-in was dropped or replaced elsewhere while this refresh was
-      // out. Storing its answer now would bring it back.
+    final stored = await _store.read(_profileUuid);
+    // A sign-in dropped elsewhere retires this service or moves its
+    // generation on, both checked above. What is left to catch here is a
+    // newer sign-in stored meanwhile. An empty read is not taken for a
+    // dropped one: the keystore reports a failed read as nothing, and
+    // throwing away the successor then would leave only the spent token,
+    // which the server answers by revoking the chain.
+    if (stored != null && stored.isNotEmpty && stored != refreshToken) {
       _log.info('The stored sign-in changed during a refresh; dropping it');
       if (!_isStale(generation)) _tokens = null;
       return false;
