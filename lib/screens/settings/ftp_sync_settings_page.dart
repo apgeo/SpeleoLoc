@@ -397,8 +397,6 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
           ? '/'
           : _remoteFolder.text.trim(),
       passiveMode: _passiveMode,
-      allowInvalidCertificate:
-          widget.existing?.allowInvalidCertificate ?? false,
     );
   }
 

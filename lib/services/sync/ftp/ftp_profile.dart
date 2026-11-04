@@ -5,8 +5,10 @@ enum FtpProtocol {
   /// Plain FTP (insecure, port 21 by default).
   ftp,
 
-  /// FTP over TLS implicit (port 990) or explicit (FTPES, port 21).
-  /// Implementation uses FTPES by default when [ftps] is selected.
+  /// FTP over TLS. No longer connects: the FTP library cannot check the
+  /// server's certificate. Kept so a profile saved with it is still read as
+  /// FTPS — an unknown name falls back to plain [ftp] — and can be moved to
+  /// [sftp] in the editor.
   ftps,
 
   /// SFTP over SSH (port 22 by default).
@@ -30,7 +32,8 @@ class FtpProfile {
   final FtpProtocol protocol;
   final String host;
 
-  /// When null, the protocol's default port is used (21/990/22).
+  /// When null, the protocol's default port is used (21 for FTP and FTPS,
+  /// 22 for SFTP).
   final int? port;
 
   final String username;
@@ -39,14 +42,6 @@ class FtpProfile {
   /// Example: `/speleo_loc/sync/` — the filename schema described in the
   /// sync-v2 dev log is applied within this folder.
   final String remoteFolder;
-
-  /// Whether to treat self-signed TLS certs as valid (FTPS only).
-  ///
-  /// Not applied, and no longer offered in the editor: ftpconnect accepts
-  /// every server certificate and exposes no hook to change that. The field
-  /// stays so profiles keep the choice they were saved with until FTPS can
-  /// verify certificates.
-  final bool allowInvalidCertificate;
 
   /// FTP passive mode (data channel initiated by client). Generally required
   /// behind NAT. No effect for SFTP.
@@ -60,7 +55,6 @@ class FtpProfile {
     required this.port,
     required this.username,
     required this.remoteFolder,
-    this.allowInvalidCertificate = false,
     this.passiveMode = true,
   });
 
@@ -85,7 +79,6 @@ class FtpProfile {
     bool clearPort = false,
     String? username,
     String? remoteFolder,
-    bool? allowInvalidCertificate,
     bool? passiveMode,
   }) {
     return FtpProfile(
@@ -96,8 +89,6 @@ class FtpProfile {
       port: clearPort ? null : (port ?? this.port),
       username: username ?? this.username,
       remoteFolder: remoteFolder ?? this.remoteFolder,
-      allowInvalidCertificate:
-          allowInvalidCertificate ?? this.allowInvalidCertificate,
       passiveMode: passiveMode ?? this.passiveMode,
     );
   }
@@ -110,7 +101,6 @@ class FtpProfile {
     'port': port,
     'username': username,
     'remoteFolder': remoteFolder,
-    'allowInvalidCertificate': allowInvalidCertificate,
     'passiveMode': passiveMode,
   };
 
@@ -127,8 +117,6 @@ class FtpProfile {
       port: json['port'] as int?,
       username: json['username'] as String? ?? '',
       remoteFolder: json['remoteFolder'] as String? ?? '/',
-      allowInvalidCertificate:
-          json['allowInvalidCertificate'] as bool? ?? false,
       passiveMode: json['passiveMode'] as bool? ?? true,
     );
   }

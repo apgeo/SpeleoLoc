@@ -13,7 +13,6 @@ void main() {
         username: 'caver',
         remoteFolder: '/speleo/sync/',
         passiveMode: false,
-        allowInvalidCertificate: true,
       );
       final encoded = profile.encode();
       final decoded = FtpProfile.decode(encoded);
@@ -25,7 +24,6 @@ void main() {
       expect(decoded.username, profile.username);
       expect(decoded.remoteFolder, profile.remoteFolder);
       expect(decoded.passiveMode, profile.passiveMode);
-      expect(decoded.allowInvalidCertificate, profile.allowInvalidCertificate);
     });
 
     test(
@@ -63,6 +61,24 @@ void main() {
       expect(p.copyWith(clearPort: true).port, isNull);
     });
 
+    test('a profile stored with FTPS is still read as FTPS', () {
+      // Read as plain FTP, it would sign in without any encryption at all.
+      final p = FtpProfile.fromJson({
+        'profileUuid': '8',
+        'displayName': 'Old FTPS',
+        'protocol': 'ftps',
+        'host': 'ftps.example.test',
+        'port': 990,
+        'username': 'caver',
+        'remoteFolder': '/sync/',
+        'allowInvalidCertificate': true,
+        'passiveMode': true,
+      });
+      expect(p.protocol, FtpProtocol.ftps);
+      expect(p.port, 990);
+      expect(p.toJson()['protocol'], 'ftps');
+    });
+
     test('decode tolerates missing optional fields and unknown protocol', () {
       final p = FtpProfile.fromJson({
         'profileUuid': '7',
@@ -74,7 +90,6 @@ void main() {
       });
       expect(p.protocol, FtpProtocol.ftp);
       expect(p.passiveMode, isTrue);
-      expect(p.allowInvalidCertificate, isFalse);
       expect(p.port, isNull);
     });
   });
