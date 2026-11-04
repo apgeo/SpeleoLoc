@@ -231,8 +231,9 @@ cea primită este numărată ca omisă.
 Arhiva duce cu ea ce a șters celălalt dispozitiv, iar o îmbinare repetă
 acele ștergeri: o peșteră pe care colegul dumneavoastră a eliminat-o este
 eliminată și de pe dispozitivul dumneavoastră, cu excepția cazului în care
-ați modificat-o după ce a ștears-o el. Nu sunteți întrebat nimic. Dacă nu
-sunteți sigur de o arhivă, exportați întâi propriile date.
+ați modificat-o, sau i-ați adăugat ceva, după ce a ștears-o el. Nu sunteți
+întrebat nimic. Dacă nu sunteți sigur de o arhivă, exportați întâi
+propriile date.
 
 #### Ce aduce o îmbinare
 

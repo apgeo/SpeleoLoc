@@ -210,8 +210,9 @@ not added: yours is kept and the incoming one is counted as skipped.
 
 The archive carries what the other device deleted, and a merge replays
 those deletions: a cave your team-mate removed is removed from your
-device too, unless you changed it after they deleted it. Nothing prompts
-for this. If you are unsure about an archive, export your own data first.
+device too, unless you changed it, or added something to it, after they
+deleted it. Nothing prompts for this. If you are unsure about an archive,
+export your own data first.
 
 #### What a merge brings across
 

@@ -139,6 +139,17 @@ This is irreversible and nothing prompts you record by record:
 
 - The record survives only if you edited it **strictly after** they
   deleted it. If the two happened at the same moment, the deletion wins.
+- The same goes for what is inside it. If, after they deleted a place, you
+  recorded a trip point at it, pinned it on a map or attached a photo to
+  it, the place stays — on your device, and on theirs once they import
+  your next archive. The import counts it as skipped.
+- What the other device never saw goes with the record, as it would have
+  there: a pin you added before their deletion is removed with the place,
+  and a trip point recorded at it stays on its trip without a place.
+- An archive made before its device heard of a deletion cannot bring the
+  record back. If your team-mate's phone still had the place when it last
+  synced, importing that archive does not restore the place you deleted
+  afterwards.
 - **Manual (review each conflict)** does not help here. The conflict
   dialog only covers edits; deletions are always applied silently.
 
@@ -160,12 +171,16 @@ database backup) so you can get a deleted record back.
   syncing quietly merges them and the change log will credit both to one
   name.
 - **A partly damaged archive still imports.** A record that is corrupt,
-  or that collides with an unrelated local record on a unique code, is
-  skipped and the rest of the archive is merged anyway. That is usually
-  what you want in a hut with one bar of signal, but it means an import
-  can report success while a few records quietly stayed behind. The
-  counts in the summary line are your only clue — compare them against
-  what you expected to receive.
+  that needs a record neither your device nor the archive has, or that
+  collides with an unrelated local record on a unique name (with whatever
+  hangs on it), is skipped and the rest of the archive is merged anyway.
+  That is usually what you want in a hut with one bar of signal, but it
+  means an import can report success while a few records quietly stayed
+  behind. The counts in the summary line are your only clue — compare them
+  against what you expected to receive.
+- **An import is all or nothing.** Either everything the archive brings
+  is merged, or, when the import fails or you cancel it, nothing at all
+  is written.
 - **Only the archive format and the database version are checked.** The
   app never asks which device an archive came from, and shows no warning
   for an unfamiliar one. An archive produced by a *newer* app than yours

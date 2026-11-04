@@ -5,13 +5,13 @@ import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
+import 'package:speleoloc/services/sync/sync_row_merger.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 
-/// Owns the ordered list of synced tables and the generic per-table
-/// upsert logic. Extracted from [SyncArchiveService] so the big handler
-/// list lives in one place and the service body stays focused on the
-/// archive/zip/manifest orchestration.
+/// Owns the ordered list of synced tables: how each is dumped into an
+/// archive, and which [SyncRowMerger] call merges its rows back. Extracted
+/// from [SyncArchiveService] so the big handler list lives in one place.
 ///
 /// Tables are listed in FK-dependency order: parents before children.
 class SyncTableRegistry {
@@ -21,28 +21,8 @@ class SyncTableRegistry {
   static const _serializer = SyncValueSerializer();
   final _log = AppLogger.of('SyncTableRegistry');
 
-  /// Metadata columns excluded from conflict diff (audit/bookkeeping).
-  /// The last_* and firmware_version entries are cave_place_beacons health
-  /// telemetry — devices legitimately observe different values, so they
-  /// must not raise conflicts (LWW still propagates them).
-  static const _metaColumnsForDiff = <String>{
-    'created_at',
-    'updated_at',
-    'deleted_at',
-    'created_by_user_uuid',
-    'last_modified_by_user_uuid',
-    'last_seen_at',
-    'last_battery_mv',
-    'last_temperature_c',
-    'last_humidity_pct',
-    'last_pressure_hpa',
-    'last_movement_counter',
-    'firmware_version',
-    // Two devices that each edit a trip's points mark its log stale at
-    // different moments. That is the same fact, not a conflict to ask about;
-    // last-write-wins still carries it.
-    'log_stale_since',
-  };
+  /// The one synced table keyed by title rather than by uuid.
+  static const configurationsTable = 'configurations';
 
   static const SyncValueSerializer serializer = _serializer;
 
@@ -67,11 +47,10 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.users).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<User>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<User>(
         rows,
         (j) => User.fromJson(j, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.users,
         resolver,
@@ -82,11 +61,10 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.surfaceAreas).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<SurfaceArea>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<SurfaceArea>(
         rows,
         (j) => SurfaceArea.fromJson(j, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.surfaceAreas,
         resolver,
@@ -97,11 +75,10 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.caves).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<Cave>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<Cave>(
         rows,
         (j) => Cave.fromJson(j, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.caves,
         resolver,
@@ -112,11 +89,10 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.caveAreas).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CaveArea>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<CaveArea>(
         rows,
         (j) => CaveArea.fromJson(j, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.caveAreas,
         resolver,
@@ -127,11 +103,10 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.cavePlaces).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CavePlace>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<CavePlace>(
         rows,
         (j) => CavePlace.fromJson(j, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.cavePlaces,
         resolver,
@@ -142,19 +117,19 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.cavePlaceBeacons).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CavePlaceBeacon>(
-        rows,
-        // Older archives (schema <= v15) lack beacon_type.
-        (j) => CavePlaceBeacon.fromJson({
-          'beacon_type': 'ibeacon',
-          ...j,
-        }, serializer: _serializer),
-        (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
-        (r) => r.updatedAt ?? r.createdAt,
-        _db.cavePlaceBeacons,
-        resolver,
-      ),
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<CavePlaceBeacon>(
+            rows,
+            // Older archives (schema <= v15) lack beacon_type.
+            (j) => CavePlaceBeacon.fromJson({
+              'beacon_type': 'ibeacon',
+              ...j,
+            }, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.cavePlaceBeacons,
+            resolver,
+          ),
     ),
     SyncTableHandler(
       name: 'raster_maps',
@@ -165,7 +140,7 @@ class SyncTableRegistry {
             .map((r) => r.toJson(serializer: _serializer))
             .toList();
       },
-      upsert: (rows, resolver) async => upsertRows<RasterMap>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<RasterMap>(
         rows,
         (j) => RasterMap.fromJson(
           // Older archives (schema <= v12) lack order_index.
@@ -173,7 +148,6 @@ class SyncTableRegistry {
           serializer: _serializer,
         ),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.rasterMaps,
         resolver,
@@ -188,15 +162,14 @@ class SyncTableRegistry {
             .map((r) => r.toJson(serializer: _serializer))
             .toList();
       },
-      upsert: (rows, resolver) async =>
-          upsertRows<CavePlaceToRasterMapDefinition>(
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<CavePlaceToRasterMapDefinition>(
             rows,
             (j) => CavePlaceToRasterMapDefinition.fromJson(
               j,
               serializer: _serializer,
             ),
             (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.cavePlaceToRasterMapDefinitions,
             resolver,
@@ -207,11 +180,10 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.caveTrips).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CaveTrip>(
+      upsert: (rows, resolver, merger) async => merger.upsertRows<CaveTrip>(
         rows,
         (j) => CaveTrip.fromJson(j, serializer: _serializer),
         (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
         (r) => r.updatedAt ?? r.createdAt,
         _db.caveTrips,
         resolver,
@@ -222,15 +194,15 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.caveTripPoints).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CaveTripPoint>(
-        rows,
-        (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
-        (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
-        (r) => r.updatedAt ?? r.createdAt,
-        _db.caveTripPoints,
-        resolver,
-      ),
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<CaveTripPoint>(
+            rows,
+            (j) => CaveTripPoint.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.caveTripPoints,
+            resolver,
+          ),
     ),
     SyncTableHandler(
       name: 'documentation_files',
@@ -241,15 +213,15 @@ class SyncTableRegistry {
             .map((r) => r.toJson(serializer: _serializer))
             .toList();
       },
-      upsert: (rows, resolver) async => upsertRows<DocumentationFile>(
-        rows,
-        (j) => DocumentationFile.fromJson(j, serializer: _serializer),
-        (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
-        (r) => r.updatedAt ?? r.createdAt,
-        _db.documentationFiles,
-        resolver,
-      ),
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<DocumentationFile>(
+            rows,
+            (j) => DocumentationFile.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.documentationFiles,
+            resolver,
+          ),
     ),
     SyncTableHandler(
       name: 'documentation_files_to_geofeatures',
@@ -260,15 +232,14 @@ class SyncTableRegistry {
             .map((r) => r.toJson(serializer: _serializer))
             .toList();
       },
-      upsert: (rows, resolver) async =>
-          upsertRows<DocumentationFilesToGeofeature>(
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<DocumentationFilesToGeofeature>(
             rows,
             (j) => DocumentationFilesToGeofeature.fromJson(
               j,
               serializer: _serializer,
             ),
             (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
             (r) => r.updatedAt ?? r.createdAt,
             _db.documentationFilesToGeofeatures,
             resolver,
@@ -283,15 +254,14 @@ class SyncTableRegistry {
             .map((r) => r.toJson(serializer: _serializer))
             .toList();
       },
-      upsert: (rows, resolver) async =>
-          upsertRows<DocumentationFilesToCaveTrip>(
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<DocumentationFilesToCaveTrip>(
             rows,
             (j) => DocumentationFilesToCaveTrip.fromJson(
               j,
               serializer: _serializer,
             ),
             (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
             // Link table has no updated_at; LWW falls back to created_at.
             (r) => r.createdAt,
             _db.documentationFilesToCaveTrips,
@@ -307,15 +277,14 @@ class SyncTableRegistry {
             .map((r) => r.toJson(serializer: _serializer))
             .toList();
       },
-      upsert: (rows, resolver) async =>
-          upsertRows<DocumentationFilesToCaveTripPoint>(
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<DocumentationFilesToCaveTripPoint>(
             rows,
             (j) => DocumentationFilesToCaveTripPoint.fromJson(
               j,
               serializer: _serializer,
             ),
             (r) => r.toJson(serializer: _serializer),
-            (r) => r.uuid,
             // Link table has no updated_at; LWW falls back to created_at.
             (r) => r.createdAt,
             _db.documentationFilesToCaveTripPoints,
@@ -327,45 +296,45 @@ class SyncTableRegistry {
       dump: () async => (await _db.select(_db.cavePlaceModelStations).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CavePlaceModelStation>(
-        rows,
-        (j) => CavePlaceModelStation.fromJson(j, serializer: _serializer),
-        (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
-        (r) => r.updatedAt ?? r.createdAt,
-        _db.cavePlaceModelStations,
-        resolver,
-      ),
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<CavePlaceModelStation>(
+            rows,
+            (j) => CavePlaceModelStation.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.cavePlaceModelStations,
+            resolver,
+          ),
     ),
     SyncTableHandler(
       name: 'cave_default_survey_models',
       dump: () async => (await _db.select(_db.caveDefaultSurveyModels).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<CaveDefaultSurveyModel>(
-        rows,
-        (j) => CaveDefaultSurveyModel.fromJson(j, serializer: _serializer),
-        (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
-        (r) => r.updatedAt ?? r.createdAt,
-        _db.caveDefaultSurveyModels,
-        resolver,
-      ),
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<CaveDefaultSurveyModel>(
+            rows,
+            (j) => CaveDefaultSurveyModel.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.caveDefaultSurveyModels,
+            resolver,
+          ),
     ),
     SyncTableHandler(
       name: 'trip_report_templates',
       dump: () async => (await _db.select(_db.tripReportTemplates).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList(),
-      upsert: (rows, resolver) async => upsertRows<TripReportTemplate>(
-        rows,
-        (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
-        (r) => r.toJson(serializer: _serializer),
-        (r) => r.uuid,
-        (r) => r.updatedAt ?? r.createdAt,
-        _db.tripReportTemplates,
-        resolver,
-      ),
+      upsert: (rows, resolver, merger) async =>
+          merger.upsertRows<TripReportTemplate>(
+            rows,
+            (j) => TripReportTemplate.fromJson(j, serializer: _serializer),
+            (r) => r.toJson(serializer: _serializer),
+            (r) => r.updatedAt ?? r.createdAt,
+            _db.tripReportTemplates,
+            resolver,
+          ),
     ),
     // `configurations` is the one syncable table with an INTEGER primary key
     // and no uuid/audit columns, so it can't use the generic uuid-keyed
@@ -376,7 +345,7 @@ class SyncTableRegistry {
     // plain last-writer-wins on updated_at — a config setting is a "latest
     // wins" value, so it is not routed through the resolver.
     SyncTableHandler(
-      name: 'configurations',
+      name: configurationsTable,
       dump: () async {
         final rows = await _db
             .customSelect(
@@ -389,7 +358,7 @@ class SyncTableRegistry {
             .map((r) => Map<String, dynamic>.from(r.data))
             .toList();
       },
-      upsert: (rows, _) => _upsertConfigurations(rows),
+      upsert: (rows, _, _) => _upsertConfigurations(rows),
     ),
   ];
 
@@ -458,140 +427,5 @@ class SyncTableRegistry {
       updated: updated,
       skipped: skipped,
     );
-  }
-
-  /// Generic last-writer-wins upsert with optional [resolver] callback for
-  /// surfacing conflicts to the user.
-  Future<UpsertCounters> upsertRows<D extends Insertable<D>>(
-    List<Map<String, dynamic>> rows,
-    D Function(Map<String, dynamic>) fromJson,
-    Map<String, dynamic> Function(D) toJson,
-    Uuid Function(D) uuidOf,
-    int? Function(D) tsOf,
-    TableInfo<Table, D> table,
-    ConflictResolver? resolver,
-  ) async {
-    var inserted = 0;
-    var updated = 0;
-    var skipped = 0;
-
-    for (final raw in rows) {
-      final D incoming;
-      try {
-        incoming = fromJson(raw);
-      } catch (e) {
-        _log.warning('skipping malformed ${table.actualTableName} row: $e');
-        continue;
-      }
-      final uuid = uuidOf(incoming);
-      final incomingTs = tsOf(incoming) ?? 0;
-
-      final local = await _loadLocal<D>(table, uuid);
-      if (local == null) {
-        // A brand-new uuid, but its unique key may still collide with a
-        // DIFFERENT existing local row (two devices created the same logical
-        // entity with different uuids). A plain insert would throw, and
-        // because the whole import runs in one transaction that would abort
-        // every other table too. Keep the local row, drop the incoming one,
-        // and record it — one collision must never sink the import.
-        try {
-          await _db.into(table).insert(incoming);
-          inserted++;
-        } on Exception catch (e) {
-          skipped++;
-          _log.warning(
-            'unique-constraint collision inserting '
-            '${table.actualTableName} $uuid; keeping local, skipping '
-            'incoming: $e',
-          );
-        }
-        continue;
-      }
-
-      final localTs = tsOf(local) ?? 0;
-      final localJson = toJson(local);
-      final incomingJson = toJson(incoming);
-      final diff = _diffMeaningfulFields(localJson, incomingJson);
-
-      if (diff.isEmpty) {
-        skipped++;
-        continue;
-      }
-
-      var action = incomingTs > localTs
-          ? SyncConflictAction.useIncoming
-          : SyncConflictAction.keepLocal;
-
-      if (resolver != null) {
-        final decision = await resolver(
-          SyncConflict(
-            tableName: table.actualTableName,
-            entityUuid: uuid,
-            localFields: localJson,
-            incomingFields: incomingJson,
-            differingFields: diff,
-            localUpdatedAt: localTs == 0 ? null : localTs,
-            incomingUpdatedAt: incomingTs == 0 ? null : incomingTs,
-          ),
-        );
-        if (decision == SyncConflictAction.cancel) {
-          throw const SyncImportCancelledException();
-        }
-        if (decision != null) action = decision;
-      }
-
-      if (action == SyncConflictAction.useIncoming) {
-        // Update the row sharing this uuid, matched by primary key. The old
-        // InsertMode.insertOrReplace used SQLite REPLACE, which deletes EVERY
-        // row conflicting on ANY unique index before re-inserting — so an
-        // incoming edit whose new unique key collided with an unrelated local
-        // row silently destroyed that row (and orphaned its children, failing
-        // the deferred-FK check at commit). An update-by-pk touches only this
-        // uuid; a secondary-unique collision throws and we keep local rather
-        // than clobber the other row.
-        try {
-          await _db.update(table).replace(incoming);
-          updated++;
-        } on Exception catch (e) {
-          skipped++;
-          _log.warning(
-            'unique-constraint collision updating '
-            '${table.actualTableName} $uuid; keeping local: $e',
-          );
-        }
-      } else {
-        skipped++;
-      }
-    }
-
-    return UpsertCounters(
-      inserted: inserted,
-      updated: updated,
-      skipped: skipped,
-    );
-  }
-
-  Future<D?> _loadLocal<D>(TableInfo<Table, D> table, Uuid uuid) async {
-    final row = await _db
-        .customSelect(
-          'SELECT * FROM ${table.actualTableName} WHERE uuid = ? LIMIT 1',
-          variables: [Variable<Uint8List>(uuid.bytes)],
-        )
-        .getSingleOrNull();
-    if (row == null) return null;
-    return await table.map(row.data);
-  }
-
-  List<String> _diffMeaningfulFields(
-    Map<String, dynamic> a,
-    Map<String, dynamic> b,
-  ) {
-    final keys = <String>{...a.keys, ...b.keys};
-    final diff = <String>[];
-    for (final k in keys) {
-      if (_metaColumnsForDiff.contains(k)) continue;
-      if (a[k] != b[k]) diff.add(k);
-    }
-    return diff;
   }
 }

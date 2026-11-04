@@ -153,6 +153,19 @@ Operațiunea este ireversibilă și nimic nu vă întreabă înregistrare cu
 - Înregistrarea supraviețuiește doar dacă ați modificat-o **strict după**
   ce el a șters-o. Dacă cele două s-au petrecut în același moment,
   ștergerea câștigă.
+- La fel și pentru ce se află în ea. Dacă, după ce el a șters un loc, ați
+  înregistrat acolo un punct de tură, l-ați fixat pe o hartă sau i-ați
+  atașat o fotografie, locul rămâne — pe dispozitivul vostru și, după ce
+  importă următoarea voastră arhivă, și pe al lui. Importul îl numără ca
+  sărit.
+- Ce n-a văzut niciodată celălalt dispozitiv pleacă odată cu
+  înregistrarea, cum ar fi plecat și la el: un pin adăugat de voi înainte
+  de ștergerea lui este înlăturat împreună cu locul, iar un punct de tură
+  înregistrat acolo rămâne în tura lui, fără loc.
+- O arhivă făcută înainte ca dispozitivul ei să afle de o ștergere nu
+  poate aduce înregistrarea înapoi. Dacă telefonul colegului mai avea
+  locul la ultima lui sincronizare, importul acelei arhive nu readuce
+  locul pe care l-ați șters după aceea.
 - **Manual (revizuiește fiecare conflict)** nu ajută aici. Dialogul de
   conflict acoperă doar modificările; ștergerile se aplică întotdeauna în
   tăcere.
@@ -178,12 +191,16 @@ Dacă nu sunteți sigur pe o arhivă, exportați-vă mai întâi propriile date
   contopește fără să spună nimic, iar istoricul modificărilor va trece
   totul pe un singur nume.
 - **O arhivă parțial stricată se importă totuși.** O înregistrare coruptă,
-  sau care se ciocnește pe un cod unic de o înregistrare locală fără
-  legătură cu ea, este sărită, iar restul arhivei este îmbinat oricum. De
-  obicei asta și vreți, într-o cabană cu o liniuță de semnal, dar
-  înseamnă că un import poate raporta reușită în timp ce câteva
-  înregistrări au rămas pe dinafară. Numerele din linia de rezumat sunt
-  singurul indiciu — comparați-le cu ce vă așteptați să primiți.
+  una care are nevoie de o înregistrare pe care n-o au nici dispozitivul
+  vostru, nici arhiva, sau una care se ciocnește pe un nume unic de o
+  înregistrare locală fără legătură cu ea (cu tot ce atârnă de ea), este
+  sărită, iar restul arhivei este îmbinat oricum. De obicei asta și vreți,
+  într-o cabană cu o liniuță de semnal, dar înseamnă că un import poate
+  raporta reușită în timp ce câteva înregistrări au rămas pe dinafară.
+  Numerele din linia de rezumat sunt singurul indiciu — comparați-le cu ce
+  vă așteptați să primiți.
+- **Un import se face complet sau deloc.** Fie este îmbinat tot ce aduce
+  arhiva, fie, când importul eșuează sau îl anulați, nu se scrie nimic.
 - **Se verifică doar formatul arhivei și versiunea bazei de date.**
   Aplicația nu întreabă niciodată de pe ce dispozitiv vine o arhivă și nu
   afișează niciun avertisment pentru unul necunoscut. O arhivă produsă de

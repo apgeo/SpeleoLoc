@@ -8,10 +8,10 @@ import 'package:drift/drift.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
+import 'package:speleoloc/services/sync/sync_merge_engine.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
@@ -70,7 +70,7 @@ const int kSyncArchiveMinImportSchemaVersion = 9;
 class SyncImportReport {
   final int rowsInserted;
   final int rowsUpdated;
-  final int rowsSkipped; // local copy already newer
+  final int rowsSkipped; // local copy already newer, or not brought in
   final int deletesApplied;
   final int changeLogMerged;
   final int filesCopied;
@@ -215,29 +215,27 @@ class SyncArchiveSchemaMismatchException implements Exception {
 ///
 /// Export produces a `.zip` containing, in addition to a small manifest,
 /// one JSONL file per synced table plus the `change_log` / `change_log_field`
-/// rows. Import replays those files with a last-writer-wins policy keyed on
-/// `updated_at` (falling back to `created_at`). Change-log entries carrying
-/// a delete tombstone are used to propagate deletes across devices without
-/// requiring an app-wide soft-delete query refactor.
-///
-/// The whole import runs inside [ChangeLogger.runSuspended] so replay does
-/// not double-log into the local `change_log`.
+/// rows. Import hands those rows to [SyncMergeEngine], which replays them
+/// with a last-writer-wins policy keyed on `updated_at` (falling back to
+/// `created_at`), applies the deletions the change log carries, and leaves
+/// out what it cannot merge on its own.
 class SyncArchiveService {
   SyncArchiveService(
     this._db,
-    this._logger, {
+    ChangeLogger logger, {
     Future<Directory> Function()? assetsBaseDirResolver,
     Clock clock = const SystemClock(),
   }) : _assetsBaseDirResolver =
            assetsBaseDirResolver ?? getApplicationDocumentsDirectory,
        _clock = clock,
-       _registry = SyncTableRegistry(_db);
+       _registry = SyncTableRegistry(_db),
+       _engine = SyncMergeEngine(_db, logger);
 
   final AppDatabase _db;
-  final ChangeLogger _logger;
   final Future<Directory> Function() _assetsBaseDirResolver;
   final Clock _clock;
   final SyncTableRegistry _registry;
+  final SyncMergeEngine _engine;
   final _log = AppLogger.of('SyncArchiveService');
 
   static const _serializer = SyncValueSerializer();
@@ -580,7 +578,7 @@ class SyncArchiveService {
       final fieldRows = (await source.select(source.changeLogField).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList();
-      return await _mergeRows(
+      return await _engine.merge(
         tableRows: tableRows,
         logRows: logRows,
         fieldRows: fieldRows,
@@ -724,7 +722,7 @@ class SyncArchiveService {
         ? _readJsonl(fieldEntry)
         : <Map<String, dynamic>>[];
 
-    final report = await _mergeRows(
+    final report = await _engine.merge(
       tableRows: tableRows,
       logRows: logRows,
       fieldRows: fieldRows,
@@ -740,245 +738,6 @@ class SyncArchiveService {
     ];
 
     return (report, assetEntryNames);
-  }
-
-  /// Merges rows read from an archive into the live database: the
-  /// last-writer-wins upsert of every synced table, the change-log replay and
-  /// the delete tombstones it carries. [tableRows] is keyed by table name and
-  /// holds rows in the JSON shape [SyncTableHandler.dump] produces. Asset
-  /// files are left to the caller, so the report's file counts are zero.
-  Future<SyncImportReport> _mergeRows({
-    required Map<String, List<Map<String, dynamic>>> tableRows,
-    required List<Map<String, dynamic>> logRows,
-    required List<Map<String, dynamic>> fieldRows,
-    required ConflictResolver? conflictResolver,
-    required List<String> warnings,
-  }) async {
-    var inserted = 0;
-    var updated = 0;
-    var skipped = 0;
-    var deletesApplied = 0;
-    var changeLogMerged = 0;
-
-    // A device on an older app can still send timestamps in seconds; store
-    // them the way this device now does.
-    for (final rows in [...tableRows.values, logRows]) {
-      for (final row in rows) {
-        for (final key in legacyTimestampColumns) {
-          final v = row[key];
-          if (v is int) row[key] = timestampToMillis(v);
-        }
-      }
-    }
-
-    // Build a remap table for incoming user UUIDs that collide on
-    // `username` with a different local user (e.g. the auto-generated
-    // 'system' user, whose UUID is independently created on each device).
-    // Without this remap the insert would trip the UNIQUE(username)
-    // constraint and every FK from the archive that points at the
-    // incoming user UUID would be orphaned.
-    final userRemap = await _buildUserUuidRemap(
-      tableRows['users'] ?? const [],
-      warnings,
-    );
-    if (userRemap.isNotEmpty) {
-      for (final entry in tableRows.entries) {
-        for (final r in entry.value) {
-          _applyUserRemapToRow(r, userRemap, entry.key);
-        }
-      }
-      for (final row in logRows) {
-        _applyUserRemapToChangeLogRow(row, userRemap);
-      }
-    }
-
-    final tables = _syncedTables();
-    // ── Phase 2: DB transaction — pure async DB operations only ──────────
-    await _logger.runSuspended(() async {
-      await _db.transaction(() async {
-        // Defer FK checks to the end of the transaction so we can insert
-        // in any order without hitting transient constraint violations.
-        await _db.customStatement('PRAGMA defer_foreign_keys = ON');
-
-        for (final t in tables) {
-          final rows = tableRows[t.name];
-          if (rows == null) continue; // missing entry already warned above
-          final result = await t.upsert(rows, conflictResolver);
-          inserted += result.inserted;
-          updated += result.updated;
-          skipped += result.skipped;
-        }
-
-        // A server copy the archive's row replaced now holds another
-        // device's file, and has to stop being recorded as the copy.
-        await SilexgisFileCopyRepository(_db).adoptArchiveFiles(<Uuid, String>{
-          for (final r in tableRows['documentation_files'] ?? const [])
-            if (Uuid.tryParse(r['uuid'] as String? ?? '') case final id?)
-              if (r['file_name'] case final String name) id: name,
-        });
-
-        // Merge change_log headers first (FK parent) then fields.
-        final existingLogUuids = <String>{};
-        for (final r in await _db.select(_db.changeLog).get()) {
-          existingLogUuids.add(r.uuid.toString());
-        }
-        // uuid-string -> (entity_table, changed_at). The entity_table lets
-        // us target the one table the row lives in instead of probing all
-        // of them.
-        final deleteTargets = <String, (String, int)>{};
-
-        for (final row in logRows) {
-          final uuidStr = row['uuid'] as String;
-          if (existingLogUuids.contains(uuidStr)) continue;
-          final data = ChangeLogData.fromJson(row, serializer: _serializer);
-          await _db.into(_db.changeLog).insert(data);
-          existingLogUuids.add(uuidStr);
-          changeLogMerged++;
-          if (data.changeType == ChangeType.delete) {
-            deleteTargets[data.entityUuid.toString()] = (
-              data.entityTable,
-              data.changedAt,
-            );
-          }
-        }
-
-        for (final row in fieldRows) {
-          try {
-            final data = ChangeLogFieldData.fromJson(
-              row,
-              serializer: _serializer,
-            );
-            await _db
-                .into(_db.changeLogField)
-                .insert(data, mode: InsertMode.insertOrIgnore);
-          } catch (e) {
-            warnings.add('change_log_field: $e');
-          }
-        }
-
-        // An archive is a full snapshot of its source device, so a row it
-        // still carries, and has not soft-deleted, is alive there whatever
-        // its change log says. Such a tombstone is stale — the row was
-        // deleted and later restored with the same uuid — and applying it
-        // would delete on this device what the source still shows. Rows that
-        // keep a creation time in seconds from older data lose every
-        // timestamp comparison, so the check below cannot spare them.
-        final carried = <String>{
-          for (final rows in tableRows.values)
-            for (final r in rows)
-              if (r['uuid'] case final String uuid when r['deleted_at'] == null)
-                uuid,
-        };
-        deleteTargets.removeWhere((uuid, _) => carried.contains(uuid));
-
-        // Apply delete tombstones: for every delete entry in the archive,
-        // remove the corresponding row from its table locally if the
-        // delete was more recent than the local row's updated_at.
-        if (deleteTargets.isNotEmpty) {
-          deletesApplied += await _applyDeletes(deleteTargets, warnings);
-        }
-      });
-    });
-
-    return SyncImportReport(
-      rowsInserted: inserted,
-      rowsUpdated: updated,
-      rowsSkipped: skipped,
-      deletesApplied: deletesApplied,
-      changeLogMerged: changeLogMerged,
-      filesCopied: 0,
-      filesSkipped: 0,
-      warnings: warnings,
-    );
-  }
-
-  /// For each (entityUuid -> deleteTs) mapping, delete the row from whichever
-  /// synced table still holds it iff its updated_at/created_at is older than
-  /// the tombstone. Returns the number of rows physically removed.
-  Future<int> _applyDeletes(
-    Map<String, (String, int)> deleteTargets,
-    List<String> warnings,
-  ) async {
-    var n = 0;
-    // Each synced table's delete-by-uuid function, keyed by table name.
-    // Tombstones record the entity_table, so we run only that table's
-    // delete instead of probing all of them per tombstone. Relies on the
-    // caller holding a transaction with deferred FK checks.
-    final deleteByTable = <String, Future<int> Function(Uuid, int)>{
-      'users': (u, ts) => _deleteIfOlder(_db.users, u, ts),
-      'cave_place_model_stations': (u, ts) =>
-          _deleteIfOlder(_db.cavePlaceModelStations, u, ts),
-      'cave_default_survey_models': (u, ts) =>
-          _deleteIfOlder(_db.caveDefaultSurveyModels, u, ts),
-      'cave_place_to_raster_map_definitions': (u, ts) =>
-          _deleteIfOlder(_db.cavePlaceToRasterMapDefinitions, u, ts),
-      'documentation_files_to_geofeatures': (u, ts) =>
-          _deleteIfOlder(_db.documentationFilesToGeofeatures, u, ts),
-      'documentation_files_to_cave_trips': (u, ts) =>
-          _deleteIfOlder(_db.documentationFilesToCaveTrips, u, ts),
-      'documentation_files_to_cave_trip_points': (u, ts) =>
-          _deleteIfOlder(_db.documentationFilesToCaveTripPoints, u, ts),
-      'cave_trip_points': (u, ts) => _deleteIfOlder(_db.caveTripPoints, u, ts),
-      'cave_trips': (u, ts) => _deleteIfOlder(_db.caveTrips, u, ts),
-      'documentation_files': (u, ts) =>
-          _deleteIfOlder(_db.documentationFiles, u, ts),
-      'trip_report_templates': (u, ts) =>
-          _deleteIfOlder(_db.tripReportTemplates, u, ts),
-      'raster_maps': (u, ts) => _deleteIfOlder(_db.rasterMaps, u, ts),
-      'cave_place_beacons': (u, ts) =>
-          _deleteIfOlder(_db.cavePlaceBeacons, u, ts),
-      'cave_places': (u, ts) => _deleteIfOlder(_db.cavePlaces, u, ts),
-      'cave_areas': (u, ts) => _deleteIfOlder(_db.caveAreas, u, ts),
-      'caves': (u, ts) => _deleteIfOlder(_db.caves, u, ts),
-      'surface_areas': (u, ts) => _deleteIfOlder(_db.surfaceAreas, u, ts),
-    };
-
-    for (final entry in deleteTargets.entries) {
-      final (entityTable, ts) = entry.value;
-      final deleteFn = deleteByTable[entityTable];
-      // A tombstone for a non-physically-deletable table (e.g. a local-only
-      // key/value row) simply has nothing to remove here.
-      if (deleteFn == null) continue;
-      try {
-        n += await deleteFn(Uuid.parse(entry.key), ts);
-      } catch (e) {
-        warnings.add('delete ${entry.key} ($entityTable): $e');
-      }
-    }
-    return n;
-  }
-
-  /// Applies a delete tombstone to a local row using last-write-wins on
-  /// timestamps. The local row survives only when it is *strictly* newer than
-  /// the tombstone; on a tie (`tombstoneTs == localTs`) the delete wins. This
-  /// tie-goes-to-delete policy is deliberate and must match the LWW upsert side
-  /// so a delete and an equal-timestamp edit can't disagree about the outcome.
-  Future<int> _deleteIfOlder(
-    TableInfo table,
-    Uuid entityUuid,
-    int tombstoneTs,
-  ) async {
-    // We can't read `updated_at` generically, so use a custom statement.
-    final countRows = await _db
-        .customSelect(
-          'SELECT COALESCE(updated_at, created_at, 0) AS ts '
-          'FROM ${table.actualTableName} WHERE uuid = ?',
-          variables: [Variable<Uint8List>(entityUuid.bytes)],
-        )
-        .get();
-    if (countRows.isEmpty) return 0;
-    final localTs = countRows.first.read<int>('ts');
-    if (tombstoneTs < localTs)
-      return 0; // local strictly newer → keep (ties delete)
-    // customUpdate rather than customStatement: it tells drift which table
-    // changed, so screens watching it reload after the import.
-    await _db.customUpdate(
-      'DELETE FROM ${table.actualTableName} WHERE uuid = ?',
-      variables: [Variable<Uint8List>(entityUuid.bytes)],
-      updates: {table},
-      updateKind: UpdateKind.delete,
-    );
-    return 1;
   }
 
   // ---------------------------------------------------------------------------
@@ -1092,96 +851,6 @@ class SyncArchiveService {
       );
       return _AssetResult(copied: 0, skipped: skipped);
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  //  User-UUID remap (collision on username)
-  // ---------------------------------------------------------------------------
-
-  /// Inspects the incoming `users` rows against the local `users` table and
-  /// returns a `{incomingUuidStr: localUuidStr}` map for every incoming
-  /// user whose `username` already exists locally under a different UUID.
-  ///
-  /// This is what makes seed users (notably the auto-generated `system`
-  /// user, whose UUID is independently allocated on every device)
-  /// importable across devices: instead of inserting the incoming row
-  /// (which would fail on the UNIQUE(username) constraint) and orphaning
-  /// every FK that references the incoming UUID, we rewrite all those
-  /// references to the local UUID and let normal LWW handle the row
-  /// itself.
-  Future<Map<String, String>> _buildUserUuidRemap(
-    List<Map<String, dynamic>> rows,
-    List<String> warnings,
-  ) async {
-    if (rows.isEmpty) return const <String, String>{};
-
-    final localByUsername = <String, String>{};
-    final localUuids = <String>{};
-    for (final u in await _db.select(_db.users).get()) {
-      localUuids.add(u.uuid.toString());
-      localByUsername[u.username] = u.uuid.toString();
-    }
-
-    final remap = <String, String>{};
-    for (final row in rows) {
-      final incomingUuid = row['uuid'];
-      final incomingUsername = row['username'];
-      if (incomingUuid is! String || incomingUsername is! String) continue;
-      if (localUuids.contains(incomingUuid)) continue;
-      final localUuid = localByUsername[incomingUsername];
-      if (localUuid == null) continue; // brand-new user — insert as-is
-      remap[incomingUuid] = localUuid;
-      warnings.add(
-        'remapped user "$incomingUsername" '
-        '$incomingUuid -> $localUuid (matched by username)',
-      );
-    }
-    return remap;
-  }
-
-  /// Rewrites user-FK columns of [row] using [remap]. For the `users`
-  /// table the row's own `uuid` is also rewritten so the subsequent
-  /// upsert resolves to the local row via LWW instead of attempting an
-  /// insert that would violate the UNIQUE(username) constraint.
-  void _applyUserRemapToRow(
-    Map<String, dynamic> row,
-    Map<String, String> remap,
-    String tableName,
-  ) {
-    if (tableName == 'users') {
-      final u = row['uuid'];
-      if (u is String) {
-        final mapped = remap[u];
-        if (mapped != null) row['uuid'] = mapped;
-      }
-    }
-    _remapField(row, 'created_by_user_uuid', remap);
-    _remapField(row, 'last_modified_by_user_uuid', remap);
-  }
-
-  /// Rewrites user-FK columns of a single `change_log` row using [remap].
-  /// `entity_uuid` is also rewritten when the row targets the `users`
-  /// table so that delete tombstones and field-history entries follow the
-  /// remapped user identity.
-  void _applyUserRemapToChangeLogRow(
-    Map<String, dynamic> row,
-    Map<String, String> remap,
-  ) {
-    _remapField(row, 'changed_by_user_uuid', remap);
-    if (row['entity_table'] == 'users') {
-      _remapField(row, 'entity_uuid', remap);
-    }
-  }
-
-  void _remapField(
-    Map<String, dynamic> row,
-    String key,
-    Map<String, String> remap,
-  ) {
-    final v = row[key];
-    if (v is! String) return;
-    final mapped = remap[v];
-    if (mapped != null) row[key] = mapped;
   }
 
   /// Reads `PackageInfo.fromPlatform()` and swallows any failure so a
