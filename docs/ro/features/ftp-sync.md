@@ -311,8 +311,14 @@ banner roșu care numește prima problemă — chiar dacă cea mai mare parte a
 reușit. O arhivă care nu s-a descărcat sau care nu s-a importat nu
 oprește restul și nu vă oprește nici propria încărcare. Așadar, un
 rezultat roșu nu înseamnă că nu a mers nimic: citiți fila Jurnal ca să
-vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că e
-destul să rulați sincronizarea din nou ca să se reîncerce.
+vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că o
+nouă sincronizare îl reîncearcă — o descărcare eșuată, chiar la
+sincronizarea următoare. O arhivă al cărei **import** a eșuat este altfel:
+cauza stă de obicei în date, iar descărcarea întregii arhive la fiecare
+sincronizare nu ar schimba-o. Este lăsată deoparte la următoarele 4
+sincronizări și reîncercată la a 5-a, sau imediat ce se schimbă pe server
+ori aplicația este actualizată. Între timp fiecare sincronizare o numește
+într-un rând portocaliu din fila Jurnal și în bannerul portocaliu.
 
 O arhivă ale cărei fișiere nu au putut fi scrise pe acest dispozitiv — de
 exemplu pentru că memoria telefonului este plină — contează și ea ca
@@ -435,7 +441,9 @@ aducă de două ori.
 - **O arhivă a fost sărită din cauza versiunii aplicației** — fila Jurnal
   spune în ce sens. De la o versiune *mai nouă* de SpeleoLoc: mesajul
   numește versiunea de care aveți nevoie, iar odată actualizat acest
-  dispozitiv, arhiva se importă singură la sincronizarea următoare. De la
+  dispozitiv, arhiva se importă singură la sincronizarea următoare. Până
+  atunci este descărcată o singură dată: sincronizările următoare o lasă
+  pe server și spun asta în fila Jurnal și în bannerul portocaliu. De la
   o versiune *mai veche*: este sărită definitiv pe acest dispozitiv, iar
   singurul leac este să actualizați aplicația care a produs-o și să lăsați
   acel dispozitiv să sincronizeze din nou. În ambele cazuri, restul

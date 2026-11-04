@@ -32,8 +32,10 @@ class ConfigKey {
   /// imported from the remote (so future downloads skip them).
   static const String ftpSeenArchives = 'ftp_seen_archives';
 
-  /// `archiveFilename<TAB>sizeBytes` per line — server archives that could
-  /// not be read, so they are not downloaded again until their size changes.
+  /// Server archives that are not downloaded again for now: ones that could
+  /// not be read, until their size changes, and ones this app could not
+  /// import, until it is updated or a few runs pass. Format in
+  /// `FtpArchiveDeferrals`.
   static const String ftpUnreadableArchives = 'ftp_unreadable_archives';
 
   /// JSON map `{ profileUuid: timestampMs }` — the wall-clock time of the

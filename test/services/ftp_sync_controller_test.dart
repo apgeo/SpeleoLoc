@@ -13,6 +13,7 @@ import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_archive_deferrals.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
@@ -1276,6 +1277,126 @@ void main() {
       expect(second.phase, FtpSyncPhase.completed, reason: second.errorMessage);
       expect(await seenArchives(h), contains(peerArchive));
     });
+  });
+
+  group('unimportable archives', () {
+    const peerArchive = 'speleo_loc_sync_1000_deadbeef.zip';
+
+    /// A controller over [service] whose downloads are recorded, and whose
+    /// app version a test can change between runs.
+    Future<(FtpSyncController, _FakeTransport, List<String>)> build(
+      _Harness h,
+      SyncArchiveService service,
+      String Function() appVersion,
+    ) async {
+      final (_, fake) = await makeController(h);
+      final downloads = <String>[];
+      final controller = FtpSyncController(
+        db: h.db,
+        profileRepository: FtpProfileRepository(h.db),
+        archiveService: service,
+        currentUserService: h.currentUser,
+        transportBuilder: (_) => _OrderTrackingTransport(fake, downloads),
+        appVersionReader: () async => appVersion(),
+      );
+      return (controller, fake, downloads);
+    }
+
+    test(
+      'an archive from a newer app is downloaded once per app version',
+      () async {
+        final h = await _buildHarness();
+        final service = _ScriptedArchiveService(
+          h.db,
+          h.logger,
+          (_) async => throw const SyncArchiveSchemaMismatchException(
+            archiveSchemaVersion: 99,
+            localSchemaVersion: 36,
+            archiveAppVersion: '9.0.0',
+            archiveAppBuildNumber: null,
+            tooNew: true,
+          ),
+        );
+        var version = '1.0.0+1';
+        final (controller, fake, downloads) = await build(
+          h,
+          service,
+          () => version,
+        );
+        fake.publish(peerArchive, [1, 2, 3]);
+
+        await controller.startDefault();
+        final first = await _waitForTerminal(controller);
+        expect(downloads, [peerArchive, '$peerArchive.sha256']);
+        expect(first.warningMessage, contains('v9.0.0'));
+
+        downloads.clear();
+        await controller.startDefault();
+        final second = await _waitForTerminal(controller);
+        expect(downloads, isEmpty, reason: 'same app: not downloaded again');
+        expect(second.phase, FtpSyncPhase.completed);
+        expect(second.warningMessage, contains(peerArchive));
+        expect(
+          logLines(second, FtpSyncLogLevel.warning),
+          contains(contains('tried again once this app is updated')),
+        );
+
+        version = '1.1.0+2';
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(downloads, contains(peerArchive), reason: 'updated app retries');
+        expect(await seenArchives(h), isNot(contains(peerArchive)));
+      },
+    );
+
+    test(
+      'a failed import waits a few runs, or until the file changes',
+      () async {
+        final h = await _buildHarness();
+        final service = _ScriptedArchiveService(
+          h.db,
+          h.logger,
+          (_) async => throw StateError('FOREIGN KEY constraint failed'),
+        );
+        final (controller, fake, downloads) = await build(
+          h,
+          service,
+          () => '1.0.0+1',
+        );
+        fake.publish(peerArchive, [1, 2, 3]);
+
+        await controller.startDefault();
+        final first = await _waitForTerminal(controller);
+        expect(first.phase, FtpSyncPhase.failed);
+        expect(service.imported, [peerArchive]);
+
+        for (
+          var run = 0;
+          run < FtpArchiveDeferrals.failedImportSkippedRuns;
+          run++
+        ) {
+          await controller.startDefault();
+          final held = await _waitForTerminal(controller);
+          expect(held.phase, FtpSyncPhase.completed, reason: 'run $run');
+          expect(held.warningMessage, contains(peerArchive));
+        }
+        expect(service.imported, [peerArchive], reason: 'skipped meanwhile');
+
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(service.imported, [peerArchive, peerArchive]);
+
+        // Failed again, and now the device re-uploads it: tried at once.
+        downloads.clear();
+        fake.publish(peerArchive, [1, 2, 3, 4]);
+        service.onImport = (_) async => _report();
+        await controller.startDefault();
+        final fixed = await _waitForTerminal(controller);
+        expect(downloads, contains(peerArchive));
+        expect(fixed.phase, FtpSyncPhase.completed, reason: fixed.errorMessage);
+        expect(await seenArchives(h), contains(peerArchive));
+      },
+    );
   });
 
   group('SFTP host key', () {

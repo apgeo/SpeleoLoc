@@ -301,8 +301,13 @@ the first problem — even if most of it succeeded. One archive that
 failed to download or failed to import does not stop the rest, and does
 not stop your own upload. So a red result does
 not mean nothing worked: read the Log tab to see what did. Everything
-that failed is deliberately left unmarked, so simply running the sync
-again retries it.
+that failed is deliberately left unmarked, so running the sync again
+retries it — a failed download on the very next sync. An archive whose
+**import** failed is different: the cause is usually in the data, and
+downloading the whole archive again on every sync would not change it.
+It is left alone for the next 4 syncs and tried again on the 5th, or as
+soon as it changes on the server or the app is updated. Meanwhile each
+sync names it in an orange line in the Log tab and in the orange banner.
 
 An archive whose files could not be written on this device — the phone's
 storage is full, for instance — also counts as failed. Its records are
@@ -417,7 +422,9 @@ already handled — the most recent 500 — so it does not fetch them twice.
 - **An archive was skipped over its app version** — the Log tab says
   which way round it is. From a *newer* version of SpeleoLoc: the
   message names the version you need, and once this device is updated
-  the archive imports itself on the next sync. From an *older* version:
+  the archive imports itself on the next sync. Until then it is
+  downloaded only once: later syncs leave it on the server, and say so in
+  the Log tab and the orange banner. From an *older* version:
   it is skipped for good on this device, and the only cure is to update
   the app that produced it and let that device sync again. Either way
   the rest of the run carries on.

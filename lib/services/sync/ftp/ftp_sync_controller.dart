@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_archive_deferrals.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
@@ -75,6 +77,7 @@ class FtpSyncController extends ChangeNotifier {
   final CurrentUserService _currentUser;
   final FtpHostKeyStore _hostKeys;
   final FtpTransportBuilder? _transportBuilderOverride;
+  final Future<String> Function() _appVersionReader;
 
   // Syncs run without a dialog, so a server's first host key is trusted
   // without asking and reported in the log instead.
@@ -108,12 +111,14 @@ class FtpSyncController extends ChangeNotifier {
     required CurrentUserService currentUserService,
     FtpHostKeyStore? hostKeyStore,
     FtpTransportBuilder? transportBuilder,
+    Future<String> Function()? appVersionReader,
   }) : _db = db,
        _profileRepo = profileRepository,
        _archiveService = archiveService,
        _currentUser = currentUserService,
        _hostKeys = hostKeyStore ?? FtpHostKeyStore(),
-       _transportBuilderOverride = transportBuilder;
+       _transportBuilderOverride = transportBuilder,
+       _appVersionReader = appVersionReader ?? _defaultAppVersion;
 
   /// Latest live progress snapshot. Listeners are notified via
   /// [ChangeNotifier.notifyListeners] on every change.
@@ -257,15 +262,33 @@ class FtpSyncController extends ChangeNotifier {
         remoteEntries.map((e) => _deviceIdOf(e.name)).nonNulls,
         myDeviceId,
       );
-      // Archives that could not be read when last downloaded are not fetched
-      // again until their size changes — an upload still in progress grows,
-      // an abandoned one never does.
-      final unreadable = await _loadUnreadableArchives();
+      // Peer archives left aside because the file is unusable or arrived
+      // without its checksum. That is the producer's problem, not a failure
+      // of this sync, so the run still completes and only warns.
+      final skipped = <String>[];
+      // Archives that could not be read or imported when last downloaded
+      // are not fetched again until something changes — an upload still in
+      // progress grows, an abandoned one never does, and an updated app may
+      // import what this one could not.
+      final appVersion = await _appVersionReader();
+      final deferrals = FtpArchiveDeferrals.parse(
+        await _readConfig(ConfigKey.ftpUnreadableArchives),
+      );
       final remoteNames = {for (final e in remoteEntries) e.name};
-      unreadable.removeWhere((name, _) => !remoteNames.contains(name));
-      final stillUnreadable = remoteEntries
-          .where((e) => unreadable[e.name] == e.size)
-          .length;
+      deferrals.retainOnly(remoteNames);
+      final held = <String>{};
+      var stillUnreadable = 0;
+      for (final e in remoteEntries) {
+        if (seen.contains(e.name)) continue;
+        final deferral = deferrals.holding(e.name, e.size, appVersion);
+        if (deferral == null) continue;
+        held.add(e.name);
+        if (deferral.reason == FtpDeferralReason.unreadable) {
+          stillUnreadable++;
+        } else {
+          skipped.add(_reportHeldArchive(e.name, deferral, deferrals));
+        }
+      }
       if (stillUnreadable > 0) {
         _appendLog(
           FtpSyncLogLevel.info,
@@ -278,7 +301,7 @@ class FtpSyncController extends ChangeNotifier {
             (e) =>
                 _archiveNameRe.hasMatch(e.name) &&
                 !seen.contains(e.name) &&
-                unreadable[e.name] != e.size,
+                !held.contains(e.name),
           )
           .toList();
 
@@ -305,10 +328,6 @@ class FtpSyncController extends ChangeNotifier {
       // (finding 5.3).
       final supersededByDevice = <String, List<String>>{};
       var supersededCount = 0;
-      // Peer archives left aside because the file is unusable or arrived
-      // without its checksum. That is the producer's problem, not a failure
-      // of this sync, so the run still completes and only warns.
-      final skipped = <String>[];
       // A device's newest archive may already be seen — our own upload, or
       // one adopted with a database taken over from another device. Its
       // unseen older siblings are then subsumed too, and must not be imported
@@ -568,7 +587,7 @@ class FtpSyncController extends ChangeNotifier {
                 'got ${actual.substring(0, 12)}…)';
             // The file itself is damaged: not worth downloading again until
             // it changes.
-            unreadable[entry.name] = entry.size;
+            deferrals.markUnreadable(entry.name, entry.size);
           }
         } on TransferCancelledException {
           rethrow;
@@ -668,13 +687,21 @@ class FtpSyncController extends ChangeNotifier {
           );
           // Older archives won't ever import — mark as seen so we stop
           // re-listing them (and its older superseded siblings too, which
-          // are older still). Newer archives are intentionally left unseen
-          // so a future app upgrade can import them.
+          // are older still). Newer archives are left unseen so an updated
+          // app imports them, and are not downloaded again until then.
           if (!e.tooNew) {
             seen.add(entry.name);
             markSupersededSeen(entry.name);
+          } else {
+            final needed = 'v${e.archiveAppVersion ?? '?'}';
+            deferrals.markTooNew(
+              entry.name,
+              entry.size,
+              appVersion: appVersion,
+              detail: needed,
+            );
+            skipped.add('${entry.name} (needs app $needed or newer)');
           }
-          // Skip the trailing seen.add for too-new archives.
           _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
           try {
             await File(localPath).delete();
@@ -686,7 +713,7 @@ class FtpSyncController extends ChangeNotifier {
           // Not a readable sync archive: typically an upload cut off before
           // it finished, which also never got its .sha256 sidecar.
           skipped.add('${entry.name} (not a readable sync archive)');
-          unreadable[entry.name] = entry.size;
+          deferrals.markUnreadable(entry.name, entry.size);
           _appendLog(
             FtpSyncLogLevel.warning,
             'Skipping ${entry.name}: not a readable sync archive '
@@ -705,7 +732,16 @@ class FtpSyncController extends ChangeNotifier {
           firstImportError ??= '${entry.name}: $e';
           _appendLog(
             FtpSyncLogLevel.error,
-            'Import failed for ${entry.name}: $e — continuing with next',
+            'Import failed for ${entry.name}: $e — continuing with next. '
+            'It is not downloaded again for the next '
+            '${FtpArchiveDeferrals.failedImportSkippedRuns} sync(s), unless '
+            'it changes on the server or the app is updated.',
+          );
+          deferrals.markImportFailed(
+            entry.name,
+            entry.size,
+            appVersion: appVersion,
+            detail: '$e',
           );
           // Leave this archive AND its device's superseded siblings unseen so
           // a later run can retry once the source device re-uploads or the
@@ -719,6 +755,7 @@ class FtpSyncController extends ChangeNotifier {
           continue;
         }
         seen.add(entry.name);
+        deferrals.clear(entry.name);
         markSupersededSeen(entry.name);
         _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
         // Best-effort cleanup of the local copy.
@@ -748,7 +785,7 @@ class FtpSyncController extends ChangeNotifier {
           ),
         );
         await _saveSeenArchives(seen);
-        await _saveUnreadableArchives(unreadable);
+        await _saveDeferrals(deferrals);
         try {
           await tempDir.delete(recursive: true);
         } catch (e, st) {
@@ -909,7 +946,7 @@ class FtpSyncController extends ChangeNotifier {
         ),
       );
       await _saveSeenArchives(seen);
-      await _saveUnreadableArchives(unreadable);
+      await _saveDeferrals(deferrals);
       await _saveLastUploadAt(
         profile.profileUuid,
         DateTime.now().millisecondsSinceEpoch,
@@ -1109,26 +1146,45 @@ class FtpSyncController extends ChangeNotifier {
     }
   }
 
-  /// `name<TAB>size` per line: archives that could not be read, with the
-  /// size they had then.
-  Future<Map<String, int>> _loadUnreadableArchives() async {
-    final raw = await _readConfig(ConfigKey.ftpUnreadableArchives);
-    final out = <String, int>{};
-    if (raw == null) return out;
-    for (final line in raw.split('\n')) {
-      final tab = line.lastIndexOf('\t');
-      if (tab <= 0) continue;
-      final size = int.tryParse(line.substring(tab + 1));
-      if (size != null) out[line.substring(0, tab)] = size;
+  Future<void> _saveDeferrals(FtpArchiveDeferrals deferrals) =>
+      _writeConfig(ConfigKey.ftpUnreadableArchives, deferrals.serialize());
+
+  /// Logs why [name] is not downloaded this time, counts the run against a
+  /// failed import's wait, and returns the archive's entry for the banner.
+  String _reportHeldArchive(
+    String name,
+    FtpArchiveDeferral deferral,
+    FtpArchiveDeferrals deferrals,
+  ) {
+    if (deferral.reason == FtpDeferralReason.tooNew) {
+      _appendLog(
+        FtpSyncLogLevel.warning,
+        'Not downloading $name again: it was made by a newer version of the '
+        'app (${deferral.detail}). It is tried again once this app is '
+        'updated.',
+      );
+      return '$name (needs app ${deferral.detail} or newer)';
     }
-    return out;
+    final left = deferrals.countSkippedRun(name);
+    _appendLog(
+      FtpSyncLogLevel.warning,
+      'Not downloading $name again: its import failed (${deferral.detail}). '
+      '${left == 0 ? 'It is tried again on the next sync' : 'It is tried again in ${left + 1} sync(s)'}'
+      ', or as soon as it changes on the server or the app is updated.',
+    );
+    return '$name (import failed earlier)';
   }
 
-  Future<void> _saveUnreadableArchives(Map<String, int> unreadable) =>
-      _writeConfig(
-        ConfigKey.ftpUnreadableArchives,
-        unreadable.entries.map((e) => '${e.key}\t${e.value}').join('\n'),
-      );
+  /// The running app, as far as deciding whether an archive it could not
+  /// import deserves another try: a new version may import it.
+  static Future<String> _defaultAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      return '${info.version}+${info.buildNumber}/$kSyncArchiveDbSchemaVersion';
+    } catch (_) {
+      return 'schema $kSyncArchiveDbSchemaVersion';
+    }
+  }
 
   /// One line for the finished run when archives were left aside, or null.
   String? _skippedSummary(List<String> skipped) {
