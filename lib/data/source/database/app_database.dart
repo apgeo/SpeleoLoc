@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
-import 'package:speleoloc/data/source/database/migrations/migrations.dart';
+import 'package:speleoloc/data/source/database/migrations/schema_upgrade.dart';
 import 'package:speleoloc/data/source/database/test_data_helper.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/contained_path.dart';
@@ -115,13 +115,8 @@ class AppDatabase extends _$AppDatabase {
         );
       }
     },
-    onUpgrade: (migrator, from, to) async {
-      for (final m in schemaMigrations) {
-        if (m.shouldApply(from)) {
-          await m.apply(this, migrator);
-        }
-      }
-    },
+    onUpgrade: (migrator, from, to) =>
+        upgradeSchema(this, migrator, from: from, to: to),
   );
 
   Future<Uuid> insertCaveTrip({
