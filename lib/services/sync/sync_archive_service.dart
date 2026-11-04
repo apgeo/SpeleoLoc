@@ -48,8 +48,9 @@ const int kSyncArchiveVersion = 4;
 /// snapshot recorded for this value and fails until both move together.
 ///
 /// History: frozen at 9 while the schema went to 15, then kept equal to the
-/// schema version up to 36, so archives in the wild carry 9 to 36.
-const int kSyncArchiveDbSchemaVersion = 35;
+/// schema version up to 34, so archives in the wild carry 9 to 34;
+/// development builds also wrote 35 and 36 over the same archived tables.
+const int kSyncArchiveDbSchemaVersion = 34;
 
 /// Oldest archive `schema_version` this app still imports. The sync-v2
 /// format has only ever emitted `schema_version >= 9`, and every archived
@@ -60,8 +61,8 @@ const int kSyncArchiveDbSchemaVersion = 35;
 /// The newest one it imports is its own [AppDatabase.schemaVersion]: an
 /// archive is never stamped above the schema of the app that wrote it, so a
 /// stamp up to ours names archived tables this app already knows — including
-/// the stamps above [kSyncArchiveDbSchemaVersion] written while the two were
-/// kept equal. A higher stamp comes from an app whose archived tables changed
+/// the stamps above [kSyncArchiveDbSchemaVersion] that development builds
+/// wrote. A higher stamp comes from an app whose archived tables changed
 /// after this one was built, and is refused as too new rather than
 /// silently mis-merged.
 const int kSyncArchiveMinImportSchemaVersion = 9;

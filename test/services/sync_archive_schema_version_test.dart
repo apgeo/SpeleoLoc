@@ -63,7 +63,7 @@ void main() {
   });
 }
 
-const int _recordedFor = 35;
+const int _recordedFor = 34;
 
 const Map<String, Set<String>> _archivedColumns = {
   'users': {

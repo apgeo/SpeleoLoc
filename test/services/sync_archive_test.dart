@@ -240,8 +240,8 @@ void main() {
 
   test('imports every stamp from the archive version up to the local '
       'schema', () async {
-    // Builds that kept the stamp equal to their schema version wrote stamps
-    // above the archive version for the same archived tables.
+    // Development builds wrote stamps above the archive version for the
+    // same archived tables.
     final a = await buildHarness();
     final b = await buildHarness();
 
