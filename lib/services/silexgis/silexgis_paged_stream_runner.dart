@@ -122,6 +122,13 @@ class SilexgisPagedStreamRunner<P extends SyncStreamPage> {
       await _apply(page);
       pages++;
       setRevision = page.setRevision;
+      if (page.hasMore && page.nextCursor == null) {
+        // Going on from no position would read the first page again, and
+        // again, for as long as the process lives.
+        throw SilexgisTransportException(
+          '$_name: a page said more follows but named no position',
+        );
+      }
       cursor = page.nextCursor;
       more = page.hasMore;
     }

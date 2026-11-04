@@ -203,6 +203,22 @@ void main() {
     });
   }
 
+  test('a page saying more follows but naming no position ends the read '
+      'instead of reading the first page for ever', () async {
+    final read = streamOf(SyncStream.documents, <Object>[
+      const _Page(cursor: 'd1', more: true),
+      const _Page(cursor: null, more: true),
+      const _Page(cursor: 'never', more: false),
+    ]);
+
+    await expectLater(
+      read.runner.run(),
+      throwsA(isA<SilexgisTransportException>()),
+    );
+    expect(read.asked, <String?>[null, 'd1']);
+    expect(await stored(SyncStream.documents), 'd1');
+  });
+
   test('a full read drops the stored position first', () async {
     await localState.writeStreamCursor(
       profile,
