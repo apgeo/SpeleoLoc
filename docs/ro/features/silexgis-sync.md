@@ -773,7 +773,7 @@ după caz:
 
 | Buton | Ce se întâmplă |
 |---|---|
-| **Folosește versiunea serverului** | Versiunea dumneavoastră este înlocuită cu a serverului: **Versiunea serverului a fost pusă la loc.** Când telefonul nu a primit versiunea serverului, butonul scrie **Recitește de pe server**, iar răspunsul este **Versiunea serverului vine la următoarea sincronizare.** |
+| **Folosește versiunea serverului** | Întreabă întâi, în afară de cazul în care elementul este o ștergere de-a dumneavoastră: **Folosești versiunea serverului?** — *Versiunea ta de pe acest dispozitiv este înlocuită cu cea a serverului. Modificările tale se pierd.* Apoi versiunea dumneavoastră este înlocuită cu a serverului: **Versiunea serverului a fost pusă la loc.** Când telefonul nu a primit versiunea serverului, butonul scrie **Recitește de pe server**, iar răspunsul este **Versiunea serverului vine la următoarea sincronizare.** |
 | **Păstrează-o pe a mea, nu o trimite** | **Păstrată pe acest dispozitiv. Se trimite din nou când o modifici.** Pentru ceva șters pe server: **Păstrată doar pe acest dispozitiv. Nu se trimite la server.** |
 | **Șterge** | Pentru ceva ce serverul nu a avut niciodată. **Ștergi această ciornă?** — *Serverul nu a avut-o niciodată. Dacă o ștergi, dispare de pe acest dispozitiv.* Pentru ceva șters pe server: **O ștergi și de aici?** — *Serverul nu o mai are. Dacă o ștergi, dispare de pe acest dispozitiv, cu tot ce conține și cu modificările tale netrimise.* |
 | **Șterge punctul meu** | Pentru un al doilea punct pe același loc. Punctul dumneavoastră pleacă, iar cel al serverului sosește la următoarea sincronizare. Un loc la stația unui model 3D primește în schimb **Elimină stația mea**. |

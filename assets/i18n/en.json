@@ -1503,6 +1503,8 @@
   "silexgis_review_removal": "Your removal",
   "silexgis_review_untitled": "(no name)",
   "silexgis_review_use_server": "Use the server's version",
+  "silexgis_review_use_server_title": "Use the server's version?",
+  "silexgis_review_use_server_body": "Your version on this device is replaced by the server's. Your changes to it are lost.",
   "silexgis_review_keep_mine": "Keep mine, don't send",
   "silexgis_review_delete": "Delete",
   "silexgis_review_delete_title": "Delete this draft?",

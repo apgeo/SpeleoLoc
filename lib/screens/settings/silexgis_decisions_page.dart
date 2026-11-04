@@ -70,12 +70,38 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
     }
   }
 
-  Future<void> _useServer(SilexgisDecision decision) => _act((p) async {
-    final now = await _service.useServerVersion(p, decision);
-    return LocServ.inst.t(
-      now ? 'silexgis_review_server_now' : 'silexgis_review_server_next_run',
+  Future<void> _useServer(SilexgisDecision decision) async {
+    // Giving up an edit cannot be undone; giving up a removal only brings the
+    // server's row back, which the caver can delete again.
+    if (!decision.held.isDelete && !await _confirmUseServer()) return;
+    await _act((p) async {
+      final now = await _service.useServerVersion(p, decision);
+      return LocServ.inst.t(
+        now ? 'silexgis_review_server_now' : 'silexgis_review_server_next_run',
+      );
+    });
+  }
+
+  Future<bool> _confirmUseServer() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(LocServ.inst.t('silexgis_review_use_server_title')),
+        content: Text(LocServ.inst.t('silexgis_review_use_server_body')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(LocServ.inst.t('silexgis_review_use_server')),
+          ),
+        ],
+      ),
     );
-  });
+    return confirmed == true;
+  }
 
   Future<void> _keepMine(SilexgisDecision decision) => _act((p) async {
     await _service.keepMine(p.profileUuid, decision);

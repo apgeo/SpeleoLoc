@@ -709,7 +709,7 @@ apply:
 
 | Button | What happens |
 |---|---|
-| **Use the server's version** | Your version is replaced by the server's: **The server's version is back.** When the phone was not handed the server's version, the button reads **Re-read from the server** and the answer is **The server's version arrives with the next sync.** |
+| **Use the server's version** | Asks first, unless the item is a removal of yours: **Use the server's version?** — *Your version on this device is replaced by the server's. Your changes to it are lost.* Your version is then replaced by the server's: **The server's version is back.** When the phone was not handed the server's version, the button reads **Re-read from the server** and the answer is **The server's version arrives with the next sync.** |
 | **Keep mine, don't send** | **Kept on this device. It is sent again when you edit it.** For something deleted on the server: **Kept on this device only. It is not sent to the server.** |
 | **Delete** | For something the server never had. **Delete this draft?** — *The server never had it. Deleting it removes it from this device.* For something deleted on the server: **Delete it here too?** — *The server no longer has it. Deleting it removes it from this device, with everything inside it and your unsent changes.* |
 | **Remove my point** | For a second point on the same place. Your point goes, and the server's arrives with the next sync. A place at a 3D model's station gets **Remove my station** instead. |
