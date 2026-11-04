@@ -246,7 +246,9 @@ curentă și pune în locul ei pe cea din arhivă — tot ce ținea cea veche s-
 dus — apoi copiază peste ele fotografiile și imaginile de hartă din
 arhivă, suprascriind orice fișier cu același nume, și repornește
 aplicația. Confirmați întâi avertismentul. Telefonul își păstrează propria
-identitate de dispozitiv, în loc să o adopte pe a expeditorului.
+identitate de dispozitiv, în loc să o adopte pe a expeditorului. O arhivă
+de la o versiune mai nouă a aplicației este refuzată înainte să se
+înlocuiască ceva.
 
 **Îmbinare cu datele existente** — îmbină arhiva exact așa cum o face
 [Sinc. man.](../features/sync-and-change-log.md):
@@ -297,7 +299,7 @@ deloc o astfel de secțiune — nici buton, nici notificare. Vezi
 | Acțiune | Ce face |
 |---|---|
 | **Exportă baza de date** | scrie o copie brută `speleo_loc_export.sqlite` prin dialogul de salvare al dispozitivului (pe iOS, un folder ales de dumneavoastră). Fără fotografii, fără imagini de hartă — doar un instantaneu pentru același dispozitiv. |
-| **Restaurează baza de date din fișier** | înlocuiește baza de date cu un fișier `.sqlite` sau `.db` ales de dumneavoastră, după o singură confirmare, apoi repornește aplicația. Nu poate primi un zip — restaurați o arhivă întreagă din **Export / Import Date**. |
+| **Restaurează baza de date din fișier** | înlocuiește baza de date cu un fișier `.sqlite` sau `.db` ales de dumneavoastră, după o singură confirmare, apoi repornește aplicația. Nu poate primi un zip — restaurați o arhivă întreagă din **Export / Import Date**. Un fișier salvat de o versiune mai nouă a aplicației este refuzat, iar datele dumneavoastră rămân cum erau. |
 | **Reinițializați baza de date** | șterge tot și lasă aplicația goală. |
 
 Versiunile pentru dezvoltatori adaugă deasupra un buton **Reinițializează

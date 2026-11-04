@@ -220,7 +220,8 @@ current database and puts the archive's in its place — everything the old
 one held is gone — then copies the archive's photos and map images over
 the top, overwriting any file of the same name, and restarts the app.
 Confirm the warning first. Your phone keeps its own device identity
-rather than adopting the sender's.
+rather than adopting the sender's. An archive from a newer app version is
+refused before anything is replaced.
 
 **Merge with existing data** — merges the archive exactly as
 [Man. sync](../features/sync-and-change-log.md) does:
@@ -267,7 +268,7 @@ released app has no such section at all — no button and no notice. See
 | Action | What it does |
 |---|---|
 | **Export database** | writes a raw `speleo_loc_export.sqlite` copy through your device's save dialog (a folder you pick, on iOS). No photos, no map images — a same-device snapshot only. |
-| **Restore database from file** | replaces the database with a `.sqlite` or `.db` file you pick, after one confirmation, then restarts the app. It cannot take a zip — restore a whole archive from **Data Export / Import** instead. |
+| **Restore database from file** | replaces the database with a `.sqlite` or `.db` file you pick, after one confirmation, then restarts the app. It cannot take a zip — restore a whole archive from **Data Export / Import** instead. A file saved by a newer app version is refused and your data stays as it was. |
 | **Reinitialize database** | erases everything and leaves an empty app. |
 
 Developer builds add a **Reinitialize database with test data** button

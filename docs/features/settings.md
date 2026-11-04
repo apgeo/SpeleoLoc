@@ -236,7 +236,8 @@ data that is not backed up somewhere else.
   fills the database with the bundled sample dataset; it is not in the
   released app.)
 - **Restore database from file** — replaces the current database with a
-  `.sqlite` or `.db` file you pick.
+  `.sqlite` or `.db` file you pick. A file saved by a newer version of the
+  app is refused and nothing is replaced; update the app first.
 - **Export database** — saves a copy of the database file through your
   device's save dialog, offered as `speleo_loc_export.sqlite` (on iOS,
   into a folder you choose). This is the quick snapshot to take before

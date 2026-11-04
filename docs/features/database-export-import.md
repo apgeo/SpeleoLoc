@@ -156,6 +156,10 @@ its media files overwrite anything of the same name. The app restarts.
 **This is destructive and there is no undo.** Everything currently on the
 device is gone. Export an archive first if you are not certain.
 
+An archive whose database was saved by a newer version of the app is
+refused before anything is replaced: update the app first. Nothing on the
+device changes.
+
 Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
 sync from getting confused afterwards.

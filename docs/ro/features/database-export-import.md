@@ -169,6 +169,10 @@ nume. Aplicația repornește.
 **Este distructiv și nu există anulare.** Tot ce se află acum pe
 dispozitiv dispare. Exportați întâi o arhivă dacă nu sunteți sigur.
 
+O arhivă a cărei bază de date a fost salvată de o versiune mai nouă a
+aplicației este refuzată înainte să se înlocuiască ceva: actualizați întâi
+aplicația. Nimic de pe dispozitiv nu se schimbă.
+
 Dispozitivul dumneavoastră își păstrează propria identitate printr-o
 înlocuire — nu începe să pretindă că este dispozitivul care a făcut
 arhiva, iar asta este ceea ce împiedică sincronizarea să se încurce după

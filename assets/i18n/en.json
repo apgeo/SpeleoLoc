@@ -122,6 +122,7 @@
   "restoring_database_from_file": "Restoring database from file...",
   "database_restored": "Database restored. Application will now restart.",
   "database_restore_failed": "Database restore failed",
+  "database_file_too_new": "This database was saved by a newer version of SpeleoLoc (database version {file}; this version opens up to {app}). Update the app, then try again. Nothing was changed.",
   "select_image": "Select image",
   "add_raster_map": "Add raster map",
   "select_folder_save_database": "Select folder to save database",

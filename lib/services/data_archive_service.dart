@@ -172,6 +172,7 @@ class DataArchiveService {
       if (!await importedDbFile.exists()) {
         throw Exception('No database found in archive');
       }
+      DatabaseRestoreHelper.ensureNotNewer(importedDbFile);
 
       // Preserve the device-local identity so the restored database keeps
       // this device's UUID (the archive may carry a different device's UUID).

@@ -263,7 +263,9 @@ date**, distruge date care nu sunt salvate în altă parte.
   umple baza de date cu setul de date exemplu inclus; nu se află în
   aplicația publicată.)
 - **Restaurează baza de date din fișier** — înlocuiește baza de date
-  curentă cu un fișier `.sqlite` sau `.db` ales de dumneavoastră.
+  curentă cu un fișier `.sqlite` sau `.db` ales de dumneavoastră. Un fișier
+  salvat de o versiune mai nouă a aplicației este refuzat și nu se
+  înlocuiește nimic; actualizați întâi aplicația.
 - **Exportă baza de date** — salvează o copie a fișierului bazei de date
   prin dialogul de salvare al dispozitivului, propusă cu numele
   `speleo_loc_export.sqlite` (pe iOS, într-un folder ales de

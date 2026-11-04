@@ -121,6 +121,7 @@
   "restoring_database_from_file": "Se restaurează baza de date din fișier...",
   "database_restored": "Baza de date a fost restaurată. Aplicația va fi repornită.",
   "database_restore_failed": "Restaurarea bazei de date a eșuat",
+  "database_file_too_new": "Această bază de date a fost salvată de o versiune mai nouă a SpeleoLoc (versiunea bazei de date {file}; această versiune deschide până la {app}). Actualizează aplicația, apoi încearcă din nou. Nu s-a modificat nimic.",
   "select_image": "Selectează imagine",
   "add_raster_map": "Adaugă hartă",
   "select_folder_save_database": "Selectați folderul pentru a salva baza de date",
