@@ -680,6 +680,45 @@ void main() {
       expect(await rasters.readAll(profile), isEmpty);
     });
 
+    test(
+      'a pin removed and placed again goes down before it goes up',
+      () async {
+        // One live pin per place on a map: the new one sent first would be
+        // refused as a second pin of the place, and then the old one removed.
+        final (id, bytes) = await map();
+        await agreed(
+          id,
+          table: SilexgisRasterTables.maps,
+          mapId: id,
+          picture: bytes,
+        );
+        final oldPin = await pin(id);
+        await agreed(oldPin, table: SilexgisRasterTables.pins, mapId: id);
+        await (db.delete(
+          db.cavePlaceToRasterMapDefinitions,
+        )..where((t) => t.uuid.equalsValue(oldPin))).go();
+        final newPin = await pin(id, x: 200, y: 40);
+        final client = ScriptedClient(<ScriptedResponse>[
+          answer(
+            pins: <Map<String, Object?>>[
+              verdict(oldPin, 'deleted'),
+              verdict(newPin, 'created'),
+            ],
+          ),
+        ]);
+
+        await run(client);
+
+        expect(
+          sentSection(
+            client,
+            SyncUploadSection.rasterPins,
+          ).map((item) => item['id']),
+          <String>[oldPin.toString(), newPin.toString()],
+        );
+      },
+    );
+
     test('a removed pin names its map', () async {
       final (id, bytes) = await map();
       await agreed(

@@ -119,6 +119,11 @@ class SilexgisPlaceStationsUploadPart implements SilexgisUploadPart {
       items.add(item);
     }
 
+    // Ahead of the mappings that go: the server applies items in order and
+    // holds one live mapping per place on a survey, so a place unmapped and
+    // mapped again here has to be taken down there before its successor goes
+    // up.
+    final removals = <SyncUploadItem>[];
     for (final entry in revisions.entries) {
       if (entry.value.entityTable != _table) continue;
       if (present.contains(entry.key)) continue;
@@ -128,9 +133,9 @@ class SilexgisPlaceStationsUploadPart implements SilexgisUploadPart {
         baseRevision: entry.value.revision,
       );
       _planned[item.id] = _Planned(entry.key, isDelete: true);
-      items.add(item);
+      removals.add(item);
     }
-    return items;
+    return <SyncUploadItem>[...removals, ...items];
   }
 
   @override

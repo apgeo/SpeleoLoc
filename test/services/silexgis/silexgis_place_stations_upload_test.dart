@@ -282,6 +282,36 @@ void main() {
     expect((await localState.readRevisions(profile))[id], isNull);
   });
 
+  test(
+    'a place unmapped and mapped again goes down before it goes up',
+    () async {
+      // One live mapping per place on a survey: the new one sent first would
+      // be refused as a second mapping of the place.
+      final oldMapping = Uuid.v7();
+      await localState.writeRevision(
+        profile,
+        oldMapping,
+        entityTable: SilexgisSurveyTables.placeStations,
+        revision: 'r-1',
+        localUpdatedAt: 1,
+      );
+      final newMapping = await mapping(serverModelDoc, station: '1.13');
+      final client = ScriptedClient(<ScriptedResponse>[
+        answer(<Map<String, Object?>>[
+          verdict(oldMapping, 'deleted'),
+          verdict(newMapping, 'created'),
+        ]),
+      ]);
+
+      await run(client);
+
+      expect(sent(client).map((item) => item['id']), <String>[
+        oldMapping.toString(),
+        newMapping.toString(),
+      ]);
+    },
+  );
+
   test('place_station_exists is kept for the caver and has the stream read '
       'again from the beginning', () async {
     final id = await mapping(serverModelDoc);

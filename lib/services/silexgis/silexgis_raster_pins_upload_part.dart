@@ -104,6 +104,10 @@ class SilexgisRasterPinsUploadPart implements SilexgisUploadPart {
       for (final map in await _db.select(_db.rasterMaps).get()) map.uuid,
     };
     final orphans = <Uuid>[];
+    // Ahead of the pins that go: the server applies items in order and holds
+    // one live pin per place on a map, so a pin removed and placed again here
+    // has to be taken down there before its successor goes up.
+    final removals = <SyncUploadItem>[];
     for (final entry in revisions.entries) {
       if (entry.value.entityTable != SilexgisRasterTables.pins) continue;
       if (present.contains(entry.key)) continue;
@@ -129,10 +133,10 @@ class SilexgisRasterPinsUploadPart implements SilexgisUploadPart {
         isPin: true,
         isDelete: true,
       );
-      items.add(item);
+      removals.add(item);
     }
     await _localState.forgetRevisions(_profileUuid, orphans);
-    return items;
+    return <SyncUploadItem>[...removals, ...items];
   }
 
   @override
