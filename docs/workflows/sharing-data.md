@@ -109,8 +109,10 @@ message says *Import cancelled — no changes were applied*.
   and the rest is merged rather than failing the whole import. Compare
   the counts in the result line against what you expected to receive.
 - **An archive from a newer app version is refused** outright, with a
-  message naming the version you need to update to. One from a much
-  older version is refused too — re-export it from an up-to-date phone.
+  message naming the version you need to update to. A newer version that
+  changed only what each phone keeps to itself does not count: its
+  archives import as usual. One from a much older version is refused
+  too — re-export it from an up-to-date phone.
 
 ## Route 2: let a shared FTP/SFTP folder do the passing
 

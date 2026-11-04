@@ -122,7 +122,9 @@ mesajul spune *Import anulat — nicio modificare nu a fost aplicată*.
   Comparați numerele din linia de rezultat cu ce vă așteptați să primiți.
 - **O arhivă de la o versiune mai nouă a aplicației este refuzată** din
   capul locului, cu un mesaj care numește versiunea la care trebuie să
-  actualizați. Una de la o versiune mult mai veche este refuzată la fel —
+  actualizați. O versiune mai nouă care a schimbat doar ce păstrează
+  fiecare telefon pentru sine nu contează: arhivele ei se importă ca de
+  obicei. Una de la o versiune mult mai veche este refuzată la fel —
   reexportați-o de pe un telefon actualizat.
 
 ## Ruta 2: lăsați un folder FTP/SFTP partajat să facă predarea
