@@ -7,7 +7,6 @@ import 'package:drift/drift.dart'
     show ApplyInterceptor, QueryExecutor, QueryInterceptor;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
 
 import 'sync_test_device.dart';
 
