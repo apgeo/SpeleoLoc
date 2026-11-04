@@ -28,11 +28,13 @@ class SilexgisSubtreeRow {
 /// Everything here that names those rows follows them: the places, areas and
 /// caves inside, trips, raster maps and their points, beacon registrations,
 /// 3D model stations and document links. Each row that changes is stamped
-/// now and the change is logged — the old identifiers as removed, the new as
-/// added — so a device sharing archives with this one swaps them the same
-/// way instead of keeping both. What this device knew of the old identifiers
-/// on the installation goes: their revisions, held entries and recorded
-/// document links.
+/// now and the change is logged — each old identifier as merged into its new
+/// one — so a device sharing archives with this one swaps them the same way
+/// instead of keeping both, and moves what only it holds inside them (a trip
+/// it recorded in the cave, a visit at the place) over to the new rows
+/// rather than losing it with the old. What this device knew of the old
+/// identifiers on the installation goes: their revisions, held entries and
+/// recorded document links.
 class SilexgisFeatureRekeyer {
   SilexgisFeatureRekeyer({
     required AppDatabase db,
@@ -131,7 +133,7 @@ class SilexgisFeatureRekeyer {
         final fresh = renamed[row.uuid]!;
         for (final (other, column) in _references[row.table]!) {
           for (final named in await _uuidsWhere(other, column, row.uuid)) {
-            // A row inside the subtree is logged as removed and added below.
+            // A row inside the subtree is logged as merged below.
             if (renamed.containsKey(named)) continue;
             await _logger.logUpdate(
               other,
@@ -152,9 +154,10 @@ class SilexgisFeatureRekeyer {
           'UPDATE ${row.table} SET uuid = ?, updated_at = ? WHERE uuid = ?',
           <Object?>[fresh.bytes, now, row.uuid.bytes],
         );
-        await _logger.logDelete(
+        await _logger.logMerge(
           row.table,
           row.uuid,
+          into: fresh,
           oldValues: <String, Object?>{'title': titles[row.uuid]},
         );
         await _logger.logInsert(row.table, fresh);

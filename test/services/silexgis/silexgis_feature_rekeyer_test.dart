@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
@@ -203,6 +203,21 @@ void main() {
           .toSet(),
       <Uuid>{caveId, areaId, placeId},
     );
+    // Each old identifier is logged as merged into its new one, so a peer
+    // moves what only it holds inside the old rows over to the new ones.
+    final mergedInto = <Uuid, Uuid>{
+      for (final row
+          in await db
+              .customSelect(
+                'SELECT l.entity_uuid AS old, f.old_value_short AS fresh '
+                'FROM change_log l JOIN change_log_field f '
+                'ON f.change_uuid = l.uuid WHERE f.field_name = ?',
+                variables: const [Variable<String>(kMergedIntoField)],
+              )
+              .get())
+        Uuid.fromBytes(row.read('old')): Uuid.fromBytes(row.read('fresh')),
+    };
+    expect(mergedInto, renamed);
     expect(
       logged
           .where((e) => e.changeType == ChangeType.insert)

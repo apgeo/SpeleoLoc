@@ -194,10 +194,19 @@ class SyncMergeEngine {
       skipped += result.skipped;
     }
 
-    // Merges whose target the archive only brought in above.
-    for (final MapEntry(key: from, value: (table, into)) in Map.of(
-      tombstones.pendingMerges,
-    ).entries) {
+    // Merges whose target the archive only brought in above, the records
+    // furthest down first: a record merged along with the one it hangs on
+    // — a cave given new identifiers with its places — has moved out of the
+    // way before that one's own move is checked against what the target
+    // already holds.
+    final depth = <String, int>{
+      for (final (i, t) in handlers.indexed) t.name: i,
+    };
+    final pending = tombstones.pendingMerges.entries.toList()
+      ..sort(
+        (a, b) => (depth[b.value.$1] ?? 0).compareTo(depth[a.value.$1] ?? 0),
+      );
+    for (final MapEntry(key: from, value: (table, into)) in pending) {
       if (state.isPresent(table, into) &&
           await tombstones.mergeInto(table, from, into)) {
         continue;
