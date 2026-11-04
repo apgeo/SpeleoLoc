@@ -90,6 +90,11 @@ CREATE TABLE IF NOT EXISTS cave_place_to_raster_map_definitions (
     UNIQUE(cave_place_uuid, raster_map_uuid) ON CONFLICT ROLLBACK
 );
 
+-- Every places-list load reads the definitions of the cave's maps by map;
+-- the UNIQUE above leads with the place.
+CREATE INDEX IF NOT EXISTS idx_cave_place_definitions_map
+    ON cave_place_to_raster_map_definitions(raster_map_uuid);
+
 -- Table: cave_places
 CREATE TABLE IF NOT EXISTS cave_places (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
@@ -122,6 +127,16 @@ CREATE TABLE IF NOT EXISTS cave_places (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area
     ON cave_places(title, cave_uuid) WHERE cave_area_uuid IS NULL;
 
+-- Every places list and watch filters by cave, and every QR resolve and
+-- code uniqueness check looks a place up by one of its codes; the title
+-- indexes above serve none of them.
+CREATE INDEX IF NOT EXISTS idx_cave_places_cave
+    ON cave_places(cave_uuid);
+CREATE INDEX IF NOT EXISTS idx_cave_places_place_code
+    ON cave_places(place_code_identifier);
+CREATE INDEX IF NOT EXISTS idx_cave_places_qr_code
+    ON cave_places(qr_code_resource_identifier);
+
 -- Table: caves
 CREATE TABLE IF NOT EXISTS caves (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
@@ -153,6 +168,11 @@ CREATE TABLE IF NOT EXISTS documentation_files (
     last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, file_name, file_size, file_hash) ON CONFLICT ROLLBACK
 );
+
+-- Checking whether a file is already held looks it up by its hash; the
+-- UNIQUE above leads with the title.
+CREATE INDEX IF NOT EXISTS idx_documentation_files_hash
+    ON documentation_files(file_hash);
 
 -- Table: documentation_files_to_geofeatures
 CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (

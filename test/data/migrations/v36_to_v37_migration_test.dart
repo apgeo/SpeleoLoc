@@ -81,7 +81,15 @@ void main() {
       expect(read.placeCodeIdentifier, 'A1');
       expect(read.latitude, 45.5);
       expect((read.isEntrance, read.isMainEntrance), (0, 0));
-      expect(await indexNames(), contains('idx_cave_places_title_no_area'));
+      expect(
+        await indexNames(),
+        containsAll(<String>[
+          'idx_cave_places_title_no_area',
+          'idx_cave_places_cave',
+          'idx_cave_places_place_code',
+          'idx_cave_places_qr_code',
+        ]),
+      );
     });
 
     test('a second run changes nothing', () async {
@@ -142,6 +150,42 @@ void main() {
     await migrate();
 
     expect(await indexNames(), contains('idx_doc_files_to_trip_points_point'));
+  });
+
+  group('lookup indexes', () {
+    const lookups = {
+      'idx_cave_places_cave': 'SELECT * FROM cave_places WHERE cave_uuid = 1',
+      'idx_cave_places_place_code':
+          "SELECT * FROM cave_places WHERE place_code_identifier = 'a'",
+      'idx_cave_places_qr_code':
+          "SELECT * FROM cave_places WHERE qr_code_resource_identifier = 'a'",
+      'idx_cave_place_definitions_map':
+          'SELECT * FROM cave_place_to_raster_map_definitions '
+          'WHERE raster_map_uuid = 1',
+      'idx_documentation_files_hash':
+          "SELECT * FROM documentation_files WHERE file_hash = 'a'",
+    };
+
+    test('are created where they are missing', () async {
+      for (final name in lookups.keys) {
+        await db.customStatement('DROP INDEX $name');
+      }
+
+      await migrate();
+
+      expect(await indexNames(), containsAll(lookups.keys));
+    });
+
+    test('serve the lookups', () async {
+      for (final MapEntry(key: name, value: query) in lookups.entries) {
+        final plan = await pragma('EXPLAIN QUERY PLAN $query');
+        expect(
+          plan.map((r) => r['detail']).join(' '),
+          contains(name),
+          reason: query,
+        );
+      }
+    });
   });
 
   test('on a database already in shape, changes no schema', () async {

@@ -18,31 +18,35 @@ import 'package:sqlite3/sqlite3.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('v15 -> v16 keeps beacon registrations and adds ruuvi support', () async {
-    final tmpDir = await Directory.systemTemp.createTemp('v15_beacon_test_');
-    final tmpFile = File(p.join(tmpDir.path, 'v15.sqlite'));
+  test(
+    'v15 -> v16 keeps beacon registrations and adds ruuvi support',
+    () async {
+      final tmpDir = await Directory.systemTemp.createTemp('v15_beacon_test_');
+      final tmpFile = File(p.join(tmpDir.path, 'v15.sqlite'));
 
-    final caveUuid = List<int>.generate(16, (i) => i + 1);
-    final placeUuid = List<int>.generate(16, (i) => i + 101);
-    final beaconUuid = List<int>.generate(16, (i) => i + 201);
+      final caveUuid = List<int>.generate(16, (i) => i + 1);
+      final placeUuid = List<int>.generate(16, (i) => i + 101);
+      final beaconUuid = List<int>.generate(16, (i) => i + 201);
 
-    final raw = sqlite3.open(tmpFile.path);
-    try {
-      // Minimal FK parents (shape only, as far as the beacon table needs).
-      raw.execute('CREATE TABLE users (uuid BLOB PRIMARY KEY NOT NULL)');
-      raw.execute('CREATE TABLE caves (uuid BLOB PRIMARY KEY NOT NULL)');
-      // Stub carries the columns V16ToV17's twin-rename pass reads, so the
-      // full ladder can run over this fixture.
-      raw.execute(
-        'CREATE TABLE cave_places (uuid BLOB PRIMARY KEY NOT NULL, '
-        "title TEXT NOT NULL DEFAULT '', cave_uuid BLOB, "
-        'cave_area_uuid BLOB, created_at INTEGER, updated_at INTEGER)',
-      );
-      raw.execute('INSERT INTO caves (uuid) VALUES (?)', [caveUuid]);
-      raw.execute('INSERT INTO cave_places (uuid) VALUES (?)', [placeUuid]);
+      final raw = sqlite3.open(tmpFile.path);
+      try {
+        // Minimal FK parents (shape only, as far as the beacon table needs).
+        raw.execute('CREATE TABLE users (uuid BLOB PRIMARY KEY NOT NULL)');
+        raw.execute('CREATE TABLE caves (uuid BLOB PRIMARY KEY NOT NULL)');
+        // Stub carries the columns V16ToV17's twin-rename pass reads and the
+        // ones V36ToV37 indexes, so the full ladder can run over this fixture.
+        raw.execute(
+          'CREATE TABLE cave_places (uuid BLOB PRIMARY KEY NOT NULL, '
+          "title TEXT NOT NULL DEFAULT '', cave_uuid BLOB, "
+          'cave_area_uuid BLOB, place_code_identifier TEXT, '
+          'qr_code_resource_identifier TEXT, created_at INTEGER, '
+          'updated_at INTEGER)',
+        );
+        raw.execute('INSERT INTO caves (uuid) VALUES (?)', [caveUuid]);
+        raw.execute('INSERT INTO cave_places (uuid) VALUES (?)', [placeUuid]);
 
-      // The beacon table exactly as V14ToV15Migration created it.
-      raw.execute('''
+        // The beacon table exactly as V14ToV15Migration created it.
+        raw.execute('''
         CREATE TABLE cave_place_beacons (
           uuid BLOB PRIMARY KEY NOT NULL,
           cave_place_uuid BLOB NOT NULL REFERENCES cave_places(uuid),
@@ -67,103 +71,104 @@ void main() {
           UNIQUE(proximity_uuid, major, minor, cave_uuid) ON CONFLICT ROLLBACK
         )
       ''');
-      raw.execute(
-        'INSERT INTO cave_place_beacons '
-        '(uuid, cave_place_uuid, cave_uuid, proximity_uuid, major, minor, '
-        'mac_address, last_battery_mv, created_at) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          beaconUuid,
-          placeUuid,
-          caveUuid,
-          'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
-          10816,
-          1,
-          'F0:C8:90:02:10:9B',
-          3287,
-          1000,
-        ],
-      );
-      raw.execute('PRAGMA user_version = 15');
-    } finally {
-      raw.close();
-    }
+        raw.execute(
+          'INSERT INTO cave_place_beacons '
+          '(uuid, cave_place_uuid, cave_uuid, proximity_uuid, major, minor, '
+          'mac_address, last_battery_mv, created_at) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            beaconUuid,
+            placeUuid,
+            caveUuid,
+            'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+            10816,
+            1,
+            'F0:C8:90:02:10:9B',
+            3287,
+            1000,
+          ],
+        );
+        raw.execute('PRAGMA user_version = 15');
+      } finally {
+        raw.close();
+      }
 
-    // Opening as AppDatabase runs the ladder (only v15 -> v16 applies).
-    final db = AppDatabase.forTesting(NativeDatabase(tmpFile));
-    try {
-      final beacons = await db.select(db.cavePlaceBeacons).get();
-      expect(beacons, hasLength(1));
-      final b = beacons.single;
-      expect(b.beaconType, 'ibeacon');
-      expect(b.proximityUuid, 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825');
-      expect(b.major, 10816);
-      expect(b.minor, 1);
-      expect(b.macAddress, 'F0:C8:90:02:10:9B');
-      expect(b.lastBatteryMv, 3287);
-      expect(b.firmwareVersion, isNull);
-      expect(b.lastPressureHpa, isNull);
+      // Opening as AppDatabase runs the ladder (only v15 -> v16 applies).
+      final db = AppDatabase.forTesting(NativeDatabase(tmpFile));
+      try {
+        final beacons = await db.select(db.cavePlaceBeacons).get();
+        expect(beacons, hasLength(1));
+        final b = beacons.single;
+        expect(b.beaconType, 'ibeacon');
+        expect(b.proximityUuid, 'FDA50693-A4E2-4FB1-AFCF-C6EB07647825');
+        expect(b.major, 10816);
+        expect(b.minor, 1);
+        expect(b.macAddress, 'F0:C8:90:02:10:9B');
+        expect(b.lastBatteryMv, 3287);
+        expect(b.firmwareVersion, isNull);
+        expect(b.lastPressureHpa, isNull);
 
-      // Ruuvi rows carry a NULL triple and are unique per (mac, cave).
-      Future<void> insertRuuvi(List<int> uuid, String mac) => db
-          .into(db.cavePlaceBeacons)
-          .insert(
-            CavePlaceBeaconsCompanion.insert(
-              uuid: Uuid.fromBytes(uuid),
-              cavePlaceUuid: Uuid.fromBytes(placeUuid),
-              caveUuid: Uuid.fromBytes(caveUuid),
-              beaconType: const Value('ruuvi'),
-              macAddress: Value(mac),
-            ),
-          );
-      await insertRuuvi(
-        List<int>.generate(16, (i) => i + 301),
-        'CB:B8:33:4C:88:4F',
-      );
-      await expectLater(
-        insertRuuvi(
-          List<int>.generate(16, (i) => i + 401),
-          'CB:B8:33:4C:88:4F',
-        ),
-        throwsA(anything),
-        reason: 'partial UNIQUE index must reject a duplicate ruuvi MAC',
-      );
-
-      // The iBeacon triple constraint must still hold after the recreate.
-      await expectLater(
-        db
+        // Ruuvi rows carry a NULL triple and are unique per (mac, cave).
+        Future<void> insertRuuvi(List<int> uuid, String mac) => db
             .into(db.cavePlaceBeacons)
             .insert(
               CavePlaceBeaconsCompanion.insert(
-                uuid: Uuid.fromBytes(List<int>.generate(16, (i) => i + 501)),
+                uuid: Uuid.fromBytes(uuid),
                 cavePlaceUuid: Uuid.fromBytes(placeUuid),
                 caveUuid: Uuid.fromBytes(caveUuid),
-                proximityUuid: const Value(
-                  'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
-                ),
-                major: const Value(10816),
-                minor: const Value(1),
+                beaconType: const Value('ruuvi'),
+                macAddress: Value(mac),
               ),
-            ),
-        throwsA(anything),
-        reason: 'triple UNIQUE must survive the table recreation',
-      );
+            );
+        await insertRuuvi(
+          List<int>.generate(16, (i) => i + 301),
+          'CB:B8:33:4C:88:4F',
+        );
+        await expectLater(
+          insertRuuvi(
+            List<int>.generate(16, (i) => i + 401),
+            'CB:B8:33:4C:88:4F',
+          ),
+          throwsA(anything),
+          reason: 'partial UNIQUE index must reject a duplicate ruuvi MAC',
+        );
 
-      // The new history table is usable.
-      await db
-          .into(db.ruuviSensorHistory)
-          .insert(
-            RuuviSensorHistoryCompanion.insert(
-              macAddress: 'CB:B8:33:4C:88:4F',
-              measuredAt: 1600000000,
-              temperatureC: const Value(4.2),
-            ),
-          );
-      final history = await db.select(db.ruuviSensorHistory).get();
-      expect(history.single.temperatureC, 4.2);
-    } finally {
-      await db.close();
-      await tmpDir.delete(recursive: true);
-    }
-  });
+        // The iBeacon triple constraint must still hold after the recreate.
+        await expectLater(
+          db
+              .into(db.cavePlaceBeacons)
+              .insert(
+                CavePlaceBeaconsCompanion.insert(
+                  uuid: Uuid.fromBytes(List<int>.generate(16, (i) => i + 501)),
+                  cavePlaceUuid: Uuid.fromBytes(placeUuid),
+                  caveUuid: Uuid.fromBytes(caveUuid),
+                  proximityUuid: const Value(
+                    'FDA50693-A4E2-4FB1-AFCF-C6EB07647825',
+                  ),
+                  major: const Value(10816),
+                  minor: const Value(1),
+                ),
+              ),
+          throwsA(anything),
+          reason: 'triple UNIQUE must survive the table recreation',
+        );
+
+        // The new history table is usable.
+        await db
+            .into(db.ruuviSensorHistory)
+            .insert(
+              RuuviSensorHistoryCompanion.insert(
+                macAddress: 'CB:B8:33:4C:88:4F',
+                measuredAt: 1600000000,
+                temperatureC: const Value(4.2),
+              ),
+            );
+        final history = await db.select(db.ruuviSensorHistory).get();
+        expect(history.single.temperatureC, 4.2);
+      } finally {
+        await db.close();
+        await tmpDir.delete(recursive: true);
+      }
+    },
+  );
 }

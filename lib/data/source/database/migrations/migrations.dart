@@ -1180,6 +1180,10 @@ class V35ToV36Migration extends SchemaMigration {
 /// - The index on `documentation_files_to_cave_trip_points` by point, which
 ///   only upgraded databases got from v20 → v21, is created on the rest.
 ///
+/// It also adds the indexes the hot lookups were scanning whole tables for:
+/// places by cave and by either code, map definitions by map and documents
+/// by file hash.
+///
 /// Archived tables keep their columns, so the sync archive schema version
 /// stays where it is.
 class V36ToV37Migration extends SchemaMigration {
@@ -1202,6 +1206,36 @@ class V36ToV37Migration extends SchemaMigration {
       'CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point '
           'ON documentation_files_to_cave_trip_points(cave_trip_point_uuid)',
     );
+    // After the cave_places recreate, which would drop them.
+    for (final (table, createIndex) in const [
+      (
+        'cave_places',
+        'CREATE INDEX IF NOT EXISTS idx_cave_places_cave '
+            'ON cave_places(cave_uuid)',
+      ),
+      (
+        'cave_places',
+        'CREATE INDEX IF NOT EXISTS idx_cave_places_place_code '
+            'ON cave_places(place_code_identifier)',
+      ),
+      (
+        'cave_places',
+        'CREATE INDEX IF NOT EXISTS idx_cave_places_qr_code '
+            'ON cave_places(qr_code_resource_identifier)',
+      ),
+      (
+        'cave_place_to_raster_map_definitions',
+        'CREATE INDEX IF NOT EXISTS idx_cave_place_definitions_map '
+            'ON cave_place_to_raster_map_definitions(raster_map_uuid)',
+      ),
+      (
+        'documentation_files',
+        'CREATE INDEX IF NOT EXISTS idx_documentation_files_hash '
+            'ON documentation_files(file_hash)',
+      ),
+    ]) {
+      await _createIndexIfTableExists(db, table, createIndex);
+    }
   }
 
   static Future<bool> _entranceFlagsNullable(AppDatabase db) async {

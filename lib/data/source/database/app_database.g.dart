@@ -25378,11 +25378,31 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final RasterMaps rasterMaps = RasterMaps(this);
   late final CavePlaceToRasterMapDefinitions cavePlaceToRasterMapDefinitions =
       CavePlaceToRasterMapDefinitions(this);
+  late final Index idxCavePlaceDefinitionsMap = Index(
+    'idx_cave_place_definitions_map',
+    'CREATE INDEX IF NOT EXISTS idx_cave_place_definitions_map ON cave_place_to_raster_map_definitions (raster_map_uuid)',
+  );
   late final Index idxCavePlacesTitleNoArea = Index(
     'idx_cave_places_title_no_area',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area ON cave_places (title, cave_uuid) WHERE cave_area_uuid IS NULL',
   );
+  late final Index idxCavePlacesCave = Index(
+    'idx_cave_places_cave',
+    'CREATE INDEX IF NOT EXISTS idx_cave_places_cave ON cave_places (cave_uuid)',
+  );
+  late final Index idxCavePlacesPlaceCode = Index(
+    'idx_cave_places_place_code',
+    'CREATE INDEX IF NOT EXISTS idx_cave_places_place_code ON cave_places (place_code_identifier)',
+  );
+  late final Index idxCavePlacesQrCode = Index(
+    'idx_cave_places_qr_code',
+    'CREATE INDEX IF NOT EXISTS idx_cave_places_qr_code ON cave_places (qr_code_resource_identifier)',
+  );
   late final DocumentationFiles documentationFiles = DocumentationFiles(this);
+  late final Index idxDocumentationFilesHash = Index(
+    'idx_documentation_files_hash',
+    'CREATE INDEX IF NOT EXISTS idx_documentation_files_hash ON documentation_files (file_hash)',
+  );
   late final DocumentationFilesToGeofeatures documentationFilesToGeofeatures =
       DocumentationFilesToGeofeatures(this);
   late final Configurations configurations = Configurations(this);
@@ -25513,8 +25533,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cavePlaces,
     rasterMaps,
     cavePlaceToRasterMapDefinitions,
+    idxCavePlaceDefinitionsMap,
     idxCavePlacesTitleNoArea,
+    idxCavePlacesCave,
+    idxCavePlacesPlaceCode,
+    idxCavePlacesQrCode,
     documentationFiles,
+    idxDocumentationFilesHash,
     documentationFilesToGeofeatures,
     configurations,
     caveTrips,
