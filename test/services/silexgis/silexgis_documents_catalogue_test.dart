@@ -15,7 +15,9 @@ import 'package:speleoloc/services/silexgis/silexgis_document_title.dart';
 import 'package:speleoloc/services/silexgis/silexgis_documents_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
+import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_link_removal_follower.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -165,6 +167,15 @@ void main() {
         serverLinks: serverLinks,
         profileUuid: profileUuid,
         clock: clock,
+      ),
+      removals: SilexgisLinkRemovalFollower(
+        db: db,
+        logger: logger,
+        catalogue: catalogue,
+        copies: copies,
+        serverLinks: serverLinks,
+        heldRows: SilexgisHeldRowRepository(db, clock: clock),
+        profileUuid: profileUuid,
       ),
       profileUuid: profileUuid,
     ).run(setId, capabilities: capabilities);
@@ -516,6 +527,148 @@ void main() {
       ]);
 
       expect(await links(), isEmpty);
+    });
+  });
+
+  group('a link taken down on the server is taken down here', () {
+    Map<String, Object?> tombstone(String id) => <String, Object?>{
+      'id': id,
+      'deletedAt': '2026-10-28T07:00Z',
+    };
+
+    Future<List<DocumentationFilesToGeofeature>> links() =>
+        db.select(db.documentationFilesToGeofeatures).get();
+
+    Future<void> document({required bool fetched}) async {
+      await db
+          .into(db.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: documentId,
+              title: 'entrance.jpg',
+              fileName: 'documentation_files/entrance.jpg',
+              fileSize: 1024,
+              fileType: 'photo',
+            ),
+          );
+      if (fetched) {
+        await copies.register(
+          SilexgisFileCopyEntry(
+            documentUuid: documentId,
+            heldAs: SilexgisHeldAs.original,
+            origin: SilexgisCopyOrigin.server,
+            versionId: 'version-1',
+          ),
+        );
+      }
+    }
+
+    /// The caver's own link of the document on [target], sent and recorded
+    /// under [linkId].
+    Future<void> hungAndSent(Uuid target, String linkId) async {
+      await db
+          .into(db.documentationFilesToGeofeatures)
+          .insert(
+            DocumentationFilesToGeofeaturesCompanion.insert(
+              uuid: Uuid.v7(),
+              geofeatureType: GeofeatureType.cave.dbValue,
+              documentationFileUuid: documentId,
+              geofeatureUuid: Value(target),
+            ),
+          );
+      await serverLinks.record(
+        profileUuid,
+        SilexgisServerLinkEntry(
+          documentUuid: documentId,
+          targetKind: SyncDocumentLink.targetFeature,
+          targetId: target,
+          linkId: linkId,
+        ),
+      );
+    }
+
+    test('a fetched document\'s link goes, unlogged, and is not held '
+        'there any more', () async {
+      await document(fetched: true);
+      await db.into(db.caves).insert(Cave(uuid: caveId, title: 'Invented'));
+      await read(<Map<String, Object?>>[
+        page(links: <Map<String, Object?>>[link('link-1')]),
+      ]);
+      expect(await links(), hasLength(1));
+
+      final report = await read(<Map<String, Object?>>[
+        page(tombstones: <Map<String, Object?>>[tombstone('link-1')]),
+      ]);
+
+      expect(report.unlinked, 1);
+      expect(await links(), isEmpty);
+      // Neither a link to send again nor a removal to send.
+      expect(await serverLinks.readAll(profileUuid), isEmpty);
+      expect(await db.select(db.changeLog).get(), isEmpty);
+    });
+
+    test('the caver\'s own document follows a link taken down while the '
+        'server still lists it elsewhere', () async {
+      final otherCave = Uuid.v7();
+      await document(fetched: false);
+      await hungAndSent(caveId, 'link-1');
+      await hungAndSent(otherCave, 'link-2');
+      await read(<Map<String, Object?>>[
+        page(
+          links: <Map<String, Object?>>[
+            link('link-1'),
+            link('link-2', target: otherCave),
+          ],
+        ),
+      ]);
+
+      await read(<Map<String, Object?>>[
+        page(tombstones: <Map<String, Object?>>[tombstone('link-1')]),
+      ]);
+
+      expect((await links()).single.geofeatureUuid, otherCave);
+      expect((await serverLinks.readAll(profileUuid)).keys, <SilexgisLinkKey>[
+        (documentId, otherCave),
+      ]);
+    });
+
+    test('the caver\'s own document keeps its last link, which may have '
+        'gone with the document', () async {
+      // Undone on the server, the document takes its links with it, and its
+      // next upload re-creates it with the links it has here.
+      await document(fetched: false);
+      await hungAndSent(caveId, 'link-1');
+      await read(<Map<String, Object?>>[
+        page(links: <Map<String, Object?>>[link('link-1')]),
+      ]);
+
+      final report = await read(<Map<String, Object?>>[
+        page(tombstones: <Map<String, Object?>>[tombstone('link-1')]),
+      ]);
+
+      expect(report.unlinked, 0);
+      expect(await links(), hasLength(1));
+      expect(
+        (await serverLinks.readAll(profileUuid)).keys,
+        contains((documentId, caveId)),
+      );
+    });
+
+    test('a link hung again under another identifier stays', () async {
+      await document(fetched: true);
+      await db.into(db.caves).insert(Cave(uuid: caveId, title: 'Invented'));
+      await read(<Map<String, Object?>>[
+        page(links: <Map<String, Object?>>[link('link-1')]),
+      ]);
+
+      await read(<Map<String, Object?>>[
+        page(
+          links: <Map<String, Object?>>[link('link-3')],
+          tombstones: <Map<String, Object?>>[tombstone('link-1')],
+        ),
+      ]);
+
+      expect(await links(), hasLength(1));
     });
   });
 }

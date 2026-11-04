@@ -29,6 +29,7 @@ import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
 import 'package:speleoloc/services/silexgis/silexgis_files_network_gate.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_link_removal_follower.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
@@ -435,6 +436,15 @@ class SilexgisSyncController extends ChangeNotifier {
             catalogue: _catalogue,
             copies: _copies,
             serverLinks: _serverLinks,
+            profileUuid: profile.profileUuid,
+          ),
+          removals: SilexgisLinkRemovalFollower(
+            db: _db,
+            logger: _logger,
+            catalogue: _catalogue,
+            copies: _copies,
+            serverLinks: _serverLinks,
+            heldRows: _heldRows,
             profileUuid: profile.profileUuid,
           ),
           profileUuid: profile.profileUuid,

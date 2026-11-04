@@ -376,6 +376,13 @@ are about sending. When it ends, a message counts what happened: downloaded,
 already on this device, no longer on the server for you, not handed to this
 account, or could not be downloaded (**try again to continue**).
 
+A photo or document taken off a cave, place or trip in the web interface is
+taken off it here too, at the next sync, and the phone does not put it back.
+One exception: your own file keeps the last place it hangs on. The server
+reports a link taken down and a file deleted there the same way, and if the
+file was deleted there, your next edit of it sends it up again with where it
+hangs on your phone.
+
 ### Server copies
 
 What your account is handed depends on the installation's rules, file by

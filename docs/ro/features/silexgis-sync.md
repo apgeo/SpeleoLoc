@@ -408,6 +408,14 @@ deja pe acest dispozitiv, care nu mai sunt pe server pentru dumneavoastră,
 care nu sunt date acestui cont, sau care nu au putut fi descărcate
 (**încearcă din nou ca să continui**).
 
+O fotografie sau un document scos de pe o peșteră, un loc sau o tură în
+interfața web este scos și de aici, la următoarea sincronizare, iar telefonul
+nu îl pune la loc. O excepție: un fișier al dumneavoastră își păstrează
+ultimul loc pe care stă. Serverul raportează la fel o legătură scoasă și un
+fișier șters acolo, iar dacă fișierul a fost șters acolo, următoarea lui
+editare îl trimite din nou, împreună cu locul unde stă pe telefonul
+dumneavoastră.
+
 ### Copiile de pe server
 
 Ce primește contul dumneavoastră depinde de regulile instalării, fișier cu

@@ -55,12 +55,21 @@ class SilexgisCatalogueApplyReport {
     this.links = 0,
     this.removed = 0,
     this.documents = const <SyncDocument>[],
+    this.tombstonedLinkIds = const <String>[],
+    this.removedLinks = const <String, SilexgisDocumentLinkData>{},
   });
 
   final int links;
 
   /// Tombstones that removed a link this device held.
   final int removed;
+
+  /// Every link the page tombstoned, held in the catalogue or not: a link
+  /// this device sent may be taken down before the catalogue lists it.
+  final List<String> tombstonedLinkIds;
+
+  /// The catalogue's copy of each link a tombstone removed, by link id.
+  final Map<String, SilexgisDocumentLinkData> removedLinks;
 
   /// The documents the page described, for whatever keeps local copies of
   /// them in step.
@@ -120,16 +129,18 @@ class SilexgisDocumentCatalogueRepository {
     }
 
     var removed = 0;
+    final removedLinks = <String, SilexgisDocumentLinkData>{};
     for (final tombstone in page.tombstones) {
-      final documentId = await _linkDocument(profileUuid, tombstone.id);
-      if (documentId == null) continue;
+      final held = await _link(profileUuid, tombstone.id);
+      if (held == null) continue;
       await (_db.delete(_db.silexgisDocumentLink)..where(
             (t) =>
                 t.profileUuid.equals(profileUuid) &
                 t.linkId.equals(tombstone.id),
           ))
           .go();
-      touched.add(documentId);
+      touched.add(held.documentId);
+      removedLinks[tombstone.id] = held;
       removed++;
     }
     for (final documentId in touched) {
@@ -140,6 +151,8 @@ class SilexgisDocumentCatalogueRepository {
       links: links,
       removed: removed,
       documents: documents.values.toList(growable: false),
+      tombstonedLinkIds: <String>[for (final t in page.tombstones) t.id],
+      removedLinks: removedLinks,
     );
   }
 
@@ -295,12 +308,13 @@ class SilexgisDocumentCatalogueRepository {
       );
 
   Future<Uuid?> _linkDocument(String profileUuid, String linkId) async =>
-      (await (_db.select(_db.silexgisDocumentLink)..where(
-                (t) =>
-                    t.profileUuid.equals(profileUuid) & t.linkId.equals(linkId),
-              ))
-              .getSingleOrNull())
-          ?.documentId;
+      (await _link(profileUuid, linkId))?.documentId;
+
+  Future<SilexgisDocumentLinkData?> _link(String profileUuid, String linkId) =>
+      (_db.select(_db.silexgisDocumentLink)..where(
+            (t) => t.profileUuid.equals(profileUuid) & t.linkId.equals(linkId),
+          ))
+          .getSingleOrNull();
 
   Future<void> _dropIfUnlinked(String profileUuid, Uuid documentId) async {
     if ((await linksOf(profileUuid, documentId)).isNotEmpty) return;
