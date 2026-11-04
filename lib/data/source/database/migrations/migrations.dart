@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/legacy_v6_migration.dart';
+import 'package:speleoloc/data/source/database/migrations/raster_map_type.dart';
 import 'package:speleoloc/data/source/database/migrations/schema_migration.dart';
 
 /// Pre-v7 → v7. Converts legacy INTEGER-PK schema to UUID-PK schema,
@@ -45,7 +46,8 @@ class LegacyV6ToV7Migration extends SchemaMigration {
 /// 1. Add created_at column to documentation_files_to_geofeatures.
 /// 2. Backfill cave_places.is_entrance / is_main_entrance NULL → 0.
 /// 3. Recreate cave_trips for the new UNIQUE(title, cave_uuid) constraint.
-/// 4. Recreate raster_maps for the new map_type CHECK constraint.
+/// 4. Recreate raster_maps for the new map_type CHECK constraint; a type it
+///    rejects becomes `other`.
 ///
 /// Only runs when `from == 7`: the v6→v7 path calls `createAll()` at the
 /// current schema, so this step must not double-apply.
@@ -118,7 +120,7 @@ class V7ToV8Migration extends SchemaMigration {
           [
             d['uuid'],
             d['title'],
-            d['map_type'],
+            rasterMapTypeOrOther(d['map_type']),
             d['file_name'],
             d['cave_uuid'],
             d['cave_area_uuid'],

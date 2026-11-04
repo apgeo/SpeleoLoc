@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:speleoloc/data/source/database/migrations/raster_map_type.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
@@ -310,7 +311,7 @@ Future<void> reinsertLegacyData(
     final rasterSeenTitle = <String>{};
     for (final r in snap.rasterMaps) {
       final legacyId = r['id'] as int;
-      final mapType = r['map_type'] as String;
+      final mapType = rasterMapTypeOrOther(r['map_type']);
       final caveId = r['cave_id'];
       var title = r['title'] as String;
       var fileName = r['file_name'] as String;
