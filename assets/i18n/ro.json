@@ -1567,6 +1567,7 @@
   "silexgis_decision_deleted_body": "Serverul nu o mai are. Dacă o ștergi, dispare de pe acest dispozitiv, cu tot ce conține și cu modificările tale netrimise.",
   "silexgis_decision_deleted_kept": "Păstrată doar pe acest dispozitiv. Nu se trimite la server.",
   "silexgis_delete_travels": "Și {server} are acest element. Următoarea sincronizare îl șterge și acolo, pentru toți cei care îl citesc, inclusiv pentru cel care l-a făcut.",
+  "silexgis_delete_travels_some": "Și {server} are {count} dintre ele. Următoarea sincronizare le șterge și acolo, pentru toți cei care le citesc, inclusiv pentru cei care le-au făcut.",
   "silexgis_decision_pin_exists": "Alt punct marchează acest loc pe harta de pe server",
   "silexgis_decision_remove_pin": "Șterge punctul meu",
   "silexgis_decision_remove_pin_title": "Ștergi punctul tău?",

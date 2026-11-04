@@ -55,4 +55,32 @@ void main() {
     // Made here and never sent: deleting it removes nothing there.
     expect(await presence.holdingInstallation(Uuid.v7()), isNull);
   });
+
+  test('a deletion of several items counts the ones the installation '
+      'holds', () async {
+    await profiles.save(
+      const SilexgisProfile(
+        profileUuid: 'p-1',
+        displayName: 'Invented club',
+        baseUrl: 'https://club.example.org',
+      ),
+    );
+    final held = <Uuid>[Uuid.v7(), Uuid.v7()];
+    for (final uuid in held) {
+      await localState.writeRevision(
+        'p-1',
+        uuid,
+        entityTable: 'cave_places',
+        revision: '2026-10-01T08:00:00Z',
+      );
+    }
+
+    final found = await presence.holdingInstallationOfAny(<Uuid>[
+      ...held,
+      Uuid.v7(),
+    ]);
+    expect(found?.installation, 'Invented club');
+    expect(found?.count, 2);
+    expect(await presence.holdingInstallationOfAny(<Uuid>[Uuid.v7()]), isNull);
+  });
 }

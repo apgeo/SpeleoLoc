@@ -597,10 +597,12 @@ Aceasta este partea distructivă, în ambele sensuri.
   elimină *cu tot ce se află în el*. Turele și hărțile raster pleacă la fel,
   chiar și una venită de pe alt telefon: serverul o elimină pentru toți, iar
   telefonul care a făcut-o își șterge propria copie la următoarea
-  sincronizare. Ștergerea unei ture sau a unei hărți raster pe care serverul o
-  are spune asta în confirmare: *Și Clubul Speo Example are acest element.
-  Următoarea sincronizare îl șterge și acolo, pentru toți cei care îl citesc, inclusiv
-  pentru cel care l-a făcut.*
+  sincronizare. Ștergerea unei peșteri, a unui loc, a unei ture sau a unei
+  hărți raster pe care serverul o are spune asta în confirmare: *Și Clubul
+  Speo Example are acest element. Următoarea sincronizare îl șterge și acolo,
+  pentru toți cei care îl citesc, inclusiv pentru cel care l-a făcut.*
+  Ștergerea mai multor peșteri sau locuri deodată le numără pe cele pe care
+  serverul le are: *Și Clubul Speo Example are 2 dintre ele. …*
 
 Niciuna nu cere confirmare în momentul sincronizării. Confirmarea a fost
 însăși ștergerea. Dacă nu sunteți sigur, faceți o copie de siguranță înainte

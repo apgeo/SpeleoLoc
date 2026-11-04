@@ -548,9 +548,11 @@ This is the destructive part, in both directions.
   everything inside it*. Trips and raster maps go the same way, also one
   that came from another phone: the server removes it for everyone, and the
   phone that made it deletes its own copy when it next syncs. Deleting a
-  trip or a raster map the server holds says so in its confirmation: *Clubul
-  Speo Example holds it too. The next sync deletes it there as well, for
-  everyone who reads it, including whoever made it.*
+  cave, a place, a trip or a raster map the server holds says so in its
+  confirmation: *Clubul Speo Example holds it too. The next sync deletes it
+  there as well, for everyone who reads it, including whoever made it.*
+  Deleting several caves or places at once counts the ones the server
+  holds: *Clubul Speo Example holds 2 of them too. …*
 
 Neither asks for confirmation at sync time. The confirmation was the delete
 itself. If you are unsure, take a backup before syncing — see

@@ -534,11 +534,24 @@ class _HomePageState extends ConsumerState<HomePage>
   void _deleteCave(Uuid caveUuid) async {
     // Deleting a cave cascades over places/maps/trips — always confirm,
     // even though the per-row button is currently feature-flagged off.
+    final installation = await ref
+        .read(silexgisServerPresenceProvider)
+        .holdingInstallation(caveUuid);
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('delete_cave_confirm')),
+        content: Text(
+          <String>[
+            LocServ.inst.t('delete_cave_confirm'),
+            // The deletion travels to the installation holding the cave.
+            if (installation != null)
+              LocServ.inst.t('silexgis_delete_travels', <String, String>{
+                'server': installation,
+              }),
+          ].join('\n\n'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -570,15 +583,26 @@ class _HomePageState extends ConsumerState<HomePage>
   Future<void> _deleteSelectedCaves(List<Cave> selected) async {
     final loc = LocServ.inst;
     final count = selected.length;
+    final held = await ref
+        .read(silexgisServerPresenceProvider)
+        .holdingInstallationOfAny(selected.map((c) => c.uuid));
+    if (!mounted) return;
     // First confirmation — Cancel left, Delete right (standard order)
     final first = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(loc.t('confirm')),
         content: Text(
-          loc
-              .t('delete_selected_caves_confirm')
-              .replaceAll('{count}', '$count'),
+          <String>[
+            loc
+                .t('delete_selected_caves_confirm')
+                .replaceAll('{count}', '$count'),
+            if (held != null)
+              loc.t('silexgis_delete_travels_some', <String, String>{
+                'server': held.installation,
+                'count': '${held.count}',
+              }),
+          ].join('\n\n'),
         ),
         actions: [
           TextButton(
