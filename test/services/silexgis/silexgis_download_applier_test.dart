@@ -1009,6 +1009,34 @@ void main() {
     });
 
     test(
+      'a place that never carried a stamp is not work of the caver\'s',
+      () async {
+        // Agreed while it had no stamp: nobody here has changed it since.
+        await (db.update(db.cavePlaces)
+              ..where((t) => t.uuid.equalsValue(placeId)))
+            .write(const CavePlacesCompanion(updatedAt: Value(null)));
+        await localState.writeRevision(
+          profile,
+          placeId,
+          entityTable: 'cave_places',
+          revision: '2026-08-28T09:00:00.000Z',
+        );
+
+        final report = await applier.applyPage(
+          page(
+            const <Map<String, Object?>>[],
+            tombstones: <Map<String, Object?>>[tombstone(caveId)],
+          ),
+          setId: setId,
+        );
+
+        expect(report.deleted, 1);
+        expect(await holds(db.cavePlaces, placeId), isFalse);
+        expect(await heldRows.readAll(profile), isEmpty);
+      },
+    );
+
+    test(
       'removes an area with its places before their own tombstones come',
       () async {
         // The places' tombstones may be a page later; left behind, they would
