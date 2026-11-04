@@ -163,15 +163,22 @@ class SyncMergeEngine {
     state.tombstones.addAll(
       _newest(localDeletes, merges.overruled).map((r, d) => MapEntry(r, d.$2)),
     );
+    // A merge is never stale the way a deletion can be: no record comes
+    // back from one under the same uuid. An archive still carrying the
+    // record merged away comes from a phone that has not heard of the merge,
+    // or could not carry it out; its rows of that record are left out, and
+    // what hangs on it goes to the record it was merged into, rather than
+    // raising again a decision a caver already took.
     final incomingDeletes = _newest(newDeletes, merges.overruled)
-      ..removeWhere((uuid, _) => state.carried.contains(uuid));
+      ..removeWhere(
+        (uuid, _) =>
+            state.carried.contains(uuid) && !merges.targets.containsKey(uuid),
+      );
     for (final MapEntry(key: uuid, value: (_, at)) in incomingDeletes.entries) {
       final known = state.tombstones[uuid];
       if (known == null || at > known) state.tombstones[uuid] = at;
     }
-    for (final MapEntry(key: from, value: into) in merges.targets.entries) {
-      if (!state.carried.contains(from)) state.mergedInto[from] = into;
-    }
+    state.mergedInto.addAll(merges.targets);
     _stampSubtrees(handlers, schema, state, rowsByTable);
 
     // Deletions first: a record the archive removes frees its unique name

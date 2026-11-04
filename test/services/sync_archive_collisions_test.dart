@@ -224,6 +224,22 @@ void main() {
       },
     );
 
+    test('to merge is not asked again when the other phone, not having heard '
+        'of it, adds inside its record', () async {
+      await b.decisions.mergeIntoLocal(await onlyDecision(b));
+      await tick();
+      final later = await placeIn(a, 'Column', aHall);
+      await tick();
+
+      final onB = await a.sendTo(b, tmp, 'a2.zip');
+
+      expect(onB.decisionsPending, 0);
+      expect(await b.held.readAll(), isEmpty);
+      expect(await b.uuidsOf('cave_areas'), {bHall});
+      expect(await areaOf(b, later), bHall.toString());
+      expect(await areaOf(b, inside), bHall.toString());
+    });
+
     test('to merge, taken on both phones the opposite way, ends with the '
         'later merge on both, holding what was inside either', () async {
       final column = await placeIn(b, 'Column', bHall);
