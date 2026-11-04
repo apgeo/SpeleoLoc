@@ -164,13 +164,48 @@ void main() {
     await b.db.close();
   });
 
-  test('emitted schema_version tracks the real DB schema', () async {
-    final db = AppDatabase.forTesting(NativeDatabase.memory());
-    // Guard against the historical drift where this constant was frozen at 9
-    // while the schema advanced. If a future migration bumps the schema,
-    // bump kSyncArchiveDbSchemaVersion in the same change.
-    expect(kSyncArchiveDbSchemaVersion, db.schemaVersion);
-    await db.close();
+  test('an archive is stamped with the archive schema version', () async {
+    final a = await buildHarness();
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final archive = ZipDecoder().decodeBytes(
+      await File(zip.path).readAsBytes(),
+    );
+    final manifest =
+        jsonDecode(
+              utf8.decode(
+                archive.findFile('manifest.json')!.content as List<int>,
+              ),
+            )
+            as Map<String, dynamic>;
+    expect(manifest['schema_version'], kSyncArchiveDbSchemaVersion);
+    await a.db.close();
+  });
+
+  test('imports every stamp from the archive version up to the local '
+      'schema', () async {
+    // Builds that kept the stamp equal to their schema version wrote stamps
+    // above the archive version for the same archived tables.
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    await a.caveRepo.addCave('Stamped');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    for (
+      var stamp = kSyncArchiveDbSchemaVersion;
+      stamp <= b.db.schemaVersion;
+      stamp++
+    ) {
+      final relabeled = await _rewriteSchemaVersion(
+        zip.path,
+        tempDir.path,
+        stamp,
+      );
+      await b.sync.importFromZip(relabeled);
+    }
+    expect((await b.caveRepo.getCaves()).single.title, 'Stamped');
+
+    await a.db.close();
+    await b.db.close();
   });
 
   test('accepts an older but in-range schema_version', () async {
@@ -204,7 +239,7 @@ void main() {
     final tooNew = await _rewriteSchemaVersion(
       zip.path,
       tempDir.path,
-      kSyncArchiveDbSchemaVersion + 1,
+      b.db.schemaVersion + 1,
     );
 
     await expectLater(
