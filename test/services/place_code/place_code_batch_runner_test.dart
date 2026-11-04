@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_place_repository.dart';
+import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
@@ -102,7 +103,10 @@ void main() {
     loggerRef = ChangeLogger(db, currentUser);
     logger = loggerRef;
     repo = CavePlaceRepository(db, currentUser, logger);
-    service = PlaceCodeService(db);
+    service = PlaceCodeService(
+      db,
+      caveIndexWriter: CaveRepository(db, currentUser, logger),
+    );
     runner = PlaceCodeBatchRunner(db, service, repo);
 
     // Use the simplest deterministic strategy for these tests.

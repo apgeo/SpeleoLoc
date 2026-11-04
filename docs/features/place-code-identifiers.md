@@ -155,6 +155,13 @@ free *within its area segment*, so two caves in different surface areas
 can both be cave `001`. Changing or clearing the field afterwards
 changes the codes generated for that cave.
 
+The index picked this way is saved like any other edit of the cave, so it
+reaches your other devices with the next sync. The free number is looked
+up only among the caves on the phone doing the generating, though: if two
+phones generate codes for two new caves in the same area before they
+sync, both can pick the same index. Sync before generating codes for new
+caves, or set the index by hand.
+
 ### Per-cave sequential
 
 Plain integers that restart inside each cave. Starting at **Start at**

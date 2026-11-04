@@ -170,6 +170,14 @@ segmentului său de zonă*, așa că două peșteri din arii de suprafață
 diferite pot fi amândouă peștera `001`. Modificarea sau golirea câmpului
 ulterior schimbă codurile generate pentru acea peșteră.
 
+Indexul ales astfel este salvat ca orice altă modificare a peșterii, deci
+ajunge la celelalte dispozitive la următoarea sincronizare. Numărul liber
+este însă căutat doar printre peșterile de pe telefonul care generează:
+dacă două telefoane generează coduri pentru două peșteri noi din aceeași
+zonă înainte să se sincronizeze, pot alege amândouă același index.
+Sincronizați înainte de a genera coduri pentru peșteri noi sau setați
+indexul manual.
+
 ### Secvențial per peșteră
 
 Numere întregi simple, care reîncep în interiorul fiecărei peșteri.

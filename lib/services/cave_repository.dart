@@ -122,6 +122,44 @@ class CaveRepository implements ICaveRepository {
     }
   }
 
+  /// Writes only the index, so a code generated while another edit of the
+  /// cave is open does not overwrite that edit's other fields.
+  @override
+  Future<void> setCaveLocalIndex(Uuid caveUuid, String caveLocalIndex) async {
+    try {
+      await _database.transaction(() async {
+        final old =
+            await (_database.select(_database.caves)
+                  ..where((c) => c.uuid.equalsValue(caveUuid))
+                  ..limit(1))
+                .getSingleOrNull();
+        if (old == null || old.caveLocalIndex == caveLocalIndex) return;
+        await (_database.update(
+          _database.caves,
+        )..where((c) => c.uuid.equalsValue(caveUuid))).write(
+          CavesCompanion(
+            caveLocalIndex: Value(caveLocalIndex),
+            updatedAt: Value(_clock.nowMs()),
+            lastModifiedByUserUuid: Value(await _currentUser.currentOrSystem()),
+          ),
+        );
+        await _logger.logUpdate(
+          'caves',
+          caveUuid,
+          oldValues: {'cave_local_index': old.caveLocalIndex},
+          newValues: {'cave_local_index': caveLocalIndex},
+        );
+      });
+    } catch (e, st) {
+      _log.severe('Failed to set cave local index', e, st);
+      throw DbException(
+        'Failed to set cave local index',
+        cause: e,
+        stackTrace: st,
+      );
+    }
+  }
+
   @override
   Future<void> deleteCave(Uuid id) async {
     try {

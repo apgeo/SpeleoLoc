@@ -576,7 +576,10 @@ final ruuviHistoryStreamProvider =
 /// The single chokepoint for PCI/QCRI generation, validation and write
 /// integration. See `docs/features/place-code-identifiers.md`.
 final placeCodeServiceProvider = Provider<PlaceCodeService>(
-  (ref) => PlaceCodeService(ref.watch(appDatabaseProvider)),
+  (ref) => PlaceCodeService(
+    ref.watch(appDatabaseProvider),
+    caveIndexWriter: ref.watch(caveRepositoryProvider),
+  ),
 );
 
 /// Batch runner orchestrating PCI/QCRI generation over a scope.
