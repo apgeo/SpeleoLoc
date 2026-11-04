@@ -9,10 +9,9 @@ import 'package:speleoloc/services/silexgis/auth/silexgis_tokens.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_set.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
-import 'package:speleoloc/services/silexgis/silexgis_http.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_server_address.dart';
-import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
+import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_progress.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -197,11 +196,9 @@ class _SilexgisSyncSettingsPageState
     );
     if (credentials == null) return;
 
-    final auth = SilexgisAuthService(
-      baseUri: profile.baseUri,
-      profileUuid: profile.profileUuid,
-      store: ref.read(silexgisTokenStoreProvider),
-    );
+    // The profile's shared sign-in, so a fetch or a run already holding it
+    // goes on with the new credential rather than writing its old one back.
+    final auth = ref.read(silexgisAuthRegistryProvider).forProfile(profile);
     try {
       var tokens = await _attemptSignIn(auth, credentials);
       if (tokens == null) return;
@@ -221,8 +218,6 @@ class _SilexgisSyncSettingsPageState
     } on SilexgisException catch (e) {
       // The server's own sentence, not a diagnosis this application invented.
       if (mounted) SnackBarService.showError(e.message);
-    } finally {
-      auth.close();
     }
   }
 
@@ -254,22 +249,18 @@ class _SilexgisSyncSettingsPageState
 
   /// Lists the sets this account owns and lets the caver pick one.
   Future<void> _chooseSet(SilexgisProfile profile) async {
-    final auth = SilexgisAuthService(
-      baseUri: profile.baseUri,
-      profileUuid: profile.profileUuid,
-      store: ref.read(silexgisTokenStoreProvider),
+    final session = SilexgisSession.signedIn(
+      profile,
+      ref.read(silexgisAuthRegistryProvider),
     );
     try {
-      if (!await auth.restore()) {
+      if (!await session.auth.restore()) {
         if (mounted) {
           SnackBarService.showError(LocServ.inst.t('silexgis_sign_in_first'));
         }
         return;
       }
-      final api = SilexgisSyncApi(
-        SilexgisHttp(baseUri: profile.baseUri, tokens: auth),
-      );
-      final sets = await api.listSets();
+      final sets = await session.api.listSets();
       if (!mounted) return;
 
       final chosen = await showDialog<SyncSet>(
@@ -289,8 +280,6 @@ class _SilexgisSyncSettingsPageState
       await _reload();
     } on SilexgisException catch (e) {
       if (mounted) SnackBarService.showError(e.message);
-    } finally {
-      auth.close();
     }
   }
 

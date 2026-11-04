@@ -1,3 +1,4 @@
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
@@ -21,16 +22,13 @@ class SilexgisSession {
     this.files,
   });
 
-  /// A session signed in with the refresh token kept in [tokens].
+  /// A session on the profile's one sign-in, which every other session of
+  /// that profile shares.
   factory SilexgisSession.signedIn(
     SilexgisProfile profile,
-    SilexgisRefreshTokenStore tokens,
+    SilexgisAuthRegistry signIns,
   ) {
-    final auth = SilexgisAuthService(
-      baseUri: profile.baseUri,
-      profileUuid: profile.profileUuid,
-      store: tokens,
-    );
+    final auth = signIns.forProfile(profile);
     final http = SilexgisHttp(baseUri: profile.baseUri, tokens: auth);
     return SilexgisSession(
       auth: auth,

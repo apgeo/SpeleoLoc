@@ -7,6 +7,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/network/network_kind_probe.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
@@ -86,6 +87,7 @@ class SilexgisSyncController extends ChangeNotifier {
     required ICaveRepository caves,
     required ICavePlaceRepository places,
     required SilexgisRefreshTokenStore tokens,
+    SilexgisAuthRegistry? signIns,
     SilexgisFileCopyRepository? copies,
     SilexgisServerLinkRepository? serverLinks,
     SilexgisStagedUploadRepository? staged,
@@ -106,7 +108,7 @@ class SilexgisSyncController extends ChangeNotifier {
        _logger = logger,
        _caves = caves,
        _places = places,
-       _tokens = tokens,
+       _signIns = signIns ?? SilexgisAuthRegistry(store: tokens),
        _copies = copies ?? SilexgisFileCopyRepository(db),
        _serverLinks = serverLinks ?? SilexgisServerLinkRepository(db),
        _staged = staged ?? SilexgisStagedUploadRepository(db),
@@ -127,7 +129,11 @@ class SilexgisSyncController extends ChangeNotifier {
   final ChangeLogger _logger;
   final ICaveRepository _caves;
   final ICavePlaceRepository _places;
-  final SilexgisRefreshTokenStore _tokens;
+
+  /// The sign-ins this run shares with every other caller of the server, so
+  /// a refresh made elsewhere during a long run never leaves it holding a
+  /// spent token.
+  final SilexgisAuthRegistry _signIns;
   final SilexgisFileCopyRepository _copies;
   final SilexgisServerLinkRepository _serverLinks;
   final SilexgisStagedUploadRepository _staged;
@@ -744,7 +750,7 @@ class SilexgisSyncController extends ChangeNotifier {
   }
 
   SilexgisSession _defaultSession(SilexgisProfile profile) =>
-      SilexgisSession.signedIn(profile, _tokens);
+      SilexgisSession.signedIn(profile, _signIns);
 
   String _summary(SilexgisReviewCounts reviews) {
     final parts = <String>[

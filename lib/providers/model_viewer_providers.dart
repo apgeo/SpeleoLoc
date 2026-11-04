@@ -99,7 +99,7 @@ final caveServerModelsProvider = FutureProvider.autoDispose
 final serverSurveyModelFetcherProvider = Provider<ServerSurveyModelFetcher>((
   ref,
 ) {
-  final tokens = ref.watch(silexgisTokenStoreProvider);
+  final signIns = ref.watch(silexgisAuthRegistryProvider);
   return SilexgisSurveyModelDownloadService(
     db: ref.watch(appDatabaseProvider),
     logger: ref.watch(changeLoggerProvider),
@@ -107,7 +107,7 @@ final serverSurveyModelFetcherProvider = Provider<ServerSurveyModelFetcher>((
     localState: ref.watch(silexgisLocalStateProvider),
     models: ref.watch(silexgisSurveyModelsProvider),
     copies: ref.watch(silexgisFileCopyRepositoryProvider),
-    sessionBuilder: (profile) => SilexgisSession.signedIn(profile, tokens),
+    sessionBuilder: (profile) => SilexgisSession.signedIn(profile, signIns),
     baseDir: getApplicationDocumentsDirectory,
   );
 });

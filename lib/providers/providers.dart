@@ -34,6 +34,7 @@ import 'package:speleoloc/services/raster_map_repository.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_history_repository.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
@@ -198,6 +199,13 @@ final silexgisTokenStoreProvider = Provider<SilexgisRefreshTokenStore>(
   (ref) => SilexgisSecureTokenStore(),
 );
 
+/// One sign-in per server profile, shared by the sync run, the settings
+/// page and every on-demand fetch: a refresh spends the token presented, and
+/// a caller holding a sign-in of its own would present a spent one.
+final silexgisAuthRegistryProvider = Provider<SilexgisAuthRegistry>(
+  (ref) => SilexgisAuthRegistry(store: ref.watch(silexgisTokenStoreProvider)),
+);
+
 /// This device's download position and per-row server revisions. Local-only:
 /// none of it leaves the device except back to the installation that issued it.
 final silexgisLocalStateProvider = Provider<SilexgisLocalStateRepository>(
@@ -269,7 +277,7 @@ final silexgisDocumentsServiceProvider = Provider<SilexgisDocumentsService>((
   ref,
 ) {
   final db = ref.watch(appDatabaseProvider);
-  final tokens = ref.watch(silexgisTokenStoreProvider);
+  final signIns = ref.watch(silexgisAuthRegistryProvider);
   final catalogue = ref.watch(silexgisDocumentCatalogueProvider);
   final logger = ref.watch(changeLoggerProvider);
   final localState = ref.watch(silexgisLocalStateProvider);
@@ -280,7 +288,7 @@ final silexgisDocumentsServiceProvider = Provider<SilexgisDocumentsService>((
     profiles: ref.watch(silexgisProfileRepositoryProvider),
     catalogue: catalogue,
     documents: ref.watch(documentationRepositoryProvider),
-    sessionBuilder: (profile) => SilexgisSession.signedIn(profile, tokens),
+    sessionBuilder: (profile) => SilexgisSession.signedIn(profile, signIns),
     downloaderBuilder: (profile, api) => SilexgisDocumentDownloader(
       db: db,
       api: api,
@@ -453,6 +461,7 @@ final silexgisSyncControllerProvider =
         caves: ref.watch(caveRepositoryProvider),
         places: ref.watch(cavePlaceRepositoryProvider),
         tokens: ref.watch(silexgisTokenStoreProvider),
+        signIns: ref.watch(silexgisAuthRegistryProvider),
         copies: ref.watch(silexgisFileCopyRepositoryProvider),
         serverLinks: ref.watch(silexgisServerLinksProvider),
         networkProbe: ref.watch(networkKindProbeProvider),

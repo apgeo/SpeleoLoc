@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_tokens.dart';
@@ -12,6 +13,7 @@ import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/silexgis_contract.dart';
 import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_http.dart';
+import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/utils/clock.dart';
 
@@ -606,6 +608,33 @@ void main() {
       );
     });
 
+    test('presents the stored successor when another client of this profile '
+        'already redeemed the token it holds', () async {
+      addTearDown(() => clock.set(DateTime.utc(2026, 9, 1, 12)));
+      final store = InMemoryRefreshTokenStore();
+      await store.write(profile, 'refresh-1');
+      final runClient = ScriptedClient(<ScriptedResponse>[
+        tokenOk(access: 'access-2', refresh: 'refresh-2'),
+        tokenOk(access: 'access-4', refresh: 'refresh-4'),
+      ]);
+      final fetchClient = ScriptedClient(<ScriptedResponse>[
+        tokenOk(access: 'access-3', refresh: 'refresh-3'),
+      ]);
+      final run = build(runClient, store: store);
+      final fetch = build(fetchClient, store: store);
+
+      expect(await run.restore(), isTrue);
+      // A model fetch while the run goes on redeems refresh-2.
+      expect(await fetch.restore(), isTrue);
+      expect(fetchClient.sent.single.formBody['refresh_token'], 'refresh-2');
+
+      clock.advance(const Duration(minutes: 15));
+      expect(await run.accessToken(), 'access-4');
+      // refresh-2 is spent; presenting it again would revoke the chain.
+      expect(runClient.sent.last.formBody['refresh_token'], 'refresh-3');
+      expect(await store.read(profile), 'refresh-4');
+    });
+
     test('renews an access token before it lapses mid-request', () async {
       final store = InMemoryRefreshTokenStore();
       await store.write(profile, 'refresh-1');
@@ -706,6 +735,111 @@ void main() {
     );
   });
 
+  group('one sign-in per profile', () {
+    const club = SilexgisProfile(
+      profileUuid: profile,
+      displayName: 'Invented club',
+      baseUrl: 'https://club.example.org',
+    );
+
+    SilexgisAuthRegistry registryOn(
+      SilexgisRefreshTokenStore store,
+      http.Client client,
+    ) => SilexgisAuthRegistry(
+      store: store,
+      newClient: () => client,
+      clock: clock,
+    );
+
+    test(
+      'every caller of a profile gets the same sign-in, which refreshes once',
+      () async {
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = ScriptedClient(<ScriptedResponse>[
+          tokenOk(access: 'access-2', refresh: 'refresh-2'),
+        ]);
+        final registry = registryOn(store, client);
+
+        // A run, and a model fetch while it goes on.
+        final run = registry.forProfile(club);
+        final fetch = registry.forProfile(club);
+        expect(identical(run, fetch), isTrue);
+        final answers = await Future.wait(<Future<bool>>[
+          run.restore(),
+          fetch.restore(),
+        ]);
+        expect(answers, everyElement(isTrue));
+        expect(client.sent, hasLength(1));
+        expect(await store.read(profile), 'refresh-2');
+      },
+    );
+
+    test('the same server written another way keeps its sign-in', () {
+      final registry = registryOn(
+        InMemoryRefreshTokenStore(),
+        ScriptedClient(<ScriptedResponse>[]),
+      );
+      final first = registry.forProfile(club);
+      expect(
+        registry.forProfile(
+          club.copyWith(baseUrl: 'https://club.example.org/'),
+        ),
+        same(first),
+      );
+      expect(
+        registry.forProfile(club.copyWith(baseUrl: 'https://test.example.org')),
+        isNot(same(first)),
+      );
+    });
+
+    group('a refresh still on its way', () {
+      test('stores nothing once the sign-in was removed elsewhere', () async {
+        // A replaced database drops the sign-in straight from the keystore.
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = _HoldsRefresh(
+          ScriptedClient(<ScriptedResponse>[
+            tokenOk(access: 'access-2', refresh: 'refresh-2'),
+          ]),
+        );
+        final auth = build(client, store: store);
+
+        final refreshing = auth.restore();
+        await client.requested;
+        await store.delete(profile);
+        client.release();
+
+        expect(await refreshing, isFalse);
+        expect(await store.read(profile), isNull);
+        expect(await auth.accessToken(), isNull);
+      });
+
+      test('does not undo a sign-in made meanwhile', () async {
+        final store = InMemoryRefreshTokenStore();
+        await store.write(profile, 'refresh-1');
+        final client = _HoldsRefresh(
+          ScriptedClient(<ScriptedResponse>[
+            loginOk(),
+            authorizeOk(),
+            tokenOk(access: 'access-new', refresh: 'refresh-new'),
+            tokenOk(access: 'access-2', refresh: 'refresh-2'),
+          ]),
+        );
+        final auth = registryOn(store, client).forProfile(club);
+
+        final refreshing = auth.restore();
+        await client.requested;
+        await auth.signIn(email: 'someone@example.org', password: 'secret');
+        client.release();
+
+        expect(await refreshing, isTrue);
+        expect(await store.read(profile), 'refresh-new');
+        expect(await auth.accessToken(), 'access-new');
+      });
+    });
+  });
+
   group('a plain http address to another machine', () {
     SilexgisAuthService cleartext(
       ScriptedClient client,
@@ -752,6 +886,31 @@ void main() {
 String _s256(String verifier) => base64Url
     .encode(sha256.convert(ascii.encode(verifier)).bytes)
     .replaceAll('=', '');
+
+/// Holds the first refresh back until [release], so a test can act while it
+/// is on its way.
+class _HoldsRefresh extends http.BaseClient {
+  _HoldsRefresh(this._inner);
+
+  final ScriptedClient _inner;
+  final Completer<void> _requested = Completer<void>();
+  final Completer<void> _released = Completer<void>();
+
+  Future<void> get requested => _requested.future;
+  void release() => _released.complete();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (!_requested.isCompleted &&
+        request is http.Request &&
+        request.url.path == SilexgisContract.tokenPath &&
+        Uri.splitQueryString(request.body)['grant_type'] == 'refresh_token') {
+      _requested.complete();
+      await _released.future;
+    }
+    return _inner.send(request);
+  }
+}
 
 /// Loses the answer to the first [lose] refreshes, as a dropped connection
 /// does after the server already acted on the request, and records each

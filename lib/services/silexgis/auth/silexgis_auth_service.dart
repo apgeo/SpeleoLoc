@@ -88,7 +88,16 @@ class SilexgisAuthService implements SilexgisTokenSource {
   /// revokes the whole chain — including the successor this client is holding.
   Future<bool>? _refreshInFlight;
 
+  /// Moves on with every sign-in and with [retire]. A refresh answer that
+  /// arrives after either belongs to a chain this client has let go of:
+  /// storing it would undo the newer sign-in, or bring back a forgotten one.
+  int _generation = 0;
+  bool _retired = false;
+
   bool get isSignedIn => _tokens != null;
+
+  /// The address this sign-in talks to.
+  Uri get baseUri => _baseUri;
 
   Uri _uri(String path) {
     final prefix = _baseUri.path.endsWith('/')
@@ -129,6 +138,11 @@ class SilexgisAuthService implements SilexgisTokenSource {
         'No refresh token was granted (scope: ${tokens.grantedScopes.join(' ')})',
       );
     }
+    // Moved on before the tokens are adopted, not when the sign-in starts:
+    // a refresh answered while a sign-in is still failing on a wrong
+    // password must still be kept, or its predecessor is the stored one and
+    // already spent.
+    _generation++;
     await _adopt(tokens);
     return tokens;
   }
@@ -156,16 +170,35 @@ class SilexgisAuthService implements SilexgisTokenSource {
   /// there is none, or when it is beyond renewal and the caver has to type
   /// their password again — which is never a reason to discard or re-download
   /// anything, because the local database is the source of truth regardless.
+  ///
+  /// The store is read every time, because the sign-in can end elsewhere —
+  /// the profile forgotten, moved to another server, or dropped with a
+  /// replaced database — and a client still holding an access token would
+  /// otherwise carry on as if nothing had happened.
   Future<bool> restore() async {
-    if (_tokens != null) return true;
     final stored = await _store.read(_profileUuid);
-    if (stored == null || stored.isEmpty) return false;
-    return _redeem(stored);
+    if (stored == null || stored.isEmpty) {
+      _tokens = null;
+      return false;
+    }
+    final tokens = _tokens;
+    if (tokens != null && tokens.refreshToken == stored) return true;
+    return refresh();
   }
 
   Future<void> signOut() async {
+    _generation++;
     _tokens = null;
     await _store.delete(_profileUuid);
+  }
+
+  /// Lets go of this sign-in for good, because its profile was forgotten or
+  /// now names another server. A refresh still on its way stores nothing
+  /// when it lands, so no credential outlives the profile it belonged to.
+  void retire() {
+    _retired = true;
+    _generation++;
+    _tokens = null;
   }
 
   // ------------------------------------------------------- SilexgisTokenSource
@@ -190,17 +223,28 @@ class SilexgisAuthService implements SilexgisTokenSource {
     });
   }
 
+  /// Presents the stored token rather than the one held here. Every answer is
+  /// stored before it is used, so the store holds the newest successor even
+  /// when another client of this profile refreshed meanwhile; the one held
+  /// here may already be spent.
   Future<bool> _doRefresh() async {
-    final stored = _tokens?.refreshToken ?? await _store.read(_profileUuid);
-    if (stored == null || stored.isEmpty) return false;
+    if (_retired) return false;
+    final stored = await _store.read(_profileUuid);
+    if (stored == null || stored.isEmpty) {
+      _tokens = null;
+      return false;
+    }
     return _redeem(stored);
   }
 
   Future<bool> _redeem(String refreshToken) async {
+    final generation = _generation;
+    final SilexgisTokens tokens;
+    // A transport failure passes through untouched: the credential may still
+    // be good when the network was not, so the stored token stays for the
+    // next run to try again.
     try {
-      final tokens = await _refreshWithinGrace(refreshToken);
-      await _adopt(tokens);
-      return true;
+      tokens = await _refreshWithinGrace(refreshToken);
     } on SilexgisAuthException catch (e) {
       if (_isAccountLocked(e)) {
         // A lock revokes nothing: the same refresh token works again once it
@@ -217,17 +261,31 @@ class SilexgisAuthService implements SilexgisTokenSource {
       }
       // `invalid_grant` here is spent, expired, replayed — or the account's
       // password was changed or reset, which revokes every token that account
-      // holds on every device. All of them mean: ask for a password.
+      // holds on every device. All of them mean: ask for a password. Only
+      // the refused token is dropped: a sign-in that replaced it meanwhile
+      // is not the one refused.
       _log.info('Refresh refused (${e.code}); a password sign-in is needed');
-      _tokens = null;
-      await _store.delete(_profileUuid);
+      if (generation == _generation) _tokens = null;
+      if (await _store.read(_profileUuid) == refreshToken) {
+        await _store.delete(_profileUuid);
+      }
       return false;
-    } on SilexgisTransportException {
-      // The credential may still be good; the network was not. Leave the
-      // stored token alone so the next run can try again.
-      rethrow;
     }
+
+    if (_isStale(generation)) return _tokens != null;
+    if (await _store.read(_profileUuid) != refreshToken) {
+      // The sign-in was dropped or replaced elsewhere while this refresh was
+      // out. Storing its answer now would bring it back.
+      _log.info('The stored sign-in changed during a refresh; dropping it');
+      if (!_isStale(generation)) _tokens = null;
+      return false;
+    }
+    if (_isStale(generation)) return _tokens != null;
+    await _adopt(tokens);
+    return true;
   }
+
+  bool _isStale(int generation) => _retired || generation != _generation;
 
   /// Repeats a refresh that got no answer at all, promptly and with the same
   /// token, while the server still accepts it. An answer that did arrive —
@@ -260,13 +318,15 @@ class SilexgisAuthService implements SilexgisTokenSource {
   /// Stores the new pair **before** anything else uses it. The refresh token
   /// in an answer is a new one and the old is spent, so discarding the
   /// response after reading the access token out of it leaves the client
-  /// holding a token that has already been redeemed.
+  /// holding a token that has already been redeemed. Held here only once
+  /// stored, so the store is never behind what this client uses.
   Future<void> _adopt(SilexgisTokens tokens) async {
-    _tokens = tokens;
+    if (_retired) return;
     final refreshToken = tokens.refreshToken;
     if (refreshToken != null) {
       await _store.write(_profileUuid, refreshToken);
     }
+    _tokens = tokens;
   }
 
   // ------------------------------------------------------------------ the flow
