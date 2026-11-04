@@ -24,8 +24,8 @@ file that contains any `ftp_seed_*` key.
 | `ftp_seed_name` | no | the host | display name in *Settings → FTP sync* |
 | `ftp_seed_username` | no | empty | |
 | `ftp_seed_password` | no | empty | written to the OS keystore |
-| `ftp_seed_protocol` | no | `ftp` | `ftp`, `ftps` or `sftp` |
-| `ftp_seed_port` | no | protocol default (21/21/22) | |
+| `ftp_seed_protocol` | no | `ftp` | `ftp` or `sftp`; `ftps` is no longer supported and seeds no profile |
+| `ftp_seed_port` | no | protocol default (21/22) | |
 | `ftp_seed_remote_folder` | no | `/` | |
 
 A define file carrying `ftp_seed_password` is **machine-local** and git-ignored
@@ -44,6 +44,11 @@ given hand-out build live with whoever owns that account.
 - Deleting the profile keeps it gone until the next replace-import.
 - A later build with *different* seed values does not update an install that
   is already seeded; the user has to edit or delete the profile first.
+- A build seeded with `ftp_seed_protocol` = `ftps` creates no profile and logs
+  a warning instead: the app cannot check an FTPS server's certificate, so it
+  no longer connects over FTPS. Seed `sftp` (port 22) instead. An install
+  already seeded with FTPS by an earlier build keeps that profile, which
+  opens in the editor with instructions for moving it to SFTP.
 
 ## Security
 

@@ -79,6 +79,16 @@ Future<void> ensureSeededFtpProfile(
 }) async {
   final seed = config ?? FtpSeedConfig.fromEnvironment();
   if (!seed.isConfigured) return;
+  // An FTPS profile would only sit there refusing to connect, since the FTP
+  // library cannot check the server's certificate. Seeding nothing leaves
+  // the build's maker an obvious gap rather than a profile that fails later.
+  if (seed.protocol == FtpProtocol.ftps) {
+    AppLogger.of('FtpProfileSeed').warning(
+      'Not seeding "${seed.displayName}" (${seed.host}): ftp_seed_protocol '
+      'is ftps, which is no longer supported; use sftp',
+    );
+    return;
+  }
 
   final existing = await repository.list();
   if (existing.any((p) => p.profileUuid == seededFtpProfileUuid)) return;

@@ -96,6 +96,24 @@ void main() {
     expect(await repo.getDefaultUuid(), isNull);
   });
 
+  test('seeds nothing when the build asks for FTPS', () async {
+    await ensureSeededFtpProfile(
+      repo,
+      config: const FtpSeedConfig(
+        displayName: 'congress',
+        protocol: FtpProtocol.ftps,
+        host: 'ftps.example.org',
+        port: null,
+        username: 'shared@example.org',
+        password: 'sekrit',
+        remoteFolder: '/',
+      ),
+    );
+    expect(await repo.list(), isEmpty);
+    expect(await repo.getDefaultUuid(), isNull);
+    expect(await repo.readPassword(seededFtpProfileUuid), isNull);
+  });
+
   test('becomes the active profile even when another default exists', () async {
     const other = FtpProfile(
       profileUuid: 'other',
