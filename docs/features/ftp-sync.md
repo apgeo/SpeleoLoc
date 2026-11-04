@@ -158,12 +158,15 @@ What happens then:
 1. The run starts **immediately** — there is no confirmation and no
    profile picker — and, unless you started it from the app menu, the
    **FTP sync** screen opens on top of it. If there is no default
-   profile, or it has no stored password, the run fails at once.
+   profile, or it has no stored password, the run fails at once. It
+   stops to ask only before an archive would delete records on this
+   device — see [Deletions are asked about](#deletions-are-asked-about).
 2. The header on the **Progress** tab names the current phase:
    **Connecting…**, **Listing remote archives…**, **Downloading
-   archive**, **Importing archive**, **Generating local archive…**,
-   **Uploading archive**, **Finalizing…**. Underneath it are the profile
-   name and **Started at**.
+   archive**, **Importing archive**, **Waiting for your answer**,
+   **Generating local archive…**, **Uploading archive**,
+   **Finalizing…**. Underneath it are the profile name and **Started
+   at**.
 3. **Overall progress** is a single bar for the whole run, with an
    **Archives: 2 / 5** count once the download queue is known. Under
    **Current file** you get the file's name, **Transferred** so far out
@@ -376,6 +379,35 @@ carries on, and the Log tab adds an orange line, *N record(s) from other
 devices wait for a decision*. Decide on **Man. sync → Archive sync → Needs
 a decision**; see [When a record here already has the
 name](sync-and-change-log.md#when-a-record-here-already-has-the-name).
+
+## Deletions are asked about
+
+An archive carries what other devices deleted as well as what they added
+and edited, and importing it deletes those records here too. A deletion
+made by mistake on one phone would otherwise vanish from every phone at
+the next one-tap sync, with nothing to bring it back.
+
+So before importing an archive that would delete records on this device,
+the run stops with **Waiting for your answer**. The **Progress** tab shows
+**Delete records on this device?**, the archive's name and what it would
+do — how many records it deletes, adds and changes — and the sync card in
+the app menu reads *N record(s) would be deleted — tap to decide*.
+Nothing from that archive has been imported yet.
+
+- **Delete and import** imports the archive with its deletions, and the
+  run goes on.
+- **Keep my records** imports nothing from that archive and goes on with
+  the others. The archive is named in the orange banner at the end, and
+  the next sync downloads it and asks again. That device's later archives
+  carry the same deletions, so nothing else from it arrives either until
+  you let them through: settle the deletion with the team-mate.
+- **Cancel sync** or **Pause sync** stop the run; the next one asks again.
+
+The question is the same on the Man. sync screen, so an archive is never
+imported with its deletions on one route without asking while the other
+asks. If you are unsure, check with the team-mate first: you can look at
+what was deleted in the [change log](sync-and-change-log.md#change-log)
+once you have let it through, but not get the records back from there.
 
 ## Housekeeping on the server
 

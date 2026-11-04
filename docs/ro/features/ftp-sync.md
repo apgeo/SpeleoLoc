@@ -168,10 +168,14 @@ Ce se întâmplă apoi:
    profil — și, dacă nu ați pornit-o din meniul aplicației, ecranul
    **Sincronizare FTP** se deschide peste ea. Dacă nu există profil
    implicit sau dacă acesta nu are parolă stocată, rularea eșuează pe loc.
+   Se oprește să întrebe doar înainte ca o arhivă să șteargă înregistrări
+   de pe acest dispozitiv — vedeți [Ștergerile sunt
+   întrebate](#ștergerile-sunt-întrebate).
 2. Antetul din fila **Progres** numește faza curentă: **Conectare…**,
    **Listare arhive pe server…**, **Se descarcă arhiva**, **Se importă
-   arhiva**, **Se generează arhiva locală…**, **Se încarcă arhiva**,
-   **Finalizare…**. Dedesubt stau numele profilului și **Început la**.
+   arhiva**, **Se așteaptă răspunsul dumneavoastră**, **Se generează
+   arhiva locală…**, **Se încarcă arhiva**, **Finalizare…**. Dedesubt
+   stau numele profilului și **Început la**.
 3. **Progres total** este o singură bară pentru întreaga rulare, cu un
    contor **Arhive: 2 / 5** odată ce coada de descărcare este cunoscută.
    Sub **Fișier curent** aveți numele fișierului, cât s-a **Transferat**
@@ -392,6 +396,40 @@ adaugă o linie portocalie, *N record(s) from other devices wait for a
 decision*. Decideți în **Sinc. man. → Arhivă sincronizare → Necesită o
 decizie**; vedeți [Când o înregistrare de aici are deja
 numele](sync-and-change-log.md#când-o-înregistrare-de-aici-are-deja-numele).
+
+## Ștergerile sunt întrebate
+
+O arhivă poartă ce au șters alte dispozitive, nu doar ce au adăugat și
+modificat, iar importul ei șterge aceste înregistrări și aici. Altfel, o
+ștergere făcută din greșeală pe un telefon ar dispărea de pe toate
+telefoanele la următoarea sincronizare dintr-o atingere, fără nimic care
+să o aducă înapoi.
+
+De aceea, înainte de a importa o arhivă care ar șterge înregistrări de pe
+acest dispozitiv, rularea se oprește cu **Se așteaptă răspunsul
+dumneavoastră**. Fila **Progres** arată **Ștergeți înregistrări de pe
+acest dispozitiv?**, numele arhivei și ce ar face — câte înregistrări
+șterge, adaugă și modifică — iar cardul de sincronizare din meniul
+aplicației scrie *N înregistrare(i) ar fi șterse — atingeți pentru a
+decide*. Din acea arhivă nu s-a importat încă nimic.
+
+- **Șterge și importă** importă arhiva cu ștergerile ei, iar rularea
+  merge mai departe.
+- **Păstrează înregistrările mele** nu importă nimic din acea arhivă și
+  continuă cu celelalte. Arhiva este numită în bannerul portocaliu de la
+  sfârșit, iar următoarea sincronizare o descarcă și întreabă din nou.
+  Arhivele ulterioare ale acelui dispozitiv poartă aceleași ștergeri, așa
+  că nici altceva de la el nu ajunge până nu le lăsați să treacă: lămuriți
+  ștergerea cu coechipierul.
+- **Anulează sincronizarea** sau **Pauză** opresc rularea; următoarea
+  întreabă din nou.
+
+Întrebarea este aceeași pe ecranul Sinc. man., așa că o arhivă nu este
+niciodată importată cu ștergerile ei pe o cale fără să fiți întrebat, în
+timp ce cealaltă întreabă. Dacă nu sunteți sigur, vorbiți întâi cu
+coechipierul: după ce o lăsați să treacă, puteți vedea ce s-a șters în
+[istoricul modificărilor](sync-and-change-log.md#change-log), dar nu
+puteți recupera înregistrările de acolo.
 
 ## Întreținerea pe server
 

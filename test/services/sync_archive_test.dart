@@ -145,6 +145,63 @@ void main() {
     await b.db.close();
   });
 
+  test(
+    'an import holding back deletions changes nothing and counts them',
+    () async {
+      final a = await buildHarness();
+      final b = await buildHarness();
+      final id = await a.caveRepo.addCave('ToDelete');
+      final zip1 = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'a1.zip',
+      );
+      // Nothing to delete yet: it imports as usual.
+      await b.sync.importFromZip(zip1.path, holdBackDeletions: true);
+      expect((await b.caveRepo.getCaves()).map((c) => c.title), ['ToDelete']);
+
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await a.logger.logDelete('caves', id, oldValues: {'title': 'ToDelete'});
+      await (a.db.delete(
+        a.db.caves,
+      )..where((c) => c.uuid.equalsValue(id))).go();
+      await a.caveRepo.addCave('Added with the deletion');
+      final zip2 = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'a2.zip',
+      );
+      final logBefore = await b.db.select(b.db.changeLog).get();
+
+      final held = await b.sync
+          .importFromZip(zip2.path, holdBackDeletions: true)
+          .then<SyncImportHasDeletionsException?>((_) => null)
+          .catchError(
+            (Object e) => e as SyncImportHasDeletionsException,
+            test: (e) => e is SyncImportHasDeletionsException,
+          );
+
+      expect(held, isNotNull);
+      expect(held!.preview.deletesApplied, 1);
+      expect(held.preview.rowsInserted, greaterThan(0));
+      expect((await b.caveRepo.getCaves()).map((c) => c.title), [
+        'ToDelete',
+      ], reason: 'neither the deletion nor the new cave is kept');
+      expect(
+        await b.db.select(b.db.changeLog).get(),
+        hasLength(logBefore.length),
+      );
+
+      // Asked and agreed: the same archive imported again applies it all.
+      final report = await b.sync.importFromZip(zip2.path);
+      expect(report.deletesApplied, 1);
+      expect((await b.caveRepo.getCaves()).map((c) => c.title), [
+        'Added with the deletion',
+      ]);
+
+      await a.db.close();
+      await b.db.close();
+    },
+  );
+
   test('rejects archive with wrong schema_version', () async {
     final a = await buildHarness();
     final b = await buildHarness();

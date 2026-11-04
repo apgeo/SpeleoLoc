@@ -94,6 +94,10 @@ class FtpSyncController extends ChangeNotifier {
   /// `paused` terminal phase instead of `cancelled`.
   bool _pauseRequested = false;
 
+  /// Completed with the user's answer while a run waits in
+  /// [FtpSyncPhase.awaitingConfirmation].
+  Completer<bool>? _deletionAnswer;
+
   // Speed / ETA rolling window for the current file transfer step. Cleared
   // each time we enter a fresh download/upload step.
   final List<_SpeedSample> _speedSamples = <_SpeedSample>[];
@@ -169,6 +173,7 @@ class FtpSyncController extends ChangeNotifier {
     _pauseRequested = false;
     _appendLog(FtpSyncLogLevel.warning, 'Cancellation requested');
     token.cancel();
+    _answerDeletions(apply: false);
   }
 
   /// Pauses the in-flight run: the current step is cancelled and the run
@@ -181,6 +186,66 @@ class FtpSyncController extends ChangeNotifier {
     _pauseRequested = true;
     _appendLog(FtpSyncLogLevel.info, 'Pause requested');
     token.cancel();
+    _answerDeletions(apply: false);
+  }
+
+  /// Answers [FtpSyncProgress.pendingDeletions]: imports the archive with
+  /// its deletions, and the run goes on.
+  void applyPendingDeletions() {
+    if (_deletionAnswer == null) return;
+    _appendLog(FtpSyncLogLevel.info, 'Deletions accepted');
+    _answerDeletions(apply: true);
+  }
+
+  /// Answers [FtpSyncProgress.pendingDeletions]: leaves the archive aside,
+  /// keeping this device's records, and the run goes on. The archive is
+  /// offered again on the next run.
+  void skipPendingDeletions() {
+    if (_deletionAnswer == null) return;
+    _answerDeletions(apply: false);
+  }
+
+  void _answerDeletions({required bool apply}) {
+    final answer = _deletionAnswer;
+    if (answer != null && !answer.isCompleted) answer.complete(apply);
+  }
+
+  /// Stops the run until the user answers whether [archiveName] may delete
+  /// what [preview] counts. Throws [TransferCancelledException] when the run
+  /// is cancelled or paused meanwhile.
+  Future<bool> _awaitDeletionAnswer(
+    String archiveName,
+    SyncImportReport preview,
+    CancelToken token,
+  ) async {
+    final answer = Completer<bool>();
+    _deletionAnswer = answer;
+    _appendLog(
+      FtpSyncLogLevel.warning,
+      'Importing $archiveName would delete ${preview.deletesApplied} '
+      'record(s) on this device (and add ${preview.rowsInserted}, change '
+      '${preview.rowsUpdated}). Waiting for your answer.',
+    );
+    _emit(
+      (s) => s.copyWith(
+        phase: FtpSyncPhase.awaitingConfirmation,
+        statusMessage: 'ftp_phase_awaitingConfirmation',
+        pendingDeletions: FtpPendingDeletions(
+          archiveName: archiveName,
+          deletes: preview.deletesApplied,
+          inserts: preview.rowsInserted,
+          updates: preview.rowsUpdated,
+        ),
+      ),
+    );
+    try {
+      final apply = await answer.future;
+      token.throwIfCancelled();
+      return apply;
+    } finally {
+      _deletionAnswer = null;
+      _emit((s) => s.copyWith(clearPendingDeletions: true));
+    }
   }
 
   /// Resumes a previously paused run by triggering a fresh [startDefault].
@@ -520,10 +585,26 @@ class FtpSyncController extends ChangeNotifier {
       String? firstImportError;
       var importWarnings = 0;
 
+      // A server drops a connection left idle while the user decides about
+      // deletions, so the next transfer after an answer starts afresh.
+      var reconnectNeeded = false;
+      Future<void> reconnectIfNeeded() async {
+        if (!reconnectNeeded) return;
+        reconnectNeeded = false;
+        try {
+          await transport.disconnect();
+        } catch (e, st) {
+          _log.fine('best-effort disconnect before reconnect failed', e, st);
+        }
+        await transport.connect(password: password);
+        token.throwIfCancelled();
+      }
+
       for (var i = 0; i < unseen.length; i++) {
         token.throwIfCancelled();
         final entry = unseen[i];
         final localPath = p.join(tempDir.path, entry.name);
+        await reconnectIfNeeded();
 
         _resetSpeedSamples();
         _emit(
@@ -687,7 +768,48 @@ class FtpSyncController extends ChangeNotifier {
           ),
         );
         try {
-          final report = await _archiveService.importFromZip(localPath);
+          SyncImportReport report;
+          try {
+            report = await _archiveService.importFromZip(
+              localPath,
+              holdBackDeletions: true,
+            );
+          } on SyncImportHasDeletionsException catch (held) {
+            // Nothing was imported. A one-tap sync must not delete what
+            // another device deleted without the user's say: some of those
+            // deletions are mistakes, and nothing here brings them back.
+            final apply = await _awaitDeletionAnswer(
+              entry.name,
+              held.preview,
+              token,
+            );
+            reconnectNeeded = true;
+            if (!apply) {
+              skipped.add('${entry.name} (its deletions were not accepted)');
+              _appendLog(
+                FtpSyncLogLevel.warning,
+                'Left ${entry.name} aside: its deletions were not accepted, '
+                'so nothing from it was imported. It is offered again on '
+                'the next sync.',
+              );
+              _emit(
+                (s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0),
+              );
+              try {
+                await File(localPath).delete();
+              } catch (e, st) {
+                _log.fine('best-effort delete failed: $localPath', e, st);
+              }
+              continue;
+            }
+            _emit(
+              (s) => s.copyWith(
+                phase: FtpSyncPhase.importing,
+                statusMessage: 'ftp_phase_importing',
+              ),
+            );
+            report = await _archiveService.importFromZip(localPath);
+          }
           _appendLog(
             FtpSyncLogLevel.info,
             'Imported ${entry.name}: +${report.rowsInserted} / '
@@ -727,6 +849,8 @@ class FtpSyncController extends ChangeNotifier {
             }
             continue;
           }
+        } on TransferCancelledException {
+          rethrow;
         } on SyncArchiveSchemaMismatchException catch (e) {
           // Make the message actionable: tell the user the minimum app
           // version they need to update to. We deliberately *do not* mark
@@ -948,6 +1072,7 @@ class FtpSyncController extends ChangeNotifier {
           clearStepEta: true,
         ),
       );
+      await reconnectIfNeeded();
       await _deleteOwnLeftovers(transport, remoteEntries, myDeviceId);
 
       // The SHA-256 sidecar goes up first: peers refuse an archive without

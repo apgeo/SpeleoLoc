@@ -100,10 +100,12 @@ Then:
 
 1. Tap **Import sync archive** and pick the `.zip`.
 2. Confirm the **Import sync archive?** prompt. Read it: it warns that
-   newer local edits are kept, older ones overwritten, and that
-   **deletions carried by the archive are applied to your database**.
+   newer local edits are kept and older ones overwritten.
 3. The merge runs. In Manual mode a dialog appears for each conflicting
-   record (see below).
+   record (see below). If the archive would delete records on your
+   device, **Delete records on this device?** asks first, with their
+   number (see [Importing can delete your
+   records](#importing-can-delete-your-records)).
 4. A one-line summary appears under the buttons, for example
    `Import complete: +12 / ~3 / -1 (57 Change history, 8 files)` —
    records added, records updated, records deleted, change-log entries
@@ -137,7 +139,19 @@ added and edited, and importing replays those deletions on your device. A
 cave, place, map or document your team-mate removed will be removed from
 your database too.
 
-This is irreversible and nothing prompts you record by record:
+This is irreversible, so before an archive deletes anything on your
+device you are asked once, for the whole archive: **Delete records on
+this device?** says how many records it would delete, add and change.
+
+- **Delete and import** imports the archive, deletions included.
+- **Keep my records** imports nothing from it, and the screen reports
+  *Import cancelled — no changes were applied*.
+
+[FTP sync](ftp-sync.md#deletions-are-asked-about) asks the same question.
+It is not asked record by record, and **Manual (review each conflict)**
+does not change that: the conflict dialog only covers edits.
+
+A deletion you let through works like this:
 
 - The record survives only if you edited it **strictly after** they
   deleted it. If the two happened at the same moment, the deletion wins.
@@ -152,8 +166,6 @@ This is irreversible and nothing prompts you record by record:
   record back. If your team-mate's phone still had the place when it last
   synced, importing that archive does not restore the place you deleted
   afterwards.
-- **Manual (review each conflict)** does not help here. The conflict
-  dialog only covers edits; deletions are always applied silently.
 
 If you are unsure about an archive, export your own data first (or take a
 database backup) so you can get a deleted record back.

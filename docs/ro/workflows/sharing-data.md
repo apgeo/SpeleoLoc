@@ -84,8 +84,11 @@ pornește imediat o sincronizare FTP (vezi ruta 2).
      din arhivă**, **Păstrează toate local**, **Folosește toate din
      arhivă** sau **Anulează importul**.
 3. Apăsați **Importă arhivă de sincronizare** și alegeți zip-ul.
-4. Confirmați întrebarea **Import arhivă de sincronizare?**. Citiți-o —
-   este singurul avertisment că și ștergerile călătoresc.
+4. Confirmați întrebarea **Import arhivă de sincronizare?**. Dacă arhiva
+   ar șterge înregistrări de pe telefonul dumneavoastră, întreabă apoi
+   **Ștergeți înregistrări de pe acest dispozitiv?**, cu numărul lor:
+   **Șterge și importă**, sau **Păstrează înregistrările mele** ca să nu
+   importați nimic din ea.
 5. Când se termină primiți o singură linie: **Import finalizat**, urmată
    de câte înregistrări au fost adăugate, actualizate și șterse și câte
    intrări de istoric al modificărilor și câte fișiere au trecut.
@@ -101,9 +104,10 @@ mesajul spune *Import anulat — nicio modificare nu a fost aplicată*.
   document pe care colegul le-a scos dispar și de la dumneavoastră. Copia
   dumneavoastră supraviețuiește doar dacă ați modificat-o *strict după* ce
   el a șters-o; dacă cele două s-au petrecut în aceeași clipă, câștigă
-  ștergerea. Asta se întâmplă și în modul **Manual** — dialogul de
-  revizuire acoperă numai modificări, așa că nu sunteți niciodată întrebat
-  înainte ca ceva să dispară.
+  ștergerea. Sunteți întrebat o dată înainte ca o arhivă să șteargă ceva
+  — pe această cale la fel ca pe calea FTP — dar nu înregistrare cu
+  înregistrare: dialogul de revizuire din modul **Manual** acoperă numai
+  modificări.
 - **Doi oameni cu același nume de utilizator devin unul singur.** Un
   utilizator sosit al cărui nume există deja pe dispozitivul dumneavoastră
   este tratat ca aceeași persoană, iar înregistrările lui sunt atașate
@@ -166,7 +170,10 @@ niciodată date.
 
 Tot ce face un import FTP bazei dumneavoastră de date este exact ce
 descrie mai sus „Ce poate face pe tăcute un import datelor dumneavoastră”
-— inclusiv rejucarea ștergerilor, fără nicio întrebare. Detaliile complete
+— inclusiv rejucarea ștergerilor, după aceeași întrebare ca pe calea
+manuală: rularea se oprește la **Se așteaptă răspunsul dumneavoastră**
+până alegeți **Șterge și importă** sau **Păstrează înregistrările mele**.
+Detaliile complete
 despre câmpurile profilului și despre jurnal sunt în
 [Sincronizare FTP](../features/ftp-sync.md).
 

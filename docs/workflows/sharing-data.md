@@ -74,8 +74,10 @@ toolbar: it does not open this screen, it starts an FTP sync immediately
      **Keep local**, **Use incoming**, **Keep all local**,
      **Use all incoming** or **Cancel import**.
 3. Press **Import sync archive** and pick the zip.
-4. Confirm the **Import sync archive?** prompt. Read it — it is the only
-   warning that deletions travel too.
+4. Confirm the **Import sync archive?** prompt. If the archive would
+   delete records on your phone, **Delete records on this device?** then
+   asks, with their number: **Delete and import**, or **Keep my
+   records** to import nothing from it.
 5. When it finishes you get one line: **Import complete** followed by
    how many records were added, updated and deleted, and how many change
    history entries and files came across.
@@ -90,9 +92,9 @@ message says *Import cancelled — no changes were applied*.
   on your phone: a cave, place, map or document your team-mate removed
   disappears from yours too. Your copy survives only if you edited it
   *strictly after* they deleted it; if the two happened in the same
-  instant, the delete wins. This happens in **Manual** mode as well —
-  the review dialog only ever covers edits, so you are never asked
-  before something vanishes.
+  instant, the delete wins. You are asked once before an archive
+  deletes anything — on this route and on the FTP route alike — but not
+  record by record: the **Manual** review dialog only ever covers edits.
 - **Two people with the same user name become one.** An incoming user
   whose name already exists on your device is treated as the same
   person, and their records are attached to your local user. That is
@@ -149,7 +151,9 @@ little bandwidth, never data.
 
 Everything an FTP import does to your database is exactly what
 "What an import can quietly do to your data" above describes —
-including replaying deletions, without a prompt. Full details of the
+including replaying deletions, after the same question as the manual
+route: the run stops on **Waiting for your answer** until you choose
+**Delete and import** or **Keep my records**. Full details of the
 profile fields and the log are in [FTP sync](../features/ftp-sync.md).
 
 ## Route 3: sync caves with your club's server

@@ -11,6 +11,19 @@ import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/sync_conflict_dialog.dart';
+import 'package:speleoloc/widgets/sync_deletion_consent.dart';
+
+/// Gives a conflict already asked about the same answer again: an import
+/// that held back its deletions runs a second time once they are allowed,
+/// and must not ask about every conflict twice.
+ConflictResolver _rememberingAnswers(ConflictResolver ask) {
+  final answers = <String, SyncConflictAction?>{};
+  return (conflict) async {
+    final key = '${conflict.tableName}/${conflict.entityUuid}';
+    if (answers.containsKey(key)) return answers[key];
+    return answers[key] = await ask(conflict);
+  };
+}
 
 /// Import-time conflict resolution strategy picked by the user.
 enum _ConflictMode {
@@ -280,12 +293,35 @@ class _SyncPageState extends ConsumerState<SyncPage>
 
     try {
       final service = ref.read(syncArchiveServiceProvider);
-      final report = await service.importFromZip(
-        path,
-        conflictResolver: _conflictMode == _ConflictMode.manual
-            ? promptingConflictResolver(context)
-            : null,
-      );
+      final resolver = _conflictMode == _ConflictMode.manual
+          ? _rememberingAnswers(promptingConflictResolver(context))
+          : null;
+      SyncImportReport report;
+      try {
+        report = await service.importFromZip(
+          path,
+          conflictResolver: resolver,
+          holdBackDeletions: true,
+        );
+      } on SyncImportHasDeletionsException catch (held) {
+        // Nothing was imported yet; the same question as an FTP sync asks.
+        if (!mounted) return;
+        final apply = await showSyncDeletionConsentDialog(
+          context,
+          deletes: held.preview.deletesApplied,
+          inserts: held.preview.rowsInserted,
+          updates: held.preview.rowsUpdated,
+        );
+        if (!apply) {
+          if (mounted) {
+            setState(() {
+              _lastMessage = LocServ.inst.t('sync_import_cancelled');
+            });
+          }
+          return;
+        }
+        report = await service.importFromZip(path, conflictResolver: resolver);
+      }
       if (!mounted) return;
       setState(() {
         _lastMessage =

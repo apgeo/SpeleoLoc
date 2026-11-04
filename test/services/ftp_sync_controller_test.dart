@@ -290,15 +290,24 @@ class _ScriptedArchiveService extends SyncArchiveService {
   _ScriptedArchiveService(super.db, super.logger, this.onImport);
 
   Future<SyncImportReport> Function(String zipPath) onImport;
+
+  /// Used instead of [onImport] for an import holding back deletions.
+  Future<SyncImportReport> Function(String zipPath)? onHeldBackImport;
   final List<String> imported = <String>[];
+  final List<bool> heldBack = <bool>[];
 
   @override
   Future<SyncImportReport> importFromZip(
     String zipPath, {
     ConflictResolver? conflictResolver,
+    bool holdBackDeletions = false,
   }) {
     imported.add(zipPath.split(Platform.pathSeparator).last);
-    return onImport(zipPath);
+    heldBack.add(holdBackDeletions);
+    final held = onHeldBackImport;
+    return holdBackDeletions && held != null
+        ? held(zipPath)
+        : onImport(zipPath);
   }
 }
 
@@ -1509,6 +1518,90 @@ void main() {
         await controller.startDefault();
         await _waitForTerminal(controller);
         expect(fake.uploadedNames, isEmpty);
+      },
+    );
+  });
+
+  group('incoming deletions', () {
+    const peerArchive = 'speleo_loc_sync_1000_deadbeef.zip';
+
+    /// Waits for the run [c] was just told to start to ask its question.
+    Future<FtpSyncProgress> waitForQuestion(FtpSyncController c) async {
+      while (!c.progress.isRunning) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      while (c.progress.phase != FtpSyncPhase.awaitingConfirmation) {
+        if (!c.progress.isRunning && c.progress.phase != FtpSyncPhase.idle) {
+          fail('the run ended without asking: ${c.progress.phase}');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      return c.progress;
+    }
+
+    Future<(FtpSyncController, _FakeTransport, _ScriptedArchiveService)> build(
+      _Harness h,
+    ) async {
+      final service =
+          _ScriptedArchiveService(
+              h.db,
+              h.logger,
+              (_) async => _report(deletes: 2),
+            )
+            ..onHeldBackImport = (_) async =>
+                throw SyncImportHasDeletionsException(_report(deletes: 2));
+      final (controller, fake) = await makeController(
+        h,
+        archiveService: service,
+      );
+      fake.publish(peerArchive, [1, 2, 3]);
+      return (controller, fake, service);
+    }
+
+    test('a one-tap sync asks before applying them, then imports', () async {
+      final h = await _buildHarness();
+      final (controller, fake, service) = await build(h);
+
+      unawaited(controller.startDefault());
+      final asking = await waitForQuestion(controller);
+
+      expect(asking.pendingDeletions?.archiveName, peerArchive);
+      expect(asking.pendingDeletions?.deletes, 2);
+      expect(service.heldBack, [true], reason: 'nothing applied yet');
+
+      controller.applyPendingDeletions();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      expect(end.pendingDeletions, isNull);
+      expect(service.heldBack, [true, false]);
+      expect(await seenArchives(h), contains(peerArchive));
+      expect(fake.connectCalls, 2, reason: 'reconnects after the wait');
+    });
+
+    test(
+      'keeping the records imports nothing and asks again next time',
+      () async {
+        final h = await _buildHarness();
+        final (controller, _, service) = await build(h);
+
+        unawaited(controller.startDefault());
+        await waitForQuestion(controller);
+        controller.skipPendingDeletions();
+        final end = await _waitForTerminal(controller);
+
+        expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+        expect(end.warningMessage, contains(peerArchive));
+        expect(service.heldBack, [true]);
+        expect(await seenArchives(h), isNot(contains(peerArchive)));
+
+        unawaited(controller.startDefault());
+        await waitForQuestion(controller);
+        controller.cancel();
+        expect(
+          (await _waitForTerminal(controller)).phase,
+          FtpSyncPhase.cancelled,
+        );
       },
     );
   });

@@ -140,6 +140,11 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
         leadingIcon = Icons.pause_circle_outline;
         leadingColor = Colors.blueGrey;
         break;
+      case FtpSyncPhase.awaitingConfirmation:
+        background = Colors.orange.withValues(alpha: 0.10);
+        leadingIcon = Icons.help_outline;
+        leadingColor = Colors.orange;
+        break;
       default:
         background = theme.colorScheme.primaryContainer.withValues(alpha: 0.3);
         leadingIcon = Icons.cloud_upload;
@@ -235,6 +240,18 @@ class _FtpSyncDrawerCardState extends ConsumerState<FtpSyncDrawerCard> {
                       fontSize: 10,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              if (progress.pendingDeletions case final pending?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    LocServ.inst.t('ftp_deletions_waiting', {
+                      'deletes': '${pending.deletes}',
+                    }),
+                    style: const TextStyle(fontSize: 10, color: Colors.orange),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

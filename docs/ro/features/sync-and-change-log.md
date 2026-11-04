@@ -108,11 +108,13 @@ Apoi:
 
 1. Apăsați **Importă arhivă de sincronizare** și alegeți fișierul `.zip`.
 2. Confirmați întrebarea **Import arhivă de sincronizare?**. Citiți-o:
-   vă avertizează că modificările locale mai noi se păstrează, cele mai
-   vechi se suprascriu și că **ștergerile aduse de arhivă se aplică bazei
-   voastre de date**.
+   vă avertizează că modificările locale mai noi se păstrează, iar cele
+   mai vechi se suprascriu.
 3. Îmbinarea rulează. În modul Manual apare un dialog pentru fiecare
-   înregistrare aflată în conflict (vedeți mai jos).
+   înregistrare aflată în conflict (vedeți mai jos). Dacă arhiva ar șterge
+   înregistrări de pe dispozitivul vostru, **Ștergeți înregistrări de pe
+   acest dispozitiv?** întreabă întâi, cu numărul lor (vedeți [Importul vă
+   poate șterge înregistrări](#importul-vă-poate-șterge-înregistrări)).
 4. Sub butoane apare un rezumat pe o linie, de exemplu
    `Import finalizat: +12 / ~3 / -1 (57 Istoric modificări, 8 fișiere)` —
    înregistrări adăugate, înregistrări actualizate, înregistrări șterse,
@@ -149,8 +151,21 @@ pe dispozitivul vostru. O peșteră, un loc, o hartă sau un document pe care
 colegul de echipă le-a înlăturat vor fi înlăturate și din baza voastră de
 date.
 
-Operațiunea este ireversibilă și nimic nu vă întreabă înregistrare cu
-înregistrare:
+Operațiunea este ireversibilă, așa că înainte ca o arhivă să șteargă ceva
+de pe dispozitivul vostru sunteți întrebat o dată, pentru toată arhiva:
+**Ștergeți înregistrări de pe acest dispozitiv?** spune câte înregistrări
+ar șterge, adăuga și modifica.
+
+- **Șterge și importă** importă arhiva, cu tot cu ștergeri.
+- **Păstrează înregistrările mele** nu importă nimic din ea, iar ecranul
+  raportează *Import anulat — nicio modificare nu a fost aplicată*.
+
+[Sincronizarea FTP](ftp-sync.md#ștergerile-sunt-întrebate) pune aceeași
+întrebare. Nu se întreabă înregistrare cu înregistrare, iar **Manual
+(revizuiește fiecare conflict)** nu schimbă asta: dialogul de conflict
+acoperă doar modificările.
+
+O ștergere pe care o lăsați să treacă se aplică astfel:
 
 - Înregistrarea supraviețuiește doar dacă ați modificat-o **strict după**
   ce el a șters-o. Dacă cele două s-au petrecut în același moment,
@@ -168,9 +183,6 @@ Operațiunea este ireversibilă și nimic nu vă întreabă înregistrare cu
   poate aduce înregistrarea înapoi. Dacă telefonul colegului mai avea
   locul la ultima lui sincronizare, importul acelei arhive nu readuce
   locul pe care l-ați șters după aceea.
-- **Manual (revizuiește fiecare conflict)** nu ajută aici. Dialogul de
-  conflict acoperă doar modificările; ștergerile se aplică întotdeauna în
-  tăcere.
 
 Dacă nu sunteți sigur pe o arhivă, exportați-vă mai întâi propriile date
 (sau faceți o copie de siguranță a bazei de date), ca să puteți recupera o

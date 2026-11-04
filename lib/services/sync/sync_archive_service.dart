@@ -183,6 +183,24 @@ class SyncImportCancelledException implements Exception {
   String toString() => 'SyncImportCancelledException: $message';
 }
 
+/// Thrown by [SyncArchiveService.importFromZip] with `holdBackDeletions`
+/// when the archive would delete rows on this device. Nothing was changed;
+/// [preview] holds the counts the import would have produced.
+class SyncImportHasDeletionsException implements Exception {
+  const SyncImportHasDeletionsException(this.preview);
+  final SyncImportReport preview;
+
+  @override
+  String toString() =>
+      'SyncImportHasDeletionsException: the archive would delete '
+      '${preview.deletesApplied} row(s)';
+}
+
+/// Rolls back the outer transaction of a held-back import.
+class _DeletionsHeldBack implements Exception {
+  const _DeletionsHeldBack();
+}
+
 /// Thrown by [SyncArchiveService.importFromZip] when the archive's database
 /// schema version does not match the running app's. Carries enough metadata
 /// to render an actionable message:
@@ -493,9 +511,16 @@ class SyncArchiveService {
   /// [SyncConflictAction.cancel], the whole import is rolled back and
   /// [SyncImportCancelledException] is thrown. Returning `null` from the
   /// resolver falls back to the default LWW decision.
+  ///
+  /// With [holdBackDeletions], an import that would delete rows on this
+  /// device is rolled back before any file is written and
+  /// [SyncImportHasDeletionsException] is thrown with what it would have
+  /// done, so the user can be asked first; importing again without it
+  /// applies the deletions.
   Future<SyncImportReport> importFromZip(
     String zipPath, {
     ConflictResolver? conflictResolver,
+    bool holdBackDeletions = false,
   }) async {
     // Read the file asynchronously so the UI/main isolate is never blocked.
     //
@@ -541,6 +566,7 @@ class SyncArchiveService {
       archive,
       conflictResolver,
       zipPath,
+      holdBackDeletions: holdBackDeletions,
     );
 
     // Release the full in-memory archive and its backing byte buffer before
@@ -661,8 +687,9 @@ class SyncArchiveService {
   Future<(SyncImportReport, List<String>)> _mergeArchiveIntoDb(
     Archive archive,
     ConflictResolver? conflictResolver,
-    String zipPath,
-  ) async {
+    String zipPath, {
+    bool holdBackDeletions = false,
+  }) async {
     final manifestFile = archive.findFile('manifest.json');
     if (manifestFile == null) {
       final f = File(zipPath);
@@ -742,13 +769,16 @@ class SyncArchiveService {
         ? _readJsonl(fieldEntry)
         : <Map<String, dynamic>>[];
 
-    final report = await _engine.merge(
+    Future<SyncImportReport> merge() => _engine.merge(
       tableRows: tableRows,
       logRows: logRows,
       fieldRows: fieldRows,
       conflictResolver: conflictResolver,
       warnings: warnings,
     );
+    final report = holdBackDeletions
+        ? await _mergeUnlessDeleting(merge)
+        : await merge();
 
     // Collect the asset entry names for the caller to extract after it has
     // released this archive; file counts are filled in there.
@@ -758,6 +788,24 @@ class SyncArchiveService {
     ];
 
     return (report, assetEntryNames);
+  }
+
+  /// Runs [merge] inside an outer transaction, so that a merge that deleted
+  /// rows can be undone whole: its own transaction becomes a savepoint, and
+  /// throwing here rolls everything back.
+  Future<SyncImportReport> _mergeUnlessDeleting(
+    Future<SyncImportReport> Function() merge,
+  ) async {
+    SyncImportReport? report;
+    try {
+      await _db.transaction(() async {
+        final r = report = await merge();
+        if (r.deletesApplied > 0) throw const _DeletionsHeldBack();
+      });
+    } on _DeletionsHeldBack {
+      throw SyncImportHasDeletionsException(report!);
+    }
+    return report!;
   }
 
   // ---------------------------------------------------------------------------
