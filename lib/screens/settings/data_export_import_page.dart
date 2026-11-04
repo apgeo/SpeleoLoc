@@ -525,6 +525,11 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
                 LocServ.inst.t('import_files_copied'),
                 result.filesCopied,
               ),
+              if (result.decisionsPending > 0)
+                _resultRow(
+                  LocServ.inst.t('import_decisions_pending'),
+                  result.decisionsPending,
+                ),
               if (result.warnings.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(

@@ -221,10 +221,13 @@ fiecărui conflict rămas din tot importul, la toate tipurile de
 înregistrări. Dacă închideți dialogul fără să alegeți, înregistrarea
 dumneavoastră este păstrată.
 
-O înregistrare nouă al cărei nume se ciocnește cu o înregistrare *diferită*
+O înregistrare nouă al cărei nume îl are deja o înregistrare *diferită*
 de-a dumneavoastră — același titlu de loc în aceeași peșteră, creat separat
-pe două telefoane — nu este adăugată: a dumneavoastră este păstrată, iar
-cea primită este numărată ca omisă.
+pe două telefoane — nu este nici adăugată, nici pierdută: este reținută, cu
+tot ce atârnă de ea, până decideți în **Sinc. man. → Arhivă sincronizare →
+Necesită o decizie** (vedeți [Când o înregistrare de aici are deja
+numele](sync-and-change-log.md#când-o-înregistrare-de-aici-are-deja-numele)).
+Restul arhivei este îmbinat.
 
 #### O îmbinare și șterge
 
@@ -269,8 +272,10 @@ numărul de la **Fișiere copiate** iese mai mic decât vă așteptați. Doar
 
 Când o îmbinare se termină, un dialog **Import Complet** raportează patru
 numere: **Înregistrări importate** (adăugate), **Înregistrări omise**
-(neschimbate, păstrate local sau în coliziune), **Înregistrări
-suprascrise** (actualizate) și **Fișiere copiate**. Dacă ceva a mers prost
+(neschimbate, păstrate local sau neaduse pentru că ce le conține a
+dispărut), **Înregistrări suprascrise** (actualizate) și **Fișiere
+copiate** — plus un al cincilea, **Așteaptă o decizie (Sinc. man.)**, când
+există înregistrări reținute pentru dumneavoastră. Dacă ceva a mers prost
 pe parcurs — un fișier care nu s-a putut copia, un utilizator potrivit cu
 unul de-al dumneavoastră după numele de utilizator — dedesubt sunt listate
 cu portocaliu până la zece **Avertismente**, cu un rând „… și N în plus”

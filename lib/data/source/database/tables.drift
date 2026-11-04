@@ -14,8 +14,8 @@
 -- not synced across devices. Local-only means: absent from the sync-archive
 -- table registry and from the archive import/export configs, so no exporter
 -- has to remember to skip it. The other local-only tables are
--- `ruuvi_sensor_history` and the `silexgis_*` tables at the end of this
--- file.
+-- `ruuvi_sensor_history`, `media_qr_scan_cache`, `archive_held_row` and the
+-- `silexgis_*` tables at the end of this file.
 --
 -- `place_code_identifier` (PCI) and `qr_code_resource_identifier` (QCRI)
 -- are user-facing alphanumeric identifiers on cave_places. PCI is the
@@ -499,6 +499,31 @@ CREATE TABLE IF NOT EXISTS change_log_field (
     old_value_short      BLOB,
     old_value_truncated  INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (change_uuid, field_name)
+);
+
+-- Table: archive_held_row
+-- LOCAL ONLY, like `configurations`: never change-logged, never carried by an
+-- archive. The rows of an archive merge that wait for a person to decide:
+-- a new record whose unique name a different record here already holds (two
+-- phones each created cave area "Hall" in the same cave), an edit that would
+-- give a record such a name, and every incoming row that hangs on such a new
+-- record. The rest of the archive is merged; these wait here.
+--
+-- `group_uuid` is the record the row waits on: the colliding record itself,
+-- or the colliding record a dependent row hangs on. `collides_with_uuid` is
+-- the local record holding the same name, set on the colliding row only.
+-- `row_json` is the row as the archive carried it.
+--
+-- Every merge reads these rows back beside the archive it merges, so a newer
+-- version replaces a held one, a record its source has since renamed or
+-- deleted stops waiting, and whatever still collides is held again.
+CREATE TABLE IF NOT EXISTS archive_held_row (
+    entity_uuid         BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    entity_table        TEXT(80) NOT NULL,
+    group_uuid          BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    collides_with_uuid  BLOB MAPPED BY `const UuidConverter()`,
+    row_json            TEXT NOT NULL,
+    held_at             INTEGER NOT NULL
 );
 
 -- Indexes for change_log lookups

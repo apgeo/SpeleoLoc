@@ -75,6 +75,11 @@ class SyncImportReport {
   final int changeLogMerged;
   final int filesCopied;
   final int filesSkipped; // already present locally
+
+  /// Records waiting, after this import, for a person to decide about: each
+  /// a record whose unique name a different record here already holds.
+  /// Counts those held by earlier imports too.
+  final int decisionsPending;
   final List<String> warnings;
 
   const SyncImportReport({
@@ -86,6 +91,7 @@ class SyncImportReport {
     required this.filesCopied,
     required this.filesSkipped,
     required this.warnings,
+    this.decisionsPending = 0,
   });
 
   /// Returns a copy with the asset-file counts filled in — used by
@@ -100,6 +106,7 @@ class SyncImportReport {
         filesCopied: filesCopied ?? this.filesCopied,
         filesSkipped: filesSkipped ?? this.filesSkipped,
         warnings: warnings,
+        decisionsPending: decisionsPending,
       );
 
   @override
@@ -107,7 +114,8 @@ class SyncImportReport {
       'SyncImportReport(inserted=$rowsInserted, updated=$rowsUpdated, '
       'skipped=$rowsSkipped, deletes=$deletesApplied, '
       'changeLog=$changeLogMerged, filesCopied=$filesCopied, '
-      'filesSkipped=$filesSkipped, warnings=${warnings.length})';
+      'filesSkipped=$filesSkipped, decisionsPending=$decisionsPending, '
+      'warnings=${warnings.length})';
 }
 
 /// User (or programmatic) decision when an incoming sync row would overwrite
@@ -217,8 +225,8 @@ class SyncArchiveSchemaMismatchException implements Exception {
 /// one JSONL file per synced table plus the `change_log` / `change_log_field`
 /// rows. Import hands those rows to [SyncMergeEngine], which replays them
 /// with a last-writer-wins policy keyed on `updated_at` (falling back to
-/// `created_at`), applies the deletions the change log carries, and leaves
-/// out what it cannot merge on its own.
+/// `created_at`), applies the deletions the change log carries, and holds for
+/// a decision what it cannot merge on its own.
 class SyncArchiveService {
   SyncArchiveService(
     this._db,

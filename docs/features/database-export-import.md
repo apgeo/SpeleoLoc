@@ -202,9 +202,13 @@ on two phones stay two caves, even with the same title.
 conflict in the whole import, across all record types. Closing the dialog
 without choosing keeps your record.
 
-A new record whose name collides with a *different* record of yours — the
+A new record whose name a *different* record of yours already has — the
 same place title in the same cave, created separately on two phones — is
-not added: yours is kept and the incoming one is counted as skipped.
+neither added nor lost: it is held, with whatever hangs on it, until you
+decide on **Man. sync → Archive sync → Needs a decision** (see [When a
+record here already has the
+name](sync-and-change-log.md#when-a-record-here-already-has-the-name)).
+The rest of the archive is merged.
 
 #### A merge also deletes
 
@@ -244,8 +248,10 @@ and the **Files copied** count comes out lower than you expected. Only
 #### The Import Complete summary
 
 When a merge finishes, an **Import Complete** dialog reports four numbers:
-**Records imported** (added), **Records skipped** (unchanged, kept local or
-colliding), **Records overwritten** (updated) and **Files copied**. If
+**Records imported** (added), **Records skipped** (unchanged, kept local,
+or not brought in because what they belong to is gone), **Records
+overwritten** (updated) and **Files copied** — and a fifth, **Waiting for a
+decision (Man. sync)**, when records are held for you. If
 anything went wrong along the way — a file that failed to copy, a user
 matched to one of yours by user name — up to ten **Warnings** are listed
 underneath in orange, with a "… and N more" line if there were others.

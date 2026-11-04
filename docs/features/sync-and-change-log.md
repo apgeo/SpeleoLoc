@@ -107,7 +107,9 @@ Then:
 4. A one-line summary appears under the buttons, for example
    `Import complete: +12 / ~3 / -1 (57 Change history, 8 files)` —
    records added, records updated, records deleted, change-log entries
-   merged, and media files copied.
+   merged, and media files copied. A second line follows when records wait
+   for your decision (see [When a record here already has the
+   name](#when-a-record-here-already-has-the-name)).
 
 ### Reviewing a conflict by hand
 
@@ -156,6 +158,44 @@ This is irreversible and nothing prompts you record by record:
 If you are unsure about an archive, export your own data first (or take a
 database backup) so you can get a deleted record back.
 
+### When a record here already has the name
+
+Some records must have a name of their own: two cave areas of one cave,
+two places of one cave in the same area (or outside any area), two caves
+of one surface area, two surface areas, two raster maps of one cave with
+the same title or image. When two phones each create such a record
+separately — both add cave area "Hall" to the same cave — the phone that
+imports second cannot simply add the incoming one.
+
+The import does not stop for it, and does not throw it away. Everything
+else in the archive is merged, and the incoming record is **held**,
+together with everything in the archive that hangs on it: the places
+inside that "Hall", the trip points recorded at that "Siphon". An incoming
+edit that would rename a record to a name a different record here already
+has is held the same way.
+
+The **Archive sync** tab then shows *N records from other devices wait for
+your decision*. Tap it to open **Needs a decision**, where each held record
+has a card: what it is, which cave it belongs to, which of your records has
+its name, and how many records wait with it.
+
+| Button | What happens |
+|---|---|
+| **Merge into mine** | The two are the same thing. What the incoming record holds moves to yours, and the incoming record is removed on every device at its next sync — together with what the other phone added to it meanwhile, which moves to yours too. |
+| **Keep both** | They are different things. You give the incoming record a new name and it is added beside yours. Offered when the two share their title. |
+| **Discard incoming** | The incoming record is deleted, with everything inside it, on every device at its next sync. For an incoming rename, your version stays instead and reaches the other devices. |
+
+Merging and discarding ask you to confirm first. Your choice is an ordinary
+change made on this device: it is written to the change log and travels in
+your next archive, so the other phones end up the same without being
+asked.
+
+Until you choose, the held records stay held, across restarts and further
+syncs. A newer copy from the other phone replaces the held one. If that
+phone renames or deletes its record, or you rename yours, the clash is
+gone, and the record is added at the next sync or as soon as you open
+**Needs a decision**.
+
 ### Other things worth knowing before you import
 
 - **Media files are never overwritten.** A photo or map image is copied
@@ -171,13 +211,12 @@ database backup) so you can get a deleted record back.
   syncing quietly merges them and the change log will credit both to one
   name.
 - **A partly damaged archive still imports.** A record that is corrupt,
-  that needs a record neither your device nor the archive has, or that
-  collides with an unrelated local record on a unique name (with whatever
-  hangs on it), is skipped and the rest of the archive is merged anyway.
-  That is usually what you want in a hut with one bar of signal, but it
-  means an import can report success while a few records quietly stayed
-  behind. The counts in the summary line are your only clue — compare them
-  against what you expected to receive.
+  or that needs a record neither your device nor the archive has, is
+  skipped and the rest of the archive is merged anyway. That is usually
+  what you want in a hut with one bar of signal, but it means an import
+  can report success while a few records quietly stayed behind. The
+  counts in the summary line are your only clue — compare them against
+  what you expected to receive.
 - **An import is all or nothing.** Either everything the archive brings
   is merged, or, when the import fails or you cancel it, nothing at all
   is written.

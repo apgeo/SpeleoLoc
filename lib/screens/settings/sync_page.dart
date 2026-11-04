@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/archive_sync_decisions_page.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -44,6 +45,11 @@ class _SyncPageState extends ConsumerState<SyncPage>
   bool _includeRasterMaps = true;
   _ConflictMode _conflictMode = _ConflictMode.auto;
   String? _lastMessage;
+
+  /// How many records earlier imports hold for a decision.
+  late final Stream<int> _decisionCount = ref
+      .read(archiveHeldRowRepositoryProvider)
+      .watchDecisionCount();
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +105,35 @@ class _SyncPageState extends ConsumerState<SyncPage>
         const Divider(height: 32),
 
         // ---- Import --------------------------------------------------
+        StreamBuilder<int>(
+          stream: _decisionCount,
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            if (count == 0) return const SizedBox.shrink();
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  Icons.rule,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  LocServ.inst.t('archive_decisions_waiting', {
+                    'count': '$count',
+                  }),
+                ),
+                subtitle: Text(
+                  LocServ.inst.t('archive_decisions_waiting_desc'),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ArchiveSyncDecisionsPage(),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
         Text(
           LocServ.inst.t('sync_conflict_mode_title'),
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -258,7 +293,8 @@ class _SyncPageState extends ConsumerState<SyncPage>
             '+${report.rowsInserted} / ~${report.rowsUpdated} / '
             '-${report.deletesApplied} '
             '(${report.changeLogMerged} ${LocServ.inst.t('change_log')}, '
-            '${report.filesCopied} ${LocServ.inst.t('files')})';
+            '${report.filesCopied} ${LocServ.inst.t('files')})'
+            '${report.decisionsPending == 0 ? '' : '\n${LocServ.inst.t('archive_decisions_waiting', {'count': '${report.decisionsPending}'})}'}';
       });
     } on SyncImportCancelledException {
       if (!mounted) return;

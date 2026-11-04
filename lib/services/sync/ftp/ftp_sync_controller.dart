@@ -610,6 +610,14 @@ class FtpSyncController extends ChangeNotifier {
             'Imported ${entry.name}: +${report.rowsInserted} / '
             '~${report.rowsUpdated} / =${report.rowsSkipped}',
           );
+          // Held records never stop a run; they wait for the caver.
+          if (report.decisionsPending > 0) {
+            _appendLog(
+              FtpSyncLogLevel.warning,
+              '${report.decisionsPending} record(s) from other devices wait '
+              'for a decision: Man. sync → Archive sync → Needs a decision',
+            );
+          }
         } on SyncArchiveSchemaMismatchException catch (e) {
           // Make the message actionable: tell the user the minimum app
           // version they need to update to. We deliberately *do not* mark

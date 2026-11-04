@@ -9,13 +9,16 @@ import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/archive_held_row_repository.dart';
+import 'package:speleoloc/services/sync/archive_sync_decisions_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/sync/sync_merge_engine.dart';
 import 'package:speleoloc/services/user_repository.dart';
 
 /// One phone in a device-to-device sync test: its own in-memory database,
 /// its own `system` user and device identity, the repositories that write
-/// through the change log, and the archive service. Every row a test puts in
-/// is invented.
+/// through the change log, the archive service and the decisions a merge
+/// leaves. Every row a test puts in is invented.
 class SyncTestDevice {
   SyncTestDevice._(
     this.db,
@@ -25,6 +28,8 @@ class SyncTestDevice {
     this.places,
     this.trips,
     this.sync,
+    this.held,
+    this.decisions,
   );
 
   final AppDatabase db;
@@ -34,6 +39,8 @@ class SyncTestDevice {
   final CavePlaceRepository places;
   final CaveTripRepository trips;
   final SyncArchiveService sync;
+  final ArchiveHeldRowRepository held;
+  final ArchiveSyncDecisionsService decisions;
 
   Uuid get author => currentUser.currentUserUuid.value!;
 
@@ -51,6 +58,7 @@ class SyncTestDevice {
     // Each phone has its own 'system' user, as on first run.
     await currentUser.currentOrSystem();
     final assetsDir = await Directory.systemTemp.createTemp('sync_assets_');
+    final held = ArchiveHeldRowRepository(db);
     return SyncTestDevice._(
       db,
       currentUser,
@@ -62,6 +70,14 @@ class SyncTestDevice {
         db,
         logger,
         assetsBaseDirResolver: () async => assetsDir,
+      ),
+      held,
+      ArchiveSyncDecisionsService(
+        db: db,
+        logger: logger,
+        currentUser: currentUser,
+        engine: SyncMergeEngine(db, logger, heldRows: held),
+        heldRows: held,
       ),
     );
   }

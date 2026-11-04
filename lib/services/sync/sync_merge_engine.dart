@@ -3,6 +3,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
+import 'package:speleoloc/services/sync/archive_held_row_repository.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_merge_state.dart';
 import 'package:speleoloc/services/sync/sync_row_merger.dart';
@@ -20,20 +21,29 @@ import 'package:speleoloc/services/sync/sync_user_remap.dart';
 /// A merge commits completely or not at all. It runs in one transaction with
 /// foreign-key checks deferred to its end, and whatever it cannot write
 /// without breaking that check — a row whose parent is gone, a record whose
-/// unique name another record here already holds, with what hangs on it —
-/// it leaves out (see [SyncRowMerger]), so the commit never fails over the
-/// archive's content and the rest of the archive is always merged.
+/// unique name another record here already holds — it leaves out or holds
+/// for a person to decide (see [SyncRowMerger]), so the commit never fails
+/// over the archive's content and the rest of the archive is always merged.
+///
+/// The rows held by earlier merges are merged again each time, beside the
+/// archive: a newer version of one replaces it, one that no longer collides
+/// is written, and what still collides stays held.
 class SyncMergeEngine {
-  SyncMergeEngine(this._db, this._logger) : _registry = SyncTableRegistry(_db);
+  SyncMergeEngine(this._db, this._logger, {ArchiveHeldRowRepository? heldRows})
+    : _registry = SyncTableRegistry(_db),
+      _heldRows = heldRows ?? ArchiveHeldRowRepository(_db);
 
   final AppDatabase _db;
   final ChangeLogger _logger;
   final SyncTableRegistry _registry;
+  final ArchiveHeldRowRepository _heldRows;
 
   static const _serializer = SyncValueSerializer();
 
   /// Merges [tableRows] (keyed by table name, in the JSON shape
-  /// [SyncTableHandler.dump] produces), [logRows] and [fieldRows].
+  /// [SyncTableHandler.dump] produces), [logRows] and [fieldRows], together
+  /// with every row held from earlier merges. Called with no rows, it merges
+  /// the held rows alone.
   Future<SyncImportReport> merge({
     Map<String, List<Map<String, dynamic>>> tableRows =
         const <String, List<Map<String, dynamic>>>{},
@@ -89,6 +99,20 @@ class SyncMergeEngine {
     return report;
   }
 
+  /// Moves what refers to the local record [from] over to [into] and removes
+  /// [from]. Returns false, changing nothing, when a moved row would take a
+  /// unique key a row of [into] already holds. Run inside the caller's
+  /// transaction; the caller logs the merge.
+  Future<bool> mergeLocalRecord(String table, Uuid from, Uuid into) async {
+    final schema = await SyncSchema.read(_db, _uuidTables());
+    final state = SyncMergeState(_db, <String>[]);
+    return SyncTombstoneApplier(
+      _db,
+      schema,
+      state,
+    ).mergeInto(table, from, into);
+  }
+
   List<String> _uuidTables() => <String>[
     for (final t in _registry.tables())
       if (t.name != SyncTableRegistry.configurationsTable) t.name,
@@ -126,6 +150,7 @@ class SyncMergeEngine {
       for (final MapEntry(:key, :value) in tableRows.entries)
         key: <Map<String, dynamic>>[...value],
     };
+    _addHeldRows(rowsByTable, await _heldRows.readAll());
 
     state.tombstones.addAll(await _localDeletes());
     final (incomingDeletes, changeLogMerged) = await _mergeChangeLog(
@@ -192,25 +217,36 @@ class SyncMergeEngine {
           if (r['file_name'] case final String name) id: name,
     });
 
-    for (final h in state.held.values) {
-      if (h.isRoot) {
-        warnings.add(
-          'left out ${h.table} ${h.uuid}: ${h.collidesWith ?? 'another '
-                  'record'} here already holds its unique name',
-        );
-      }
-    }
+    await _heldRows.replaceAll(state.held.values);
 
     return SyncImportReport(
       rowsInserted: inserted,
       rowsUpdated: updated,
-      rowsSkipped: skipped + state.skipped + state.held.length,
+      rowsSkipped: skipped + state.skipped,
       deletesApplied: state.deletesApplied,
       changeLogMerged: changeLogMerged,
       filesCopied: 0,
       filesSkipped: 0,
       warnings: warnings,
+      decisionsPending: state.held.values.where((h) => h.isRoot).length,
     );
+  }
+
+  /// Adds the rows held by earlier merges to [rowsByTable]. Where the archive
+  /// carries the same row, the newer of the two is merged.
+  void _addHeldRows(
+    Map<String, List<Map<String, dynamic>>> rowsByTable,
+    List<SyncHeldRow> held,
+  ) {
+    for (final h in held) {
+      final rows = rowsByTable.putIfAbsent(h.table, () => []);
+      final at = rows.indexWhere((r) => r['uuid'] == h.uuid.toString());
+      if (at < 0) {
+        rows.add(h.row);
+      } else if (_stampOfJson(h.row) > _stampOfJson(rows[at])) {
+        rows[at] = h.row;
+      }
+    }
   }
 
   static int _stampOfJson(Map<String, dynamic> row) =>

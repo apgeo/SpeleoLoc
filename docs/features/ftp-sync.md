@@ -333,6 +333,15 @@ If you need to see what an incoming change overwrote, look at the
 by hand and import it on the Man. sync screen with manual conflict
 resolution turned on.
 
+The one thing a run leaves to you is a record another phone created under
+a name a different record of yours already has — cave area "Hall" added to
+the same cave on both phones. It is neither overwritten nor dropped: it is
+held, with whatever hangs on it, and everything else is merged. The run
+carries on, and the Log tab adds an orange line, *N record(s) from other
+devices wait for a decision*. Decide on **Man. sync → Archive sync → Needs
+a decision**; see [When a record here already has the
+name](sync-and-change-log.md#when-a-record-here-already-has-the-name).
+
 ## Housekeeping on the server
 
 SpeleoLoc never deletes another device's files, nor any finished archive,

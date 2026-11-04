@@ -16155,6 +16155,445 @@ class ChangeLogFieldCompanion extends UpdateCompanion<ChangeLogFieldData> {
   }
 }
 
+class ArchiveHeldRow extends Table
+    with TableInfo<ArchiveHeldRow, ArchiveHeldRowData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  ArchiveHeldRow(this.attachedDatabase, [this._alias]);
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> entityUuid =
+      GeneratedColumn<Uint8List>(
+        'entity_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'PRIMARY KEY NOT NULL',
+      ).withConverter<Uuid>(ArchiveHeldRow.$converterentityUuid);
+  static const VerificationMeta _entityTableMeta = const VerificationMeta(
+    'entityTable',
+  );
+  late final GeneratedColumn<String> entityTable = GeneratedColumn<String>(
+    'entity_table',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  late final GeneratedColumnWithTypeConverter<Uuid, Uint8List> groupUuid =
+      GeneratedColumn<Uint8List>(
+        'group_uuid',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      ).withConverter<Uuid>(ArchiveHeldRow.$convertergroupUuid);
+  late final GeneratedColumnWithTypeConverter<Uuid?, Uint8List>
+  collidesWithUuid = GeneratedColumn<Uint8List>(
+    'collides_with_uuid',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  ).withConverter<Uuid?>(ArchiveHeldRow.$convertercollidesWithUuidn);
+  static const VerificationMeta _rowJsonMeta = const VerificationMeta(
+    'rowJson',
+  );
+  late final GeneratedColumn<String> rowJson = GeneratedColumn<String>(
+    'row_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _heldAtMeta = const VerificationMeta('heldAt');
+  late final GeneratedColumn<int> heldAt = GeneratedColumn<int>(
+    'held_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    entityUuid,
+    entityTable,
+    groupUuid,
+    collidesWithUuid,
+    rowJson,
+    heldAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'archive_held_row';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ArchiveHeldRowData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('entity_table')) {
+      context.handle(
+        _entityTableMeta,
+        entityTable.isAcceptableOrUnknown(
+          data['entity_table']!,
+          _entityTableMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_entityTableMeta);
+    }
+    if (data.containsKey('row_json')) {
+      context.handle(
+        _rowJsonMeta,
+        rowJson.isAcceptableOrUnknown(data['row_json']!, _rowJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rowJsonMeta);
+    }
+    if (data.containsKey('held_at')) {
+      context.handle(
+        _heldAtMeta,
+        heldAt.isAcceptableOrUnknown(data['held_at']!, _heldAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_heldAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {entityUuid};
+  @override
+  ArchiveHeldRowData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ArchiveHeldRowData(
+      entityUuid: ArchiveHeldRow.$converterentityUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}entity_uuid'],
+        )!,
+      ),
+      entityTable: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_table'],
+      )!,
+      groupUuid: ArchiveHeldRow.$convertergroupUuid.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}group_uuid'],
+        )!,
+      ),
+      collidesWithUuid: ArchiveHeldRow.$convertercollidesWithUuidn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.blob,
+          data['${effectivePrefix}collides_with_uuid'],
+        ),
+      ),
+      rowJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}row_json'],
+      )!,
+      heldAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}held_at'],
+      )!,
+    );
+  }
+
+  @override
+  ArchiveHeldRow createAlias(String alias) {
+    return ArchiveHeldRow(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Uuid, Uint8List> $converterentityUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertergroupUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid, Uint8List> $convertercollidesWithUuid =
+      const UuidConverter();
+  static TypeConverter<Uuid?, Uint8List?> $convertercollidesWithUuidn =
+      NullAwareTypeConverter.wrap($convertercollidesWithUuid);
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class ArchiveHeldRowData extends DataClass
+    implements Insertable<ArchiveHeldRowData> {
+  final Uuid entityUuid;
+  final String entityTable;
+  final Uuid groupUuid;
+  final Uuid? collidesWithUuid;
+  final String rowJson;
+  final int heldAt;
+  const ArchiveHeldRowData({
+    required this.entityUuid,
+    required this.entityTable,
+    required this.groupUuid,
+    this.collidesWithUuid,
+    required this.rowJson,
+    required this.heldAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    {
+      map['entity_uuid'] = Variable<Uint8List>(
+        ArchiveHeldRow.$converterentityUuid.toSql(entityUuid),
+      );
+    }
+    map['entity_table'] = Variable<String>(entityTable);
+    {
+      map['group_uuid'] = Variable<Uint8List>(
+        ArchiveHeldRow.$convertergroupUuid.toSql(groupUuid),
+      );
+    }
+    if (!nullToAbsent || collidesWithUuid != null) {
+      map['collides_with_uuid'] = Variable<Uint8List>(
+        ArchiveHeldRow.$convertercollidesWithUuidn.toSql(collidesWithUuid),
+      );
+    }
+    map['row_json'] = Variable<String>(rowJson);
+    map['held_at'] = Variable<int>(heldAt);
+    return map;
+  }
+
+  ArchiveHeldRowCompanion toCompanion(bool nullToAbsent) {
+    return ArchiveHeldRowCompanion(
+      entityUuid: Value(entityUuid),
+      entityTable: Value(entityTable),
+      groupUuid: Value(groupUuid),
+      collidesWithUuid: collidesWithUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(collidesWithUuid),
+      rowJson: Value(rowJson),
+      heldAt: Value(heldAt),
+    );
+  }
+
+  factory ArchiveHeldRowData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ArchiveHeldRowData(
+      entityUuid: serializer.fromJson<Uuid>(json['entity_uuid']),
+      entityTable: serializer.fromJson<String>(json['entity_table']),
+      groupUuid: serializer.fromJson<Uuid>(json['group_uuid']),
+      collidesWithUuid: serializer.fromJson<Uuid?>(json['collides_with_uuid']),
+      rowJson: serializer.fromJson<String>(json['row_json']),
+      heldAt: serializer.fromJson<int>(json['held_at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'entity_uuid': serializer.toJson<Uuid>(entityUuid),
+      'entity_table': serializer.toJson<String>(entityTable),
+      'group_uuid': serializer.toJson<Uuid>(groupUuid),
+      'collides_with_uuid': serializer.toJson<Uuid?>(collidesWithUuid),
+      'row_json': serializer.toJson<String>(rowJson),
+      'held_at': serializer.toJson<int>(heldAt),
+    };
+  }
+
+  ArchiveHeldRowData copyWith({
+    Uuid? entityUuid,
+    String? entityTable,
+    Uuid? groupUuid,
+    Value<Uuid?> collidesWithUuid = const Value.absent(),
+    String? rowJson,
+    int? heldAt,
+  }) => ArchiveHeldRowData(
+    entityUuid: entityUuid ?? this.entityUuid,
+    entityTable: entityTable ?? this.entityTable,
+    groupUuid: groupUuid ?? this.groupUuid,
+    collidesWithUuid: collidesWithUuid.present
+        ? collidesWithUuid.value
+        : this.collidesWithUuid,
+    rowJson: rowJson ?? this.rowJson,
+    heldAt: heldAt ?? this.heldAt,
+  );
+  ArchiveHeldRowData copyWithCompanion(ArchiveHeldRowCompanion data) {
+    return ArchiveHeldRowData(
+      entityUuid: data.entityUuid.present
+          ? data.entityUuid.value
+          : this.entityUuid,
+      entityTable: data.entityTable.present
+          ? data.entityTable.value
+          : this.entityTable,
+      groupUuid: data.groupUuid.present ? data.groupUuid.value : this.groupUuid,
+      collidesWithUuid: data.collidesWithUuid.present
+          ? data.collidesWithUuid.value
+          : this.collidesWithUuid,
+      rowJson: data.rowJson.present ? data.rowJson.value : this.rowJson,
+      heldAt: data.heldAt.present ? data.heldAt.value : this.heldAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ArchiveHeldRowData(')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('entityTable: $entityTable, ')
+          ..write('groupUuid: $groupUuid, ')
+          ..write('collidesWithUuid: $collidesWithUuid, ')
+          ..write('rowJson: $rowJson, ')
+          ..write('heldAt: $heldAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    entityUuid,
+    entityTable,
+    groupUuid,
+    collidesWithUuid,
+    rowJson,
+    heldAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ArchiveHeldRowData &&
+          other.entityUuid == this.entityUuid &&
+          other.entityTable == this.entityTable &&
+          other.groupUuid == this.groupUuid &&
+          other.collidesWithUuid == this.collidesWithUuid &&
+          other.rowJson == this.rowJson &&
+          other.heldAt == this.heldAt);
+}
+
+class ArchiveHeldRowCompanion extends UpdateCompanion<ArchiveHeldRowData> {
+  final Value<Uuid> entityUuid;
+  final Value<String> entityTable;
+  final Value<Uuid> groupUuid;
+  final Value<Uuid?> collidesWithUuid;
+  final Value<String> rowJson;
+  final Value<int> heldAt;
+  final Value<int> rowid;
+  const ArchiveHeldRowCompanion({
+    this.entityUuid = const Value.absent(),
+    this.entityTable = const Value.absent(),
+    this.groupUuid = const Value.absent(),
+    this.collidesWithUuid = const Value.absent(),
+    this.rowJson = const Value.absent(),
+    this.heldAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ArchiveHeldRowCompanion.insert({
+    required Uuid entityUuid,
+    required String entityTable,
+    required Uuid groupUuid,
+    this.collidesWithUuid = const Value.absent(),
+    required String rowJson,
+    required int heldAt,
+    this.rowid = const Value.absent(),
+  }) : entityUuid = Value(entityUuid),
+       entityTable = Value(entityTable),
+       groupUuid = Value(groupUuid),
+       rowJson = Value(rowJson),
+       heldAt = Value(heldAt);
+  static Insertable<ArchiveHeldRowData> custom({
+    Expression<Uint8List>? entityUuid,
+    Expression<String>? entityTable,
+    Expression<Uint8List>? groupUuid,
+    Expression<Uint8List>? collidesWithUuid,
+    Expression<String>? rowJson,
+    Expression<int>? heldAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (entityUuid != null) 'entity_uuid': entityUuid,
+      if (entityTable != null) 'entity_table': entityTable,
+      if (groupUuid != null) 'group_uuid': groupUuid,
+      if (collidesWithUuid != null) 'collides_with_uuid': collidesWithUuid,
+      if (rowJson != null) 'row_json': rowJson,
+      if (heldAt != null) 'held_at': heldAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ArchiveHeldRowCompanion copyWith({
+    Value<Uuid>? entityUuid,
+    Value<String>? entityTable,
+    Value<Uuid>? groupUuid,
+    Value<Uuid?>? collidesWithUuid,
+    Value<String>? rowJson,
+    Value<int>? heldAt,
+    Value<int>? rowid,
+  }) {
+    return ArchiveHeldRowCompanion(
+      entityUuid: entityUuid ?? this.entityUuid,
+      entityTable: entityTable ?? this.entityTable,
+      groupUuid: groupUuid ?? this.groupUuid,
+      collidesWithUuid: collidesWithUuid ?? this.collidesWithUuid,
+      rowJson: rowJson ?? this.rowJson,
+      heldAt: heldAt ?? this.heldAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (entityUuid.present) {
+      map['entity_uuid'] = Variable<Uint8List>(
+        ArchiveHeldRow.$converterentityUuid.toSql(entityUuid.value),
+      );
+    }
+    if (entityTable.present) {
+      map['entity_table'] = Variable<String>(entityTable.value);
+    }
+    if (groupUuid.present) {
+      map['group_uuid'] = Variable<Uint8List>(
+        ArchiveHeldRow.$convertergroupUuid.toSql(groupUuid.value),
+      );
+    }
+    if (collidesWithUuid.present) {
+      map['collides_with_uuid'] = Variable<Uint8List>(
+        ArchiveHeldRow.$convertercollidesWithUuidn.toSql(
+          collidesWithUuid.value,
+        ),
+      );
+    }
+    if (rowJson.present) {
+      map['row_json'] = Variable<String>(rowJson.value);
+    }
+    if (heldAt.present) {
+      map['held_at'] = Variable<int>(heldAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ArchiveHeldRowCompanion(')
+          ..write('entityUuid: $entityUuid, ')
+          ..write('entityTable: $entityTable, ')
+          ..write('groupUuid: $groupUuid, ')
+          ..write('collidesWithUuid: $collidesWithUuid, ')
+          ..write('rowJson: $rowJson, ')
+          ..write('heldAt: $heldAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class SilexgisSyncState extends Table
     with TableInfo<SilexgisSyncState, SilexgisSyncStateData> {
   @override
@@ -25448,6 +25887,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final ChangeLog changeLog = ChangeLog(this);
   late final ChangeLogField changeLogField = ChangeLogField(this);
+  late final ArchiveHeldRow archiveHeldRow = ArchiveHeldRow(this);
   late final Index idxChangeLogEntity = Index(
     'idx_change_log_entity',
     'CREATE INDEX IF NOT EXISTS idx_change_log_entity ON change_log (entity_table, entity_uuid)',
@@ -25560,6 +26000,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tripReportTemplates,
     changeLog,
     changeLogField,
+    archiveHeldRow,
     idxChangeLogEntity,
     idxChangeLogChangedAt,
     idxChangeLogChangedBy,
@@ -42082,6 +42523,236 @@ typedef $ChangeLogFieldProcessedTableManager =
       ChangeLogFieldData,
       PrefetchHooks Function({bool changeUuid})
     >;
+typedef $ArchiveHeldRowCreateCompanionBuilder =
+    ArchiveHeldRowCompanion Function({
+      required Uuid entityUuid,
+      required String entityTable,
+      required Uuid groupUuid,
+      Value<Uuid?> collidesWithUuid,
+      required String rowJson,
+      required int heldAt,
+      Value<int> rowid,
+    });
+typedef $ArchiveHeldRowUpdateCompanionBuilder =
+    ArchiveHeldRowCompanion Function({
+      Value<Uuid> entityUuid,
+      Value<String> entityTable,
+      Value<Uuid> groupUuid,
+      Value<Uuid?> collidesWithUuid,
+      Value<String> rowJson,
+      Value<int> heldAt,
+      Value<int> rowid,
+    });
+
+class $ArchiveHeldRowFilterComposer
+    extends Composer<_$AppDatabase, ArchiveHeldRow> {
+  $ArchiveHeldRowFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Uuid, Uuid, Uint8List> get groupUuid =>
+      $composableBuilder(
+        column: $table.groupUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Uuid?, Uuid, Uint8List> get collidesWithUuid =>
+      $composableBuilder(
+        column: $table.collidesWithUuid,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get rowJson => $composableBuilder(
+    column: $table.rowJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get heldAt => $composableBuilder(
+    column: $table.heldAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $ArchiveHeldRowOrderingComposer
+    extends Composer<_$AppDatabase, ArchiveHeldRow> {
+  $ArchiveHeldRowOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get entityUuid => $composableBuilder(
+    column: $table.entityUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get groupUuid => $composableBuilder(
+    column: $table.groupUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get collidesWithUuid => $composableBuilder(
+    column: $table.collidesWithUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rowJson => $composableBuilder(
+    column: $table.rowJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get heldAt => $composableBuilder(
+    column: $table.heldAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $ArchiveHeldRowAnnotationComposer
+    extends Composer<_$AppDatabase, ArchiveHeldRow> {
+  $ArchiveHeldRowAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get entityUuid =>
+      $composableBuilder(
+        column: $table.entityUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get entityTable => $composableBuilder(
+    column: $table.entityTable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Uuid, Uint8List> get groupUuid =>
+      $composableBuilder(column: $table.groupUuid, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Uuid?, Uint8List> get collidesWithUuid =>
+      $composableBuilder(
+        column: $table.collidesWithUuid,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get rowJson =>
+      $composableBuilder(column: $table.rowJson, builder: (column) => column);
+
+  GeneratedColumn<int> get heldAt =>
+      $composableBuilder(column: $table.heldAt, builder: (column) => column);
+}
+
+class $ArchiveHeldRowTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          ArchiveHeldRow,
+          ArchiveHeldRowData,
+          $ArchiveHeldRowFilterComposer,
+          $ArchiveHeldRowOrderingComposer,
+          $ArchiveHeldRowAnnotationComposer,
+          $ArchiveHeldRowCreateCompanionBuilder,
+          $ArchiveHeldRowUpdateCompanionBuilder,
+          (
+            ArchiveHeldRowData,
+            BaseReferences<_$AppDatabase, ArchiveHeldRow, ArchiveHeldRowData>,
+          ),
+          ArchiveHeldRowData,
+          PrefetchHooks Function()
+        > {
+  $ArchiveHeldRowTableManager(_$AppDatabase db, ArchiveHeldRow table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $ArchiveHeldRowFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $ArchiveHeldRowOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $ArchiveHeldRowAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<Uuid> entityUuid = const Value.absent(),
+                Value<String> entityTable = const Value.absent(),
+                Value<Uuid> groupUuid = const Value.absent(),
+                Value<Uuid?> collidesWithUuid = const Value.absent(),
+                Value<String> rowJson = const Value.absent(),
+                Value<int> heldAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ArchiveHeldRowCompanion(
+                entityUuid: entityUuid,
+                entityTable: entityTable,
+                groupUuid: groupUuid,
+                collidesWithUuid: collidesWithUuid,
+                rowJson: rowJson,
+                heldAt: heldAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uuid entityUuid,
+                required String entityTable,
+                required Uuid groupUuid,
+                Value<Uuid?> collidesWithUuid = const Value.absent(),
+                required String rowJson,
+                required int heldAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ArchiveHeldRowCompanion.insert(
+                entityUuid: entityUuid,
+                entityTable: entityTable,
+                groupUuid: groupUuid,
+                collidesWithUuid: collidesWithUuid,
+                rowJson: rowJson,
+                heldAt: heldAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $ArchiveHeldRowProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      ArchiveHeldRow,
+      ArchiveHeldRowData,
+      $ArchiveHeldRowFilterComposer,
+      $ArchiveHeldRowOrderingComposer,
+      $ArchiveHeldRowAnnotationComposer,
+      $ArchiveHeldRowCreateCompanionBuilder,
+      $ArchiveHeldRowUpdateCompanionBuilder,
+      (
+        ArchiveHeldRowData,
+        BaseReferences<_$AppDatabase, ArchiveHeldRow, ArchiveHeldRowData>,
+      ),
+      ArchiveHeldRowData,
+      PrefetchHooks Function()
+    >;
 typedef $SilexgisSyncStateCreateCompanionBuilder =
     SilexgisSyncStateCompanion Function({
       required String profileUuid,
@@ -46709,6 +47380,8 @@ class $AppDatabaseManager {
       $ChangeLogTableManager(_db, _db.changeLog);
   $ChangeLogFieldTableManager get changeLogField =>
       $ChangeLogFieldTableManager(_db, _db.changeLogField);
+  $ArchiveHeldRowTableManager get archiveHeldRow =>
+      $ArchiveHeldRowTableManager(_db, _db.archiveHeldRow);
   $SilexgisSyncStateTableManager get silexgisSyncState =>
       $SilexgisSyncStateTableManager(_db, _db.silexgisSyncState);
   $SilexgisRowRevisionTableManager get silexgisRowRevision =>

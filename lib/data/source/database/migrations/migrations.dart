@@ -1385,6 +1385,26 @@ Future<void> _executeIfTableExists(
   await db.customStatement(statement, args);
 }
 
+/// v37 → v38.
+///
+/// Adds the local-only table where an archive merge keeps the rows that wait
+/// for a person to decide: a record whose unique name another record here
+/// already holds, and the rows that hang on it. New table only.
+///
+/// The table is local-only, so the sync archive schema version stays where it
+/// is.
+class V37ToV38Migration extends SchemaMigration {
+  const V37ToV38Migration();
+
+  @override
+  int get toVersion => 38;
+
+  @override
+  Future<void> apply(AppDatabase db, Migrator migrator) async {
+    await migrator.createTable(db.archiveHeldRow);
+  }
+}
+
 /// Adds [column] to [table] unless it is already there — or unless the
 /// table is not there at all.
 ///
@@ -1445,6 +1465,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V34ToV35Migration(),
   V35ToV36Migration(),
   V36ToV37Migration(),
+  V37ToV38Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

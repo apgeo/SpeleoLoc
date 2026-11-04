@@ -342,6 +342,16 @@ uitați-vă în [istoricul modificărilor](sync-and-change-log.md#change-log)
 sau schimbați arhiva de mână și importați-o pe ecranul Sinc. man. cu
 rezolvarea manuală a conflictelor pornită.
 
+Singurul lucru pe care o rulare vi-l lasă vouă este o înregistrare creată
+pe alt telefon cu un nume pe care îl are deja o altă înregistrare a
+voastră — zona „Sala” adăugată aceleiași peșteri pe ambele telefoane. Ea
+nu este nici suprascrisă, nici aruncată: este reținută, cu tot ce atârnă
+de ea, iar tot restul este îmbinat. Rularea continuă, iar fila Jurnal
+adaugă o linie portocalie, *N record(s) from other devices wait for a
+decision*. Decideți în **Sinc. man. → Arhivă sincronizare → Necesită o
+decizie**; vedeți [Când o înregistrare de aici are deja
+numele](sync-and-change-log.md#când-o-înregistrare-de-aici-are-deja-numele).
+
 ## Întreținerea pe server
 
 SpeleoLoc **nu șterge niciodată nimic** din folderul de pe server. Fiecare
