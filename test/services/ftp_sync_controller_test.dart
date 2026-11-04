@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
-import 'package:drift/drift.dart' show Variable;
+import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1395,6 +1395,120 @@ void main() {
         expect(downloads, contains(peerArchive));
         expect(fixed.phase, FtpSyncPhase.completed, reason: fixed.errorMessage);
         expect(await seenArchives(h), contains(peerArchive));
+      },
+    );
+  });
+
+  group('wrong clocks', () {
+    // Far enough ahead to be a wrong clock, not drift between phones.
+    final future = DateTime.now()
+        .add(const Duration(days: 5 * 365))
+        .millisecondsSinceEpoch;
+    final recent = DateTime.now()
+        .subtract(const Duration(minutes: 5))
+        .millisecondsSinceEpoch;
+
+    String ownId(_Harness h) =>
+        h.currentUser.deviceUuid.value!.toString().replaceAll('-', '');
+
+    test(
+      'a future-dated archive does not hide its device\'s later one',
+      () async {
+        final peer = await _buildHarness();
+        await peer.caveRepo.addCave('Made after the clock was fixed');
+        final later = await peer.sync.exportToZip(
+          tempDir.path,
+          filenameHint: 'later.zip',
+        );
+        final b = await _buildHarness();
+        final futureName = 'speleo_loc_sync_${future}_deadbeef.zip';
+        // The peer's wrong-clock archive was imported by an earlier run.
+        await b.db.customStatement(
+          'INSERT INTO configurations (title, value) VALUES (?, ?)',
+          [ConfigKey.ftpSeenArchives, futureName],
+        );
+        final (controller, fake) = await makeController(b);
+        fake.publish(futureName, [1, 2, 3]);
+        fake.publish(
+          'speleo_loc_sync_${recent}_deadbeef.zip',
+          await later.readAsBytes(),
+        );
+
+        await controller.startDefault();
+        final end = await _waitForTerminal(controller);
+
+        expect(
+          (await b.caveRepo.getCaves()).map((c) => c.title),
+          contains('Made after the clock was fixed'),
+          reason: end.log.map((e) => e.message).join('\n'),
+        );
+        expect(end.warningMessage, contains("dated after this device's clock"));
+      },
+    );
+
+    test(
+      'an own future-dated archive is replaced, then uploads stop',
+      () async {
+        final h = await _buildHarness();
+        await h.caveRepo.addCave('Alpha');
+        final (controller, fake) = await makeController(h);
+        final futureName = 'speleo_loc_sync_${future}_${ownId(h)}.zip';
+        fake.publish(futureName, [1, 2, 3]);
+        await h.db.customStatement(
+          'INSERT INTO configurations (title, value) VALUES (?, ?)',
+          [ConfigKey.ftpSeenArchives, futureName],
+        );
+
+        await controller.startDefault();
+        final first = await _waitForTerminal(controller);
+
+        expect(first.phase, FtpSyncPhase.completed, reason: first.errorMessage);
+        expect(_zipsOnly(fake.uploadedNames), hasLength(1));
+        expect(fake.store.keys, isNot(contains(futureName)));
+        expect(fake.store.keys, isNot(contains('$futureName.sha256')));
+
+        fake.uploadedNames.clear();
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(fake.uploadedNames, isEmpty, reason: 'nothing new to send');
+      },
+    );
+
+    test(
+      'changes dated ahead of the clock upload once, not every run',
+      () async {
+        final h = await _buildHarness();
+        await h.caveRepo.addCave('Alpha');
+        final (controller, fake) = await makeController(h);
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(_zipsOnly(fake.uploadedNames), hasLength(1));
+
+        // An edit made while this phone's clock ran years ahead.
+        final caveUuid = (await h.caveRepo.getCaves()).single.uuid;
+        await h.db
+            .into(h.db.changeLog)
+            .insert(
+              ChangeLogCompanion.insert(
+                uuid: Uuid.v7(),
+                entityTable: 'caves',
+                entityUuid: caveUuid,
+                changeType: ChangeType.update,
+                changedAt: future,
+                deviceUuid: Value(h.currentUser.deviceUuid.value),
+              ),
+            );
+
+        fake.uploadedNames.clear();
+        await controller.startDefault();
+        final second = await _waitForTerminal(controller);
+        expect(_zipsOnly(fake.uploadedNames), hasLength(1));
+        expect(second.warningMessage, contains('dated after its clock'));
+
+        fake.uploadedNames.clear();
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(fake.uploadedNames, isEmpty);
       },
     );
   });

@@ -104,6 +104,10 @@ class FtpSyncController extends ChangeNotifier {
 
   static const int _maxWarningsPerArchive = 20;
 
+  /// How far a date may run ahead of this device's clock before it is taken
+  /// for a wrong clock rather than ordinary drift between phones.
+  static const Duration _clockTolerance = Duration(hours: 1);
+
   FtpSyncController({
     required AppDatabase db,
     required FtpProfileRepository profileRepository,
@@ -266,6 +270,8 @@ class FtpSyncController extends ChangeNotifier {
       // without its checksum. That is the producer's problem, not a failure
       // of this sync, so the run still completes and only warns.
       final skipped = <String>[];
+      // Other problems the finished run's banner must mention.
+      final notices = <String>[];
       // Archives that could not be read or imported when last downloaded
       // are not fetched again until something changes — an upload still in
       // progress grows, an abandoned one never does, and an updated app may
@@ -333,9 +339,21 @@ class FtpSyncController extends ChangeNotifier {
       // unseen older siblings are then subsumed too, and must not be imported
       // on their own: one may be an upload cut off half-way, which never
       // imports and would fail every sync from then on.
+      //
+      // Archive names carry the clock of the phone that made them. One
+      // dated after this device's clock, past a margin for ordinary drift,
+      // was made under a wrong clock — here or there — so its date says
+      // nothing about its age. It never counts as a device's newest, which
+      // would hide every correctly dated archive of that device until the
+      // wrong date has passed.
+      final futureLimit =
+          DateTime.now().millisecondsSinceEpoch +
+          _clockTolerance.inMilliseconds;
+      bool futureDated(String name) => _timestampOf(name) > futureLimit;
+      _warnAboutFutureDatedArchives(remoteEntries, futureDated, notices);
       final newestSeenByDevice = <String, int>{};
       for (final e in remoteEntries) {
-        if (!seen.contains(e.name)) continue;
+        if (!seen.contains(e.name) || futureDated(e.name)) continue;
         final deviceId = deviceKeys.of(_deviceIdOf(e.name));
         if (deviceId == null) continue;
         final ts = _timestampOf(e.name);
@@ -344,12 +362,20 @@ class FtpSyncController extends ChangeNotifier {
         }
       }
       for (final deviceEntry in byDevice.entries) {
+        // Oldest first, future-dated archives before all others.
         final group = deviceEntry.value
-          ..sort(
-            (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
-          );
+          ..sort((a, b) {
+            final byClock = (futureDated(a.name) ? 0 : 1).compareTo(
+              futureDated(b.name) ? 0 : 1,
+            );
+            return byClock != 0
+                ? byClock
+                : _timestampOf(a.name).compareTo(_timestampOf(b.name));
+          });
         final newestSeen = newestSeenByDevice[deviceEntry.key];
-        if (newestSeen != null && newestSeen > _timestampOf(group.last.name)) {
+        if (newestSeen != null &&
+            !futureDated(group.last.name) &&
+            newestSeen > _timestampOf(group.last.name)) {
           seen.addAll(group.map((e) => e.name));
           supersededCount += group.length;
           continue;
@@ -361,13 +387,9 @@ class FtpSyncController extends ChangeNotifier {
         final usable = group
             .where((e) => remoteNames.contains('${e.name}$_sha256Suffix'))
             .toList();
-        final newestUsableTs = usable.isEmpty
-            ? -1
-            : _timestampOf(usable.last.name);
-        for (final e in group) {
-          if (usable.contains(e) || _timestampOf(e.name) < newestUsableTs) {
-            continue;
-          }
+        final newestUsable = usable.isEmpty ? -1 : group.indexOf(usable.last);
+        for (var i = newestUsable + 1; i < group.length; i++) {
+          final e = group[i];
           skipped.add('${e.name} (no .sha256 checksum file)');
           _appendLog(
             FtpSyncLogLevel.warning,
@@ -377,10 +399,7 @@ class FtpSyncController extends ChangeNotifier {
         }
         if (usable.isEmpty) continue;
         unseen.add(usable.last);
-        final olders = [
-          for (final e in group)
-            if (_timestampOf(e.name) < newestUsableTs) e.name,
-        ];
+        final olders = [for (final e in group.take(newestUsable)) e.name];
         if (olders.isNotEmpty) {
           supersededByDevice[deviceEntry.key] = olders;
           supersededCount += olders.length;
@@ -424,21 +443,63 @@ class FtpSyncController extends ChangeNotifier {
       // lastUploadAt because (a) it survives reinstall and (b) it prevents
       // peer-imported change_log entries from causing false positives when
       // the change_log is filtered by device_uuid.
+      //
+      // A reference dated after this device's clock was set by a wrong
+      // clock, and no later change could ever pass it: it is ignored, and an
+      // own archive with such a date is replaced (and then removed) by this
+      // run's upload.
+      final ownArchives = myDeviceId == null
+          ? const <RemoteFileEntry>[]
+          : remoteEntries
+                .where((e) => deviceKeys.of(_deviceIdOf(e.name)) == myDeviceId)
+                .toList();
+      final ownFutureDated = ownArchives
+          .where((e) => futureDated(e.name))
+          .toList();
       int? serverNewestOwnTs;
-      if (myDeviceId != null) {
-        final myRemoteTs = remoteEntries
-            .where((e) => deviceKeys.of(_deviceIdOf(e.name)) == myDeviceId)
-            .map((e) => _timestampOf(e.name));
-        if (myRemoteTs.isNotEmpty) {
-          serverNewestOwnTs = myRemoteTs.reduce((a, b) => a > b ? a : b);
-        }
+      final myRemoteTs = ownArchives
+          .where((e) => !futureDated(e.name))
+          .map((e) => _timestampOf(e.name));
+      if (myRemoteTs.isNotEmpty) {
+        serverNewestOwnTs = myRemoteTs.reduce((a, b) => a > b ? a : b);
       }
-      final referenceTs =
-          serverNewestOwnTs ?? await _loadLastUploadAt(profile.profileUuid);
-      final localChanged = await _hasLocalChangesSince(
-        referenceTs,
-        deviceUuid: myDeviceUuid,
+      var lastUploadAt = await _loadLastUploadAt(profile.profileUuid);
+      if (lastUploadAt != null && lastUploadAt > futureLimit) {
+        lastUploadAt = null;
+      }
+      final referenceTs = serverNewestOwnTs ?? lastUploadAt;
+      final futureChanges = await _futureDatedLocalChanges(
+        myDeviceUuid,
+        futureLimit,
       );
+      final uploadedFutureChanges = await _loadUploadedFutureChanges(
+        profile.profileUuid,
+      );
+      if (futureChanges.count > 0) {
+        final notice =
+            '${futureChanges.count} change(s) made on this device are dated '
+            'after its clock, up to ${_formatTime(futureChanges.latest!)}: '
+            'its clock was wrong when they were made. Until then they win '
+            'over any edit of the same records';
+        _appendLog(FtpSyncLogLevel.warning, notice);
+        notices.add(notice);
+      }
+      var localChanged =
+          await _hasLocalChangesSince(
+            referenceTs,
+            deviceUuid: myDeviceUuid,
+            until: futureLimit,
+          ) ||
+          futureChanges.count > uploadedFutureChanges;
+      if (ownFutureDated.isNotEmpty) {
+        localChanged = true;
+        _appendLog(
+          FtpSyncLogLevel.warning,
+          'This device has ${ownFutureDated.length} archive(s) on the server '
+          "dated after its clock, which would hide its later uploads from "
+          'the other devices. A correctly dated archive replaces them.',
+        );
+      }
       _appendLog(
         FtpSyncLogLevel.info,
         referenceTs == null
@@ -814,7 +875,7 @@ class FtpSyncController extends ChangeNotifier {
           );
           return;
         }
-        final warning = _skippedSummary(skipped);
+        final warning = _runWarning(skipped, notices);
         _emit(
           (s) => s.copyWith(
             phase: FtpSyncPhase.completed,
@@ -936,6 +997,12 @@ class FtpSyncController extends ChangeNotifier {
       await transport.rename(partName, archiveName);
       seen.add(archiveName);
       _appendLog(FtpSyncLogLevel.info, 'Uploaded $archiveName');
+      await _deleteOwnArchivesDatedAfter(
+        transport,
+        ownArchives,
+        remoteNames,
+        nowMs,
+      );
 
       _emit(
         (s) => s.copyWith(
@@ -950,6 +1017,10 @@ class FtpSyncController extends ChangeNotifier {
       await _saveLastUploadAt(
         profile.profileUuid,
         DateTime.now().millisecondsSinceEpoch,
+      );
+      await _saveUploadedFutureChanges(
+        profile.profileUuid,
+        futureChanges.count,
       );
       try {
         await archiveFile.delete();
@@ -984,7 +1055,7 @@ class FtpSyncController extends ChangeNotifier {
         );
         return;
       }
-      final warning = _skippedSummary(skipped);
+      final warning = _runWarning(skipped, notices);
       _emit(
         (s) => s.copyWith(
           phase: FtpSyncPhase.completed,
@@ -1186,15 +1257,48 @@ class FtpSyncController extends ChangeNotifier {
     }
   }
 
-  /// One line for the finished run when archives were left aside, or null.
-  String? _skippedSummary(List<String> skipped) {
-    if (skipped.isEmpty) return null;
-    final summary =
+  /// The finished run's banner when archives were left aside or [notices]
+  /// were raised, or null.
+  String? _runWarning(List<String> skipped, List<String> notices) {
+    final parts = [
+      if (skipped.isNotEmpty)
         'Skipped ${skipped.length} archive(s) on the server: '
-        '${skipped.join('; ')}';
+            '${skipped.join('; ')}',
+      ...notices,
+    ];
+    if (parts.isEmpty) return null;
+    final summary = parts.join('. ');
     _appendLog(FtpSyncLogLevel.warning, summary);
     return summary;
   }
+
+  /// Archives dated after this device's clock mean a phone's clock is or
+  /// was wrong — this one's or theirs — which also skews which edit wins a
+  /// conflict, so the user is told to check.
+  void _warnAboutFutureDatedArchives(
+    List<RemoteFileEntry> remoteEntries,
+    bool Function(String name) futureDated,
+    List<String> notices,
+  ) {
+    final dated = [
+      for (final e in remoteEntries)
+        if (_archiveNameRe.hasMatch(e.name) && futureDated(e.name))
+          _timestampOf(e.name),
+    ];
+    if (dated.isEmpty) return;
+    final latest = dated.reduce((a, b) => a > b ? a : b);
+    final notice =
+        '${dated.length} archive(s) on the server are dated after this '
+        "device's clock (latest ${_formatTime(latest)}, now "
+        '${_formatTime(DateTime.now().millisecondsSinceEpoch)}): the clock of '
+        'this phone or of the phone that made them is or was wrong. Check '
+        'the date and time in the phone settings';
+    _appendLog(FtpSyncLogLevel.warning, notice);
+    notices.add(notice);
+  }
+
+  static String _formatTime(int ms) =>
+      DateTime.fromMillisecondsSinceEpoch(ms).toLocal().toString();
 
   /// [line] with the run's import-warning count appended. The count is kept
   /// out of the banner: some warnings, such as a user matched by name,
@@ -1270,25 +1374,101 @@ class FtpSyncController extends ChangeNotifier {
   /// When [deviceUuid] is provided the query is restricted to rows that
   /// originated on this device, preventing change_log entries imported from
   /// peer archives from causing false-positive "something changed" results.
+  ///
+  /// Changes dated after [until] are left to [_futureDatedLocalChanges]:
+  /// they would pass any reference, and trigger an upload on every run.
   Future<bool> _hasLocalChangesSince(
     int? lastUploadAt, {
     Uuid? deviceUuid,
+    required int until,
   }) async {
     if (lastUploadAt == null) return true;
     final List<Variable<Object>> vars;
     final String sql;
     if (deviceUuid != null) {
-      sql = 'SELECT MAX(changed_at) AS m FROM change_log WHERE device_uuid = ?';
-      vars = [Variable<Uint8List>(deviceUuid.bytes)];
+      sql =
+          'SELECT MAX(changed_at) AS m FROM change_log '
+          'WHERE device_uuid = ? AND changed_at <= ?';
+      vars = [Variable<Uint8List>(deviceUuid.bytes), Variable<int>(until)];
     } else {
-      sql = 'SELECT MAX(changed_at) AS m FROM change_log';
-      vars = [];
+      sql = 'SELECT MAX(changed_at) AS m FROM change_log WHERE changed_at <= ?';
+      vars = [Variable<int>(until)];
     }
     final rows = await _db.customSelect(sql, variables: vars).get();
     if (rows.isEmpty) return false;
     final m = rows.first.data['m'] as int?;
     if (m == null) return false;
     return m > lastUploadAt;
+  }
+
+  /// This device's changes dated after [after]: made under a clock that ran
+  /// ahead. Their number, compared with the number already uploaded, is
+  /// what tells whether one of them still needs uploading.
+  Future<({int count, int? latest})> _futureDatedLocalChanges(
+    Uuid? deviceUuid,
+    int after,
+  ) async {
+    final row = await _db
+        .customSelect(
+          'SELECT COUNT(*) AS n, MAX(changed_at) AS m FROM change_log '
+          'WHERE changed_at > ?'
+          '${deviceUuid == null ? '' : ' AND device_uuid = ?'}',
+          variables: [
+            Variable<int>(after),
+            if (deviceUuid != null) Variable<Uint8List>(deviceUuid.bytes),
+          ],
+        )
+        .getSingle();
+    return (count: row.data['n'] as int? ?? 0, latest: row.data['m'] as int?);
+  }
+
+  Future<int> _loadUploadedFutureChanges(String profileUuid) async {
+    final raw = await _readConfig(ConfigKey.ftpUploadedFutureChanges);
+    if (raw == null || raw.isEmpty) return 0;
+    return _decodeUploadMap(raw)[profileUuid] ?? 0;
+  }
+
+  Future<void> _saveUploadedFutureChanges(String profileUuid, int n) async {
+    final raw = await _readConfig(ConfigKey.ftpUploadedFutureChanges);
+    final map = raw == null || raw.isEmpty
+        ? <String, int>{}
+        : _decodeUploadMap(raw);
+    map[profileUuid] = n;
+    await _writeConfig(
+      ConfigKey.ftpUploadedFutureChanges,
+      _encodeUploadMap(map),
+    );
+  }
+
+  /// Removes this device's archives named after [uploadedTs], the archive
+  /// just uploaded. Their dates came from a wrong clock — this phone's then
+  /// or now — and other devices take the newest name for its newest
+  /// snapshot, so they would hide the upload. The upload holds everything
+  /// they held. Best-effort.
+  Future<void> _deleteOwnArchivesDatedAfter(
+    IFtpTransport transport,
+    List<RemoteFileEntry> ownArchives,
+    Set<String> remoteNames,
+    int uploadedTs,
+  ) async {
+    for (final e in ownArchives) {
+      if (_timestampOf(e.name) <= uploadedTs) continue;
+      for (final name in [e.name, '${e.name}$_sha256Suffix']) {
+        if (!remoteNames.contains(name)) continue;
+        try {
+          await transport.deleteFile(name);
+          _appendLog(
+            FtpSyncLogLevel.info,
+            'Removed $name, dated after this upload',
+          );
+        } catch (err) {
+          _appendLog(
+            FtpSyncLogLevel.warning,
+            'Could not remove $name, dated after this upload: $err',
+          );
+        }
+      }
+    }
   }
 
   Future<String?> _readConfig(String key) async {

@@ -44,6 +44,12 @@ class ConfigKey {
   /// `change_log.changed_at` is newer than this timestamp).
   static const String ftpLastUploadAt = 'ftp_last_upload_at';
 
+  /// `profileUuid=count` per line — how many of this device's changes were
+  /// dated after its clock (made while it ran ahead) at the last upload to
+  /// that profile, so a new one triggers an upload but the old ones do not
+  /// trigger one on every run.
+  static const String ftpUploadedFutureChanges = 'ftp_uploaded_future_changes';
+
   // SilexGIS server sync. Its own keys, deliberately not a new member of the
   // FTP protocol enum: an older build reading a profile whose protocol it does
   // not recognise falls back to plain FTP, and would try to speak FTP to an

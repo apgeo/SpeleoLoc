@@ -274,6 +274,24 @@ change-log entries against the newest archive it already has on the
 server (or, if there is none there, its own record of when it last
 uploaded).
 
+### When a phone's clock is wrong
+
+Archive names, and every change you make, carry the date and time of
+the phone that made them, and phones in the field often go without
+network time. An archive dated more than an hour after this phone's
+clock means one of the two clocks is or was wrong. The Log tab and the
+orange banner say so — check the date and time in the phone's settings.
+Such an archive is still imported, but it never counts as its device's
+newest, so it cannot hide that device's later, correctly dated archives.
+
+If this phone uploaded while its clock ran ahead, its next sync notices
+its own archive dated after its clock, uploads a correctly dated one even
+without new changes, and removes the old one, so the other devices keep
+receiving its uploads. Changes made while the clock ran ahead are
+uploaded once; the Log tab and the banner count them, because until their
+date has passed they win over any edit of the same records on every
+device. Correct those records by hand if needed.
+
 ## How a run ends
 
 Whatever happened, a successful run's header reads **Sync complete**.
@@ -362,7 +380,10 @@ name](sync-and-change-log.md#when-a-record-here-already-has-the-name).
 ## Housekeeping on the server
 
 SpeleoLoc never deletes another device's files, nor any finished archive,
-from the remote folder — only the leftovers of its own cut-off uploads.
+from the remote folder — only the leftovers of its own cut-off uploads,
+and its own archives dated after a new upload of its own, which a wrong
+clock produced (see [When a phone's clock is
+wrong](#when-a-phones-clock-is-wrong)).
 Every sync that uploads adds one archive plus one small checksum file, so
 the folder grows steadily — one pair per device per upload.
 

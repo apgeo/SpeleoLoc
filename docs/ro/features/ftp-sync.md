@@ -283,6 +283,27 @@ modificărilor de pe acest dispozitiv cu cea mai nouă arhivă pe care o are
 deja pe server (sau, dacă nu există niciuna acolo, cu propria evidență a
 momentului ultimei încărcări).
 
+### Când ceasul unui telefon este greșit
+
+Numele arhivelor, ca și fiecare modificare pe care o faceți, poartă data
+și ora telefonului care le-a făcut, iar telefoanele de pe teren rămân
+adesea fără ora din rețea. O arhivă datată cu mai mult de o oră după
+ceasul acestui telefon înseamnă că unul dintre cele două ceasuri este sau
+a fost greșit. Fila Jurnal și bannerul portocaliu o spun — verificați data
+și ora în setările telefonului. O astfel de arhivă este totuși importată,
+dar nu contează niciodată drept cea mai nouă a dispozitivului ei, așa că
+nu poate ascunde arhivele lui ulterioare, datate corect.
+
+Dacă acest telefon a încărcat cât timp ceasul îi mergea înainte,
+următoarea lui sincronizare își observă propria arhivă datată după ceasul
+lui, încarcă una datată corect chiar fără modificări noi și o șterge pe
+cea veche, ca celelalte dispozitive să-i primească în continuare
+încărcările. Modificările făcute cât timp ceasul mergea înainte sunt
+încărcate o singură dată; fila Jurnal și bannerul le numără, pentru că
+până trece data lor ele câștigă în fața oricărei editări a acelorași
+înregistrări, pe fiecare dispozitiv. Corectați manual acele înregistrări
+dacă e nevoie.
+
 ## Cum se încheie o rulare
 
 Orice s-ar fi întâmplat, antetul unei rulări reușite scrie **Sincronizare
@@ -374,7 +395,11 @@ numele](sync-and-change-log.md#când-o-înregistrare-de-aici-are-deja-numele).
 
 ## Întreținerea pe server
 
-SpeleoLoc **nu șterge niciodată nimic** din folderul de pe server. Fiecare
+SpeleoLoc nu șterge niciodată fișierele altui dispozitiv din folderul de
+pe server. Șterge doar resturile propriilor încărcări întrerupte și
+propriile arhive datate după o încărcare nouă a sa, produse de un ceas
+greșit (vedeți [Când ceasul unui telefon este
+greșit](#când-ceasul-unui-telefon-este-greșit)). Fiecare
 sincronizare care încarcă adaugă o arhivă plus un mic fișier de sumă de
 control, așa că folderul crește constant — o pereche pentru fiecare
 dispozitiv, la fiecare încărcare.
