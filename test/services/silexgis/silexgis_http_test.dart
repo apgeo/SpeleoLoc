@@ -213,10 +213,10 @@ void main() {
       return expectLater(
         SilexgisSyncApi(build(client, _FakeTokens())).upload(
           'set-1',
-          SyncUploadBatch(
+          const SyncUploadBatch(
             batchId: 'batch-1',
             clientFeatures: SilexgisContract.clientFeatures,
-            rows: const <SyncUploadRow>[],
+            rows: <SyncUploadRow>[],
           ),
         ),
         throwsA(
