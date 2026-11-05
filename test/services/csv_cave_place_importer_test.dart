@@ -253,17 +253,37 @@ void main() {
       );
     });
 
-    test('skip keeps the code an existing place already holds', () async {
+    test('skip keeps the code an existing place already holds and reports '
+        'the row', () async {
       final existing = await place(caveA, 'Holder A', code: 'OLD-1');
+      final rows = [
+        CSVCavePlaceImportRow(
+          cavePlaceName: 'Holder A',
+          qrCode: 'NEW-1',
+          lineNumber: 2,
+        ),
+      ];
+
+      // The question is asked for this place, so declining it must show.
+      final conflicts = await importer.findQrCodeConflicts(
+        rows,
+        singleCave(caveA),
+      );
+      expect(conflicts.map((c) => c.cavePlaceName), ['Holder A']);
 
       final result = await importer.importRows(
-        [CSVCavePlaceImportRow(cavePlaceName: 'Holder A', qrCode: 'NEW-1')],
+        rows,
         singleCave(caveA),
         overwriteQr: false,
       );
 
       expect((await placeByUuid(existing)).placeCodeIdentifier, 'OLD-1');
       expect(result.qrCodesUpdated, 0);
+      final issue = result.issues.single;
+      expect(issue.kind, CSVCavePlaceRowIssueKind.qrCodeKept);
+      expect(issue.lineNumber, 2);
+      expect(issue.qrCode, 'NEW-1');
+      expect(issue.keptCode, 'OLD-1');
     });
 
     test('an existing place without a code receives the file code', () async {

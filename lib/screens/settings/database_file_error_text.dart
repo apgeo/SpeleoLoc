@@ -20,6 +20,9 @@ String databaseFileErrorText(Object error) => switch (error) {
   InvalidDatabaseFileException(reason: InvalidDatabaseFileReason.damaged) =>
     LocServ.inst.t('database_file_damaged'),
   SyncRunActiveException() => LocServ.inst.t('database_swap_sync_running'),
+  DatabaseRestorePendingException() => LocServ.inst.t(
+    'database_swap_restore_pending',
+  ),
   TestDatabaseUnavailableException() => LocServ.inst.t(
     'test_database_not_bundled',
   ),

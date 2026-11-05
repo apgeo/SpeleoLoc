@@ -20,6 +20,7 @@ void main() {
   late AppDatabase current;
   late bool syncRunning;
   late int settled;
+  late int installs;
   late LiveDatabaseSwap swap;
 
   Future<String?> marker(AppDatabase db) =>
@@ -36,11 +37,15 @@ void main() {
     current = AppDatabase.file(liveFile);
     syncRunning = false;
     settled = 0;
+    installs = 0;
     swap = LiveDatabaseSwap(
       documentsDirectory: () async => docs,
       openLiveDatabase: () => AppDatabase.file(liveFile),
       currentDatabase: () => current,
-      install: (db) => current = db,
+      install: (db) {
+        installs++;
+        current = db;
+      },
       isSyncRunning: () => syncRunning,
       onSettled: () async => settled++,
     );
@@ -205,7 +210,46 @@ void main() {
     expect(docsEntries(), ['speleo_loc.sqlite']);
   });
 
-  test('a swap cut short is undone at the next start', () async {
+  test('a failed rollback installs no empty database over the waiting '
+      'backup', () async {
+    final picked = await appDatabaseFile(p.join(tmp.path, 'good.sqlite'));
+    final blocker = Directory(liveFile.path);
+
+    await expectLater(
+      swap.replaceWith(
+        picked,
+        afterOpen: (db) async {
+          // Something at the live name the backup cannot be moved onto.
+          await db.close();
+          await liveFile.rename(p.join(tmp.path, 'moved-away.sqlite'));
+          await blocker.create();
+          File(p.join(blocker.path, 'invented')).writeAsStringSync('x');
+          throw const FileSystemException('invented: disk full');
+        },
+      ),
+      throwsA(isA<DatabaseRestorePendingException>()),
+    );
+
+    // Only the candidate was ever installed, and it is closed: nothing can
+    // be written that the next start would throw away.
+    expect(installs, 1);
+    expect(
+      docsEntries(),
+      contains('speleo_loc.sqlite${LiveDatabaseSwap.backupSuffix}'),
+    );
+    await expectLater(
+      swap.replaceWith(picked),
+      throwsA(isA<DatabaseRestorePendingException>()),
+    );
+
+    await blocker.delete(recursive: true);
+    expect(await swap.recoverInterruptedSwap(), isTrue);
+    current = AppDatabase.file(liveFile);
+    expect(await marker(current), 'live');
+  });
+
+  test('a swap cut short is undone at the next start, keeping what the '
+      'half-done swap left at the live name', () async {
     await current.close();
     // What a kill right after the live file was moved aside and the new one
     // moved in leaves on disk.
@@ -217,9 +261,21 @@ void main() {
 
     expect(await swap.recoverInterruptedSwap(), isTrue);
 
-    expect(docsEntries(), ['speleo_loc.sqlite']);
+    final entries = docsEntries();
+    expect(entries, hasLength(2));
+    expect(entries.first, 'speleo_loc.sqlite');
+    expect(
+      entries.last,
+      startsWith('speleo_loc.sqlite${LiveDatabaseSwap.discardedSuffix}-'),
+    );
     current = AppDatabase.file(liveFile);
     expect(await marker(current), 'live');
+    final setAside = AppDatabase.file(File(p.join(docs.path, entries.last)));
+    try {
+      expect(await marker(setAside), 'half-done');
+    } finally {
+      await setAside.close();
+    }
     expect(await swap.recoverInterruptedSwap(), isFalse);
   });
 
@@ -228,5 +284,49 @@ void main() {
 
     expect(await marker(current), isNull);
     expect(docsEntries(), ['speleo_loc.sqlite']);
+  });
+
+  group('after a swap was cut short', () {
+    late File backup;
+
+    setUp(() async {
+      await current.close();
+      backup = File('${liveFile.path}${LiveDatabaseSwap.backupSuffix}');
+      await liveFile.rename(backup.path);
+      await appDatabaseFile(liveFile.path, marker: 'half-done');
+      current = AppDatabase.file(liveFile);
+    });
+
+    test('the file to export is the backup, which holds the caver\'s '
+        'data', () async {
+      expect((await swap.databaseFileToExport()).path, backup.path);
+
+      await backup.delete();
+      expect((await swap.databaseFileToExport()).path, liveFile.path);
+    });
+
+    test(
+      'starting over sets the backup aside instead of deleting it',
+      () async {
+        await swap.discardLiveDatabase();
+
+        expect(await marker(current), isNull);
+        final entries = docsEntries();
+        expect(entries, hasLength(2));
+        expect(entries.first, 'speleo_loc.sqlite');
+        expect(
+          entries.last,
+          startsWith('speleo_loc.sqlite${LiveDatabaseSwap.discardedSuffix}-'),
+        );
+        final setAside = AppDatabase.file(
+          File(p.join(docs.path, entries.last)),
+        );
+        try {
+          expect(await marker(setAside), 'live');
+        } finally {
+          await setAside.close();
+        }
+      },
+    );
   });
 }

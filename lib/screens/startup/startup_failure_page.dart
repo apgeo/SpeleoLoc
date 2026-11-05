@@ -8,7 +8,8 @@ enum _ResetChoice { exportFirst, delete }
 
 /// Shown in place of the app when it could not start, so the caver is never
 /// left on the splash screen: says what went wrong, and offers to save the
-/// database, try again, or start over.
+/// database, try again, or, when the database is what does not open, start
+/// over.
 class StartupFailurePage extends StatefulWidget {
   const StartupFailurePage({
     super.key,
@@ -156,9 +157,11 @@ class _StartupFailurePageState extends State<StartupFailurePage> {
               icon: const Icon(Icons.refresh),
               label: Text(LocServ.inst.t('startup_retry')),
             ),
-            // Starting over cannot help with data from a newer app, which
-            // updating opens as it is.
-            if (_kind != StartupFailureKind.databaseTooNew) ...[
+            // Starting over is offered only when the database itself does
+            // not open: a full disk or another failure would delete the
+            // caver's data and still not start, and data from a newer app
+            // opens as it is once the app is updated.
+            if (_kind == StartupFailureKind.databaseUnreadable) ...[
               const SizedBox(height: 8),
               TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: colors.error),

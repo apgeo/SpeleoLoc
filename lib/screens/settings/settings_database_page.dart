@@ -15,6 +15,7 @@ import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/providers/database_swap_providers.dart';
+import 'package:speleoloc/providers/providers.dart';
 
 /// Database management settings: reinitialize, export.
 class SettingsDatabasePage extends ConsumerStatefulWidget {
@@ -270,8 +271,8 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
 
   void _exportDatabase(BuildContext context) async {
     try {
-      final saved = await const DatabaseFileExportService().export(
-        await ref.read(liveDatabaseSwapProvider).liveDatabaseFile(),
+      final saved = await const DatabaseFileExportService().exportSnapshot(
+        ref.read(appDatabaseProvider),
         folderDialogTitle: LocServ.inst.t('select_folder_save_database'),
         saveDialogTitle: LocServ.inst.t('save_database_file'),
       );

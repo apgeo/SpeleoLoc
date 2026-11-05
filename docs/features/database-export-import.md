@@ -169,7 +169,8 @@ progress.
 
 Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
-sync from getting confused afterwards.
+sync from getting confused afterwards. Its [beacon detection](ble-beacons.md)
+settings stay as they were too, so an archive never switches detection on.
 
 It also keeps its own [FTP server profiles](ftp-sync.md) and its choice of
 default profile; the archive's are not taken over. Saved passwords stay in
@@ -297,7 +298,9 @@ already be on the device, or they will show as missing.
 The file is checked first, as on a replace: one that is not a SpeleoLoc
 database, is damaged, or was saved by a newer version of the app is
 refused with nothing changed, and a restore that fails part-way puts your
-previous database back.
+previous database back. Should even putting it back fail, the app says so
+and works on no database until you close it and open it again; that next
+start puts your previous database back.
 
 **Once the restore succeeds, it is irreversible.** The database you had is
 deleted, not archived.
@@ -312,14 +315,21 @@ offers:
 
 - **Export database file** — saves a copy of the raw database file through
   the same save dialog as **Export database**, so nothing is lost whatever
-  you do next.
+  you do next. When a restore or replace was cut short, the copy is of the
+  database you had before it, the one the app is trying to put back.
 - **Retry** — tries to start again, for example after freeing some space.
-- **Reset app data** — deletes the database so the app starts empty. It
+- **Reset app data** — offered only when the database itself does not
+  open. It deletes the database so the app starts empty. It
   asks first, says what will be deleted, and offers **Export first**.
-  Photos and documents already saved on the device are not deleted.
+  Photos and documents already saved on the device are not deleted, and
+  neither is a previous database a cut-short restore left waiting: it stays
+  on the device under another name.
 
 A database saved by a newer version of the app gets its own message: update
-the app and it opens as it is. **Reset app data** is not offered then.
+the app and it opens as it is. **Reset app data** is not offered then, nor
+when storage is full or something other than the database stopped the
+start: deleting the database would lose your data and not help the app
+start.
 
 ## Reinitializing the database
 

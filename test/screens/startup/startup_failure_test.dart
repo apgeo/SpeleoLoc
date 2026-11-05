@@ -19,6 +19,11 @@ void main() {
 
   String t(String key) => LocServ.inst.t(key);
 
+  final unreadable = SqliteException(
+    extendedResultCode: 26,
+    message: 'invented: not a database',
+  );
+
   setUpAll(() async {
     await LocServ.inst.setLocale('en');
     await LocServ.inst.load();
@@ -74,20 +79,35 @@ void main() {
     expect(find.text(t('startup_reset_app_data')), findsNothing);
   });
 
-  testWidgets('a full disk says so', (tester) async {
+  testWidgets('a full disk says so and offers no reset', (tester) async {
     await boot(tester, [const FileSystemException('invented: no space')]);
 
     expect(find.text(t('startup_failed_storage')), findsOneWidget);
+    expect(find.text(t('startup_export_database')), findsOneWidget);
+    expect(find.text(t('startup_retry')), findsOneWidget);
+    expect(find.text(t('startup_reset_app_data')), findsNothing);
+  });
+
+  testWidgets('a failure the database did not cause offers no reset', (
+    tester,
+  ) async {
+    await boot(tester, [StateError('invented: a service failed')]);
+
+    expect(find.text(t('startup_failed_unknown')), findsOneWidget);
+    expect(find.text(t('startup_export_database')), findsOneWidget);
+    expect(find.text(t('startup_retry')), findsOneWidget);
+    expect(find.text(t('startup_reset_app_data')), findsNothing);
+  });
+
+  testWidgets('a database that does not open offers a reset', (tester) async {
+    await boot(tester, [unreadable]);
+
+    expect(find.text(t('startup_failed_database_unreadable')), findsOneWidget);
     expect(find.text(t('startup_reset_app_data')), findsOneWidget);
   });
 
   testWidgets('Export saves the database file', (tester) async {
-    await boot(tester, [
-      SqliteException(
-        extendedResultCode: 26,
-        message: 'invented: not a database',
-      ),
-    ]);
+    await boot(tester, [unreadable]);
     expect(find.text(t('startup_failed_database_unreadable')), findsOneWidget);
 
     await tester.tap(find.text(t('startup_export_database')));
@@ -117,7 +137,7 @@ void main() {
   });
 
   testWidgets('Reset asks first; cancelling deletes nothing', (tester) async {
-    await boot(tester, [const FileSystemException('invented: no space')]);
+    await boot(tester, [unreadable]);
 
     await tester.tap(find.text(t('startup_reset_app_data')));
     await tester.pumpAndSettle();
@@ -132,7 +152,7 @@ void main() {
   testWidgets('Reset offers an export first, then deletes and starts again', (
     tester,
   ) async {
-    await boot(tester, [const FileSystemException('invented: no space'), null]);
+    await boot(tester, [unreadable, null]);
 
     await tester.tap(find.text(t('startup_reset_app_data')));
     await tester.pumpAndSettle();

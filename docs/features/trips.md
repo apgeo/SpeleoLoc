@@ -111,15 +111,19 @@ not all fit.
 |---|---|
 | **Stop trip** / **Pause** / **Resume trip** | Shown while this trip is the one this phone is recording. See [Pausing and resuming](#pausing-and-resuming) and [Stopping a trip](#stopping-a-trip). |
 | **Restart trip** | Shown instead once the trip has ended. See [Restarting a finished trip](#restarting-a-finished-trip). |
-
-A trip still open on another phone — a teammate's recording received
-through SilexGIS — shows *"Open — not recording on this phone"* in its
-summary card and none of these three buttons.
 | **Add point** | Records a point at a place and time you choose. See [Correcting the points](#correcting-the-points). |
 | **Pictures** | Opens **Points from pictures**. See [Points from pictures](#points-from-pictures). |
 | **Trip log** | Opens the log. See [The trip log](#the-trip-log). |
 | **Export report** | See [Trip reports](trip-reports.md). |
 | **Map view** / **List view** | Only when the cave has at least one raster map. See [Map view](#map-view). |
+
+A trip still open on another phone — a teammate's recording received
+through SilexGIS — shows *"Open — not recording on this phone"* in its
+summary card and none of these three buttons. A trip left open that this
+phone recorded, or one that names no recording phone at all, shows the
+same line but offers **Stop trip**, so it can be closed; stopping it asks
+first and leaves the trip this phone is recording untouched. **Restart
+trip** is not offered while a trip is still open.
 
 ### Summary card and point list
 

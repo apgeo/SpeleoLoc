@@ -315,13 +315,15 @@ class _CSVCavePlacesImportPageState
       CSVCavePlaceRowIssueKind.placeAmbiguous => 'csv_issue_place_ambiguous',
       CSVCavePlaceRowIssueKind.qrCodeTaken => 'csv_issue_qr_taken',
       CSVCavePlaceRowIssueKind.qrCodeRepeated => 'csv_issue_qr_repeated',
+      CSVCavePlaceRowIssueKind.qrCodeKept => 'csv_issue_qr_kept',
     };
     final text = LocServ.inst
         .t(key)
         .replaceAll('{cave}', issue.caveName ?? '')
         .replaceAll('{place}', issue.placeName ?? '')
         .replaceAll('{qr}', issue.qrCode ?? '')
-        .replaceAll('{holder}', issue.holderTitle ?? '');
+        .replaceAll('{holder}', issue.holderTitle ?? '')
+        .replaceAll('{old}', issue.keptCode ?? '');
     final line = issue.lineNumber;
     if (line == null) return text;
     final row = LocServ.inst.t('csv_issue_row').replaceAll('{line}', '$line');

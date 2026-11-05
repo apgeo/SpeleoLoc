@@ -8,7 +8,8 @@ abstract interface class StartupRecovery {
   /// it went, or null when the caver cancelled.
   Future<String?> exportDatabase();
 
-  /// Deletes the database so the next start begins empty.
+  /// Deletes the database so the next start begins empty. A previous
+  /// database a cut-short swap left aside is kept, under another name.
   Future<void> resetAppData();
 }
 
@@ -23,7 +24,7 @@ class DatabaseStartupRecovery implements StartupRecovery {
 
   @override
   Future<String?> exportDatabase() async => _exporter.export(
-    await _swap.liveDatabaseFile(),
+    await _swap.databaseFileToExport(),
     folderDialogTitle: LocServ.inst.t('select_folder_save_database'),
     saveDialogTitle: LocServ.inst.t('save_database_file'),
   );

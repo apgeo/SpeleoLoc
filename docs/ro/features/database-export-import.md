@@ -184,7 +184,8 @@ sincronizare FTP sau SilexGIS.
 Dispozitivul dumneavoastră își păstrează propria identitate printr-o
 înlocuire — nu începe să pretindă că este dispozitivul care a făcut
 arhiva, iar asta este ceea ce împiedică sincronizarea să se încurce după
-aceea.
+aceea. Și setările de [detectare a beaconurilor](ble-beacons.md) rămân
+cum erau, așa că o arhivă nu pornește niciodată detectarea.
 
 Își păstrează și propriile [profiluri de server FTP](ftp-sync.md) și
 profilul ales implicit; cele din arhivă nu sunt preluate. Parolele salvate
@@ -327,6 +328,9 @@ Fișierul este verificat întâi, ca la o înlocuire: unul care nu este o
 bază de date SpeleoLoc, este deteriorat sau a fost salvat de o versiune
 mai nouă a aplicației este refuzat fără să se schimbe nimic, iar o
 restaurare care eșuează pe parcurs pune la loc baza de date anterioară.
+Dacă nici punerea la loc nu reușește, aplicația spune asta și nu lucrează
+cu nicio bază de date până când o închideți și o deschideți din nou;
+pornirea următoare pune la loc baza de date anterioară.
 
 **Odată reușită, restaurarea este ireversibilă.** Baza de date pe care o
 aveați este ștearsă, nu arhivată.
@@ -341,17 +345,23 @@ pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
 
 - **Exportă fișierul bazei de date** — salvează o copie a fișierului brut
   al bazei de date prin același dialog de salvare ca **Exportă baza de
-  date**, ca să nu se piardă nimic orice ați face după aceea.
+  date**, ca să nu se piardă nimic orice ați face după aceea. Când o
+  restaurare sau o înlocuire a fost întreruptă, copia este a bazei de date
+  pe care o aveați înainte, cea pe care aplicația încearcă să o pună la loc.
 - **Reîncearcă** — încearcă din nou pornirea, de exemplu după ce ați
   eliberat spațiu.
-- **Resetează datele aplicației** — șterge baza de date, iar aplicația
+- **Resetează datele aplicației** — oferit doar când baza de date însăși
+  nu se deschide. Șterge baza de date, iar aplicația
   pornește goală. Întreabă întâi, spune ce se va șterge și oferă
   **Exportă întâi**. Fotografiile și documentele deja salvate pe
-  dispozitiv nu se șterg.
+  dispozitiv nu se șterg și nici o bază de date anterioară lăsată în
+  așteptare de o restaurare întreruptă: rămâne pe dispozitiv sub alt nume.
 
 O bază de date salvată de o versiune mai nouă a aplicației are propriul
 mesaj: actualizați aplicația și baza de date se deschide așa cum este.
-Atunci **Resetează datele aplicației** nu este oferit.
+**Resetează datele aplicației** nu este oferit atunci, nici când memoria
+este plină sau altceva decât baza de date a oprit pornirea: ștergerea
+bazei de date v-ar pierde datele fără să ajute aplicația să pornească.
 
 ## Reinițializarea bazei de date
 
