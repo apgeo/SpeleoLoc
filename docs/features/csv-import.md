@@ -196,13 +196,16 @@ code generation pass over them.
 
 ### How rows are matched against places you already have
 
-A row whose name is exactly the name of a place in this cave counts as
-that place; every other row creates a new place. The match is exact,
-capitalisation included.
+A row whose name is the name of a place in this cave counts as that
+place; every other row creates a new place. Capitalisation is ignored,
+both here and in the warning dialog, so "Sump" and "sump" are the same
+place.
 
-The warning dialog counts matches differently: it ignores
-capitalisation. So "Sump" and "sump" are reported as one existing
-place and then imported as two.
+A cave can hold two places with the same name when they sit in
+different cave areas. A row naming such a place cannot tell which one
+it means, so it is skipped and listed in the summary rather than
+applied to either. When only one of them sits in no cave area, the row
+counts as that one.
 
 ### The questions the import asks
 
@@ -212,33 +215,31 @@ asks whether to continue. Continuing imports the new rows and leaves
 the existing places where they are — though their code can still be
 replaced by the next question.
 
-**QR code conflicts** appears when you mapped the QR code column and
-some place in the database already holds one of the codes in the file.
-It lists the code, the place holding it and that place's cave, then
-asks "Do you want to overwrite existing QR codes?":
+**QR code conflicts** appears when you mapped the QR code column and a
+row's code would displace another: a different place in this cave
+already holds the code, or the place the row matches already holds a
+different code. Codes held by places in other caves do not count —
+place codes only need to be unique within a cave — and neither does a
+place that already holds exactly the code in the file, so importing
+the same file twice raises no question. The dialog lists each code,
+the place holding it and that place's cave, then explains the two
+choices:
 
-- **Skip QR updates** — places you already have keep the code they
-  have. This only protects existing places: a row that creates a new
-  place is given the code from the file whichever button you press.
-- **Overwrite QR codes** — when a row matches a place that already
-  exists in this cave, that place's code is replaced by the one in the
-  file. The place that previously carried that code is left alone, so
-  afterwards two places can hold the same code — check the ones the
-  dialog listed.
+- **Skip QR updates** — every listed code stays where it is. A row
+  whose code another place holds is still imported, without the code,
+  and the summary lists it; a place that already has a different code
+  keeps it.
+- **Overwrite QR codes** — each row's place receives the code from the
+  file, and the place that held it loses it, so no two places of the
+  cave end up with the same code. The summary counts the codes taken
+  away.
 
-The conflict check does not exclude the very places you are
-re-importing, so importing the same file a second time raises this
-dialog even though nothing has changed.
+Either way, a code that no place in this cave holds is given to the
+row's place, including a place you already had that has no code yet.
 
-### Two cases that stop the import
-
-Both leave your data untouched, show an error message and close the
-screen:
-
-- The cave already holds two places with exactly the same name
-  (possible when they sit in different cave areas).
-- Two places in the database already hold the same code as a row in
-  the file.
+If the file itself gives one code to two different places, the first
+row keeps it; the later row is imported without it and listed in the
+summary.
 
 ### What the summary reports
 
@@ -247,8 +248,15 @@ The **Import complete** dialog reports:
 - **Cave areas created** — always 0 here, since this import has no
   cave area column.
 - **Cave places created**
-- **QR codes updated** — codes replaced on places you already had, not
-  codes given to new places.
+- **QR codes updated** — codes written onto places you already had,
+  not codes given to new places.
+- **QR codes removed from other places** — shown only when you chose
+  to overwrite and some place lost its code.
+
+Under **Rows not imported as written** it then lists, by row number in
+the file (the header being row 1), every row that was skipped because
+its name matched more than one place, and every row imported without
+its code. The first five are shown, followed by a count of the rest.
 
 ## Nothing is written until every question is answered
 
