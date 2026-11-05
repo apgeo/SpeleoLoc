@@ -177,8 +177,8 @@ class _AddCavePlacePopupState extends ConsumerState<AddCavePlacePopup> {
           onScan: (code) {
             final qr = code.trim();
             if (qr.isNotEmpty) {
+              // ScannerPage closes itself once this returns.
               _qrController.text = qr;
-              Navigator.pop(context); // close scanner
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
