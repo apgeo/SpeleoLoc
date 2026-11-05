@@ -890,6 +890,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     // open popup, and auto-save the definition.
     if (_waitingForNewCavePlaceTap) {
       final point = _imagePointAt(pos, controllerValue);
+      if (point == null) return;
       setState(() => _waitingForNewCavePlaceTap = false);
 
       if (widget.caveUuid == null) return;
@@ -931,6 +932,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     }
 
     final point = _imagePointAt(pos, controllerValue);
+    if (point == null) return;
 
     // mark that user explicitly selected a new point — used to control
     // whether the blue+orange 'new' marker is displayed.
@@ -944,17 +946,24 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     widget.onImagePointChanged?.call(_imageSelectedX!, _imageSelectedY!);
   }
 
-  /// The picture pixel under viewport position [pos], clamped to the
-  /// picture.
-  Offset _imagePointAt(Offset pos, PhotoViewControllerValue controllerValue) {
-    final scale = controllerValue.scale ?? 1.0;
-    final rawX = (pos.dx - controllerValue.position.dx) / scale;
-    final rawY = (pos.dy - controllerValue.position.dy) / scale;
-    final imgW = (_img?.width ?? _naturalImgW)?.toDouble();
-    final imgH = (_img?.height ?? _naturalImgH)?.toDouble();
-    final maxX = (imgW != null && imgW > 0) ? (imgW - 1.0) : double.infinity;
-    final maxY = (imgH != null && imgH > 0) ? (imgH - 1.0) : double.infinity;
-    return Offset(rawX.clamp(0.0, maxX), rawY.clamp(0.0, maxY));
+  /// The picture pixel under viewport position [pos], or null when [pos] is
+  /// off the picture or the picture's size or zoom is not known yet.
+  ///
+  /// Until PhotoView has laid the picture out its scale is null, and reading
+  /// the tap at scale 1 would store screen positions as picture pixels; a
+  /// tap beside a zoomed-out picture is not a point on it, and clamping it
+  /// to the nearest edge would store one the user never touched.
+  Offset? _imagePointAt(Offset pos, PhotoViewControllerValue controllerValue) {
+    final scale = controllerValue.scale;
+    final width = _naturalImgW;
+    final height = _naturalImgH;
+    if (scale == null || scale <= 0 || width == null || height == null) {
+      return null;
+    }
+    final x = (pos.dx - controllerValue.position.dx) / scale;
+    final y = (pos.dy - controllerValue.position.dy) / scale;
+    if (x < 0 || y < 0 || x >= width || y >= height) return null;
+    return Offset(x, y);
   }
 
   /// Selects the shown place whose point is nearest to [pos], if one is
@@ -997,13 +1006,19 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     _effectiveNavBarState?.setSelectedPlaceId(nearest.cavePlace.uuid);
   }
 
+  // The scale is null until PhotoView has laid the picture out, and there is
+  // nothing to zoom before that.
   @override
-  void zoomIn() =>
-      _zoomAtViewportCenter(clampZoom(_photoViewController.scale! * 1.2));
+  void zoomIn() {
+    final scale = _photoViewController.scale;
+    if (scale != null) _zoomAtViewportCenter(clampZoom(scale * 1.2));
+  }
 
   @override
-  void zoomOut() =>
-      _zoomAtViewportCenter(clampZoom(_photoViewController.scale! / 1.2));
+  void zoomOut() {
+    final scale = _photoViewController.scale;
+    if (scale != null) _zoomAtViewportCenter(clampZoom(scale / 1.2));
+  }
 
   /// Zoom to [newScale] while keeping the image point currently at the
   /// viewport centre fixed in place.

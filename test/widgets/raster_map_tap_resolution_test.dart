@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -10,8 +11,9 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 
 /// Where a tap on the map goes: in define mode it is a position on the
-/// picture and nothing else; in select mode and in the read-only viewer it
-/// picks the nearest point within reach.
+/// picture and nothing else, and only a tap on the picture, once its size
+/// and zoom are known, defines a point; in select mode and in the read-only
+/// viewer it picks the nearest point within reach.
 void main() {
   late Directory tmp;
   late File imageFile;
@@ -150,6 +152,60 @@ void main() {
       expect(saves, 0);
       expect(selected, isEmpty);
     });
+
+    testWidgets('a tap before the picture\'s size is known defines no point, '
+        'and the zoom buttons wait for it', (tester) async {
+      final points = <Offset>[];
+      await pumpEditor(
+        tester,
+        controller: RasterMapPlacePointEditorController(
+          initialTapDefinesNewPoint: true,
+        ),
+        places: const [],
+        picture: _NeverLoads(),
+        onPoint: (x, y) => points.add(Offset(x, y)),
+      );
+      expect(find.byType(PhotoView), findsNothing);
+
+      await tapAt(
+        tester,
+        tester.getCenter(find.byType(RasterMapPlacePointEditor)),
+      );
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.remove));
+      await tester.pump();
+
+      expect(points, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a tap beside the picture defines no point', (tester) async {
+      final points = <Offset>[];
+      await pumpEditor(
+        tester,
+        controller: RasterMapPlacePointEditorController(
+          initialTapDefinesNewPoint: true,
+        ),
+        places: const [],
+        onPoint: (x, y) => points.add(Offset(x, y)),
+      );
+
+      await tapAt(tester, onScreen(tester, 120, 60));
+      expect(points, hasLength(1));
+      expect(points.single.dx, closeTo(120, 0.01));
+      expect(points.single.dy, closeTo(60, 0.01));
+
+      final map = tester.getRect(find.byType(PhotoView));
+      final pictureBottom = onScreen(tester, 0, pictureH).dy;
+      expect(map.bottom - pictureBottom, greaterThan(100));
+      await tapAt(
+        tester,
+        Offset(map.center.dx, (pictureBottom + map.bottom) / 2),
+      );
+
+      expect(points, hasLength(1));
+    });
   });
 
   group('select mode', () {
@@ -216,4 +272,17 @@ void main() {
 
     expect(tapped.map((p) => p.cavePlace.title), ['Invented hall']);
   });
+}
+
+/// A picture whose bytes never arrive, as a large scan still being read.
+class _NeverLoads extends ImageProvider<_NeverLoads> {
+  @override
+  Future<_NeverLoads> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture(this);
+
+  @override
+  ImageStreamCompleter loadImage(
+    _NeverLoads key,
+    ImageDecoderCallback decode,
+  ) => OneFrameImageStreamCompleter(Completer<ImageInfo>().future);
 }

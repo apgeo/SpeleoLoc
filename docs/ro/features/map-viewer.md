@@ -62,6 +62,8 @@ cu pini pentru locurile din peșteră — cum vă deplasați pe imagine, ce
 - **Apăsați pe imagine** — pe o hartă doar de vizualizare nu se întâmplă
   nimic. Pe *Poziționare locuri pe hartă* fie lasă un punct nou, fie alege
   pinul cel mai apropiat, în funcție de modul de atingere descris mai jos.
+  O apăsare alături de imagine, sau înainte ca imaginea să se fi încărcat,
+  nu lasă niciun punct.
 
 Trecerea de la un loc la altul vă păstrează mărirea curentă și doar
 deplasează harta pe noul pin, așa că puteți lucra pe toată ridicarea
