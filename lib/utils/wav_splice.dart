@@ -23,10 +23,14 @@ class WavPcmInfo {
 
   int get blockAlign => numChannels * (bitsPerSample ~/ 8);
 
+  static const _formatPcm = 0x0001;
+  static const _formatExtensible = 0xFFFE;
+
   /// Reads the header of [wav]. Returns `null` unless it is an uncompressed
-  /// PCM WAV with whole-byte samples and a `data` chunk; anything else (a
-  /// compressed file saved under a `.wav` name, a float WAV, a truncated
-  /// header) cannot be spliced sample-accurately.
+  /// PCM WAV (plain, or extensible with a PCM sub-format) with whole-byte
+  /// samples and a `data` chunk; anything else (a compressed file saved under
+  /// a `.wav` name, a float WAV, a truncated header) cannot be spliced
+  /// sample-accurately.
   static WavPcmInfo? parse(Uint8List wav) {
     if (wav.length < 12 || _tag(wav, 0) != 'RIFF' || _tag(wav, 8) != 'WAVE') {
       return null;
@@ -44,7 +48,16 @@ class WavPcmInfo {
       if (id == 'fmt ') {
         if (size < 16 || body + 16 > wav.length) return null;
         final format = bd.getUint16(body, Endian.little);
-        if (format != 1) return null;
+        if (format == _formatExtensible) {
+          // The real format code is in the first two bytes of the sub-format
+          // GUID, 24 bytes into the 40-byte extensible fmt chunk.
+          if (size < 40 || body + 40 > wav.length) return null;
+          if (bd.getUint16(body + 24, Endian.little) != _formatPcm) {
+            return null;
+          }
+        } else if (format != _formatPcm) {
+          return null;
+        }
         numChannels = bd.getUint16(body + 2, Endian.little);
         sampleRate = bd.getUint32(body + 4, Endian.little);
         bitsPerSample = bd.getUint16(body + 14, Endian.little);
