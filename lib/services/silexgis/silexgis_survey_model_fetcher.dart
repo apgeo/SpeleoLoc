@@ -114,12 +114,20 @@ class SilexgisSurveyModelFetcher {
       return _Outcome.fetched;
     }
 
-    final answer = await _api.fileLinks(<SyncFileLinkRequest>[
-      SyncFileLinkRequest(
-        documentId: document.toString(),
-        rendition: SyncRendition.original,
-      ),
-    ]);
+    final SyncFileLinksAnswer answer;
+    try {
+      answer = await _api.fileLinks(<SyncFileLinkRequest>[
+        SyncFileLinkRequest(
+          documentId: document.toString(),
+          rendition: SyncRendition.original,
+        ),
+      ]);
+    } on SilexgisTransportException catch (e) {
+      // One model must not end the run for the others; the next run asks
+      // again.
+      _log.info('a survey model address was not obtained: ${e.message}');
+      return _Outcome.failed;
+    }
     final link = answer.links
         .where((l) => l.documentId == document.toString())
         .firstOrNull;

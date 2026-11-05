@@ -1786,6 +1786,7 @@
   "model_server_sign_in": "Sign in to SilexGIS again to download it.",
   "model_server_refused": "SilexGIS no longer hands over this model.",
   "model_server_failed": "The download did not finish. Try again later.",
+  "model_server_offline": "No connection to SilexGIS. Try again when you have a signal.",
   "model_untitled": "Survey model",
   "model_no_places": "No places",
   "model_no_splays": "This station has no splays",

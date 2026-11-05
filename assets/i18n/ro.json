@@ -1785,6 +1785,7 @@
   "model_server_sign_in": "Autentifică-te din nou în SilexGIS ca să-l descarci.",
   "model_server_refused": "SilexGIS nu mai oferă acest model.",
   "model_server_failed": "Descărcarea nu s-a terminat. Încearcă mai târziu.",
+  "model_server_offline": "Nu există conexiune la SilexGIS. Încearcă din nou când ai semnal.",
   "model_untitled": "Model topografic",
   "model_no_places": "Niciun punct",
   "model_no_splays": "Stația nu are vizări laterale",

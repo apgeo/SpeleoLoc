@@ -4,6 +4,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_model/current_survey_models.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
+import 'package:speleoloc/services/silexgis/silexgis_exception.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_file_store.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_fetcher.dart';
@@ -13,6 +14,7 @@ import 'package:speleoloc/services/silexgis/silexgis_session.dart';
 import 'package:speleoloc/services/silexgis/silexgis_survey_model_copies.dart';
 import 'package:speleoloc/services/silexgis/silexgis_survey_model_fetcher.dart';
 import 'package:speleoloc/services/silexgis/silexgis_survey_model_repository.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 
 /// Fetches one server model's file when the caver asks for it, outside a
 /// sync run.
@@ -39,6 +41,8 @@ class SilexgisSurveyModelDownloadService implements ServerSurveyModelFetcher {
        _sessionBuilder = sessionBuilder,
        _baseDir = baseDir;
 
+  static final _log = AppLogger.of('SurveyModelDownload');
+
   final AppDatabase _db;
   final ChangeLogger _logger;
   final SilexgisProfileRepository _profiles;
@@ -50,6 +54,18 @@ class SilexgisSurveyModelDownloadService implements ServerSurveyModelFetcher {
 
   @override
   Future<ServerModelFetchOutcome> fetch(ServerSurveyModel model) async {
+    try {
+      return await _fetch(model);
+    } on SilexgisTransportException catch (e) {
+      // Signing in again and asking for the address both go over the network.
+      _log.info(
+        'a survey model fetch could not reach the server: ${e.message}',
+      );
+      return ServerModelFetchOutcome.offline;
+    }
+  }
+
+  Future<ServerModelFetchOutcome> _fetch(ServerSurveyModel model) async {
     final profile = await _profiles.find(model.profileUuid);
     if (profile == null) return ServerModelFetchOutcome.refused;
     final session = _sessionBuilder(profile);

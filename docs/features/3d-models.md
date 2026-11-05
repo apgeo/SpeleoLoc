@@ -35,6 +35,7 @@ from SilexGIS automatically** on (the default), the sync downloads them, but onl
 network your server profile allows files on. Otherwise they wait: the
 viewer's **⋮** menu, and the 3D button of a cave that has no model on the
 phone yet, list the models still on SilexGIS, and a tap downloads one.
+Without a connection the tap says so and the list stays usable for another try.
 
 If the 3D view cannot open (a phone without 3D support, or a page that does not
 come up within about 90 seconds), the screen says so and offers **Retry** and
