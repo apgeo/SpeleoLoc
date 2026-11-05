@@ -125,7 +125,9 @@ scanned until you turn it on.
    relying on detection with the phone put away.
 
 Once enabled, detection starts again by itself every time you open the
-app, without asking anything.
+app, without asking anything. Assigning a tag through the
+**Nearby beacons** picker, or scanning in the Beacon Lab, does not
+interrupt it.
 
 ### The quick switch in the drawer
 
@@ -199,8 +201,11 @@ place, since the phone can stay in a chest pocket.
 Turning it on asks for notification permission (without it the option
 refuses to enable, warning "Notification permission is required for
 background alerts") and for permission to run unrestricted in the
-background. While it is active a permanent notification reads
-**SpeleoLoc beacon detection — Scanning for cave beacons…**.
+background. While detection runs with it on, a permanent notification
+reads **SpeleoLoc beacon detection — Scanning for cave beacons…**. It
+appears as soon as detection starts, with the app still on screen:
+Android lets the background scan hear tags only when that service was
+started while you were looking at the app.
 
 Because it has to survive hours underground, background scanning is
 duty-cycled: one short burst about every **Background scan interval**

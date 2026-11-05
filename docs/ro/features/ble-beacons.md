@@ -133,7 +133,9 @@ Detectarea este o preferință a fiecărui dispozitiv. Este oprită implicit
    pe detectare cu telefonul pus deoparte.
 
 Odată activată, detectarea pornește din nou de la sine de fiecare dată
-când deschideți aplicația, fără să mai întrebe nimic.
+când deschideți aplicația, fără să mai întrebe nimic. Asocierea unui tag
+din lista **Beaconuri în apropiere** sau o scanare în **Laborator beacon**
+nu o întrerupe.
 
 ### Comutatorul rapid din meniul lateral
 
@@ -209,8 +211,11 @@ piept.
 Pornirea ei cere permisiunea de notificări (fără ea opțiunea refuză să se
 activeze, avertizând „Permisiunea de notificări este necesară pentru
 alertele în fundal”) și permisiunea de a rula nerestricționat în fundal.
-Cât timp este activă, o notificare permanentă afișează **Detectare
-beaconuri SpeleoLoc — Se scanează beaconurile din peșteră…**.
+Cât timp detectarea rulează cu ea pornită, o notificare permanentă
+afișează **Detectare beaconuri SpeleoLoc — Se scanează beaconurile din
+peșteră…**. Ea apare de îndată ce pornește detectarea, cu aplicația încă
+pe ecran: Android lasă scanarea din fundal să audă tagurile doar dacă
+serviciul a fost pornit cât timp vă uitați la aplicație.
 
 Pentru că trebuie să reziste ore întregi în subteran, scanarea în fundal
 este intermitentă: o rafală scurtă cam la fiecare **Interval de scanare
