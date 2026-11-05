@@ -18,11 +18,18 @@ class _FlakyProfileRepository extends FtpProfileRepository {
   _FlakyProfileRepository(super.db, {super.hostKeys});
 
   bool failSave = false;
+  bool failDelete = false;
 
   @override
   Future<void> save(FtpProfile profile, {String? password}) async {
     if (failSave) throw StateError('keystore refused the write');
     return super.save(profile, password: password);
+  }
+
+  @override
+  Future<void> delete(String profileUuid) async {
+    if (failDelete) throw StateError('database is locked');
+    return super.delete(profileUuid);
   }
 }
 
@@ -332,5 +339,53 @@ void main() {
     await tester.tap(find.byIcon(Icons.save).first);
     await tester.pumpAndSettle();
     expect(find.text('ftp_edit_profile'), findsNothing);
+  });
+
+  testWidgets('a delete that fails says so and the profile stays listed', (
+    tester,
+  ) async {
+    final repository = _FlakyProfileRepository(db, hostKeys: hostKeys)
+      ..failDelete = true;
+    await repository.save(sftp, password: 'pw');
+    final container = ProviderContainer(
+      overrides: <Override>[
+        appDatabaseProvider.overrideWithValue(db),
+        ftpHostKeyStoreProvider.overrideWithValue(hostKeys),
+        ftpProfileRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: const FtpSyncSettingsPage(),
+          builder: (context, child) => Stack(
+            children: [
+              SizedBox.expand(child: child),
+              const AppToastHost(),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('delete'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('database is locked'), findsOneWidget);
+    expect(find.text(sftp.displayName), findsOneWidget);
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
   });
 }

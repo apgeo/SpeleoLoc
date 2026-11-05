@@ -92,12 +92,25 @@ class _FtpSyncSettingsPageState extends ConsumerState<FtpSyncSettingsPage>
       ),
     );
     if (confirm != true) return;
-    await ref.read(ftpProfileRepositoryProvider).delete(p.profileUuid);
+    try {
+      await ref.read(ftpProfileRepositoryProvider).delete(p.profileUuid);
+    } catch (e, st) {
+      AppLogger.of('FtpSyncSettings').warning('profile not deleted', e, st);
+      SnackBarService.showError(e);
+    }
+    // Reloaded either way: a failure midway may already have removed it.
     await _reload();
   }
 
   Future<void> _setDefault(FtpProfile p) async {
-    await ref.read(ftpProfileRepositoryProvider).setDefaultUuid(p.profileUuid);
+    try {
+      await ref
+          .read(ftpProfileRepositoryProvider)
+          .setDefaultUuid(p.profileUuid);
+    } catch (e, st) {
+      AppLogger.of('FtpSyncSettings').warning('default not changed', e, st);
+      SnackBarService.showError(e);
+    }
     await _reload();
   }
 

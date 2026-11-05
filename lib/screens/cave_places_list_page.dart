@@ -766,10 +766,17 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   }
 
   Future<void> _deleteCavePlace(Uuid id) async {
-    await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(id);
-    unawaited(_loadCavePlaces());
-    if (mounted)
-      SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
+    try {
+      await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(id);
+      if (mounted) {
+        SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
+      }
+    } catch (e, st) {
+      AppLogger.of('CavePlacesList').warning('place not deleted', e, st);
+      SnackBarService.showError(e);
+    } finally {
+      unawaited(_loadCavePlaces());
+    }
   }
 
   /// Adds the warning that a deletion travels to the installation holding
