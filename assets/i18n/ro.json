@@ -213,6 +213,8 @@
   "add_cave_area": "Adaugă arie",
   "delete_area_confirm": "Aceasta va șterge aria. Sigur doriți să continuați?",
   "area_saved": "Aria a fost salvată",
+  "area_save_failed": "Aria nu a putut fi salvată. Este posibil ca o altă arie din această peșteră să aibă deja acest titlu.",
+  "surface_area_save_failed": "Aria de suprafață nu a putut fi salvată. Este posibil ca o altă arie de suprafață să aibă deja acest titlu.",
   "area_deleted": "Aria a fost ștearsă",
   "delete_area_failed": "Aria nu a putut fi ștearsă",
   "delete_area_place_title_taken": "Aria nu poate fi ștearsă: locul „{title}” ar avea același nume cu un loc din afara oricărei arii a acestei peșteri. Redenumiți mai întâi unul dintre ele.",

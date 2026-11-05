@@ -4,6 +4,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/services/range_code_generator.dart';
+import 'package:speleoloc/screens/general_data/surface_area_dialog.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/index_range_dialog.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
@@ -81,105 +82,7 @@ class _SurfaceAreasPageState extends ConsumerState<SurfaceAreasPage>
   }
 
   Future<void> _showAddEditDialog({SurfaceArea? existing}) async {
-    final controller = TextEditingController(text: existing?.title ?? '');
-    final descController = TextEditingController(
-      text: existing?.description ?? '',
-    );
-    final identifierController = TextEditingController(
-      text: existing?.generalAreaIdentifier ?? '',
-    );
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          existing == null
-              ? LocServ.inst.t('add_surface_area')
-              : LocServ.inst.t('edit'),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: LocServ.inst.t('enter_surface_area_title'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: identifierController,
-              decoration: InputDecoration(
-                labelText: LocServ.inst.t('general_area_identifier'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: descController,
-              decoration: InputDecoration(
-                labelText: LocServ.inst.t('description'),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          if (existing != null)
-            TextButton.icon(
-              icon: const Icon(Icons.auto_awesome, size: 18),
-              label: Text(LocServ.inst.t('generate_codes')),
-              onPressed: () async {
-                await PlaceCodeBatchUi.run(
-                  context,
-                  runner: ref.read(placeCodeBatchRunnerProvider),
-                  scope: PerAreaScope(existing.uuid),
-                  confirmTitle: LocServ.inst.t('generate_codes'),
-                  confirmBody: LocServ.inst.t('generate_codes_confirm_area'),
-                );
-              },
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(LocServ.inst.t('cancel')),
-          ),
-          TextButton(
-            onPressed: () async {
-              final title = controller.text.trim();
-              if (title.isEmpty) return;
-              final desc = descController.text.trim().isEmpty
-                  ? null
-                  : descController.text.trim();
-              final identifier = identifierController.text.trim().isEmpty
-                  ? null
-                  : identifierController.text.trim();
-              if (existing == null) {
-                await ref
-                    .read(caveRepositoryProvider)
-                    .addSurfaceArea(
-                      title: title,
-                      description: desc,
-                      generalAreaIdentifier: identifier,
-                    );
-              } else {
-                await ref
-                    .read(caveRepositoryProvider)
-                    .updateSurfaceArea(
-                      existing: existing,
-                      title: title,
-                      description: desc,
-                      generalAreaIdentifier: identifier,
-                    );
-              }
-              if (!context.mounted) return;
-              Navigator.pop(context, true);
-            },
-            child: Text(LocServ.inst.t('save')),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    descController.dispose();
-    identifierController.dispose();
+    final result = await SurfaceAreaDialog.show(context, existing: existing);
 
     if (result == true) {
       _changed = true;

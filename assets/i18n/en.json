@@ -216,6 +216,8 @@
   "add_cave_area": "Add cave area",
   "delete_area_confirm": "This will delete the cave area. Are you sure?",
   "area_saved": "Area saved",
+  "area_save_failed": "Could not save the area. Another area of this cave may already have this title.",
+  "surface_area_save_failed": "Could not save the surface area. Another surface area may already have this title.",
   "area_deleted": "Area deleted",
   "delete_area_failed": "The area could not be deleted",
   "delete_area_place_title_taken": "The area cannot be deleted: its place \"{title}\" would share its name with a place outside any area of this cave. Rename one of the two first.",
