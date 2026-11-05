@@ -94,6 +94,10 @@ enum CSVCavePlaceRowIssueKind {
   /// An earlier row of the file gave the code to another place; the row's
   /// place was written without it.
   qrCodeRepeated,
+
+  /// The row's place already holds another code and the user chose to leave
+  /// codes where they are; the place keeps its code.
+  qrCodeKept,
 }
 
 /// One row the import could not apply as written.
@@ -104,7 +108,11 @@ class CSVCavePlaceRowIssue {
   /// The place that keeps the row's code, for the code issues.
   final String? holderTitle;
 
-  CSVCavePlaceRowIssue(this.kind, this.row, {this.holderTitle});
+  /// The code the row's place keeps instead of the row's, for
+  /// [CSVCavePlaceRowIssueKind.qrCodeKept].
+  final String? keptCode;
+
+  CSVCavePlaceRowIssue(this.kind, this.row, {this.holderTitle, this.keptCode});
 
   int? get lineNumber => row.lineNumber;
   String? get caveName => row.caveName;
@@ -320,9 +328,10 @@ class CSVCavePlaceImporter {
   /// [overwriteQr] answers the code-conflict question: true gives each row's
   /// place the file's code and takes it away from any other place of the
   /// cave holding it; false leaves every code where it is, so a place whose
-  /// code is held elsewhere is written without one. A code no place of the
-  /// cave holds is written either way, as is a code onto a place that has
-  /// none. The first row of the file to name a code keeps it.
+  /// code is held elsewhere is written without one, and a place that already
+  /// holds another code keeps it. Each such row is listed in the result's
+  /// issues. A code no place of the cave holds is written onto a place that
+  /// has none either way. The first row of the file to name a code keeps it.
   Future<CSVCavePlaceImportResult> importRows(
     List<CSVCavePlaceImportRow> rows,
     CSVCavePlacesImportConfig config, {
@@ -422,6 +431,14 @@ class CSVCavePlaceImporter {
                 CSVCavePlaceRowIssueKind.qrCodeTaken,
                 row,
                 holderTitle: holders.first.title,
+              ),
+            );
+          } else {
+            issues.add(
+              CSVCavePlaceRowIssue(
+                CSVCavePlaceRowIssueKind.qrCodeKept,
+                row,
+                keptCode: place?.placeCode,
               ),
             );
           }

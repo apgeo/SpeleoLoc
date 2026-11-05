@@ -240,7 +240,8 @@ cele două variante:
 
 - **Omite actualizare QR** — fiecare cod listat rămâne unde este. Un rând
   al cărui cod este purtat de alt loc este totuși importat, fără cod, iar
-  sumarul îl listează; un loc care are deja un cod diferit și-l păstrează.
+  sumarul îl listează; un loc care are deja un cod diferit și-l păstrează,
+  iar sumarul listează și acel rând.
 - **Suprascrie coduri QR** — locul fiecărui rând primește codul din
   fișier, iar locul care îl purta îl pierde, așa că nu rămân două locuri
   ale peșterii cu același cod. Sumarul numără codurile luate.
@@ -267,8 +268,9 @@ Dialogul **Import finalizat** raportează:
 
 Sub **Rânduri neimportate așa cum sunt scrise** listează apoi, după
 numărul rândului din fișier (antetul fiind rândul 1), fiecare rând omis
-pentru că numele lui se potrivea cu mai multe locuri și fiecare rând
-importat fără codul lui. Primele cinci sunt afișate, urmate de numărul
+pentru că numele lui se potrivea cu mai multe locuri, fiecare rând
+importat fără codul lui și fiecare rând al cărui loc și-a păstrat codul
+pe care îl avea. Primele cinci sunt afișate, urmate de numărul
 celorlalte.
 
 ## Nu se scrie nimic până nu răspundeți la toate întrebările

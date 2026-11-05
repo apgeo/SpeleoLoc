@@ -274,6 +274,7 @@
   "csv_issue_place_ambiguous": "skipped, several places in the cave are named \"{place}\"",
   "csv_issue_qr_taken": "\"{place}\" imported without QR code {qr}, which stays with \"{holder}\"",
   "csv_issue_qr_repeated": "\"{place}\" imported without QR code {qr}, already given to \"{holder}\" by an earlier row",
+  "csv_issue_qr_kept": "\"{place}\" keeps its QR code {old}; the file's {qr} was not written",
   "csv_start_import": "Start import",
   "csv_data_preview": "Data preview",
   "csv_import_caves": "Import caves - CSV",

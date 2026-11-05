@@ -271,6 +271,7 @@
   "csv_issue_place_ambiguous": "omis, mai multe locuri din peșteră se numesc \"{place}\"",
   "csv_issue_qr_taken": "\"{place}\" importat fără codul QR {qr}, care rămâne la \"{holder}\"",
   "csv_issue_qr_repeated": "\"{place}\" importat fără codul QR {qr}, dat deja lui \"{holder}\" de un rând anterior",
+  "csv_issue_qr_kept": "\"{place}\" își păstrează codul QR {old}; codul {qr} din fișier nu a fost scris",
   "csv_start_import": "Pornește importul",
   "csv_data_preview": "Previzualizare date",
   "csv_import_caves": "Import peșteri din CSV",

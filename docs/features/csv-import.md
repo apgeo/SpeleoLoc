@@ -228,7 +228,7 @@ choices:
 - **Skip QR updates** — every listed code stays where it is. A row
   whose code another place holds is still imported, without the code,
   and the summary lists it; a place that already has a different code
-  keeps it.
+  keeps it, and the summary lists that row too.
 - **Overwrite QR codes** — each row's place receives the code from the
   file, and the place that held it loses it, so no two places of the
   cave end up with the same code. The summary counts the codes taken
@@ -255,8 +255,8 @@ The **Import complete** dialog reports:
 
 Under **Rows not imported as written** it then lists, by row number in
 the file (the header being row 1), every row that was skipped because
-its name matched more than one place, and every row imported without
-its code. The first five are shown, followed by a count of the rest.
+its name matched more than one place, every row imported without
+its code, and every row whose place kept the code it already had. The first five are shown, followed by a count of the rest.
 
 ## Nothing is written until every question is answered
 
