@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
-import 'package:speleoloc/services/storage/saf_storage_service.dart';
+import 'package:speleoloc/services/storage/database_file_export_service.dart';
 import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
@@ -270,52 +269,20 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
   }
 
   void _exportDatabase(BuildContext context) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final sourceFile = File('${directory.path}/speleo_loc.sqlite');
-    if (!await sourceFile.exists()) {
+    try {
+      final saved = await const DatabaseFileExportService().export(
+        await ref.read(liveDatabaseSwapProvider).liveDatabaseFile(),
+        folderDialogTitle: LocServ.inst.t('select_folder_save_database'),
+        saveDialogTitle: LocServ.inst.t('save_database_file'),
+      );
+      if (saved != null && context.mounted) {
+        SnackBarService.showSuccess(
+          '${LocServ.inst.t('database_export_success')}: $saved',
+        );
+      }
+    } on DatabaseFileMissingException {
       if (context.mounted) {
         SnackBarService.showWarning(LocServ.inst.t('database_file_not_found'));
-      }
-      return;
-    }
-
-    String? outputFile;
-    try {
-      if (Platform.isAndroid) {
-        // Scoped storage: the create-document dialog carries the write
-        // grant, so no storage permission is needed.
-        final saved = await const SafStorageService().saveDocument(
-          fileName: 'speleo_loc_export.sqlite',
-          mimeType: 'application/octet-stream',
-          sourcePath: sourceFile.path,
-        );
-        if (saved != null && context.mounted) {
-          SnackBarService.showSuccess(
-            '${LocServ.inst.t('database_export_success')}: $saved',
-          );
-        }
-        return;
-      }
-      if (Platform.isIOS) {
-        final dir = await FilePicker.platform.getDirectoryPath(
-          dialogTitle: LocServ.inst.t('select_folder_save_database'),
-        );
-        if (dir == null) return;
-        outputFile = '$dir/speleo_loc_export.sqlite';
-      } else {
-        outputFile = await FilePicker.platform.saveFile(
-          dialogTitle: LocServ.inst.t('save_database_file'),
-          fileName: 'speleo_loc_export.sqlite',
-        );
-      }
-
-      if (outputFile != null) {
-        await sourceFile.copy(outputFile);
-        if (context.mounted) {
-          SnackBarService.showSuccess(
-            '${LocServ.inst.t('database_export_success')}: $outputFile',
-          );
-        }
       }
     } catch (e) {
       if (context.mounted) {
