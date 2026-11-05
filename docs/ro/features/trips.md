@@ -415,11 +415,11 @@ Două lucruri merită știute înainte să vă bazați pe ea:
 
 - **Pauza nu lasă nicio urmă în jurnalul turei.** Nimic din
   înregistrarea finală nu arată unde au fost întreruperile.
-- **Pauza se uită dacă aplicația este închisă.** Tura activă în sine
-  supraviețuiește închiderii aplicației, opririi ei forțate sau
-  repornirii telefonului, dar starea de pauză nu — tura revine
-  înregistrând. După o repornire, verificați culoarea cardului turei din
-  meniul ⋮: verde înseamnă că înregistrează din nou.
+- **Pauza supraviețuiește închiderii aplicației.** Dacă aplicația este
+  închisă, oprită de telefon sau telefonul repornește cât timp tura este
+  în pauză, tura revine în pauză și rămâne așa până apăsați
+  **Continuă**. Oprirea, repornirea sau pornirea unei ture începe
+  întotdeauna înregistrarea.
 
 <a id="the-trip-log"></a>
 

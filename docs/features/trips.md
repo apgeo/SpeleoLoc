@@ -386,11 +386,11 @@ Two things are worth knowing before you rely on it:
 
 - **A pause leaves no trace in the trip log.** Nothing in the finished
   record shows where the breaks were.
-- **A pause is forgotten if the app is closed.** The active trip
-  itself survives the app being closed, killed, or the phone
-  rebooting, but the paused state does not — the trip comes back
-  recording. After a restart, check the colour of the trip card in the
-  ⋮ menu: green means it is recording again.
+- **A pause survives the app being closed.** If the app is closed,
+  killed by the phone, or the phone reboots while the trip is paused,
+  the trip comes back paused, and stays so until you press **Resume
+  trip**. Stopping, restarting or starting a trip always begins
+  recording.
 
 ## The trip log
 

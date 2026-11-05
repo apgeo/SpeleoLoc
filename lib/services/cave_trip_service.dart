@@ -52,9 +52,22 @@ class CaveTripService {
         activeTripIdNotifier.value = trip != null ? parsed : null;
         if (trip == null) await _clearConfig();
       }
+      await _restorePause();
     } catch (e, st) {
       log.warning('initActiveTrip failed; leaving active trip unset', e, st);
     }
+  }
+
+  /// Takes the pause back up only when it names the trip that is active
+  /// now; any other stored pause was left behind and is dropped.
+  Future<void> _restorePause() async {
+    final active = activeTripIdNotifier.value;
+    final stored = Uuid.tryParse(
+      await _configRepo.readString(pausedTripConfigKey),
+    );
+    final paused = active != null && stored == active;
+    isPausedNotifier.value = paused;
+    if (stored != null && !paused) await _clearPause();
   }
 
   /// Drops the active trip when its row is gone or ended — deleted or ended
@@ -74,6 +87,7 @@ class CaveTripService {
       await _clearConfig();
       activeTripIdNotifier.value = null;
       isPausedNotifier.value = false;
+      await _clearPause();
     } catch (e, st) {
       log.warning('reconcileActiveTrip failed', e, st);
     }
@@ -81,6 +95,7 @@ class CaveTripService {
 
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
     isPausedNotifier.value = false;
+    await _clearPause();
     final author = await _currentUser.currentOrSystem();
     final tripUuid = await _db.insertCaveTrip(
       caveUuid: caveUuid,
@@ -110,6 +125,7 @@ class CaveTripService {
       );
     }
     isPausedNotifier.value = false;
+    await _clearPause();
     final author = await _currentUser.currentOrSystem();
     final old = await _tripRow(tripUuid);
     await _db.restartCaveTrip(tripUuid, authorUuid: author);
@@ -161,10 +177,12 @@ class CaveTripService {
     await _clearConfig();
     activeTripIdNotifier.value = null;
     isPausedNotifier.value = false;
+    await _clearPause();
   }
 
-  /// Pause/resume are purely in-memory: while paused, [recordPoint] is
-  /// suppressed. Pauses are not persisted and do not appear in the
+  /// While paused, [recordPoint] is suppressed. The pause is stored next to
+  /// the active trip, so it survives the app being killed underground and is
+  /// taken back up by [initActiveTrip]; it does not appear in the
   /// regenerated trip log.
   ///
   /// [tripUuid], when given, must be the active trip; for any other trip
@@ -174,6 +192,13 @@ class CaveTripService {
     if (id == null || isPausedNotifier.value) return;
     if (tripUuid != null && tripUuid != id) return;
     isPausedNotifier.value = true;
+    try {
+      await _configRepo.writeString(pausedTripConfigKey, id.toString());
+    } catch (e, st) {
+      // Scans stay suppressed for as long as the app runs; only a restart
+      // would bring the trip back recording.
+      log.warning('could not store the pause of trip $id', e, st);
+    }
   }
 
   Future<void> resumeTrip([Uuid? tripUuid]) async {
@@ -181,6 +206,7 @@ class CaveTripService {
     if (id == null || !isPausedNotifier.value) return;
     if (tripUuid != null && tripUuid != id) return;
     isPausedNotifier.value = false;
+    await _clearPause();
   }
 
   /// Adds a live-scan point at [cavePlaceUuid] to the active trip and says
@@ -628,6 +654,17 @@ class CaveTripService {
 
   Future<void> _clearConfig() {
     return _configRepo.delete(activeTripConfigKey);
+  }
+
+  /// Never throws: the recording state the caver chose has already taken
+  /// effect, and a pause row left behind names its own trip, so the next
+  /// start-up drops it unless that same trip is active again.
+  Future<void> _clearPause() async {
+    try {
+      await _configRepo.delete(pausedTripConfigKey);
+    } catch (e, st) {
+      log.warning('could not clear the stored trip pause', e, st);
+    }
   }
 
   static final _suffixRe = RegExp(r'\s+\[\d+\]$');

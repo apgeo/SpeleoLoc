@@ -150,11 +150,9 @@ următoarea scanare.
 
 Două lucruri de știut despre pauză:
 
-- Este **uitată dacă aplicația repornește**. Tura în sine
-  supraviețuiește închiderii aplicației, opririi ei forțate sau
-  repornirii telefonului, dar revine **înregistrând**. După orice
-  repornire, verificați culoarea cardului turei: verde înseamnă că
-  înregistrează din nou.
+- **Supraviețuiește repornirii aplicației**. Dacă aplicația este
+  închisă, oprită de telefon sau telefonul repornește în timpul pauzei,
+  tura revine **în pauză** — portocalie — până apăsați **Continuă**.
 - Nu lasă **nicio urmă în jurnalul turei**, așa că înregistrarea finală
   nu arată unde au fost pauzele.
 

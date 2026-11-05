@@ -141,10 +141,9 @@ scan.
 
 Two things to know about pause:
 
-- It is **forgotten if the app restarts**. The trip itself survives the
-  app being closed, killed or the phone rebooting, but it comes back
-  **recording**. After any restart, check the colour of the trip card:
-  green means it is recording again.
+- It **survives the app restarting**. If the app is closed, killed by
+  the phone, or the phone reboots during a pause, the trip comes back
+  **paused** — orange — until you press **Resume trip**.
 - It leaves **no trace in the trip log**, so the finished record does
   not show where the breaks were.
 
