@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/documents/editors/document_load_error_view.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -73,6 +74,11 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
   bool _isSaving = false;
   bool _isLoading = false;
 
+  /// The stored document could not be read; the page shows why and offers
+  /// no Save, so whatever is typed into the empty field never replaces the
+  /// real file.
+  bool _loadFailed = false;
+
   /// Snapshots captured after initial load for dirty-state detection.
   String _initialTitle = '';
   String _initialContent = '';
@@ -80,8 +86,10 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
   bool get _isEditing => widget.existingDoc != null;
 
   bool get _isModified =>
-      _titleCtrl.text.trim() != _initialTitle ||
-      _contentCtrl.text != _initialContent;
+      !_isLoading &&
+      !_loadFailed &&
+      (_titleCtrl.text.trim() != _initialTitle ||
+          _contentCtrl.text != _initialContent);
 
   @override
   void initState() {
@@ -97,15 +105,20 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
 
   Future<void> _loadExistingContent() async {
     setState(() => _isLoading = true);
+    var failed = false;
     try {
       final file = await getDocumentsFile(widget.existingDoc!.fileName);
-      if (file != null) {
+      if (file == null) {
+        failed = true;
+      } else {
         _contentCtrl.text = await file.readAsString();
       }
     } catch (e) {
       log.warning('Error loading file', e);
+      failed = true;
     }
     if (mounted) {
+      _loadFailed = failed;
       _initialTitle = widget.existingDoc!.title;
       _initialContent = _contentCtrl.text;
       setState(() => _isLoading = false);
@@ -151,6 +164,7 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
   }
 
   Future<void> _save() async {
+    if (_isLoading || _loadFailed) return;
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('title_required'));
@@ -257,7 +271,7 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
                   ),
                 ),
               )
-            else
+            else if (!_isLoading && !_loadFailed)
               IconButton(
                 icon: const Icon(Icons.save),
                 tooltip: LocServ.inst.t('save'),
@@ -268,6 +282,8 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
+            : _loadFailed
+            ? const DocumentLoadErrorView()
             : Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(

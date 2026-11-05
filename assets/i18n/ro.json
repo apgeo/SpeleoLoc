@@ -1430,6 +1430,8 @@
   "coord_enter_title": "Introdu coordonatele",
   "coord_enter_label": "Coordonate (zecimal, DMS sau UTM)",
   "coord_enter_invalid": "Format de coordonate nerecunoscut",
+  "document_load_failed_title": "Documentul nu a putut fi deschis",
+  "document_load_failed_body": "Fișierul lui lipsește de pe acest telefon sau nu a putut fi citit. Nu s-a schimbat nimic. Poate fi editat din nou când fișierul revine, de exemplu după următoarea sincronizare.",
   "settings_map_desc": "Straturile hărții de suprafață și fișierele MBTiles offline",
   "map_mbtiles_auto_load": "Încărcare automată MBTiles",
   "map_mbtiles_auto_load_desc": "Scanează folderul mbtiles al aplicației și oferă fișierele ca straturi de hartă",

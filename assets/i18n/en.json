@@ -1431,6 +1431,8 @@
   "coord_enter_title": "Enter coordinates",
   "coord_enter_label": "Coordinates (decimal, DMS, or UTM)",
   "coord_enter_invalid": "Unrecognized coordinate format",
+  "document_load_failed_title": "This document could not be opened",
+  "document_load_failed_body": "Its file is missing on this phone or could not be read. Nothing was changed. It can be edited again once the file is back, for example after the next sync.",
   "settings_map_desc": "Surface map layers and offline MBTiles files",
   "map_mbtiles_auto_load": "Auto-load MBTiles",
   "map_mbtiles_auto_load_desc": "Scan the app's mbtiles folder and offer the files as map layers",

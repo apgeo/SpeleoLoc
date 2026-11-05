@@ -235,6 +235,12 @@ Dacă un document text nou are conținutul identic cu al unuia deja stocat în
 aplicație, un avertisment scurt o spune — este doar o înștiințare,
 documentul se salvează oricum.
 
+Dacă fișierul unui document text sau text formatat lipsește de pe acest
+telefon (înregistrarea poate sosi prin sincronizare înaintea fișierului)
+sau nu poate fi citit, editorul spune **Documentul nu a putut fi deschis**
+și nu are buton de salvare, așa că documentul stocat nu este niciodată
+înlocuit cu unul gol.
+
 ### Reînregistrarea audio
 
 Deschiderea unui document audio în reportofon nu pornește de la zero. Redați

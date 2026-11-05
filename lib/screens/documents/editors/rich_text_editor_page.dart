@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/documents/editors/document_load_error_view.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -73,6 +74,10 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
   bool _isSaving = false;
   bool _isLoading = false;
 
+  /// The stored document could not be read; the page shows why and offers
+  /// no Save, so the empty editor never replaces the real file.
+  bool _loadFailed = false;
+
   /// Snapshot of title and delta JSON captured after initial load.
   /// Used to detect unsaved modifications.
   String _initialTitle = '';
@@ -81,6 +86,7 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
   bool get _isEditing => widget.existingDoc != null;
 
   bool get _isModified {
+    if (_isLoading || _loadFailed) return false;
     if (_titleCtrl.text.trim() != _initialTitle) return true;
     final currentJson = jsonEncode(
       _quillController.document.toDelta().toJson(),
@@ -107,17 +113,22 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
 
   Future<void> _loadExistingContent() async {
     setState(() => _isLoading = true);
+    var failed = false;
     try {
       final file = await getDocumentsFile(widget.existingDoc!.fileName);
-      if (file != null) {
+      if (file == null) {
+        failed = true;
+      } else {
         final jsonStr = await file.readAsString();
         final deltaJson = jsonDecode(jsonStr) as List;
         _quillController.document = Document.fromJson(deltaJson);
       }
     } catch (e) {
       log.warning('Error loading file', e);
+      failed = true;
     }
     if (mounted) {
+      _loadFailed = failed;
       // Capture initial snapshot now that the document is loaded.
       _initialTitle = widget.existingDoc!.title;
       _initialDeltaJson = jsonEncode(
@@ -170,6 +181,7 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
   }
 
   Future<void> _save() async {
+    if (_isLoading || _loadFailed) return;
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('title_required'));
@@ -261,7 +273,7 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
                   ),
                 ),
               )
-            else
+            else if (!_isLoading && !_loadFailed)
               IconButton(
                 icon: const Icon(Icons.save),
                 tooltip: LocServ.inst.t('save'),
@@ -272,6 +284,8 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
+            : _loadFailed
+            ? const DocumentLoadErrorView()
             : Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(

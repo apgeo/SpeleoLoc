@@ -227,6 +227,11 @@ document. If a new text document's contents exactly match one already
 stored in the app, a short warning says so — it is only a notice, the
 document is still saved.
 
+If a text or rich-text document's file is missing on this phone (its
+record can arrive by sync before the file does) or cannot be read, the
+editor says **This document could not be opened** and has no Save
+button, so the stored document is never replaced by an empty one.
+
 ### Re-recording audio
 
 Opening an audio document in the recorder does not start from scratch.
