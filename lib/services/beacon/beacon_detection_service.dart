@@ -129,6 +129,11 @@ class BeaconDetectionService {
   bool _inBackground = false;
   bool _fgsInitialized = false;
 
+  /// The background-scanning foreground service, and whether it holds the
+  /// location type that lets BLE scans deliver results in the background.
+  bool _serviceRunning = false;
+  bool _serviceHasLocation = false;
+
   /// Scan burst length in background duty-cycle mode.
   static const int _backgroundScanBurstMs = 5000;
 
@@ -172,6 +177,7 @@ class BeaconDetectionService {
 
       _listenRanging(await BeaconScanHelper.loadRegionUuids());
       _running = true;
+      if (config.backgroundEnabled) await _startServiceWhileVisible();
       _log.info(
         'Beacon detection started '
         '(threshold ${config.rssiThresholdDbm} dBm, '
@@ -207,14 +213,8 @@ class BeaconDetectionService {
     _registeredProximityUuids = const {};
     _ruuviNeeded = false;
     _engine = null;
-    if (_inBackground) {
-      _inBackground = false;
-      try {
-        await FlutterForegroundTask.stopService();
-      } catch (e, st) {
-        _log.warning('Foreground service stop failed', e, st);
-      }
-    }
+    _inBackground = false;
+    await _stopForegroundService();
     if (_running) _log.info('Beacon detection stopped');
     _running = false;
   }
@@ -295,23 +295,70 @@ class BeaconDetectionService {
   // Background mode (Android foreground service + duty-cycled scanning)
   // ---------------------------------------------------------------------------
 
+  /// Starts the background-scanning service while the app is on screen.
+  ///
+  /// BLE scan results need location access, because BLUETOOTH_SCAN is
+  /// declared without neverForLocation. In the background Android extends a
+  /// while-in-use location grant only to a foreground service typed
+  /// location that was started from the foreground, and Android 14 refuses
+  /// to start a location-typed service from the background at all. So the
+  /// service starts with detection, not when the app leaves the screen.
+  Future<void> _startServiceWhileVisible() async {
+    if (!Platform.isAndroid || _serviceHasLocation) return;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+    // A service started from the background lacks the location type;
+    // replace it now that the app is visible.
+    try {
+      await _stopForegroundService();
+      await _startForegroundService(withLocation: true);
+    } catch (e, st) {
+      // Foreground detection does not need the service; leaving the screen
+      // tries again.
+      _log.warning('Foreground service start failed', e, st);
+    }
+  }
+
+  Future<bool> _startForegroundService({required bool withLocation}) async {
+    _initForegroundTask();
+    final result = await FlutterForegroundTask.startService(
+      serviceId: 7001,
+      serviceTypes: [
+        ForegroundServiceTypes.connectedDevice,
+        if (withLocation) ForegroundServiceTypes.location,
+      ],
+      notificationTitle: LocServ.inst.t('beacon_background_notif_title'),
+      notificationText: LocServ.inst.t('beacon_background_notif_text'),
+    );
+    _serviceRunning = result is ServiceRequestSuccess;
+    _serviceHasLocation = _serviceRunning && withLocation;
+    if (!_serviceRunning) _log.warning('Foreground service refused: $result');
+    return _serviceRunning;
+  }
+
+  Future<void> _stopForegroundService() async {
+    if (!_serviceRunning) return;
+    _serviceRunning = false;
+    _serviceHasLocation = false;
+    try {
+      await FlutterForegroundTask.stopService();
+    } catch (e, st) {
+      _log.warning('Foreground service stop failed', e, st);
+    }
+  }
+
   Future<void> _enterBackgroundMode() async {
     if (_inBackground || !Platform.isAndroid) return;
     try {
       final config = _engine?.config;
       if (config == null) return;
-      _initForegroundTask();
-      final result = await FlutterForegroundTask.startService(
-        serviceId: 7001,
-        serviceTypes: const [ForegroundServiceTypes.connectedDevice],
-        notificationTitle: LocServ.inst.t('beacon_background_notif_title'),
-        notificationText: LocServ.inst.t('beacon_background_notif_text'),
-      );
-      if (result is! ServiceRequestSuccess) {
-        _log.warning(
-          'Foreground service refused: $result — '
-          'stopping detection with the app',
-        );
+      // Normally running since detection started. If it is not (detection
+      // started while the app was off screen), it can only be started
+      // without the location type now, and Android may give its scans no
+      // results.
+      if (!_serviceRunning &&
+          !await _startForegroundService(withLocation: false)) {
+        _log.warning('Stopping detection with the app');
         await stop();
         return;
       }
@@ -367,11 +414,8 @@ class BeaconDetectionService {
     _ruuviDutyTimer = null;
     _syncRuuviSubscription();
     if (!Platform.isAndroid) return;
-    try {
-      await FlutterForegroundTask.stopService();
-    } catch (e, st) {
-      _log.warning('Foreground service stop failed', e, st);
-    }
+    // The service keeps running, ready for the next time the app leaves
+    // the screen: started then, it could not be typed location.
     try {
       await flutterBeacon.setScanPeriod(_foregroundScanPeriodMs);
       await flutterBeacon.setBetweenScanPeriod(0);
@@ -392,7 +436,11 @@ class BeaconDetectionService {
         st,
       );
     }
-    if (!_running) await start();
+    if (!_running) {
+      await start();
+    } else if (_engine?.config.backgroundEnabled ?? false) {
+      await _startServiceWhileVisible();
+    }
   }
 
   void _initForegroundTask() {
