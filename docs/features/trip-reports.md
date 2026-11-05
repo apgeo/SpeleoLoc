@@ -208,13 +208,16 @@ running or ended** — you do not have to stop the trip first.
    file name already filled in as `trip_report_<trip title>.odt` (or
    `.docx`); spaces and punctuation in the trip title become
    underscores. Change the name or the destination if you want, then
-   confirm.
-5. SpeleoLoc writes the document, shows **Report exported
-   successfully**, and then hands the file to whatever app on your
-   device opens ODT or DOCX files.
+   confirm. Choosing a file that already exists replaces it.
+5. SpeleoLoc writes the document and shows **Report exported
+   successfully**. On a computer it then opens the report in the
+   application registered for ODT or DOCX files. On a phone or tablet
+   nothing opens: the report is where you saved it — open it from your
+   file manager or office app.
 
-If nothing opens at step 5 the report was still written — your device
-simply has no app registered for that format.
+If nothing opens at step 5 on a computer, the report was still
+written — the computer simply has no application registered for that
+format.
 
 ## The trip map image
 
@@ -242,7 +245,7 @@ PNG where you want it.
 | **Unsupported format. Please select an ODT or DOCX file.** | The picked file is not `.odt` or `.docx`. Save it again from your word processor in one of those two formats. |
 | The report is just the template with text pasted at the end | That is exactly what it is. There is no substitution step. Rearrange things in your word processor after exporting. |
 | Text you typed into the log has vanished | The log was regenerated — by a trip restart, by a style switch, or after the points were edited. |
-| Nothing happened after the export succeeded | The file was written; your device has no app that handles ODT or DOCX. |
+| Nothing happened after the export succeeded | The file was written. Phones never open it by themselves; on a computer, no application handles ODT or DOCX. |
 
 ## See also
 

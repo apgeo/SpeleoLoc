@@ -276,8 +276,9 @@ as you wrote it and marks it out of date instead.
 3. Choose where to save the file. The report is the template with the
    trip log text appended — the route map is **not** included; export
    it separately with **Export map**.
-4. After saving, the app hands the file to your device's default
-   application for that format and it opens.
+4. After saving, a computer opens the report in its default
+   application for that format. A phone does not: open the report from
+   where you saved it.
 
 See [Trip reports](../features/trip-reports.md) for templates in
 detail.

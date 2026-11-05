@@ -297,8 +297,9 @@ generat, un punct nou lasă jurnalul așa cum l-ați scris și îl marchează
 3. Alegeți unde salvați fișierul. Raportul este șablonul cu textul
    jurnalului turei adăugat la sfârșit — harta traseului **nu** este
    inclusă; exportați-o separat cu **Exportă harta**.
-4. După salvare, aplicația predă fișierul aplicației implicite a
-   dispozitivului pentru acel format și acesta se deschide.
+4. După salvare, un calculator deschide raportul în aplicația sa
+   implicită pentru acel format. Un telefon nu o face: deschideți
+   raportul din locul în care l-ați salvat.
 
 Vedeți [Rapoarte de tură](../features/trip-reports.md) pentru șabloane
 în detaliu.

@@ -93,6 +93,39 @@ void main() {
     }
   });
 
+  group('saving at the path the save dialog returned', () {
+    test('on a desktop an older report under the full name is replaced, '
+        'also when the name was typed without its extension', () async {
+      final stale = File(p.join(root.path, 'report.docx'));
+      await stale.writeAsBytes([1, 1, 1]);
+
+      final written = await service.savePickedReport(
+        pickedPath: p.join(root.path, 'report'),
+        format: 'docx',
+        bytes: [2, 2],
+        desktop: true,
+      );
+
+      expect(written, stale.path);
+      expect(await stale.readAsBytes(), [2, 2]);
+    });
+
+    test('on a phone what the dialog already wrote is kept', () async {
+      final saved = File(p.join(root.path, 'report.odt'));
+      await saved.writeAsBytes([3]);
+
+      final written = await service.savePickedReport(
+        pickedPath: saved.path,
+        format: 'odt',
+        bytes: [4],
+        desktop: false,
+      );
+
+      expect(written, saved.path);
+      expect(await saved.readAsBytes(), [3]);
+    });
+  });
+
   group('a DOCX report', () {
     const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 

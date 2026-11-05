@@ -227,13 +227,16 @@ trebuie să opriți întâi tura.
    **Export raport**, cu numele fișierului deja completat ca
    `trip_report_<trip title>.odt` (sau `.docx`); spațiile și semnele de
    punctuație din titlul turei devin liniuțe de subliniere. Schimbați
-   numele sau destinația dacă doriți, apoi confirmați.
-5. SpeleoLoc scrie documentul, afișează **Raport exportat cu succes**,
-   apoi predă fișierul aplicației de pe dispozitiv care deschide
-   fișiere ODT sau DOCX.
+   numele sau destinația dacă doriți, apoi confirmați. Dacă alegeți un
+   fișier care există deja, acesta este înlocuit.
+5. SpeleoLoc scrie documentul și afișează **Raport exportat cu
+   succes**. Pe un calculator deschide apoi raportul în aplicația
+   înregistrată pentru fișiere ODT sau DOCX. Pe un telefon sau o
+   tabletă nu se deschide nimic: raportul este acolo unde l-ați salvat
+   — deschideți-l din managerul de fișiere sau din aplicația de birou.
 
-Dacă la pasul 5 nu se deschide nimic, raportul a fost totuși scris —
-dispozitivul dumneavoastră pur și simplu nu are nicio aplicație
+Dacă la pasul 5 nu se deschide nimic pe un calculator, raportul a fost
+totuși scris — calculatorul pur și simplu nu are nicio aplicație
 înregistrată pentru acel format.
 
 ## Imaginea hărții turei
@@ -263,7 +266,7 @@ PNG-ul unde doriți.
 | **Format nesuportat. Selectați un fișier ODT sau DOCX.** | Fișierul ales nu este `.odt` sau `.docx`. Salvați-l din nou din procesorul de text în unul dintre aceste două formate. |
 | Raportul este doar șablonul cu text lipit la final | Exact asta și este. Nu există niciun pas de substituție. Rearanjați lucrurile în procesorul de text după export. |
 | Textul pe care l-ați scris în jurnal a dispărut | Jurnalul a fost regenerat — de o repornire a turei, de o schimbare de stil sau după ce punctele au fost modificate. |
-| Nu s-a întâmplat nimic după ce exportul a reușit | Fișierul a fost scris; dispozitivul dumneavoastră nu are nicio aplicație care să gestioneze ODT sau DOCX. |
+| Nu s-a întâmplat nimic după ce exportul a reușit | Fișierul a fost scris. Telefoanele nu îl deschid niciodată singure; pe un calculator, nicio aplicație nu gestionează ODT sau DOCX. |
 
 ## Vezi și
 

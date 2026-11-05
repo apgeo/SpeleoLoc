@@ -453,20 +453,16 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       );
       if (outputPath == null || !mounted) return;
 
-      // On desktop, FilePicker returns a path but does NOT write the file
-      // (bytes param is ignored). Write it ourselves.
-      final finalPath = outputPath.endsWith('.$ext')
-          ? outputPath
-          : '$outputPath.$ext';
-      if (!File(finalPath).existsSync()) {
-        await File(finalPath).writeAsBytes(docBytes);
-      }
+      final finalPath = await TripReportExportService.instance.savePickedReport(
+        pickedPath: outputPath,
+        format: ext,
+        bytes: docBytes,
+      );
 
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_export_success'));
       }
 
-      // Open with system handler
       await TripReportExportService.instance.openWithSystem(finalPath);
     } catch (e) {
       if (mounted) {

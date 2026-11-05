@@ -6,6 +6,7 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/contained_path.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart' show launchUrl;
 
 /// Service responsible for exporting trip reports by cloning a template
 /// document (ODF or DOCX) and appending text content at the end.
@@ -242,39 +243,49 @@ class TripReportExportService {
         .replaceAll("'", '&apos;');
   }
 
-  /// Opens a file with the system's default handler.
-  Future<void> openWithSystem(String filePath) async {
-    if (Platform.isAndroid) {
-      // On Android, use an intent via process; typically handled by
-      // a plugin. We use a simple approach via `am start`.
-      // For better Android support, consider adding open_filex package.
-      await Process.run('am', [
-        'start',
-        '-a',
-        'android.intent.action.VIEW',
-        '-d',
-        Uri.file(filePath).toString(),
-        '-t',
-        _mimeTypeForPath(filePath),
-      ]);
-    } else if (Platform.isIOS || Platform.isMacOS) {
-      await Process.run('open', [filePath]);
-    } else if (Platform.isWindows) {
-      await Process.run('cmd', ['/c', 'start', '', filePath]);
-    } else if (Platform.isLinux) {
-      await Process.run('xdg-open', [filePath]);
+  /// Puts [bytes] at the path the save dialog returned, adding the
+  /// [format] extension when the name was typed without it, and returns
+  /// the path written.
+  ///
+  /// On a phone the system save dialog has already written the bytes to
+  /// what it returned, which may not even be a path this app can write to,
+  /// so the file is written only when nothing is there yet. On a desktop
+  /// the file is always written: a name typed without its extension points
+  /// at a different file than the one the dialog wrote, and an older report
+  /// already there under the full name must be replaced, not kept.
+  Future<String> savePickedReport({
+    required String pickedPath,
+    required String format,
+    required List<int> bytes,
+    bool? desktop,
+  }) async {
+    final finalPath = pickedPath.toLowerCase().endsWith('.$format')
+        ? pickedPath
+        : '$pickedPath.$format';
+    final file = File(finalPath);
+    if ((desktop ?? _isDesktop) || !file.existsSync()) {
+      await file.writeAsBytes(bytes, flush: true);
     }
+    return finalPath;
   }
 
-  String _mimeTypeForPath(String path) {
-    final ext = p.extension(path).toLowerCase();
-    switch (ext) {
-      case '.odt':
-        return 'application/vnd.oasis.opendocument.text';
-      case '.docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      default:
-        return 'application/octet-stream';
+  bool get _isDesktop =>
+      Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+
+  /// Opens a saved report in the desktop's default application, and says
+  /// whether it did.
+  ///
+  /// Phones are left alone. iOS forbids starting processes, and neither
+  /// iOS nor Android lets another app open a `file:` address inside this
+  /// one; that needs a file-sharing plugin, which the app does not have.
+  /// The report is already where the caver chose in the save dialog.
+  Future<bool> openWithSystem(String filePath) async {
+    if (!_isDesktop) return false;
+    try {
+      return await launchUrl(Uri.file(filePath));
+    } catch (e, st) {
+      log.warning('opening the report failed', e, st);
+      return false;
     }
   }
 }
