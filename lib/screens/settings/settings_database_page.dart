@@ -124,6 +124,7 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
     BuildContext context, {
     bool populateTestData = true,
   }) async {
+    if (_refuseWhileSyncRuns()) return;
     final confirmKey = populateTestData
         ? 'confirm_reinitialize_database'
         : 'confirm_reinitialize_database_empty';
@@ -145,8 +146,10 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
     );
 
     if (confirmed == true && confirmed2 == true) {
+      var progressShown = false;
       try {
         if (context.mounted) {
+          progressShown = true;
           unawaited(
             showDialog<void>(
               context: context,
@@ -171,6 +174,7 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
 
         await DatabaseRestoreHelper.reinitializeDatabase(
           populateTestData: populateTestData,
+          swap: ref.read(liveDatabaseSwapProvider),
         );
 
         if (context.mounted) {
@@ -185,9 +189,10 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
         await DatabaseRestoreHelper.restartApplication();
       } catch (e) {
         if (context.mounted) {
-          Navigator.pop(context);
+          if (progressShown) Navigator.pop(context);
           SnackBarService.showError(
-            '${LocServ.inst.t('error_reinitializing_database')}: $e',
+            '${LocServ.inst.t('error_reinitializing_database')}: '
+            '${databaseFileErrorText(e)}',
           );
         }
       }

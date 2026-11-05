@@ -126,6 +126,7 @@
   "database_file_not_this_app": "Fișierul este o bază de date, dar nu una SpeleoLoc. Nu s-a modificat nimic.",
   "database_file_damaged": "Baza de date din fișier este deteriorată. Nu s-a modificat nimic.",
   "database_swap_sync_running": "O sincronizare este în curs. Așteaptă să se termine, apoi încearcă din nou.",
+  "test_database_not_bundled": "Această versiune nu include baza de date de test. Nu s-a modificat nimic.",
   "select_image": "Selectează imagine",
   "add_raster_map": "Adaugă hartă",
   "select_folder_save_database": "Selectați folderul pentru a salva baza de date",

@@ -127,6 +127,7 @@
   "database_file_not_this_app": "The file is a database, but not a SpeleoLoc one. Nothing was changed.",
   "database_file_damaged": "The database in the file is damaged. Nothing was changed.",
   "database_swap_sync_running": "A sync is in progress. Wait for it to finish, then try again.",
+  "test_database_not_bundled": "This build does not include the test database. Nothing was changed.",
   "select_image": "Select image",
   "add_raster_map": "Add raster map",
   "select_folder_save_database": "Select folder to save database",

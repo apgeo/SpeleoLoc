@@ -1,4 +1,5 @@
 import 'package:speleoloc/data/source/database/database_file_version.dart';
+import 'package:speleoloc/data/source/database/test_database_loader.dart';
 import 'package:speleoloc/services/database_swap/database_file_validator.dart';
 import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -19,5 +20,8 @@ String databaseFileErrorText(Object error) => switch (error) {
   InvalidDatabaseFileException(reason: InvalidDatabaseFileReason.damaged) =>
     LocServ.inst.t('database_file_damaged'),
   SyncRunActiveException() => LocServ.inst.t('database_swap_sync_running'),
+  TestDatabaseUnavailableException() => LocServ.inst.t(
+    'test_database_not_bundled',
+  ),
   _ => '$error',
 };

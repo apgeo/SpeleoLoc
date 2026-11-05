@@ -236,8 +236,9 @@ data that is not backed up somewhere else.
   fills the database with the bundled sample dataset; it is not in the
   released app.)
 - **Restore database from file** — replaces the current database with a
-  `.sqlite` or `.db` file you pick. A file saved by a newer version of the
-  app is refused and nothing is replaced; update the app first.
+  `.sqlite` or `.db` file you pick. The file is checked first: one that
+  is not a SpeleoLoc database, is damaged, or was saved by a newer version
+  of the app (update the app first) is refused and nothing is replaced.
 - **Export database** — saves a copy of the database file through your
   device's save dialog, offered as `speleo_loc_export.sqlite` (on iOS,
   into a folder you choose). This is the quick snapshot to take before
@@ -253,7 +254,13 @@ Reinitializing asks for confirmation **twice**. Restore asks **once**
 and then opens the file picker — so a restore is easier to trigger than
 a reinitialize, and it is just as irreversible. The first confirmation
 of each of these actions warns that the application will be restarted,
-and it does restart automatically once the operation finishes.
+and it does restart automatically once the operation finishes. If the
+operation fails part-way, your previous database is put back and the app
+carries on with it.
+
+None of these replace the database while an FTP or SilexGIS sync is in
+progress: the app says a sync is running and asks you to wait for it to
+finish.
 
 See [Database export, import and backup](database-export-import.md).
 

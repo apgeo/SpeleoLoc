@@ -156,9 +156,13 @@ its media files overwrite anything of the same name. The app restarts.
 **This is destructive and there is no undo.** Everything currently on the
 device is gone. Export an archive first if you are not certain.
 
-An archive whose database was saved by a newer version of the app is
-refused before anything is replaced: update the app first. Nothing on the
-device changes.
+The archive's database is checked before anything is replaced. One that
+is not a SpeleoLoc database, is damaged, or was saved by a newer version
+of the app (update the app first) is refused, and nothing on the device
+changes. If the import fails after that, your previous database is put
+back; media files the archive had already copied over yours stay as
+copied. A replace is not possible while an FTP or SilexGIS sync is in
+progress.
 
 Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
@@ -285,8 +289,13 @@ replace — and its SilexGIS sign-ins follow the same rule as on a replace. Any
 documentation files or map images the restored database refers to must
 already be on the device, or they will show as missing.
 
-**This is destructive and irreversible.** The database you had is deleted,
-not archived.
+The file is checked first, as on a replace: one that is not a SpeleoLoc
+database, is damaged, or was saved by a newer version of the app is
+refused with nothing changed, and a restore that fails part-way puts your
+previous database back.
+
+**Once the restore succeeds, it is irreversible.** The database you had is
+deleted, not archived.
 
 ## Reinitializing the database
 
@@ -298,7 +307,9 @@ data**, which wipes everything and loads the bundled sample dataset.
 Each asks twice: a first confirmation, then a bluntly worded second one
 warning that all data will be erased. After that the app restarts. Nothing
 is backed up on your behalf. The app language and your FTP server profiles
-are kept.
+are kept. In a developer build that was not given the sample dataset, the
+test-data button says so and leaves your data alone; a reinitialize that
+fails part-way puts your previous database back.
 
 ## Loading the ready-made test dataset
 
