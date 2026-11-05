@@ -75,7 +75,17 @@ class CaveTripService {
 
   /// Reactivates an already-ended trip in-place (updates its row instead of
   /// inserting a new one). The title is unchanged.
+  ///
+  /// Refused while a different trip is recording: taking over the active
+  /// slot would leave that trip open with nothing tracking it, and no
+  /// screen could end it any more.
   Future<void> restartTrip(Uuid tripUuid) async {
+    final running = activeTripIdNotifier.value;
+    if (running != null && running != tripUuid) {
+      throw const ValidationException(
+        'Another trip is recording; stop it before restarting this one',
+      );
+    }
     isPausedNotifier.value = false;
     final author = await _currentUser.currentOrSystem();
     final old = await _tripRow(tripUuid);
@@ -100,14 +110,21 @@ class CaveTripService {
     await _regenerateLog(tripUuid);
   }
 
-  Future<void> stopTrip() async {
-    final id = activeTripIdNotifier.value;
-    if (id != null) {
+  /// Ends [tripUuid], or the trip recording on this device when none is
+  /// named. A screen showing one trip passes its id, so its Stop can never
+  /// end a different trip than the one on screen. Only ending the active
+  /// trip clears the active-trip state; an open trip that is not the active
+  /// one is ended on its own. A trip that has already ended keeps its end
+  /// time.
+  Future<void> stopTrip([Uuid? tripUuid]) async {
+    final active = activeTripIdNotifier.value;
+    final id = tripUuid ?? active;
+    final old = id == null ? null : await _tripRow(id);
+    if (id != null && old != null && old.tripEndedAt == null) {
       final author = await _currentUser.currentOrSystem();
-      final old = await _tripRow(id);
       await _db.endCaveTrip(id, authorUuid: author);
       final updated = await _tripRow(id);
-      if (old != null && updated != null) {
+      if (updated != null) {
         await _logger.logUpdate(
           'cave_trips',
           id,
@@ -117,6 +134,7 @@ class CaveTripService {
       }
       await _appendForNewEvent(id);
     }
+    if (id != active) return;
     await _clearConfig();
     activeTripIdNotifier.value = null;
     isPausedNotifier.value = false;
@@ -125,15 +143,20 @@ class CaveTripService {
   /// Pause/resume are purely in-memory: while paused, [recordPoint] is
   /// suppressed. Pauses are not persisted and do not appear in the
   /// regenerated trip log.
-  Future<void> pauseTrip() async {
+  ///
+  /// [tripUuid], when given, must be the active trip; for any other trip
+  /// nothing happens, since only the active trip has a pause to change.
+  Future<void> pauseTrip([Uuid? tripUuid]) async {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
+    if (tripUuid != null && tripUuid != id) return;
     isPausedNotifier.value = true;
   }
 
-  Future<void> resumeTrip() async {
+  Future<void> resumeTrip([Uuid? tripUuid]) async {
     final id = activeTripIdNotifier.value;
     if (id == null || !isPausedNotifier.value) return;
+    if (tripUuid != null && tripUuid != id) return;
     isPausedNotifier.value = false;
   }
 
