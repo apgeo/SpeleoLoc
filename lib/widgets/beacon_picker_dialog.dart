@@ -105,7 +105,7 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
 
   Future<void> _start() async {
     try {
-      await flutterBeacon.initializeAndCheckScanning;
+      await BeaconScanHelper.initializeScanning(checkPermissions: true);
     } on PlatformException catch (e, st) {
       _log.warning('Beacon picker init failed', e, st);
       if (mounted) setState(() => _error = e.message ?? e.code);

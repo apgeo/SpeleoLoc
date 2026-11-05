@@ -164,7 +164,7 @@ class BeaconDetectionService {
           'Android will deliver no scan results until they are enabled',
         );
       }
-      await flutterBeacon.initializeScanning;
+      await BeaconScanHelper.initializeScanning(checkPermissions: false);
 
       _engine = BeaconMatchEngine(config);
       _watchRegistrations();
@@ -240,7 +240,7 @@ class BeaconDetectionService {
         return false;
       }
       try {
-        await flutterBeacon.initializeAndCheckScanning;
+        await BeaconScanHelper.initializeScanning(checkPermissions: true);
       } on PlatformException catch (e) {
         SnackBarService.showWarning(e.message ?? e.code);
         return false;

@@ -176,7 +176,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     if (!mounted) return;
     setState(() => _rangingError = null);
     try {
-      await flutterBeacon.initializeAndCheckScanning;
+      await BeaconScanHelper.initializeScanning(checkPermissions: true);
     } on PlatformException catch (e, st) {
       _log.warning('Beacon scanning init failed', e, st);
       if (mounted) setState(() => _rangingError = e.message ?? e.code);
