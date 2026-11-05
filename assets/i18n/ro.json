@@ -633,6 +633,7 @@
   "recording_error": "Nu s-a putut porni înregistrarea",
   "tap_record": "Apăsați butonul de înregistrare",
   "no_recording": "Nu există înregistrare de salvat",
+  "audio_splice_unsupported": "Înregistrarea inițială nu poate fi continuată din mijloc, așa că noua înregistrare rămâne singură. Salvarea înlocuiește înregistrarea inițială.",
   "populate_test_data_title": "Încărcați date de test?",
   "populate_test_data_message": "Baza de date este goală. Doriți să o populați cu peșteri și locuri de test?",
   "populate_test_data_overwrite_warning": "Atenție: hărțile și/sau documentele existente vor fi șterse definitiv și înlocuite cu datele de test.",

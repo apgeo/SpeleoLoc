@@ -14,6 +14,7 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/wav_splice.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -382,36 +383,18 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
 
   /// Merges the prefix of [originalWav] (up to [_currentPositionMs]) with the
   /// newly recorded [newFile]. The result overwrites [_recordedPath].
+  ///
+  /// When the original cannot be spliced (not PCM WAV, or another sample
+  /// format than the recorder produces) the new recording is kept on its own
+  /// and the caver is told, so nothing is silently corrupted.
   Future<void> _mergeWavFiles(Uint8List originalWav, File newFile) async {
     final newBytes = await newFile.readAsBytes();
-    final info = _WavInfo.parse(originalWav);
-    final newInfo = _WavInfo.parse(Uint8List.fromList(newBytes));
-
-    final bytesPerSecond =
-        info.sampleRate * info.numChannels * (info.bitsPerSample ~/ 8);
-    final blockAlign = info.numChannels * (info.bitsPerSample ~/ 8);
-
-    int prefixDataBytes = (_currentPositionMs / 1000.0 * bytesPerSecond)
-        .round();
-    prefixDataBytes = (prefixDataBytes ~/ blockAlign) * blockAlign;
-    if (prefixDataBytes > info.dataSize) prefixDataBytes = info.dataSize;
-
-    final newDataSize = prefixDataBytes + newInfo.dataSize;
-
-    // Build WAV header from the original, patching chunk sizes.
-    final header = Uint8List.fromList(originalWav.sublist(0, info.dataOffset));
-    final hd = ByteData.sublistView(header);
-    hd.setUint32(4, info.dataOffset - 8 + newDataSize, Endian.little);
-    hd.setUint32(info.dataOffset - 4, newDataSize, Endian.little);
-
-    final merged = BytesBuilder(copy: false)
-      ..add(header)
-      ..add(
-        originalWav.sublist(info.dataOffset, info.dataOffset + prefixDataBytes),
-      )
-      ..add(newBytes.sublist(newInfo.dataOffset));
-
-    await File(_recordedPath!).writeAsBytes(merged.toBytes(), flush: true);
+    final merged = spliceWav(originalWav, newBytes, _currentPositionMs);
+    if (merged == null) {
+      SnackBarService.showWarning(LocServ.inst.t('audio_splice_unsupported'));
+      return;
+    }
+    await newFile.writeAsBytes(merged, flush: true);
   }
 
   // -----------------------------------------------------------------------
@@ -668,58 +651,6 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
           ],
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-//  _WavInfo — lightweight WAV header parser for splice support
-// ---------------------------------------------------------------------------
-
-class _WavInfo {
-  final int sampleRate;
-  final int numChannels;
-  final int bitsPerSample;
-  final int dataOffset; // byte offset where PCM data starts
-  final int dataSize;
-
-  _WavInfo({
-    required this.sampleRate,
-    required this.numChannels,
-    required this.bitsPerSample,
-    required this.dataOffset,
-    required this.dataSize,
-  });
-
-  static _WavInfo parse(Uint8List wav) {
-    final bd = ByteData.sublistView(wav);
-    final sampleRate = bd.getUint32(24, Endian.little);
-    final numChannels = bd.getUint16(22, Endian.little);
-    final bitsPerSample = bd.getUint16(34, Endian.little);
-
-    // Walk RIFF sub-chunks to find the 'data' chunk.
-    int offset = 12;
-    while (offset < wav.length - 8) {
-      final chunkId = String.fromCharCodes(wav.sublist(offset, offset + 4));
-      final chunkSize = bd.getUint32(offset + 4, Endian.little);
-      if (chunkId == 'data') {
-        return _WavInfo(
-          sampleRate: sampleRate,
-          numChannels: numChannels,
-          bitsPerSample: bitsPerSample,
-          dataOffset: offset + 8,
-          dataSize: chunkSize,
-        );
-      }
-      offset += 8 + chunkSize;
-    }
-    // Fallback: standard 44-byte header.
-    return _WavInfo(
-      sampleRate: sampleRate,
-      numChannels: numChannels,
-      bitsPerSample: bitsPerSample,
-      dataOffset: 44,
-      dataSize: wav.length - 44,
     );
   }
 }

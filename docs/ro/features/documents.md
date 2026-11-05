@@ -167,7 +167,7 @@ Ce face o apăsare depinde de tip.
 | Tip | Ce se deschide |
 |---|---|
 | **Fotografie** | Galeria pe tot ecranul. |
-| **Text, text formatat, audio** | **Editorul** lor, când sunteți într-o listă de documente ale unei peșteri sau ale unui loc. |
+| **Text, text formatat, audio** | **Editorul** lor, când sunteți într-o listă de documente ale unei peșteri sau ale unui loc. Fișierele MP3, OGG, M4A și FLAC importate se deschid în player. |
 | **PDF** | Cititorul PDF încorporat — derulați paginile, apropiați degetele pentru zoom. |
 | **Video, foi de calcul, arhive, orice nu este recunoscut** | O pagină substitut care arată extensia fișierului și un buton **Salvează**. Nu există player și nici previzualizare. |
 
@@ -248,6 +248,13 @@ Deschiderea unui document audio în reportofon nu pornește de la zero. Redați
 apoi apăsați înregistrare: tot ce urmează după acel punct este înlocuit de
 noua preluare, iar tot ce este înainte se păstrează. Nu există funcție de
 tăiere, iar salvarea înlocuiește înregistrarea originală.
+
+Doar înregistrările WAV pot fi reînregistrate, adică exact formatul pe care îl
+produce reportofonul. Un fișier MP3, OGG, M4A sau FLAC importat nu are acțiunea
+**Editează** și se deschide în player. Dacă un fișier WAV a fost înregistrat în
+altă parte, cu altă frecvență de eșantionare sau alt număr de canale, noua
+preluare nu i se poate alipi: reportofonul spune acest lucru și păstrează noua
+preluare separat.
 
 ## Ce nu puteți face
 

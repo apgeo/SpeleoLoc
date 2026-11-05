@@ -163,7 +163,7 @@ What a tap does depends on the type.
 | Type | What opens |
 |---|---|
 | **Photo** | The full-screen gallery. |
-| **Text, rich text, audio** | Their **editor**, when you are in a cave or place documents list. |
+| **Text, rich text, audio** | Their **editor**, when you are in a cave or place documents list. Imported MP3, OGG, M4A and FLAC files open in the player instead. |
 | **PDF** | The built-in PDF reader — scroll through the pages, pinch to zoom. |
 | **Video, spreadsheets, archives, anything unrecognised** | A placeholder page showing the file extension and a **Save** button. There is no player or preview. |
 
@@ -239,6 +239,13 @@ Play the existing recording, drag the waveform to the point you want,
 then press record: everything from that point on is replaced by the new
 take, and everything before it is kept. There is no trim function, and
 saving replaces the original recording.
+
+Only WAV recordings can be re-recorded, which is what the recorder
+itself produces. An imported MP3, OGG, M4A or FLAC file has no **Edit**
+action and opens in the player instead. If a WAV file was recorded
+elsewhere with a different sample rate or channel count, the new take
+cannot be joined to it: the recorder says so and keeps the new take on
+its own.
 
 ## What you cannot do
 
