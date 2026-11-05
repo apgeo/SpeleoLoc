@@ -23,9 +23,11 @@ typedef ForgetFtpProfileSecrets = Future<void> Function(String profileUuid);
 ///
 /// Which trip this device is recording into is its own too: an archive
 /// exported mid-trip would otherwise hand the exporter's trip to this device,
-/// and the next scans would be recorded into it. So is beacon detection: an
-/// archive must not switch scanning on, with its battery cost and automatic
-/// trip points, on a device whose caver never chose it.
+/// and the next scans would be recorded into it. Whether that trip is paused
+/// goes with it, or the exporter's pause would stop this device recording.
+/// So is beacon detection: an archive must not switch scanning on, with its
+/// battery cost and automatic trip points, on a device whose caver never
+/// chose it.
 ///
 /// The one exception is a restore of the caver's own data onto a device with
 /// no FTP profiles yet, such as a new phone: the archive's profiles are taken
@@ -37,6 +39,7 @@ class DevicePreferencesCarryOver {
   static const List<String> keys = [
     appLanguageKey,
     activeTripConfigKey,
+    pausedTripConfigKey,
     beaconDetectionConfigKey,
     ConfigKey.ftpProfiles,
     ConfigKey.ftpDefaultProfileUuid,

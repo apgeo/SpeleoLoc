@@ -78,6 +78,27 @@ void main() {
     },
   );
 
+  test('keeps whether this device\'s trip is paused, not the '
+      'exporter\'s', () async {
+    // The pause names the trip it belongs to, so it follows the active trip:
+    // an archive exported during the exporter's pause must not stop this
+    // device's recording, nor drop this device's own pause.
+    const mine = '00000000-0000-7000-8000-00000000000a';
+    const theirs = '00000000-0000-7000-8000-00000000000b';
+    final incoming = ConfigurationRepository(after);
+    await incoming.writeString(pausedTripConfigKey, theirs);
+
+    await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+    expect(await incoming.readString(pausedTripConfigKey), isNull);
+
+    await incoming.writeString(pausedTripConfigKey, theirs);
+    await ConfigurationRepository(
+      before,
+    ).writeString(pausedTripConfigKey, mine);
+    await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+    expect(await incoming.readString(pausedTripConfigKey), mine);
+  });
+
   test('keeps this device\'s beacon detection setting, not the '
       'exporter\'s', () async {
     // An imported archive must not switch detection on, or tune it, on a

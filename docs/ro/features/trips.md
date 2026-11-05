@@ -33,8 +33,8 @@ Tura activă ține de acest dispozitiv. Dacă dispare — ștearsă de o
 sincronizare FTP sau SilexGIS ori de o îmbinare de arhivă, ștearsă odată
 cu peștera ei sau încheiată pe alt dispozitiv — aici nu mai este activă
 nicio tură și puteți începe una nouă. Restaurarea unei baze de date sau a
-unei arhive păstrează tura activă a acestui dispozitiv dacă datele
-restaurate o au încă în desfășurare; o tură care rula pe dispozitivul
+unei arhive păstrează tura activă a acestui dispozitiv, în pauză sau nu,
+dacă datele restaurate o au încă în desfășurare; o tură care rula pe dispozitivul
 care a făcut exportul nu devine activă aici.
 
 O tură oprită **nu** este blocată. O puteți în continuare redenumi, îi
