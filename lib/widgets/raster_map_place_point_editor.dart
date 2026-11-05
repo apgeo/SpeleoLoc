@@ -2110,108 +2110,123 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                         },
                       ),
                     ),
-                    // Status message + Legend overlay (bottom-left corner)
+                    // Status message and legend (bottom-left) share one row
+                    // with the zoom controls (bottom-right), so on a narrow
+                    // phone the hint wraps beside the buttons instead of
+                    // covering them. In landscape-phone mode the row stops
+                    // short of the right action bar.
                     Positioned(
                       left: 8,
+                      right: _computeIsLandscapePhone(context) ? 56 : 8,
                       bottom: 8,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          if (!widget.isReadonly &&
-                              _showTapModeCheckbox &&
-                              _showStatusOverlay)
-                            Container(
-                              constraints: const BoxConstraints(maxWidth: 220),
-                              margin: const EdgeInsets.only(bottom: 4),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 5,
-                                horizontal: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.82),
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 4,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!widget.isReadonly &&
+                                    _showTapModeCheckbox &&
+                                    _showStatusOverlay)
+                                  Container(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 220,
+                                    ),
+                                    margin: const EdgeInsets.only(bottom: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 5,
+                                      horizontal: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.82,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            _tapDefinesNewPoint
+                                                ? LocServ.inst.t(
+                                                    'status_define_point',
+                                                  )
+                                                : LocServ.inst.t(
+                                                    'status_select_place',
+                                                  ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.black87,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.white70,
+                                                  blurRadius: 1,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          _tapDefinesNewPoint
+                                              ? Icons.edit_location_alt
+                                              : Icons.touch_app,
+                                          size: 14,
+                                          color: _tapDefinesNewPoint
+                                              ? Colors.blue
+                                              : Colors.orange,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
+                                if (_showLegend) const RasterMapPointsLegend(),
+                              ],
+                            ),
+                          ),
+                          if (_showZoomControls) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surface.withValues(alpha: 0.60),
+                                border: Border.all(
+                                  color: Colors.grey,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      _tapDefinesNewPoint
-                                          ? LocServ.inst.t(
-                                              'status_define_point',
-                                            )
-                                          : LocServ.inst.t(
-                                              'status_select_place',
-                                            ),
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.black87,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.white70,
-                                            blurRadius: 1,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                  IconButton(
+                                    onPressed: zoomOut,
+                                    icon: const Icon(Icons.remove),
                                   ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    _tapDefinesNewPoint
-                                        ? Icons.edit_location_alt
-                                        : Icons.touch_app,
-                                    size: 14,
-                                    color: _tapDefinesNewPoint
-                                        ? Colors.blue
-                                        : Colors.orange,
+                                  IconButton(
+                                    onPressed: resetZoom,
+                                    icon: const Icon(Icons.refresh),
+                                  ),
+                                  IconButton(
+                                    onPressed: zoomIn,
+                                    icon: const Icon(Icons.add),
                                   ),
                                 ],
                               ),
                             ),
-                          if (_showLegend) const RasterMapPointsLegend(),
+                          ],
                         ],
                       ),
                     ),
-                    // Zoom controls overlay (bottom-right corner).
-                    // In landscape-phone mode shift left to avoid the right action bar.
-                    if (_showZoomControls)
-                      Positioned(
-                        right: _computeIsLandscapePhone(context) ? 56 : 8,
-                        bottom: 8,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surface.withValues(alpha: 0.60),
-                            border: Border.all(color: Colors.grey, width: 1.5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                onPressed: zoomOut,
-                                icon: const Icon(Icons.remove),
-                              ),
-                              IconButton(
-                                onPressed: resetZoom,
-                                icon: const Icon(Icons.refresh),
-                              ),
-                              IconButton(
-                                onPressed: zoomIn,
-                                icon: const Icon(Icons.add),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
 
                     // ── Side toolbar toggle button (top-left or top-right) ────────
                     _buildToolbarToggleButton(context),
