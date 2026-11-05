@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_sound.dart';
+import 'package:speleoloc/services/beacon/beacon_enabled_notice.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
@@ -263,13 +264,62 @@ class BeaconDetectionService {
     await config.copyWith(enabled: enable).save();
     enabledListenable.value = enable;
     await restart();
-    if (enable && !_running) {
-      SnackBarService.showWarning(
-        LocServ.inst.t('beacon_detection_not_running'),
+    if (enable) {
+      _showEnabledNotice(
+        enabledNoticeFor(
+          running: _running,
+          backgroundEnabled: config.backgroundEnabled,
+          backgroundSupported: Platform.isAndroid,
+        ),
       );
     }
     return true;
   }
+
+  /// What the caver is told right after switching detection on. Unless
+  /// background mode runs, a locked screen stops detection, and a phone in
+  /// a pocket locks within a minute, so that is said at the moment the
+  /// caver relies on it.
+  @visibleForTesting
+  static BeaconEnabledNotice enabledNoticeFor({
+    required bool running,
+    required bool backgroundEnabled,
+    required bool backgroundSupported,
+  }) {
+    if (!running) return BeaconEnabledNotice.notRunning;
+    if (backgroundEnabled && backgroundSupported) {
+      return BeaconEnabledNotice.none;
+    }
+    return backgroundSupported
+        ? BeaconEnabledNotice.stopsWhenLockedUnlessBackground
+        : BeaconEnabledNotice.stopsWhenLocked;
+  }
+
+  void _showEnabledNotice(BeaconEnabledNotice notice) {
+    final loc = LocServ.inst;
+    switch (notice) {
+      case BeaconEnabledNotice.none:
+        break;
+      case BeaconEnabledNotice.notRunning:
+        SnackBarService.showWarning(loc.t('beacon_detection_not_running'));
+      case BeaconEnabledNotice.stopsWhenLocked:
+        SnackBarService.showInfo(
+          loc.t('beacon_detection_stops_when_locked'),
+          duration: _enabledNoticeDuration,
+        );
+      case BeaconEnabledNotice.stopsWhenLockedUnlessBackground:
+        SnackBarService.showInfo(
+          loc.t('beacon_detection_stops_when_locked_hint', {
+            'option': loc.t('beacon_background_enable'),
+            'page': '${loc.t('settings')} → ${loc.t('settings_beacons')}',
+          }),
+          duration: _enabledNoticeDuration,
+        );
+    }
+  }
+
+  /// Long enough to read two sentences.
+  static const _enabledNoticeDuration = Duration(seconds: 8);
 
   /// App lifecycle hook. With background detection enabled the scan
   /// survives app pause inside a foreground service (duty-cycled);

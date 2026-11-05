@@ -125,6 +125,12 @@ Detectarea este o preferință a fiecărui dispozitiv. Este oprită implicit
    însuși este oprit — primiți „Detectarea nu a putut porni — verifică
    dacă Bluetooth este pornit”. Porniți Bluetooth și aplicația se
    rearmează singură.
+4. Altfel, dacă **Continuă detectarea în fundal** nu este pornită, un
+   mesaj vă amintește că detectarea funcționează doar cât timp SpeleoLoc
+   este pe ecran și se oprește când ecranul se blochează sau când treceți
+   la altă aplicație. Un telefon pus în buzunar se blochează în mai puțin
+   de un minut, așa că porniți acea opțiune (Android) înainte să vă bazați
+   pe detectare cu telefonul pus deoparte.
 
 Odată activată, detectarea pornește din nou de la sine de fiecare dată
 când deschideți aplicația, fără să mai întrebe nimic.

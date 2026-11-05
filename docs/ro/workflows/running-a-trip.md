@@ -100,9 +100,12 @@ Punctele se înregistrează singure:
 | Scanați un loc din **altă** peșteră | Nimic — locul se deschide normal |
 | Scanați o **intrare** a acestei peșteri | Aplicația întreabă dacă ieșiți (vedeți mai jos) |
 
-Detectarea prin beacon este cazul fără mâini: cu detectarea automată
-pornită, telefonul poate rămâne în buzunar, iar traseul se completează
-pe măsură ce treceți pe lângă fiecare loc cu beacon. Pe ecran primiți
+Detectarea prin beacon este cazul fără mâini: cu detectarea automată și
+**Continuă detectarea în fundal** pornite (Android), telefonul poate
+rămâne în buzunar, iar traseul se completează pe măsură ce treceți pe
+lângă fiecare loc cu beacon. Fără detectarea în fundal, și întotdeauna pe
+iPhone, detectarea se oprește când ecranul se blochează, așa că țineți
+aplicația pe ecran. Pe ecran primiți
 *„Loc detectat: …”*, urmat de *„Punct adăugat la tură”*; în fundal,
 același lucru sosește ca notificare, care adaugă *„Punct adăugat la
 tură”* doar dacă a fost înregistrat un punct.

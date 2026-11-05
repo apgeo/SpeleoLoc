@@ -118,6 +118,11 @@ scanned until you turn it on.
 3. If scanning cannot be started — most often because Bluetooth itself is
    off — you get "Detection could not start — check Bluetooth is on".
    Turn Bluetooth on and the app re-arms on its own.
+4. Otherwise, unless **Keep detecting in background** is on, a reminder
+   says that detection runs only while SpeleoLoc is on screen and stops
+   when the screen locks or you switch to another app. A phone in a
+   pocket locks within a minute, so turn that option on (Android) before
+   relying on detection with the phone put away.
 
 Once enabled, detection starts again by itself every time you open the
 app, without asking anything.
