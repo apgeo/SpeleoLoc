@@ -57,6 +57,25 @@ class _CaveViewWebViewState extends State<CaveViewWebView>
             Uri.tryParse(request.url)?.origin == widget.pageUri.origin
             ? NavigationDecision.navigate
             : NavigationDecision.prevent,
+        // Without this the platform's own error page sits under the loading
+        // overlay and the caver never learns the page did not open.
+        onWebResourceError: (error) {
+          if (error.isForMainFrame == false || !mounted) return;
+          widget.onEvent(
+            ModelViewerFailed(code: 'page', message: error.description),
+          );
+        },
+        onHttpError: (error) {
+          final uri = error.request?.uri;
+          if (uri == null || uri.path != widget.pageUri.path || !mounted)
+            return;
+          widget.onEvent(
+            ModelViewerFailed(
+              code: 'page',
+              message: 'HTTP ${error.response?.statusCode}',
+            ),
+          );
+        },
       ),
     );
     await _web.loadRequest(widget.pageUri);

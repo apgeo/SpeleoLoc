@@ -37,6 +37,10 @@ așteaptă: meniul **⋮** al vizualizatorului și butonul 3D al unei peșteri
 fără model pe telefon arată modelele rămase pe SilexGIS, iar o atingere
 descarcă unul.
 
+Dacă vizualizarea 3D nu se poate deschide (un telefon fără suport 3D sau o
+pagină care nu apare în aproximativ 90 de secunde), ecranul spune asta și
+oferă **Reîncearcă** și **Înapoi**, în loc de un cerc de încărcare fără sfârșit.
+
 Punctele puse la stațiile unui model pleacă spre SilexGIS și ajung la
 celelalte telefoane ale clubului. Dacă SilexGIS are deja punctul la altă
 stație a aceluiași model, sincronizarea îl păstrează pe al dumneavoastră și

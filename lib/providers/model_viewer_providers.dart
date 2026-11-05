@@ -30,6 +30,12 @@ final modelViewerBuilderProvider = Provider<ModelViewerBuilder?>((ref) {
       );
 });
 
+/// How long the page may take to draw the model before the screen gives up
+/// and offers a retry. Parsing a large model on a phone is slow, hence long.
+final modelViewerLoadTimeoutProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 90),
+);
+
 typedef ModelViewerAssetServerFactory =
     ModelViewerAssetServer Function(File modelFile, SurveyModelFormat format);
 
