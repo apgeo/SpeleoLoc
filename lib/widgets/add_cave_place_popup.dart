@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/qr_scanner_launcher.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// A compact dialog for quickly adding a new cave place.
@@ -169,25 +169,17 @@ class _AddCavePlacePopupState extends ConsumerState<AddCavePlacePopup> {
     }
   }
 
-  void _openScanner() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ScannerPage(
-          onScan: (code) {
-            final qr = code.trim();
-            if (qr.isNotEmpty) {
-              // ScannerPage closes itself once this returns.
-              _qrController.text = qr;
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
-              );
-            }
-          },
-        ),
-      ),
-    );
+  Future<void> _openScanner() async {
+    final code = await openQrScanner(context);
+    if (code == null || !mounted) return;
+    final qr = code.trim();
+    if (qr.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(LocServ.inst.t('invalid_qr_code'))),
+      );
+      return;
+    }
+    _qrController.text = qr;
   }
 
   @override

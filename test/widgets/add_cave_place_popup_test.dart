@@ -13,17 +13,39 @@ import '../support/cave_repository_fixture.dart';
 void main() {
   late AppDatabase db;
 
+  // PermissionStatus indexes: 0 denied, 1 granted, 4 permanently denied.
+  late int cameraStatus;
+  var settingsOpened = false;
+
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('dev.steenbakker.mobile_scanner/scanner/method'),
-          (call) async => null,
-        );
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('dev.steenbakker.mobile_scanner/scanner/method'),
+      (call) async => null,
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('flutter.baseflow.com/permissions/methods'),
+      (call) async {
+        switch (call.method) {
+          case 'checkPermissionStatus':
+            return cameraStatus;
+          case 'requestPermissions':
+            return {for (final p in call.arguments as List) p: cameraStatus};
+          case 'openAppSettings':
+            settingsOpened = true;
+            return true;
+        }
+        return null;
+      },
+    );
   });
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    cameraStatus = 1;
+    settingsOpened = false;
   });
   tearDown(() => db.close());
 
@@ -72,5 +94,23 @@ void main() {
 
     expect(find.byType(AddCavePlacePopup), findsOneWidget);
     expect(find.text('x1'), findsOneWidget);
+  });
+
+  testWidgets('a permanently denied camera explains and offers the settings, '
+      'not the scanner', (tester) async {
+    cameraStatus = 4;
+    await openPopup(tester);
+    await tester.tap(find.byIcon(Icons.qr_code_scanner));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MobileScanner), findsNothing);
+    expect(find.text('camera_permission_required'), findsOneWidget);
+
+    await tester.tap(find.text('open_settings'));
+    await tester.pumpAndSettle();
+
+    expect(settingsOpened, isTrue);
+    expect(find.text('camera_permission_required'), findsNothing);
+    expect(find.byType(AddCavePlacePopup), findsOneWidget);
   });
 }

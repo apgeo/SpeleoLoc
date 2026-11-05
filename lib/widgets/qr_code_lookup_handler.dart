@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/services/location/last_located_place.dart';
 import 'package:speleoloc/services/map/best_raster_map_finder.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/screens/settings/settings_general_page.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
@@ -14,6 +12,7 @@ import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/end_trip_dialog.dart';
+import 'package:speleoloc/widgets/qr_scanner_launcher.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/trip_record_feedback.dart';
 
@@ -462,66 +461,19 @@ class QrCodeLookupHandler {
     BuildContext context, {
     Uuid? currentCaveId,
   }) async {
-    var status = await Permission.camera.status;
-    if (!status.isGranted) {
-      status = await Permission.camera.request();
-    }
+    final scannedCode = await openQrScanner(context);
+    if (scannedCode == null || !context.mounted) return null;
+    final policy = await loadQrAmbiguityPolicy(QrLookupSource.scan);
     if (!context.mounted) return null;
-
-    if (status.isGranted) {
-      String? scannedCode;
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ScannerPage(
-            onScan: (code) {
-              scannedCode = code;
-            },
-          ),
-        ),
-      );
-      if (scannedCode != null && context.mounted) {
-        final policy = await loadQrAmbiguityPolicy(QrLookupSource.scan);
-        if (!context.mounted) return null;
-        return handleScannedCode(
-          context,
-          scannedCode!,
-          currentCaveId: currentCaveId,
-          ambiguityPolicy: policy,
-          // ScannerPage already runs qrScanService.process on the code it
-          // delivers, but the handler's process step is idempotent.
-          preprocessPayload: false,
-        );
-      }
-    } else if (status.isPermanentlyDenied) {
-      if (context.mounted) {
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(LocServ.inst.t('permission_required')),
-            content: Text(LocServ.inst.t('camera_permission_required')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(LocServ.inst.t('cancel')),
-              ),
-              TextButton(
-                onPressed: () {
-                  openAppSettings();
-                  Navigator.of(ctx).pop();
-                },
-                child: Text(LocServ.inst.t('open_settings')),
-              ),
-            ],
-          ),
-        );
-      }
-    } else {
-      if (context.mounted) {
-        SnackBarService.showWarning(LocServ.inst.t('camera_permission_denied'));
-      }
-    }
-    return null;
+    return handleScannedCode(
+      context,
+      scannedCode,
+      currentCaveId: currentCaveId,
+      ambiguityPolicy: policy,
+      // ScannerPage already runs qrScanService.process on the code it
+      // delivers, but the handler's process step is idempotent.
+      preprocessPayload: false,
+    );
   }
 
   /// Canonical entry point for the "manual QR input" dialog used by
