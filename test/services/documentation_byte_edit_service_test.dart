@@ -150,7 +150,7 @@ void main() {
     });
   }
 
-  test('the caver\'s own file takes the edit in place', () async {
+  test('the caver\'s own file takes the edit as a new revision', () async {
     final own = await picture();
 
     final id = await service.save(own, edited);
@@ -162,7 +162,58 @@ void main() {
     )..where((t) => t.uuid.equalsValue(own.uuid))).getSingle();
     expect(row.fileHash, sha256.convert(edited).toString());
     expect(row.fileSize, edited.length);
-    expect(await File('${base.path}/${own.fileName}').readAsBytes(), edited);
+    expect(row.title, own.title);
+    // A fresh storage name, keeping the caver's name, so archive sync copies
+    // the new bytes to phones that hold the old ones; the old file is gone.
+    expect(row.fileName, isNot(own.fileName));
+    expect(row.fileName, endsWith('_picture_480.jpg'));
+    expect(await File('${base.path}/${row.fileName}').readAsBytes(), edited);
+    expect(await File('${base.path}/${own.fileName}').exists(), isFalse);
+
+    final change = (await db.select(db.changeLog).get()).single;
+    expect(change.entityUuid, own.uuid);
+    final fields = await (db.select(
+      db.changeLogField,
+    )..where((f) => f.changeUuid.equalsValue(change.uuid))).get();
+    expect(
+      fields.map((f) => f.fieldName),
+      containsAll(<String>['file_name', 'file_hash']),
+    );
+  });
+
+  test('a new title is saved and logged with the content', () async {
+    final own = await picture();
+
+    await service.save(own, edited, title: 'Looking up');
+
+    final row = await (db.select(
+      db.documentationFiles,
+    )..where((t) => t.uuid.equalsValue(own.uuid))).getSingle();
+    expect(row.title, 'Looking up');
+    final fields = await db.select(db.changeLogField).get();
+    expect(fields.map((f) => f.fieldName), contains('title'));
+  });
+
+  test('the old file stays while another record still names it', () async {
+    final own = await picture();
+    await db
+        .into(db.documentationFiles)
+        .insert(
+          DocumentationFilesCompanion.insert(
+            uuid: Uuid.v7(),
+            title: 'Same file, other record',
+            fileName: own.fileName,
+            fileSize: own.fileSize,
+            fileType: 'photo',
+          ),
+        );
+
+    await service.save(own, edited);
+
+    expect(
+      await File('${base.path}/${own.fileName}').readAsString(),
+      'invented picture',
+    );
   });
 
   test('so does the server\'s stored file', () async {

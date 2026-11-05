@@ -251,18 +251,25 @@ GeoPoint? _parseUtm(String text) {
   return _validated(point.latitude, point.longitude);
 }
 
-/// DMS tokenizer. Commas are treated as separators (DMS fractions use a
-/// dot); hemisphere letters may lead or trail each part.
+/// DMS tokenizer; hemisphere letters may lead or trail each part.
+///
+/// A comma between two digits is a decimal mark (Romanian input writes
+/// `21,55` for decimal minutes); read as a separator it would turn decimal
+/// minutes into seconds and move the point hundreds of metres without any
+/// error. A comma followed by a space or a letter still separates. Commas
+/// used as field separators with no space (`45,21,33`) therefore give a
+/// fractional value followed by more fields, which is refused below rather
+/// than guessed at.
 GeoPoint? _parseDms(String text) {
   if (!RegExp("[°º'\"′″]|[NSEW]", caseSensitive: false).hasMatch(text)) {
     return null;
   }
   final tokens = <Object>[]; // double for numbers, String for hemispheres
   for (final match in RegExp(
-    r'(\d+(?:\.\d+)?)|([NSEWnsew])(?![a-zA-Z])',
+    r'(\d+(?:[.,]\d+)?)|([NSEWnsew])(?![a-zA-Z])',
   ).allMatches(text)) {
     if (match.group(1) != null) {
-      tokens.add(double.parse(match.group(1)!));
+      tokens.add(double.parse(match.group(1)!.replaceAll(',', '.')));
     } else {
       tokens.add(match.group(2)!.toUpperCase());
     }

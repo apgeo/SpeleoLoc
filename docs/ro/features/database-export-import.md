@@ -275,7 +275,9 @@ acel nume. Un fișier primit care are același nume cu unul de-al
 dumneavoastră este omis — așa că, dacă cineva a refotografiat o poză sau a
 reexportat o imagine de hartă sub același nume, păstrați poza veche, iar
 numărul de la **Fișiere copiate** iese mai mic decât vă așteptați. Doar
-**Înlocuire totală** suprascrie fișierele media.
+**Înlocuire totală** suprascrie fișierele media. Un document modificat în
+editorul de text, de text formatat, audio sau de imagini al aplicației
+este salvat sub un nume de fișier nou, așa că noul conținut ajunge.
 
 #### Rezumatul Import Complet
 

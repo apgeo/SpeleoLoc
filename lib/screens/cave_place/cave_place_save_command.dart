@@ -66,7 +66,7 @@ abstract class CavePlaceConfirmationPort {
 /// Command that runs the entire "save cave place" workflow:
 ///
 /// 1. Validates the form values (title required, depth parseable + in
-///    range).
+///    range, coordinates parseable + in range).
 /// 2. Asks the user to confirm a series of edge cases via the injected
 ///    [CavePlaceConfirmationPort].
 /// 3. Computes the effective QCRI (from the explicit field or via
@@ -103,11 +103,9 @@ class CavePlaceSaveCommand {
     final qrText = form.qr.text.trim();
     final qr = qrText.isEmpty ? null : qrText;
     final qcriText = form.qcri.text.trim();
-    final lat = double.tryParse(form.lat.text);
-    final long = double.tryParse(form.long.text);
-    final alt = form.alt.text.trim().isEmpty
-        ? null
-        : double.tryParse(form.alt.text);
+    final lat = parseCoordinateValue(form.lat.text);
+    final long = parseCoordinateValue(form.long.text);
+    final alt = parseCoordinateValue(form.alt.text);
 
     // --- 1. Validation.
     if (title.isEmpty) {
@@ -118,6 +116,20 @@ class CavePlaceSaveCommand {
     }
     if (depth != null && (depth < -5000 || depth > 5000)) {
       return const SaveValidationFailed('depth_out_of_range');
+    }
+    // An update writes every coordinate column, so a value that does not
+    // parse must stop the save; turning it into null would erase the
+    // stored position. An empty field is a deliberate clear.
+    if (form.lat.text.trim().isNotEmpty &&
+        (lat == null || lat < -90 || lat > 90)) {
+      return const SaveValidationFailed('latitude_invalid');
+    }
+    if (form.long.text.trim().isNotEmpty &&
+        (long == null || long < -180 || long > 180)) {
+      return const SaveValidationFailed('longitude_invalid');
+    }
+    if (form.alt.text.trim().isNotEmpty && alt == null) {
+      return const SaveValidationFailed('altitude_invalid');
     }
 
     // --- 2. Extreme-depth confirmation.
