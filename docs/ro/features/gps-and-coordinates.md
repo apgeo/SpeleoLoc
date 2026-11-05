@@ -140,12 +140,15 @@ neatins.
 ### Scrierea direct în câmpuri
 
 Câmpurile Latitudine, Longitudine și Altitudine sunt simple câmpuri
-numerice: grade zecimale și metri, nimic altceva. Sunt citite la salvare,
-iar **orice nu este un număr este tratat ca lipsă de valoare** — locul se
-salvează fără poziție și fără avertisment. O latitudine scrisă pe jumătate,
-sau un șir DMS lipit de mână în câmp, se pierde în tăcere. Folosiți
-**Introdu coordonatele** pentru orice nu este deja zecimal și aruncați o
-privire pe câmpuri după salvare dacă le-ați scris chiar dumneavoastră.
+numerice: grade zecimale și metri, nimic altceva. Ca semn zecimal merge
+atât virgula, cât și punctul, așa că `45,359167` este citit ca 45.359167.
+Sunt citite la salvare, iar **orice nu este un număr oprește salvarea**,
+cu un mesaj care numește câmpul: *Latitudinea trebuie să fie un număr între
+-90 și 90*, *Longitudinea trebuie să fie un număr între -180 și 180* sau
+*Altitudinea trebuie să fie un număr*. Poziția salvată rămâne neschimbată
+până corectați câmpul. Un câmp golit intenționat șterge valoarea
+respectivă. Folosiți **Introdu coordonatele** pentru orice nu este deja
+zecimal, cum ar fi DMS sau UTM.
 
 ## Formatul de afișare a coordonatelor
 

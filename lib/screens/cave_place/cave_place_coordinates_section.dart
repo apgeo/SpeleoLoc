@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
+import 'package:speleoloc/screens/cave_place/cave_place_form_utils.dart';
 import 'package:speleoloc/screens/cave_place/coordinate_entry_dialog.dart';
 import 'package:speleoloc/utils/coordinate_formats.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -122,8 +123,8 @@ class CavePlaceCoordinatesSection extends StatelessWidget {
           ListenableBuilder(
             listenable: Listenable.merge([form.lat, form.long]),
             builder: (context, _) {
-              final lat = double.tryParse(form.lat.text.trim());
-              final lng = double.tryParse(form.long.text.trim());
+              final lat = parseCoordinateValue(form.lat.text);
+              final lng = parseCoordinateValue(form.long.text);
               if (lat == null || lng == null) return const SizedBox.shrink();
               return Align(
                 alignment: Alignment.centerLeft,

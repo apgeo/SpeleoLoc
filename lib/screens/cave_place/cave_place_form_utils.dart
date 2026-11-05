@@ -28,6 +28,21 @@ double? parseDepthValue(String input) {
   return double.tryParse(trimmed.replaceAll(',', '.'));
 }
 
+/// Parses a user-entered latitude, longitude or altitude. A decimal comma
+/// counts as a decimal point: a Romanian decimal keypad types one, and a
+/// pasted `45,359167` must not be mistaken for garbage.
+///
+/// Returns `null` for empty or unparseable input; callers tell the two
+/// apart by the text itself, so a cleared field can still clear the column
+/// while a typo blocks the save instead of erasing the stored value.
+/// NaN and infinities are rejected because `double.tryParse` accepts them.
+double? parseCoordinateValue(String input) {
+  final trimmed = input.trim();
+  if (trimmed.isEmpty) return null;
+  final value = double.tryParse(trimmed.replaceAll(',', '.'));
+  return value != null && value.isFinite ? value : null;
+}
+
 /// Input formatter that constrains the depth field to an optionally-negative
 /// number with up to 4 integer digits and 1 decimal digit.
 final TextInputFormatter depthInputFormatter = TextInputFormatter.withFunction((

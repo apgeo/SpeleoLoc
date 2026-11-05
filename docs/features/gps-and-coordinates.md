@@ -138,12 +138,15 @@ The Altitude field is left untouched.
 ### Typing straight into the fields
 
 The Latitude, Longitude and Altitude fields themselves are plain number
-fields: decimal degrees and metres, nothing else. They are read when you
-save, and **anything that is not a number is treated as no value** — the
-place saves with no position and no warning. A half-typed latitude, or a
-DMS string pasted into the field by hand, is silently lost. Use **Enter
-coordinates** for anything that is not already decimal, and glance at
-the fields after saving if you typed them yourself.
+fields: decimal degrees and metres, nothing else. A comma works as the
+decimal mark as well as a dot, so `45,359167` is read as 45.359167. They
+are read when you save, and **anything that is not a number stops the
+save** with a message naming the field: *Latitude must be a number between
+-90 and 90*, *Longitude must be a number between -180 and 180* or
+*Altitude must be a number*. The stored position is left as it was until
+you correct the field. A field you empty on purpose clears that value.
+Use **Enter coordinates** for anything that is not already decimal, such
+as DMS or UTM.
 
 ## Coordinate display format
 
