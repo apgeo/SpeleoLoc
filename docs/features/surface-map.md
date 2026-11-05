@@ -305,6 +305,13 @@ Two independent mechanisms:
   [Using offline MBTiles layers](../workflows/mbtiles-layers.md) for how
   to produce and install one.
 
+When an online base map cannot load several tiles in a row (no signal and
+nothing cached for the area), a banner under the toolbar says *Map tiles
+could not be loaded. You may be offline…*. **Map settings** opens
+Settings → Map, and the close button hides the banner until you pick
+another base map. Without it, the map would simply show its empty
+background.
+
 ## Settings → Map
 
 | Row | What it does |

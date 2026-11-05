@@ -9,6 +9,7 @@ import 'package:speleoloc/services/map/map_mbtiles_config.dart';
 import 'package:speleoloc/services/map/mbtiles_isolate_reader.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
 import 'package:speleoloc/services/map/tile_disk_cache.dart';
+import 'package:speleoloc/services/map/tile_failure_monitor.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
@@ -25,8 +26,10 @@ class CaveMapLayersController extends ChangeNotifier {
   CaveMapLayersController({
     required IConfigurationRepository configRepository,
     required Future<List<MbTilesDescriptor>> Function() scanMbTiles,
+    TileFailureMonitor? tileFailures,
   }) : _configRepository = configRepository,
-       _scanMbTiles = scanMbTiles;
+       _scanMbTiles = scanMbTiles,
+       _tileFailures = tileFailures ?? TileFailureMonitor();
 
   static const String _userAgentPackageName = 'com.example.speleoloc';
 
@@ -42,6 +45,9 @@ class CaveMapLayersController extends ChangeNotifier {
   final Set<String> _readerOpensInFlight = {};
   bool _disposed = false;
   bool _tileCacheEnabled = true;
+  final TileFailureMonitor _tileFailures;
+  bool _tilesUnavailable = false;
+  bool _tilesNoticeDismissed = false;
 
   /// Disk cache for the online sources, injected by the page after the
   /// async directory lookup. Null (or the setting being off) falls back
@@ -54,6 +60,29 @@ class CaveMapLayersController extends ChangeNotifier {
   double? lastZoom;
 
   String get baseId => _baseId;
+
+  /// True once the online base map has failed to load a screenful of tiles
+  /// (no connection, nothing cached) and the caver has not dismissed the
+  /// notice. A blank map otherwise looks the same as one still loading.
+  bool get tilesNoticeVisible => _tilesUnavailable && !_tilesNoticeDismissed;
+
+  void dismissTilesNotice() {
+    _tilesNoticeDismissed = true;
+    notifyListeners();
+  }
+
+  void _onTileError(TileImage tile, Object error, StackTrace? stackTrace) {
+    if (_disposed || !_tileFailures.record() || _tilesUnavailable) return;
+    _tilesUnavailable = true;
+    notifyListeners();
+  }
+
+  void _resetTilesNotice() {
+    _tileFailures.reset();
+    _tilesUnavailable = false;
+    _tilesNoticeDismissed = false;
+  }
+
   Set<String> get enabledOverlays => _enabledOverlays;
 
   List<MbTilesDescriptor> get baseDescriptors => [
@@ -119,6 +148,7 @@ class CaveMapLayersController extends ChangeNotifier {
 
   void selectBase(String id) {
     _baseId = id;
+    _resetTilesNotice();
     notifyListeners();
     unawaited(savePrefs());
   }
@@ -200,6 +230,7 @@ class CaveMapLayersController extends ChangeNotifier {
       subdomains: source.subdomains,
       maxNativeZoom: source.maxNativeZoom,
       userAgentPackageName: _userAgentPackageName,
+      errorTileCallback: _onTileError,
       tileProvider: (_tileCacheEnabled && cache != null)
           ? CachedNetworkTileProvider(sourceId: source.id, cache: cache)
           // flutter_map's own default, retries included, on the shared

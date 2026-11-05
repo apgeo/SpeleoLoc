@@ -23,8 +23,10 @@ import 'package:speleoloc/screens/cave_map/cave_map_place_info_card.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_item.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_place_list_panel.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_prompts.dart';
+import 'package:speleoloc/screens/cave_map/cave_map_tiles_notice.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_toolbar.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
+import 'package:speleoloc/screens/settings/settings_map_page.dart';
 import 'package:speleoloc/services/location/gps_averaging_session.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/services/map/place_label_resolver.dart';
@@ -662,9 +664,7 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                         selectedUuid: _map.selectedUuid,
                         onTap: _onMarkerTap,
                         onClusterTap: _onClusterTap,
-                        pendingPoint: _placement != null
-                            ? _pendingPoint
-                            : null,
+                        pendingPoint: _placement != null ? _pendingPoint : null,
                         onPendingDragged: (point) {
                           unawaited(_stopAveraging());
                           setState(() => _pendingPoint = point);
@@ -712,6 +712,11 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
                       ? null
                       : () => unawaited(_openAddMenu()),
                 ),
+                if (_layers.tilesNoticeVisible)
+                  CaveMapTilesNotice(
+                    onOpenMapSettings: () => unawaited(_openMapSettings()),
+                    onDismiss: _layers.dismissTilesNotice,
+                  ),
                 Expanded(
                   child: _panel == CaveMapPanel.none
                       ? const IgnorePointer(child: SizedBox.expand())
@@ -733,6 +738,16 @@ class _CaveMapPageState extends ConsumerState<CaveMapPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _openMapSettings() async {
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const SettingsMapPage()));
+    if (!mounted) return;
+    // Files added there should show up in the layer picker straight away.
+    await _layers.load();
+    if (mounted) setState(() {});
   }
 
   Widget _buildPanel() {

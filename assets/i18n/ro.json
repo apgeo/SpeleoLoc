@@ -1519,6 +1519,8 @@
   "map_tile_cache_size": "Cache-ul de hartă",
   "map_tile_cache_clear": "Golește cache-ul de hartă",
   "map_tile_cache_cleared": "Cache-ul de hartă a fost golit",
+  "map_tiles_unavailable": "Dalele hărții nu s-au putut încărca. Este posibil să fiți fără conexiune; un fișier de hartă adăugat în setările hărții funcționează fără conexiune.",
+  "map_tiles_open_settings": "Setări hartă",
   "transfer_export_places": "Exportă punctele (GPX/KML)",
   "transfer_import_places": "Importă puncte (GPX/KML)",
   "transfer_format_gpx_desc": "Puncte de traseu pentru Garmin, Locus, QGIS",

@@ -1520,6 +1520,8 @@
   "map_tile_cache_size": "Tile cache",
   "map_tile_cache_clear": "Clear tile cache",
   "map_tile_cache_cleared": "Tile cache cleared",
+  "map_tiles_unavailable": "Map tiles could not be loaded. You may be offline; a map file added in Map settings works without a connection.",
+  "map_tiles_open_settings": "Map settings",
   "transfer_export_places": "Export places (GPX/KML)",
   "transfer_import_places": "Import places (GPX/KML)",
   "transfer_format_gpx_desc": "Waypoints for Garmin, Locus, QGIS",
