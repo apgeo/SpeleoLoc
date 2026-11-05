@@ -872,28 +872,24 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     return '';
   }
 
+  /// Every tap on the map is resolved here; markers take none of their own.
+  /// A tap that defines a point is a position whatever it lands near, and a
+  /// tap that selects picks the nearest point rather than whichever marker
+  /// happens to be drawn on top.
   Future<void> _onImageTap(
     TapUpDetails details,
     PhotoViewControllerValue controllerValue,
   ) async {
-    if (widget.isReadonly) return;
-
     final pos = details.localPosition;
-    final offset = controllerValue.position;
-    final scale = controllerValue.scale ?? 1.0;
-
-    final rawX = (pos.dx - offset.dx) / scale;
-    final rawY = (pos.dy - offset.dy) / scale;
+    if (widget.isReadonly) {
+      await _selectNearestPlace(pos, controllerValue);
+      return;
+    }
 
     // When waiting for a new-cave-place tap, capture coordinates,
     // open popup, and auto-save the definition.
     if (_waitingForNewCavePlaceTap) {
-      final imgW = (_img?.width ?? _naturalImgW)?.toDouble();
-      final imgH = (_img?.height ?? _naturalImgH)?.toDouble();
-      final mxX = (imgW != null && imgW > 0) ? (imgW - 1.0) : double.infinity;
-      final mxY = (imgH != null && imgH > 0) ? (imgH - 1.0) : double.infinity;
-      final cx = rawX.clamp(0.0, mxX);
-      final cy = rawY.clamp(0.0, mxY);
+      final point = _imagePointAt(pos, controllerValue);
       setState(() => _waitingForNewCavePlaceTap = false);
 
       if (widget.caveUuid == null) return;
@@ -907,8 +903,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
           await widget.onAutoSaveRequested!(
             newId,
             widget.selectedRasterMapUuid!,
-            cx,
-            cy,
+            point.dx,
+            point.dy,
           );
         }
         SnackBarService.showSuccess(
@@ -929,62 +925,76 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       return;
     }
 
-    // When in "select place" tap mode, find the closest existing marker
-    // if the tap is within a threshold distance and select it instead of
-    // defining a new point.
     if (!_tapDefinesNewPoint) {
-      const double hitThreshold = RasterMapEditorConstants.markerHitThreshold;
-      CavePlaceWithDefinition? nearest;
-      double nearestDist = double.infinity;
-      for (final cpwd in widget.cavePlacesWithDefinitions) {
-        final def = cpwd.definition;
-        if (def == null || def.xCoordinate == null || def.yCoordinate == null)
-          continue;
-        final vp = _imageToViewportCoordinates(
-          def.xCoordinate!.toDouble(),
-          def.yCoordinate!.toDouble(),
-          controllerValue,
-        );
-        final dist = (vp - pos).distance;
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearest = cpwd;
-        }
-      }
-      if (nearest != null && nearestDist <= hitThreshold) {
-        _startPulseAtImagePoint(
-          nearest.definition!.xCoordinate!.toDouble(),
-          nearest.definition!.yCoordinate!.toDouble(),
-        );
-        await _handleNavCavePlaceSelected(nearest, notifyMarkerTap: true);
-        _effectiveNavBarState?.setSelectedPlaceId(nearest.cavePlace.uuid);
-      }
+      await _selectNearestPlace(pos, controllerValue);
       return;
     }
 
-    final imgWidth = (_img?.width ?? _naturalImgW)?.toDouble();
-    final imgHeight = (_img?.height ?? _naturalImgH)?.toDouble();
-
-    final maxX = (imgWidth != null && imgWidth > 0)
-        ? (imgWidth - 1.0)
-        : double.infinity;
-    final maxY = (imgHeight != null && imgHeight > 0)
-        ? (imgHeight - 1.0)
-        : double.infinity;
-
-    final clampedX = rawX.clamp(0.0, maxX);
-    final clampedY = rawY.clamp(0.0, maxY);
+    final point = _imagePointAt(pos, controllerValue);
 
     // mark that user explicitly selected a new point — used to control
     // whether the blue+orange 'new' marker is displayed.
     _userHasSelectedNewPoint = true;
 
     setState(() {
-      _imageSelectedX = clampedX;
-      _imageSelectedY = clampedY;
+      _imageSelectedX = point.dx;
+      _imageSelectedY = point.dy;
     });
 
     widget.onImagePointChanged?.call(_imageSelectedX!, _imageSelectedY!);
+  }
+
+  /// The picture pixel under viewport position [pos], clamped to the
+  /// picture.
+  Offset _imagePointAt(Offset pos, PhotoViewControllerValue controllerValue) {
+    final scale = controllerValue.scale ?? 1.0;
+    final rawX = (pos.dx - controllerValue.position.dx) / scale;
+    final rawY = (pos.dy - controllerValue.position.dy) / scale;
+    final imgW = (_img?.width ?? _naturalImgW)?.toDouble();
+    final imgH = (_img?.height ?? _naturalImgH)?.toDouble();
+    final maxX = (imgW != null && imgW > 0) ? (imgW - 1.0) : double.infinity;
+    final maxY = (imgH != null && imgH > 0) ? (imgH - 1.0) : double.infinity;
+    return Offset(rawX.clamp(0.0, maxX), rawY.clamp(0.0, maxY));
+  }
+
+  /// Selects the shown place whose point is nearest to [pos], if one is
+  /// within reach. Places a filter leaves out, hidden or faded, are not
+  /// selectable.
+  Future<void> _selectNearestPlace(
+    Offset pos,
+    PhotoViewControllerValue controllerValue,
+  ) async {
+    if (controllerValue.scale == null) return;
+    final visible = _visiblePlaceUuids;
+    CavePlaceWithDefinition? nearest;
+    double nearestDist = double.infinity;
+    for (final cpwd in widget.cavePlacesWithDefinitions) {
+      final def = cpwd.definition;
+      if (def == null || def.xCoordinate == null || def.yCoordinate == null) {
+        continue;
+      }
+      if (visible != null && !visible.contains(cpwd.cavePlace.uuid)) continue;
+      final vp = _imageToViewportCoordinates(
+        def.xCoordinate!.toDouble(),
+        def.yCoordinate!.toDouble(),
+        controllerValue,
+      );
+      final dist = (vp - pos).distance;
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = cpwd;
+      }
+    }
+    if (nearest == null ||
+        nearestDist > RasterMapEditorConstants.markerHitThreshold) {
+      return;
+    }
+    _startPulseAtImagePoint(
+      nearest.definition!.xCoordinate!.toDouble(),
+      nearest.definition!.yCoordinate!.toDouble(),
+    );
+    await _handleNavCavePlaceSelected(nearest, notifyMarkerTap: true);
+    _effectiveNavBarState?.setSelectedPlaceId(nearest.cavePlace.uuid);
   }
 
   @override
@@ -1995,17 +2005,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                               outlineEnabled: outlineEnabled,
                               outlineWidth: outlineWidth,
                               bgEnabled: bgEnabled,
-                              onTap: (cpwd) async {
-                                final def = cpwd.definition!;
-                                _startPulseAtImagePoint(
-                                  (def.xCoordinate ?? 0).toDouble(),
-                                  (def.yCoordinate ?? 0).toDouble(),
-                                );
-                                await _handleNavCavePlaceSelected(
-                                  cpwd,
-                                  notifyMarkerTap: true,
-                                );
-                              },
                               onLongPress: _showLongTapToast,
                             ),
                           );

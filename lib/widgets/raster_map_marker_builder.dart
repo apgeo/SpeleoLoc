@@ -112,6 +112,11 @@ class RasterMapMarkerBuilder {
   /// Build overlay widgets for existing cave-place definition markers (red dots
   /// + labels), skipping "special" points that get their own distinct markers.
   ///
+  /// A marker answers a long press only. Taps are left to the editor, which
+  /// reads them as a position in define mode and picks the nearest point
+  /// otherwise; a tap box per marker would take a tap meant as a position
+  /// and, where boxes overlap, pick whichever is drawn on top.
+  ///
   /// When [visiblePlaceUuids] is non-null a filter is active:
   ///   • [fadeFilteredMarkers] = true (default): filtered-out places are
   ///     rendered as a faded dot at 25 % opacity with no label and no gesture
@@ -135,7 +140,6 @@ class RasterMapMarkerBuilder {
     required bool outlineEnabled,
     required double outlineWidth,
     required bool bgEnabled,
-    required Future<void> Function(CavePlaceWithDefinition cpwd) onTap,
     required void Function(String title) onLongPress,
   }) {
     final List<Widget> widgets = [];
@@ -198,7 +202,6 @@ class RasterMapMarkerBuilder {
             top: viewportPos.dy - (_redDotBox / 2),
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () => onTap(cpwd),
               onLongPress: () => onLongPress(cpwd.cavePlace.title),
               child: Container(
                 width: _redDotBox,
@@ -217,14 +220,13 @@ class RasterMapMarkerBuilder {
           ),
         );
       } else {
-        // Transparent hit-test area for special points
+        // Transparent hold area for special points
         widgets.add(
           Positioned(
             left: viewportPos.dx - (_redDotBox / 2),
             top: viewportPos.dy - (_redDotBox / 2),
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () => onTap(cpwd),
               onLongPress: () => onLongPress(cpwd.cavePlace.title),
               child: const SizedBox(width: _redDotBox, height: _redDotBox),
             ),

@@ -75,7 +75,6 @@ void main() {
     outlineEnabled: false,
     outlineWidth: 2,
     bgEnabled: false,
-    onTap: (_) async {},
     onLongPress: (_) {},
   );
 
