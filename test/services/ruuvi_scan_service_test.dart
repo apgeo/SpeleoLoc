@@ -56,4 +56,12 @@ void main() {
     expect(sightings.single.seenAt, heardAt);
     await sub.cancel();
   });
+
+  test('scans only for Ruuvi manufacturer data', () async {
+    final sub = ruuvi.sightings.listen((_) {});
+    await _settle();
+
+    expect(platform.currentFilter, [ruuviCompanyId]);
+    await sub.cancel();
+  });
 }

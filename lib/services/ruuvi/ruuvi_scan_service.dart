@@ -52,10 +52,11 @@ class RuuviScanService {
   Stream<RuuviSighting> get sightings => _controller.stream;
 
   void _start() {
-    _scanSub ??= _scan.advertisements().listen(
-      _onAdvertisement,
-      onError: _controller.addError,
-    );
+    // Android 8.1+ delivers nothing to an unfiltered scan while the screen
+    // is off, which is where background detection runs.
+    _scanSub ??= _scan
+        .advertisements(manufacturerIds: const {ruuviCompanyId})
+        .listen(_onAdvertisement, onError: _controller.addError);
   }
 
   void _onAdvertisement(fbp.ScanResult r) {
