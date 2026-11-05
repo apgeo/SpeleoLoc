@@ -13,6 +13,7 @@ import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
+import 'package:speleoloc/services/beacon/shared_beacon_ranging.dart';
 import 'package:speleoloc/services/location/last_located_place.dart';
 import 'package:speleoloc/services/map/best_raster_map_finder.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
@@ -410,7 +411,10 @@ class BeaconDetectionService {
       (state) {
         if (state != BluetoothState.stateOn || !_running) return;
         unawaited(
-          _resubscribeRanging().catchError((Object e, StackTrace st) {
+          _resubscribeRanging(restartNative: true).catchError((
+            Object e,
+            StackTrace st,
+          ) {
             _log.warning('Ranging restart on Bluetooth-on failed', e, st);
           }),
         );
@@ -420,7 +424,7 @@ class BeaconDetectionService {
     );
   }
 
-  Future<void> _resubscribeRanging() async {
+  Future<void> _resubscribeRanging({bool restartNative = false}) async {
     final uuids = {
       ...await BeaconScanHelper.loadRegionUuids(),
       ..._registeredProximityUuids,
@@ -429,11 +433,17 @@ class BeaconDetectionService {
     _rangingSub = null;
     if (!_running) return;
     _listenRanging(uuids);
+    // Another screen may hold the shared ranging open, so re-listening
+    // alone would not restart it.
+    if (restartNative) await SharedBeaconRanging.instance.restart();
   }
 
+  /// Through the shared ranging, never the plugin directly: a second
+  /// direct listener (the picker, Beacon Lab) would take the plugin's one
+  /// ranging channel over and end detection's ranging when it closed.
   void _listenRanging(List<String> uuids) {
-    _rangingSub = flutterBeacon
-        .ranging(BeaconScanHelper.buildRegions(uuids))
+    _rangingSub = SharedBeaconRanging.instance
+        .ranging(uuids)
         .listen(
           _onRangingResult,
           onError: (Object e, StackTrace st) =>

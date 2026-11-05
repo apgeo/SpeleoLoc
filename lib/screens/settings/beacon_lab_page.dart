@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
+import 'package:speleoloc/services/beacon/shared_beacon_ranging.dart';
 import 'package:speleoloc/services/beacon/bp1003_advertisement_parser.dart';
 import 'package:speleoloc/services/beacon/shared_ble_scan.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
@@ -184,10 +185,10 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     // Disposed during init: subscribing now would leak past _stopRanging.
     if (!mounted) return;
 
-    final regions = BeaconScanHelper.buildRegions(_regionUuids);
-
-    _rangingSub = flutterBeacon
-        .ranging(regions)
+    // Shared with detection, which must keep ranging after the Lab stops.
+    // Results for detection's regions show up here too.
+    _rangingSub = SharedBeaconRanging.instance
+        .ranging(_regionUuids)
         .listen(
           (result) {
             final now = DateTime.now();
