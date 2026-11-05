@@ -647,6 +647,7 @@ class _RasterMapPlaceSelectorPageState
     onAutoSaveRequested: readonly ? null : _handleAutoSaveRequested,
     onRemoveDefinitionRequested: readonly ? null : _handleRemoveDefinition,
     onSaveDefinitionRequested: readonly ? null : _definePlace,
+    onSavePointRequested: readonly ? null : _saveDefinition,
     caveUuid: widget.rasterMap.caveUuid,
     caveAreaTitles: _caveAreaTitles,
     groupPlacesByCaveArea: _cavePlaceSortOption.groupByCaveArea,
