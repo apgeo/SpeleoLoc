@@ -139,7 +139,7 @@ class DocumentationFileHelper {
     ImageCompressionSettings settings,
   ) async {
     final file = File(info.absolutePath);
-    final compressed = ImageCompressor.compressBytes(
+    final compressed = await ImageCompressor.compressInBackground(
       await file.readAsBytes(),
       settings,
     );
