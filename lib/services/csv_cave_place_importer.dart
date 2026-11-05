@@ -2,6 +2,7 @@ import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/csv_cave_place_import_snapshot.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -45,11 +46,16 @@ class CSVCavePlaceImportRow {
   final String? qrCode;
   final String? caveArea;
 
+  /// The row's position in the file, the header being row 1, so issues can
+  /// point the user at it; null for rows not read from a file.
+  final int? lineNumber;
+
   CSVCavePlaceImportRow({
     this.caveName,
     this.cavePlaceName,
     this.qrCode,
     this.caveArea,
+    this.lineNumber,
   });
 
   @override
@@ -72,22 +78,72 @@ class CavePlaceExistingMatch {
   });
 }
 
+/// Why a row was not imported as written.
+enum CSVCavePlaceRowIssueKind {
+  /// Several caves carry the row's cave name; the row was skipped.
+  caveAmbiguous,
+
+  /// Several places of the cave carry the row's place name and the row's
+  /// area does not pick one; the row was skipped.
+  placeAmbiguous,
+
+  /// Another place of the cave holds the row's code and the user chose to
+  /// leave it there; the row's place was written without the code.
+  qrCodeTaken,
+
+  /// An earlier row of the file gave the code to another place; the row's
+  /// place was written without it.
+  qrCodeRepeated,
+}
+
+/// One row the import could not apply as written.
+class CSVCavePlaceRowIssue {
+  final CSVCavePlaceRowIssueKind kind;
+  final CSVCavePlaceImportRow row;
+
+  /// The place that keeps the row's code, for the code issues.
+  final String? holderTitle;
+
+  CSVCavePlaceRowIssue(this.kind, this.row, {this.holderTitle});
+
+  int? get lineNumber => row.lineNumber;
+  String? get caveName => row.caveName;
+  String? get placeName => row.cavePlaceName;
+  String? get qrCode => row.qrCode;
+}
+
 /// Result of an import operation.
 class CSVCavePlaceImportResult {
   final int cavesCreated;
   final int cavePlacesCreated;
   final int caveAreasCreated;
+
+  /// Codes written onto places that already existed.
   final int qrCodesUpdated;
+
+  /// Codes taken away from places because the user chose to overwrite.
+  final int qrCodesCleared;
+
+  final List<CSVCavePlaceRowIssue> issues;
 
   CSVCavePlaceImportResult({
     required this.cavesCreated,
     required this.cavePlacesCreated,
     required this.caveAreasCreated,
     required this.qrCodesUpdated,
+    this.qrCodesCleared = 0,
+    this.issues = const [],
   });
 }
 
 /// Helper class for importing cave place data from CSV files.
+///
+/// The duplicate preview ([findExistingCombinations]), the code-conflict
+/// check ([findQrCodeConflicts]) and the import ([importRows]) resolve
+/// caves, places and code holders through one [CavePlaceImportSnapshot],
+/// so the questions asked before the import describe what it will do. A
+/// row that names more than one cave or place is reported rather than
+/// guessed at.
 ///
 /// Every row written is logged in the change log like a repository write:
 /// the log is what the FTP upload gate and the change history read, so an
@@ -176,117 +232,48 @@ class CSVCavePlaceImporter {
           cavePlaceName: cavePlaceName,
           qrCode: qrCode,
           caveArea: caveArea,
+          lineNumber: i + 1,
         ),
       );
     }
     return rows;
   }
 
-  /// Find existing combinations of (cave name, cave area, cave place) that already
-  /// exist in the database, matching the CSV rows.
-  /// In single-cave mode, only cave place name is matched within the specified cave.
-  /// Returns the list of matches and the total count.
+  /// Find the places already in the database that the CSV rows will update.
+  /// Rows naming several caves or places match nothing here; the import
+  /// reports them instead.
   Future<({List<CavePlaceExistingMatch> matches, int totalCount})>
   findExistingCombinations(
     List<CSVCavePlaceImportRow> rows,
     CSVCavePlacesImportConfig config,
   ) async {
-    final List<CavePlaceExistingMatch> allMatches = [];
-
-    if (config.isMultipleCaveMode) {
-      // Multiple cave mode: match cave name + cave area + cave place
-      final caves = await _database.select(_database.caves).get();
-      final caveMap = {for (var c in caves) c.title.toLowerCase(): c};
-
-      final areas = await _database.select(_database.caveAreas).get();
-      // Map: caveUuid -> (areaTitle.lowercase -> CaveArea)
-      final areaMap = <Uuid, Map<String, CaveArea>>{};
-      for (var a in areas) {
-        areaMap.putIfAbsent(a.caveUuid, () => {});
-        areaMap[a.caveUuid]![a.title.toLowerCase()] = a;
-      }
-
-      final places = await _database.select(_database.cavePlaces).get();
-      // Map: caveUuid -> (placeTitle.lowercase -> list of CavePlace)
-      final placeMap = <Uuid, Map<String, List<CavePlace>>>{};
-      for (var p in places) {
-        placeMap.putIfAbsent(p.caveUuid, () => {});
-        placeMap[p.caveUuid]!.putIfAbsent(p.title.toLowerCase(), () => []);
-        placeMap[p.caveUuid]![p.title.toLowerCase()]!.add(p);
-      }
-
-      for (final row in rows) {
-        if (row.caveName == null) continue;
-        final cave = caveMap[row.caveName!.toLowerCase()];
-        if (cave == null) continue;
-
-        // Check area match if area column is mapped
-        if (row.caveArea != null && config.caveAreaColumn != null) {
-          final caveAreas = areaMap[cave.uuid];
-          if (caveAreas != null &&
-              caveAreas.containsKey(row.caveArea!.toLowerCase())) {
-            // area exists
-          }
-        }
-
-        // Check place match
-        final cavePlaces = placeMap[cave.uuid];
-        if (cavePlaces != null && row.cavePlaceName != null) {
-          final matchingPlaces = cavePlaces[row.cavePlaceName!.toLowerCase()];
-          if (matchingPlaces != null && matchingPlaces.isNotEmpty) {
-            for (final mp in matchingPlaces) {
-              allMatches.add(
-                CavePlaceExistingMatch(
-                  caveName: cave.title,
-                  cavePlaceName: mp.title,
-                  caveArea: row.caveArea,
-                  existingQrCode: mp.placeCodeIdentifier,
-                ),
-              );
-            }
-          }
-        }
-      }
-    } else {
-      // Single cave mode: match cave place within the specified cave
-      final cavePlaces = await (_database.select(
-        _database.cavePlaces,
-      )..where((cp) => cp.caveUuid.equalsValue(config.caveUuid!))).get();
-      final placeMap = <String, List<CavePlace>>{};
-      for (var p in cavePlaces) {
-        placeMap.putIfAbsent(p.title.toLowerCase(), () => []);
-        placeMap[p.title.toLowerCase()]!.add(p);
-      }
-
-      // Get cave name for display
-      final cave = await (_database.select(
-        _database.caves,
-      )..where((c) => c.uuid.equalsValue(config.caveUuid!))).getSingleOrNull();
-      final caveName = cave?.title ?? '';
-
-      for (final row in rows) {
-        if (row.cavePlaceName == null) continue;
-        final matchingPlaces = placeMap[row.cavePlaceName!.toLowerCase()];
-        if (matchingPlaces != null && matchingPlaces.isNotEmpty) {
-          for (final mp in matchingPlaces) {
-            allMatches.add(
-              CavePlaceExistingMatch(
-                caveName: caveName,
-                cavePlaceName: mp.title,
-                caveArea: row.caveArea,
-                existingQrCode: mp.placeCodeIdentifier,
-              ),
-            );
-          }
-        }
-      }
+    final snapshot = await CavePlaceImportSnapshot.load(
+      _database,
+      caveUuid: config.caveUuid,
+    );
+    final matches = <CavePlaceExistingMatch>[];
+    for (final row in rows) {
+      final caveUuid = _existingCave(row, config, snapshot).match;
+      if (caveUuid == null || row.cavePlaceName == null) continue;
+      final place = _placeFor(snapshot, caveUuid, row).match;
+      if (place == null) continue;
+      matches.add(
+        CavePlaceExistingMatch(
+          caveName: snapshot.caveTitleOf(caveUuid) ?? '',
+          cavePlaceName: place.title,
+          caveArea: row.caveArea,
+          existingQrCode: place.placeCode,
+        ),
+      );
     }
-
-    return (matches: allMatches, totalCount: allMatches.length);
+    return (matches: matches, totalCount: matches.length);
   }
 
-  /// Find rows where the CSV has a QR code that already exists in the database
-  /// on a *different* cave place or a matching place that already has a different QR.
+  /// Find the places whose code the import would replace if the user
+  /// chooses to overwrite: other places of a row's cave holding the row's
+  /// code, and places the row matches that already hold a different code.
+  /// Codes repeat legitimately across caves, so only the row's own cave
+  /// counts.
   Future<List<CavePlaceExistingMatch>> findQrCodeConflicts(
     List<CSVCavePlaceImportRow> rows,
     CSVCavePlacesImportConfig config,
@@ -294,35 +281,48 @@ class CSVCavePlaceImporter {
     final conflicts = <CavePlaceExistingMatch>[];
     if (config.qrCodeColumn == null) return conflicts;
 
+    final snapshot = await CavePlaceImportSnapshot.load(
+      _database,
+      caveUuid: config.caveUuid,
+    );
+    final listed = <Uuid>{};
+    void add(Uuid caveUuid, PlaceSnapshotEntry place) {
+      if (!listed.add(place.uuid)) return;
+      conflicts.add(
+        CavePlaceExistingMatch(
+          caveName: snapshot.caveTitleOf(caveUuid) ?? '',
+          cavePlaceName: place.title,
+          existingQrCode: place.placeCode,
+        ),
+      );
+    }
+
     for (final row in rows) {
-      if (row.qrCode == null) continue;
-      final existing =
-          await (_database.select(_database.cavePlaces)
-                ..where((cp) => cp.placeCodeIdentifier.equals(row.qrCode!)))
-              .getSingleOrNull();
-      if (existing != null) {
-        // Determine the cave name for display
-        String caveName = '';
-        final cave =
-            await (_database.select(_database.caves)
-                  ..where((c) => c.uuid.equalsValue(existing.caveUuid)))
-                .getSingleOrNull();
-        caveName = cave?.title ?? '';
-        conflicts.add(
-          CavePlaceExistingMatch(
-            caveName: caveName,
-            cavePlaceName: existing.title,
-            caveArea: null,
-            existingQrCode: existing.placeCodeIdentifier,
-          ),
-        );
+      final code = row.qrCode;
+      if (code == null || row.cavePlaceName == null) continue;
+      final caveUuid = _existingCave(row, config, snapshot).match;
+      if (caveUuid == null) continue;
+      final resolved = _placeFor(snapshot, caveUuid, row);
+      if (resolved.ambiguous) continue;
+      final place = resolved.match;
+      for (final holder in snapshot.holdersOf(caveUuid, code, except: place)) {
+        add(caveUuid, holder);
+      }
+      if (place != null && place.placeCode != null && place.placeCode != code) {
+        add(caveUuid, place);
       }
     }
     return conflicts;
   }
 
   /// Perform the actual import.
-  /// [overwriteQr] — if true, existing QR codes will be overwritten.
+  ///
+  /// [overwriteQr] answers the code-conflict question: true gives each row's
+  /// place the file's code and takes it away from any other place of the
+  /// cave holding it; false leaves every code where it is, so a place whose
+  /// code is held elsewhere is written without one. A code no place of the
+  /// cave holds is written either way, as is a code onto a place that has
+  /// none. The first row of the file to name a code keeps it.
   Future<CSVCavePlaceImportResult> importRows(
     List<CSVCavePlaceImportRow> rows,
     CSVCavePlacesImportConfig config, {
@@ -333,160 +333,136 @@ class CSVCavePlaceImporter {
       int cavePlacesCreated = 0;
       int caveAreasCreated = 0;
       int qrCodesUpdated = 0;
+      int qrCodesCleared = 0;
+      final issues = <CSVCavePlaceRowIssue>[];
 
-      // Caches to avoid duplicate DB lookups / inserts within one import
-      final caveCache = <String, Uuid>{}; // title.lower -> uuid
-      final areaCache = <String, Uuid>{}; // "caveUuid:areaTitle.lower" -> uuid
-
-      // Pre-populate caches from DB
-      final existingCaves = await _database.select(_database.caves).get();
-      for (var c in existingCaves) {
-        caveCache[c.title.toLowerCase()] = c.uuid;
-      }
-      final existingAreas = await _database.select(_database.caveAreas).get();
-      for (var a in existingAreas) {
-        areaCache['${a.caveUuid}:${a.title.toLowerCase()}'] = a.uuid;
-      }
+      // Kept in step with every write below, so later rows see this run's
+      // own caves, areas, places and codes.
+      final snapshot = await CavePlaceImportSnapshot.load(
+        _database,
+        caveUuid: config.caveUuid,
+      );
+      // Place given each "cave|code" by an earlier row of this file.
+      final claimedBy = <String, PlaceSnapshotEntry>{};
+      final author = await _currentUser.currentOrSystem();
 
       for (final row in rows) {
-        if (row.cavePlaceName == null || row.cavePlaceName!.isEmpty) continue;
-
+        final title = row.cavePlaceName;
+        if (title == null || title.isEmpty) continue;
         final now = _clock.nowMs();
-        final author = await _currentUser.currentOrSystem();
 
-        Uuid? targetCaveUuid = config.caveUuid;
-
-        // In multiple cave mode, resolve or create the cave
-        if (config.isMultipleCaveMode) {
-          if (row.caveName == null || row.caveName!.isEmpty) continue;
-          final caveKey = row.caveName!.toLowerCase();
-          if (caveCache.containsKey(caveKey)) {
-            targetCaveUuid = caveCache[caveKey]!;
-          } else {
-            // Create new cave
-            final newUuid = Uuid.v7();
-            await _database
-                .into(_database.caves)
-                .insert(
-                  CavesCompanion.insert(
-                    uuid: newUuid,
-                    title: row.caveName!,
-                    createdAt: Value(now),
-                    updatedAt: Value(now),
-                    createdByUserUuid: Value(author),
-                    lastModifiedByUserUuid: Value(author),
-                  ),
-                );
-            await _logger.logInsert('caves', newUuid);
-            caveCache[caveKey] = newUuid;
-            targetCaveUuid = newUuid;
-            cavesCreated++;
+        final cave = _existingCave(row, config, snapshot);
+        if (cave.ambiguous) {
+          issues.add(
+            CSVCavePlaceRowIssue(CSVCavePlaceRowIssueKind.caveAmbiguous, row),
+          );
+          continue;
+        }
+        var caveUuid = cave.match;
+        if (caveUuid == null) {
+          final caveName = row.caveName;
+          if (!config.isMultipleCaveMode ||
+              caveName == null ||
+              caveName.isEmpty) {
+            continue;
           }
+          caveUuid = await _createCave(caveName, now, author, snapshot);
+          cavesCreated++;
         }
 
-        if (targetCaveUuid == null) continue;
+        final resolved = _placeFor(snapshot, caveUuid, row);
+        if (resolved.ambiguous) {
+          issues.add(
+            CSVCavePlaceRowIssue(CSVCavePlaceRowIssueKind.placeAmbiguous, row),
+          );
+          continue;
+        }
 
-        // Resolve or create cave area if mapped
-        Uuid? targetAreaUuid;
-        if (row.caveArea != null && row.caveArea!.isNotEmpty) {
-          final areaKey = '$targetCaveUuid:${row.caveArea!.toLowerCase()}';
-          if (areaCache.containsKey(areaKey)) {
-            targetAreaUuid = areaCache[areaKey]!;
-          } else {
-            final newUuid = Uuid.v7();
-            await _database
-                .into(_database.caveAreas)
-                .insert(
-                  CaveAreasCompanion.insert(
-                    uuid: newUuid,
-                    title: row.caveArea!,
-                    caveUuid: targetCaveUuid,
-                    createdAt: Value(now),
-                    updatedAt: Value(now),
-                    createdByUserUuid: Value(author),
-                    lastModifiedByUserUuid: Value(author),
-                  ),
-                );
-            await _logger.logInsert('cave_areas', newUuid);
-            areaCache[areaKey] = newUuid;
-            targetAreaUuid = newUuid;
+        final areaTitle = _areaTitle(row);
+        Uuid? areaUuid;
+        if (areaTitle != null) {
+          areaUuid = snapshot.areaOf(caveUuid, areaTitle);
+          if (areaUuid == null) {
+            areaUuid = await _createArea(
+              caveUuid,
+              areaTitle,
+              now,
+              author,
+              snapshot,
+            );
             caveAreasCreated++;
           }
         }
 
-        // Check if a cave place with same title already exists in this cave
-        final existingPlace =
-            await (_database.select(_database.cavePlaces)..where(
-                  (cp) =>
-                      cp.caveUuid.equalsValue(targetCaveUuid!) &
-                      cp.title.equals(row.cavePlaceName!),
-                ))
-                .getSingleOrNull();
-
-        if (existingPlace != null) {
-          // Update PCI if configured and allowed
-          if (row.qrCode != null && config.qrCodeColumn != null) {
-            if (existingPlace.placeCodeIdentifier != row.qrCode &&
-                overwriteQr) {
-              final patch = await _placeCodeService.applyPciToCompanion(
-                CavePlacesCompanion(
-                  placeCodeIdentifier: Value(row.qrCode),
-                  updatedAt: Value(now),
-                  lastModifiedByUserUuid: Value(author),
-                ),
-                cavePlaceUuid: existingPlace.uuid,
-              );
-              await (_database.update(_database.cavePlaces)
-                    ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
-                  .write(patch);
-              await _logger.logUpdate(
-                'cave_places',
-                existingPlace.uuid,
-                oldValues: {
-                  'place_code_identifier': existingPlace.placeCodeIdentifier,
-                  'qr_code_resource_identifier':
-                      existingPlace.qrCodeResourceIdentifier,
-                },
-                newValues: {
-                  'place_code_identifier': patch.placeCodeIdentifier.value,
-                  'qr_code_resource_identifier':
-                      patch.qrCodeResourceIdentifier.present
-                      ? patch.qrCodeResourceIdentifier.value
-                      : existingPlace.qrCodeResourceIdentifier,
-                },
-              );
-              qrCodesUpdated++;
+        final place = resolved.match;
+        final code = config.qrCodeColumn != null ? row.qrCode : null;
+        final claimKey = '$caveUuid|$code';
+        String? codeToWrite;
+        if (code != null && place?.placeCode != code) {
+          final earlier = claimedBy[claimKey];
+          final holders = snapshot.holdersOf(caveUuid, code, except: place);
+          if (earlier != null) {
+            issues.add(
+              CSVCavePlaceRowIssue(
+                CSVCavePlaceRowIssueKind.qrCodeRepeated,
+                row,
+                holderTitle: earlier.title,
+              ),
+            );
+          } else if (overwriteQr ||
+              (holders.isEmpty && place?.placeCode == null)) {
+            for (final holder in holders) {
+              await _writeCode(holder, null, now, author, snapshot);
+              qrCodesCleared++;
             }
+            codeToWrite = code;
+          } else if (holders.isNotEmpty) {
+            issues.add(
+              CSVCavePlaceRowIssue(
+                CSVCavePlaceRowIssueKind.qrCodeTaken,
+                row,
+                holderTitle: holders.first.title,
+              ),
+            );
           }
-          // Update area if mapped and not yet set
-          if (targetAreaUuid != null &&
-              existingPlace.caveAreaUuid != targetAreaUuid) {
+        }
+
+        final PlaceSnapshotEntry target;
+        if (place != null) {
+          if (codeToWrite != null) {
+            await _writeCode(place, codeToWrite, now, author, snapshot);
+            qrCodesUpdated++;
+          }
+          // An area already set is never overwritten: a place filed in
+          // another area is a different place, which the lookup keeps apart.
+          if (areaUuid != null && place.caveAreaUuid == null) {
             await (_database.update(
               _database.cavePlaces,
-            )..where((cp) => cp.uuid.equalsValue(existingPlace.uuid))).write(
+            )..where((cp) => cp.uuid.equalsValue(place.uuid))).write(
               CavePlacesCompanion(
-                caveAreaUuid: Value(targetAreaUuid),
+                caveAreaUuid: Value(areaUuid),
                 updatedAt: Value(now),
                 lastModifiedByUserUuid: Value(author),
               ),
             );
             await _logger.logUpdate(
               'cave_places',
-              existingPlace.uuid,
-              oldValues: {'cave_area_uuid': existingPlace.caveAreaUuid},
-              newValues: {'cave_area_uuid': targetAreaUuid},
+              place.uuid,
+              oldValues: const {'cave_area_uuid': null},
+              newValues: {'cave_area_uuid': areaUuid},
             );
+            place.caveAreaUuid = areaUuid;
           }
+          target = place;
         } else {
-          // Create new cave place
           final newUuid = Uuid.v7();
           final companion = await _placeCodeService.applyPciToCompanion(
             CavePlacesCompanion.insert(
               uuid: newUuid,
-              title: row.cavePlaceName!,
-              caveUuid: targetCaveUuid,
-              caveAreaUuid: Value(targetAreaUuid),
-              placeCodeIdentifier: Value(row.qrCode),
+              title: title,
+              caveUuid: caveUuid,
+              caveAreaUuid: Value(areaUuid),
+              placeCodeIdentifier: Value(codeToWrite),
               createdAt: Value(now),
               updatedAt: Value(now),
               createdByUserUuid: Value(author),
@@ -496,7 +472,18 @@ class CSVCavePlaceImporter {
           );
           await _database.into(_database.cavePlaces).insert(companion);
           await _logger.logInsert('cave_places', newUuid);
+          target = PlaceSnapshotEntry(
+            uuid: newUuid,
+            caveUuid: caveUuid,
+            title: title,
+            caveAreaUuid: areaUuid,
+            placeCode: codeToWrite,
+          );
+          snapshot.registerPlace(target);
           cavePlacesCreated++;
+        }
+        if (code != null && target.placeCode == code) {
+          claimedBy.putIfAbsent(claimKey, () => target);
         }
       }
 
@@ -505,7 +492,134 @@ class CSVCavePlaceImporter {
         cavePlacesCreated: cavePlacesCreated,
         caveAreasCreated: caveAreasCreated,
         qrCodesUpdated: qrCodesUpdated,
+        qrCodesCleared: qrCodesCleared,
+        issues: issues,
       );
     }); // end transaction
+  }
+
+  static String? _areaTitle(CSVCavePlaceImportRow row) {
+    final area = row.caveArea;
+    return (area == null || area.isEmpty) ? null : area;
+  }
+
+  /// The existing cave a row belongs to. In multi-cave mode a match of
+  /// null that is not ambiguous means the import would create the cave.
+  SnapshotMatch<Uuid> _existingCave(
+    CSVCavePlaceImportRow row,
+    CSVCavePlacesImportConfig config,
+    CavePlaceImportSnapshot snapshot,
+  ) {
+    if (!config.isMultipleCaveMode) {
+      return (match: config.caveUuid, ambiguous: false);
+    }
+    final name = row.caveName;
+    if (name == null || name.isEmpty) return (match: null, ambiguous: false);
+    final caves = snapshot.cavesTitled(name);
+    return (match: caves.match?.uuid, ambiguous: caves.ambiguous);
+  }
+
+  SnapshotMatch<PlaceSnapshotEntry> _placeFor(
+    CavePlaceImportSnapshot snapshot,
+    Uuid caveUuid,
+    CSVCavePlaceImportRow row,
+  ) {
+    final areaTitle = _areaTitle(row);
+    return snapshot.placeIn(
+      caveUuid,
+      row.cavePlaceName!,
+      rowNamesArea: areaTitle != null,
+      areaUuid: areaTitle == null ? null : snapshot.areaOf(caveUuid, areaTitle),
+    );
+  }
+
+  Future<Uuid> _createCave(
+    String title,
+    int now,
+    Uuid author,
+    CavePlaceImportSnapshot snapshot,
+  ) async {
+    final uuid = Uuid.v7();
+    await _database
+        .into(_database.caves)
+        .insert(
+          CavesCompanion.insert(
+            uuid: uuid,
+            title: title,
+            createdAt: Value(now),
+            updatedAt: Value(now),
+            createdByUserUuid: Value(author),
+            lastModifiedByUserUuid: Value(author),
+          ),
+        );
+    await _logger.logInsert('caves', uuid);
+    snapshot.registerCave(uuid, title);
+    return uuid;
+  }
+
+  Future<Uuid> _createArea(
+    Uuid caveUuid,
+    String title,
+    int now,
+    Uuid author,
+    CavePlaceImportSnapshot snapshot,
+  ) async {
+    final uuid = Uuid.v7();
+    await _database
+        .into(_database.caveAreas)
+        .insert(
+          CaveAreasCompanion.insert(
+            uuid: uuid,
+            title: title,
+            caveUuid: caveUuid,
+            createdAt: Value(now),
+            updatedAt: Value(now),
+            createdByUserUuid: Value(author),
+            lastModifiedByUserUuid: Value(author),
+          ),
+        );
+    await _logger.logInsert('cave_areas', uuid);
+    snapshot.registerArea(caveUuid, title, uuid);
+    return uuid;
+  }
+
+  /// Writes [code] onto [place], or clears it when null, recomputing the
+  /// QR payload that is derived from it.
+  Future<void> _writeCode(
+    PlaceSnapshotEntry place,
+    String? code,
+    int now,
+    Uuid author,
+    CavePlaceImportSnapshot snapshot,
+  ) async {
+    final old = await (_database.select(
+      _database.cavePlaces,
+    )..where((cp) => cp.uuid.equalsValue(place.uuid))).getSingle();
+    final patch = await _placeCodeService.applyPciToCompanion(
+      CavePlacesCompanion(
+        placeCodeIdentifier: Value(code),
+        updatedAt: Value(now),
+        lastModifiedByUserUuid: Value(author),
+      ),
+      cavePlaceUuid: place.uuid,
+    );
+    await (_database.update(
+      _database.cavePlaces,
+    )..where((cp) => cp.uuid.equalsValue(place.uuid))).write(patch);
+    await _logger.logUpdate(
+      'cave_places',
+      place.uuid,
+      oldValues: {
+        'place_code_identifier': old.placeCodeIdentifier,
+        'qr_code_resource_identifier': old.qrCodeResourceIdentifier,
+      },
+      newValues: {
+        'place_code_identifier': code,
+        'qr_code_resource_identifier': patch.qrCodeResourceIdentifier.present
+            ? patch.qrCodeResourceIdentifier.value
+            : old.qrCodeResourceIdentifier,
+      },
+    );
+    snapshot.setPlaceCode(place, code);
   }
 }
