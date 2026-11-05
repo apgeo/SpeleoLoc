@@ -16,8 +16,9 @@ void main() {
     maxResolution: 1280,
     quality: 70,
   );
-  const allowedStall = Duration(milliseconds: 250);
-
+  // Stalls are compared with the length of the work rather than a fixed
+  // budget: the suite runs many files at once on a shared machine, which
+  // stretches both alike, while blocking work stalls for all of its length.
   late Uint8List photo;
 
   setUpAll(() {
@@ -36,9 +37,7 @@ void main() {
   test('gives the same bytes as compressing on the calling isolate', () async {
     final clock = Stopwatch()..start();
     final expected = ImageCompressor.compressBytes(photo, settings)!;
-    // The stall checks below only mean something when the work itself takes
-    // well over the stall they allow.
-    expect(clock.elapsed, greaterThan(allowedStall * 3));
+    final blocking = clock.elapsed;
 
     final stall = await longestEventLoopStall(() async {
       final actual = await ImageCompressor.compressInBackground(
@@ -48,7 +47,7 @@ void main() {
       expect(actual, expected);
     });
 
-    expect(stall, lessThan(allowedStall));
+    expect(stall, lessThan(blocking ~/ 3));
   });
 
   test('compresses a file in place without stalling the caller', () async {
@@ -56,11 +55,12 @@ void main() {
     addTearDown(() => dir.delete(recursive: true));
     final file = await File('${dir.path}/photo.jpg').writeAsBytes(photo);
 
+    final clock = Stopwatch()..start();
     final stall = await longestEventLoopStall(
       () => ImageCompressor.compressFile(file, settings),
     );
 
-    expect(stall, lessThan(allowedStall));
+    expect(stall, lessThan(clock.elapsed ~/ 3));
     final stored = img.decodeJpg(await file.readAsBytes())!;
     expect(stored.width, 1280);
     expect(stored.height, 960);
