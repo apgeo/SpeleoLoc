@@ -429,10 +429,15 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
       );
       if (confirmed != true || !mounted) return;
     }
-    for (final cp in selected) {
-      await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(cp.uuid);
+    try {
+      for (final cp in selected) {
+        await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(cp.uuid);
+      }
+    } finally {
+      // A failure midway leaves the earlier places deleted; the list has to
+      // show that rather than rows that are already gone.
+      await _loadCavePlaces();
     }
-    await _loadCavePlaces();
   }
 
   Future<void> _printQRCodes() async {
