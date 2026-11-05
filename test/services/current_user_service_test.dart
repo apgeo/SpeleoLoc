@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
@@ -44,6 +46,22 @@ class _SlowConfigRepo implements IConfigurationRepository {
       _inner.insertRow(companion);
 }
 
+/// Fails its first read, as a database that could not open yet does.
+class _FailingOnceConfigRepo extends _SlowConfigRepo {
+  _FailingOnceConfigRepo(IConfigurationRepository inner)
+    : super(inner, Duration.zero);
+  bool _failed = false;
+
+  @override
+  Future<String?> readString(String key) async {
+    if (!_failed) {
+      _failed = true;
+      throw const FileSystemException('invented: storage not ready');
+    }
+    return super.readString(key);
+  }
+}
+
 void main() {
   late AppDatabase db;
   setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
@@ -88,5 +106,16 @@ void main() {
       db.configurations,
     )..where((c) => c.title.equals('device_uuid'))).get();
     expect(rows, hasLength(1));
+  });
+
+  test('initialize() can be retried after it failed', () async {
+    // A start that failed offers Retry, which must not get the same cached
+    // failure back.
+    final svc = build(_FailingOnceConfigRepo(ConfigurationRepository(db)));
+    await expectLater(svc.initialize(), throwsA(isA<FileSystemException>()));
+
+    await svc.initialize();
+
+    expect(svc.deviceUuid.value, isNotNull);
   });
 }

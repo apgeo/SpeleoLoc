@@ -153,7 +153,16 @@ class CurrentUserService {
   /// awaiting after the provider kicked off a fire-and-forget init) returned
   /// immediately while the values were still null — the writes that follow
   /// would then be attributed to a null user/device.
-  Future<void> initialize() => _initFuture ??= _doInitialize();
+  ///
+  /// A failed load is not cached, so a retry after a failed start loads
+  /// again instead of getting the same error back.
+  Future<void> initialize() => _initFuture ??= _doInitialize().then(
+    (_) {},
+    onError: (Object e, StackTrace st) {
+      _initFuture = null;
+      Error.throwWithStackTrace(e, st);
+    },
+  );
 
   Future<void> _doInitialize() async {
     deviceUuid.value = await _readOrCreateDeviceUuid();
