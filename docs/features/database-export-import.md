@@ -166,7 +166,8 @@ progress.
 
 Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
-sync from getting confused afterwards.
+sync from getting confused afterwards. Its [beacon detection](ble-beacons.md)
+settings stay as they were too, so an archive never switches detection on.
 
 It also keeps its own [FTP server profiles](ftp-sync.md) and its choice of
 default profile; the archive's are not taken over. Saved passwords stay in

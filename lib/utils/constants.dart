@@ -117,6 +117,9 @@ const String tripReportTemplatesRoute = '/trip_report_templates';
 // Cave trip config key
 const String activeTripConfigKey = 'active_trip_id';
 
+// Beacon detection tuning, a JSON object kept per device
+const String beaconDetectionConfigKey = 'beacon_detection_config';
+
 // Auto-add entrance cave place when creating a new cave
 const String autoAddEntrancePlaceKey = 'auto_add_entrance_place';
 

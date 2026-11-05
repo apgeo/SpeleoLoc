@@ -78,6 +78,26 @@ void main() {
     },
   );
 
+  test('keeps this device\'s beacon detection setting, not the '
+      'exporter\'s', () async {
+    // An imported archive must not switch detection on, or tune it, on a
+    // device whose caver never chose to.
+    const mine = '{"enabled":false,"rssiThresholdDbm":-75}';
+    const theirs = '{"enabled":true,"rssiThresholdDbm":-90}';
+    final incoming = ConfigurationRepository(after);
+    await incoming.writeString(beaconDetectionConfigKey, theirs);
+
+    await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+    expect(await incoming.readString(beaconDetectionConfigKey), isNull);
+
+    await incoming.writeString(beaconDetectionConfigKey, theirs);
+    await ConfigurationRepository(
+      before,
+    ).writeString(beaconDetectionConfigKey, mine);
+    await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+    expect(await incoming.readString(beaconDetectionConfigKey), mine);
+  });
+
   test('drops the exporter\'s language when this device chose none', () async {
     await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
     expect(

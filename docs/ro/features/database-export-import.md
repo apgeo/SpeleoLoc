@@ -181,7 +181,8 @@ sincronizare FTP sau SilexGIS.
 Dispozitivul dumneavoastră își păstrează propria identitate printr-o
 înlocuire — nu începe să pretindă că este dispozitivul care a făcut
 arhiva, iar asta este ceea ce împiedică sincronizarea să se încurce după
-aceea.
+aceea. Și setările de [detectare a beaconurilor](ble-beacons.md) rămân
+cum erau, așa că o arhivă nu pornește niciodată detectarea.
 
 Își păstrează și propriile [profiluri de server FTP](ftp-sync.md) și
 profilul ales implicit; cele din arhivă nu sunt preluate. Parolele salvate
