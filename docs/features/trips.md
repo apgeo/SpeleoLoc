@@ -34,9 +34,9 @@ The active trip belongs to this device. If it disappears — deleted by an
 FTP or SilexGIS sync or an archive merge, deleted together with its cave,
 or ended on another device — no trip is active here any more, and you can
 start a new one. Restoring a database or an archive keeps this device's
-own active trip if the restored data still has it running; a trip that
-was running on the device that made the export does not become active
-here.
+own active trip, paused or not, if the restored data still has it
+running; a trip that was running on the device that made the export does
+not become active here.
 
 A stopped trip is **not** locked. You can still rename it, add, move or
 remove its points, correct its start and end times, fill in its
@@ -386,11 +386,11 @@ Two things are worth knowing before you rely on it:
 
 - **A pause leaves no trace in the trip log.** Nothing in the finished
   record shows where the breaks were.
-- **A pause is forgotten if the app is closed.** The active trip
-  itself survives the app being closed, killed, or the phone
-  rebooting, but the paused state does not — the trip comes back
-  recording. After a restart, check the colour of the trip card in the
-  ⋮ menu: green means it is recording again.
+- **A pause survives the app being closed.** If the app is closed,
+  killed by the phone, or the phone reboots while the trip is paused,
+  the trip comes back paused, and stays so until you press **Resume
+  trip**. Stopping, restarting or starting a trip always begins
+  recording.
 
 ## The trip log
 

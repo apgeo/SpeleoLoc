@@ -13,6 +13,7 @@ import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
+import 'package:speleoloc/utils/constants.dart';
 
 /// Exercises the export-then-import round-trip and LWW merge behaviour
 /// of [SyncArchiveService] against two independent in-memory databases.
@@ -759,6 +760,10 @@ void main() {
             ConfigKey.currentUserUuid,
             '00000000-0000-7000-8000-00000000beef',
           ),
+          // Which trip records here, and whether it is paused, belong to
+          // this device alone.
+          hostile(activeTripConfigKey, '00000000-0000-7000-8000-00000000000b'),
+          hostile(pausedTripConfigKey, '00000000-0000-7000-8000-00000000000b'),
         ],
       );
 
@@ -772,6 +777,8 @@ void main() {
       expect(await bConfig.readString(ConfigKey.silexgisProfiles), isNull);
       expect(await bConfig.readString(ConfigKey.deviceUuid), bDevice);
       expect(await bConfig.readString(ConfigKey.currentUserUuid), bUser);
+      expect(await bConfig.readString(activeTripConfigKey), isNull);
+      expect(await bConfig.readString(pausedTripConfigKey), isNull);
       final flag = await b.db
           .customSelect(
             "SELECT is_synced FROM configurations WHERE title = 'ftp_profiles'",

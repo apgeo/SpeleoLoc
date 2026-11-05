@@ -121,6 +121,11 @@ const String tripReportTemplatesRoute = '/trip_report_templates';
 // Cave trip config key
 const String activeTripConfigKey = 'active_trip_id';
 
+// The id of the active trip while it is paused; absent while it records.
+// Holding the id rather than a flag keeps a pause left behind by one trip
+// from applying to the next.
+const String pausedTripConfigKey = 'paused_trip_id';
+
 // Beacon detection tuning, a JSON object kept per device
 const String beaconDetectionConfigKey = 'beacon_detection_config';
 
