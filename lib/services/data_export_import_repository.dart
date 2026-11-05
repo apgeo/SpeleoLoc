@@ -27,8 +27,14 @@ class DataExportImportRepository {
     final args = <Variable<Object>>[];
 
     if (afterTimestamp != null) {
-      conditions.add('(created_at > ? OR created_at IS NULL)');
-      args.add(Variable.withInt(afterTimestamp));
+      // An edit stores the new content under a new file name and bumps
+      // updated_at, so an edited document belongs in the diff as well.
+      conditions.add(
+        '(created_at > ? OR updated_at > ? OR created_at IS NULL)',
+      );
+      args
+        ..add(Variable.withInt(afterTimestamp))
+        ..add(Variable.withInt(afterTimestamp));
     }
 
     final query =
