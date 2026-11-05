@@ -346,7 +346,8 @@ pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
   pe care o aveați înainte, cea pe care aplicația încearcă să o pună la loc.
 - **Reîncearcă** — încearcă din nou pornirea, de exemplu după ce ați
   eliberat spațiu.
-- **Resetează datele aplicației** — șterge baza de date, iar aplicația
+- **Resetează datele aplicației** — oferit doar când baza de date însăși
+  nu se deschide. Șterge baza de date, iar aplicația
   pornește goală. Întreabă întâi, spune ce se va șterge și oferă
   **Exportă întâi**. Fotografiile și documentele deja salvate pe
   dispozitiv nu se șterg și nici o bază de date anterioară lăsată în
@@ -354,7 +355,9 @@ pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
 
 O bază de date salvată de o versiune mai nouă a aplicației are propriul
 mesaj: actualizați aplicația și baza de date se deschide așa cum este.
-Atunci **Resetează datele aplicației** nu este oferit.
+**Resetează datele aplicației** nu este oferit atunci, nici când memoria
+este plină sau altceva decât baza de date a oprit pornirea: ștergerea
+bazei de date v-ar pierde datele fără să ajute aplicația să pornească.
 
 ## Reinițializarea bazei de date
 
