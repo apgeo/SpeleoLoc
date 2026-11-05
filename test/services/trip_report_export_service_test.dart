@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:speleoloc/services/trip_report_export_service.dart';
+import 'package:xml/xml.dart';
 
 /// Report-template rows sync between devices, so the file name a row carries
-/// must only ever reach a file inside the templates folder.
+/// must only ever reach a file inside the templates folder; and the report
+/// built from a template must be a document a word processor opens as it is.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -89,5 +91,101 @@ void main() {
         reason: name,
       );
     }
+  });
+
+  group('saving at the path the save dialog returned', () {
+    test('on a desktop an older report under the full name is replaced, '
+        'also when the name was typed without its extension', () async {
+      final stale = File(p.join(root.path, 'report.docx'));
+      await stale.writeAsBytes([1, 1, 1]);
+
+      final written = await service.savePickedReport(
+        pickedPath: p.join(root.path, 'report'),
+        format: 'docx',
+        bytes: [2, 2],
+        desktop: true,
+      );
+
+      expect(written, stale.path);
+      expect(await stale.readAsBytes(), [2, 2]);
+    });
+
+    test('on a phone what the dialog already wrote is kept', () async {
+      final saved = File(p.join(root.path, 'report.odt'));
+      await saved.writeAsBytes([3]);
+
+      final written = await service.savePickedReport(
+        pickedPath: saved.path,
+        format: 'odt',
+        bytes: [4],
+        desktop: false,
+      );
+
+      expect(written, saved.path);
+      expect(await saved.readAsBytes(), [3]);
+    });
+  });
+
+  group('a DOCX report', () {
+    const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+    /// A DOCX whose body ends, as every Word-saved one does, with the
+    /// section properties; its first paragraph closes a section of its own.
+    List<int> docx() {
+      final xml = utf8.encode(
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="$w"><w:body>'
+        '<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>'
+        '</w:pPr><w:r><w:t>Cover</w:t></w:r></w:p>'
+        '<w:p><w:r><w:t>Template text</w:t></w:r></w:p>'
+        '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+        '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>'
+        '</w:sectPr></w:body></w:document>',
+      );
+      final archive = Archive()
+        ..addFile(ArchiveFile('word/document.xml', xml.length, xml));
+      return ZipEncoder().encode(archive)!;
+    }
+
+    Future<XmlElement> builtBody(String text) async {
+      await File(
+        p.join(await service.getTemplatesDir(), 'a.docx'),
+      ).writeAsBytes(docx());
+      final bytes = await service.buildReportBytes(
+        templateFileName: 'a.docx',
+        text: text,
+      );
+      final document = ZipDecoder()
+          .decodeBytes(bytes)
+          .findFile('word/document.xml')!;
+      return XmlDocument.parse(
+        utf8.decode(document.content as List<int>),
+      ).findAllElements('body', namespace: w).single;
+    }
+
+    test('keeps the section properties as the body\'s last child', () async {
+      final body = await builtBody('Hall\nSump');
+
+      final children = body.childElements.toList();
+      expect(children.last.name.local, 'sectPr');
+      final texts = [
+        for (final para in children.where((e) => e.name.local == 'p'))
+          para
+              .findAllElements('t', namespace: w)
+              .map((t) => t.innerText)
+              .join(),
+      ];
+      expect(texts, ['Cover', 'Template text', 'Hall', 'Sump']);
+    });
+
+    test('keeps the spaces a log line starts with', () async {
+      final body = await builtBody('  indented line');
+
+      final appended = body
+          .findAllElements('t', namespace: w)
+          .singleWhere((t) => t.innerText.contains('indented'));
+      expect(appended.innerText, '  indented line');
+      expect(appended.getAttribute('xml:space'), 'preserve');
+    });
   });
 }

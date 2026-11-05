@@ -18,15 +18,18 @@ import 'package:speleoloc/screens/cave_trip/trip_log_stale_banner.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_actions.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_pictures_sheet.dart';
 import 'package:speleoloc/screens/cave_trip/trip_point_row.dart';
+import 'package:speleoloc/screens/cave_trip/trip_restart_dialog.dart';
 import 'package:speleoloc/screens/cave_trip/trip_window_dialog.dart';
 import 'package:speleoloc/screens/cave_trip/trip_log_update_prompt.dart';
 import 'package:speleoloc/services/trip_participants.dart';
 import 'package:speleoloc/services/trip_report_export_service.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/end_trip_dialog.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
@@ -119,7 +122,28 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   // Export map key
   final GlobalKey _mapRepaintKey = GlobalKey();
 
-  bool get _isActive => _trip?.tripEndedAt == null;
+  /// The trip shown is the one recording on this device. An open trip is
+  /// not necessarily that one: another phone's recording arrives open
+  /// through sync, and Stop or Pause on it must not reach the trip this
+  /// device is recording.
+  bool get _isActive {
+    final trip = _trip;
+    return trip != null &&
+        trip.tripEndedAt == null &&
+        trip.uuid == _tripService.activeTripIdNotifier.value;
+  }
+
+  /// Open, but not recording here: another phone's recording, or one this
+  /// device left open without tracking it.
+  bool get _isOpenElsewhere => _trip?.tripEndedAt == null && !_isActive;
+
+  /// Recorded by this device, so ending it here cannot cut short a
+  /// recording still running on another phone.
+  bool get _recordedHere {
+    final device = _trip?.deviceUuid;
+    return device != null &&
+        device == ref.read(currentUserServiceProvider).deviceUuid.value;
+  }
 
   @override
   List<AppMenuItem> get screenMenuItems => [
@@ -389,8 +413,12 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   }
 
   Future<void> _exportTripReport() async {
-    final trip = _trip;
-    if (trip == null) return;
+    // Read the stored log rather than the one loaded with the page: the log
+    // page may have saved a newer one moments ago.
+    final trip = await ref
+        .read(caveTripRepositoryProvider)
+        .findById(widget.tripUuid);
+    if (trip == null || !mounted) return;
 
     final log = trip.log;
     if (log == null || log.trim().isEmpty) {
@@ -425,20 +453,16 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       );
       if (outputPath == null || !mounted) return;
 
-      // On desktop, FilePicker returns a path but does NOT write the file
-      // (bytes param is ignored). Write it ourselves.
-      final finalPath = outputPath.endsWith('.$ext')
-          ? outputPath
-          : '$outputPath.$ext';
-      if (!File(finalPath).existsSync()) {
-        await File(finalPath).writeAsBytes(docBytes);
-      }
+      final finalPath = await TripReportExportService.instance.savePickedReport(
+        pickedPath: outputPath,
+        format: ext,
+        bytes: docBytes,
+      );
 
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_export_success'));
       }
 
-      // Open with system handler
       await TripReportExportService.instance.openWithSystem(finalPath);
     } catch (e) {
       if (mounted) {
@@ -570,25 +594,12 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   }
 
   Future<void> _stopTrip() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('trip_stop_confirm')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(LocServ.inst.t('cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(LocServ.inst.t('yes')),
-          ),
-        ],
-      ),
+    final confirmed = await showEndTripDialog(
+      context,
+      caveTitle: _cave?.title ?? '',
     );
-    if (confirmed == true) {
-      await ref.read(caveTripServiceProvider).stopTrip();
+    if (confirmed) {
+      await _tripService.stopTrip(widget.tripUuid);
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
         unawaited(_load());
@@ -627,7 +638,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
       ),
     );
     if (confirmed == true) {
-      if (_isActive) await ref.read(caveTripServiceProvider).stopTrip();
+      if (_isActive) await _tripService.stopTrip(widget.tripUuid);
       await ref
           .read(caveTripRepositoryProvider)
           .deleteCaveTrip(widget.tripUuid);
@@ -641,11 +652,36 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   Future<void> _restartTrip() async {
     final trip = _trip;
     if (trip == null) return;
-    await ref.read(caveTripServiceProvider).restartTrip(trip.uuid);
+    final running = _tripService.activeTripIdNotifier.value;
+    if (running != null && running != trip.uuid) {
+      final other = await ref
+          .read(caveTripRepositoryProvider)
+          .findById(running);
+      SnackBarService.showWarning(
+        LocServ.inst.t('trip_restart_other_running', {
+          'trip': other?.title ?? '',
+        }),
+      );
+      return;
+    }
+    if (!mounted || !await showTripRestartDialog(context, trip)) return;
+    try {
+      await _tripService.restartTrip(trip.uuid);
+    } on ValidationException catch (e) {
+      SnackBarService.showError(e);
+      return;
+    }
     if (mounted) {
       SnackBarService.showSuccess(LocServ.inst.t('trip_restarted'));
       unawaited(_load());
     }
+  }
+
+  /// The log page saves the log and may regenerate or accept it, so the
+  /// banner and Export must read the trip again on the way back.
+  Future<void> _openLog() async {
+    await AppRoutes.pushCaveTripLog(context, widget.tripUuid);
+    if (mounted) unawaited(_load());
   }
 
   /// Opens the worksheet that turns the device's photos and videos into
@@ -791,7 +827,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     final isPaused = ref.read(caveTripServiceProvider).isPausedNotifier.value;
     final buttons = <_TripToolbarButton>[];
 
-    if (_isActive) {
+    if (_isActive || (_isOpenElsewhere && _recordedHere)) {
       buttons.add(
         _TripToolbarButton(
           icon: Icons.stop_circle,
@@ -800,6 +836,8 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
           onTap: _stopTrip,
         ),
       );
+    }
+    if (_isActive) {
       if (isPaused) {
         buttons.add(
           _TripToolbarButton(
@@ -807,7 +845,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             label: LocServ.inst.t('trip_resume'),
             color: Colors.green,
             onTap: () {
-              ref.read(caveTripServiceProvider).resumeTrip();
+              _tripService.resumeTrip(widget.tripUuid);
               setState(() {});
             },
           ),
@@ -819,13 +857,13 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
             label: LocServ.inst.t('trip_pause'),
             color: Colors.orange,
             onTap: () {
-              ref.read(caveTripServiceProvider).pauseTrip();
+              _tripService.pauseTrip(widget.tripUuid);
               setState(() {});
             },
           ),
         );
       }
-    } else {
+    } else if (!_isOpenElsewhere) {
       buttons.add(
         _TripToolbarButton(
           icon: Icons.replay,
@@ -859,7 +897,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         icon: Icons.article_outlined,
         label: LocServ.inst.t('trip_log'),
         color: Colors.grey[700]!,
-        onTap: () => AppRoutes.pushCaveTripLog(context, widget.tripUuid),
+        onTap: _openLog,
       ),
     );
 
@@ -1093,6 +1131,27 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else if (_isOpenElsewhere) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.radio_button_unchecked,
+                        size: 12,
+                        color: Colors.grey[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          LocServ.inst.t('trip_open_not_here'),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],

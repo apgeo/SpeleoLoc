@@ -131,10 +131,10 @@ oprește niciodată o tură de la sine — întreabă întotdeauna mai întâi.
   în peșteră. Vrei să începi o tură nouă?”* Răspundeți **Da** și apare
   dialogul **Începe o tură nouă**, cu un titlu sugerat în câmpul
   **Titlul turei**, pe care îl puteți edita.
-- **O tură în desfășurare în această peșteră** — **Oprește**: *„Ai
-  scanat o intrare în peșteră. Ieși din peșteră? Oprești tura activă?”*
-  Răspundeți **Nu** și scanarea este înregistrată în schimb ca punct al
-  turei, așa că puteți trece pe la intrare fără să încheiați tura.
+- **O tură în desfășurare în această peșteră** — *„Închei tura din
+  <peșteră>?”* Răspundeți **Continuă înregistrarea** și scanarea este
+  înregistrată în schimb ca punct al turei, așa că puteți trece pe la
+  intrare fără să încheiați tura.
 - **O tură în desfășurare în altă peșteră** — SpeleoLoc numește acea
   peșteră și întreabă dacă să îi oprească tura; dacă sunteți de acord,
   vă propune apoi să începeți o tură aici.

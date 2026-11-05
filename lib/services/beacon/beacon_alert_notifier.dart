@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/trip_record_outcome.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -84,7 +85,7 @@ class BeaconAlertNotifier {
   /// channel exists, so it cannot express the preference).
   Future<void> showDetection({
     required String placeTitle,
-    required bool tripPointRecorded,
+    required TripRecordOutcome? tripOutcome,
     required Uuid caveUuid,
     required Uuid placeUuid,
     bool playSound = true,
@@ -94,7 +95,16 @@ class BeaconAlertNotifier {
       await _plugin.show(
         id: _notificationId,
         title: '${LocServ.inst.t('beacon_place_detected')}: $placeTitle',
-        body: tripPointRecorded ? LocServ.inst.t('trip_point_added') : null,
+        body: switch (tripOutcome) {
+          TripRecordOutcome.recorded => LocServ.inst.t('trip_point_added'),
+          TripRecordOutcome.paused => LocServ.inst.t(
+            'trip_point_not_recorded_paused',
+          ),
+          TripRecordOutcome.failed => LocServ.inst.t(
+            'trip_point_record_failed',
+          ),
+          TripRecordOutcome.noActiveTrip || null => null,
+        },
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,

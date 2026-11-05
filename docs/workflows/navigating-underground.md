@@ -77,9 +77,9 @@ menus, and it is described in
 
 While a trip is running in that cave, every ordinary scan silently adds
 a trip point and confirms with *Point added to trip*, so the route
-builds itself as you go. A **paused** trip records nothing even though
-that same message still appears — resume it before you rely on the
-route.
+builds itself as you go. A **paused** trip records nothing and says so
+instead: *Trip paused — point not recorded*, with a **Resume trip**
+button on the message.
 
 ### When the label will not scan
 

@@ -7,6 +7,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
 import 'package:speleoloc/services/trip_log_update.dart';
+import 'package:speleoloc/services/trip_record_outcome.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -75,7 +76,17 @@ class CaveTripService {
 
   /// Reactivates an already-ended trip in-place (updates its row instead of
   /// inserting a new one). The title is unchanged.
+  ///
+  /// Refused while a different trip is recording: taking over the active
+  /// slot would leave that trip open with nothing tracking it, and no
+  /// screen could end it any more.
   Future<void> restartTrip(Uuid tripUuid) async {
+    final running = activeTripIdNotifier.value;
+    if (running != null && running != tripUuid) {
+      throw const ValidationException(
+        'Another trip is recording; stop it before restarting this one',
+      );
+    }
     isPausedNotifier.value = false;
     final author = await _currentUser.currentOrSystem();
     final old = await _tripRow(tripUuid);
@@ -100,14 +111,21 @@ class CaveTripService {
     await _regenerateLog(tripUuid);
   }
 
-  Future<void> stopTrip() async {
-    final id = activeTripIdNotifier.value;
-    if (id != null) {
+  /// Ends [tripUuid], or the trip recording on this device when none is
+  /// named. A screen showing one trip passes its id, so its Stop can never
+  /// end a different trip than the one on screen. Only ending the active
+  /// trip clears the active-trip state; an open trip that is not the active
+  /// one is ended on its own. A trip that has already ended keeps its end
+  /// time.
+  Future<void> stopTrip([Uuid? tripUuid]) async {
+    final active = activeTripIdNotifier.value;
+    final id = tripUuid ?? active;
+    final old = id == null ? null : await _tripRow(id);
+    if (id != null && old != null && old.tripEndedAt == null) {
       final author = await _currentUser.currentOrSystem();
-      final old = await _tripRow(id);
       await _db.endCaveTrip(id, authorUuid: author);
       final updated = await _tripRow(id);
-      if (old != null && updated != null) {
+      if (updated != null) {
         await _logger.logUpdate(
           'cave_trips',
           id,
@@ -117,6 +135,7 @@ class CaveTripService {
       }
       await _appendForNewEvent(id);
     }
+    if (id != active) return;
     await _clearConfig();
     activeTripIdNotifier.value = null;
     isPausedNotifier.value = false;
@@ -125,21 +144,32 @@ class CaveTripService {
   /// Pause/resume are purely in-memory: while paused, [recordPoint] is
   /// suppressed. Pauses are not persisted and do not appear in the
   /// regenerated trip log.
-  Future<void> pauseTrip() async {
+  ///
+  /// [tripUuid], when given, must be the active trip; for any other trip
+  /// nothing happens, since only the active trip has a pause to change.
+  Future<void> pauseTrip([Uuid? tripUuid]) async {
     final id = activeTripIdNotifier.value;
     if (id == null || isPausedNotifier.value) return;
+    if (tripUuid != null && tripUuid != id) return;
     isPausedNotifier.value = true;
   }
 
-  Future<void> resumeTrip() async {
+  Future<void> resumeTrip([Uuid? tripUuid]) async {
     final id = activeTripIdNotifier.value;
     if (id == null || !isPausedNotifier.value) return;
+    if (tripUuid != null && tripUuid != id) return;
     isPausedNotifier.value = false;
   }
 
-  Future<void> recordPoint(Uuid cavePlaceUuid, {String? placeTitle}) async {
+  /// Adds a live-scan point at [cavePlaceUuid] to the active trip and says
+  /// what happened, so callers never confirm a point that a pause dropped.
+  Future<TripRecordOutcome> recordPoint(
+    Uuid cavePlaceUuid, {
+    String? placeTitle,
+  }) async {
     final id = activeTripIdNotifier.value;
-    if (id == null || isPausedNotifier.value) return;
+    if (id == null) return TripRecordOutcome.noActiveTrip;
+    if (isPausedNotifier.value) return TripRecordOutcome.paused;
     try {
       final author = await _currentUser.currentOrSystem();
       final pointUuid = await _db.insertTripPoint(
@@ -149,8 +179,10 @@ class CaveTripService {
       );
       await _logger.logInsert('cave_trip_points', pointUuid);
       await _appendForNewEvent(id);
+      return TripRecordOutcome.recorded;
     } catch (e, st) {
       log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
+      return TripRecordOutcome.failed;
     }
   }
 
@@ -418,13 +450,14 @@ class CaveTripService {
   /// it on subsequent re-renders. Document text is preserved in the
   /// `documentation_files` table (file content on disk) and is reachable
   /// from the document itself.
-  Future<void> linkDocument(
+  Future<TripRecordOutcome> linkDocument(
     Uuid docUuid, {
     String? documentTitle,
     String? textContent,
   }) async {
     final id = activeTripIdNotifier.value;
-    if (id == null || isPausedNotifier.value) return;
+    if (id == null) return TripRecordOutcome.noActiveTrip;
+    if (isPausedNotifier.value) return TripRecordOutcome.paused;
     try {
       final author = await _currentUser.currentOrSystem();
       await _db.linkDocumentToTrip(docUuid, id, authorUuid: author);
@@ -441,8 +474,10 @@ class CaveTripService {
         await _logger.logInsert('documentation_files_to_cave_trips', link.uuid);
       }
       await _appendForNewEvent(id);
+      return TripRecordOutcome.recorded;
     } catch (e, st) {
       log.warning('linkDocument failed (doc=$docUuid)', e, st);
+      return TripRecordOutcome.failed;
     }
   }
 
@@ -500,18 +535,15 @@ class CaveTripService {
       final events = await _renderer.loadEvents(tripUuid);
       if (events.isEmpty) return;
 
+      final trip = await _tripRow(tripUuid);
+      final current = trip?.log ?? '';
+
       final delta = _renderer.renderTailDelta(events, method);
       if (delta == null) {
-        // Method (narrative) does not support incremental rendering.
-        final full = _renderer.render(events, method);
-        await _db.updateTripLog(tripUuid, full);
+        await _rerenderGeneratedPart(tripUuid, current, events, method);
         return;
       }
 
-      final trip = await (_db.select(
-        _db.caveTrips,
-      )..where((t) => t.uuid.equalsValue(tripUuid))).getSingleOrNull();
-      final current = trip?.log ?? '';
       if (current.isEmpty) {
         // First event — write the delta as-is (no leading separator).
         await _db.updateTripLog(tripUuid, delta);
@@ -523,6 +555,32 @@ class CaveTripService {
       }
     } catch (e, st) {
       log.warning('appendForNewEvent failed (trip=$tripUuid)', e, st);
+    }
+  }
+
+  /// For a method that cannot append (narrative regroups its paragraphs
+  /// as events arrive): re-renders the generated part of the log and keeps
+  /// whatever the caver typed after it. The generated part is recognised as
+  /// the render of every event but the newest; a log that no longer starts
+  /// with it was reworded by hand, so it is left as written and marked
+  /// behind its points instead of being overwritten.
+  Future<void> _rerenderGeneratedPart(
+    Uuid tripUuid,
+    String current,
+    List<TripLogEvent> events,
+    TripLogMethod method,
+  ) async {
+    final full = _renderer.render(events, method);
+    if (current == full) return;
+    final previous = events.length > 1
+        ? _renderer.render(events.sublist(0, events.length - 1), method)
+        : '';
+    if (current.isEmpty ||
+        previous.isNotEmpty && current.startsWith(previous)) {
+      final typed = current.isEmpty ? '' : current.substring(previous.length);
+      await _db.updateTripLog(tripUuid, '$full$typed');
+    } else {
+      await _markLogStale(tripUuid);
     }
   }
 

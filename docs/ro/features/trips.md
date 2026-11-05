@@ -71,10 +71,10 @@ Cât timp tura rulează, punctele se înregistrează singure:
   este calea de a construi un traseu fără să folosiți mâinile — vedeți
   [Beaconuri BLE](ble-beacons.md).
 - **Locurile de intrare se comportă diferit la scanare.** Dacă tura
-  care rulează este pentru aceeași peșteră, aplicația întreabă *„Ai
-  scanat o intrare în peșteră. Ieși din peșteră? Oprești tura activă?”*.
-  Răspundeți **Da** și tura se oprește; răspundeți **Nu** și intrarea
-  este înregistrată ca punct de tură obișnuit. Dacă tura care rulează
+  care rulează este pentru aceeași peșteră, aplicația întreabă *„Închei
+  tura din <peșteră>?”*. **Închei tura** o oprește; **Continuă
+  înregistrarea** înregistrează în schimb intrarea ca punct de tură
+  obișnuit. Dacă tura care rulează
   aparține altei peșteri, aplicația numește acea peșteră, se oferă să îi
   oprească tura și apoi se oferă să înceapă una aici.
 
@@ -102,8 +102,13 @@ când butoanele nu încap toate.
 
 | Buton | Ce face |
 |---|---|
-| **Oprește** / **Pauză** / **Continuă** | Apar cât timp aceasta este tura activă. Vedeți [Pauză și continuare](#pausing-and-resuming) și [Oprirea unei ture](#stopping-a-trip). |
+| **Oprește** / **Pauză** / **Continuă** | Apar cât timp aceasta este tura pe care o înregistrează acest telefon. Vedeți [Pauză și continuare](#pausing-and-resuming) și [Oprirea unei ture](#stopping-a-trip). |
 | **Repornește** | Apare în locul lor după ce tura s-a încheiat. Vedeți [Repornirea unei ture încheiate](#restarting-a-finished-trip). |
+
+O tură încă deschisă pe alt telefon — înregistrarea unui coechipier
+primită prin SilexGIS — afișează în cardul de rezumat *„Deschisă — nu
+se înregistrează pe acest telefon”* și niciunul dintre aceste trei
+butoane.
 | **Adaugă punct** | Înregistrează un punct la un loc și la o oră alese de dumneavoastră. Vedeți [Corectarea punctelor](#correcting-the-points). |
 | **Poze** | Deschide **Puncte din poze**. Vedeți [Puncte din poze](#points-from-pictures). |
 | **Jurnal** | Deschide jurnalul. Vedeți [Jurnalul turei](#the-trip-log). |
@@ -373,8 +378,9 @@ Apăsarea cardului deschide tura.
 
 - **Vezi tura** — deschide ecranul turei.
 - **Pauză** / **Continuă** — comută înregistrarea.
-- **Oprește** (roșu) — oprește tura **imediat, fără confirmarea
-  obișnuită**. Folosiți-l cu grijă.
+- **Oprește** (roșu), separat, la capătul din dreapta — întreabă
+  *„Închei tura din <peșteră>?”* înainte să o încheie, ca ecranul
+  turei.
 
 Cardul este cea mai rapidă cale de întoarcere la o tură în desfășurare
 și singura cale de a ajunge la prima tură a unei peșteri înainte ca ea
@@ -386,7 +392,10 @@ să fi fost oprită vreodată.
 
 **Pauză** oprește înregistrarea: scanările QR și detectările de
 beaconuri nu mai adaugă puncte, iar documentele pe care le creați nu mai
-sunt legate de tură. **Continuă** repornește înregistrarea. Pauza și
+sunt legate de tură. O scanare sau o detectare în timpul pauzei răspunde
+cu *„Tură în pauză — punctul nu a fost înregistrat”*, în portocaliu, cu
+un buton **Continuă**, în loc de *„Punct adăugat la tură”*; în fundal,
+notificarea spune același lucru. **Continuă** repornește înregistrarea. Pauza și
 continuarea se află în ecranul turei, în ecranul **Ture trecute /
 active** al peșterii și pe cardul turei din meniul ⋮.
 
@@ -441,8 +450,10 @@ tratați-vă notele ca pe ceva fragil:
   vedeți mai jos.
 - În stilurile **Brut**, **Clasic** și **Jurnal de teren** un eveniment
   nou este doar adăugat la sfârșit, așa că modificările anterioare îi
-  supraviețuiesc. În stilul **Narativ** fiecare punct sau document nou
-  rescrie tot jurnalul.
+  supraviețuiesc. În stilul **Narativ** un punct sau document nou
+  rescrie textul generat și păstrează ce ați scris după el; un jurnal
+  al cărui text generat l-ați reformulat este lăsat neatins și marcat
+  ca neactualizat.
 
 Adăugați astfel de note la sfârșitul turei și păstrați o copie în altă
 parte dacă sunt importante.
@@ -543,9 +554,12 @@ citeze titlul vechi până când jurnalul este regenerat.
 
 Apăsați butonul roșu **Oprește**: în ecranul turei, în ecranul **Ture
 trecute / active** al peșterii sau pe cardul turei din meniul ⋮.
-Primele două întreabă *„Oprești înregistrarea acestei ture?”*; butonul
-de pe card oprește imediat, fără confirmare. Scanarea codului QR al unei
-intrări din peștera turei se oferă și ea să o oprească.
+Ecranul turei și cardul întreabă *„Închei tura din <peșteră>?”*, cu
+**Închei tura** și butonul evidențiat **Continuă înregistrarea**;
+ecranul **Ture trecute / active** întreabă *„Oprești înregistrarea
+acestei ture?”*. Scanarea codului QR al unei intrări din peștera turei
+pune aceeași întrebare, *„Închei tura din <peșteră>?”*; **Continuă
+înregistrarea** înregistrează în schimb intrarea ca punct.
 
 Oprirea înregistrează ora de final și nu mai lasă nicio tură activă.
 Toate datele turei sunt păstrate.
@@ -555,11 +569,17 @@ Toate datele turei sunt păstrate.
 ## Repornirea unei ture încheiate
 
 Când deschideți o tură care s-a încheiat deja, butonul **Oprește** este
-înlocuit de un buton albastru **Repornește**. Apăsarea lui face din nou
+înlocuit de un buton albastru **Repornește**. Mai întâi întreabă
+*„Repornești această tură?”* și arată orele de început și de sfârșit
+care vor fi înlocuite; **Înlocuiește orele și repornește** face din nou
 acea tură tura activă, așa că scanările și detectările de beaconuri noi
 continuă să se adauge aceluiași traseu, în loc să înceapă o tură nouă.
 Folosiți-l când ați oprit o tură din greșeală sau când coborâți din nou
 în subteran în aceeași zi și vreți o singură înregistrare continuă.
+
+Cât timp se înregistrează altă tură, repornirea este refuzată cu *„Altă
+tură se înregistrează: …”*: opriți mai întâi acea tură, ca să nu rămână
+nicio tură deschisă pe care să nu o mai înregistreze nimic.
 
 Două consecințe:
 

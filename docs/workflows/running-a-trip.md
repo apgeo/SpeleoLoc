@@ -33,7 +33,7 @@ one per cave. While a trip is running:
 To pick the trip up again from anywhere, open the **⋮** app menu (the
 drawer that slides in from the right edge) and scroll to the bottom.
 The trip card there carries **View trip**, **Pause** / **Resume trip**
-and a red stop button.
+and, set apart at the right end, a red stop button.
 
 ## Before you descend
 
@@ -132,7 +132,10 @@ Press **Pause** — on the trip card, on the trip screen's button row, or
 on the **Past / active trip(s)** screen — to stop recording during a
 surface break or a side passage you do not want on the route. The card
 and the summary chip turn orange and read **Trip paused**. **Resume
-trip** starts recording again.
+trip** starts recording again. Scans and beacon detections during a
+pause answer *"Trip paused — point not recorded"*, with a **Resume
+trip** button on the message, so a forgotten pause shows at the next
+scan.
 
 Two things to know about pause:
 
@@ -148,13 +151,15 @@ Two things to know about pause:
 1. Press the red **Stop trip** button. It is in the trip screen's
    button row, on the cave's **Past / active trip(s)** screen, and on
    the trip card in the **⋮** app menu.
-2. The first two ask *"Stop recording this trip?"* — confirm. **The
-   button on the drawer card stops the trip immediately, with no
-   confirmation.**
+2. The trip screen and the drawer card ask *"End the trip at
+   <cave>?"* — press **End trip**. **Keep recording**, the highlighted
+   button, leaves the trip running. The **Past / active trip(s)**
+   screen asks *"Stop recording this trip?"*.
 
 On the way out you can instead scan the entrance QR code: the app asks
-*"You scanned a cave entrance. Are you exiting the cave? Stop the
-active trip?"*. Answer **Yes** and the trip ends; answer **No** and the
+*"End the trip at <cave>?"* and explains that you scanned the entrance.
+Press **End trip** and the trip ends; press **Keep recording** — for
+example when you are only passing the entrance chamber — and the
 entrance is recorded as an ordinary trip point.
 
 A stopped trip is **not** locked. Its route, log, linked documents and
@@ -169,6 +174,11 @@ view: a summary card with the cave, **Started**, **Ended**,
 **Duration** and **Points**, then every point in visit order with a
 numbered badge, the time, and the place's depth on the right where it
 is known. Tap a row to open that cave place.
+
+A trip that is still open on another phone — a teammate's recording
+that arrived through SilexGIS — reads *"Open — not recording on this
+phone"* and has no stop or pause buttons: those act only on the trip
+this phone is recording.
 
 If the cave has at least one raster map, the button row also offers
 **Map view**. There the route is drawn as a blue line with direction
@@ -244,8 +254,10 @@ rebuilds the log, and when the log is regenerated after you edited the
 points. So complete the points first and write in the log last. New
 points added while the trip runs are *appended* in the Raw, Classic and
 Field journal styles, so they do not disturb text you have already
-written. Narrative is the exception: every new point rebuilds the whole
-log, and manual edits go with it.
+written. Narrative regroups its paragraphs as points arrive, so it
+rewrites its own generated text but keeps whatever you typed after it.
+If you reworded the generated text itself, a new point leaves the log
+as you wrote it and marks it out of date instead.
 
 ## Step 6 — Export a report
 
@@ -264,8 +276,9 @@ log, and manual edits go with it.
 3. Choose where to save the file. The report is the template with the
    trip log text appended — the route map is **not** included; export
    it separately with **Export map**.
-4. After saving, the app hands the file to your device's default
-   application for that format and it opens.
+4. After saving, a computer opens the report in its default
+   application for that format. A phone does not: open the report from
+   where you saved it.
 
 See [Trip reports](../features/trip-reports.md) for templates in
 detail.
@@ -283,7 +296,11 @@ ODT or DOCX file behind it, so every device has to add its own copy. See
 
 **Stopped the trip too early, or went back in the same day.** Open the
 trip; where the red stop button was there is now a blue **Restart
-trip**. Pressing it makes that trip the active trip again, so new scans
+trip**. It first asks *"Restart this trip?"* and shows the start and
+end times about to be replaced; **Replace times and restart** goes
+ahead. While a different trip is recording, Restart is refused with
+*"Another trip is recording: …"* — stop that one first. Restarting
+makes the trip the active trip again, so new scans
 and beacon detections keep adding to the same route. Two consequences:
 the start time is **reset to the moment you restart**, so **Started**
 and **Duration** now count from there rather than from your original

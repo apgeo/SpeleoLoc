@@ -109,10 +109,9 @@ the quickest way to run a [trip](trips.md) without touching menus.
   Would you like to start a new trip?" Answer **Yes** and a **Start a
   new trip** dialog appears with a **Trip title** already filled in
   (the cave name plus today's date); edit it or press **OK**.
-- **A trip is running for this cave** — the app asks "You scanned a
-  cave entrance. Are you exiting the cave? Stop the active trip?"
-  **Yes** stops it and confirms with "Trip stopped". **No** simply
-  records the scan as another trip point.
+- **A trip is running for this cave** — the app asks "End the trip at
+  <cave>?" **End trip** stops it and confirms with "Trip stopped".
+  **Keep recording** simply records the scan as another trip point.
 - **A trip is running for a different cave** — the app names that cave
   and asks whether to stop its trip; if you agree, it then offers to
   start a new trip for the cave you are standing in.

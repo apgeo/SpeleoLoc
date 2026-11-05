@@ -114,9 +114,9 @@ să umblați prin meniuri.
   dialogul **Începe o tură nouă**, cu **Titlul turei** deja completat
   (numele peșterii plus data de azi); îl modificați sau apăsați **OK**.
 - **O tură este pornită pentru această peșteră** — aplicația întreabă
-  „Ai scanat o intrare în peșteră. Ieși din peșteră? Oprești tura
-  activă?" **Da** o oprește și confirmă cu „Tură oprită". **Nu**
-  înregistrează pur și simplu scanarea ca încă un punct al turei.
+  „Închei tura din <peșteră>?" **Închei tura** o oprește și confirmă cu
+  „Tură oprită". **Continuă înregistrarea** înregistrează pur și simplu
+  scanarea ca încă un punct al turei.
 - **O tură este pornită pentru altă peșteră** — aplicația numește acea
   peșteră și întreabă dacă să îi oprească tura; dacă acceptați, vă
   propune apoi să începeți o tură nouă pentru peștera în care vă aflați.
