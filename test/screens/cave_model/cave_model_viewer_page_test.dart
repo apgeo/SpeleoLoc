@@ -55,12 +55,15 @@ void main() {
     DocumentationFile? model,
     Uuid? caveUuid,
     Uuid? focusPlaceUuid,
+    Duration? loadTimeout,
   }) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(db),
+            if (loadTimeout != null)
+              modelViewerLoadTimeoutProvider.overrideWithValue(loadTimeout),
             modelViewerBuilderProvider.overrideWithValue(
               supported ? viewer.build : null,
             ),
@@ -172,5 +175,111 @@ void main() {
     await open(tester, 'test_data/cave_models/test_cave.lox', supported: false);
     expect(find.byType(ModelViewerUnavailable), findsOneWidget);
     expect(viewer.pageUri, isNull);
+  });
+
+  group('when the page does not come up', () {
+    const fixture = 'test_data/cave_models/test_cave.lox';
+
+    Future<void> waitReal(WidgetTester tester) async {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('a script error before the model is drawn ends the spinner', (
+      tester,
+    ) async {
+      await open(tester, fixture);
+      viewer.report!(
+        const ModelViewerFailed(code: 'script', message: 'no WebGL'),
+      );
+      await tester.pump();
+
+      expect(find.text('model_viewer_loading'), findsNothing);
+      expect(find.text('model_viewer_cannot_show'), findsOneWidget);
+      expect(find.text('retry'), findsOneWidget);
+      expect(find.text('back'), findsOneWidget);
+      expect(find.byKey(const Key('fake-viewer')), findsNothing);
+    });
+
+    testWidgets('a page the WebView could not open ends the spinner', (
+      tester,
+    ) async {
+      await open(tester, fixture);
+      viewer.report!(const ModelViewerFailed(code: 'page', message: 'net'));
+      await tester.pump();
+
+      expect(find.text('model_viewer_loading'), findsNothing);
+      expect(find.text('model_viewer_cannot_show'), findsOneWidget);
+    });
+
+    testWidgets('a page that never answers gives up after the timeout', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        fixture,
+        loadTimeout: const Duration(milliseconds: 100),
+      );
+      expect(find.text('model_viewer_loading'), findsOneWidget);
+
+      await waitReal(tester);
+
+      expect(find.text('model_viewer_loading'), findsNothing);
+      expect(find.text('model_viewer_cannot_show'), findsOneWidget);
+    });
+
+    testWidgets('a drawn model does not time out', (tester) async {
+      await open(
+        tester,
+        fixture,
+        loadTimeout: const Duration(milliseconds: 100),
+      );
+      viewer.report!(const ModelViewerLoaded(stations: 11));
+      await tester.pump();
+
+      await waitReal(tester);
+
+      expect(find.text('model_viewer_cannot_show'), findsNothing);
+      expect(find.byTooltip('model_viewer_views'), findsOneWidget);
+    });
+
+    testWidgets('an error after the model is shown keeps the viewer', (
+      tester,
+    ) async {
+      await open(tester, fixture);
+      viewer.report!(const ModelViewerLoaded(stations: 11));
+      await tester.pump();
+
+      viewer.report!(const ModelViewerFailed(code: 'load', message: 'route'));
+      viewer.report!(const ModelViewerFailed(code: 'script', message: 'x'));
+      await tester.pump();
+
+      expect(find.text('model_viewer_failed'), findsNothing);
+      expect(find.byKey(const Key('fake-viewer')), findsOneWidget);
+    });
+
+    testWidgets('retry opens a fresh page', (tester) async {
+      await open(tester, fixture);
+      final first = viewer.pageUri;
+      viewer.report!(const ModelViewerFailed(code: 'script', message: 'x'));
+      await tester.pump();
+      viewer.pageUri = null;
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('retry'));
+        for (var i = 0; i < 40 && viewer.pageUri == null; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 25));
+          await tester.pump();
+        }
+      });
+      await tester.pump();
+
+      expect(viewer.pageUri, isNotNull);
+      expect(viewer.pageUri, isNot(first));
+      expect(find.text('model_viewer_cannot_show'), findsNothing);
+      expect(find.text('model_viewer_loading'), findsOneWidget);
+    });
   });
 }

@@ -48,8 +48,10 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
     // earlier install can carry detection switched on.
     if (BuildConfig.beaconsEnabled) BeaconDetectionService.instance.start();
     // After the first frame (navigator must exist): if a detection
-    // notification cold-started the app, finish its navigation.
+    // notification or an sp:// link cold-started the app, finish its
+    // navigation.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(DeepLinkHandler.instance.handleInitialLink());
       unawaited(BeaconAlertNotifier.instance.handleLaunchFromNotification());
     });
   }

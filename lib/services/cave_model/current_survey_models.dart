@@ -62,6 +62,9 @@ enum ServerModelFetchOutcome {
   /// The fetch broke off, or brought other bytes than listed. Nothing was
   /// stored.
   failed,
+
+  /// The server could not be reached; the phone has no usable connection.
+  offline,
 }
 
 /// Fetches a server model's file when the caver asks for it.

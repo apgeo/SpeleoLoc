@@ -13,8 +13,15 @@ import 'package:speleoloc/widgets/qr_code_lookup_handler.dart';
 /// Matches dl_input against place_qr_code_identifier in all caves.
 /// If multiple matches, uses the last open cave (stored in settings).
 class DeepLinkHandler {
-  DeepLinkHandler._();
+  DeepLinkHandler._() : _resolve = null;
+
+  @visibleForTesting
+  DeepLinkHandler.withResolver(Future<void> Function(BuildContext, String) r)
+    : _resolve = r;
+
   static final DeepLinkHandler instance = DeepLinkHandler._();
+
+  final Future<void> Function(BuildContext, String)? _resolve;
 
   GlobalKey<NavigatorState>? _navigatorKey;
   static const _channel = MethodChannel('speleoloc/deep_link');
@@ -29,6 +36,23 @@ class DeepLinkHandler {
         await handleUri(uri);
       }
     });
+  }
+
+  /// Handles the link that started the app, if any. The platform keeps it
+  /// until asked because a message pushed while the app starts has no
+  /// listener yet. Call once the navigator exists.
+  Future<void> handleInitialLink() async {
+    final String? link;
+    try {
+      link = await _channel.invokeMethod<String>('getInitialLink');
+    } on MissingPluginException {
+      // Platforms without a native side for this channel have no launch link.
+      return;
+    } on PlatformException {
+      return;
+    }
+    if (link == null || link.isEmpty) return;
+    await handleUri(link);
   }
 
   void dispose() {
@@ -52,7 +76,7 @@ class DeepLinkHandler {
 
     if (dlInput.isEmpty) return;
 
-    await _resolveAndNavigate(context, dlInput);
+    await (_resolve ?? _resolveAndNavigate)(context, dlInput);
   }
 
   /// Resolve dl_input against place_code_identifier / qr_code_resource_identifier

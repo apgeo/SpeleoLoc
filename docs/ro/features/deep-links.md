@@ -56,7 +56,7 @@ Există trei căi de intrare, iar ele se comportă puțin diferit.
 | Cale | Ce se întâmplă |
 |---|---|
 | **Scanerul din aplicație** — butonul de scanare de pe pagina principală sau din lista de locuri a unei peșteri | Camera citește eticheta, aplicația elimină prefixul și caută valoarea. Aceasta este calea sigură în subteran. |
-| **Camera sistemului sau un link apăsat** (doar pe Android) | Sistemul de operare întreabă cu ce aplicație să deschidă linkul. SpeleoLoc sare la loc atunci când **rulează deja**, în prim-plan sau în fundal. Un link care trebuie să pornească SpeleoLoc de la rece îl deschide pe pagina principală, fără să navigheze — după ce aplicația a pornit, apăsați linkul din nou. |
+| **Camera sistemului sau un link apăsat** (doar pe Android) | Sistemul de operare întreabă cu ce aplicație să deschidă linkul. SpeleoLoc sare la loc fie că **rulează deja** (în prim-plan sau în fundal), fie că trebuie să **pornească de la rece**: în acest caz aplicația se deschide întâi pe pagina principală și apoi trece la loc. |
 | **Introducere manuală** | În lista de locuri a unei peșteri, apăsați **Căutare manuală cod QR** din bara de instrumente. Scrieți fie identificatorul simplu, fie o valoare `sp://…` întreagă în câmpul **Mod de generare identificatori cod QR** și apăsați **Caută loc după id cod QR**. (În versiunile pentru dezvoltatori, aceeași căutare se poate deschide și ținând butonul de scanare apăsat aproximativ două secunde și jumătate.) |
 
 Introducerea manuală este răspunsul pentru o etichetă acoperită de

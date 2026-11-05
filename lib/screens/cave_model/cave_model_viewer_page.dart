@@ -110,6 +110,7 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
   Uri? _pageUri;
   _Phase _phase = _Phase.starting;
   String? _failure;
+  Timer? _loadTimer;
   _Mode _mode = const _Browse();
 
   CaveModelMappingController? _mapping;
@@ -187,9 +188,16 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
       format,
     );
     _server = server;
-    final uri = await server.start(
-      language: LocServ.inst.locale == 'ro' ? 'ro' : 'en',
-    );
+    final Uri uri;
+    try {
+      uri = await server.start(
+        language: LocServ.inst.locale == 'ro' ? 'ro' : 'en',
+      );
+    } on IOException catch (e) {
+      _log.warning('viewer server did not start: $e');
+      _fail(LocServ.inst.t('model_viewer_cannot_show'));
+      return;
+    }
     if (!mounted) {
       // The screen closed while the port was being opened, after dispose()
       // had already stopped a server that was not yet listening.
@@ -200,14 +208,33 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
       _pageUri = uri;
       _phase = _Phase.loading;
     });
+    // A page that never answers (a script that did not parse stops all of
+    // its own error reporting) must not leave the spinner up for good.
+    _loadTimer = Timer(ref.read(modelViewerLoadTimeoutProvider), () {
+      _log.warning('viewer did not load in time');
+      _fail(LocServ.inst.t('model_viewer_cannot_show'));
+    });
   }
 
   void _fail(String message) {
     if (!mounted) return;
+    _loadTimer?.cancel();
     setState(() {
       _phase = _Phase.failed;
       _failure = message;
     });
+  }
+
+  /// Starts over after a failure, with a fresh server and page.
+  void _retry() {
+    unawaited(_server?.stop());
+    _server = null;
+    setState(() {
+      _pageUri = null;
+      _failure = null;
+      _phase = _Phase.starting;
+    });
+    unawaited(_start());
   }
 
   void _send(ModelViewerCommand command) =>
@@ -221,10 +248,17 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
         _log.info('viewer ${event.engine} ${event.engineVersion} ready');
       case ModelViewerLoaded():
         _log.info('model drawn, ${event.stations} stations');
+        _loadTimer?.cancel();
         setState(() => _phase = _Phase.shown);
         unawaited(_onModelShown());
-      case ModelViewerFailed(code: 'load'):
-        _fail(event.message);
+      case ModelViewerFailed(code: 'load' || 'script' || 'page')
+          when _phase == _Phase.starting || _phase == _Phase.loading:
+        _log.warning('viewer reported ${event.code}: ${event.message}');
+        _fail(
+          event.code == 'load'
+              ? event.message
+              : LocServ.inst.t('model_viewer_cannot_show'),
+        );
       case ModelViewerFailed(code: 'notFound'):
         SnackBarService.showWarning(
           LocServ.inst.t('model_station_not_found', {'station': event.message}),
@@ -714,6 +748,7 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
 
   @override
   void dispose() {
+    _loadTimer?.cancel();
     _mapping?.removeListener(_onMappingChanged);
     _mapping?.dispose();
     unawaited(_server?.stop());
@@ -773,7 +808,12 @@ class _CaveModelViewerPageState extends ConsumerState<CaveModelViewerPage> {
                   ),
                 if (_phase == _Phase.starting || _phase == _Phase.loading)
                   const _Loading(),
-                if (_phase == _Phase.failed) _Failed(message: _failure ?? ''),
+                if (_phase == _Phase.failed)
+                  _Failed(
+                    message: _failure ?? '',
+                    onRetry: _retry,
+                    onBack: () => Navigator.of(context).maybePop(),
+                  ),
                 if (shown)
                   Align(alignment: Alignment.bottomCenter, child: _modeBar()),
               ],
@@ -958,9 +998,15 @@ class _Loading extends StatelessWidget {
 }
 
 class _Failed extends StatelessWidget {
-  const _Failed({required this.message});
+  const _Failed({
+    required this.message,
+    required this.onRetry,
+    required this.onBack,
+  });
 
   final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -984,6 +1030,21 @@ class _Failed extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              children: [
+                OutlinedButton(
+                  onPressed: onBack,
+                  child: Text(LocServ.inst.t('back')),
+                ),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: Text(LocServ.inst.t('retry')),
+                ),
+              ],
+            ),
           ],
         ),
       ),
