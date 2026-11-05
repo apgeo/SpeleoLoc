@@ -8,6 +8,7 @@ import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_image_filter.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_filter_panel.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_img_processing_menu.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_picture_view.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_place_point_editor_controller.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_toolbar_widgets.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_viewport_layer.dart';
@@ -263,10 +264,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   // Decoded image for color-sampling (now stored as raw RGBA for fast sampling)
   RawImageData? _img;
 
-  // Natural pixel dimensions of the displayed image, resolved from the image
-  // provider. Lets tap coordinates be clamped to the image bounds even when
-  // [_img] (the full RGBA decode) is not loaded — the common case when
-  // color-sampling is disabled (finding 4.3).
+  // The picture's own pixel size, read from its header by the picture view.
+  // Taps are clamped to it whether or not label colours are sampled.
   int? _naturalImgW;
   int? _naturalImgH;
 
@@ -553,8 +552,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     } else {
       decodedImageCache.remove(widget.imageFile.path);
     }
-
-    _captureNaturalImageSize();
   }
 
   /// Loads the reduced copy of the picture that label colours are sampled
@@ -569,24 +566,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         }
       }),
     );
-  }
-
-  /// Resolves the displayed image's natural pixel size from its provider and
-  /// stores it in [_naturalImgW]/[_naturalImgH]. Independent of [_img], so tap
-  /// clamping works even when color-sampling is off.
-  void _captureNaturalImageSize() {
-    final provider = widget.imageProvider ?? FileImage(widget.imageFile);
-    final stream = provider.resolve(ImageConfiguration.empty);
-    ImageStreamListener? listener;
-    listener = ImageStreamListener((info, _) {
-      if (mounted) {
-        _naturalImgW = info.image.width;
-        _naturalImgH = info.image.height;
-      }
-      final l = listener;
-      if (l != null) stream.removeListener(l);
-    });
-    stream.addListener(listener);
   }
 
   @override
@@ -614,7 +593,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       _img = null;
       _naturalImgW = null;
       _naturalImgH = null;
-      _captureNaturalImageSize();
       if (_useImageTextColor) _loadLabelSampler();
     }
 
@@ -1947,32 +1925,20 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
               child: ClipRect(
                 child: Stack(
                   children: [
-                    // Apply image-processing filter. The filter is computed from
-                    // RasterMapImageFilter.toColorFilter() which returns null when
-                    // no processing is needed (no shader overhead at rest).
-                    () {
-                      final photoView = PhotoView(
-                        controller: _photoViewController,
-                        scaleStateController: _scaleStateController,
-                        imageProvider:
-                            widget.imageProvider ?? FileImage(widget.imageFile),
-                        minScale: _gestureZoomEnabled
-                            ? PhotoViewComputedScale.contained * 0.5
-                            : PhotoViewComputedScale.contained,
-                        maxScale: _gestureZoomEnabled
-                            ? PhotoViewComputedScale.covered * 4.8
-                            : PhotoViewComputedScale.contained,
-                        initialScale: PhotoViewComputedScale.contained,
-                        enableRotation: false,
-                        basePosition: Alignment.topLeft,
-                        disableGestures: true,
-                        loadingBuilder: (context, event) =>
-                            const Center(child: CircularProgressIndicator()),
-                      );
-                      final cf = _activeFilter.toColorFilter();
-                      if (cf == null) return photoView;
-                      return ColorFiltered(colorFilter: cf, child: photoView);
-                    }(),
+                    // The filter is null when no processing is needed, so a
+                    // plain map pays for no shader.
+                    RasterMapPictureView(
+                      picture:
+                          widget.imageProvider ?? FileImage(widget.imageFile),
+                      controller: _photoViewController,
+                      scaleStateController: _scaleStateController,
+                      gestureZoomEnabled: _gestureZoomEnabled,
+                      colorFilter: _activeFilter.toColorFilter(),
+                      onPictureSize: (size) {
+                        _naturalImgW = size?.width.round();
+                        _naturalImgH = size?.height.round();
+                      },
+                    ),
                     Positioned.fill(
                       child: RasterMapViewportLayer(
                         viewport: _viewport,
