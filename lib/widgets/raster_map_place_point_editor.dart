@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
 import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
@@ -55,7 +53,6 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.defaultLabelColor = Colors.white,
 
     this.useImageTextColor = false,
-    this.useSimpleViewerForTests = false,
     this.imageProvider,
     this.controller,
     this.onImagePointChanged,
@@ -109,7 +106,6 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// when sampling can't determine a color. Default: `Colors.white`.
   final Color defaultLabelColor;
 
-  final bool useSimpleViewerForTests;
   final ImageProvider?
   imageProvider; // optional cached provider (MapViewerPage passes this)
   final RasterMapPlacePointEditorController? controller;
@@ -550,47 +546,27 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
           _photoViewController.scale = scale;
         });
 
-    // Decode image only when image-sampling for label color is enabled.
-    // Otherwise ensure we do not hold or populate the decoded-image cache
-    // for this image (performance / memory optimization).
     if (_useImageTextColor) {
-      // Decode image. In tests we allow the synchronous path; in normal
-      // runtime decode happens inside an isolate via `compute` to avoid
-      // blocking the UI thread on large images.
-      if (widget.useSimpleViewerForTests) {
-        try {
-          final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
-          if (decoded != null) {
-            final pixels = Uint8List.fromList(decoded.getBytes());
-            _img = RawImageData(decoded.width, decoded.height, pixels);
-          } else {
-            _img = null;
-          }
-        } catch (e, st) {
-          _log.fine('initState: simple decoder failed', e, st);
-          _img = null;
-        }
-      } else {
-        // use persistent cache to avoid re-decoding when switching maps
-        decodeImageToRawCached(widget.imageFile.path)
-            .then((raw) {
-              if (raw != null && mounted) {
-                setState(() {
-                  _img = raw;
-                });
-              }
-            })
-            .catchError((_) {
-              // ignore failures; _img stays null
-            });
-      }
+      _loadLabelSampler();
     } else {
-      // sampling disabled: clear any existing decoded cache for this image
-      _img = null;
       decodedImageCache.remove(widget.imageFile.path);
     }
 
     _captureNaturalImageSize();
+  }
+
+  /// Loads the reduced copy of the picture that label colours are sampled
+  /// from; a picture that cannot be decoded leaves labels in the default
+  /// colour.
+  void _loadLabelSampler() {
+    final path = widget.imageFile.path;
+    unawaited(
+      decodeImageToRawCached(path).then((raw) {
+        if (raw != null && mounted && widget.imageFile.path == path) {
+          setState(() => _img = raw);
+        }
+      }),
+    );
   }
 
   /// Resolves the displayed image's natural pixel size from its provider and
@@ -636,34 +612,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       _naturalImgW = null;
       _naturalImgH = null;
       _captureNaturalImageSize();
-      if (_useImageTextColor) {
-        if (widget.useSimpleViewerForTests) {
-          try {
-            final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
-            if (decoded != null) {
-              final pixels = Uint8List.fromList(decoded.getBytes());
-              if (mounted)
-                setState(
-                  () => _img = RawImageData(
-                    decoded.width,
-                    decoded.height,
-                    pixels,
-                  ),
-                );
-            }
-          } catch (e) {
-            log.warning('Error decoding image', e);
-          }
-        } else {
-          decodeImageToRawCached(widget.imageFile.path)
-              .then((raw) {
-                if (raw != null && mounted) setState(() => _img = raw);
-              })
-              .catchError((e) {
-                log.warning('Error decoding image async', e);
-              });
-        }
-      }
+      if (_useImageTextColor) _loadLabelSampler();
     }
 
     // prefer controller setting; otherwise fall back to widget prop
@@ -847,29 +796,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     setState(() => _useImageTextColor = v);
 
     if (v) {
-      // enable sampling -> decode now (same logic as initState)
-      if (widget.useSimpleViewerForTests) {
-        try {
-          final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
-          if (decoded != null) {
-            final pixels = Uint8List.fromList(decoded.getBytes());
-            setState(
-              () => _img = RawImageData(decoded.width, decoded.height, pixels),
-            );
-          }
-        } catch (e, st) {
-          _log.fine('setUseImageTextColor: simple decoder failed', e, st);
-          setState(() => _img = null);
-        }
-      } else {
-        decodeImageToRawCached(widget.imageFile.path)
-            .then((raw) {
-              if (raw != null && mounted) setState(() => _img = raw);
-            })
-            .catchError((_) {
-              // ignore
-            });
-      }
+      _loadLabelSampler();
     } else {
       // disable sampling -> clear local decoded image and cache entry
       decodedImageCache.remove(widget.imageFile.path);
