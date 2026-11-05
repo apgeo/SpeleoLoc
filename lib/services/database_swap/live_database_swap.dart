@@ -167,6 +167,13 @@ class LiveDatabaseSwap {
     _install(_openLiveDatabase());
   }
 
+  /// Installs a fresh connection to the live file. A connection whose open
+  /// failed keeps failing, so a retry after a failed start needs a new one.
+  Future<void> reopenLiveDatabase() async {
+    await _closeQuietly(_currentDatabase());
+    _install(_openLiveDatabase());
+  }
+
   /// The live database file. It may not exist yet.
   Future<File> liveDatabaseFile() => _liveFile();
 

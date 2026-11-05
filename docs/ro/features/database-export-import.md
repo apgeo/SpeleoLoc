@@ -326,6 +326,28 @@ restaurare care eșuează pe parcurs pune la loc baza de date anterioară.
 **Odată reușită, restaurarea este ireversibilă.** Baza de date pe care o
 aveați este ștearsă, nu arhivată.
 
+## Când aplicația nu poate porni
+
+Dacă ceva oprește SpeleoLoc la pornire — o bază de date pe care nu o poate
+deschide, o memorie prea plină pentru a scrie în ea — aplicația arată un
+ecran **SpeleoLoc nu a putut porni** în loc să rămână pe ecranul de
+pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
+**Detalii**, și oferă:
+
+- **Exportă fișierul bazei de date** — salvează o copie a fișierului brut
+  al bazei de date prin același dialog de salvare ca **Exportă baza de
+  date**, ca să nu se piardă nimic orice ați face după aceea.
+- **Reîncearcă** — încearcă din nou pornirea, de exemplu după ce ați
+  eliberat spațiu.
+- **Resetează datele aplicației** — șterge baza de date, iar aplicația
+  pornește goală. Întreabă întâi, spune ce se va șterge și oferă
+  **Exportă întâi**. Fotografiile și documentele deja salvate pe
+  dispozitiv nu se șterg.
+
+O bază de date salvată de o versiune mai nouă a aplicației are propriul
+mesaj: actualizați aplicația și baza de date se deschide așa cum este.
+Atunci **Resetează datele aplicației** nu este oferit.
+
 ## Reinițializarea bazei de date
 
 Un singur buton în partea de sus a **Setări → Baza de date** —

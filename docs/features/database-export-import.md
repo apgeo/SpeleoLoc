@@ -297,6 +297,25 @@ previous database back.
 **Once the restore succeeds, it is irreversible.** The database you had is
 deleted, not archived.
 
+## When the app cannot start
+
+If something stops SpeleoLoc while it starts — a database it cannot open,
+storage too full to write to — it shows a **SpeleoLoc could not start**
+screen instead of staying on the splash screen. It says what went wrong in
+plain words, with the technical details folded away under **Details**, and
+offers:
+
+- **Export database file** — saves a copy of the raw database file through
+  the same save dialog as **Export database**, so nothing is lost whatever
+  you do next.
+- **Retry** — tries to start again, for example after freeing some space.
+- **Reset app data** — deletes the database so the app starts empty. It
+  asks first, says what will be deleted, and offers **Export first**.
+  Photos and documents already saved on the device are not deleted.
+
+A database saved by a newer version of the app gets its own message: update
+the app and it opens as it is. **Reset app data** is not offered then.
+
 ## Reinitializing the database
 
 One button at the top of **Settings → Database** — **Reinitialize
