@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
 import 'package:photo_view/photo_view.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_editor_constants.dart';
@@ -10,8 +8,10 @@ import 'package:speleoloc/widgets/raster_map/raster_map_zoom_math.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_image_filter.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_filter_panel.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_img_processing_menu.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_picture_view.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_place_point_editor_controller.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_toolbar_widgets.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_viewport_layer.dart';
 import 'package:speleoloc/widgets/raster_map/trip_overlay_data.dart';
 import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
@@ -55,7 +55,6 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.defaultLabelColor = Colors.white,
 
     this.useImageTextColor = false,
-    this.useSimpleViewerForTests = false,
     this.imageProvider,
     this.controller,
     this.onImagePointChanged,
@@ -109,7 +108,6 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// when sampling can't determine a color. Default: `Colors.white`.
   final Color defaultLabelColor;
 
-  final bool useSimpleViewerForTests;
   final ImageProvider?
   imageProvider; // optional cached provider (MapViewerPage passes this)
   final RasterMapPlacePointEditorController? controller;
@@ -259,13 +257,15 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   // Stream subscription for PhotoView state changes (#9 fix)
   StreamSubscription? _pvSubscription;
 
+  // Where the picture sits in the viewport, fed from the PhotoView controller.
+  // Only the marker layer listens, so pan and zoom never rebuild the editor.
+  late final ValueNotifier<PhotoViewControllerValue> _viewport;
+
   // Decoded image for color-sampling (now stored as raw RGBA for fast sampling)
   RawImageData? _img;
 
-  // Natural pixel dimensions of the displayed image, resolved from the image
-  // provider. Lets tap coordinates be clamped to the image bounds even when
-  // [_img] (the full RGBA decode) is not loaded — the common case when
-  // color-sampling is disabled (finding 4.3).
+  // The picture's own pixel size, read from its header by the picture view.
+  // Taps are clamped to it whether or not label colours are sampled.
   int? _naturalImgW;
   int? _naturalImgH;
 
@@ -521,19 +521,16 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     _photoViewController = PhotoViewController();
     _scaleStateController = PhotoViewScaleStateController();
 
-    _pvSubscription = _photoViewController.outputStateStream.listen((value) {
-      // rebuild markers when zoom/pan changes
-      if (mounted) setState(() {});
-    });
+    _viewport = ValueNotifier(_photoViewController.value);
+    _pvSubscription = _photoViewController.outputStateStream.listen(
+      (value) => _viewport.value = value,
+    );
 
-    // pulse animation controller for marker-tap feedback
-    _pulseController =
-        AnimationController(
-          vsync: this,
-          duration: RasterMapEditorConstants.pulseAnimationDuration,
-        )..addListener(() {
-          if (mounted) setState(() {});
-        });
+    // Pulse animation for marker-tap feedback; the marker layer redraws on it.
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: RasterMapEditorConstants.pulseAnimationDuration,
+    );
 
     _panZoomController =
         AnimationController(
@@ -550,65 +547,25 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
           _photoViewController.scale = scale;
         });
 
-    // Decode image only when image-sampling for label color is enabled.
-    // Otherwise ensure we do not hold or populate the decoded-image cache
-    // for this image (performance / memory optimization).
     if (_useImageTextColor) {
-      // Decode image. In tests we allow the synchronous path; in normal
-      // runtime decode happens inside an isolate via `compute` to avoid
-      // blocking the UI thread on large images.
-      if (widget.useSimpleViewerForTests) {
-        try {
-          final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
-          if (decoded != null) {
-            final pixels = Uint8List.fromList(decoded.getBytes());
-            _img = RawImageData(decoded.width, decoded.height, pixels);
-          } else {
-            _img = null;
-          }
-        } catch (e, st) {
-          _log.fine('initState: simple decoder failed', e, st);
-          _img = null;
-        }
-      } else {
-        // use persistent cache to avoid re-decoding when switching maps
-        decodeImageToRawCached(widget.imageFile.path)
-            .then((raw) {
-              if (raw != null && mounted) {
-                setState(() {
-                  _img = raw;
-                });
-              }
-            })
-            .catchError((_) {
-              // ignore failures; _img stays null
-            });
-      }
+      _loadLabelSampler();
     } else {
-      // sampling disabled: clear any existing decoded cache for this image
-      _img = null;
       decodedImageCache.remove(widget.imageFile.path);
     }
-
-    _captureNaturalImageSize();
   }
 
-  /// Resolves the displayed image's natural pixel size from its provider and
-  /// stores it in [_naturalImgW]/[_naturalImgH]. Independent of [_img], so tap
-  /// clamping works even when color-sampling is off.
-  void _captureNaturalImageSize() {
-    final provider = widget.imageProvider ?? FileImage(widget.imageFile);
-    final stream = provider.resolve(ImageConfiguration.empty);
-    ImageStreamListener? listener;
-    listener = ImageStreamListener((info, _) {
-      if (mounted) {
-        _naturalImgW = info.image.width;
-        _naturalImgH = info.image.height;
-      }
-      final l = listener;
-      if (l != null) stream.removeListener(l);
-    });
-    stream.addListener(listener);
+  /// Loads the reduced copy of the picture that label colours are sampled
+  /// from; a picture that cannot be decoded leaves labels in the default
+  /// colour.
+  void _loadLabelSampler() {
+    final path = widget.imageFile.path;
+    unawaited(
+      decodeImageToRawCached(path).then((raw) {
+        if (raw != null && mounted && widget.imageFile.path == path) {
+          setState(() => _img = raw);
+        }
+      }),
+    );
   }
 
   @override
@@ -617,6 +574,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     // detach controller reference
     widget.controller?.detachHost(this);
     _pvSubscription?.cancel();
+    _viewport.dispose();
     _photoViewController.dispose();
     _scaleStateController.dispose();
     _pulseController.dispose();
@@ -635,35 +593,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       _img = null;
       _naturalImgW = null;
       _naturalImgH = null;
-      _captureNaturalImageSize();
-      if (_useImageTextColor) {
-        if (widget.useSimpleViewerForTests) {
-          try {
-            final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
-            if (decoded != null) {
-              final pixels = Uint8List.fromList(decoded.getBytes());
-              if (mounted)
-                setState(
-                  () => _img = RawImageData(
-                    decoded.width,
-                    decoded.height,
-                    pixels,
-                  ),
-                );
-            }
-          } catch (e) {
-            log.warning('Error decoding image', e);
-          }
-        } else {
-          decodeImageToRawCached(widget.imageFile.path)
-              .then((raw) {
-                if (raw != null && mounted) setState(() => _img = raw);
-              })
-              .catchError((e) {
-                log.warning('Error decoding image async', e);
-              });
-        }
-      }
+      if (_useImageTextColor) _loadLabelSampler();
     }
 
     // prefer controller setting; otherwise fall back to widget prop
@@ -847,29 +777,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     setState(() => _useImageTextColor = v);
 
     if (v) {
-      // enable sampling -> decode now (same logic as initState)
-      if (widget.useSimpleViewerForTests) {
-        try {
-          final decoded = img.decodeImage(widget.imageFile.readAsBytesSync());
-          if (decoded != null) {
-            final pixels = Uint8List.fromList(decoded.getBytes());
-            setState(
-              () => _img = RawImageData(decoded.width, decoded.height, pixels),
-            );
-          }
-        } catch (e, st) {
-          _log.fine('setUseImageTextColor: simple decoder failed', e, st);
-          setState(() => _img = null);
-        }
-      } else {
-        decodeImageToRawCached(widget.imageFile.path)
-            .then((raw) {
-              if (raw != null && mounted) setState(() => _img = raw);
-            })
-            .catchError((_) {
-              // ignore
-            });
-      }
+      _loadLabelSampler();
     } else {
       // disable sampling -> clear local decoded image and cache entry
       decodedImageCache.remove(widget.imageFile.path);
@@ -2017,46 +1925,29 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
               child: ClipRect(
                 child: Stack(
                   children: [
-                    // Apply image-processing filter. The filter is computed from
-                    // RasterMapImageFilter.toColorFilter() which returns null when
-                    // no processing is needed (no shader overhead at rest).
-                    () {
-                      final photoView = PhotoView(
-                        controller: _photoViewController,
-                        scaleStateController: _scaleStateController,
-                        imageProvider:
-                            widget.imageProvider ?? FileImage(widget.imageFile),
-                        minScale: _gestureZoomEnabled
-                            ? PhotoViewComputedScale.contained * 0.5
-                            : PhotoViewComputedScale.contained,
-                        maxScale: _gestureZoomEnabled
-                            ? PhotoViewComputedScale.covered * 4.8
-                            : PhotoViewComputedScale.contained,
-                        initialScale: PhotoViewComputedScale.contained,
-                        enableRotation: false,
-                        basePosition: Alignment.topLeft,
-                        disableGestures: true,
-                        loadingBuilder: (context, event) =>
-                            const Center(child: CircularProgressIndicator()),
-                      );
-                      final cf = _activeFilter.toColorFilter();
-                      if (cf == null) return photoView;
-                      return ColorFiltered(colorFilter: cf, child: photoView);
-                    }(),
+                    // The filter is null when no processing is needed, so a
+                    // plain map pays for no shader.
+                    RasterMapPictureView(
+                      picture:
+                          widget.imageProvider ?? FileImage(widget.imageFile),
+                      controller: _photoViewController,
+                      scaleStateController: _scaleStateController,
+                      gestureZoomEnabled: _gestureZoomEnabled,
+                      colorFilter: _activeFilter.toColorFilter(),
+                      onPictureSize: (size) {
+                        _naturalImgW = size?.width.round();
+                        _naturalImgH = size?.height.round();
+                      },
+                    ),
                     Positioned.fill(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          // store the current viewport size for use by zoomToPoint
-                          _photoViewportSize = constraints.biggest;
-
+                      child: RasterMapViewportLayer(
+                        viewport: _viewport,
+                        animation: _pulseController,
+                        // Kept for zoomToPoint, so offsets are relative to the
+                        // editor's viewport rather than the whole screen.
+                        onSize: (size) => _photoViewportSize = size,
+                        builder: (context, controllerValue, viewportSize) {
                           final List<Widget> overlay = [];
-                          final controllerValue = PhotoViewControllerValue(
-                            scale: _photoViewController.scale,
-                            position: _photoViewController.position,
-                            rotation: _photoViewController.rotation,
-                            rotationFocusPoint:
-                                _photoViewController.rotationFocusPoint,
-                          );
                           final selectedCavePlaceTitle =
                               _resolveSelectedCavePlaceTitle();
                           String markerLabel(String qualifierKey) {
@@ -2092,6 +1983,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                             RasterMapMarkerBuilder.buildDefinitionMarkers(
                               definitions: widget.cavePlacesWithDefinitions,
                               controllerValue: controllerValue,
+                              visibleArea: Offset.zero & viewportSize,
                               specialPointKeys: specialPointKeys,
                               visiblePlaceUuids: _visiblePlaceUuids,
                               fadeFilteredMarkers:
@@ -2200,7 +2092,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                             );
                           }
 
-                          return Stack(children: overlay);
+                          return overlay;
                         },
                       ),
                     ),

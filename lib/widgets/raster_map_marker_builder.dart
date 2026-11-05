@@ -111,9 +111,14 @@ class RasterMapMarkerBuilder {
   ///     handlers, so the user can still see where they are.
   ///   • [fadeFilteredMarkers] = false: filtered-out places are hidden entirely.
   /// Pass [visiblePlaceUuids] = null to show all markers (no filter active).
+  ///
+  /// When [visibleArea] is given, points whose dot or label cannot reach it
+  /// are left out: the layer is rebuilt on every pan and zoom frame, and a
+  /// zoomed-in map shows few of its places.
   static List<Widget> buildDefinitionMarkers({
     required List<CavePlaceWithDefinition> definitions,
     required PhotoViewControllerValue controllerValue,
+    Rect? visibleArea,
     required Set<String> specialPointKeys,
     Set<Uuid>? visiblePlaceUuids,
     bool fadeFilteredMarkers = true,
@@ -138,6 +143,9 @@ class RasterMapMarkerBuilder {
       final imageX = (def.xCoordinate ?? 0).toDouble();
       final imageY = (def.yCoordinate ?? 0).toDouble();
       final viewportPos = imageToViewport(imageX, imageY, controllerValue);
+      if (visibleArea != null && !_reaches(visibleArea, viewportPos)) {
+        continue;
+      }
       final textColor = textColorFromImage(
         imageX.toInt(),
         imageY.toInt(),
@@ -234,6 +242,19 @@ class RasterMapMarkerBuilder {
 
     return widgets;
   }
+
+  /// Whether a point drawn at [at] can show any part of its dot or its label,
+  /// which runs to the right of the dot, inside [area].
+  static bool _reaches(Rect area, Offset at) =>
+      at.dx >= area.left - _labelReach &&
+      at.dx <= area.right + _dotReach &&
+      at.dy >= area.top - _dotReach &&
+      at.dy <= area.bottom + _dotReach;
+
+  /// Generous bounds on how far a label reaches left of its viewport point,
+  /// and a dot or a label's height in any other direction, in logical px.
+  static const double _labelReach = 400;
+  static const double _dotReach = 40;
 
   /// Build the "new point" marker (blue circle + orange inner dot) and
   /// optionally the "old point" outline if the user moved the point.

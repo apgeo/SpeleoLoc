@@ -314,9 +314,13 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
                         ? _titleController.text.trim()
                         : null,
                   ),
+                  // Decoded at the preview's height: map pictures are scans
+                  // far larger than this 200 dp strip.
                   child: Image.file(
                     File(_fullImagePath!),
                     height: 200,
+                    cacheHeight: (200 * MediaQuery.devicePixelRatioOf(context))
+                        .ceil(),
                     fit: BoxFit.cover,
                   ),
                 ),
