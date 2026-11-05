@@ -13,11 +13,14 @@ import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/database_swap/database_file_validator.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:sqlite3/sqlite3.dart' show sqlite3;
+
+import '../support/database_file_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -150,6 +153,42 @@ void main() {
       isFalse,
     );
   });
+  for (final (label, make) in [
+    ('damaged', damagedAppDatabaseFile),
+    ('foreign', (String path) async => foreignSqliteFile(path)),
+  ]) {
+    test('a replace import of a $label database keeps the live one and leaves '
+        'it open', () async {
+      appDatabase = AppDatabase();
+      await ConfigurationRepository(
+        appDatabase,
+      ).writeString('invented_key', 'kept');
+
+      final source = await make(p.join(tempDir.path, '$label.sqlite'));
+      final dbBytes = await source.readAsBytes();
+      final zip = Archive()
+        ..addFile(ArchiveFile('speleo_loc.sqlite', dbBytes.length, dbBytes));
+      final zipPath = p.join(tempDir.path, '$label.zip');
+      await File(zipPath).writeAsBytes(ZipEncoder().encode(zip)!);
+
+      await expectLater(
+        DataArchiveService(
+          DataExportImportRepository(appDatabase),
+        ).importArchiveReplace(zipPath: zipPath, silexgisTokens: _NoTokens()),
+        throwsA(isA<InvalidDatabaseFileException>()),
+      );
+
+      expect(
+        await ConfigurationRepository(appDatabase).readString('invented_key'),
+        'kept',
+      );
+      final leftovers = Directory(p.join(tempDir.path, 'docs'))
+          .listSync()
+          .map((e) => p.basename(e.path))
+          .where((name) => name.contains('swap'));
+      expect(leftovers, isEmpty);
+    });
+  }
 }
 
 class _NoTokens implements SilexgisRefreshTokenStore {
