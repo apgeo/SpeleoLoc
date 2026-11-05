@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -149,7 +150,7 @@ class SilexgisHttp {
       }
       response = await _sendOnce(build, timeout ?? _timeout);
     }
-    return _decode(response);
+    return await _decode(response);
   }
 
   Future<http.Response> _sendOnce(
@@ -186,7 +187,7 @@ class SilexgisHttp {
   }
 
   /// The decoded body of a successful response, or null when it had none.
-  Object? _decode(http.Response response) {
+  Future<Object?> _decode(http.Response response) async {
     final status = response.statusCode;
     if (status >= 300 && status < 400) {
       throw SilexgisTransportException(
@@ -196,12 +197,14 @@ class SilexgisHttp {
     }
 
     Object? body;
-    if (response.body.isNotEmpty) {
-      try {
-        body = jsonDecode(utf8.decode(response.bodyBytes));
-      } on FormatException {
-        body = response.body;
-      }
+    final bytes = response.bodyBytes;
+    if (bytes.isNotEmpty) {
+      // Each read of `response.body` decodes the whole body to a string
+      // again, so only the rare body that is not JSON reads it.
+      final json = bytes.length < _backgroundDecodeBytes
+          ? _tryJson(bytes)
+          : await _tryJsonInBackground(bytes);
+      body = json == null ? response.body : json.$1;
     }
 
     if (status >= 400) {
@@ -223,4 +226,24 @@ class SilexgisHttp {
   }
 
   void close() => _client.close();
+
+  /// Bodies from this size up are decoded on a background isolate. A
+  /// download page can carry several cave centerlines, megabytes of JSON
+  /// whose decoding would stall the sync screen's progress on every page.
+  static const int _backgroundDecodeBytes = 256 * 1024;
+
+  /// Static, so the closure sent to the isolate captures [bytes] alone and
+  /// not this transport, whose client cannot cross.
+  static Future<(Object?,)?> _tryJsonInBackground(List<int> bytes) =>
+      Isolate.run(() => _tryJson(bytes));
+
+  /// The JSON value [bytes] hold, wrapped so that a JSON `null` is told
+  /// apart from no JSON at all, which returns null.
+  static (Object?,)? _tryJson(List<int> bytes) {
+    try {
+      return (jsonDecode(utf8.decode(bytes)),);
+    } on FormatException {
+      return null;
+    }
+  }
 }
