@@ -12,6 +12,20 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/sftp_host_key.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
+/// A repository whose writes fail on demand, as a locked database or a
+/// refusing keystore would.
+class _FlakyProfileRepository extends FtpProfileRepository {
+  _FlakyProfileRepository(super.db, {super.hostKeys});
+
+  bool failSave = false;
+
+  @override
+  Future<void> save(FtpProfile profile, {String? password}) async {
+    if (failSave) throw StateError('keystore refused the write');
+    return super.save(profile, password: password);
+  }
+}
+
 class _MemoryHostKeyStore implements FtpHostKeyStore {
   final Map<String, SftpHostKey> keys = {};
 
@@ -71,11 +85,14 @@ void main() {
     FtpProfile profile, {
     bool withToasts = false,
     String? password,
+    FtpProfileRepository? repository,
   }) async {
     final container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
         ftpHostKeyStoreProvider.overrideWithValue(hostKeys),
+        if (repository != null)
+          ftpProfileRepositoryProvider.overrideWithValue(repository),
       ],
     );
     addTearDown(container.dispose);
@@ -284,5 +301,36 @@ void main() {
     // Let the toast expire so no timer outlives the test.
     await tester.pump(const Duration(seconds: 10));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('a save that fails says so and leaves the editor usable', (
+    tester,
+  ) async {
+    final repository = _FlakyProfileRepository(db, hostKeys: hostKeys);
+    await openEditor(
+      tester,
+      sftp,
+      withToasts: true,
+      password: 'pw',
+      repository: repository,
+    );
+    repository.failSave = true;
+
+    await tester.tap(find.byIcon(Icons.save).first);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('keystore refused the write'), findsOneWidget);
+    expect(find.text('ftp_edit_profile'), findsOneWidget);
+    final saveButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.save),
+    );
+    expect(saveButton.onPressed, isNotNull);
+
+    // The edits are still there, so trying again once the cause is gone works.
+    repository.failSave = false;
+    await tester.pump(const Duration(seconds: 10));
+    await tester.tap(find.byIcon(Icons.save).first);
+    await tester.pumpAndSettle();
+    expect(find.text('ftp_edit_profile'), findsNothing);
   });
 }

@@ -513,22 +513,29 @@ class _FtpProfileEditPageState extends State<_FtpProfileEditPage> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
-    final profile = _currentProfile();
     // Require a password when creating a new profile.
     final bool isNew = widget.existing == null;
     if (isNew && _password.text.isEmpty) {
       _showSnack(LocServ.inst.t('ftp_password_required'), isError: true);
-      setState(() => _saving = false);
       return;
     }
-    await widget.repository.save(
-      profile,
-      password: _passwordChanged ? _password.text : null,
-    );
-    _saved = true;
-    if (!mounted) return;
-    Navigator.pop(context, true);
+    setState(() => _saving = true);
+    try {
+      await widget.repository.save(
+        _currentProfile(),
+        password: _passwordChanged ? _password.text : null,
+      );
+      _saved = true;
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e, st) {
+      AppLogger.of(
+        'FtpSyncSettings',
+      ).warning('profile could not be saved', e, st);
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _showSnack('${LocServ.inst.t('error')}: $e', isError: true);
+    }
   }
 
   void _showSnack(String message, {bool isError = false}) {
