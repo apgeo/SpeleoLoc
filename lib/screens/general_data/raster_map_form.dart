@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:speleoloc/utils/file_digest.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 import 'package:speleoloc/utils/image_format_sniffer.dart';
@@ -119,9 +119,8 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       // The name carries the format the bytes really have; the picker may
       // hand over a PNG or WebP.
       final stamp = DateTime.now().millisecondsSinceEpoch;
-      final pickedBytes = await pickedFile.readAsBytes();
       var ext = ImageFormatSniffer.extensionForPicked(
-        pickedBytes,
+        await ImageFormatSniffer.readHead(pickedFile.path),
         pickedFile.name,
       );
       var fileName = 'raster_$stamp.$ext';
@@ -134,8 +133,9 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
         final compressionSettings = await ImageCompressionSettings.load();
         await ImageCompressor.compressFile(savedFile, compressionSettings);
         // Compression re-encodes as JPEG, so the name follows the result.
-        final head = await savedFile.readAsBytes();
-        final afterExt = ImageFormatSniffer.extensionFor(head);
+        final afterExt = ImageFormatSniffer.extensionFor(
+          await ImageFormatSniffer.readHead(savedFile.path),
+        );
         if (afterExt != null && afterExt != ext) {
           ext = afterExt;
           fileName = 'raster_$stamp.$ext';
@@ -148,16 +148,15 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       // this keeps the decoded-image cache correct if a path is ever reused.
       invalidateDecodedImage(savedFile.path);
 
-      // Compute SHA-256 hash and file size for duplicate detection.
-      final bytes = await savedFile.readAsBytes();
-      final hash = sha256.convert(bytes).toString();
-      final size = bytes.length;
+      // Hash and size for duplicate detection.
+      final digest = await FileDigest.of(savedFile.path);
+      if (!mounted) return;
 
       setState(() {
         _imagePath = 'cave_${widget.caveUuid}/$fileName';
         _fullImagePath = savedFile.path;
-        _pendingFileHash = hash;
-        _pendingFileSize = size;
+        _pendingFileHash = digest.sha256Hex;
+        _pendingFileSize = digest.size;
       });
     }
   }
@@ -315,9 +314,13 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
                         ? _titleController.text.trim()
                         : null,
                   ),
+                  // Decoded at the preview's height: map pictures are scans
+                  // far larger than this 200 dp strip.
                   child: Image.file(
                     File(_fullImagePath!),
                     height: 200,
+                    cacheHeight: (200 * MediaQuery.devicePixelRatioOf(context))
+                        .ceil(),
                     fit: BoxFit.cover,
                   ),
                 ),

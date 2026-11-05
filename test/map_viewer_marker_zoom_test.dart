@@ -51,7 +51,6 @@ void main() {
               controller: controller,
               imageFile: file,
               cavePlacesWithDefinitions: [cpwd],
-              useSimpleViewerForTests: true, // keep decoding sync for tests
             ),
           ),
         ),

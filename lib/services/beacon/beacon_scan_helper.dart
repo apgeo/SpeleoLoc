@@ -86,6 +86,26 @@ class BeaconScanHelper {
     return false;
   }
 
+  /// Initializes the beacon plugin; with [checkPermissions] it also asks for
+  /// what scanning needs and fails when it is missing.
+  ///
+  /// On iOS the plugin asks for "Always" location by default, a prompt iOS
+  /// suppresses unless the app declares the Always purpose string, so the
+  /// authorization stayed undetermined and ranging never started. Ranging
+  /// here runs only while the app is on screen (background detection is
+  /// Android-only), which When-In-Use covers. The call is a no-op on
+  /// Android.
+  static Future<bool> initializeScanning({
+    required bool checkPermissions,
+  }) async {
+    await flutterBeacon.setLocationAuthorizationTypeDefault(
+      AuthorizationStatus.whenInUse,
+    );
+    return checkPermissions
+        ? flutterBeacon.initializeAndCheckScanning
+        : flutterBeacon.initializeScanning;
+  }
+
   /// Loads the persisted proximity-UUID list; defaults to the HoneyComm
   /// factory UUID. Values are canonical uppercase.
   static Future<List<String>> loadRegionUuids() async {

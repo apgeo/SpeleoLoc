@@ -287,6 +287,12 @@ rich-text document has no viewer of its own, so it shows the same
 placeholder page as an unrecognised file — use the pencil button to
 read it properly.
 
+A plain-text or CSV file larger than 256 KB shows only its first 256 KB in
+the viewer, with a line above saying how much of the file that is. Bytes
+that are not valid UTF-8, as in an export from an older program that uses
+another code page, show as a replacement mark instead of the file failing
+to open.
+
 ## Bulk import: a folder of documents per cave
 
 If you already keep your cave photos and surveys in folders — one folder

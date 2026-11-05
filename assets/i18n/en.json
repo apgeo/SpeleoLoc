@@ -1067,6 +1067,8 @@
 
   "tour_doc_file_viewer_content_title": "Document Viewer",
   "tour_doc_file_viewer_content_body": "View the contents of this documentation file — images, text, or PDF.",
+  "text_file_preview_truncated": "Only the first {shown} KB of this {total} KB file are shown.",
+  "text_file_preview_failed": "This file could not be read.",
 
   "tour_sound_file_viewer_player_title": "Audio Player",
   "tour_sound_file_viewer_player_body": "Play back the audio recording. Use the waveform to scrub to a specific position.",
@@ -1413,6 +1415,8 @@
   "beacon_detection_auto_open": "Open place on detection",
   "beacon_detection_auto_open_desc": "Navigate to the detected place like a QR scan (off = notification only)",
   "beacon_detection_not_running": "Detection could not start — check Bluetooth is on",
+  "beacon_detection_stops_when_locked": "Detection runs only while SpeleoLoc is on screen. It stops when the screen locks or you switch to another app.",
+  "beacon_detection_stops_when_locked_hint": "Detection runs only while SpeleoLoc is on screen. It stops when the screen locks or you switch to another app, unless “{option}” is on in {page}.",
   "beacon_detection_quick_toggle": "Beacon detection",
   "beacon_detection_sound": "Detection sound",
   "beacon_detection_sound_desc": "Play an audible alert when a beacon is detected (in background it rings via the notification)",

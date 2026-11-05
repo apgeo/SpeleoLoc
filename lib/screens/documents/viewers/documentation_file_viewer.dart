@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:speleoloc/screens/documents/viewers/text_file_view.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -84,11 +85,7 @@ class _DocumentationFileViewerState extends State<DocumentationFileViewer>
     if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].contains(ext)) {
       body = Center(child: Image.file(widget.file));
     } else if (['txt', 'csv', 'rtf'].contains(ext)) {
-      final txt = widget.file.readAsStringSync();
-      body = Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: SingleChildScrollView(child: SelectableText(txt)),
-      );
+      body = TextFileView(path: widget.file.path);
     } else if (ext == 'pdf') {
       if (_pdfController == null) {
         body = Center(child: Text(LocServ.inst.t('pdf')));

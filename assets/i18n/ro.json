@@ -1066,6 +1066,8 @@
 
   "tour_doc_file_viewer_content_title": "Vizualizator document",
   "tour_doc_file_viewer_content_body": "Vizualizează conținutul fișierului — imagini, text sau PDF.",
+  "text_file_preview_truncated": "Se afișează doar primii {shown} KB din cei {total} KB ai fișierului.",
+  "text_file_preview_failed": "Acest fișier nu a putut fi citit.",
 
   "tour_sound_file_viewer_player_title": "Player audio",
   "tour_sound_file_viewer_player_body": "Redă înregistrarea audio. Folosește forma de undă pentru a naviga la o poziție specifică.",
@@ -1412,6 +1414,8 @@
   "beacon_detection_auto_open": "Deschide locul la detectare",
   "beacon_detection_auto_open_desc": "Navighează la locul detectat ca la scanarea unui QR (dezactivat = doar notificare)",
   "beacon_detection_not_running": "Detectarea nu a putut porni — verifică dacă Bluetooth este pornit",
+  "beacon_detection_stops_when_locked": "Detectarea funcționează doar cât timp SpeleoLoc este pe ecran. Se oprește când ecranul se blochează sau când treci la altă aplicație.",
+  "beacon_detection_stops_when_locked_hint": "Detectarea funcționează doar cât timp SpeleoLoc este pe ecran. Se oprește când ecranul se blochează sau când treci la altă aplicație, dacă nu este activată opțiunea „{option}” din {page}.",
   "beacon_detection_quick_toggle": "Detectare beaconuri",
   "beacon_detection_sound": "Sunet la detectare",
   "beacon_detection_sound_desc": "Redă o alertă sonoră la detectarea unui beacon (în fundal sună prin notificare)",

@@ -1,13 +1,30 @@
 import 'dart:typed_data';
 
-// Lightweight decoded-image container used for async decoding (isolate -> UI).
+/// Decoded pixels of a picture, for sampling colours at picture coordinates.
+///
+/// [pixels] may hold a reduced copy: [width] × [height] is the picture's own
+/// frame, which callers sample in, and [gridWidth] × [gridHeight] the copy's
+/// grid, which samples are read from.
 class RawImageData {
   final int width;
   final int height;
   final Uint8List pixels; // RGBA order
-  RawImageData(this.width, this.height, this.pixels);
+  final int gridWidth;
+  final int gridHeight;
+  RawImageData(
+    this.width,
+    this.height,
+    this.pixels, {
+    int? gridWidth,
+    int? gridHeight,
+  }) : gridWidth = gridWidth ?? width,
+       gridHeight = gridHeight ?? height;
 
-  int _index(int x, int y) => (y * width + x) * 4;
+  int _index(int x, int y) {
+    final gx = width == gridWidth ? x : x * gridWidth ~/ width;
+    final gy = height == gridHeight ? y : y * gridHeight ~/ height;
+    return (gy * gridWidth + gx) * 4;
+  }
 
   PixelRgb getPixel(int x, int y) {
     final i = _index(x, y);

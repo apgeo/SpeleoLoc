@@ -1,20 +1,55 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:speleoloc/utils/raw_image_data.dart';
-import 'package:image/image.dart' as img;
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
-/// Top-level sync decoder used by `compute` in an isolate. Returns a simple
-/// serializable map with width/height and raw RGBA bytes (List<int>).
-Map<String, dynamic>? decodeImageToRawSync(String path) {
+import 'package:speleoloc/utils/raw_image_data.dart';
+
+/// Longest side, in pixels, of the copy label colours are sampled from.
+///
+/// A label's colour depends on the tone around its point, not on single
+/// pixels, so a reduced copy answers as well as the full picture. Survey
+/// scans run to tens of megapixels: their full RGBA would be hundreds of MB
+/// held for a handful of samples, while 1024 px keeps a copy under 4 MB.
+const int labelSampleMaxSide = 1024;
+
+/// Decodes the picture at [path] through the engine at no more than
+/// [labelSampleMaxSide] px on its longest side, as straight RGBA.
+///
+/// The engine decodes every format the map itself is shown from, in the same
+/// orientation, and always hands back four 8-bit channels, whatever the
+/// file's own layout (indexed, grey, 16-bit). The decode and the read-back
+/// run off the UI isolate's event loop.
+Future<RawImageData?> decodeImageForLabelSampling(String path) async {
+  final buffer = await ui.ImmutableBuffer.fromFilePath(path);
+  ui.ImageDescriptor? descriptor;
+  ui.Codec? codec;
+  ui.Image? image;
   try {
-    final bytes = File(path).readAsBytesSync();
-    final image = img.decodeImage(bytes);
-    if (image == null) return null;
-    final pix = image.getBytes();
-    return {'w': image.width, 'h': image.height, 'pixels': pix};
-  } catch (_) {
-    return null;
+    descriptor = await ui.ImageDescriptor.encoded(buffer);
+    final width = descriptor.width;
+    final height = descriptor.height;
+    final reduce = math.min(1.0, labelSampleMaxSide / math.max(width, height));
+    codec = await descriptor.instantiateCodec(
+      targetWidth: math.max(1, (width * reduce).round()),
+      targetHeight: math.max(1, (height * reduce).round()),
+    );
+    image = (await codec.getNextFrame()).image;
+    final rgba = await image.toByteData(
+      format: ui.ImageByteFormat.rawStraightRgba,
+    );
+    if (rgba == null) return null;
+    return RawImageData(
+      width,
+      height,
+      rgba.buffer.asUint8List(rgba.offsetInBytes, rgba.lengthInBytes),
+      gridWidth: image.width,
+      gridHeight: image.height,
+    );
+  } finally {
+    image?.dispose();
+    codec?.dispose();
+    descriptor?.dispose();
+    buffer.dispose();
   }
 }
 
@@ -23,9 +58,8 @@ Map<String, dynamic>? decodeImageToRawSync(String path) {
 /// widgets request the same image concurrently.
 ///
 /// Bounded by [maxCacheBytes] of decoded RGBA pixels rather than an entry
-/// count: five 4000×3000 scans is ~240 MB while five small maps is a few MB,
-/// so a fixed entry cap either wastes memory or evicts needlessly. The most
-/// recent entry is always kept, even when it alone exceeds the budget.
+/// count, since small maps decode to far less than [labelSampleMaxSide]
+/// allows. The most recent entry is always kept.
 const int maxCacheBytes = 128 * 1024 * 1024;
 final Map<String, Future<RawImageData?>?> decodedImageCache = {};
 final List<String> _cacheInsertionOrder = [];
@@ -45,54 +79,16 @@ void _evictOverBudget() {
   }
 }
 
-/// Returns a cached [RawImageData] for [path] or decodes it (in an isolate)
-/// and caches the result. Safe to call from any file; callers get a
-/// Future<RawImageData?>.
+/// Returns a cached [RawImageData] for [path] or decodes it with
+/// [decodeImageForLabelSampling] and caches the result; null when the picture
+/// cannot be decoded.
 Future<RawImageData?> decodeImageToRawCached(String path) {
   final existing = decodedImageCache[path];
   if (existing != null) return existing;
 
-  final future = compute(decodeImageToRawSync, path)
-      .then((result) {
-        if (result == null) return null;
-        final rawPixels = result['pixels'] as List;
-        final w = result['w'] as int;
-        final h = result['h'] as int;
-        // The isolate hands back a Uint8List; use it directly — copying a
-        // full-map RGBA buffer (tens of MB) on the UI isolate causes jank.
-        final pixels = rawPixels is Uint8List
-            ? rawPixels
-            : Uint8List.fromList(rawPixels.cast<int>());
-
-        final expectedRGBA = w * h * 4;
-
-        // If the decoder returned RGB (3 bytes/pixel), convert to RGBA.
-        if (pixels.length == w * h * 3) {
-          final rgba = Uint8List(expectedRGBA);
-          for (int src = 0, dst = 0; src < pixels.length; src += 3, dst += 4) {
-            rgba[dst] = pixels[src];
-            rgba[dst + 1] = pixels[src + 1];
-            rgba[dst + 2] = pixels[src + 2];
-            rgba[dst + 3] = 255;
-          }
-          return RawImageData(w, h, rgba);
-        }
-
-        if (pixels.length == expectedRGBA) {
-          return RawImageData(w, h, pixels);
-        }
-
-        // Fallback: trim or pad the buffer to avoid later range errors.
-        if (pixels.length > expectedRGBA) {
-          final trimmed = pixels.sublist(0, expectedRGBA);
-          return RawImageData(w, h, Uint8List.fromList(trimmed));
-        } else {
-          final padded = Uint8List(expectedRGBA);
-          padded.setRange(0, pixels.length, pixels);
-          return RawImageData(w, h, padded);
-        }
-      })
-      .catchError((_) => null);
+  final future = decodeImageForLabelSampling(
+    path,
+  ).then<RawImageData?>((raw) => raw, onError: (Object _) => null);
 
   decodedImageCache[path] = future;
   _cacheInsertionOrder.remove(path);

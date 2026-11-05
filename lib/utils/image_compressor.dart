@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:speleoloc/utils/image_compression_settings.dart';
@@ -17,13 +18,28 @@ class ImageCompressor {
     ImageCompressionSettings settings,
   ) async {
     if (!settings.enabled) return;
-    final bytes = await sourceFile.readAsBytes();
-    final result = compressBytes(bytes, settings);
-    if (result == null) return;
-    await sourceFile.writeAsBytes(result, flush: true);
+    final path = sourceFile.path;
+    await Isolate.run(() {
+      final result = compressBytes(File(path).readAsBytesSync(), settings);
+      if (result != null) File(path).writeAsBytesSync(result, flush: true);
+    });
   }
 
-  /// Compresses raw image [bytes] according to [settings].
+  /// [compressBytes] on a background isolate.
+  ///
+  /// Decoding, resizing and re-encoding a phone photo in pure Dart takes
+  /// seconds; on the UI isolate the screen would freeze for all of it, and a
+  /// folder import would freeze it once per photo.
+  static Future<Uint8List?> compressInBackground(
+    Uint8List bytes,
+    ImageCompressionSettings settings,
+  ) async {
+    if (!settings.enabled) return null;
+    return Isolate.run(() => compressBytes(bytes, settings));
+  }
+
+  /// Compresses raw image [bytes] according to [settings], on the calling
+  /// isolate; see [compressInBackground].
   ///
   /// Returns the compressed JPEG bytes, or `null` if the input could not be
   /// decoded (e.g. non-image file).

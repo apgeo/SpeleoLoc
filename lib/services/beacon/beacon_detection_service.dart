@@ -9,10 +9,12 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_sound.dart';
+import 'package:speleoloc/services/beacon/beacon_enabled_notice.dart';
 import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
+import 'package:speleoloc/services/beacon/shared_beacon_ranging.dart';
 import 'package:speleoloc/services/location/last_located_place.dart';
 import 'package:speleoloc/services/map/best_raster_map_finder.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
@@ -20,6 +22,7 @@ import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
+import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
@@ -51,12 +54,30 @@ import 'package:speleoloc/widgets/trip_record_feedback.dart';
 /// permissions itself — [start] silently stays off until the user enables
 /// detection in Settings → Beacon detection (which runs the request flow).
 class BeaconDetectionService {
-  BeaconDetectionService._() {
+  BeaconDetectionService._({
+    bool featureEnabled = BuildConfig.beaconsEnabled,
+    Future<BeaconDetectionConfig> Function()? loadConfig,
+  }) : _featureEnabled = featureEnabled,
+       _loadConfig = loadConfig ?? BeaconDetectionConfig.load {
     // The registration watch subscribes against the appDatabase instance
     // current at start; re-subscribe whenever a restore/import swaps it.
     onAppDatabaseReplaced(() => unawaited(restart()));
   }
+
+  @visibleForTesting
+  factory BeaconDetectionService.forTesting({
+    required bool featureEnabled,
+    required Future<BeaconDetectionConfig> Function() loadConfig,
+  }) = BeaconDetectionService._;
+
   static final BeaconDetectionService instance = BeaconDetectionService._();
+
+  /// False in builds that hide beacons. Such a build must never scan or
+  /// show the background-service notification, even when a restored
+  /// archive or an earlier install left detection switched on, because it
+  /// has no screen to switch it off.
+  final bool _featureEnabled;
+  final Future<BeaconDetectionConfig> Function() _loadConfig;
 
   final _log = AppLogger.of('BeaconDetectionService');
 
@@ -109,6 +130,11 @@ class BeaconDetectionService {
   bool _inBackground = false;
   bool _fgsInitialized = false;
 
+  /// The background-scanning foreground service, and whether it holds the
+  /// location type that lets BLE scans deliver results in the background.
+  bool _serviceRunning = false;
+  bool _serviceHasLocation = false;
+
   /// Scan burst length in background duty-cycle mode.
   static const int _backgroundScanBurstMs = 5000;
 
@@ -119,11 +145,13 @@ class BeaconDetectionService {
   /// Safe to call unconditionally (app start, resume, settings change) —
   /// every failure path only logs.
   Future<void> start() async {
-    if (_running) return;
+    // Every path that starts detection (launch, resume, settings, a
+    // database swap, the start retry) comes through here.
+    if (_running || !_featureEnabled) return;
     _startRetryTimer?.cancel();
     _startRetryTimer = null;
     try {
-      final config = await BeaconDetectionConfig.load();
+      final config = await _loadConfig();
       enabledListenable.value = config.enabled;
       if (!config.enabled) return;
       if (!await _permissionsAlreadyGranted()) {
@@ -142,7 +170,7 @@ class BeaconDetectionService {
           'Android will deliver no scan results until they are enabled',
         );
       }
-      await flutterBeacon.initializeScanning;
+      await BeaconScanHelper.initializeScanning(checkPermissions: false);
 
       _engine = BeaconMatchEngine(config);
       _watchRegistrations();
@@ -150,6 +178,7 @@ class BeaconDetectionService {
 
       _listenRanging(await BeaconScanHelper.loadRegionUuids());
       _running = true;
+      if (config.backgroundEnabled) await _startServiceWhileVisible();
       _log.info(
         'Beacon detection started '
         '(threshold ${config.rssiThresholdDbm} dBm, '
@@ -185,14 +214,8 @@ class BeaconDetectionService {
     _registeredProximityUuids = const {};
     _ruuviNeeded = false;
     _engine = null;
-    if (_inBackground) {
-      _inBackground = false;
-      try {
-        await FlutterForegroundTask.stopService();
-      } catch (e, st) {
-        _log.warning('Foreground service stop failed', e, st);
-      }
-    }
+    _inBackground = false;
+    await _stopForegroundService();
     if (_running) _log.info('Beacon detection stopped');
     _running = false;
   }
@@ -218,13 +241,13 @@ class BeaconDetectionService {
         return false;
       }
       try {
-        await flutterBeacon.initializeAndCheckScanning;
+        await BeaconScanHelper.initializeScanning(checkPermissions: true);
       } on PlatformException catch (e) {
         SnackBarService.showWarning(e.message ?? e.code);
         return false;
       }
     }
-    final config = await BeaconDetectionConfig.load();
+    final config = await _loadConfig();
     if (enable && config.backgroundEnabled) {
       // Background mode is already configured (its settings toggle ran
       // this flow once) — but the grants can be revoked between sessions,
@@ -241,13 +264,62 @@ class BeaconDetectionService {
     await config.copyWith(enabled: enable).save();
     enabledListenable.value = enable;
     await restart();
-    if (enable && !_running) {
-      SnackBarService.showWarning(
-        LocServ.inst.t('beacon_detection_not_running'),
+    if (enable) {
+      _showEnabledNotice(
+        enabledNoticeFor(
+          running: _running,
+          backgroundEnabled: config.backgroundEnabled,
+          backgroundSupported: Platform.isAndroid,
+        ),
       );
     }
     return true;
   }
+
+  /// What the caver is told right after switching detection on. Unless
+  /// background mode runs, a locked screen stops detection, and a phone in
+  /// a pocket locks within a minute, so that is said at the moment the
+  /// caver relies on it.
+  @visibleForTesting
+  static BeaconEnabledNotice enabledNoticeFor({
+    required bool running,
+    required bool backgroundEnabled,
+    required bool backgroundSupported,
+  }) {
+    if (!running) return BeaconEnabledNotice.notRunning;
+    if (backgroundEnabled && backgroundSupported) {
+      return BeaconEnabledNotice.none;
+    }
+    return backgroundSupported
+        ? BeaconEnabledNotice.stopsWhenLockedUnlessBackground
+        : BeaconEnabledNotice.stopsWhenLocked;
+  }
+
+  void _showEnabledNotice(BeaconEnabledNotice notice) {
+    final loc = LocServ.inst;
+    switch (notice) {
+      case BeaconEnabledNotice.none:
+        break;
+      case BeaconEnabledNotice.notRunning:
+        SnackBarService.showWarning(loc.t('beacon_detection_not_running'));
+      case BeaconEnabledNotice.stopsWhenLocked:
+        SnackBarService.showInfo(
+          loc.t('beacon_detection_stops_when_locked'),
+          duration: _enabledNoticeDuration,
+        );
+      case BeaconEnabledNotice.stopsWhenLockedUnlessBackground:
+        SnackBarService.showInfo(
+          loc.t('beacon_detection_stops_when_locked_hint', {
+            'option': loc.t('beacon_background_enable'),
+            'page': '${loc.t('settings')} → ${loc.t('settings_beacons')}',
+          }),
+          duration: _enabledNoticeDuration,
+        );
+    }
+  }
+
+  /// Long enough to read two sentences.
+  static const _enabledNoticeDuration = Duration(seconds: 8);
 
   /// App lifecycle hook. With background detection enabled the scan
   /// survives app pause inside a foreground service (duty-cycled);
@@ -273,23 +345,70 @@ class BeaconDetectionService {
   // Background mode (Android foreground service + duty-cycled scanning)
   // ---------------------------------------------------------------------------
 
+  /// Starts the background-scanning service while the app is on screen.
+  ///
+  /// BLE scan results need location access, because BLUETOOTH_SCAN is
+  /// declared without neverForLocation. In the background Android extends a
+  /// while-in-use location grant only to a foreground service typed
+  /// location that was started from the foreground, and Android 14 refuses
+  /// to start a location-typed service from the background at all. So the
+  /// service starts with detection, not when the app leaves the screen.
+  Future<void> _startServiceWhileVisible() async {
+    if (!Platform.isAndroid || _serviceHasLocation) return;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+    // A service started from the background lacks the location type;
+    // replace it now that the app is visible.
+    try {
+      await _stopForegroundService();
+      await _startForegroundService(withLocation: true);
+    } catch (e, st) {
+      // Foreground detection does not need the service; leaving the screen
+      // tries again.
+      _log.warning('Foreground service start failed', e, st);
+    }
+  }
+
+  Future<bool> _startForegroundService({required bool withLocation}) async {
+    _initForegroundTask();
+    final result = await FlutterForegroundTask.startService(
+      serviceId: 7001,
+      serviceTypes: [
+        ForegroundServiceTypes.connectedDevice,
+        if (withLocation) ForegroundServiceTypes.location,
+      ],
+      notificationTitle: LocServ.inst.t('beacon_background_notif_title'),
+      notificationText: LocServ.inst.t('beacon_background_notif_text'),
+    );
+    _serviceRunning = result is ServiceRequestSuccess;
+    _serviceHasLocation = _serviceRunning && withLocation;
+    if (!_serviceRunning) _log.warning('Foreground service refused: $result');
+    return _serviceRunning;
+  }
+
+  Future<void> _stopForegroundService() async {
+    if (!_serviceRunning) return;
+    _serviceRunning = false;
+    _serviceHasLocation = false;
+    try {
+      await FlutterForegroundTask.stopService();
+    } catch (e, st) {
+      _log.warning('Foreground service stop failed', e, st);
+    }
+  }
+
   Future<void> _enterBackgroundMode() async {
     if (_inBackground || !Platform.isAndroid) return;
     try {
       final config = _engine?.config;
       if (config == null) return;
-      _initForegroundTask();
-      final result = await FlutterForegroundTask.startService(
-        serviceId: 7001,
-        serviceTypes: const [ForegroundServiceTypes.connectedDevice],
-        notificationTitle: LocServ.inst.t('beacon_background_notif_title'),
-        notificationText: LocServ.inst.t('beacon_background_notif_text'),
-      );
-      if (result is! ServiceRequestSuccess) {
-        _log.warning(
-          'Foreground service refused: $result — '
-          'stopping detection with the app',
-        );
+      // Normally running since detection started. If it is not (detection
+      // started while the app was off screen), it can only be started
+      // without the location type now, and Android may give its scans no
+      // results.
+      if (!_serviceRunning &&
+          !await _startForegroundService(withLocation: false)) {
+        _log.warning('Stopping detection with the app');
         await stop();
         return;
       }
@@ -345,11 +464,8 @@ class BeaconDetectionService {
     _ruuviDutyTimer = null;
     _syncRuuviSubscription();
     if (!Platform.isAndroid) return;
-    try {
-      await FlutterForegroundTask.stopService();
-    } catch (e, st) {
-      _log.warning('Foreground service stop failed', e, st);
-    }
+    // The service keeps running, ready for the next time the app leaves
+    // the screen: started then, it could not be typed location.
     try {
       await flutterBeacon.setScanPeriod(_foregroundScanPeriodMs);
       await flutterBeacon.setBetweenScanPeriod(0);
@@ -360,7 +476,7 @@ class BeaconDetectionService {
     // current config, but surface the failure so a broken debounce config
     // isn't silently ignored.
     try {
-      final config = await BeaconDetectionConfig.load();
+      final config = await _loadConfig();
       _engine?.config = config;
     } catch (e, st) {
       _log.warning(
@@ -370,7 +486,11 @@ class BeaconDetectionService {
         st,
       );
     }
-    if (!_running) await start();
+    if (!_running) {
+      await start();
+    } else if (_engine?.config.backgroundEnabled ?? false) {
+      await _startServiceWhileVisible();
+    }
   }
 
   void _initForegroundTask() {
@@ -410,7 +530,10 @@ class BeaconDetectionService {
       (state) {
         if (state != BluetoothState.stateOn || !_running) return;
         unawaited(
-          _resubscribeRanging().catchError((Object e, StackTrace st) {
+          _resubscribeRanging(restartNative: true).catchError((
+            Object e,
+            StackTrace st,
+          ) {
             _log.warning('Ranging restart on Bluetooth-on failed', e, st);
           }),
         );
@@ -420,7 +543,7 @@ class BeaconDetectionService {
     );
   }
 
-  Future<void> _resubscribeRanging() async {
+  Future<void> _resubscribeRanging({bool restartNative = false}) async {
     final uuids = {
       ...await BeaconScanHelper.loadRegionUuids(),
       ..._registeredProximityUuids,
@@ -429,11 +552,17 @@ class BeaconDetectionService {
     _rangingSub = null;
     if (!_running) return;
     _listenRanging(uuids);
+    // Another screen may hold the shared ranging open, so re-listening
+    // alone would not restart it.
+    if (restartNative) await SharedBeaconRanging.instance.restart();
   }
 
+  /// Through the shared ranging, never the plugin directly: a second
+  /// direct listener (the picker, Beacon Lab) would take the plugin's one
+  /// ranging channel over and end detection's ranging when it closed.
   void _listenRanging(List<String> uuids) {
-    _rangingSub = flutterBeacon
-        .ranging(BeaconScanHelper.buildRegions(uuids))
+    _rangingSub = SharedBeaconRanging.instance
+        .ranging(uuids)
         .listen(
           _onRangingResult,
           onError: (Object e, StackTrace st) =>

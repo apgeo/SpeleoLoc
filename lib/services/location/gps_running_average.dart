@@ -19,7 +19,7 @@ class GpsRunningAverage {
     _samples += 1;
     _sumLatitude += position.latitude;
     _sumLongitude += position.longitude;
-    if (!position.altitude.isNaN) {
+    if (hasAltitude(position)) {
       _altitudeSamples += 1;
       _sumAltitude += position.altitude;
     }
@@ -28,6 +28,14 @@ class GpsRunningAverage {
     }
     _last = position;
   }
+
+  /// geolocator reports a fix without altitude (network fixes before GPS
+  /// lock, iOS fixes with no vertical accuracy) as 0.0 m with 0.0 accuracy,
+  /// not as NaN. Only that pair counts as missing: Android before API 26
+  /// never reports a vertical accuracy, and its altitudes are real.
+  static bool hasAltitude(Position position) =>
+      !position.altitude.isNaN &&
+      !(position.altitude == 0 && position.altitudeAccuracy == 0);
 
   int get sampleCount => _samples;
 

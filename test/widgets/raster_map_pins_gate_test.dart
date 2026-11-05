@@ -7,7 +7,6 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
 import 'package:speleoloc/services/silexgis/silexgis_picture_frame.dart';
-import 'package:speleoloc/widgets/raster_map/raster_map_picture_size.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
 
 import '../support/layout_harness.dart';
@@ -47,9 +46,6 @@ void main() {
     WidgetTester tester, {
     required SilexgisMapPicture? picture,
   }) async {
-    // Decoding runs outside the fake clock; once cached, the gate sizes the
-    // picture at once.
-    await tester.runAsync(() => rasterMapPictureSize(held));
     late List<CavePlaceWithDefinition> shown;
     late bool editable;
     await tester.pumpWidget(

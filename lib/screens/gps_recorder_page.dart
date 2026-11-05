@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/services/location/gps_averaging_session.dart';
 import 'package:speleoloc/services/location/gps_quality.dart';
+import 'package:speleoloc/services/location/gps_running_average.dart';
 import 'package:speleoloc/services/location/location_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -202,9 +203,9 @@ class _GpsRecorderPageState extends State<GpsRecorderPage> {
                 loc.t('altitude'),
                 _session.altitude != null
                     ? '${_session.altitude!.toStringAsFixed(1)} m'
-                    : (pos.altitude.isNaN
-                          ? '—'
-                          : '${pos.altitude.toStringAsFixed(1)} m'),
+                    : (GpsRunningAverage.hasAltitude(pos)
+                          ? '${pos.altitude.toStringAsFixed(1)} m'
+                          : '—'),
               ),
               _kv(
                 loc.t('gps_accuracy'),

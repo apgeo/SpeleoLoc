@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
@@ -322,15 +323,12 @@ class CavePlaceQRCodePDFGenerator {
 
   /// Load a TrueType font from bundled assets that supports
   /// Unicode characters (including Romanian diacritics like ț, ș, ă).
-  Future<pw.Font> _loadUnicodeFont() async {
-    final fontData = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
-    return pw.Font.ttf(fontData);
-  }
+  Future<ByteData> _loadUnicodeFont() =>
+      rootBundle.load('assets/fonts/Roboto-Regular.ttf');
 
-  Future<pw.Font> _loadUnicodeFontBold() async {
+  Future<ByteData> _loadUnicodeFontBold() async {
     try {
-      final fontData = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
-      return pw.Font.ttf(fontData);
+      return await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
     } catch (_) {
       return _loadUnicodeFont();
     }
@@ -340,9 +338,37 @@ class CavePlaceQRCodePDFGenerator {
     List<CavePlace> places,
     GenerationPreferences prefs,
   ) async {
-    // Load Unicode-capable font for PDF text rendering
+    // The asset bundle is reachable only from the UI isolate; the fonts'
+    // bytes travel to the isolate that lays the sheet out.
     final font = await _loadUnicodeFont();
     final fontBold = await _loadUnicodeFontBold();
+    final pdfBytes = await Isolate.run(
+      () => _layOutPdf(places, prefs, font, fontBold),
+    );
+    final files = [
+      GeneratedFile(
+        name: 'cave_places_qr.pdf',
+        bytes: pdfBytes,
+        mimeType: 'application/pdf',
+      ),
+    ];
+
+    return GenerationResult(files: files);
+  }
+
+  /// Lays the sheet out and serialises it. Every square is hundreds of
+  /// vector rectangles and `save` subsets the font and deflates every page
+  /// synchronously, so a large cave's sheet takes seconds: this runs on a
+  /// background isolate. Static, so the closure sent there captures its
+  /// arguments alone.
+  static Future<Uint8List> _layOutPdf(
+    List<CavePlace> places,
+    GenerationPreferences prefs,
+    ByteData fontData,
+    ByteData fontBoldData,
+  ) {
+    final font = pw.Font.ttf(fontData);
+    final fontBold = pw.Font.ttf(fontBoldData);
 
     final doc = pw.Document();
 
@@ -458,16 +484,7 @@ class CavePlaceQRCodePDFGenerator {
       );
     }
 
-    final pdfBytes = await doc.save();
-    final files = [
-      GeneratedFile(
-        name: 'cave_places_qr.pdf',
-        bytes: pdfBytes,
-        mimeType: 'application/pdf',
-      ),
-    ];
-
-    return GenerationResult(files: files);
+    return doc.save();
   }
 
   // ---- Image generation (one QR per image) ----
@@ -524,7 +541,7 @@ class CavePlaceQRCodePDFGenerator {
     return Uint8List.fromList(encoded);
   }
 
-  BarcodeQRCorrectionLevel _pdfEcLevel(String level) {
+  static BarcodeQRCorrectionLevel _pdfEcLevel(String level) {
     switch (level.toUpperCase()) {
       case 'L':
         return BarcodeQRCorrectionLevel.low;

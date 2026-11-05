@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 /// Names an image file by what its bytes are, not by what the picker called
@@ -43,6 +44,20 @@ class ImageFormatSniffer {
       return ext == 'jpeg' ? 'jpg' : ext;
     }
     return 'jpg';
+  }
+
+  /// Number of leading bytes [extensionFor] looks at.
+  static const int headLength = 12;
+
+  /// The first [headLength] bytes of the file at [path], enough to sniff it
+  /// without reading a large scan whole.
+  static Future<Uint8List> readHead(String path) async {
+    final file = await File(path).open();
+    try {
+      return await file.read(headLength);
+    } finally {
+      await file.close();
+    }
   }
 
   static bool _ascii(Uint8List bytes, int offset, String text) {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -14,6 +13,7 @@ import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 
 import 'package:speleoloc/services/archive/archive_extraction.dart';
 import 'package:speleoloc/services/archive/archive_models.dart';
+import 'package:speleoloc/services/archive/zip_file_writer.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -68,16 +68,43 @@ class DataArchiveService {
     onProgress?.call('Preparing export...');
 
     final docsDir = await getApplicationDocumentsDirectory();
-    final archive = Archive();
+    final entries = <ZipEntrySource>[];
+    final workDir = await Directory.systemTemp.createTemp('speleo_loc_export_');
+    try {
+      // 1. Flush the WAL and snapshot the database file at once, so writes
+      // made while the zip is built do not tear the copy.
+      await appDatabase.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');
+      final dbFile = File('${docsDir.path}/$databaseFileName');
+      if (await dbFile.exists()) {
+        final snapshot = await dbFile.copy('${workDir.path}/$databaseFileName');
+        entries.add(ZipEntrySource.file(databaseFileName, snapshot.path));
+      }
 
-    // 1. Flush WAL and add database file.
-    await appDatabase.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');
-    final dbFile = File('${docsDir.path}/speleo_loc.sqlite');
-    if (await dbFile.exists()) {
-      final bytes = await dbFile.readAsBytes();
-      archive.addFile(ArchiveFile('speleo_loc.sqlite', bytes.length, bytes));
+      return await _writeExport(
+        settings: settings,
+        outputDir: outputDir,
+        docsDir: docsDir,
+        entries: entries,
+        onProgress: onProgress,
+        profileRepository: profileRepository,
+      );
+    } finally {
+      try {
+        await workDir.delete(recursive: true);
+      } catch (e, st) {
+        _log.fine('best-effort export work dir delete failed', e, st);
+      }
     }
+  }
 
+  Future<String> _writeExport({
+    required ExportSettings settings,
+    required String outputDir,
+    required Directory docsDir,
+    required List<ZipEntrySource> entries,
+    ProgressCallback? onProgress,
+    FtpProfileRepository? profileRepository,
+  }) async {
     // Determine diff-baseline timestamp.
     int? afterTimestamp;
     if (settings.diffOnly) {
@@ -91,7 +118,7 @@ class DataArchiveService {
         caveIds: settings.caveIds,
         afterTimestamp: afterTimestamp,
       );
-      await _addFilesToArchive(archive, docsDir.path, paths);
+      _addFileEntries(entries, docsDir.path, paths);
     }
 
     // 3. Raster-map images.
@@ -101,7 +128,7 @@ class DataArchiveService {
         caveIds: settings.caveIds,
         afterTimestamp: afterTimestamp,
       );
-      await _addFilesToArchive(archive, docsDir.path, paths);
+      _addFileEntries(entries, docsDir.path, paths);
     }
 
     // 4. FTP credentials (optional, feature-flag guarded).
@@ -115,9 +142,11 @@ class DataArchiveService {
         );
         credentials.add({...profile.toJson(), 'password': password ?? ''});
       }
-      final credBytes = utf8.encode(jsonEncode(credentials));
-      archive.addFile(
-        ArchiveFile('ftp_credentials.json', credBytes.length, credBytes),
+      entries.add(
+        ZipEntrySource.bytes(
+          'ftp_credentials.json',
+          utf8.encode(jsonEncode(credentials)),
+        ),
       );
     }
 
@@ -131,14 +160,12 @@ class DataArchiveService {
       'caveIds': settings.caveIds,
       'includesFtpPasswords': settings.includeFtpPasswords,
     };
-    final manifestBytes = utf8.encode(jsonEncode(manifest));
-    archive.addFile(
-      ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+    entries.add(
+      ZipEntrySource.bytes('manifest.json', utf8.encode(jsonEncode(manifest))),
     );
 
     // 5. Encode & write.
     onProgress?.call('Creating archive...');
-    final zipData = ZipEncoder().encode(archive);
 
     final now = _clock.now();
     final ts =
@@ -148,7 +175,17 @@ class DataArchiveService {
     final fileName = 'speleo_loc_$ts$suffix.zip';
     final outputPath = '$outputDir/$fileName';
 
-    await File(outputPath).writeAsBytes(zipData!);
+    try {
+      await writeZipFile(outputPath, entries);
+    } catch (_) {
+      // A half-written zip must not be offered as an export.
+      try {
+        await File(outputPath).delete();
+      } on FileSystemException catch (e, st) {
+        _log.fine('could not delete partial export $outputPath', e, st);
+      }
+      rethrow;
+    }
 
     // 6. Record export timestamp (full exports only).
     if (!settings.diffOnly) {
@@ -311,12 +348,14 @@ class DataArchiveService {
   //  File helpers
   // ---------------------------------------------------------------------------
 
-  /// Add files at [relativePaths] (relative to [baseDir]) into [archive].
-  Future<void> _addFilesToArchive(
-    Archive archive,
+  /// Adds the files at [relativePaths] (relative to [baseDir]) to
+  /// [entries]; a file that no longer exists is left out when the zip is
+  /// written.
+  void _addFileEntries(
+    List<ZipEntrySource> entries,
     String baseDir,
     List<String> relativePaths,
-  ) async {
+  ) {
     for (final relPath in relativePaths) {
       final path = containedDocumentsPath(baseDir, relPath);
       if (path == null) {
@@ -325,23 +364,20 @@ class DataArchiveService {
         );
         continue;
       }
-      final file = File(path);
-      if (await file.exists()) {
-        final bytes = await file.readAsBytes();
-        archive.addFile(ArchiveFile(relPath, bytes.length, bytes));
-      }
+      entries.add(ZipEntrySource.file(relPath, path));
     }
   }
 
   /// Extract zip to a new temporary directory.
   Future<Directory> _extractZip(String zipPath) async {
-    final bytes = await File(zipPath).readAsBytes();
-    final archive = ZipDecoder().decodeBytes(bytes);
-
     final tempDir = await Directory.systemTemp.createTemp('speleo_loc_import_');
-
-    for (final name in await extractArchiveInto(archive, tempDir)) {
-      _log.warning('skipping archive entry outside the import folder: $name');
+    try {
+      for (final name in await extractZipFileInto(zipPath, tempDir.path)) {
+        _log.warning('skipping archive entry outside the import folder: $name');
+      }
+    } catch (_) {
+      await tempDir.delete(recursive: true);
+      rethrow;
     }
     return tempDir;
   }

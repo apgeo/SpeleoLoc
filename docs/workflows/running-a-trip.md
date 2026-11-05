@@ -96,9 +96,11 @@ Points record themselves:
 | Scan a place in **another** cave | Nothing — the place still opens normally |
 | Scan an **entrance** of this cave | The app asks whether you are leaving (see below) |
 
-Beacon detection is the hands-free case: with automatic detection on,
-the phone can stay in a pocket and the route fills in as you pass each
-beaconed place. On screen you get *"Place detected: …"* followed by
+Beacon detection is the hands-free case: with automatic detection and
+**Keep detecting in background** on (Android), the phone can stay in a
+pocket and the route fills in as you pass each beaconed place. Without
+background detection, and always on iPhone, detection stops when the
+screen locks, so keep the app on screen. On screen you get *"Place detected: …"* followed by
 *"Point added to trip"*; in the background the same arrives as a
 notification, which adds *"Point added to trip"* only when a point was
 recorded.

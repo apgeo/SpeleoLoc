@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
+import 'package:speleoloc/services/beacon/shared_beacon_ranging.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -104,7 +105,7 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
 
   Future<void> _start() async {
     try {
-      await flutterBeacon.initializeAndCheckScanning;
+      await BeaconScanHelper.initializeScanning(checkPermissions: true);
     } on PlatformException catch (e, st) {
       _log.warning('Beacon picker init failed', e, st);
       if (mounted) setState(() => _error = e.message ?? e.code);
@@ -113,8 +114,10 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
     final uuids = await BeaconScanHelper.loadRegionUuids();
     // Dialog dismissed during init: subscribing now would outlive dispose.
     if (!mounted) return;
-    _rangingSub = flutterBeacon
-        .ranging(BeaconScanHelper.buildRegions(uuids))
+    // Shared with detection, which must keep ranging after the picker
+    // closes.
+    _rangingSub = SharedBeaconRanging.instance
+        .ranging(uuids)
         .listen(
           (result) {
             final now = DateTime.now();
@@ -195,8 +198,7 @@ class _BeaconPickerDialogState extends State<BeaconPickerDialog> {
       final readings = [
         if (adv.temperatureC != null)
           '${adv.temperatureC!.toStringAsFixed(2)} °C',
-        if (adv.humidityPct != null)
-          '${adv.humidityPct!.toStringAsFixed(1)} %',
+        if (adv.humidityPct != null) '${adv.humidityPct!.toStringAsFixed(1)} %',
         if (adv.pressureHpa != null)
           '${adv.pressureHpa!.toStringAsFixed(1)} hPa',
         if (adv.batteryMv != null) '${adv.batteryMv} mV',
@@ -273,7 +275,9 @@ class _Seen {
 
   const _Seen.iBeacon(Beacon this.beacon, this.lastSeen) : ruuvi = null;
 
-  _Seen.ruuvi(RuuviSighting this.ruuvi) : beacon = null, lastSeen = ruuvi.seenAt;
+  _Seen.ruuvi(RuuviSighting this.ruuvi)
+    : beacon = null,
+      lastSeen = ruuvi.seenAt;
 
   int get rssi => ruuvi?.rssi ?? beacon!.rssi;
 }

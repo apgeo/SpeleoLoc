@@ -63,7 +63,10 @@ de salvare al dispozitivului, cu acel nume deja completat, iar
 dumneavoastră spuneți unde ajunge fișierul — dacă renunțați acolo, nu se
 salvează nimic. Pe iOS și pe desktop alegeți în schimb mai întâi dosarul
 de destinație. Înăuntru se află baza de date, fișierele media pe care
-le-ați cerut și un mic manifest care descrie exportul.
+le-ați cerut și un mic manifest care descrie exportul. Fișierele mai mari
+de 32 MB intră necomprimate: sunt filme, fotografii și scanări ale căror
+formate sunt deja comprimate, iar lăsarea lor așa cum sunt păstrează
+aplicația receptivă și memoria ocupată mică, oricât de mare ar fi exportul.
 
 La **Setări export**, trei comutatoare controlează ce intră în arhivă; un
 al patrulea apare doar în versiuni speciale. Primele două sunt pornite
