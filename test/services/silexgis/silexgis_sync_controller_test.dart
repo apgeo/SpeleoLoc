@@ -195,6 +195,16 @@ void main() {
     },
   );
 
+  test('a run still reporting after its controller was disposed, as a '
+      'database swap disposes it, does not throw', () async {
+    final client = ScriptedClient(<ScriptedResponse>[]);
+    final controller = controllerFor(client)..dispose();
+
+    await controller.sync(profile.copyWith(clearSyncSet: true));
+
+    expect(controller.progress.phase, SilexgisSyncPhase.failed);
+  });
+
   test('a locked account is told to try later, not to sign in', () async {
     await profiles.save(profile);
     await tokens.write('p-1', 'refresh-1');

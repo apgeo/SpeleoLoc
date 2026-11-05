@@ -29,6 +29,14 @@ Pe un dispozitiv poate fi activă **o singură tură** la un moment dat,
 indiferent de peșteră. Cât timp rulează o tură în peștera A nu puteți
 începe una în peștera B — trebuie mai întâi să o opriți pe prima.
 
+Tura activă ține de acest dispozitiv. Dacă dispare — ștearsă de o
+sincronizare FTP sau SilexGIS ori de o îmbinare de arhivă, ștearsă odată
+cu peștera ei sau încheiată pe alt dispozitiv — aici nu mai este activă
+nicio tură și puteți începe una nouă. Restaurarea unei baze de date sau a
+unei arhive păstrează tura activă a acestui dispozitiv dacă datele
+restaurate o au încă în desfășurare; o tură care rula pe dispozitivul
+care a făcut exportul nu devine activă aici.
+
 O tură oprită **nu** este blocată. O puteți în continuare redenumi, îi
 puteți adăuga, muta sau elimina punctele, corecta ora de început și de
 sfârșit, completa participanții, edita jurnalul, exporta un raport, o

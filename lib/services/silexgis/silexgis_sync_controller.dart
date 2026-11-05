@@ -818,9 +818,19 @@ class SilexgisSyncController extends ChangeNotifier {
     );
   }
 
+  /// Replacing the database rebuilds the provider and disposes this
+  /// controller; a run already under way still reports when it ends.
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void _emit(SilexgisSyncProgress progress) {
     _progress = progress;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 }
 

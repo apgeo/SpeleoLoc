@@ -1,12 +1,12 @@
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/data/source/database/database_file_version.dart';
 import 'package:speleoloc/data/source/database/test_database_loader.dart';
 import 'package:speleoloc/services/device_preferences_carry_over.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/contained_path.dart';
 import 'package:restart_app/restart_app.dart';
 
 /// Reusable helper for database reinitialize / restore operations.
@@ -16,48 +16,58 @@ import 'package:restart_app/restart_app.dart';
 class DatabaseRestoreHelper {
   DatabaseRestoreHelper._();
 
-  /// Closes the current database, deletes the file, and creates a fresh one.
+  /// Replaces the live database with an empty one, or with the bundled test
+  /// database when [populateTestData] is true, through [swap]: a failure at
+  /// any step puts the previous database back.
   ///
-  /// If [populateTestData] is true the new database is seeded via
-  /// [TestDatabaseLoader]; otherwise an empty [AppDatabase] is created.
-  ///
-  /// Returns `true` on success, `false` on failure.
-  static Future<bool> reinitializeDatabase({
+  /// The test database is read before anything is touched and
+  /// [TestDatabaseUnavailableException] thrown when this build lacks it.
+  static Future<void> reinitializeDatabase({
     required bool populateTestData,
+    required LiveDatabaseSwap swap,
+    Future<List<int>?> Function() loadTestDatabaseBytes =
+        TestDatabaseLoader.loadDatabaseBytes,
+    Future<void> Function(AppDatabase db) copyTestResources =
+        TestDatabaseLoader.copyResourceFiles,
   }) async {
-    final userHandover = await UserHandoverStore(appDatabase).capture();
-    final devicePreferences = await DevicePreferencesCarryOver.capture(
-      appDatabase,
-    );
-    await appDatabase.close();
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/speleo_loc.sqlite');
-    if (await file.exists()) {
-      await file.delete();
-    }
-
+    swap.ensureNoSyncRunning();
+    Directory? seedDir;
+    File? seed;
     if (populateTestData) {
-      final newDb = await TestDatabaseLoader.loadTestDatabase();
-      replaceAppDatabase(newDb);
-      logMigrationIfAny(source: 'test-database-restore');
-    } else {
-      final newDb = AppDatabase();
-      replaceAppDatabase(newDb);
-      logMigrationIfAny(source: 'empty-database-reinitialize');
+      final bytes = await loadTestDatabaseBytes();
+      if (bytes == null) throw const TestDatabaseUnavailableException();
+      seedDir = await Directory.systemTemp.createTemp('speleo_loc_test_db_');
+      seed = File(p.join(seedDir.path, databaseFileName));
+      await seed.writeAsBytes(bytes, flush: true);
     }
-    await UserHandoverStore(appDatabase).handOver(userHandover);
-    await devicePreferences.applyTo(appDatabase);
-    return true;
+    try {
+      final userHandover = await UserHandoverStore(appDatabase).capture();
+      final devicePreferences = await DevicePreferencesCarryOver.capture(
+        appDatabase,
+      );
+      await swap.replaceWith(
+        seed,
+        afterOpen: (db) async {
+          logMigrationIfAny(
+            source: populateTestData
+                ? 'test-database-restore'
+                : 'empty-database-reinitialize',
+          );
+          if (populateTestData) await copyTestResources(db);
+          await UserHandoverStore(db).handOver(userHandover);
+          await devicePreferences.applyTo(db);
+        },
+      );
+    } finally {
+      try {
+        await seedDir?.delete(recursive: true);
+      } catch (e, st) {
+        AppLogger.of(
+          'DatabaseRestoreHelper',
+        ).fine('test database copy cleanup failed', e, st);
+      }
+    }
   }
-
-  /// Throws [DatabaseTooNewException] when [file] was written by a newer
-  /// version of the app. Called before a file replaces the live database, so
-  /// a refused file leaves the current data and the open database as they
-  /// were.
-  static void ensureNotNewer(File file) => ensureDatabaseFileNotNewer(
-    file,
-    supportedVersion: appDatabase.schemaVersion,
-  );
 
   /// Restarts the application via the restart_app plugin.
   static Future<void> restartApplication() async {

@@ -30,6 +30,15 @@ const String testReportTemplatesDir = String.fromEnvironment(
   defaultValue: _defaultTestReportTemplatesDir,
 );
 
+/// Thrown when this build carries no test database to load.
+class TestDatabaseUnavailableException implements Exception {
+  const TestDatabaseUnavailableException();
+
+  @override
+  String toString() =>
+      'TestDatabaseUnavailableException: this build has no test database';
+}
+
 /// Loads a pre-built SQLite database binary and copies referenced resource
 /// files (raster map images, documentation files) into the app documents
 /// folder so the database records point to valid local paths.
@@ -42,36 +51,22 @@ class TestDatabaseLoader {
   /// copy phase listing the count and names of missing resources.
   static bool suppressMissingResourceLogs = true;
 
-  /// Main entry-point.
+  /// The test database's bytes, or null when this build does not bundle it
+  /// (the asset lines are commented out in pubspec by default). Read before
+  /// the live database is touched, so a build without it loses nothing.
+  static Future<List<int>?> loadDatabaseBytes() => _loadBinaryAsset(testDbPath);
+
+  /// Copies the files the test database [db] refers to into the documents
+  /// folder:
   ///
-  /// 1. Copies the SQLite binary to the documents directory.
-  /// 2. Creates a fresh [AppDatabase] backed by the copied file.
-  /// 3. Iterates `raster_maps` and copies source images.
-  /// 4. Iterates `documentation_files` and copies source docs.
-  ///
-  /// Returns the new [AppDatabase] instance.
-  static Future<AppDatabase> loadTestDatabase() async {
+  /// 1. Iterates `raster_maps` and copies source images.
+  /// 2. Iterates `documentation_files` and copies source docs.
+  /// 3. Iterates `trip_report_templates` and copies the templates.
+  static Future<void> copyResourceFiles(AppDatabase db) async {
     final stopwatch = Stopwatch()..start();
-    _log.info('Starting loadTestDatabase ...');
+    _log.info('Starting copyResourceFiles ...');
 
     final documentsDir = await getApplicationDocumentsDirectory();
-    final dbTargetPath = p.join(documentsDir.path, 'speleo_loc.sqlite');
-
-    // ---- 1. Copy the SQLite binary ----
-    final dbBytes = await _loadBinaryAsset(testDbPath);
-    if (dbBytes == null) {
-      throw Exception(
-        '[TestDatabaseLoader] Could not load test database from "$testDbPath"',
-      );
-    }
-    final dbFile = File(dbTargetPath);
-    await dbFile.writeAsBytes(dbBytes, flush: true);
-    _log.info(
-      'Database binary copied (${dbBytes.length} bytes) → $dbTargetPath',
-    );
-
-    // ---- 2. Open the database ----
-    final db = AppDatabase();
 
     // ---- 3. Copy raster map images ----
     try {
@@ -179,9 +174,8 @@ class TestDatabaseLoader {
 
     stopwatch.stop();
     _log.info(
-      'loadTestDatabase completed in ${stopwatch.elapsedMilliseconds} ms',
+      'copyResourceFiles completed in ${stopwatch.elapsedMilliseconds} ms',
     );
-    return db;
   }
 
   /// Load binary bytes from either Flutter assets (rootBundle) or

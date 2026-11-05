@@ -30,6 +30,14 @@ Only **one trip** can be active at a time on a device, across all
 caves. While a trip is running in cave A you cannot start one in cave
 B — you have to stop the first.
 
+The active trip belongs to this device. If it disappears — deleted by an
+FTP or SilexGIS sync or an archive merge, deleted together with its cave,
+or ended on another device — no trip is active here any more, and you can
+start a new one. Restoring a database or an archive keeps this device's
+own active trip if the restored data still has it running; a trip that
+was running on the device that made the export does not become active
+here.
+
 A stopped trip is **not** locked. You can still rename it, add, move or
 remove its points, correct its start and end times, fill in its
 participants, edit its log, export a report, delete it, or restart it.

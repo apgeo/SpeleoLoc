@@ -1663,9 +1663,19 @@ class FtpSyncController extends ChangeNotifier {
     return dir;
   }
 
+  /// Replacing the database rebuilds the provider and disposes this
+  /// controller; a run already under way still reports when it ends.
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void _emit(FtpSyncProgress Function(FtpSyncProgress previous) mutate) {
     _progress = mutate(_progress);
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   void _appendLog(FtpSyncLogLevel level, String message) {
