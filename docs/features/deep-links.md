@@ -53,7 +53,7 @@ There are three ways in, and they behave slightly differently.
 | Route | What happens |
 |---|---|
 | **In-app scanner** — the scan button on the home screen or in a cave's places list | The camera reads the label, the app strips the prefix and looks the value up. This is the reliable route underground. |
-| **System camera or a tapped link** (Android only) | The OS asks which app to open the link with. SpeleoLoc jumps to the place when it is **already running**, in the foreground or in the background. A link that has to start SpeleoLoc from cold opens it on the home screen without navigating — once the app is up, tap the link again. |
+| **System camera or a tapped link** (Android only) | The OS asks which app to open the link with. SpeleoLoc jumps to the place whether it is **already running** (in the foreground or in the background) or has to **start from cold**: in that case the app opens on the home screen first and then moves to the place. |
 | **Manual input** | In a cave's places list, tap **Manual QR code search** in the toolbar. Type either the bare identifier or a whole `sp://…` value into **QR code identifier** and press **Search place by QR code id**. (Developer builds can also reach the same search by holding the scan button for about two and a half seconds.) |
 
 Manual input is the answer to a label that is muddy, cracked or behind a
