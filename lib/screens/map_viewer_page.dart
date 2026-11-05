@@ -10,7 +10,6 @@ import 'package:speleoloc/screens/geofeature_documents_page.dart';
 import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/file_utils.dart';
-import 'package:speleoloc/utils/raw_image_data.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_pins_gate.dart';
 import 'package:speleoloc/widgets/raster_map_place_point_editor.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
@@ -110,8 +109,6 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
       );
   final GlobalKey _childKey = GlobalKey();
 
-  RawImageData? _decodedImage;
-  bool _isDecodingImage = false;
   final Map<String, ImageProvider> _imageProviderCache = {};
   File? _imageFile;
 
@@ -231,26 +228,15 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
       _log.fine('setCavePlaceId failed (initial)', e, st);
     }
 
-    // load image (for color sampling if needed)
+    // The viewer never samples label colours from the picture, so the
+    // editor's own image stream is the only decode the picture needs.
     try {
       final path = await getDocumentsFilePath(_selectedRasterMap!.fileName);
       final f = File(path);
-      if (f.existsSync()) {
-        _imageFile = f;
-        _decodedImage = null;
-        _isDecodingImage = true;
-        final raw = await decodeImageToRawCached(path);
-        _decodedImage = raw;
-        _isDecodingImage = false;
-      } else {
-        _imageFile = null;
-        _decodedImage = null;
-      }
+      _imageFile = f.existsSync() ? f : null;
     } catch (e) {
       _log.warning('Error loading image', e);
       _imageFile = null;
-      _decodedImage = null;
-      _isDecodingImage = false;
     }
 
     // Reset zoom so a new raster map doesn't inherit the previous scale/position.
@@ -295,7 +281,6 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
   void dispose() {
     _editorController.detach();
     _imageProviderCache.clear();
-    _decodedImage = null;
     super.dispose();
   }
 
@@ -600,28 +585,6 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage>
 
                 final file = _imageFile!;
                 final imagePath = file.path;
-
-                // Ensure _decodedImage is loaded; if not, trigger background decode
-                if (_decodedImage == null && !_isDecodingImage) {
-                  _isDecodingImage = true;
-                  decodeImageToRawCached(imagePath)
-                      .then((raw) {
-                        if (mounted) {
-                          setState(() {
-                            _decodedImage = raw;
-                            _isDecodingImage = false;
-                          });
-                        }
-                      })
-                      .catchError((_) {
-                        if (mounted) {
-                          setState(() {
-                            _decodedImage = null;
-                            _isDecodingImage = false;
-                          });
-                        }
-                      });
-                }
 
                 return Column(
                   children: [
