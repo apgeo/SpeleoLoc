@@ -11,6 +11,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_layers_controller.dart';
 import 'package:speleoloc/services/map/mbtiles_reader.dart';
 import 'package:speleoloc/services/map/mbtiles_registry.dart';
+import 'package:speleoloc/services/map/tile_failure_monitor.dart';
 import 'package:speleoloc/services/map/tile_layer_sources.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -235,7 +236,7 @@ void main() {
       },
     );
 
-    test('dismissing hides it for the rest of the layer choice', () async {
+    test('dismissing hides it while the same outage goes on', () async {
       final layers = controller([]);
       await layers.load();
       failTiles(layers, 8);
@@ -244,6 +245,43 @@ void main() {
       expect(layers.tilesNoticeVisible, isFalse);
       failTiles(layers, 8);
       expect(layers.tilesNoticeVisible, isFalse);
+      layers.dispose();
+    });
+
+    test('a new outage after a quiet spell shows it again', () async {
+      var now = DateTime(2026, 1, 1, 12);
+      final layers = CaveMapLayersController(
+        configRepository: config,
+        scanMbTiles: () async => [],
+        tileFailures: TileFailureMonitor(now: () => now),
+      );
+      await layers.load();
+      failTiles(layers, 8);
+      layers.dismissTilesNotice();
+
+      now = now.add(const Duration(seconds: 5));
+      failTiles(layers, 8);
+      expect(layers.tilesNoticeVisible, isFalse);
+
+      now = now.add(const Duration(minutes: 1));
+      failTiles(layers, 1);
+      expect(layers.tilesNoticeVisible, isFalse);
+      failTiles(layers, 7);
+      expect(layers.tilesNoticeVisible, isTrue);
+      layers.dispose();
+    });
+
+    test('loading again starts the count afresh', () async {
+      final layers = controller([]);
+      await layers.load();
+      failTiles(layers, 8);
+      layers.dismissTilesNotice();
+
+      await layers.load();
+      failTiles(layers, 1);
+      expect(layers.tilesNoticeVisible, isFalse);
+      failTiles(layers, 8);
+      expect(layers.tilesNoticeVisible, isTrue);
       layers.dispose();
     });
 

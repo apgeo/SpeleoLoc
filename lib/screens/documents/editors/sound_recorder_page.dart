@@ -14,6 +14,8 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/one_at_a_time.dart';
+import 'package:speleoloc/utils/scratch_files.dart';
 import 'package:speleoloc/utils/wav_splice.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -88,16 +90,22 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   bool _isPlaying = false;
   bool _isSaving = false;
 
-  /// True while a start/stop/pause/resume call is in flight; a second tap on
-  /// the same button would otherwise run it again before the first returned.
-  bool _transitioning = false;
+  /// Start, stop, pause and resume run one at a time; a second tap on the
+  /// same button would otherwise run it again before the first returned.
+  final _transitions = OneAtATime();
 
   /// True once this page has recorded something that is not stored yet.
   bool _hasUnsavedRecording = false;
   String? _recordedPath;
 
+  /// Every WAV this page wrote ([_recordedPath] among them). A recording that
+  /// another one replaced is removed once the new one is stopped, the rest
+  /// when the page closes: saving has copied it into app storage by then,
+  /// and otherwise it was discarded.
+  final _recordings = ScratchFiles();
+
   /// Scratch files of the waveform recorder, removed as soon as it stops.
-  final List<String> _waveformPaths = [];
+  final _waveformFiles = ScratchFiles();
   Duration _elapsed = Duration.zero;
 
   StreamSubscription<RecordingDisposition>? _recorderProgressSub;
@@ -154,6 +162,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
         final dir = await getTemporaryDirectory();
         final tempPath =
             '${dir.path}/edit_${DateTime.now().millisecondsSinceEpoch}.wav';
+        _recordings.add(tempPath);
         await existingFile.copy(tempPath);
         _recordedPath = tempPath;
 
@@ -197,7 +206,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   @override
   void dispose() {
     _recorderProgressSub?.cancel();
-    _recorder.closeRecorder();
+    unawaited(_releaseRecorder());
     _player.closePlayer();
     unawaited(_disposeWaveform());
     _playerController.dispose();
@@ -205,18 +214,26 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     super.dispose();
   }
 
+  /// Closes the recorder and lets a running stop finish before removing the
+  /// recordings, so neither writes a file again after it was deleted.
+  Future<void> _releaseRecorder() async {
+    try {
+      await _recorder.closeRecorder();
+    } catch (e) {
+      log.warning('close recorder error', e);
+    } finally {
+      await _transitions.idle;
+      await _recordings.deleteAll();
+    }
+  }
+
   // -----------------------------------------------------------------------
   //  Recording
   // -----------------------------------------------------------------------
 
   Future<void> _startRecording() async {
-    if (!_recorderReady || _transitioning || _isSaving) return;
-    _transitioning = true;
-    try {
-      await _startRecordingGuarded();
-    } finally {
-      _transitioning = false;
-    }
+    if (!_recorderReady || _isSaving) return;
+    await _transitions.run(_startRecordingGuarded);
   }
 
   Future<void> _startRecordingGuarded() async {
@@ -276,6 +293,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
       final dir = await getTemporaryDirectory();
       _recordedPath =
           '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.wav';
+      _recordings.add(_recordedPath!);
 
       await _recorder.startRecorder(
         toFile: _recordedPath,
@@ -313,7 +331,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/wave_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    _waveformPaths.add(path);
+    _waveformFiles.add(path);
     await _waveController.record(path: path);
   }
 
@@ -321,7 +339,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     try {
       await _waveController.stop();
     } finally {
-      await _deleteWaveformFiles();
+      await _waveformFiles.deleteAll();
     }
   }
 
@@ -335,27 +353,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     }
   }
 
-  Future<void> _deleteWaveformFiles() async {
-    for (final path in _waveformPaths) {
-      try {
-        final f = File(path);
-        if (await f.exists()) await f.delete();
-      } on FileSystemException catch (e) {
-        log.warning('could not remove waveform scratch file', e);
-      }
-    }
-    _waveformPaths.clear();
-  }
-
-  Future<void> _stopRecording() async {
-    if (_transitioning) return;
-    _transitioning = true;
-    try {
-      await _stopRecordingGuarded();
-    } finally {
-      _transitioning = false;
-    }
-  }
+  Future<void> _stopRecording() => _transitions.run(_stopRecordingGuarded);
 
   Future<void> _stopRecordingGuarded() async {
     try {
@@ -371,6 +369,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
         _preSpliceWavBytes = null;
         await _mergeWavFiles(original, File(_recordedPath!));
       }
+      await _recordings.deleteAllExcept(_recordedPath);
 
       // Recreate PlayerController to avoid stale state from the previous
       // recording session (fixes record → stop → record → stop losing buttons).
@@ -399,9 +398,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     }
   }
 
-  Future<void> _pauseRecording() async {
-    if (_transitioning) return;
-    _transitioning = true;
+  Future<void> _pauseRecording() => _transitions.run(() async {
     try {
       await _recorder.pauseRecorder();
       await _stopWaveform();
@@ -409,14 +406,10 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     } catch (e) {
       log.warning('pause error', e);
       if (mounted) SnackBarService.showError(LocServ.inst.t('recording_error'));
-    } finally {
-      _transitioning = false;
     }
-  }
+  });
 
-  Future<void> _resumeRecording() async {
-    if (_transitioning) return;
-    _transitioning = true;
+  Future<void> _resumeRecording() => _transitions.run(() async {
     try {
       await _recorder.resumeRecorder();
       await _startWaveform();
@@ -424,10 +417,8 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     } catch (e) {
       log.warning('resume error', e);
       if (mounted) SnackBarService.showError(LocServ.inst.t('recording_error'));
-    } finally {
-      _transitioning = false;
     }
-  }
+  });
 
   // -----------------------------------------------------------------------
   //  WAV splice
@@ -481,7 +472,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   // -----------------------------------------------------------------------
 
   Future<void> _save() async {
-    if (_isSaving || _transitioning) return;
+    if (_isSaving) return;
     // Set before the first await: stopping a live recording takes long enough
     // for a second tap on Save to arrive.
     setState(() => _isSaving = true);
@@ -497,9 +488,15 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
 
   /// Returns whether the page was closed after saving.
   Future<bool> _saveGuarded() async {
-    // If still recording, stop first so the file is flushed.
+    // A start, stop, pause or resume tapped just before Save (or before the
+    // leave dialog) is still running: let it finish, then stop a live
+    // recording so the file is flushed. Save then either stores the file or
+    // says why not.
+    await _transitions.idle;
+    if (!mounted) return false;
     if (_isRecording) {
       await _stopRecording();
+      await _transitions.idle;
       if (!mounted) return false;
     }
 

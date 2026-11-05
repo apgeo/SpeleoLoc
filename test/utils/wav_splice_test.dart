@@ -53,6 +53,49 @@ Uint8List wav({
   return out.toBytes();
 }
 
+/// Builds a WAVE_FORMAT_EXTENSIBLE WAV (8 kHz, 16-bit mono), the header some
+/// recorders and editors write even for plain PCM. [subFormat] is the code in
+/// the first two bytes of the sub-format GUID; [fmtSize] the declared size of
+/// the fmt chunk, normally 40.
+Uint8List extensibleWav({
+  int subFormat = 1,
+  int fmtSize = 40,
+  int dataBytes = 16000,
+  int fill = 1,
+}) {
+  final fmt = ByteData(fmtSize < 40 ? 40 : fmtSize)
+    ..setUint16(0, 0xFFFE, Endian.little)
+    ..setUint16(2, 1, Endian.little)
+    ..setUint32(4, 8000, Endian.little)
+    ..setUint32(8, 16000, Endian.little)
+    ..setUint16(12, 2, Endian.little)
+    ..setUint16(14, 16, Endian.little)
+    ..setUint16(16, 22, Endian.little)
+    ..setUint16(18, 16, Endian.little)
+    ..setUint32(20, 4, Endian.little)
+    ..setUint16(24, subFormat, Endian.little);
+  // The rest of the GUID: 0000-0010-8000-00AA00389B71.
+  const guidTail = [0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xAA, 0, 0x38, 0x9B, 0x71];
+  for (var i = 0; i < guidTail.length; i++) {
+    fmt.setUint8(26 + i, guidTail[i]);
+  }
+  final fmtBytes = fmt.buffer.asUint8List(0, fmtSize < 40 ? fmtSize : 40);
+  final sizes = ByteData(16)
+    ..setUint32(0, 4 + 8 + fmtBytes.length + 8 + dataBytes, Endian.little)
+    ..setUint32(4, fmtBytes.length, Endian.little)
+    ..setUint32(8, dataBytes, Endian.little);
+  return (BytesBuilder()
+        ..add('RIFF'.codeUnits)
+        ..add(sizes.buffer.asUint8List(0, 4))
+        ..add('WAVEfmt '.codeUnits)
+        ..add(sizes.buffer.asUint8List(4, 4))
+        ..add(fmtBytes)
+        ..add('data'.codeUnits)
+        ..add(sizes.buffer.asUint8List(8, 4))
+        ..add(Uint8List(dataBytes)..fillRange(0, dataBytes, fill)))
+      .toBytes();
+}
+
 void main() {
   group('WavPcmInfo.parse', () {
     test('reads a canonical header', () {
@@ -89,6 +132,23 @@ void main() {
 
     test('rejects a WAV that is not plain PCM', () {
       expect(WavPcmInfo.parse(wav(audioFormat: 3)), isNull);
+    });
+
+    test('reads an extensible header whose sub-format is PCM', () {
+      final info = WavPcmInfo.parse(extensibleWav())!;
+      expect(info.sampleRate, 8000);
+      expect(info.numChannels, 1);
+      expect(info.bitsPerSample, 16);
+      expect(info.dataOffset, 12 + 8 + 40 + 8);
+      expect(info.dataSize, 16000);
+    });
+
+    test('rejects an extensible header whose sub-format is float', () {
+      expect(WavPcmInfo.parse(extensibleWav(subFormat: 3)), isNull);
+    });
+
+    test('rejects an extensible header too short to name a sub-format', () {
+      expect(WavPcmInfo.parse(extensibleWav(fmtSize: 18)), isNull);
     });
   });
 
@@ -143,6 +203,18 @@ void main() {
 
     test('refuses a recording with another channel count', () {
       expect(spliceWav(wav(channels: 2), wav(channels: 1), 100), isNull);
+    });
+
+    test('splices onto an extensible PCM original', () {
+      final merged = spliceWav(
+        extensibleWav(fill: 1),
+        wav(dataBytes: 400, fill: 2),
+        500,
+      )!;
+      final info = WavPcmInfo.parse(merged)!;
+      expect(info.dataSize, 8000 + 400);
+      expect(merged[info.dataOffset + 7999], 1);
+      expect(merged[info.dataOffset + 8000], 2);
     });
 
     test('refuses an original that is not a WAV', () {

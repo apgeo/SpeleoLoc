@@ -40,4 +40,14 @@ void main() {
     monitor.reset();
     expect(monitor.record(), isFalse);
   });
+
+  test('is quiet until a failure, and again once the window has passed', () {
+    expect(monitor.quiet, isTrue);
+    monitor.record();
+    expect(monitor.quiet, isFalse);
+    now = now.add(const Duration(seconds: 9));
+    expect(monitor.quiet, isFalse);
+    now = now.add(const Duration(seconds: 2));
+    expect(monitor.quiet, isTrue);
+  });
 }

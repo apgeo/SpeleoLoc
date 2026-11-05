@@ -68,4 +68,22 @@ void main() {
     expect(find.byType(ScannerPage), findsNothing);
     expect(find.text('open'), findsOneWidget);
   });
+
+  testWidgets('a detection during the back animation is ignored', (
+    tester,
+  ) async {
+    final scanned = <String>[];
+    await openScanner(tester, scanned.add);
+
+    final scanner = tester.widget<MobileScanner>(find.byType(MobileScanner));
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    scanner.onDetect!(capture('a1'));
+    await tester.pumpAndSettle();
+
+    expect(scanned, isEmpty);
+    expect(find.byType(ScannerPage), findsNothing);
+    expect(find.text('open'), findsOneWidget);
+  });
 }

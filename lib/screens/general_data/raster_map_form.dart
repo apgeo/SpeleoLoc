@@ -170,47 +170,54 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
         pickedFile.name,
       );
       var fileName = 'raster_$stamp.$ext';
-      var savedFile = await File(
-        pickedFile.path,
-      ).copy('${subfolder.path}/$fileName');
-
-      // Apply image compression if enabled by constant and settings.
-      if (kCompressRasterMapImages) {
-        final compressionSettings = await ImageCompressionSettings.load();
-        await ImageCompressor.compressFile(savedFile, compressionSettings);
-        // Compression re-encodes as JPEG, so the name follows the result.
-        final afterExt = ImageFormatSniffer.extensionFor(
-          await ImageFormatSniffer.readHead(savedFile.path),
-        );
-        if (afterExt != null && afterExt != ext) {
-          ext = afterExt;
-          fileName = 'raster_$stamp.$ext';
-          savedFile = await savedFile.rename('${subfolder.path}/$fileName');
-        }
-      }
-
-      // Drop any cached decode for this path so viewers re-decode the new
-      // bytes. Filenames are timestamped (so this is normally a no-op), but
-      // this keeps the decoded-image cache correct if a path is ever reused.
-      invalidateDecodedImage(savedFile.path);
-
-      // Hash and size for duplicate detection.
+      var savedPath = '${subfolder.path}/$fileName';
       final FileDigest digest;
+      // A partial copy, or one that could not be compressed, renamed or read
+      // back, would stay in the cave folder with nothing pointing at it.
+      var kept = false;
       try {
-        digest = await FileDigest.of(savedFile.path);
-      } on Exception {
-        await _deleteQuietly(savedFile.path);
-        rethrow;
+        await File(pickedFile.path).copy(savedPath);
+
+        // Apply image compression if enabled by constant and settings.
+        if (kCompressRasterMapImages) {
+          final compressionSettings = await ImageCompressionSettings.load();
+          await ImageCompressor.compressFile(
+            File(savedPath),
+            compressionSettings,
+          );
+          // Compression re-encodes as JPEG, so the name follows the result.
+          final afterExt = ImageFormatSniffer.extensionFor(
+            await ImageFormatSniffer.readHead(savedPath),
+          );
+          if (afterExt != null && afterExt != ext) {
+            ext = afterExt;
+            fileName = 'raster_$stamp.$ext';
+            savedPath = (await File(
+              savedPath,
+            ).rename('${subfolder.path}/$fileName')).path;
+          }
+        }
+
+        // Drop any cached decode for this path so viewers re-decode the new
+        // bytes. Filenames are timestamped (so this is normally a no-op), but
+        // this keeps the decoded-image cache correct if a path is ever reused.
+        invalidateDecodedImage(savedPath);
+
+        // Hash and size for duplicate detection.
+        digest = await FileDigest.of(savedPath);
+        kept = true;
+      } finally {
+        if (!kept) await _deleteQuietly(savedPath);
       }
-      if (!mounted) return savedFile.path;
+      if (!mounted) return savedPath;
 
       final replaced = _unsavedPickPath;
       setState(() {
         _imagePath = 'cave_${widget.caveUuid}/$fileName';
-        _fullImagePath = savedFile.path;
+        _fullImagePath = savedPath;
         _pendingFileHash = digest.sha256Hex;
         _pendingFileSize = digest.size;
-        _unsavedPickPath = savedFile.path;
+        _unsavedPickPath = savedPath;
       });
       if (replaced != null) unawaited(_deleteQuietly(replaced));
     }

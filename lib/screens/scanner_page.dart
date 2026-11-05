@@ -67,6 +67,9 @@ class _ScannerPageState extends State<ScannerPage>
 
   void _onDetect(BarcodeCapture capture) {
     if (_handled) return;
+    // Once the page is leaving (back gesture, menu navigation) a late frame
+    // must neither report a code nor pop, which would close the page beneath.
+    if (!mounted || ModalRoute.of(context)?.isCurrent == false) return;
     final code = capture.barcodes.firstOrNull?.rawValue ?? '';
     if (code.isEmpty) return;
     _handled = true;
@@ -78,23 +81,30 @@ class _ScannerPageState extends State<ScannerPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: appMenuScaffoldKey,
-      endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
-        title: Text(LocServ.inst.t('scan_qr')),
-        actions: [
-          IconButton(
-            key: tourKeys['torch'],
-            icon: const Icon(Icons.flash_on),
-            onPressed: () => _controller.toggleTorch(),
-          ),
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
-      body: KeyedSubtree(
-        key: tourKeys['camera'],
-        child: MobileScanner(controller: _controller, onDetect: _onDetect),
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop || _handled) return;
+        _handled = true;
+        unawaited(_controller.stop());
+      },
+      child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
+        appBar: AppBar(
+          title: Text(LocServ.inst.t('scan_qr')),
+          actions: [
+            IconButton(
+              key: tourKeys['torch'],
+              icon: const Icon(Icons.flash_on),
+              onPressed: () => _controller.toggleTorch(),
+            ),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
+        ),
+        body: KeyedSubtree(
+          key: tourKeys['camera'],
+          child: MobileScanner(controller: _controller, onDetect: _onDetect),
+        ),
       ),
     );
   }
