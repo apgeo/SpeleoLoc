@@ -21,6 +21,7 @@ import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
+import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
@@ -52,12 +53,30 @@ import 'package:speleoloc/widgets/trip_record_feedback.dart';
 /// permissions itself — [start] silently stays off until the user enables
 /// detection in Settings → Beacon detection (which runs the request flow).
 class BeaconDetectionService {
-  BeaconDetectionService._() {
+  BeaconDetectionService._({
+    bool featureEnabled = BuildConfig.beaconsEnabled,
+    Future<BeaconDetectionConfig> Function()? loadConfig,
+  }) : _featureEnabled = featureEnabled,
+       _loadConfig = loadConfig ?? BeaconDetectionConfig.load {
     // The registration watch subscribes against the appDatabase instance
     // current at start; re-subscribe whenever a restore/import swaps it.
     onAppDatabaseReplaced(() => unawaited(restart()));
   }
+
+  @visibleForTesting
+  factory BeaconDetectionService.forTesting({
+    required bool featureEnabled,
+    required Future<BeaconDetectionConfig> Function() loadConfig,
+  }) = BeaconDetectionService._;
+
   static final BeaconDetectionService instance = BeaconDetectionService._();
+
+  /// False in builds that hide beacons. Such a build must never scan or
+  /// show the background-service notification, even when a restored
+  /// archive or an earlier install left detection switched on, because it
+  /// has no screen to switch it off.
+  final bool _featureEnabled;
+  final Future<BeaconDetectionConfig> Function() _loadConfig;
 
   final _log = AppLogger.of('BeaconDetectionService');
 
@@ -120,11 +139,13 @@ class BeaconDetectionService {
   /// Safe to call unconditionally (app start, resume, settings change) —
   /// every failure path only logs.
   Future<void> start() async {
-    if (_running) return;
+    // Every path that starts detection (launch, resume, settings, a
+    // database swap, the start retry) comes through here.
+    if (_running || !_featureEnabled) return;
     _startRetryTimer?.cancel();
     _startRetryTimer = null;
     try {
-      final config = await BeaconDetectionConfig.load();
+      final config = await _loadConfig();
       enabledListenable.value = config.enabled;
       if (!config.enabled) return;
       if (!await _permissionsAlreadyGranted()) {
@@ -225,7 +246,7 @@ class BeaconDetectionService {
         return false;
       }
     }
-    final config = await BeaconDetectionConfig.load();
+    final config = await _loadConfig();
     if (enable && config.backgroundEnabled) {
       // Background mode is already configured (its settings toggle ran
       // this flow once) — but the grants can be revoked between sessions,
@@ -361,7 +382,7 @@ class BeaconDetectionService {
     // current config, but surface the failure so a broken debounce config
     // isn't silently ignored.
     try {
-      final config = await BeaconDetectionConfig.load();
+      final config = await _loadConfig();
       _engine?.config = config;
     } catch (e, st) {
       _log.warning(
