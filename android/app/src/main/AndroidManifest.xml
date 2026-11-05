@@ -13,11 +13,18 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <!-- Background beacon detection: foreground service (connectedDevice
-         type for BLE scanning), notification alerts, and the battery
-         optimisation exemption for multi-hour scanning sessions. -->
+    <!-- Background beacon detection: foreground service, notification
+         alerts, and the battery optimisation exemption for multi-hour
+         scanning sessions. The service is typed connectedDevice for the BLE
+         scan and location because, with BLUETOOTH_SCAN not marked
+         neverForLocation, Android delivers scan results in the background
+         only to a process with location access: a while-in-use grant counts
+         there only inside a location-typed service started while the app is
+         on screen. The alternative, ACCESS_BACKGROUND_LOCATION, is not
+         requested. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Legacy shared-storage read/write, maxSdkVersion-capped: runtime
@@ -39,11 +46,6 @@
          back to a temporary grant the app cannot tell from full access,
          and the selection is gone on the next start. -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
-    <!-- Merged in by plugin manifests (altbeacon/geolocator) but this app
-         never starts a location-typed foreground service — background beacon
-         scanning runs the connectedDevice-typed service below. Stripped so
-         Play's foreground-service declaration covers only connectedDevice. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove" />
     <!-- flutter_sound library-manifest bug: the Java constant name was
          pasted instead of a permission string. Inert, but it would show up
          in the store's declared-permissions list. -->
@@ -92,7 +94,7 @@
              (flutter_foreground_task). -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="connectedDevice"
+            android:foregroundServiceType="connectedDevice|location"
             android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

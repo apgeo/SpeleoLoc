@@ -11,6 +11,7 @@ Position _fix({
   required double lng,
   double accuracy = 8,
   double altitude = 100,
+  double altitudeAccuracy = 1,
 }) {
   return Position(
     latitude: lat,
@@ -18,7 +19,7 @@ Position _fix({
     timestamp: DateTime.fromMillisecondsSinceEpoch(0),
     accuracy: accuracy,
     altitude: altitude,
-    altitudeAccuracy: 1,
+    altitudeAccuracy: altitudeAccuracy,
     heading: 0,
     headingAccuracy: 0,
     speed: 0,
@@ -131,10 +132,7 @@ void main() {
   group('averaging', () {
     test('averages latitude and longitude over the samples', () async {
       await session.start();
-      await emit([
-        _fix(lat: 10.0, lng: 20.0),
-        _fix(lat: 10.2, lng: 20.4),
-      ]);
+      await emit([_fix(lat: 10.0, lng: 20.0), _fix(lat: 10.2, lng: 20.4)]);
 
       expect(session.status, GpsAveragingStatus.averaging);
       expect(session.sampleCount, 2);
@@ -167,14 +165,37 @@ void main() {
 
     test('averages altitude only over samples that report one', () async {
       await session.start();
+      // geolocator reports a fix without altitude as 0.0 m with 0.0
+      // accuracy (network fixes before GPS lock), never as NaN.
       await emit([
-        _fix(lat: 1, lng: 1, altitude: 100),
-        _fix(lat: 1, lng: 1, altitude: double.nan),
-        _fix(lat: 1, lng: 1, altitude: 200),
+        _fix(lat: 1, lng: 1, altitude: 1200),
+        _fix(lat: 1, lng: 1, altitude: 0, altitudeAccuracy: 0),
+        _fix(lat: 1, lng: 1, altitude: 1210),
       ]);
 
       expect(session.sampleCount, 3);
-      expect(session.altitude, closeTo(150, 1e-9));
+      expect(session.altitude, closeTo(1205, 1e-9));
+    });
+
+    test('keeps an altitude reported without a vertical accuracy', () async {
+      // Android before API 26 never reports a vertical accuracy.
+      await session.start();
+      await emit([
+        _fix(lat: 1, lng: 1, altitude: 800, altitudeAccuracy: 0),
+        _fix(lat: 1, lng: 1, altitude: 810, altitudeAccuracy: 0),
+      ]);
+
+      expect(session.altitude, closeTo(805, 1e-9));
+    });
+
+    test('reports no altitude when no sample has one', () async {
+      await session.start();
+      await emit([
+        _fix(lat: 1, lng: 1, altitude: 0, altitudeAccuracy: 0),
+        _fix(lat: 1, lng: 1, altitude: double.nan),
+      ]);
+
+      expect(session.altitude, isNull);
     });
 
     test('surfaces a stream error', () async {
@@ -274,9 +295,13 @@ void main() {
     });
 
     test('score decreases as accuracy worsens', () {
-      final scores = [3.0, 8.0, 15.0, 40.0, 80.0]
-          .map((a) => GpsQuality.fromAccuracy(a).score)
-          .toList();
+      final scores = [
+        3.0,
+        8.0,
+        15.0,
+        40.0,
+        80.0,
+      ].map((a) => GpsQuality.fromAccuracy(a).score).toList();
       for (var i = 1; i < scores.length; i++) {
         expect(scores[i], lessThan(scores[i - 1]));
       }
