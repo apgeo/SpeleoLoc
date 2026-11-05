@@ -212,8 +212,12 @@ A document's **description** cannot be edited anywhere in the app; it
 only ever arrives with imported or synchronised data, where it still
 counts for the search box.
 
-Saving an edit **overwrites the stored file in place**. The previous
-version of a photo, a note or a recording is not kept anywhere.
+Saving an edit **replaces the stored file**: the new content is written
+as a new file, the document is pointed at it and the old file is
+removed. The previous version of a photo, a note or a recording is not
+kept anywhere. Because the new file has a name the other phones do not
+have yet, the next sync carries the edit to phones that already hold
+the old version.
 
 If you press back with unsaved changes in the text or rich-text editor,
 a dialog offers **Save**, **Discard** and **Cancel**, so a mis-tap will
@@ -229,7 +233,7 @@ Opening an audio document in the recorder does not start from scratch.
 Play the existing recording, drag the waveform to the point you want,
 then press record: everything from that point on is replaced by the new
 take, and everything before it is kept. There is no trim function, and
-saving overwrites the original file.
+saving replaces the original recording.
 
 ## What you cannot do
 

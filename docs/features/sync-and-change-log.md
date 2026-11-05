@@ -214,7 +214,9 @@ gone, and the record is added at the next sync or as soon as you open
   out of the archive only when no file of that name already exists on
   your device. If someone re-shot a photo and kept the file name, you
   keep your old picture, and the "files" count in the summary will be
-  lower than you expected.
+  lower than you expected. Edits made in the app's own editors are not
+  caught by this: each save stores the new content under a new file
+  name, so it reaches the other phones.
 - **Two people with the same user name become one.** An incoming user
   whose user name already exists on your device is treated as the same
   person, and their records are attached to your local user. That is

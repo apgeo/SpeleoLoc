@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -184,17 +185,13 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
 
       if (_isEditing) {
         // ---- UPDATE ----
-        final doc = widget.existingDoc!;
-        final saved = await DocumentationFileHelper.overwriteText(
-          relativePath: doc.fileName,
-          content: deltaJson,
-        );
-        await DocumentationFileHelper.updateRecord(
-          id: doc.uuid,
-          title: title,
-          description: doc.description,
-          savedFile: saved,
-        );
+        await ref
+            .read(documentationByteEditServiceProvider)
+            .save(
+              widget.existingDoc!,
+              Uint8List.fromList(utf8.encode(deltaJson)),
+              title: title,
+            );
       } else {
         // ---- CREATE ----
         final sanitised = title

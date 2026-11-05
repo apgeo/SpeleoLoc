@@ -30,6 +30,7 @@ class SyncTestDevice {
     this.sync,
     this.held,
     this.decisions,
+    this.assetsDir,
   );
 
   final AppDatabase db;
@@ -41,6 +42,10 @@ class SyncTestDevice {
   final SyncArchiveService sync;
   final ArchiveHeldRowRepository held;
   final ArchiveSyncDecisionsService decisions;
+
+  /// The folder this phone's archive service reads and writes asset files
+  /// in, standing in for the app documents directory.
+  final Directory assetsDir;
 
   Uuid get author => currentUser.currentUserUuid.value!;
 
@@ -79,6 +84,7 @@ class SyncTestDevice {
         engine: SyncMergeEngine(db, logger, heldRows: held),
         heldRows: held,
       ),
+      assetsDir,
     );
   }
 

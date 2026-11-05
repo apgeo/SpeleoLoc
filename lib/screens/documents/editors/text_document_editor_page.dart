@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
@@ -165,18 +168,13 @@ class _TextDocumentEditorPageState extends ConsumerState<TextDocumentEditorPage>
     try {
       if (_isEditing) {
         // ---- UPDATE existing file & record ----
-        final existingDoc = widget.existingDoc!;
-        final savedFile = await DocumentationFileHelper.overwriteText(
-          relativePath: existingDoc.fileName,
-          content: content,
-        );
-
-        await DocumentationFileHelper.updateRecord(
-          id: existingDoc.uuid,
-          title: title,
-          description: existingDoc.description,
-          savedFile: savedFile,
-        );
+        await ref
+            .read(documentationByteEditServiceProvider)
+            .save(
+              widget.existingDoc!,
+              Uint8List.fromList(utf8.encode(content)),
+              title: title,
+            );
       } else {
         // ---- CREATE new file & record ----
         final sanitised = title

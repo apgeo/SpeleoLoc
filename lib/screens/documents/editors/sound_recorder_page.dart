@@ -476,18 +476,13 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
 
       if (_isEditing) {
         // ---- UPDATE ----
-        final doc = widget.existingDoc!;
-        final bytes = await recordedFile.readAsBytes();
-        final saved = await DocumentationFileHelper.overwriteBytes(
-          relativePath: doc.fileName,
-          bytes: bytes,
-        );
-        await DocumentationFileHelper.updateRecord(
-          id: doc.uuid,
-          title: title,
-          description: doc.description,
-          savedFile: saved,
-        );
+        await ref
+            .read(documentationByteEditServiceProvider)
+            .save(
+              widget.existingDoc!,
+              await recordedFile.readAsBytes(),
+              title: title,
+            );
       } else {
         // ---- CREATE ----
         final saved = await DocumentationFileHelper.saveExternalFile(

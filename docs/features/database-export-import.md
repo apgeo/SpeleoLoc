@@ -251,7 +251,9 @@ no file of that name already exists on your device. An incoming file that
 shares a name with one you have is skipped — so if someone re-shot a photo
 or re-exported a map image under the same name, you keep the old picture
 and the **Files copied** count comes out lower than you expected. Only
-**Replace all data** overwrites media.
+**Replace all data** overwrites media. A document edited in the app's
+text, rich-text, audio or image editor is saved under a new file name,
+so its new content does arrive.
 
 #### The Import Complete summary
 
