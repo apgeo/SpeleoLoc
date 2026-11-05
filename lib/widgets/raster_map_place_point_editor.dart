@@ -10,6 +10,7 @@ import 'package:speleoloc/widgets/raster_map/raster_map_filter_panel.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_img_processing_menu.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_place_point_editor_controller.dart';
 import 'package:speleoloc/widgets/raster_map/raster_map_toolbar_widgets.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_viewport_layer.dart';
 import 'package:speleoloc/widgets/raster_map/trip_overlay_data.dart';
 import 'package:speleoloc/widgets/raster_map_points_legend.dart';
 import 'package:speleoloc/widgets/raster_map_nav_bar.dart';
@@ -254,6 +255,10 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
   // Stream subscription for PhotoView state changes (#9 fix)
   StreamSubscription? _pvSubscription;
+
+  // Where the picture sits in the viewport, fed from the PhotoView controller.
+  // Only the marker layer listens, so pan and zoom never rebuild the editor.
+  late final ValueNotifier<PhotoViewControllerValue> _viewport;
 
   // Decoded image for color-sampling (now stored as raw RGBA for fast sampling)
   RawImageData? _img;
@@ -517,19 +522,16 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     _photoViewController = PhotoViewController();
     _scaleStateController = PhotoViewScaleStateController();
 
-    _pvSubscription = _photoViewController.outputStateStream.listen((value) {
-      // rebuild markers when zoom/pan changes
-      if (mounted) setState(() {});
-    });
+    _viewport = ValueNotifier(_photoViewController.value);
+    _pvSubscription = _photoViewController.outputStateStream.listen(
+      (value) => _viewport.value = value,
+    );
 
-    // pulse animation controller for marker-tap feedback
-    _pulseController =
-        AnimationController(
-          vsync: this,
-          duration: RasterMapEditorConstants.pulseAnimationDuration,
-        )..addListener(() {
-          if (mounted) setState(() {});
-        });
+    // Pulse animation for marker-tap feedback; the marker layer redraws on it.
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: RasterMapEditorConstants.pulseAnimationDuration,
+    );
 
     _panZoomController =
         AnimationController(
@@ -593,6 +595,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     // detach controller reference
     widget.controller?.detachHost(this);
     _pvSubscription?.cancel();
+    _viewport.dispose();
     _photoViewController.dispose();
     _scaleStateController.dispose();
     _pulseController.dispose();
@@ -1971,19 +1974,14 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                       return ColorFiltered(colorFilter: cf, child: photoView);
                     }(),
                     Positioned.fill(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          // store the current viewport size for use by zoomToPoint
-                          _photoViewportSize = constraints.biggest;
-
+                      child: RasterMapViewportLayer(
+                        viewport: _viewport,
+                        animation: _pulseController,
+                        // Kept for zoomToPoint, so offsets are relative to the
+                        // editor's viewport rather than the whole screen.
+                        onSize: (size) => _photoViewportSize = size,
+                        builder: (context, controllerValue, viewportSize) {
                           final List<Widget> overlay = [];
-                          final controllerValue = PhotoViewControllerValue(
-                            scale: _photoViewController.scale,
-                            position: _photoViewController.position,
-                            rotation: _photoViewController.rotation,
-                            rotationFocusPoint:
-                                _photoViewController.rotationFocusPoint,
-                          );
                           final selectedCavePlaceTitle =
                               _resolveSelectedCavePlaceTitle();
                           String markerLabel(String qualifierKey) {
@@ -2019,6 +2017,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                             RasterMapMarkerBuilder.buildDefinitionMarkers(
                               definitions: widget.cavePlacesWithDefinitions,
                               controllerValue: controllerValue,
+                              visibleArea: Offset.zero & viewportSize,
                               specialPointKeys: specialPointKeys,
                               visiblePlaceUuids: _visiblePlaceUuids,
                               fadeFilteredMarkers:
@@ -2127,7 +2126,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                             );
                           }
 
-                          return Stack(children: overlay);
+                          return overlay;
                         },
                       ),
                     ),
