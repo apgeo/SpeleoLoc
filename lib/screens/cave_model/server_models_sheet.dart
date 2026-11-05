@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/model_viewer_providers.dart';
 import 'package:speleoloc/services/cave_model/current_survey_models.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
@@ -28,13 +29,20 @@ class ServerModelsSheet extends ConsumerStatefulWidget {
 }
 
 class _ServerModelsSheetState extends ConsumerState<ServerModelsSheet> {
+  static final _log = AppLogger.of('ServerModelsSheet');
+
   Uuid? _fetching;
 
   Future<void> _fetch(ServerSurveyModel model) async {
     setState(() => _fetching = model.modelId);
-    final outcome = await ref
-        .read(serverSurveyModelFetcherProvider)
-        .fetch(model);
+    ServerModelFetchOutcome outcome;
+    try {
+      outcome = await ref.read(serverSurveyModelFetcherProvider).fetch(model);
+    } on Exception catch (e) {
+      // Whatever went wrong, the tiles must not stay locked.
+      _log.warning('fetching a server model failed: $e');
+      outcome = ServerModelFetchOutcome.failed;
+    }
     if (!mounted) return;
     setState(() => _fetching = null);
     switch (outcome) {
@@ -48,6 +56,8 @@ class _ServerModelsSheetState extends ConsumerState<ServerModelsSheet> {
         SnackBarService.showWarning(LocServ.inst.t('model_server_refused'));
       case ServerModelFetchOutcome.failed:
         SnackBarService.showWarning(LocServ.inst.t('model_server_failed'));
+      case ServerModelFetchOutcome.offline:
+        SnackBarService.showWarning(LocServ.inst.t('model_server_offline'));
     }
   }
 

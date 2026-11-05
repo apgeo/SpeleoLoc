@@ -19,6 +19,7 @@ import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/deep_link_handler.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/material_locales.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:speleoloc/widgets/system_bars_inset_guard.dart';
@@ -48,8 +49,10 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
     // earlier install can carry detection switched on.
     if (BuildConfig.beaconsEnabled) BeaconDetectionService.instance.start();
     // After the first frame (navigator must exist): if a detection
-    // notification cold-started the app, finish its navigation.
+    // notification or an sp:// link cold-started the app, finish its
+    // navigation.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(DeepLinkHandler.instance.handleInitialLink());
       unawaited(BeaconAlertNotifier.instance.handleLaunchFromNotification());
     });
   }
@@ -70,34 +73,28 @@ class _SpeleoLocAppState extends State<SpeleoLocApp>
 
   @override
   Widget build(BuildContext context) {
-    // PR 9: derive Material's supportedLocales from the loaded LocServ
-    // bundles (which come from `assets/i18n/*.json`) rather than the old
-    // hard-coded `[Locale('en')]`. This makes Material/Cupertino/Quill
-    // framework widgets pick up date/time and form labels in the user's
-    // language whenever a matching bundle ships in the app. `LocServ`
-    // returns BCP-47 language tags like `en` / `fr` / `pt_BR`; split on
-    // `_` so the latter maps to `Locale('pt', 'BR')`. Falls back to
-    // `[Locale('en')]` if LocServ failed to load any bundles (e.g. asset
-    // bundle missing in a test harness) so the app still boots.
-    final loaded = LocServ.inst.supportedLocales();
-    final supported = loaded.isEmpty
-        ? const <Locale>[Locale('en')]
-        : loaded
-              .map((code) {
-                final parts = code.split('_');
-                return parts.length == 2
-                    ? Locale(parts[0], parts[1])
-                    : Locale(parts[0]);
-              })
-              .toList(growable: false);
+    // The app language, not the device's, drives the framework widgets
+    // (back-button label, pickers, Quill toolbar), and a change in settings
+    // reaches them without a restart. Every shipped bundle is listed so a
+    // language chosen later still resolves.
+    return ListenableBuilder(
+      listenable: LocServ.inst,
+      builder: (context, _) => _buildApp(),
+    );
+  }
+
+  Widget _buildApp() {
     return MaterialApp(
+      locale: materialLocaleFor(LocServ.inst.locale),
       localizationsDelegates: const [
         FlutterQuillLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: supported,
+      supportedLocales: materialSupportedLocales(
+        LocServ.inst.supportedLocales(),
+      ),
       title: appName,
       navigatorKey: navigatorKey,
       theme: ThemeData(

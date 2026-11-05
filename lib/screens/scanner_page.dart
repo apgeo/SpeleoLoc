@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
@@ -43,6 +45,10 @@ class _ScannerPageState extends State<ScannerPage>
 
   final MobileScannerController _controller = MobileScannerController();
   QrScanConfig _scanConfig = const QrScanConfig();
+
+  /// Frames already being analysed when the camera is stopped still report a
+  /// detection; only the first one may hand over a code and close the page.
+  bool _handled = false;
   // Using global appDatabase instance
 
   @override
@@ -59,42 +65,45 @@ class _ScannerPageState extends State<ScannerPage>
     super.dispose();
   }
 
+  void _onDetect(BarcodeCapture capture) {
+    if (_handled) return;
+    // Once the page is leaving (back gesture, menu navigation) a late frame
+    // must neither report a code nor pop, which would close the page beneath.
+    if (!mounted || ModalRoute.of(context)?.isCurrent == false) return;
+    final code = capture.barcodes.firstOrNull?.rawValue ?? '';
+    if (code.isEmpty) return;
+    _handled = true;
+    unawaited(_controller.stop());
+    final processed = qrScanService.process(code, config: _scanConfig).qcri;
+    widget.onScan(processed);
+    if (mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // initDatabase();
-
-    return Scaffold(
-      key: appMenuScaffoldKey,
-      endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
-        title: Text(LocServ.inst.t('scan_qr')),
-        actions: [
-          IconButton(
-            key: tourKeys['torch'],
-            icon: const Icon(Icons.flash_on),
-            onPressed: () => _controller.toggleTorch(),
-          ),
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
-      body: KeyedSubtree(
-        key: tourKeys['camera'],
-        child: MobileScanner(
-          controller: _controller,
-          onDetect: (capture) {
-            final List<Barcode> barcodes = capture.barcodes;
-            if (barcodes.isNotEmpty) {
-              final code = barcodes.first.rawValue ?? '';
-              if (code.isNotEmpty) {
-                _controller.stop();
-                final processed = qrScanService
-                    .process(code, config: _scanConfig)
-                    .qcri;
-                widget.onScan(processed);
-                if (mounted) Navigator.pop(context);
-              }
-            }
-          },
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop || _handled) return;
+        _handled = true;
+        unawaited(_controller.stop());
+      },
+      child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
+        appBar: AppBar(
+          title: Text(LocServ.inst.t('scan_qr')),
+          actions: [
+            IconButton(
+              key: tourKeys['torch'],
+              icon: const Icon(Icons.flash_on),
+              onPressed: () => _controller.toggleTorch(),
+            ),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
+        ),
+        body: KeyedSubtree(
+          key: tourKeys['camera'],
+          child: MobileScanner(controller: _controller, onDetect: _onDetect),
         ),
       ),
     );

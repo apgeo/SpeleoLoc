@@ -263,7 +263,7 @@ class _HomePageState extends ConsumerState<HomePage>
   Future<void> _loadUiSettings() async {
     final showToolbar = await SettingsHelper.loadStringConfig(
       showHomeToolbarKey,
-      'true',
+      showHomeToolbarDefault,
     );
     final allowBulkDeletes = await SettingsHelper.loadStringConfig(
       allowMainObjectBulkDeletesKey,
@@ -650,10 +650,15 @@ class _HomePageState extends ConsumerState<HomePage>
       ),
     );
     if (second != true || !mounted) return;
-    for (final c in selected) {
-      await ref.read(caveRepositoryProvider).deleteCave(c.uuid);
+    try {
+      for (final c in selected) {
+        await ref.read(caveRepositoryProvider).deleteCave(c.uuid);
+      }
+    } finally {
+      // A failure midway leaves the earlier caves deleted, and a trip
+      // running in one of them went with it.
+      await ref.read(caveTripServiceProvider).reconcileActiveTrip();
     }
-    await ref.read(caveTripServiceProvider).reconcileActiveTrip();
   }
 
   @override
@@ -1086,6 +1091,8 @@ class _HomePageState extends ConsumerState<HomePage>
         ),
       ],
       enableBulkDelete: _allowMainObjectBulkDeletes,
+      // The cave deletion asks twice itself, with the server's part in it.
+      confirmBulkDelete: false,
       onBulkDelete: _allowMainObjectBulkDeletes ? _deleteSelectedCaves : null,
       searchableText: (cave) {
         final area = cave.surfaceAreaUuid != null

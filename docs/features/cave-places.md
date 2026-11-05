@@ -25,8 +25,8 @@ To the right of the title sit three things:
 
 | Element | Meaning |
 |---|---|
-| QR icon | Green when the place already has a place code, grey when it has none. |
-| Pin counter | On how many of the cave's raster maps this place has been located. Red at zero, green once it is pinned on every map of the cave, grey in between. |
+| QR icon | A filled QR glyph (green) when the place already has a place code, an outlined one (grey) when it has none. Long-press it, or use a screen reader, for *Has a QR code* / *No QR code*. |
+| Pin counter | On how many of the cave's raster maps this place has been located, with the count written out. A crossed-out pin (red) at zero, a pin with a tick (green) once it is pinned on every map of the cave, a plain pin (grey) in between. Long-press it, or use a screen reader, for *Not placed on any map* / *Placed on 1 of 3 maps* / *Placed on all 3 maps*. Tapping it opens the report. |
 | Trash button | **Delete cave place** — see [Deleting a cave place](#deleting-a-cave-place). |
 
 Depth, area and the code text itself are **not** shown on the row. Use

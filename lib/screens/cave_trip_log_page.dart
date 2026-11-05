@@ -6,6 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/cave_trip/trip_log_stale_banner.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -149,6 +150,10 @@ class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
         SnackBarService.showSuccess(LocServ.inst.t('trip_log_saved'));
         Navigator.pop(context);
       }
+    } catch (e, st) {
+      // The page stays open: the text lives only in the editor.
+      AppLogger.of('CaveTripLog').warning('trip log not saved', e, st);
+      SnackBarService.showError(e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -190,6 +195,9 @@ class _CaveTripLogPageState extends ConsumerState<CaveTripLogPage>
           _activeMethod = method;
         });
       }
+    } catch (e, st) {
+      AppLogger.of('CaveTripLog').warning('trip log not regenerated', e, st);
+      SnackBarService.showError(e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

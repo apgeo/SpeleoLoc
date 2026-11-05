@@ -52,13 +52,18 @@ cu pini pentru locurile din peșteră — cum vă deplasați pe imagine, ce
 - **Apăsați un pin** — locul din peșteră devine cel curent: pinul
   clipește, harta se mută pe el fără să vă schimbe mărirea, iar banda cu
   locuri derulează până la el. Nu deschide locul; pentru asta folosiți
-  butonul **Deschide locul**.
+  butonul **Deschide locul**. O apăsare aproape de mai mulți pini îl alege
+  pe cel mai apropiat. Pe *Poziționare locuri pe hartă*, în modul
+  *definește punct nou*, o apăsare nu alege niciodată un pin: lasă punctul
+  acolo unde apăsați, chiar și lângă un alt pin.
 - **Apăsați lung un pin** — un mesaj scurt numește locul din peșteră
   căruia îi aparține. Util într-un colț aglomerat, unde etichetele se
   suprapun.
 - **Apăsați pe imagine** — pe o hartă doar de vizualizare nu se întâmplă
   nimic. Pe *Poziționare locuri pe hartă* fie lasă un punct nou, fie alege
   pinul cel mai apropiat, în funcție de modul de atingere descris mai jos.
+  O apăsare alături de imagine, sau înainte ca imaginea să se fi încărcat,
+  nu lasă niciun punct.
 
 Trecerea de la un loc la altul vă păstrează mărirea curentă și doar
 deplasează harta pe noul pin, așa că puteți lucra pe toată ridicarea

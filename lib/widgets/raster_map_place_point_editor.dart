@@ -872,28 +872,25 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     return '';
   }
 
+  /// Every tap on the map is resolved here; markers take none of their own.
+  /// A tap that defines a point is a position whatever it lands near, and a
+  /// tap that selects picks the nearest point rather than whichever marker
+  /// happens to be drawn on top.
   Future<void> _onImageTap(
     TapUpDetails details,
     PhotoViewControllerValue controllerValue,
   ) async {
-    if (widget.isReadonly) return;
-
     final pos = details.localPosition;
-    final offset = controllerValue.position;
-    final scale = controllerValue.scale ?? 1.0;
-
-    final rawX = (pos.dx - offset.dx) / scale;
-    final rawY = (pos.dy - offset.dy) / scale;
+    if (widget.isReadonly) {
+      await _selectNearestPlace(pos, controllerValue);
+      return;
+    }
 
     // When waiting for a new-cave-place tap, capture coordinates,
     // open popup, and auto-save the definition.
     if (_waitingForNewCavePlaceTap) {
-      final imgW = (_img?.width ?? _naturalImgW)?.toDouble();
-      final imgH = (_img?.height ?? _naturalImgH)?.toDouble();
-      final mxX = (imgW != null && imgW > 0) ? (imgW - 1.0) : double.infinity;
-      final mxY = (imgH != null && imgH > 0) ? (imgH - 1.0) : double.infinity;
-      final cx = rawX.clamp(0.0, mxX);
-      final cy = rawY.clamp(0.0, mxY);
+      final point = _imagePointAt(pos, controllerValue);
+      if (point == null) return;
       setState(() => _waitingForNewCavePlaceTap = false);
 
       if (widget.caveUuid == null) return;
@@ -907,8 +904,8 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
           await widget.onAutoSaveRequested!(
             newId,
             widget.selectedRasterMapUuid!,
-            cx,
-            cy,
+            point.dx,
+            point.dy,
           );
         }
         SnackBarService.showSuccess(
@@ -929,71 +926,99 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       return;
     }
 
-    // When in "select place" tap mode, find the closest existing marker
-    // if the tap is within a threshold distance and select it instead of
-    // defining a new point.
     if (!_tapDefinesNewPoint) {
-      const double hitThreshold = RasterMapEditorConstants.markerHitThreshold;
-      CavePlaceWithDefinition? nearest;
-      double nearestDist = double.infinity;
-      for (final cpwd in widget.cavePlacesWithDefinitions) {
-        final def = cpwd.definition;
-        if (def == null || def.xCoordinate == null || def.yCoordinate == null)
-          continue;
-        final vp = _imageToViewportCoordinates(
-          def.xCoordinate!.toDouble(),
-          def.yCoordinate!.toDouble(),
-          controllerValue,
-        );
-        final dist = (vp - pos).distance;
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearest = cpwd;
-        }
-      }
-      if (nearest != null && nearestDist <= hitThreshold) {
-        _startPulseAtImagePoint(
-          nearest.definition!.xCoordinate!.toDouble(),
-          nearest.definition!.yCoordinate!.toDouble(),
-        );
-        await _handleNavCavePlaceSelected(nearest, notifyMarkerTap: true);
-        _effectiveNavBarState?.setSelectedPlaceId(nearest.cavePlace.uuid);
-      }
+      await _selectNearestPlace(pos, controllerValue);
       return;
     }
 
-    final imgWidth = (_img?.width ?? _naturalImgW)?.toDouble();
-    final imgHeight = (_img?.height ?? _naturalImgH)?.toDouble();
-
-    final maxX = (imgWidth != null && imgWidth > 0)
-        ? (imgWidth - 1.0)
-        : double.infinity;
-    final maxY = (imgHeight != null && imgHeight > 0)
-        ? (imgHeight - 1.0)
-        : double.infinity;
-
-    final clampedX = rawX.clamp(0.0, maxX);
-    final clampedY = rawY.clamp(0.0, maxY);
+    final point = _imagePointAt(pos, controllerValue);
+    if (point == null) return;
 
     // mark that user explicitly selected a new point — used to control
     // whether the blue+orange 'new' marker is displayed.
     _userHasSelectedNewPoint = true;
 
     setState(() {
-      _imageSelectedX = clampedX;
-      _imageSelectedY = clampedY;
+      _imageSelectedX = point.dx;
+      _imageSelectedY = point.dy;
     });
 
     widget.onImagePointChanged?.call(_imageSelectedX!, _imageSelectedY!);
   }
 
+  /// The picture pixel under viewport position [pos], or null when [pos] is
+  /// off the picture or the picture's size or zoom is not known yet.
+  ///
+  /// Until PhotoView has laid the picture out its scale is null, and reading
+  /// the tap at scale 1 would store screen positions as picture pixels; a
+  /// tap beside a zoomed-out picture is not a point on it, and clamping it
+  /// to the nearest edge would store one the user never touched.
+  Offset? _imagePointAt(Offset pos, PhotoViewControllerValue controllerValue) {
+    final scale = controllerValue.scale;
+    final width = _naturalImgW;
+    final height = _naturalImgH;
+    if (scale == null || scale <= 0 || width == null || height == null) {
+      return null;
+    }
+    final x = (pos.dx - controllerValue.position.dx) / scale;
+    final y = (pos.dy - controllerValue.position.dy) / scale;
+    if (x < 0 || y < 0 || x >= width || y >= height) return null;
+    return Offset(x, y);
+  }
+
+  /// Selects the shown place whose point is nearest to [pos], if one is
+  /// within reach. Places a filter leaves out, hidden or faded, are not
+  /// selectable.
+  Future<void> _selectNearestPlace(
+    Offset pos,
+    PhotoViewControllerValue controllerValue,
+  ) async {
+    if (controllerValue.scale == null) return;
+    final visible = _visiblePlaceUuids;
+    CavePlaceWithDefinition? nearest;
+    double nearestDist = double.infinity;
+    for (final cpwd in widget.cavePlacesWithDefinitions) {
+      final def = cpwd.definition;
+      if (def == null || def.xCoordinate == null || def.yCoordinate == null) {
+        continue;
+      }
+      if (visible != null && !visible.contains(cpwd.cavePlace.uuid)) continue;
+      final vp = _imageToViewportCoordinates(
+        def.xCoordinate!.toDouble(),
+        def.yCoordinate!.toDouble(),
+        controllerValue,
+      );
+      final dist = (vp - pos).distance;
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = cpwd;
+      }
+    }
+    if (nearest == null ||
+        nearestDist > RasterMapEditorConstants.markerHitThreshold) {
+      return;
+    }
+    _startPulseAtImagePoint(
+      nearest.definition!.xCoordinate!.toDouble(),
+      nearest.definition!.yCoordinate!.toDouble(),
+    );
+    await _handleNavCavePlaceSelected(nearest, notifyMarkerTap: true);
+    _effectiveNavBarState?.setSelectedPlaceId(nearest.cavePlace.uuid);
+  }
+
+  // The scale is null until PhotoView has laid the picture out, and there is
+  // nothing to zoom before that.
   @override
-  void zoomIn() =>
-      _zoomAtViewportCenter(clampZoom(_photoViewController.scale! * 1.2));
+  void zoomIn() {
+    final scale = _photoViewController.scale;
+    if (scale != null) _zoomAtViewportCenter(clampZoom(scale * 1.2));
+  }
 
   @override
-  void zoomOut() =>
-      _zoomAtViewportCenter(clampZoom(_photoViewController.scale! / 1.2));
+  void zoomOut() {
+    final scale = _photoViewController.scale;
+    if (scale != null) _zoomAtViewportCenter(clampZoom(scale / 1.2));
+  }
 
   /// Zoom to [newScale] while keeping the image point currently at the
   /// viewport centre fixed in place.
@@ -1995,17 +2020,6 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                               outlineEnabled: outlineEnabled,
                               outlineWidth: outlineWidth,
                               bgEnabled: bgEnabled,
-                              onTap: (cpwd) async {
-                                final def = cpwd.definition!;
-                                _startPulseAtImagePoint(
-                                  (def.xCoordinate ?? 0).toDouble(),
-                                  (def.yCoordinate ?? 0).toDouble(),
-                                );
-                                await _handleNavCavePlaceSelected(
-                                  cpwd,
-                                  notifyMarkerTap: true,
-                                );
-                              },
                               onLongPress: _showLongTapToast,
                             ),
                           );
@@ -2096,108 +2110,123 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
                         },
                       ),
                     ),
-                    // Status message + Legend overlay (bottom-left corner)
+                    // Status message and legend (bottom-left) share one row
+                    // with the zoom controls (bottom-right), so on a narrow
+                    // phone the hint wraps beside the buttons instead of
+                    // covering them. In landscape-phone mode the row stops
+                    // short of the right action bar.
                     Positioned(
                       left: 8,
+                      right: _computeIsLandscapePhone(context) ? 56 : 8,
                       bottom: 8,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          if (!widget.isReadonly &&
-                              _showTapModeCheckbox &&
-                              _showStatusOverlay)
-                            Container(
-                              constraints: const BoxConstraints(maxWidth: 220),
-                              margin: const EdgeInsets.only(bottom: 4),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 5,
-                                horizontal: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.82),
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 4,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!widget.isReadonly &&
+                                    _showTapModeCheckbox &&
+                                    _showStatusOverlay)
+                                  Container(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 220,
+                                    ),
+                                    margin: const EdgeInsets.only(bottom: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 5,
+                                      horizontal: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.82,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            _tapDefinesNewPoint
+                                                ? LocServ.inst.t(
+                                                    'status_define_point',
+                                                  )
+                                                : LocServ.inst.t(
+                                                    'status_select_place',
+                                                  ),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.black87,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.white70,
+                                                  blurRadius: 1,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          _tapDefinesNewPoint
+                                              ? Icons.edit_location_alt
+                                              : Icons.touch_app,
+                                          size: 14,
+                                          color: _tapDefinesNewPoint
+                                              ? Colors.blue
+                                              : Colors.orange,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
+                                if (_showLegend) const RasterMapPointsLegend(),
+                              ],
+                            ),
+                          ),
+                          if (_showZoomControls) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surface.withValues(alpha: 0.60),
+                                border: Border.all(
+                                  color: Colors.grey,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      _tapDefinesNewPoint
-                                          ? LocServ.inst.t(
-                                              'status_define_point',
-                                            )
-                                          : LocServ.inst.t(
-                                              'status_select_place',
-                                            ),
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.black87,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.white70,
-                                            blurRadius: 1,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                  IconButton(
+                                    onPressed: zoomOut,
+                                    icon: const Icon(Icons.remove),
                                   ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    _tapDefinesNewPoint
-                                        ? Icons.edit_location_alt
-                                        : Icons.touch_app,
-                                    size: 14,
-                                    color: _tapDefinesNewPoint
-                                        ? Colors.blue
-                                        : Colors.orange,
+                                  IconButton(
+                                    onPressed: resetZoom,
+                                    icon: const Icon(Icons.refresh),
+                                  ),
+                                  IconButton(
+                                    onPressed: zoomIn,
+                                    icon: const Icon(Icons.add),
                                   ),
                                 ],
                               ),
                             ),
-                          if (_showLegend) const RasterMapPointsLegend(),
+                          ],
                         ],
                       ),
                     ),
-                    // Zoom controls overlay (bottom-right corner).
-                    // In landscape-phone mode shift left to avoid the right action bar.
-                    if (_showZoomControls)
-                      Positioned(
-                        right: _computeIsLandscapePhone(context) ? 56 : 8,
-                        bottom: 8,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surface.withValues(alpha: 0.60),
-                            border: Border.all(color: Colors.grey, width: 1.5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                onPressed: zoomOut,
-                                icon: const Icon(Icons.remove),
-                              ),
-                              IconButton(
-                                onPressed: resetZoom,
-                                icon: const Icon(Icons.refresh),
-                              ),
-                              IconButton(
-                                onPressed: zoomIn,
-                                icon: const Icon(Icons.add),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
 
                     // ── Side toolbar toggle button (top-left or top-right) ────────
                     _buildToolbarToggleButton(context),

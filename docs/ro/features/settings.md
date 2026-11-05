@@ -51,8 +51,10 @@ Lista respectă ordinea din aplicație.
   `ro` (română). Aplicația pornește în română, așa că de aici treceți pe
   engleză. Alegerea are efect imediat — nu repornește nimic — iar un
   ecran rămas deschis în spatele Setărilor arată noua limbă de îndată ce
-  reveniți la el.
-- **Afișează bara de acțiuni pe pagina principală** — arată butoanele de
+  reveniți la el. Și părțile oferite de sistem — eticheta butonului înapoi,
+  selectoarele de dată și oră, bara editorului de text și editorul de
+  fotografii — urmează această setare, nu limba telefonului.
+- **Afișează bara de acțiuni pe pagina principală** — activată implicit; arată butoanele de
   scanare / adăugare / documente / setări într-o bară pe pagina
   principală. Cu opțiunea dezactivată, **Scanează QR**, **Adaugă peșteră
   nouă** și **Sincronizare FTP / SFTP** urcă în bara de sus; meniul ⋮

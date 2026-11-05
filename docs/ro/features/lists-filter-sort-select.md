@@ -158,15 +158,15 @@ este bifat înainte de a șterge.
 
 ### Ștergerea mai multor înregistrări deodată
 
-Ștergerea în masă este definitivă și nu poate fi anulată. Fiecare listă
+Ștergerea în masă este definitivă și nu poate fi anulată. Listele
 întreabă întâi:
 
 > Ștergeți N elemente selectate?
 
 Ștergerea locurilor din peșteră se oprește aici. Ștergerea peșterilor ia cu
 ea locurile lor, zonele din peșteră, hărțile raster, punctele de pe hartă,
-turele și înregistrările de beacon, așa că lista peșterilor mai întreabă de
-două ori:
+turele și înregistrările de beacon, așa că lista peșterilor sare peste
+această întrebare și pune în loc următoarele două:
 
 > Ștergeți definitiv N peșteri și toate datele aferente? Această acțiune nu
 > poate fi anulată.
@@ -176,6 +176,9 @@ două ori:
 
 Butoanele de pe ultimul dialog sunt inversate intenționat — **Șterge** în
 stânga, **Anulează** în dreapta — așa că citiți-l înainte de a apăsa.
+
+Dacă o ștergere eșuează pe parcurs, un mesaj spune de ce, înregistrările deja
+șterse rămân șterse, iar restul rămân selectate ca să puteți încerca din nou.
 
 **Șterge selectate** apare pe lista peșterilor doar cât timp **Setări →
 General → Permite ștergerea în masă a peșterilor** este pornit. Este pornit

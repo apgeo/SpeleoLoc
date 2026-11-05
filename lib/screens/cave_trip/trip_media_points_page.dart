@@ -90,7 +90,8 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
   int _applyDone = 0;
   int _applyTotal = 0;
 
-  static const _access = TripMediaAccessResolver();
+  TripMediaAccessResolver get _access =>
+      ref.read(tripMediaAccessResolverProvider);
 
   /// True when the user chose the picker although the library could be
   /// read; with no library access the picker is not a choice.
@@ -420,16 +421,42 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
       if (a.selected) a,
   ];
 
+  /// Set first thing in [_apply], before any await: the questions and the
+  /// file copies it starts take long enough for a second tap to arrive.
+  bool _applyStarted = false;
+
   Future<void> _apply() async {
+    if (_applyStarted) return;
+    setState(() => _applyStarted = true);
+    var closed = false;
+    try {
+      closed = await _applyGuarded();
+    } catch (e, st) {
+      log.warning('applying the media import failed', e, st);
+      if (mounted) SnackBarService.showError(e);
+    } finally {
+      // A page that closed after a successful run stays locked through its
+      // exit transition; any other end, a cancel or a failure, unlocks it.
+      if (!closed && mounted) {
+        setState(() {
+          _applyStarted = false;
+          _applying = false;
+        });
+      }
+    }
+  }
+
+  /// Returns whether the page was closed after applying.
+  Future<bool> _applyGuarded() async {
     final trip = _trip;
-    if (trip == null) return;
+    if (trip == null) return false;
     final selectedIds = [
       for (final e in _assignments.entries)
         if (e.value.selected) e.key,
     ];
     if (selectedIds.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('trip_media_nothing_ticked'));
-      return;
+      return false;
     }
 
     // Entrance markers contradict two things that are already recorded, so
@@ -455,7 +482,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
         entrancePlaceUuids: _entrancePlaceUuids,
       );
       if (!plan.isEmpty) {
-        if (!mounted) return;
+        if (!mounted) return false;
         final decision = await TripMediaEntranceDialog.show(
           context,
           plan: plan,
@@ -465,7 +492,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
               : null,
           placeTitles: _placeTitles,
         );
-        if (decision == null) return;
+        if (decision == null) return false;
         deletePointUuids = decision.deletePointUuids;
         newStart = decision.newTripStart;
         newEnd = decision.newTripEnd;
@@ -473,11 +500,19 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
     }
 
     final resolution = _resolution;
-    if (resolution == null || !mounted) return;
+    if (resolution == null || !mounted) return false;
 
     // Asked before anything is written, so cancelling here costs nothing.
     final logUpdate = await TripLogUpdatePrompt.decide(context, ref, trip.uuid);
-    if (logUpdate == null || !mounted) return;
+    if (logUpdate == null || !mounted) return false;
+
+    // Resolving the files is where the time goes on the library path, so the
+    // progress bar is already up while it runs.
+    setState(() {
+      _applying = true;
+      _applyDone = 0;
+      _applyTotal = selectedIds.length;
+    });
 
     final itemsById = {for (final i in _items) i.id: i};
     final commits = <TripMediaCommit>[];
@@ -500,15 +535,8 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
     }
     if (commits.isEmpty) {
       SnackBarService.showWarning(LocServ.inst.t('trip_media_nothing_ticked'));
-      return;
+      return false;
     }
-
-    if (!mounted) return;
-    setState(() {
-      _applying = true;
-      _applyDone = 0;
-      _applyTotal = commits.length;
-    });
 
     final outcome = await ref
         .read(tripMediaImportServiceProvider)
@@ -528,10 +556,10 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
           },
         );
 
-    if (!mounted) return;
-    setState(() => _applying = false);
+    if (!mounted) return false;
     _reportOutcome(outcome);
     Navigator.pop(context, true);
+    return true;
   }
 
   void _reportOutcome(TripMediaImportOutcome outcome) {
@@ -611,7 +639,7 @@ class _TripMediaPointsPageState extends ConsumerState<TripMediaPointsPage> {
         floatingActionButton: trip == null || _applying
             ? null
             : FloatingActionButton.extended(
-                onPressed: _apply,
+                onPressed: _applyStarted ? null : _apply,
                 icon: const Icon(Icons.check),
                 label: Text(
                   LocServ.inst.t('trip_media_apply', {

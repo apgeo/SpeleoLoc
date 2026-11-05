@@ -516,6 +516,28 @@ void main() {
     });
 
     test(
+      'no connection for the address counts as failed, not thrown',
+      () async {
+        await applier.applyPage(page31());
+        final api = SilexgisSyncApi(
+          SilexgisHttp(
+            baseUri: baseUri,
+            tokens: FixedTokenSource(),
+            client: _OfflineClient(),
+          ),
+        );
+        final pending = fetcher(api);
+
+        final report = await pending.fetchPending();
+
+        // Both models were tried; neither ended the run for the other.
+        expect(report.failed, 2);
+        expect(report.fetched, isEmpty);
+        expect(await doc(loxDocument), isNull);
+      },
+    );
+
+    test(
       'a new version replaces the copy\'s bytes, and its mappings stay',
       () async {
         await applier.applyPage(page31());
@@ -639,4 +661,11 @@ class _Files extends http.BaseClient {
       request: request,
     );
   }
+}
+
+/// A phone with no signal: every request breaks before an answer.
+class _OfflineClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      throw http.ClientException('no route to host');
 }

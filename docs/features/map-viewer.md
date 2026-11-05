@@ -47,12 +47,15 @@ mean, and how you give a cave place its position on a map.
 - **Tap a pin** — makes that cave place the current one: the pin flashes,
   the map moves onto it without changing your zoom, and the places strip
   scrolls to it. It does *not* open the place; use the **Open cave place**
-  button for that.
+  button for that. A tap close to several pins picks the nearest. On
+  *Place positions on map* in *define new point* mode a tap never picks a
+  pin: it drops the point where you tap, even right beside another pin.
 - **Press and hold a pin** — a short message names the cave place it
   belongs to. Useful in a crowded corner where the labels overlap.
 - **Tap the image itself** — nothing happens on a view-only map. On
   *Place positions on map* it either drops a new point or picks the
-  nearest pin, depending on the tap mode below.
+  nearest pin, depending on the tap mode below. A tap beside the picture,
+  or before the picture has finished loading, drops no point.
 
 Moving from one place to another keeps your current zoom and simply pans to
 the new pin, so you can work across a survey at a steady scale.

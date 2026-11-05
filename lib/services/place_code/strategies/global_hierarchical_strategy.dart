@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/place_code/cave_local_index_writer.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
+import 'package:speleoloc/utils/qr_label_payload.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 /// Strategy 1 — Global hierarchical PCI (the default).
@@ -98,7 +99,14 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
   bool get _allowNonDigit => (_config[kAllowNonDigit] as bool?) ?? false;
   String get _mainEntranceSuffix =>
       (_config[kMainEntranceSuffix] as String?) ?? '0001';
-  String get _sep => (_config[kSegmentSeparator] as String?) ?? '';
+
+  /// A separator the scanner would cut a code at is treated as none: the
+  /// value can arrive through sync without passing the settings field that
+  /// rejects it, and one such character would break every code allocated.
+  String get _sep {
+    final sep = (_config[kSegmentSeparator] as String?) ?? '';
+    return QrLabelPayload.isSeparatorScannable(sep) ? sep : '';
+  }
 
   // ----- Pure composition (no DB, no allocation) -----
   //

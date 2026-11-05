@@ -18,6 +18,7 @@ import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/place_status_indicators.dart';
 import 'package:speleoloc/widgets/index_range_dialog.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
 import 'package:speleoloc/widgets/range_qr_launcher.dart';
@@ -429,10 +430,15 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
       );
       if (confirmed != true || !mounted) return;
     }
-    for (final cp in selected) {
-      await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(cp.uuid);
+    try {
+      for (final cp in selected) {
+        await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(cp.uuid);
+      }
+    } finally {
+      // A failure midway leaves the earlier places deleted; the list has to
+      // show that rather than rows that are already gone.
+      await _loadCavePlaces();
     }
-    await _loadCavePlaces();
   }
 
   Future<void> _printQRCodes() async {
@@ -761,10 +767,17 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   }
 
   Future<void> _deleteCavePlace(Uuid id) async {
-    await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(id);
-    unawaited(_loadCavePlaces());
-    if (mounted)
-      SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
+    try {
+      await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(id);
+      if (mounted) {
+        SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
+      }
+    } catch (e, st) {
+      AppLogger.of('CavePlacesList').warning('place not deleted', e, st);
+      SnackBarService.showError(e);
+    } finally {
+      unawaited(_loadCavePlaces());
+    }
   }
 
   /// Adds the warning that a deletion travels to the installation holding
@@ -1338,40 +1351,12 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
             ),
             Padding(
               padding: const EdgeInsets.only(left: 4.0, right: 2.0),
-              child: Icon(
-                cp.placeCodeIdentifier != null
-                    ? Icons.qr_code
-                    : Icons.qr_code_outlined,
-                color: cp.placeCodeIdentifier != null
-                    ? Colors.green.withValues(alpha: 0.8)
-                    : Colors.grey,
-                size: 20,
-              ),
+              child: PlaceQrStatusIcon(hasCode: cp.placeCodeIdentifier != null),
             ),
-            Builder(
-              builder: (context) {
-                final count = _definitionCountByPlace[cp.uuid] ?? 0;
-                final Color col = (count == 0)
-                    ? Colors.red.withValues(alpha: 0.8)
-                    : (count == _rasterMapsCountForCave &&
-                          _rasterMapsCountForCave > 0)
-                    ? Colors.green.withValues(alpha: 0.8)
-                    : Colors.grey;
-                return InkWell(
-                  onTap: () => _showDefinitionsReport(cp.uuid),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.place, color: col, size: 18),
-                        const SizedBox(width: 2),
-                        Text('$count', style: TextStyle(color: col)),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            PlaceMapStatusChip(
+              count: _definitionCountByPlace[cp.uuid] ?? 0,
+              totalMaps: _rasterMapsCountForCave,
+              onTap: () => _showDefinitionsReport(cp.uuid),
             ),
             IconActionButton(
               onPressed: () => _confirmDeleteCavePlace(cp.uuid),

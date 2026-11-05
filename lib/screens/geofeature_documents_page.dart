@@ -634,7 +634,8 @@ class _GeofeatureDocumentsPageState
   Future<void> _openDocumentForEditing(DocumentationFile doc) async {
     if (doc.fileName.isEmpty) return;
     final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
-    final editor = handler?.buildEditorForLink(
+    if (handler == null || !handler.canEdit(doc)) return;
+    final editor = handler.buildEditorForLink(
       link: widget.source.geofeatureLink,
       existingDoc: doc,
     );
@@ -650,7 +651,7 @@ class _GeofeatureDocumentsPageState
   ) {
     final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
     final hasViewer = handler?.hasViewer ?? false;
-    final hasEditor = handler?.hasEditor ?? false;
+    final hasEditor = handler?.canEdit(doc) ?? false;
 
     if (!hasViewer && !hasEditor) {
       // No actions available — just open as usual.

@@ -69,16 +69,19 @@ class FtpProfileRepository {
     } else {
       updated.add(profile);
     }
-    await _writeConfig(
-      ConfigKey.ftpProfiles,
-      jsonEncode(updated.map((p) => p.toJson()).toList()),
-    );
+    // The password goes first: a keystore failure then leaves the profile
+    // list as it was, instead of a listed profile that no sync can sign in
+    // with.
     if (password != null) {
       await _storage.write(
         key: _passwordKey(profile.profileUuid),
         value: password,
       );
     }
+    await _writeConfig(
+      ConfigKey.ftpProfiles,
+      jsonEncode(updated.map((p) => p.toJson()).toList()),
+    );
     // If this is the only profile, auto-default it for convenience.
     if (updated.length == 1) {
       await setDefaultUuid(profile.profileUuid);

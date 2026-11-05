@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart';
 import 'package:speleoloc/services/place_code/batch/place_code_overwrite_policy.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// UI bridge that runs a [PlaceCodeBatchRunner] with overwrite prompts,
 /// a real-time progress dialog, and a final summary dialog.
@@ -252,41 +256,46 @@ class _BatchProgressDialogState extends State<_BatchProgressDialog> {
     super.initState();
     _token = BatchCancellationToken();
     _startTime = DateTime.now();
-    _startBatch();
+    unawaited(_startBatch());
   }
 
-  void _startBatch() {
-    widget.runner
-        .run(
-          scope: widget.scope,
-          cancellationToken: _token,
-          onProgress: (c, t) {
-            if (mounted) {
-              setState(() {
-                _current = c;
-                _total = t;
-              });
-            }
-          },
-          onPrompt:
-              ({
-                required cavePlaceUuid,
-                required field,
-                required existing,
-                required computed,
-              }) async {
-                if (!mounted) return OverwriteDecision.cancelBatch;
-                return PlaceCodeBatchUi.promptOverwrite(
-                  context,
-                  field: field,
-                  existing: existing,
-                  computed: computed,
-                );
-              },
-        )
-        .then((summary) {
-          if (mounted) Navigator.pop(context, summary);
-        });
+  Future<void> _startBatch() async {
+    try {
+      final summary = await widget.runner.run(
+        scope: widget.scope,
+        cancellationToken: _token,
+        onProgress: (c, t) {
+          if (mounted) {
+            setState(() {
+              _current = c;
+              _total = t;
+            });
+          }
+        },
+        onPrompt:
+            ({
+              required cavePlaceUuid,
+              required field,
+              required existing,
+              required computed,
+            }) async {
+              if (!mounted) return OverwriteDecision.cancelBatch;
+              return PlaceCodeBatchUi.promptOverwrite(
+                context,
+                field: field,
+                existing: existing,
+                computed: computed,
+              );
+            },
+      );
+      if (mounted) Navigator.pop(context, summary);
+    } catch (e, st) {
+      // The dialog cannot be dismissed by the user, so it has to close here
+      // or nothing will.
+      AppLogger.of('PlaceCodeBatch').warning('batch failed', e, st);
+      SnackBarService.showError(e);
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   String _formatEta() {
