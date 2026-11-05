@@ -43,7 +43,7 @@ void main() {
   ];
 
   test('writes the database, manifest and nested file entries', () async {
-    final rejected = await extractArchiveInto(
+    final rejected = extractArchiveInto(
       roundTrip([
         text('speleo_loc.sqlite', 'db'),
         text('manifest.json', '{}'),
@@ -77,7 +77,7 @@ void main() {
       'documentation_files/..',
     ];
 
-    final rejected = await extractArchiveInto(
+    final rejected = extractArchiveInto(
       roundTrip([
         for (final name in hostile) text(name, 'payload'),
         text('documentation_files/hall.jpg', 'photo'),
@@ -109,7 +109,7 @@ void main() {
       ..nameOfLinkedFile = '../../speleo_loc.sqlite';
     final archive = Archive()..addFile(link);
 
-    final rejected = await extractArchiveInto(archive, dest);
+    final rejected = extractArchiveInto(archive, dest);
 
     expect(rejected, isEmpty);
     expect(root.listSync(recursive: true).whereType<Link>(), isEmpty);
