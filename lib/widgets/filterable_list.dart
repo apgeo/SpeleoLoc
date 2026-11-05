@@ -7,6 +7,7 @@ import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/filterable_list/filterable_list_models.dart';
 import 'package:speleoloc/widgets/filterable_list/filterable_list_sort_picker.dart';
 import 'package:speleoloc/widgets/filterable_list/filterable_list_widgets.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 // Re-export the models (extracted to filterable_list/) so existing callers
 // importing them from this file keep working without changes.
@@ -82,6 +83,7 @@ class FilterableList<T> extends StatefulWidget {
     this.onBulkDelete,
     this.bulkDeleteConfirmTitle,
     this.bulkDeleteConfirmMessage,
+    this.confirmBulkDelete = true,
     this.onSelectionChanged,
     this.onSelectionModeChanged,
     this.itemDecoration,
@@ -179,6 +181,11 @@ class FilterableList<T> extends StatefulWidget {
   /// Optional confirmation body. The substring `{count}` is replaced with
   /// the number of selected items.
   final String? bulkDeleteConfirmMessage;
+
+  /// Whether the list asks before calling [onBulkDelete]. A caller whose
+  /// deletion needs its own, stricter confirmation turns this off instead of
+  /// stacking its dialogs behind the list's.
+  final bool confirmBulkDelete;
 
   final void Function(Set<Object> selectedKeys, List<T> selectedItems)?
   onSelectionChanged;
@@ -506,15 +513,43 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
     widget.onSelectionModeChanged?.call(enabled);
   }
 
+  /// True from the confirmation until [FilterableList.onBulkDelete] returns,
+  /// so a second tap on the delete button cannot start a second pass over the
+  /// same items.
+  bool _bulkDeleting = false;
+
   Future<void> _confirmAndBulkDelete() async {
+    if (_bulkDeleting) return;
     final selected = _selectedItems();
     if (selected.isEmpty) return;
+    if (widget.confirmBulkDelete) {
+      final confirmed = await _askBulkDelete(selected.length);
+      if (confirmed != true) return;
+    }
+    _bulkDeleting = true;
+    try {
+      await widget.onBulkDelete!(selected);
+    } catch (e, st) {
+      // Some items may be gone already; the selection stays so the caver can
+      // see what is left and try again.
+      AppLogger.of('FilterableList').warning('bulk delete failed', e, st);
+      SnackBarService.showError(e);
+      return;
+    } finally {
+      _bulkDeleting = false;
+    }
+    if (!mounted) return;
+    _clearSelection();
+    _setSelectionMode(false);
+  }
+
+  Future<bool?> _askBulkDelete(int count) {
     final loc = LocServ.inst;
     final title = widget.bulkDeleteConfirmTitle ?? loc.t('confirm');
     final messageTpl =
         widget.bulkDeleteConfirmMessage ?? loc.t('delete_selected_confirm');
-    final message = messageTpl.replaceAll('{count}', '${selected.length}');
-    final confirmed = await showDialog<bool>(
+    final message = messageTpl.replaceAll('{count}', '$count');
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
@@ -531,11 +566,6 @@ class _FilterableListState<T> extends State<FilterableList<T>> {
         ],
       ),
     );
-    if (confirmed != true) return;
-    await widget.onBulkDelete!(selected);
-    if (!mounted) return;
-    _clearSelection();
-    _setSelectionMode(false);
   }
 
   // ---------- Build ----------

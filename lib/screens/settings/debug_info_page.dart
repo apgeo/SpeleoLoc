@@ -8,7 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class DebugInfoPage extends ConsumerStatefulWidget {
   const DebugInfoPage({super.key});
@@ -146,14 +148,22 @@ class _DebugInfoPageState extends ConsumerState<DebugInfoPage> {
     titleCtrl.dispose();
     valueCtrl.dispose();
     if (saved != true || titleCtrl.text.trim().isEmpty || !mounted) return;
-    await ref
-        .read(configurationRepositoryProvider)
-        .insertRow(
-          ConfigurationsCompanion.insert(
-            title: titleCtrl.text.trim(),
-            value: drift.Value(valueCtrl.text.isEmpty ? null : valueCtrl.text),
-          ),
-        );
+    try {
+      await ref
+          .read(configurationRepositoryProvider)
+          .insertRow(
+            ConfigurationsCompanion.insert(
+              title: titleCtrl.text.trim(),
+              value: drift.Value(
+                valueCtrl.text.isEmpty ? null : valueCtrl.text,
+              ),
+            ),
+          );
+    } catch (e, st) {
+      // The key is unique, so a repeated one lands here.
+      AppLogger.of('DebugInfo').warning('config not added', e, st);
+      SnackBarService.showError(e);
+    }
     await _reload();
   }
 

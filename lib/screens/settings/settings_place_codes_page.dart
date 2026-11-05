@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
@@ -8,6 +10,7 @@ import 'package:speleoloc/services/place_code/batch/place_code_batch_runner.dart
 import 'package:speleoloc/services/place_code/strategies/global_hierarchical_strategy.dart';
 import 'package:speleoloc/services/place_code/strategies/per_area_sequential_strategy.dart';
 import 'package:speleoloc/services/place_code/strategies/per_cave_sequential_strategy.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/qr_label_payload.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -42,6 +45,10 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
   int _qcriLength = 8;
   bool _qcriEntranceHash = false;
   String _qcriSalt = '';
+
+  /// The salt the stored hash config holds, to tell whether leaving the page
+  /// would drop an edit.
+  String _savedSalt = '';
   late final TextEditingController _saltController;
 
   static const _strategies = [
@@ -59,6 +66,17 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
 
   @override
   void dispose() {
+    // Back (system button or gesture) is not a pointer event, so neither
+    // submitting nor tapping outside the field has saved the salt by now.
+    if (_qcriSalt != _savedSalt) {
+      unawaited(
+        _writeQcriHashConfig().catchError(
+          (Object e, StackTrace st) => AppLogger.of(
+            'SettingsPlaceCodes',
+          ).warning('QCRI salt could not be saved on leaving', e, st),
+        ),
+      );
+    }
     _saltController.dispose();
     super.dispose();
   }
@@ -97,6 +115,7 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
       _qcriSalt = (hashCfg['salt'] is String)
           ? (hashCfg['salt'] as String)
           : '';
+      _savedSalt = _qcriSalt;
       _saltController.text = _qcriSalt;
       _loading = false;
     });
@@ -164,30 +183,32 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
     setState(() => _qcriMode = mode);
   }
 
-  Future<void> _saveQcriLength(int length) async {
+  Future<void> _writeQcriHashConfig({
+    int? length,
+    bool? entranceHash,
+    String? salt,
+  }) async {
+    final stored = salt ?? _qcriSalt;
     await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
-      'length': length,
-      'entrance_hash': _qcriEntranceHash,
-      'salt': _qcriSalt,
+      'length': length ?? _qcriLength,
+      'entrance_hash': entranceHash ?? _qcriEntranceHash,
+      'salt': stored,
     }, isSynced: true);
+    _savedSalt = stored;
+  }
+
+  Future<void> _saveQcriLength(int length) async {
+    await _writeQcriHashConfig(length: length);
     setState(() => _qcriLength = length);
   }
 
   Future<void> _saveQcriEntranceHash(bool v) async {
-    await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
-      'length': _qcriLength,
-      'entrance_hash': v,
-      'salt': _qcriSalt,
-    }, isSynced: true);
+    await _writeQcriHashConfig(entranceHash: v);
     setState(() => _qcriEntranceHash = v);
   }
 
   Future<void> _saveQcriSalt(String salt) async {
-    await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
-      'length': _qcriLength,
-      'entrance_hash': _qcriEntranceHash,
-      'salt': salt,
-    }, isSynced: true);
+    await _writeQcriHashConfig(salt: salt);
     setState(() => _qcriSalt = salt);
   }
 
@@ -290,7 +311,12 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
             : AutovalidateMode.always,
         validator: validator,
         decoration: InputDecoration(labelText: LocServ.inst.t(key)),
-        onChanged: (v) => _saveStrategyConfigField(key, v),
+        onChanged: (v) {
+          // A value the validator flags stays on screen as an error and is
+          // not stored, so it never reaches the labels or other devices.
+          if (validator != null && validator(v) != null) return;
+          _saveStrategyConfigField(key, v);
+        },
       ),
     );
   }
@@ -487,7 +513,7 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
               helperText: LocServ.inst.t('qcri_hash_salt_help'),
               helperMaxLines: 3,
             ),
-            onChanged: (v) => setState(() => _qcriSalt = v),
+            onChanged: (v) => setState(() => _qcriSalt = v.trim()),
             onEditingComplete: () => _saveQcriSalt(_saltController.text.trim()),
             onTapOutside: (_) => _saveQcriSalt(_saltController.text.trim()),
           ),

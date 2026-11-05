@@ -119,8 +119,8 @@ answer *Yes* to "This will delete the cave. Are you sure?".
 
 **Several at once:** on the home list, tap the **Selection mode**
 (checklist) icon in the list header, tick the caves, then tap
-**Delete selected**. This walks through three confirmations in a row — and
-note that the third dialog swaps the button order, putting **Delete** on the
+**Delete selected**. This asks two confirmations in a row — and
+note that the second dialog swaps the button order, putting **Delete** on the
 left, so read them rather than tapping the same spot. The delete button only
 appears while **Settings → General → Allow bulk deletion of caves** is on,
 which it is by default.

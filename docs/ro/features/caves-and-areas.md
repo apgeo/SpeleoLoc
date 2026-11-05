@@ -126,8 +126,8 @@ doriți să continuați?”.
 
 **Mai multe deodată:** în lista ecranului principal, apăsați pictograma **Mod
 selecție** (listă bifată) din antetul listei, bifați peșterile, apoi apăsați
-**Șterge selectate**. Urmează trei confirmări una după alta — și rețineți că al
-treilea dialog inversează ordinea butoanelor, punând **Șterge** în stânga, așa
+**Șterge selectate**. Urmează două confirmări una după alta — și rețineți că al
+doilea dialog inversează ordinea butoanelor, punând **Șterge** în stânga, așa
 că citiți-le în loc să apăsați în același loc. Butonul de ștergere apare doar
 cât timp **Setări → General → Permite ștergerea în masă a peșterilor** este
 activ, ceea ce este cazul implicit.

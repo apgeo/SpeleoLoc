@@ -148,13 +148,13 @@ deleting.
 
 ### Deleting several records at once
 
-Bulk deletion is permanent and cannot be undone. Every list asks first:
+Bulk deletion is permanent and cannot be undone. Lists ask first:
 
 > Delete the selected N item(s)?
 
 Deleting cave places stops there. Deleting caves takes their places, cave
 areas, raster maps, map points, trips and beacon registrations with them, so
-the cave list asks twice more:
+the cave list skips that question and asks these two instead:
 
 > Permanently delete N cave(s) and all their data? This cannot be undone.
 
@@ -162,6 +162,9 @@ the cave list asks twice more:
 
 The buttons on that last dialog are deliberately swapped — **Delete** on the
 left, **Cancel** on the right — so read it before tapping.
+
+If a deletion fails partway, a message says why, the records already deleted
+stay deleted, and the rest stay selected so you can try again.
 
 **Delete selected** appears on the cave list only while **Settings → General
 → Allow bulk deletion of caves** is on. It is on by default; turning it off

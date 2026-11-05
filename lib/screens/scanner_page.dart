@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
@@ -43,6 +45,10 @@ class _ScannerPageState extends State<ScannerPage>
 
   final MobileScannerController _controller = MobileScannerController();
   QrScanConfig _scanConfig = const QrScanConfig();
+
+  /// Frames already being analysed when the camera is stopped still report a
+  /// detection; only the first one may hand over a code and close the page.
+  bool _handled = false;
   // Using global appDatabase instance
 
   @override
@@ -59,10 +65,19 @@ class _ScannerPageState extends State<ScannerPage>
     super.dispose();
   }
 
+  void _onDetect(BarcodeCapture capture) {
+    if (_handled) return;
+    final code = capture.barcodes.firstOrNull?.rawValue ?? '';
+    if (code.isEmpty) return;
+    _handled = true;
+    unawaited(_controller.stop());
+    final processed = qrScanService.process(code, config: _scanConfig).qcri;
+    widget.onScan(processed);
+    if (mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // initDatabase();
-
     return Scaffold(
       key: appMenuScaffoldKey,
       endDrawer: buildAppMenuEndDrawer(),
@@ -79,23 +94,7 @@ class _ScannerPageState extends State<ScannerPage>
       ),
       body: KeyedSubtree(
         key: tourKeys['camera'],
-        child: MobileScanner(
-          controller: _controller,
-          onDetect: (capture) {
-            final List<Barcode> barcodes = capture.barcodes;
-            if (barcodes.isNotEmpty) {
-              final code = barcodes.first.rawValue ?? '';
-              if (code.isNotEmpty) {
-                _controller.stop();
-                final processed = qrScanService
-                    .process(code, config: _scanConfig)
-                    .qcri;
-                widget.onScan(processed);
-                if (mounted) Navigator.pop(context);
-              }
-            }
-          },
-        ),
+        child: MobileScanner(controller: _controller, onDetect: _onDetect),
       ),
     );
   }

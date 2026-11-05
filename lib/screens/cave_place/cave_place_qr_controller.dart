@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_place/cave_place_form_controller.dart';
-import 'package:speleoloc/screens/scanner_page.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
@@ -10,6 +9,7 @@ import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/cave_place_qr_preview_dialog.dart';
+import 'package:speleoloc/widgets/qr_scanner_launcher.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// Encapsulates all QR-scan and place-code-generation interactions for
@@ -80,11 +80,9 @@ class CavePlaceQrController {
 
   // ── Scanner ───────────────────────────────────────────────────────────────
 
-  void openScanner() async {
-    await Navigator.push(
-      _context,
-      MaterialPageRoute(builder: (_) => ScannerPage(onScan: onQrScanned)),
-    );
+  Future<void> openScanner() async {
+    final code = await openQrScanner(_context);
+    if (code != null && _mounted) onQrScanned(code);
   }
 
   void startLongPress() {
