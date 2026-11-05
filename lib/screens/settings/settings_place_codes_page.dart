@@ -290,7 +290,12 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
             : AutovalidateMode.always,
         validator: validator,
         decoration: InputDecoration(labelText: LocServ.inst.t(key)),
-        onChanged: (v) => _saveStrategyConfigField(key, v),
+        onChanged: (v) {
+          // A value the validator flags stays on screen as an error and is
+          // not stored, so it never reaches the labels or other devices.
+          if (validator != null && validator(v) != null) return;
+          _saveStrategyConfigField(key, v);
+        },
       ),
     );
   }

@@ -132,6 +132,29 @@ void main() {
     },
   );
 
+  test('ignores a separator the scanner would cut a code at', () async {
+    final area = await addArea(identifier: '2048');
+    final cave = await addCave(surfaceAreaUuid: area);
+    final p = await addPlace(cave);
+    // A device can receive this value from sync without ever seeing the
+    // settings field that rejects it.
+    final strat = GlobalHierarchicalStrategy(db, {
+      ...goodConfig(),
+      GlobalHierarchicalStrategy.kSegmentSeparator: '/',
+    }, caves);
+    final r = await strat.generate(
+      caveUuid: cave,
+      cavePlaceUuid: p,
+      isMainEntrance: false,
+    );
+    final pci = switch (r) {
+      PlaceCodeGenerationOk(:final pci) => pci,
+      PlaceCodeGenerationFallback(:final pci) => pci,
+      _ => fail('expected a code, got $r'),
+    };
+    expect(pci, isNot(contains('/')));
+  });
+
   test(
     'first place gets baseline + main_entrance_suffix when is_main_entrance',
     () async {
