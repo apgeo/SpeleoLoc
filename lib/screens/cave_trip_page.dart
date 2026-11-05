@@ -413,8 +413,12 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   }
 
   Future<void> _exportTripReport() async {
-    final trip = _trip;
-    if (trip == null) return;
+    // Read the stored log rather than the one loaded with the page: the log
+    // page may have saved a newer one moments ago.
+    final trip = await ref
+        .read(caveTripRepositoryProvider)
+        .findById(widget.tripUuid);
+    if (trip == null || !mounted) return;
 
     final log = trip.log;
     if (log == null || log.trim().isEmpty) {
@@ -677,6 +681,13 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     }
   }
 
+  /// The log page saves the log and may regenerate or accept it, so the
+  /// banner and Export must read the trip again on the way back.
+  Future<void> _openLog() async {
+    await AppRoutes.pushCaveTripLog(context, widget.tripUuid);
+    if (mounted) unawaited(_load());
+  }
+
   /// Opens the worksheet that turns the device's photos and videos into
   /// track points at their capture times.
   Future<void> _openMediaPoints() async {
@@ -890,7 +901,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
         icon: Icons.article_outlined,
         label: LocServ.inst.t('trip_log'),
         color: Colors.grey[700]!,
-        onTap: () => AppRoutes.pushCaveTripLog(context, widget.tripUuid),
+        onTap: _openLog,
       ),
     );
 
