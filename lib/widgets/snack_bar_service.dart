@@ -9,6 +9,14 @@ import 'package:speleoloc/utils/app_exceptions.dart';
 /// Severity level of a toast notification.
 enum ToastType { info, success, warning, error }
 
+/// A button on a toast, for the one thing worth doing about its message.
+class ToastAction {
+  const ToastAction({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+}
+
 // ---------------------------------------------------------------------------
 // Public API — all methods are context-free.
 // ---------------------------------------------------------------------------
@@ -45,9 +53,17 @@ class SnackBarService {
       .show(message, ToastType.success, duration: duration ?? _successDuration);
 
   /// Show an amber warning toast (validation failures, non-critical issues).
-  static void showWarning(String message, {Duration? duration}) => _ToastManager
-      .instance
-      .show(message, ToastType.warning, duration: duration ?? _warningDuration);
+  /// [action], when given, adds a button that runs it and closes the toast.
+  static void showWarning(
+    String message, {
+    Duration? duration,
+    ToastAction? action,
+  }) => _ToastManager.instance.show(
+    message,
+    ToastType.warning,
+    duration: duration ?? _warningDuration,
+    action: action,
+  );
 
   /// Show a blue informational toast.
   static void showInfo(String message, {Duration? duration}) => _ToastManager
@@ -64,12 +80,14 @@ class _ToastData {
   final String message;
   final ToastType type;
   final Duration duration;
+  final ToastAction? action;
 
   const _ToastData({
     required this.id,
     required this.message,
     required this.type,
     required this.duration,
+    this.action,
   });
 }
 
@@ -79,12 +97,18 @@ class _ToastManager {
 
   final hostKey = GlobalKey<_ToastHostState>();
 
-  void show(String message, ToastType type, {required Duration duration}) {
+  void show(
+    String message,
+    ToastType type, {
+    required Duration duration,
+    ToastAction? action,
+  }) {
     final data = _ToastData(
       id: DateTime.now().microsecondsSinceEpoch,
       message: message,
       type: type,
       duration: duration,
+      action: action,
     );
     hostKey.currentState?.addToast(data);
   }
@@ -249,6 +273,21 @@ class _ToastCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (data.action case final action?)
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(48, 36),
+                  ),
+                  onPressed: () {
+                    onDismiss();
+                    action.onPressed();
+                  },
+                  child: Text(
+                    action.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               const SizedBox(width: 4),
               GestureDetector(
                 onTap: onDismiss,

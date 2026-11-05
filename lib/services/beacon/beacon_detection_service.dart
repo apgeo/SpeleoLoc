@@ -24,6 +24,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/trip_record_feedback.dart';
 
 /// Foreground automatic beacon detection (plan Phase 2).
 ///
@@ -598,27 +599,28 @@ class BeaconDetectionService {
     _log.info('Beacon trigger → place "${place.title}" ($logDetail)');
 
     // Trip point — same semantics as a QR scan of this place.
+    // Null when the place is not in the trip's cave, so no point was due.
     final activeTripCaveId = await caveTripService.getActiveTripCaveId();
-    final tripPointRecorded = activeTripCaveId == place.caveUuid;
-    if (tripPointRecorded) {
-      await caveTripService.recordPoint(place.uuid, placeTitle: place.title);
-    }
+    final tripOutcome = activeTripCaveId == place.caveUuid
+        ? await caveTripService.recordPoint(place.uuid, placeTitle: place.title)
+        : null;
 
     final soundEnabled = _engine?.config.soundEnabled ?? true;
     if (_inBackground) {
       // App not on screen: loud notification instead of a toast.
       await BeaconAlertNotifier.instance.showDetection(
         placeTitle: place.title,
-        tripPointRecorded: tripPointRecorded,
+        tripOutcome: tripOutcome,
         caveUuid: place.caveUuid,
         placeUuid: place.uuid,
         playSound: soundEnabled,
       );
     } else {
       if (soundEnabled) unawaited(BeaconAlertSound.instance.play());
-      SnackBarService.showSuccess(
-        '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"'
-        '${tripPointRecorded ? ' · ${LocServ.inst.t('trip_point_added')}' : ''}',
+      showTripRecordFeedback(
+        caveTripService,
+        tripOutcome,
+        lead: '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"',
       );
       if ((_engine?.config.autoOpenPlace ?? false)) {
         await _openPlace(place);

@@ -6,6 +6,7 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/contained_path.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart' show launchUrl;
 
 /// Service responsible for exporting trip reports by cloning a template
 /// document (ODF or DOCX) and appending text content at the end.
@@ -195,23 +196,42 @@ class TripReportExportService {
     return result;
   }
 
-  /// Inserts `<w:p>` paragraphs before the closing `</w:body>` tag.
+  /// Inserts `<w:p>` paragraphs at the end of the body content.
+  ///
+  /// The schema makes the body's own `<w:sectPr>` its last child, and every
+  /// Word-saved document has one; paragraphs placed after it make Word call
+  /// the file corrupt. So they go before that element when there is one,
+  /// otherwise before `</w:body>`. Leading spaces of a log line are kept
+  /// with `xml:space="preserve"`, which `<w:t>` otherwise collapses.
   String _insertDocxParagraph(String xml, String text) {
     final paragraphs = text
         .split('\n')
         .map((line) {
           final escaped = _escapeXml(line);
-          return '<w:p><w:r><w:t>$escaped</w:t></w:r></w:p>';
+          return '<w:p><w:r><w:t xml:space="preserve">$escaped</w:t></w:r></w:p>';
         })
         .join('\n');
 
     const closingTag = '</w:body>';
-    final idx = xml.lastIndexOf(closingTag);
-    if (idx == -1) {
+    final bodyEnd = xml.lastIndexOf(closingTag);
+    if (bodyEnd == -1) {
       log.warning('<w:body> closing tag not found in DOCX document.xml');
       return xml;
     }
-    return '${xml.substring(0, idx)}$paragraphs\n$closingTag${xml.substring(idx + closingTag.length)}';
+    final idx = _bodySectionStart(xml, bodyEnd) ?? bodyEnd;
+    return '${xml.substring(0, idx)}$paragraphs\n${xml.substring(idx)}';
+  }
+
+  static final _sectPrOpen = RegExp(r'<w:sectPr[\s>/]');
+
+  /// Where the body-level `<w:sectPr>` starts, or null when the body has
+  /// none. A section break inside a paragraph (`<w:pPr><w:sectPr>`) is not
+  /// it: the body's own one has no paragraph closing after it.
+  int? _bodySectionStart(String xml, int bodyEnd) {
+    final matches = _sectPrOpen.allMatches(xml.substring(0, bodyEnd));
+    if (matches.isEmpty) return null;
+    final start = matches.last.start;
+    return xml.substring(start, bodyEnd).contains('</w:p>') ? null : start;
   }
 
   String _escapeXml(String text) {
@@ -223,39 +243,49 @@ class TripReportExportService {
         .replaceAll("'", '&apos;');
   }
 
-  /// Opens a file with the system's default handler.
-  Future<void> openWithSystem(String filePath) async {
-    if (Platform.isAndroid) {
-      // On Android, use an intent via process; typically handled by
-      // a plugin. We use a simple approach via `am start`.
-      // For better Android support, consider adding open_filex package.
-      await Process.run('am', [
-        'start',
-        '-a',
-        'android.intent.action.VIEW',
-        '-d',
-        Uri.file(filePath).toString(),
-        '-t',
-        _mimeTypeForPath(filePath),
-      ]);
-    } else if (Platform.isIOS || Platform.isMacOS) {
-      await Process.run('open', [filePath]);
-    } else if (Platform.isWindows) {
-      await Process.run('cmd', ['/c', 'start', '', filePath]);
-    } else if (Platform.isLinux) {
-      await Process.run('xdg-open', [filePath]);
+  /// Puts [bytes] at the path the save dialog returned, adding the
+  /// [format] extension when the name was typed without it, and returns
+  /// the path written.
+  ///
+  /// On a phone the system save dialog has already written the bytes to
+  /// what it returned, which may not even be a path this app can write to,
+  /// so the file is written only when nothing is there yet. On a desktop
+  /// the file is always written: a name typed without its extension points
+  /// at a different file than the one the dialog wrote, and an older report
+  /// already there under the full name must be replaced, not kept.
+  Future<String> savePickedReport({
+    required String pickedPath,
+    required String format,
+    required List<int> bytes,
+    bool? desktop,
+  }) async {
+    final finalPath = pickedPath.toLowerCase().endsWith('.$format')
+        ? pickedPath
+        : '$pickedPath.$format';
+    final file = File(finalPath);
+    if ((desktop ?? _isDesktop) || !file.existsSync()) {
+      await file.writeAsBytes(bytes, flush: true);
     }
+    return finalPath;
   }
 
-  String _mimeTypeForPath(String path) {
-    final ext = p.extension(path).toLowerCase();
-    switch (ext) {
-      case '.odt':
-        return 'application/vnd.oasis.opendocument.text';
-      case '.docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      default:
-        return 'application/octet-stream';
+  bool get _isDesktop =>
+      Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+
+  /// Opens a saved report in the desktop's default application, and says
+  /// whether it did.
+  ///
+  /// Phones are left alone. iOS forbids starting processes, and neither
+  /// iOS nor Android lets another app open a `file:` address inside this
+  /// one; that needs a file-sharing plugin, which the app does not have.
+  /// The report is already where the caver chose in the save dialog.
+  Future<bool> openWithSystem(String filePath) async {
+    if (!_isDesktop) return false;
+    try {
+      return await launchUrl(Uri.file(filePath));
+    } catch (e, st) {
+      log.warning('opening the report failed', e, st);
+      return false;
     }
   }
 }

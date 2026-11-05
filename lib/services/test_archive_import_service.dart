@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
@@ -94,9 +95,11 @@ class TestArchiveImportService {
   static Future<void> importFrom({
     required String urlOrPath,
     required SilexgisRefreshTokenStore silexgisTokens,
+    required LiveDatabaseSwap databaseSwap,
     SilexgisAuthRegistry? silexgisSignIns,
     void Function(String message)? onProgress,
   }) async {
+    databaseSwap.ensureNoSyncRunning();
     onProgress?.call('Downloading test archive...');
     final bytes = await fetchArchiveBytes(urlOrPath);
 
@@ -112,6 +115,7 @@ class TestArchiveImportService {
     try {
       final service = DataArchiveService(
         DataExportImportRepository(appDatabase),
+        databaseSwap: databaseSwap,
       );
       await service.importArchiveReplace(
         zipPath: tempFile.path,

@@ -82,19 +82,20 @@ Două lucruri vă pot păcăli:
    înainte de export, pentru că exportul citește jurnalul salvat, nu ce
    este pe ecran.
 2. **Unele acțiuni reconstruiesc jurnalul de la zero** și vă aruncă
-   textul. Repornirea unei ture face asta, schimbarea stilului de
-   jurnal face asta și — doar cu stilul **Narativ** — o face și fiecare
-   eveniment nou cât timp tura este încă în desfășurare. O face și
+   textul. Repornirea unei ture face asta, iar schimbarea stilului de
+   jurnal face asta. O face și
    regenerarea după ce punctele turei au fost modificate; dacă asta se
    întâmplă de la sine depinde de **Setări → Jurnalul turei** — vedeți
    [Ture → Când se modifică punctele](trips.md#when-the-points-change).
 
 Cu **Brut**, **Clasic** sau **Jurnal de teren**, un eveniment nou se
 adaugă ca încă o linie după ce se află deja în jurnal, așa că textul
-dumneavoastră supraviețuiește. **Narativ** trebuie să reconstruiască
-tot, ca paragrafele să se citească cum trebuie. Dacă vreți să adnotați
-jurnalul unei ture aflate încă în desfășurare, folosiți unul dintre
-celelalte trei stiluri sau așteptați până ați oprit tura.
+dumneavoastră supraviețuiește. **Narativ** își regrupează paragrafele
+pe măsură ce sosesc evenimentele, așa că rescrie textul pe care l-a
+generat și păstrează ce ați scris după el. Dacă ați reformulat chiar
+textul generat, un eveniment nou vă lasă jurnalul neatins și îl
+marchează în schimb ca neactualizat, ca să îl regenerați sau să îl
+păstrați.
 
 ### Stiluri de jurnal
 
@@ -226,13 +227,16 @@ trebuie să opriți întâi tura.
    **Export raport**, cu numele fișierului deja completat ca
    `trip_report_<trip title>.odt` (sau `.docx`); spațiile și semnele de
    punctuație din titlul turei devin liniuțe de subliniere. Schimbați
-   numele sau destinația dacă doriți, apoi confirmați.
-5. SpeleoLoc scrie documentul, afișează **Raport exportat cu succes**,
-   apoi predă fișierul aplicației de pe dispozitiv care deschide
-   fișiere ODT sau DOCX.
+   numele sau destinația dacă doriți, apoi confirmați. Dacă alegeți un
+   fișier care există deja, acesta este înlocuit.
+5. SpeleoLoc scrie documentul și afișează **Raport exportat cu
+   succes**. Pe un calculator deschide apoi raportul în aplicația
+   înregistrată pentru fișiere ODT sau DOCX. Pe un telefon sau o
+   tabletă nu se deschide nimic: raportul este acolo unde l-ați salvat
+   — deschideți-l din managerul de fișiere sau din aplicația de birou.
 
-Dacă la pasul 5 nu se deschide nimic, raportul a fost totuși scris —
-dispozitivul dumneavoastră pur și simplu nu are nicio aplicație
+Dacă la pasul 5 nu se deschide nimic pe un calculator, raportul a fost
+totuși scris — calculatorul pur și simplu nu are nicio aplicație
 înregistrată pentru acel format.
 
 ## Imaginea hărții turei
@@ -261,8 +265,8 @@ PNG-ul unde doriți.
 | O eroare care conține **Template file not found** | Șablonul este listat, dar documentul lui lipsește de pe acest dispozitiv. Normal pe un al doilea dispozitiv sau după restaurarea unei copii de siguranță: adăugați fișierul din nou aici. |
 | **Format nesuportat. Selectați un fișier ODT sau DOCX.** | Fișierul ales nu este `.odt` sau `.docx`. Salvați-l din nou din procesorul de text în unul dintre aceste două formate. |
 | Raportul este doar șablonul cu text lipit la final | Exact asta și este. Nu există niciun pas de substituție. Rearanjați lucrurile în procesorul de text după export. |
-| Textul pe care l-ați scris în jurnal a dispărut | Jurnalul a fost regenerat — de o repornire a turei, de o schimbare de stil sau de un eveniment nou cât timp stilul **Narativ** era activ. |
-| Nu s-a întâmplat nimic după ce exportul a reușit | Fișierul a fost scris; dispozitivul dumneavoastră nu are nicio aplicație care să gestioneze ODT sau DOCX. |
+| Textul pe care l-ați scris în jurnal a dispărut | Jurnalul a fost regenerat — de o repornire a turei, de o schimbare de stil sau după ce punctele au fost modificate. |
+| Nu s-a întâmplat nimic după ce exportul a reușit | Fișierul a fost scris. Telefoanele nu îl deschid niciodată singure; pe un calculator, nicio aplicație nu gestionează ODT sau DOCX. |
 
 ## Vezi și
 

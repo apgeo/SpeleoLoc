@@ -56,6 +56,48 @@ void main() {
     expect(await theirs.readString(ConfigKey.ftpDefaultProfileUuid), isNull);
   });
 
+  test(
+    'keeps which trip this device records into, not the exporter\'s',
+    () async {
+      // A restored archive exported while the exporter's trip ran must not make
+      // that trip this device's: the next scans would land in it.
+      const mine = '00000000-0000-7000-8000-00000000000a';
+      const theirs = '00000000-0000-7000-8000-00000000000b';
+      final incoming = ConfigurationRepository(after);
+      await incoming.writeString(activeTripConfigKey, theirs);
+
+      await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+      expect(await incoming.readString(activeTripConfigKey), isNull);
+
+      await incoming.writeString(activeTripConfigKey, theirs);
+      await ConfigurationRepository(
+        before,
+      ).writeString(activeTripConfigKey, mine);
+      await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+      expect(await incoming.readString(activeTripConfigKey), mine);
+    },
+  );
+
+  test('keeps this device\'s beacon detection setting, not the '
+      'exporter\'s', () async {
+    // An imported archive must not switch detection on, or tune it, on a
+    // device whose caver never chose to.
+    const mine = '{"enabled":false,"rssiThresholdDbm":-75}';
+    const theirs = '{"enabled":true,"rssiThresholdDbm":-90}';
+    final incoming = ConfigurationRepository(after);
+    await incoming.writeString(beaconDetectionConfigKey, theirs);
+
+    await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+    expect(await incoming.readString(beaconDetectionConfigKey), isNull);
+
+    await incoming.writeString(beaconDetectionConfigKey, theirs);
+    await ConfigurationRepository(
+      before,
+    ).writeString(beaconDetectionConfigKey, mine);
+    await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
+    expect(await incoming.readString(beaconDetectionConfigKey), mine);
+  });
+
   test('drops the exporter\'s language when this device chose none', () async {
     await (await DevicePreferencesCarryOver.capture(before)).applyTo(after);
     expect(

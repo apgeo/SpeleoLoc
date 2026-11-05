@@ -127,7 +127,7 @@ din textul însuși, indiferent ce spune setarea de afișare.
 | Format | Exemplu acceptat de aplicație |
 | --- | --- |
 | Grade zecimale | `45.359167, 22.714722` — și `45,359167 22,714722`, cu virgula ca semn zecimal și cu punct și virgulă sau spațiu simplu ca separator. Latitudinea prima. |
-| Grade, minute, secunde | `45°21'33.0"N 22°42'53.0"E`. Literele de emisferă sunt obligatorii și fie stau amândouă înaintea numerelor, fie amândouă după ele, așa că merge și `N45 21.55 E22 42.88` (grade și minute zecimale), iar jumătatea E poate fi pusă prima. |
+| Grade, minute, secunde | `45°21'33.0"N 22°42'53.0"E`. Literele de emisferă sunt obligatorii și fie stau amândouă înaintea numerelor, fie amândouă după ele, așa că merge și `N45 21.55 E22 42.88` (grade și minute zecimale), iar jumătatea E poate fi pusă prima. Și aici o virgulă între două cifre este semn zecimal, așa că `N45 21,55 E22 42,38` înseamnă 21,55 și 42,38 minute; o virgulă urmată de spațiu desparte cele două jumătăți. |
 | UTM | `34T 634605 5023721`. Litera de bandă este obligatorie — ea îi spune aplicației la ce emisferă vă referiți — iar coordonata estică vine înaintea celei nordice. |
 
 Cele trei linii de exemplu sunt tipărite sub câmp, ca memento. Dacă textul
@@ -140,12 +140,15 @@ neatins.
 ### Scrierea direct în câmpuri
 
 Câmpurile Latitudine, Longitudine și Altitudine sunt simple câmpuri
-numerice: grade zecimale și metri, nimic altceva. Sunt citite la salvare,
-iar **orice nu este un număr este tratat ca lipsă de valoare** — locul se
-salvează fără poziție și fără avertisment. O latitudine scrisă pe jumătate,
-sau un șir DMS lipit de mână în câmp, se pierde în tăcere. Folosiți
-**Introdu coordonatele** pentru orice nu este deja zecimal și aruncați o
-privire pe câmpuri după salvare dacă le-ați scris chiar dumneavoastră.
+numerice: grade zecimale și metri, nimic altceva. Ca semn zecimal merge
+atât virgula, cât și punctul, așa că `45,359167` este citit ca 45.359167.
+Sunt citite la salvare, iar **orice nu este un număr oprește salvarea**,
+cu un mesaj care numește câmpul: *Latitudinea trebuie să fie un număr între
+-90 și 90*, *Longitudinea trebuie să fie un număr între -180 și 180* sau
+*Altitudinea trebuie să fie un număr*. Poziția salvată rămâne neschimbată
+până corectați câmpul. Un câmp golit intenționat șterge valoarea
+respectivă. Folosiți **Introdu coordonatele** pentru orice nu este deja
+zecimal, cum ar fi DMS sau UTM.
 
 ## Formatul de afișare a coordonatelor
 

@@ -156,13 +156,18 @@ its media files overwrite anything of the same name. The app restarts.
 **This is destructive and there is no undo.** Everything currently on the
 device is gone. Export an archive first if you are not certain.
 
-An archive whose database was saved by a newer version of the app is
-refused before anything is replaced: update the app first. Nothing on the
-device changes.
+The archive's database is checked before anything is replaced. One that
+is not a SpeleoLoc database, is damaged, or was saved by a newer version
+of the app (update the app first) is refused, and nothing on the device
+changes. If the import fails after that, your previous database is put
+back; media files the archive had already copied over yours stay as
+copied. A replace is not possible while an FTP or SilexGIS sync is in
+progress.
 
 Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
-sync from getting confused afterwards.
+sync from getting confused afterwards. Its [beacon detection](ble-beacons.md)
+settings stay as they were too, so an archive never switches detection on.
 
 It also keeps its own [FTP server profiles](ftp-sync.md) and its choice of
 default profile; the archive's are not taken over. Saved passwords stay in
@@ -251,7 +256,9 @@ no file of that name already exists on your device. An incoming file that
 shares a name with one you have is skipped — so if someone re-shot a photo
 or re-exported a map image under the same name, you keep the old picture
 and the **Files copied** count comes out lower than you expected. Only
-**Replace all data** overwrites media.
+**Replace all data** overwrites media. A document edited in the app's
+text, rich-text, audio or image editor is saved under a new file name,
+so its new content does arrive.
 
 #### The Import Complete summary
 
@@ -285,8 +292,41 @@ replace — and its SilexGIS sign-ins follow the same rule as on a replace. Any
 documentation files or map images the restored database refers to must
 already be on the device, or they will show as missing.
 
-**This is destructive and irreversible.** The database you had is deleted,
-not archived.
+The file is checked first, as on a replace: one that is not a SpeleoLoc
+database, is damaged, or was saved by a newer version of the app is
+refused with nothing changed, and a restore that fails part-way puts your
+previous database back. Should even putting it back fail, the app says so
+and works on no database until you close it and open it again; that next
+start puts your previous database back.
+
+**Once the restore succeeds, it is irreversible.** The database you had is
+deleted, not archived.
+
+## When the app cannot start
+
+If something stops SpeleoLoc while it starts — a database it cannot open,
+storage too full to write to — it shows a **SpeleoLoc could not start**
+screen instead of staying on the splash screen. It says what went wrong in
+plain words, with the technical details folded away under **Details**, and
+offers:
+
+- **Export database file** — saves a copy of the raw database file through
+  the same save dialog as **Export database**, so nothing is lost whatever
+  you do next. When a restore or replace was cut short, the copy is of the
+  database you had before it, the one the app is trying to put back.
+- **Retry** — tries to start again, for example after freeing some space.
+- **Reset app data** — offered only when the database itself does not
+  open. It deletes the database so the app starts empty. It
+  asks first, says what will be deleted, and offers **Export first**.
+  Photos and documents already saved on the device are not deleted, and
+  neither is a previous database a cut-short restore left waiting: it stays
+  on the device under another name.
+
+A database saved by a newer version of the app gets its own message: update
+the app and it opens as it is. **Reset app data** is not offered then, nor
+when storage is full or something other than the database stopped the
+start: deleting the database would lose your data and not help the app
+start.
 
 ## Reinitializing the database
 
@@ -298,7 +338,9 @@ data**, which wipes everything and loads the bundled sample dataset.
 Each asks twice: a first confirmation, then a bluntly worded second one
 warning that all data will be erased. After that the app restarts. Nothing
 is backed up on your behalf. The app language and your FTP server profiles
-are kept.
+are kept. In a developer build that was not given the sample dataset, the
+test-data button says so and leaves your data alone; a reinitialize that
+fails part-way puts your previous database back.
 
 ## Loading the ready-made test dataset
 

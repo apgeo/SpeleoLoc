@@ -136,6 +136,9 @@ CavePlaceFormController _form({
   String depth = '',
   String qr = '',
   String qcri = '',
+  String lat = '',
+  String long = '',
+  String alt = '',
 }) {
   final f = CavePlaceFormController();
   addTearDown(f.dispose);
@@ -144,6 +147,9 @@ CavePlaceFormController _form({
   f.depth.text = depth;
   f.qr.text = qr;
   f.qcri.text = qcri;
+  f.lat.text = lat;
+  f.long.text = long;
+  f.alt.text = alt;
   return f;
 }
 
@@ -152,7 +158,8 @@ CavePlaceFormController _form({
   _FakeRepo repo,
   _FakePort port,
   _FakePlaceCodeService codes,
-}) _setup(CavePlaceFormController form, {Uuid? existingId}) {
+})
+_setup(CavePlaceFormController form, {Uuid? existingId}) {
   final repo = _FakeRepo();
   final port = _FakePort();
   final codes = _FakePlaceCodeService();
@@ -212,34 +219,40 @@ void main() {
       expect(s.port.calls, contains('duplicatePci:Other place'));
     });
 
-    test('QCRI duplicates are only checked when the field was touched', () async {
-      final form = _form(qr: 'PN-01', qcri: 'Q-1');
-      final s = _setup(form);
-      s.repo.qcriDuplicates = [_place('Elsewhere')];
-      final result = await s.command.execute();
-      // Field not marked touched → no lookup, no prompt, save proceeds.
-      expect(s.repo.qcriLookupCalled, isFalse);
-      expect(result, isA<SaveOk>());
+    test(
+      'QCRI duplicates are only checked when the field was touched',
+      () async {
+        final form = _form(qr: 'PN-01', qcri: 'Q-1');
+        final s = _setup(form);
+        s.repo.qcriDuplicates = [_place('Elsewhere')];
+        final result = await s.command.execute();
+        // Field not marked touched → no lookup, no prompt, save proceeds.
+        expect(s.repo.qcriLookupCalled, isFalse);
+        expect(result, isA<SaveOk>());
 
-      final form2 = _form(qr: 'PN-01', qcri: 'Q-1')..markQcriTouched();
-      final s2 = _setup(form2);
-      s2.repo.qcriDuplicates = [_place('Elsewhere')];
-      s2.port.duplicateQcriAnswer = false;
-      final result2 = await s2.command.execute();
-      expect(s2.repo.qcriLookupCalled, isTrue);
-      expect(s2.port.calls, contains('duplicateQcri:Elsewhere'));
-      expect(result2, isA<SaveCancelled>());
-    });
+        final form2 = _form(qr: 'PN-01', qcri: 'Q-1')..markQcriTouched();
+        final s2 = _setup(form2);
+        s2.repo.qcriDuplicates = [_place('Elsewhere')];
+        s2.port.duplicateQcriAnswer = false;
+        final result2 = await s2.command.execute();
+        expect(s2.repo.qcriLookupCalled, isTrue);
+        expect(s2.port.calls, contains('duplicateQcri:Elsewhere'));
+        expect(result2, isA<SaveCancelled>());
+      },
+    );
 
-    test('entrance-detector decision applies to the row, not the form', () async {
-      final form = _form();
-      final s = _setup(form);
-      s.port.isEntranceAnswer = true;
-      final result = await s.command.execute();
-      expect(result, isA<SaveOk>());
-      expect(s.repo.inserted!.isEntrance.value, 1);
-      expect(form.isEntrance, isFalse);
-    });
+    test(
+      'entrance-detector decision applies to the row, not the form',
+      () async {
+        final form = _form();
+        final s = _setup(form);
+        s.port.isEntranceAnswer = true;
+        final result = await s.command.execute();
+        expect(result, isA<SaveOk>());
+        expect(s.repo.inserted!.isEntrance.value, 1);
+        expect(form.isEntrance, isFalse);
+      },
+    );
 
     test('main entrance is offered only when the cave has none', () async {
       final form = _form()..setEntrance(true);
@@ -277,6 +290,61 @@ void main() {
       final s2 = _setup(_form());
       await s2.command.execute();
       expect(s2.repo.inserted!.qrCodeResourceIdentifier.value, isNull);
+    });
+  });
+
+  group('coordinates', () {
+    test('a decimal comma is read as a decimal point', () async {
+      final s = _setup(
+        _form(lat: '45,359167', long: '22,706333', alt: '1200,5'),
+        existingId: Uuid.v7(),
+      );
+      final result = await s.command.execute();
+      expect(result, isA<SaveOk>());
+      final p = s.repo.updatedPatch!;
+      expect(p.latitude.value, 45.359167);
+      expect(p.longitude.value, 22.706333);
+      expect(p.altitude.value, 1200.5);
+    });
+
+    for (final (field, input, key) in const [
+      ('lat', 'abc', 'latitude_invalid'),
+      ('lat', '95', 'latitude_invalid'),
+      ('lat', 'NaN', 'latitude_invalid'),
+      ('long', '22,7,1', 'longitude_invalid'),
+      ('long', '400', 'longitude_invalid'),
+      ('alt', '1 200', 'altitude_invalid'),
+      ('alt', 'Infinity', 'altitude_invalid'),
+    ]) {
+      test(
+        '$field "$input" blocks the save and keeps the stored row',
+        () async {
+          final s = _setup(
+            _form(
+              lat: field == 'lat' ? input : '45.1',
+              long: field == 'long' ? input : '22.1',
+              alt: field == 'alt' ? input : '900',
+            ),
+            existingId: Uuid.v7(),
+          );
+          final result = await s.command.execute();
+          expect(result, isA<SaveValidationFailed>());
+          expect((result as SaveValidationFailed).messageKey, key);
+          expect(s.repo.updatedPatch, isNull);
+          expect(s.repo.inserted, isNull);
+        },
+      );
+    }
+
+    test('fields cleared on purpose clear the stored position', () async {
+      final s = _setup(_form(), existingId: Uuid.v7());
+      final result = await s.command.execute();
+      expect(result, isA<SaveOk>());
+      final p = s.repo.updatedPatch!;
+      expect(p.latitude.present, isTrue);
+      expect(p.latitude.value, isNull);
+      expect(p.longitude.value, isNull);
+      expect(p.altitude.value, isNull);
     });
   });
 

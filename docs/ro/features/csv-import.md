@@ -209,13 +209,16 @@ să rulați peste ele o trecere de generare a codurilor.
 
 ### Cum sunt potrivite rândurile cu locurile pe care le aveți deja
 
-Un rând al cărui nume este exact numele unui loc din această peșteră
-contează drept acel loc; orice alt rând creează un loc nou. Potrivirea
-este exactă, inclusiv majusculele și minusculele.
+Un rând al cărui nume este numele unui loc din această peșteră contează
+drept acel loc; orice alt rând creează un loc nou. Majusculele și
+minusculele sunt ignorate, atât aici, cât și în dialogul de avertizare,
+așa că „Sifon” și „sifon” sunt același loc.
 
-Dialogul de avertizare numără potrivirile altfel: el ignoră majusculele
-și minusculele. Așa că „Sifon” și „sifon” sunt raportate ca un singur loc
-existent și apoi importate ca două.
+O peșteră poate ține două locuri cu același nume când stau în zone
+diferite ale peșterii. Un rând care numește un astfel de loc nu poate
+spune la care se referă, așa că este omis și listat în sumar, în loc să
+fie aplicat vreunuia dintre ele. Când doar unul dintre ele nu stă în
+nicio zonă a peșterii, rândul contează drept acela.
 
 ### Întrebările pe care le pune importul
 
@@ -225,34 +228,31 @@ fiecare dintre ele îl poartă acum, și întreabă dacă să continue.
 Continuarea importă rândurile noi și lasă locurile existente unde sunt —
 deși codul lor poate fi totuși înlocuit de întrebarea următoare.
 
-**Conflicte cod QR** apare atunci când ați mapat coloana de cod QR și un
-loc oarecare din baza de date poartă deja unul dintre codurile din
-fișier. Dialogul listează codul, locul care îl poartă și peștera acelui
-loc, apoi întreabă „Doriți să suprascrieți codurile QR existente?”:
+**Conflicte cod QR** apare atunci când ați mapat coloana de cod QR și
+codul unui rând ar înlocui un altul: un alt loc din această peșteră
+poartă deja codul, sau locul cu care se potrivește rândul poartă deja un
+cod diferit. Codurile purtate de locuri din alte peșteri nu contează —
+codurile de loc trebuie să fie unice doar în cadrul unei peșteri — și nici
+un loc care poartă deja exact codul din fișier, așa că importul
+aceluiași fișier a doua oară nu ridică nicio întrebare. Dialogul listează
+fiecare cod, locul care îl poartă și peștera acelui loc, apoi explică
+cele două variante:
 
-- **Omite actualizare QR** — locurile pe care le aveți deja își păstrează
-  codul pe care îl au. Asta protejează doar locurile existente: un rând
-  care creează un loc nou primește codul din fișier, indiferent ce buton
-  apăsați.
-- **Suprascrie coduri QR** — când un rând se potrivește cu un loc care
-  există deja în această peșteră, codul acelui loc este înlocuit cu cel
-  din fișier. Locul care purta înainte acel cod este lăsat în pace, așa
-  că după aceea două locuri pot purta același cod — verificați-le pe cele
-  listate de dialog.
+- **Omite actualizare QR** — fiecare cod listat rămâne unde este. Un rând
+  al cărui cod este purtat de alt loc este totuși importat, fără cod, iar
+  sumarul îl listează; un loc care are deja un cod diferit și-l păstrează,
+  iar sumarul listează și acel rând.
+- **Suprascrie coduri QR** — locul fiecărui rând primește codul din
+  fișier, iar locul care îl purta îl pierde, așa că nu rămân două locuri
+  ale peșterii cu același cod. Sumarul numără codurile luate.
 
-Verificarea conflictelor nu exclude chiar locurile pe care le
-reimportați, așa că importul aceluiași fișier a doua oară ridică acest
-dialog chiar dacă nu s-a schimbat nimic.
+În ambele cazuri, un cod pe care nu-l poartă niciun loc din această
+peșteră este dat locului rândului, inclusiv unui loc pe care îl aveați
+deja și care nu are încă un cod.
 
-### Două cazuri care opresc importul
-
-Amândouă vă lasă datele neatinse, arată un mesaj de eroare și închid
-ecranul:
-
-- Peștera ține deja două locuri cu exact același nume (posibil când stau
-  în zone diferite ale peșterii).
-- Două locuri din baza de date poartă deja același cod ca un rând din
-  fișier.
+Dacă fișierul însuși dă același cod la două locuri diferite, primul rând
+îl păstrează; rândul de mai târziu este importat fără el și listat în
+sumar.
 
 ### Ce raportează sumarul
 
@@ -261,8 +261,17 @@ Dialogul **Import finalizat** raportează:
 - **Zone peșteră create** — aici întotdeauna 0, fiindcă acest import nu
   are coloană de zonă a peșterii.
 - **Locuri peșteră create**
-- **Coduri QR actualizate** — coduri înlocuite pe locuri pe care le
-  aveați deja, nu coduri date locurilor noi.
+- **Coduri QR actualizate** — coduri scrise pe locuri pe care le aveați
+  deja, nu coduri date locurilor noi.
+- **Coduri QR eliminate de la alte locuri** — apare doar când ați ales
+  suprascrierea și un loc și-a pierdut codul.
+
+Sub **Rânduri neimportate așa cum sunt scrise** listează apoi, după
+numărul rândului din fișier (antetul fiind rândul 1), fiecare rând omis
+pentru că numele lui se potrivea cu mai multe locuri, fiecare rând
+importat fără codul lui și fiecare rând al cărui loc și-a păstrat codul
+pe care îl avea. Primele cinci sunt afișate, urmate de numărul
+celorlalte.
 
 ## Nu se scrie nimic până nu răspundeți la toate întrebările
 

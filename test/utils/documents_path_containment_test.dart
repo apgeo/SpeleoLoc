@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 
 /// Documentation and raster-map rows sync between devices, so the file name
@@ -52,24 +51,5 @@ void main() {
       getDocumentsFilePath('../outside.txt'),
       throwsA(isA<FileSystemException>()),
     );
-  });
-
-  test('an overwrite through a leaving name writes nothing', () async {
-    await expectLater(
-      DocumentationFileHelper.overwriteBytes(
-        relativePath: '../outside.bin',
-        bytes: Uint8List.fromList([1, 2, 3]),
-      ),
-      throwsA(isA<FileSystemException>()),
-    );
-    await expectLater(
-      DocumentationFileHelper.overwriteText(
-        relativePath: '../outside.txt',
-        content: 'invented',
-      ),
-      throwsA(isA<FileSystemException>()),
-    );
-    expect(await File(p.join(root.path, 'outside.bin')).exists(), isFalse);
-    expect(await File(p.join(root.path, 'outside.txt')).exists(), isFalse);
   });
 }

@@ -73,6 +73,7 @@ class RasterMapPlacePointEditor extends StatefulWidget {
     this.onRemoveDefinitionRequested,
     this.onCavePlaceAdded,
     this.onSaveDefinitionRequested,
+    this.onSavePointRequested,
     this.placeActionsBuilder,
     this.caveUuid,
     this.tripOverlay,
@@ -167,6 +168,19 @@ class RasterMapPlacePointEditor extends StatefulWidget {
   /// Called when the user taps the save/define button. The parent should
   /// save the current point and optionally pop the page.
   final VoidCallback? onSaveDefinitionRequested;
+
+  /// Saves a pending point without asking and without navigating, when the
+  /// editor goes away with one. Receives (cavePlaceUuid, rasterMapUuid,
+  /// imageX, imageY). Kept apart from [onSaveDefinitionRequested]: a
+  /// save-and-close handler run here would close whatever page is on top
+  /// by the time its save completes.
+  final Future<void> Function(
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
+    double imageX,
+    double imageY,
+  )?
+  onSavePointRequested;
 
   /// More actions for the selected place, after the built-in view-mode ones
   /// — "View in 3D", for one — supplied by the screen that knows about them.
@@ -599,8 +613,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
   @override
   void dispose() {
-    // Auto-save modified point when navigating away
-    _saveDefinitionIfNeeded();
+    _savePendingPointOnDispose();
     // detach controller reference
     widget.controller?.detachHost(this);
     _pvSubscription?.cancel();
@@ -1380,18 +1393,21 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
   }
 
   /// If the user has tapped a new point while in define-point tap mode,
-  /// auto-save that point before executing the given action.
-  Future<void> _commitPendingPointIfNeeded() async {
+  /// auto-save that point before executing the given action. Returns false
+  /// when the caver declined the save: the action must then not run, and
+  /// the point stays pending.
+  Future<bool> _commitPendingPointIfNeeded() async {
     if (_tapDefinesNewPoint && _userHasSelectedNewPoint) {
-      await _autoSaveIfNeeded();
+      return _autoSaveIfNeeded();
     }
+    return true;
   }
 
   /// Activate add-cave-place flow: highlight button, show snackbar,
   /// and wait for user to tap on the map.
   Future<void> _handleAddCavePlace() async {
     if (widget.caveUuid == null) return;
-    await _commitPendingPointIfNeeded();
+    if (!await _commitPendingPointIfNeeded()) return;
     if (!mounted) return;
     setState(() => _waitingForNewCavePlaceTap = true);
     SnackBarService.showInfo(
@@ -1400,17 +1416,47 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
     );
   }
 
-  /// Notify the parent to save the current point when the user has modified it.
-  void _saveDefinitionIfNeeded() {
-    if (_userHasSelectedNewPoint && widget.onSaveDefinitionRequested != null) {
-      widget.onSaveDefinitionRequested!();
+  /// Saves a modified point when the editor goes away with one pending.
+  void _savePendingPointOnDispose() {
+    final save = widget.onSavePointRequested;
+    final cavePlaceUuid = widget.controller?.cavePlaceUuid;
+    final rasterMapUuid = widget.selectedRasterMapUuid;
+    final x = _imageSelectedX;
+    final y = _imageSelectedY;
+    if (!_userHasSelectedNewPoint ||
+        save == null ||
+        cavePlaceUuid == null ||
+        rasterMapUuid == null ||
+        x == null ||
+        y == null) {
+      return;
+    }
+    unawaited(_savePointQuietly(save, cavePlaceUuid, rasterMapUuid, x, y));
+  }
+
+  // Nobody is left to tell when this fails: the editor is already gone.
+  Future<void> _savePointQuietly(
+    Future<void> Function(Uuid, Uuid, double, double) save,
+    Uuid cavePlaceUuid,
+    Uuid rasterMapUuid,
+    double x,
+    double y,
+  ) async {
+    try {
+      await save(cavePlaceUuid, rasterMapUuid, x, y);
+    } catch (e, st) {
+      _log.warning('saving the pending point on leave failed', e, st);
     }
   }
 
+  /// Settles a pending point, in either tap mode, before a page opens over
+  /// the map. False when the caver declined the save: the page must then
+  /// not open, so the point is neither saved behind their back nor lost.
+  Future<bool> _settlePendingPointBeforeLeaving() => _autoSaveIfNeeded();
+
   /// Open CavePlacePage for the currently selected cave place.
   Future<void> _openCavePlacePage() async {
-    await _commitPendingPointIfNeeded();
-    _saveDefinitionIfNeeded();
+    if (!await _settlePendingPointBeforeLeaving()) return;
     final cavePlaceUuid = widget.controller?.cavePlaceUuid;
     if (cavePlaceUuid == null) return;
 
@@ -1441,8 +1487,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
 
   /// Open DocumentationFilesPage for the currently selected cave place.
   Future<void> _openCavePlaceDocuments() async {
-    await _commitPendingPointIfNeeded();
-    _saveDefinitionIfNeeded();
+    if (!await _settlePendingPointBeforeLeaving()) return;
     final cavePlaceUuid = widget.controller?.cavePlaceUuid;
     if (cavePlaceUuid == null) return;
     if (!mounted) return;
@@ -1509,7 +1554,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
       // Legend toggle (always available)
       IconButton(
         onPressed: () async {
-          await _commitPendingPointIfNeeded();
+          if (!await _commitPendingPointIfNeeded()) return;
           if (mounted) setState(() => _showLegend = !_showLegend);
         },
         icon: Icon(
@@ -1530,7 +1575,7 @@ class _RasterMapPlacePointEditorState extends State<RasterMapPlacePointEditor>
         if (_showTapModeCheckbox)
           IconButton(
             onPressed: () async {
-              await _commitPendingPointIfNeeded();
+              if (!await _commitPendingPointIfNeeded()) return;
               if (mounted) {
                 setState(() => _tapDefinesNewPoint = !_tapDefinesNewPoint);
                 _scheduleStatusOverlayHide();

@@ -219,9 +219,12 @@ schimbați o fotografie, întoarceți-vă, apăsați lung pe ea și alegeți
 sosește doar odată cu datele importate sau sincronizate, unde contează
 totuși pentru caseta de căutare.
 
-Salvarea unei modificări **suprascrie pe loc fișierul stocat**. Versiunea
-anterioară a unei fotografii, a unei note sau a unei înregistrări nu este
-păstrată nicăieri.
+Salvarea unei modificări **înlocuiește fișierul stocat**: conținutul nou
+este scris ca fișier nou, documentul este legat de el, iar fișierul vechi
+este șters. Versiunea anterioară a unei fotografii, a unei note sau a unei
+înregistrări nu este păstrată nicăieri. Fiindcă fișierul nou are un nume
+pe care celelalte telefoane nu îl au încă, următoarea sincronizare duce
+modificarea și pe telefoanele care au deja versiunea veche.
 
 Dacă apăsați înapoi cu modificări nesalvate în editorul de text sau în cel
 de text formatat, un dialog oferă **Salvează**, **Anulează** (renunțarea la
@@ -232,13 +235,19 @@ Dacă un document text nou are conținutul identic cu al unuia deja stocat în
 aplicație, un avertisment scurt o spune — este doar o înștiințare,
 documentul se salvează oricum.
 
+Dacă fișierul unui document text sau text formatat lipsește de pe acest
+telefon (înregistrarea poate sosi prin sincronizare înaintea fișierului)
+sau nu poate fi citit, editorul spune **Documentul nu a putut fi deschis**
+și nu are buton de salvare, așa că documentul stocat nu este niciodată
+înlocuit cu unul gol.
+
 ### Reînregistrarea audio
 
 Deschiderea unui document audio în reportofon nu pornește de la zero. Redați
 înregistrarea existentă, trageți de forma de undă până în punctul dorit,
 apoi apăsați înregistrare: tot ce urmează după acel punct este înlocuit de
 noua preluare, iar tot ce este înainte se păstrează. Nu există funcție de
-tăiere, iar salvarea suprascrie fișierul original.
+tăiere, iar salvarea înlocuiește înregistrarea originală.
 
 ## Ce nu puteți face
 

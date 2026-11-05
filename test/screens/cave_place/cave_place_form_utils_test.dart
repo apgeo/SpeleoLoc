@@ -96,4 +96,22 @@ void main() {
       expect(apply('12', '12a').text, '12');
     });
   });
+
+  group('parseCoordinateValue', () {
+    test('reads a decimal comma or point', () {
+      expect(parseCoordinateValue('45,359167'), 45.359167);
+      expect(parseCoordinateValue(' 22.706333 '), 22.706333);
+      expect(parseCoordinateValue('-12,5'), -12.5);
+    });
+
+    test('empty, garbage and non-finite input give null', () {
+      expect(parseCoordinateValue(''), isNull);
+      expect(parseCoordinateValue('   '), isNull);
+      expect(parseCoordinateValue('abc'), isNull);
+      expect(parseCoordinateValue('1 200'), isNull);
+      expect(parseCoordinateValue('45,1,2'), isNull);
+      expect(parseCoordinateValue('NaN'), isNull);
+      expect(parseCoordinateValue('-Infinity'), isNull);
+    });
+  });
 }

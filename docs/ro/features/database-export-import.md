@@ -169,14 +169,20 @@ nume. Aplicația repornește.
 **Este distructiv și nu există anulare.** Tot ce se află acum pe
 dispozitiv dispare. Exportați întâi o arhivă dacă nu sunteți sigur.
 
-O arhivă a cărei bază de date a fost salvată de o versiune mai nouă a
-aplicației este refuzată înainte să se înlocuiască ceva: actualizați întâi
-aplicația. Nimic de pe dispozitiv nu se schimbă.
+Baza de date din arhivă este verificată înainte să se înlocuiască ceva.
+Una care nu este o bază de date SpeleoLoc, este deteriorată sau a fost
+salvată de o versiune mai nouă a aplicației (actualizați întâi aplicația)
+este refuzată, iar nimic de pe dispozitiv nu se schimbă. Dacă importul
+eșuează după aceea, baza de date anterioară este pusă la loc; fișierele
+media pe care arhiva le copiase deja peste ale dumneavoastră rămân așa
+cum au fost copiate. O înlocuire nu este posibilă cât timp rulează o
+sincronizare FTP sau SilexGIS.
 
 Dispozitivul dumneavoastră își păstrează propria identitate printr-o
 înlocuire — nu începe să pretindă că este dispozitivul care a făcut
 arhiva, iar asta este ceea ce împiedică sincronizarea să se încurce după
-aceea.
+aceea. Și setările de [detectare a beaconurilor](ble-beacons.md) rămân
+cum erau, așa că o arhivă nu pornește niciodată detectarea.
 
 Își păstrează și propriile [profiluri de server FTP](ftp-sync.md) și
 profilul ales implicit; cele din arhivă nu sunt preluate. Parolele salvate
@@ -275,7 +281,9 @@ acel nume. Un fișier primit care are același nume cu unul de-al
 dumneavoastră este omis — așa că, dacă cineva a refotografiat o poză sau a
 reexportat o imagine de hartă sub același nume, păstrați poza veche, iar
 numărul de la **Fișiere copiate** iese mai mic decât vă așteptați. Doar
-**Înlocuire totală** suprascrie fișierele media.
+**Înlocuire totală** suprascrie fișierele media. Un document modificat în
+editorul de text, de text formatat, audio sau de imagini al aplicației
+este salvat sub un nume de fișier nou, așa că noul conținut ajunge.
 
 #### Rezumatul Import Complet
 
@@ -313,8 +321,44 @@ autentificările SilexGIS urmează aceeași regulă ca la o înlocuire. Orice fi
 de date restaurată trebuie să fie deja pe dispozitiv, altfel vor apărea ca
 lipsă.
 
-**Este distructiv și ireversibil.** Baza de date pe care o aveați este
-ștearsă, nu arhivată.
+Fișierul este verificat întâi, ca la o înlocuire: unul care nu este o
+bază de date SpeleoLoc, este deteriorat sau a fost salvat de o versiune
+mai nouă a aplicației este refuzat fără să se schimbe nimic, iar o
+restaurare care eșuează pe parcurs pune la loc baza de date anterioară.
+Dacă nici punerea la loc nu reușește, aplicația spune asta și nu lucrează
+cu nicio bază de date până când o închideți și o deschideți din nou;
+pornirea următoare pune la loc baza de date anterioară.
+
+**Odată reușită, restaurarea este ireversibilă.** Baza de date pe care o
+aveați este ștearsă, nu arhivată.
+
+## Când aplicația nu poate porni
+
+Dacă ceva oprește SpeleoLoc la pornire — o bază de date pe care nu o poate
+deschide, o memorie prea plină pentru a scrie în ea — aplicația arată un
+ecran **SpeleoLoc nu a putut porni** în loc să rămână pe ecranul de
+pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
+**Detalii**, și oferă:
+
+- **Exportă fișierul bazei de date** — salvează o copie a fișierului brut
+  al bazei de date prin același dialog de salvare ca **Exportă baza de
+  date**, ca să nu se piardă nimic orice ați face după aceea. Când o
+  restaurare sau o înlocuire a fost întreruptă, copia este a bazei de date
+  pe care o aveați înainte, cea pe care aplicația încearcă să o pună la loc.
+- **Reîncearcă** — încearcă din nou pornirea, de exemplu după ce ați
+  eliberat spațiu.
+- **Resetează datele aplicației** — oferit doar când baza de date însăși
+  nu se deschide. Șterge baza de date, iar aplicația
+  pornește goală. Întreabă întâi, spune ce se va șterge și oferă
+  **Exportă întâi**. Fotografiile și documentele deja salvate pe
+  dispozitiv nu se șterg și nici o bază de date anterioară lăsată în
+  așteptare de o restaurare întreruptă: rămâne pe dispozitiv sub alt nume.
+
+O bază de date salvată de o versiune mai nouă a aplicației are propriul
+mesaj: actualizați aplicația și baza de date se deschide așa cum este.
+**Resetează datele aplicației** nu este oferit atunci, nici când memoria
+este plină sau altceva decât baza de date a oprit pornirea: ștergerea
+bazei de date v-ar pierde datele fără să ajute aplicația să pornească.
 
 ## Reinițializarea bazei de date
 
@@ -327,7 +371,10 @@ goală. Versiunile de dezvoltare adaugă deasupra lui un al doilea,
 Fiecare întreabă de două ori: o primă confirmare, apoi una formulată fără
 menajamente, care avertizează că toate datele vor fi șterse. După aceea
 aplicația repornește. Nimic nu este salvat în locul dumneavoastră. Limba
-aplicației și profilurile de server FTP se păstrează.
+aplicației și profilurile de server FTP se păstrează. Într-o versiune de
+dezvoltare care nu a primit setul de date exemplu, butonul pentru date de
+test spune asta și nu vă atinge datele; o reinițializare care eșuează pe
+parcurs pune la loc baza de date anterioară.
 
 ## Încărcarea setului de date de test gata făcut
 

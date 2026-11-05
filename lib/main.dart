@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:speleoloc/app.dart';
+import 'package:speleoloc/app_bootstrap.dart';
+import 'package:speleoloc/providers/active_trip_reconciler_provider.dart';
+import 'package:speleoloc/providers/database_swap_providers.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
+import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/startup/startup_recovery.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_seed.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
@@ -53,8 +58,35 @@ Future<void> _runApp() async {
   // Register built-in document format handlers (editors & viewers).
   registerBuiltInDocumentFormats();
 
-  // Track application start count.
-  await AppStartCounter.increment();
+  final swap = container.read(liveDatabaseSwapProvider);
+  await startApp(
+    start: () => _startServices(container, swap),
+    prepareRetry: swap.reopenLiveDatabase,
+    recovery: DatabaseStartupRecovery(swap),
+    app: () => UncontrolledProviderScope(
+      container: container,
+      child: const SpeleoLocApp(),
+    ),
+  );
+}
+
+/// Everything that must be ready before the first screen. Any step may
+/// throw; [startApp] then shows the start-up failure screen.
+Future<void> _startServices(
+  ProviderContainer container,
+  LiveDatabaseSwap swap,
+) async {
+  // Before anything opens the database: a swap cut short by a kill left the
+  // caver's previous database aside, and it goes back now.
+  await swap.recoverInterruptedSwap();
+
+  // Track application start count. Only statistics: a full disk must not
+  // stop the app over it.
+  try {
+    await AppStartCounter.increment();
+  } catch (e, st) {
+    AppLogger.of('Main').warning('Start count could not be saved', e, st);
+  }
 
   // Load localization strings from JSON assets.
   await LocServ.inst.load();
@@ -86,6 +118,7 @@ Future<void> _runApp() async {
   await container.read(currentUserServiceProvider).initialize();
 
   await container.read(caveTripServiceProvider).initActiveTrip();
+  container.read(activeTripSyncReconcilerProvider);
 
   // Builds that bake in a shared sync endpoint install it here; a build
   // without one does nothing. Failure must not block startup — the user can
@@ -97,11 +130,4 @@ Future<void> _runApp() async {
       'Main',
     ).warning('Seeding the built-in FTP profile failed', e, st);
   }
-
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const SpeleoLocApp(),
-    ),
-  );
 }

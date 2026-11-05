@@ -10,7 +10,7 @@ import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/device_preferences_carry_over.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
-import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 
 import 'package:speleoloc/services/archive/archive_extraction.dart';
 import 'package:speleoloc/services/archive/archive_models.dart';
@@ -38,10 +38,17 @@ export 'package:speleoloc/services/archive/archive_models.dart';
 class DataArchiveService {
   final DataExportImportRepository _repo;
   final Clock _clock;
+  final LiveDatabaseSwap _databaseSwap;
   final _log = AppLogger.of('DataArchiveService');
 
-  DataArchiveService(this._repo, {Clock clock = const SystemClock()})
-    : _clock = clock;
+  /// Pass the app's [databaseSwap] (from its provider) wherever a replace
+  /// import can run, so the import is refused while a sync run is active.
+  DataArchiveService(
+    this._repo, {
+    Clock clock = const SystemClock(),
+    LiveDatabaseSwap? databaseSwap,
+  }) : _clock = clock,
+       _databaseSwap = databaseSwap ?? LiveDatabaseSwap();
 
   // ---------------------------------------------------------------------------
   //  EXPORT
@@ -157,9 +164,15 @@ class DataArchiveService {
 
   /// Replaces the entire local database and files with the archive contents.
   ///
-  /// The caller must restart the app afterwards. Pass [adoptFtpProfiles]
-  /// when the archive is the caver's own data rather than a sample: see
-  /// [DevicePreferencesCarryOver.applyTo].
+  /// The archive's database is checked before anything local is touched,
+  /// and when it fails to open or any later step throws, the previous
+  /// database is put back and stays open; see [LiveDatabaseSwap]. Files the
+  /// archive carries are copied over local ones of the same name and are not
+  /// put back.
+  ///
+  /// The caller must restart the app after a successful import. Pass
+  /// [adoptFtpProfiles] when the archive is the caver's own data rather than
+  /// a sample: see [DevicePreferencesCarryOver.applyTo].
   Future<void> importArchiveReplace({
     required String zipPath,
     required SilexgisRefreshTokenStore silexgisTokens,
@@ -167,6 +180,7 @@ class DataArchiveService {
     ForgetFtpProfileSecrets? adoptFtpProfiles,
     ProgressCallback? onProgress,
   }) async {
+    _databaseSwap.ensureNoSyncRunning();
     onProgress?.call('Extracting archive...');
     final tempDir = await _extractZip(zipPath);
 
@@ -175,7 +189,6 @@ class DataArchiveService {
       if (!await importedDbFile.exists()) {
         throw Exception('No database found in archive');
       }
-      DatabaseRestoreHelper.ensureNotNewer(importedDbFile);
 
       // Preserve the device-local identity so the restored database keeps
       // this device's UUID (the archive may carry a different device's UUID).
@@ -185,7 +198,9 @@ class DataArchiveService {
       final importExportCfgRaw = await _readConfigValue(
         'archive_sync_import_export_config',
       );
-      final copyUuidFromArchive = _parseCopyDeviceUuidFlag(importExportCfgRaw);
+      final copyUuidFromArchive = copiesDeviceUuidFromArchive(
+        importExportCfgRaw,
+      );
       final userHandover = await UserHandoverStore(appDatabase).capture();
       final devicePreferences = await DevicePreferencesCarryOver.capture(
         appDatabase,
@@ -195,46 +210,44 @@ class DataArchiveService {
         silexgisTokens,
       );
 
-      // Close current database.
-      await appDatabase.close();
-
       final docsDir = await getApplicationDocumentsDirectory();
-
-      // Replace database.
       onProgress?.call('Replacing database...');
-      final targetDb = File('${docsDir.path}/speleo_loc.sqlite');
-      if (await targetDb.exists()) await targetDb.delete();
-      await importedDbFile.copy(targetDb.path);
+      await _databaseSwap.replaceWith(
+        importedDbFile,
+        afterOpen: (db) async {
+          DatabaseRestoreHelper.logMigrationIfAny(
+            source: 'archive-import-replace',
+          );
 
-      // Copy all other files (documentation files, raster maps).
-      onProgress?.call('Copying files...');
-      await _copyAllExtractedFiles(tempDir, docsDir);
+          // Restore device identity unless the flag says to adopt the
+          // archive's.
+          if (!copyUuidFromArchive && savedDeviceUuid != null) {
+            await _writeConfigValue(db, 'device_uuid', savedDeviceUuid);
+          }
+          await UserHandoverStore(db).handOver(userHandover);
+          await devicePreferences.applyTo(
+            db,
+            adoptFtpProfiles: adoptFtpProfiles,
+          );
+          await silexgisSignIns.applyTo(
+            db,
+            silexgisTokens,
+            signIns: silexgisSignInRegistry,
+          );
 
-      // Re-open database.
-      replaceAppDatabase(AppDatabase());
-      DatabaseRestoreHelper.logMigrationIfAny(source: 'archive-import-replace');
+          // Copy all other files (documentation files, raster maps).
+          onProgress?.call('Copying files...');
+          await _copyAllExtractedFiles(tempDir, docsDir);
 
-      // Restore device identity unless the flag says to adopt the archive's.
-      if (!copyUuidFromArchive && savedDeviceUuid != null) {
-        await _writeConfigValue('device_uuid', savedDeviceUuid);
-      }
-      await UserHandoverStore(appDatabase).handOver(userHandover);
-      await devicePreferences.applyTo(
-        appDatabase,
-        adoptFtpProfiles: adoptFtpProfiles,
-      );
-      await silexgisSignIns.applyTo(
-        appDatabase,
-        silexgisTokens,
-        signIns: silexgisSignInRegistry,
-      );
-
-      // Restore FTP passwords from the archive's ftp_credentials.json into
-      // the OS keystore (flutter_secure_storage). This must run after the
-      // DB is re-opened so FtpProfileRepository can write to it.
-      await _restoreFtpCredentialsIfAllowed(
-        tempDir.path,
-        onProgress: onProgress,
+          // Restore FTP passwords from the archive's ftp_credentials.json
+          // into the OS keystore (flutter_secure_storage). This must run
+          // after the DB is re-opened so FtpProfileRepository can write to it.
+          await _restoreFtpCredentialsIfAllowed(
+            db,
+            tempDir.path,
+            onProgress: onProgress,
+          );
+        },
       );
     } finally {
       try {
@@ -279,6 +292,7 @@ class DataArchiveService {
       final filesCopied = await _copyNewFiles(tempDir.path, report.warnings);
 
       await _restoreFtpCredentialsIfAllowed(
+        appDatabase,
         tempDir.path,
         onProgress: onProgress,
       );
@@ -405,6 +419,7 @@ class DataArchiveService {
   /// of a profile whose host it replaces, so on any other build an archive
   /// carrying the file could redirect a saved login to another server.
   Future<void> _restoreFtpCredentialsIfAllowed(
+    AppDatabase db,
     String extractDir, {
     ProgressCallback? onProgress,
   }) async {
@@ -416,7 +431,7 @@ class DataArchiveService {
       }
       return;
     }
-    await _restoreFtpPasswords(extractDir, onProgress: onProgress);
+    await _restoreFtpPasswords(db, extractDir, onProgress: onProgress);
   }
 
   /// Reads `ftp_credentials.json` from [extractDir] (if present) and upserts
@@ -426,6 +441,7 @@ class DataArchiveService {
   /// it. Any entry whose `password` field is empty is saved without touching
   /// the stored password (preserves an existing keystore entry).
   Future<void> _restoreFtpPasswords(
+    AppDatabase db,
     String extractDir, {
     ProgressCallback? onProgress,
   }) async {
@@ -446,7 +462,7 @@ class DataArchiveService {
       return;
     }
 
-    final profileRepo = FtpProfileRepository(appDatabase);
+    final profileRepo = FtpProfileRepository(db);
     for (final entry in list) {
       if (entry is! Map<String, dynamic>) continue;
       final password = entry['password'] as String?;
@@ -477,10 +493,14 @@ class DataArchiveService {
     return rows.first.data['value'] as String?;
   }
 
-  /// Writes (upserts) a value into `configurations` using the open DB.
-  Future<void> _writeConfigValue(String key, String value) async {
+  /// Writes (upserts) a value into `configurations` of [db].
+  Future<void> _writeConfigValue(
+    AppDatabase db,
+    String key,
+    String value,
+  ) async {
     final now = _clock.nowMs();
-    await appDatabase.customStatement(
+    await db.customStatement(
       'INSERT INTO configurations (title, value, created_at, updated_at) '
       'VALUES (?, ?, ?, ?) '
       'ON CONFLICT(title) DO UPDATE SET value = excluded.value, '
@@ -496,7 +516,7 @@ class DataArchiveService {
   /// Any other value — absent config row, absent key in the JSON object,
   /// `null` value, `false`, or unparseable JSON — returns `false`, so
   /// the local device_uuid is preserved.
-  static bool _parseCopyDeviceUuidFlag(String? raw) {
+  static bool copiesDeviceUuidFromArchive(String? raw) {
     if (raw == null || raw.isEmpty) return false;
     try {
       final map = jsonDecode(raw) as Map<String, dynamic>;

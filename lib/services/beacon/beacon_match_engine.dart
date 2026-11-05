@@ -1,7 +1,5 @@
 import 'package:speleoloc/screens/settings/settings_helper.dart';
-
-/// Configuration key for [BeaconDetectionConfig] (device-local JSON).
-const String beaconDetectionConfigKey = 'beacon_detection_config';
+import 'package:speleoloc/utils/constants.dart';
 
 /// Tuning for automatic beacon detection. Persisted per device (detection
 /// behaviour is a personal preference, not shared cave data).

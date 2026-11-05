@@ -505,6 +505,22 @@ void main() {
     expect(controller.progress.errorMessage, 'no_default_profile');
   });
 
+  test('a run still reporting after its controller was disposed, as a '
+      'database swap disposes it, does not throw', () async {
+    final h = await _buildHarness();
+    final controller = FtpSyncController(
+      db: h.db,
+      profileRepository: FtpProfileRepository(h.db),
+      archiveService: h.sync,
+      currentUserService: h.currentUser,
+      transportBuilder: (p) => _FakeTransport(p),
+    )..dispose();
+
+    await controller.startDefault();
+
+    expect(controller.progress.phase, FtpSyncPhase.failed);
+  });
+
   test('an FTPS profile fails before any connection, pointing to the '
       'profile editor', () async {
     final h = await _buildHarness();

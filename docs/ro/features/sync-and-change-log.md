@@ -237,6 +237,9 @@ imediat ce deschideți **Necesită o decizie**.
   vostru nu există deja un fișier cu acel nume. Dacă cineva a refăcut o
   fotografie și a păstrat numele fișierului, rămâneți cu imaginea veche,
   iar numărul de fișiere din rezumat va fi mai mic decât vă așteptați.
+  Modificările făcute în editoarele aplicației nu sunt afectate: fiecare
+  salvare pune conținutul nou sub un nume de fișier nou, așa că ajunge
+  și pe celelalte telefoane.
 - **Doi oameni cu același nume de utilizator devin unul singur.** Un
   utilizator care vine din arhivă și al cărui nume de utilizator există
   deja pe dispozitivul vostru este tratat ca aceeași persoană, iar

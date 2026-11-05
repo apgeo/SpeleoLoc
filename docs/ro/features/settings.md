@@ -263,9 +263,10 @@ date**, distruge date care nu sunt salvate în altă parte.
   umple baza de date cu setul de date exemplu inclus; nu se află în
   aplicația publicată.)
 - **Restaurează baza de date din fișier** — înlocuiește baza de date
-  curentă cu un fișier `.sqlite` sau `.db` ales de dumneavoastră. Un fișier
-  salvat de o versiune mai nouă a aplicației este refuzat și nu se
-  înlocuiește nimic; actualizați întâi aplicația.
+  curentă cu un fișier `.sqlite` sau `.db` ales de dumneavoastră. Fișierul
+  este verificat întâi: unul care nu este o bază de date SpeleoLoc, este
+  deteriorat sau a fost salvat de o versiune mai nouă a aplicației
+  (actualizați întâi aplicația) este refuzat și nu se înlocuiește nimic.
 - **Exportă baza de date** — salvează o copie a fișierului bazei de date
   prin dialogul de salvare al dispozitivului, propusă cu numele
   `speleo_loc_export.sqlite` (pe iOS, într-un folder ales de
@@ -284,7 +285,13 @@ Reinițializarea cere confirmarea de **două ori**. Restaurarea întreabă
 restaurare este mai ușor de declanșat decât o reinițializare și este la
 fel de ireversibilă. Prima confirmare a fiecăreia dintre aceste acțiuni
 avertizează că aplicația va fi repornită, iar aceasta chiar repornește
-automat odată ce operațiunea se încheie.
+automat odată ce operațiunea se încheie. Dacă operațiunea eșuează pe
+parcurs, baza de date anterioară este pusă la loc și aplicația continuă
+cu ea.
+
+Niciuna dintre ele nu înlocuiește baza de date cât timp rulează o
+sincronizare FTP sau SilexGIS: aplicația spune că o sincronizare este în
+curs și vă cere să așteptați să se termine.
 
 Vedeți [Export, import și copie de siguranță a bazei de
 date](database-export-import.md).

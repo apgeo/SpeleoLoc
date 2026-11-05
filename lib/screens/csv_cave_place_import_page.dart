@@ -309,30 +309,83 @@ class _CSVCavePlacesImportPageState
     );
   }
 
+  String _issueText(CSVCavePlaceRowIssue issue) {
+    final key = switch (issue.kind) {
+      CSVCavePlaceRowIssueKind.caveAmbiguous => 'csv_issue_cave_ambiguous',
+      CSVCavePlaceRowIssueKind.placeAmbiguous => 'csv_issue_place_ambiguous',
+      CSVCavePlaceRowIssueKind.qrCodeTaken => 'csv_issue_qr_taken',
+      CSVCavePlaceRowIssueKind.qrCodeRepeated => 'csv_issue_qr_repeated',
+      CSVCavePlaceRowIssueKind.qrCodeKept => 'csv_issue_qr_kept',
+    };
+    final text = LocServ.inst
+        .t(key)
+        .replaceAll('{cave}', issue.caveName ?? '')
+        .replaceAll('{place}', issue.placeName ?? '')
+        .replaceAll('{qr}', issue.qrCode ?? '')
+        .replaceAll('{holder}', issue.holderTitle ?? '')
+        .replaceAll('{old}', issue.keptCode ?? '');
+    final line = issue.lineNumber;
+    if (line == null) return text;
+    final row = LocServ.inst.t('csv_issue_row').replaceAll('{line}', '$line');
+    return '$row: $text';
+  }
+
   /// Show the import result summary.
   Future<void> _showImportResultDialog(CSVCavePlaceImportResult result) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(LocServ.inst.t('csv_import_complete')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_isMultipleCaveMode)
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_isMultipleCaveMode)
+                Text(
+                  '${LocServ.inst.t('csv_caves_created')}: ${result.cavesCreated}',
+                ),
               Text(
-                '${LocServ.inst.t('csv_caves_created')}: ${result.cavesCreated}',
+                '${LocServ.inst.t('csv_cave_areas_created')}: ${result.caveAreasCreated}',
               ),
-            Text(
-              '${LocServ.inst.t('csv_cave_areas_created')}: ${result.caveAreasCreated}',
-            ),
-            Text(
-              '${LocServ.inst.t('csv_cave_places_created')}: ${result.cavePlacesCreated}',
-            ),
-            Text(
-              '${LocServ.inst.t('csv_qr_codes_updated')}: ${result.qrCodesUpdated}',
-            ),
-          ],
+              Text(
+                '${LocServ.inst.t('csv_cave_places_created')}: ${result.cavePlacesCreated}',
+              ),
+              Text(
+                '${LocServ.inst.t('csv_qr_codes_updated')}: ${result.qrCodesUpdated}',
+              ),
+              if (result.qrCodesCleared > 0)
+                Text(
+                  '${LocServ.inst.t('csv_qr_codes_cleared')}: ${result.qrCodesCleared}',
+                ),
+              if (result.issues.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '${LocServ.inst.t('csv_rows_with_issues')}: ${result.issues.length}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...result.issues
+                    .take(widget.maxPreviewDuplicates)
+                    .map(
+                      (issue) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '• ${_issueText(issue)}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ),
+                if (result.issues.length > widget.maxPreviewDuplicates)
+                  Text(
+                    '... ${LocServ.inst.t('and')} ${result.issues.length - widget.maxPreviewDuplicates} ${LocServ.inst.t('more')}',
+                    style: const TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontSize: 13,
+                    ),
+                  ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

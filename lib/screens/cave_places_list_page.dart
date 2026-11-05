@@ -184,6 +184,8 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
       );
       if (confirmed == true) {
         await ref.read(caveRepositoryProvider).deleteCave(widget.caveUuid);
+        // A trip running in this cave went with it.
+        await ref.read(caveTripServiceProvider).reconcileActiveTrip();
         if (!mounted) return;
         Navigator.pop(context, true);
       }

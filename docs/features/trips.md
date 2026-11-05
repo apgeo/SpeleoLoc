@@ -30,6 +30,14 @@ Only **one trip** can be active at a time on a device, across all
 caves. While a trip is running in cave A you cannot start one in cave
 B — you have to stop the first.
 
+The active trip belongs to this device. If it disappears — deleted by an
+FTP or SilexGIS sync or an archive merge, deleted together with its cave,
+or ended on another device — no trip is active here any more, and you can
+start a new one. Restoring a database or an archive keeps this device's
+own active trip if the restored data still has it running; a trip that
+was running on the device that made the export does not become active
+here.
+
 A stopped trip is **not** locked. You can still rename it, add, move or
 remove its points, correct its start and end times, fill in its
 participants, edit its log, export a report, delete it, or restart it.
@@ -71,10 +79,9 @@ While the trip is running, points are recorded for you:
   recorded. This is the hands-free way to build a route — see
   [BLE beacons](ble-beacons.md).
 - **Entrance places behave differently when scanned.** If the trip
-  running is for that same cave, the app asks *"You scanned a cave
-  entrance. Are you exiting the cave? Stop the active trip?"*. Answer
-  **Yes** and the trip stops; answer **No** and the entrance is
-  recorded as an ordinary trip point instead. If the running trip
+  running is for that same cave, the app asks *"End the trip at
+  <cave>?"*. **End trip** stops it; **Keep recording** records the
+  entrance as an ordinary trip point instead. If the running trip
   belongs to another cave, the app names that cave, offers to stop its
   trip, and then offers to start one here.
 
@@ -102,13 +109,21 @@ not all fit.
 
 | Button | What it does |
 |---|---|
-| **Stop trip** / **Pause** / **Resume trip** | Shown while this trip is the active one. See [Pausing and resuming](#pausing-and-resuming) and [Stopping a trip](#stopping-a-trip). |
+| **Stop trip** / **Pause** / **Resume trip** | Shown while this trip is the one this phone is recording. See [Pausing and resuming](#pausing-and-resuming) and [Stopping a trip](#stopping-a-trip). |
 | **Restart trip** | Shown instead once the trip has ended. See [Restarting a finished trip](#restarting-a-finished-trip). |
 | **Add point** | Records a point at a place and time you choose. See [Correcting the points](#correcting-the-points). |
 | **Pictures** | Opens **Points from pictures**. See [Points from pictures](#points-from-pictures). |
 | **Trip log** | Opens the log. See [The trip log](#the-trip-log). |
 | **Export report** | See [Trip reports](trip-reports.md). |
 | **Map view** / **List view** | Only when the cave has at least one raster map. See [Map view](#map-view). |
+
+A trip still open on another phone — a teammate's recording received
+through SilexGIS — shows *"Open — not recording on this phone"* in its
+summary card and none of these three buttons. A trip left open that this
+phone recorded, or one that names no recording phone at all, shows the
+same line but offers **Stop trip**, so it can be closed; stopping it asks
+first and leaves the trip this phone is recording untouched. **Restart
+trip** is not offered while a trip is still open.
 
 ### Summary card and point list
 
@@ -350,8 +365,8 @@ Three buttons sit at the bottom of the card:
 
 - **View trip** — opens the trip screen.
 - **Pause** / **Resume trip** — toggles recording.
-- **Stop trip** (red) — stops the trip **immediately, without the
-  usual confirmation**. Treat this one with care.
+- **Stop trip** (red), set apart at the right end — asks *"End the
+  trip at <cave>?"* before ending it, like the trip screen.
 
 This card is the quickest way back to a running trip, and the only way
 to reach a cave's first trip before it has ever been stopped.
@@ -360,6 +375,9 @@ to reach a cave's first trip before it has ever been stopped.
 
 **Pause** stops recording: QR scans and beacon detections no longer
 add points, and documents you create are no longer linked to the trip.
+A scan or detection during a pause answers *"Trip paused — point not
+recorded"* in amber, with a **Resume trip** button, instead of *"Point
+added to trip"*; in the background the notification says the same.
 **Resume trip** switches recording back on. Pause and resume are on
 the trip screen, on the cave's **Past / active trip(s)** screen, and on
 the trip card in the ⋮ menu.
@@ -411,8 +429,9 @@ your notes as fragile:
   below.
 - In the **Raw**, **Classic** and **Field journal** styles a new event
   is only appended to the end, so earlier edits survive it. In the
-  **Narrative** style every new point or document rewrites the whole
-  log.
+  **Narrative** style a new point or document rewrites the generated
+  text and keeps what you typed after it; a log whose generated text
+  you reworded is left alone and marked out of date.
 
 Add such notes at the end of the trip, and keep a copy elsewhere if
 they matter.
@@ -504,9 +523,12 @@ the old title until the log is regenerated.
 
 Press the red **Stop trip** button: on the trip screen, on the cave's
 **Past / active trip(s)** screen, or on the trip card in the ⋮ menu.
-The first two ask *"Stop recording this trip?"*; the card's button
-stops immediately, with no confirmation. Scanning the QR code of an
-entrance in the trip's own cave also offers to stop it.
+The trip screen and the card ask *"End the trip at <cave>?"*, with
+**End trip** and the highlighted **Keep recording**; the **Past /
+active trip(s)** screen asks *"Stop recording this trip?"*. Scanning
+the QR code of an entrance in the trip's own cave asks the same *"End
+the trip at <cave>?"*; **Keep recording** records the entrance as a
+point instead.
 
 Stopping records the end time and clears the active trip. All the
 trip's data is kept.
@@ -514,11 +536,17 @@ trip's data is kept.
 ## Restarting a finished trip
 
 When you open a trip that has already ended, the **Stop trip** button
-is replaced by a blue **Restart trip** button. Pressing it makes that
-trip the active trip again, so new scans and beacon detections keep
-adding to the same route instead of starting a fresh trip. Use it when
-you stopped a trip by mistake, or when you go back underground the
-same day and want one continuous record.
+is replaced by a blue **Restart trip** button. It asks *"Restart this
+trip?"* first, showing the start and end times that will be replaced;
+**Replace times and restart** makes that trip the active trip again, so
+new scans and beacon detections keep adding to the same route instead
+of starting a fresh trip. Use it when you stopped a trip by mistake, or
+when you go back underground the same day and want one continuous
+record.
+
+While a different trip is recording, Restart is refused with
+*"Another trip is recording: …"*: stop that trip first, so that no
+trip is left open with nothing recording it.
 
 Two consequences:
 

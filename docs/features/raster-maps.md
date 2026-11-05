@@ -236,8 +236,10 @@ again to switch it off.
 Once a place is selected, two more buttons appear at the end of the
 action bar: **Open cave place**, which jumps to that place's full page,
 and **Documents**, which opens the photos and files attached to it.
-Both store a point you have just tapped before they navigate, so
-nothing is lost. They are present on the read-only map viewer too,
+Both store a point you have just tapped before they navigate, asking
+the same question as switching to another place; **Cancel** keeps you on
+the map with the point still pending, so it is neither stored behind
+your back nor lost. They are present on the read-only map viewer too,
 which makes it a practical way to browse a cave: find the pin, read the
 place, look at its photos, come back.
 

@@ -382,8 +382,8 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
   /// the result only fills the form fields — nothing is persisted until
   /// the place is saved.
   Future<void> _openMapPicker() async {
-    final lat = double.tryParse(_form.lat.text.trim());
-    final lng = double.tryParse(_form.long.text.trim());
+    final lat = parseCoordinateValue(_form.lat.text);
+    final lng = parseCoordinateValue(_form.long.text);
     final hasPosition = lat != null && lng != null;
     final title = _form.title.text.trim();
     final result = await Navigator.push<CaveMapPickResult>(
@@ -392,9 +392,7 @@ class _CavePlacePageState extends ConsumerState<CavePlacePage>
         builder: (_) => CaveMapPage(
           focusCaveUuids: {widget.caveUuid},
           pickRequest: CaveMapPickRequest(
-            placeTitle: title.isNotEmpty
-                ? title
-                : LocServ.inst.t('cave_place'),
+            placeTitle: title.isNotEmpty ? title : LocServ.inst.t('cave_place'),
             caveTitle: _cave?.title ?? '',
             initialLatitude: hasPosition ? lat : null,
             initialLongitude: hasPosition ? lng : null,

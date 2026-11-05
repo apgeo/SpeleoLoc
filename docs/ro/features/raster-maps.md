@@ -249,8 +249,10 @@ Apăsați din nou butonul verde pentru a-l opri.
 Odată ce un loc este selectat, la capătul barei de acțiuni apar încă două
 butoane: **Deschide locul**, care sare la pagina completă a acelui loc,
 și **Documente**, care deschide fotografiile și fișierele atașate lui.
-Amândouă stochează punctul tocmai apăsat înainte de a naviga, așa că nu
-se pierde nimic. Sunt prezente și în vizualizatorul de hărți în
+Amândouă stochează punctul tocmai apăsat înainte de a naviga, cu aceeași
+întrebare ca la trecerea la alt loc; **Anulează** vă lasă pe hartă cu
+punctul încă nestocat, așa că nu este nici salvat fără știrea
+dumneavoastră, nici pierdut. Sunt prezente și în vizualizatorul de hărți în
 doar-citire, ceea ce îl face un mod practic de a răsfoi o peșteră:
 găsiți reperul, citiți locul, priviți-i fotografiile, reveniți.
 
