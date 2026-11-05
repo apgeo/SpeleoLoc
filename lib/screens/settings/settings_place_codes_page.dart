@@ -158,6 +158,7 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
       id,
       isSynced: true,
     );
+    if (!mounted) return;
     setState(() => _strategyId = id);
   }
 
@@ -171,6 +172,7 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
       blob,
       isSynced: true,
     );
+    if (!mounted) return;
     setState(() => _strategyConfigs = blob);
   }
 
@@ -180,6 +182,7 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
       mode,
       isSynced: true,
     );
+    if (!mounted) return;
     setState(() => _qcriMode = mode);
   }
 
@@ -189,26 +192,39 @@ class _SettingsPlaceCodesPageState extends ConsumerState<SettingsPlaceCodesPage>
     String? salt,
   }) async {
     final stored = salt ?? _qcriSalt;
-    await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
-      'length': length ?? _qcriLength,
-      'entrance_hash': entranceHash ?? _qcriEntranceHash,
-      'salt': stored,
-    }, isSynced: true);
+    final previous = _savedSalt;
+    // Counted as saved while the write is in flight, so leaving the page
+    // meanwhile does not store the same salt a second time.
     _savedSalt = stored;
+    try {
+      await SettingsHelper.saveJsonConfig(ConfigKey.qcriHashConfig, {
+        'length': length ?? _qcriLength,
+        'entrance_hash': entranceHash ?? _qcriEntranceHash,
+        'salt': stored,
+      }, isSynced: true);
+    } catch (_) {
+      if (_savedSalt == stored) _savedSalt = previous;
+      rethrow;
+    }
   }
 
   Future<void> _saveQcriLength(int length) async {
     await _writeQcriHashConfig(length: length);
+    if (!mounted) return;
     setState(() => _qcriLength = length);
   }
 
   Future<void> _saveQcriEntranceHash(bool v) async {
     await _writeQcriHashConfig(entranceHash: v);
+    if (!mounted) return;
     setState(() => _qcriEntranceHash = v);
   }
 
   Future<void> _saveQcriSalt(String salt) async {
+    // Every tap outside the field lands here, edited or not.
+    if (salt == _savedSalt) return;
     await _writeQcriHashConfig(salt: salt);
+    if (!mounted) return;
     setState(() => _qcriSalt = salt);
   }
 

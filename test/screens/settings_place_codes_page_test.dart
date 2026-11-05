@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/settings/settings_place_codes_page.dart';
@@ -12,12 +15,17 @@ import 'package:speleoloc/services/service_locator.dart';
 /// what the page shows has to be what it stored.
 void main() {
   late AppDatabase db;
+  late _HeldHashWrites repo;
   late ProviderContainer container;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    repo = _HeldHashWrites(db);
     container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        configurationRepositoryProvider.overrideWithValue(repo),
+      ],
     );
     initRootContainer(container);
   });
@@ -108,4 +116,64 @@ void main() {
     });
     expect(hash!['salt'], 'pepper');
   });
+
+  testWidgets('a salt being saved by tapping outside is not written again '
+      'on Back', (tester) async {
+    await configurationRepository.writeString(ConfigKey.qcriMode, 'hash');
+    await openPage(tester);
+    await tester.tap(find.text('place_code_tab_qcri'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'pepper');
+    await tester.pump();
+
+    repo.hold = Completer<void>();
+    await tester.tapAt(const Offset(5, 300));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPlaceCodesPage), findsNothing);
+
+    expect(repo.hashWrites.map((w) => w['salt']), ['pepper']);
+    repo.hold!.complete();
+    await tester.pump();
+  });
+
+  testWidgets('a switch whose save finishes after Back leaves the closed page '
+      'alone', (tester) async {
+    await openPage(tester);
+    await tester.tap(find.text('place_code_tab_qcri'));
+    await tester.pumpAndSettle();
+
+    repo.hold = Completer<void>();
+    await tester.tap(find.text('qcri_entrance_hash_in_mirror_mode'));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPlaceCodesPage), findsNothing);
+
+    repo.hold!.complete();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(repo.hashWrites.single['entrance_hash'], isTrue);
+  });
+}
+
+/// Records the QCRI hash config writes and, while [hold] is set, keeps them
+/// in flight until the test completes it.
+class _HeldHashWrites extends ConfigurationRepository {
+  _HeldHashWrites(super.db);
+
+  Completer<void>? hold;
+  final hashWrites = <Map<String, dynamic>>[];
+
+  @override
+  Future<void> writeJson(
+    String key,
+    Map<String, dynamic> value, {
+    bool isSynced = false,
+  }) async {
+    if (key == ConfigKey.qcriHashConfig) {
+      hashWrites.add(Map.of(value));
+      await hold?.future;
+    }
+    await super.writeJson(key, value, isSynced: isSynced);
+  }
 }
