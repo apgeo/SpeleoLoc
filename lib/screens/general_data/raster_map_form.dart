@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
+import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/file_digest.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
@@ -68,6 +71,15 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
   _pendingFileHash; // hash of the newly-picked image file (null when not changed)
   int? _pendingFileSize; // size in bytes of the newly-picked image file
 
+  /// Path of the copy made when an image was picked and not stored yet. It
+  /// is removed again when another image replaces it or the form closes
+  /// without saving, so abandoned picks do not pile up in the cave folder.
+  String? _unsavedPickPath;
+
+  /// True while a pick or a save is running; both buttons are off meanwhile.
+  bool _busy = false;
+  static final _log = AppLogger.of('RasterMapForm');
+
   @override
   void initState() {
     super.initState();
@@ -85,7 +97,18 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
   @override
   void dispose() {
     _titleController.dispose();
+    final unsaved = _unsavedPickPath;
+    if (unsaved != null) unawaited(_deleteQuietly(unsaved));
     super.dispose();
+  }
+
+  Future<void> _deleteQuietly(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } on FileSystemException catch (e, st) {
+      _log.warning('could not remove an unused map image', e, st);
+    }
   }
 
   Future<void> _setFullImagePath() async {
@@ -102,11 +125,34 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
           }
         });
       }
-      setState(() {});
+      if (mounted) setState(() {});
     }
   }
 
   Future<void> _pickImage() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    String? copiedPath;
+    try {
+      copiedPath = await _pickAndStoreImage();
+    } on Exception catch (e, st) {
+      _log.warning('picking the map image failed', e, st);
+      if (mounted) {
+        SnackBarService.showError(LocServ.inst.t('raster_map_image_failed'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    // A copy that never made it into the form is of no use to anyone.
+    if (copiedPath != null && copiedPath != _unsavedPickPath) {
+      unawaited(_deleteQuietly(copiedPath));
+    }
+  }
+
+  /// Copies the picked image into the cave folder and puts it in the form.
+  /// Returns the copy's path when it was made but not taken over (the form
+  /// closed meanwhile), otherwise null.
+  Future<String?> _pickAndStoreImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -149,19 +195,30 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       invalidateDecodedImage(savedFile.path);
 
       // Hash and size for duplicate detection.
-      final digest = await FileDigest.of(savedFile.path);
-      if (!mounted) return;
+      final FileDigest digest;
+      try {
+        digest = await FileDigest.of(savedFile.path);
+      } on Exception {
+        await _deleteQuietly(savedFile.path);
+        rethrow;
+      }
+      if (!mounted) return savedFile.path;
 
+      final replaced = _unsavedPickPath;
       setState(() {
         _imagePath = 'cave_${widget.caveUuid}/$fileName';
         _fullImagePath = savedFile.path;
         _pendingFileHash = digest.sha256Hex;
         _pendingFileSize = digest.size;
+        _unsavedPickPath = savedFile.path;
       });
+      if (replaced != null) unawaited(_deleteQuietly(replaced));
     }
+    return null;
   }
 
-  void _save() async {
+  Future<void> _save() async {
+    if (_busy) return;
     if (_imagePath == null || _selectedMapType == null) {
       SnackBarService.showWarning(
         LocServ.inst.t('please_select_image_and_map_type'),
@@ -178,6 +235,31 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       _titleController.text = title;
     }
 
+    setState(() => _busy = true);
+    var saved = false;
+    try {
+      saved = await _saveChecked(title);
+    } on DuplicateEntryException {
+      if (mounted) {
+        SnackBarService.showWarning(
+          LocServ.inst.t('raster_map_title_duplicate'),
+        );
+      }
+    } on Exception catch (e, st) {
+      _log.warning('saving the raster map failed', e, st);
+      if (mounted) {
+        SnackBarService.showError(LocServ.inst.t('raster_map_save_failed'));
+      }
+    } finally {
+      // After a successful save the form is closing; keep it locked through
+      // the exit transition.
+      if (!saved && mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Runs the duplicate checks and the write. Returns whether the form was
+  /// closed after storing the map.
+  Future<bool> _saveChecked(String title) async {
     // Check for a duplicate (title, map_type, cave_uuid) matching the DB UNIQUE constraint.
     final existingMaps = await ref
         .read(rasterMapRepositoryProvider)
@@ -191,7 +273,7 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
     );
     if (isDuplicate) {
       SnackBarService.showWarning(LocServ.inst.t('raster_map_title_duplicate'));
-      return;
+      return false;
     }
 
     // Check for a duplicate image (same SHA-256 hash, same cave).
@@ -210,7 +292,8 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
           break;
         }
       }
-      if (hashDuplicate != null && mounted) {
+      if (!mounted) return false;
+      if (hashDuplicate != null) {
         final proceed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -232,7 +315,7 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
             ],
           ),
         );
-        if (proceed != true) return;
+        if (proceed != true) return false;
       }
     }
 
@@ -266,7 +349,11 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
       );
       await ref.read(rasterMapRepositoryProvider).addRasterMap(companion);
     }
-    if (mounted) Navigator.pop(context, true);
+    if (!mounted) return false;
+    // The picked image now belongs to the stored map.
+    _unsavedPickPath = null;
+    Navigator.pop(context, true);
+    return true;
   }
 
   @override
@@ -300,7 +387,7 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
             const SizedBox(height: 20),
             ElevatedButton(
               key: tourKeys['image_picker'],
-              onPressed: _pickImage,
+              onPressed: _busy ? null : _pickImage,
               child: Text(LocServ.inst.t('select_image')),
             ),
             if (_fullImagePath != null && File(_fullImagePath!).existsSync())
@@ -357,7 +444,7 @@ class _RasterMapFormState extends ConsumerState<RasterMapForm>
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _save,
+              onPressed: _busy ? null : _save,
               child: Text(LocServ.inst.t('save')),
             ),
           ],

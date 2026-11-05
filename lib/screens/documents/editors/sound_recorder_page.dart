@@ -14,6 +14,7 @@ import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/wav_splice.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
@@ -86,6 +87,13 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   bool _hasRecording = false;
   bool _isPlaying = false;
   bool _isSaving = false;
+
+  /// True while a start/stop/pause/resume call is in flight; a second tap on
+  /// the same button would otherwise run it again before the first returned.
+  bool _transitioning = false;
+
+  /// True once this page has recorded something that is not stored yet.
+  bool _hasUnsavedRecording = false;
   String? _recordedPath;
 
   /// Scratch files of the waveform recorder, removed as soon as it stops.
@@ -132,6 +140,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
       if (mounted) setState(() => _recorderReady = true);
     } catch (e) {
       log.warning('init error', e);
+      if (mounted) SnackBarService.showError(LocServ.inst.t('recording_error'));
     }
   }
 
@@ -201,8 +210,16 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   // -----------------------------------------------------------------------
 
   Future<void> _startRecording() async {
-    if (!_recorderReady) return;
+    if (!_recorderReady || _transitioning || _isSaving) return;
+    _transitioning = true;
+    try {
+      await _startRecordingGuarded();
+    } finally {
+      _transitioning = false;
+    }
+  }
 
+  Future<void> _startRecordingGuarded() async {
     // Check and request microphone permission if needed.
     var micStatus = await Permission.microphone.status;
     if (!micStatus.isGranted) {
@@ -271,10 +288,12 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
         if (mounted) setState(() => _elapsed = event.duration);
       });
 
+      if (!mounted) return;
       setState(() {
         _isRecording = true;
         _isPaused = false;
         _hasRecording = false;
+        _hasUnsavedRecording = true;
       });
     } catch (e) {
       log.warning('start recording error', e);
@@ -329,6 +348,16 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   }
 
   Future<void> _stopRecording() async {
+    if (_transitioning) return;
+    _transitioning = true;
+    try {
+      await _stopRecordingGuarded();
+    } finally {
+      _transitioning = false;
+    }
+  }
+
+  Future<void> _stopRecordingGuarded() async {
     try {
       unawaited(_recorderProgressSub?.cancel());
       _recorderProgressSub = null;
@@ -338,14 +367,16 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
       // If we were recording over an existing WAV (splice), merge the original
       // prefix with the newly recorded tail.
       if (_preSpliceWavBytes != null && _recordedPath != null) {
-        await _mergeWavFiles(_preSpliceWavBytes!, File(_recordedPath!));
+        final original = _preSpliceWavBytes!;
         _preSpliceWavBytes = null;
+        await _mergeWavFiles(original, File(_recordedPath!));
       }
 
       // Recreate PlayerController to avoid stale state from the previous
       // recording session (fixes record → stop → record → stop losing buttons).
       await _preparePlayerForRecordedFile();
 
+      if (!mounted) return;
       setState(() {
         _isRecording = false;
         _isPaused = false;
@@ -353,26 +384,48 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
       });
     } catch (e) {
       log.warning('stop recording error', e);
+      _preSpliceWavBytes = null;
+      if (!mounted) return;
+      // Leave the recording state, or the screen would stay on the stop
+      // button with no way out.
+      final recorded =
+          _recordedPath != null && File(_recordedPath!).existsSync();
+      setState(() {
+        _isRecording = false;
+        _isPaused = false;
+        _hasRecording = recorded;
+      });
+      SnackBarService.showError(LocServ.inst.t('recording_error'));
     }
   }
 
   Future<void> _pauseRecording() async {
+    if (_transitioning) return;
+    _transitioning = true;
     try {
       await _recorder.pauseRecorder();
       await _stopWaveform();
-      setState(() => _isPaused = true);
+      if (mounted) setState(() => _isPaused = true);
     } catch (e) {
       log.warning('pause error', e);
+      if (mounted) SnackBarService.showError(LocServ.inst.t('recording_error'));
+    } finally {
+      _transitioning = false;
     }
   }
 
   Future<void> _resumeRecording() async {
+    if (_transitioning) return;
+    _transitioning = true;
     try {
       await _recorder.resumeRecorder();
       await _startWaveform();
-      setState(() => _isPaused = false);
+      if (mounted) setState(() => _isPaused = false);
     } catch (e) {
       log.warning('resume error', e);
+      if (mounted) SnackBarService.showError(LocServ.inst.t('recording_error'));
+    } finally {
+      _transitioning = false;
     }
   }
 
@@ -382,36 +435,18 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
 
   /// Merges the prefix of [originalWav] (up to [_currentPositionMs]) with the
   /// newly recorded [newFile]. The result overwrites [_recordedPath].
+  ///
+  /// When the original cannot be spliced (not PCM WAV, or another sample
+  /// format than the recorder produces) the new recording is kept on its own
+  /// and the caver is told, so nothing is silently corrupted.
   Future<void> _mergeWavFiles(Uint8List originalWav, File newFile) async {
     final newBytes = await newFile.readAsBytes();
-    final info = _WavInfo.parse(originalWav);
-    final newInfo = _WavInfo.parse(Uint8List.fromList(newBytes));
-
-    final bytesPerSecond =
-        info.sampleRate * info.numChannels * (info.bitsPerSample ~/ 8);
-    final blockAlign = info.numChannels * (info.bitsPerSample ~/ 8);
-
-    int prefixDataBytes = (_currentPositionMs / 1000.0 * bytesPerSecond)
-        .round();
-    prefixDataBytes = (prefixDataBytes ~/ blockAlign) * blockAlign;
-    if (prefixDataBytes > info.dataSize) prefixDataBytes = info.dataSize;
-
-    final newDataSize = prefixDataBytes + newInfo.dataSize;
-
-    // Build WAV header from the original, patching chunk sizes.
-    final header = Uint8List.fromList(originalWav.sublist(0, info.dataOffset));
-    final hd = ByteData.sublistView(header);
-    hd.setUint32(4, info.dataOffset - 8 + newDataSize, Endian.little);
-    hd.setUint32(info.dataOffset - 4, newDataSize, Endian.little);
-
-    final merged = BytesBuilder(copy: false)
-      ..add(header)
-      ..add(
-        originalWav.sublist(info.dataOffset, info.dataOffset + prefixDataBytes),
-      )
-      ..add(newBytes.sublist(newInfo.dataOffset));
-
-    await File(_recordedPath!).writeAsBytes(merged.toBytes(), flush: true);
+    final merged = spliceWav(originalWav, newBytes, _currentPositionMs);
+    if (merged == null) {
+      SnackBarService.showWarning(LocServ.inst.t('audio_splice_unsupported'));
+      return;
+    }
+    await newFile.writeAsBytes(merged, flush: true);
   }
 
   // -----------------------------------------------------------------------
@@ -424,7 +459,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
       if (_isPlaying) {
         await _player.stopPlayer();
         await _playerController.pausePlayer();
-        setState(() => _isPlaying = false);
+        if (mounted) setState(() => _isPlaying = false);
       } else {
         await _player.startPlayer(
           fromURI: _recordedPath,
@@ -434,7 +469,7 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
           },
         );
         await _playerController.startPlayer();
-        setState(() => _isPlaying = true);
+        if (mounted) setState(() => _isPlaying = true);
       }
     } catch (e) {
       log.warning('playback error', e);
@@ -446,9 +481,26 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   // -----------------------------------------------------------------------
 
   Future<void> _save() async {
+    if (_isSaving || _transitioning) return;
+    // Set before the first await: stopping a live recording takes long enough
+    // for a second tap on Save to arrive.
+    setState(() => _isSaving = true);
+    var closed = false;
+    try {
+      closed = await _saveGuarded();
+    } finally {
+      // After a successful save the page is closing; keep Save disabled
+      // through the exit transition.
+      if (!closed && mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  /// Returns whether the page was closed after saving.
+  Future<bool> _saveGuarded() async {
     // If still recording, stop first so the file is flushed.
     if (_isRecording) {
       await _stopRecording();
+      if (!mounted) return false;
     }
 
     String title = _titleCtrl.text.trim();
@@ -466,10 +518,8 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
     }
     if (_recordedPath == null || !File(_recordedPath!).existsSync()) {
       SnackBarService.showWarning(LocServ.inst.t('no_recording'));
-      return;
+      return false;
     }
-
-    setState(() => _isSaving = true);
 
     try {
       final recordedFile = File(_recordedPath!);
@@ -503,14 +553,53 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
         );
       }
 
-      if (mounted) Navigator.pop(context, true);
+      if (!mounted) return false;
+      Navigator.pop(context, true);
+      return true;
     } catch (e) {
       if (mounted) {
         SnackBarService.showError(e);
       }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+      return false;
     }
+  }
+
+  Future<void> _leaveIfConfirmed() async {
+    if (!await _confirmLeave() || !mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  /// Asks what to do with a recording that is not stored. Returns whether the
+  /// page may close now.
+  Future<bool> _confirmLeave() async {
+    if (_isSaving) return false;
+    if (!_isRecording && !_hasUnsavedRecording) return true;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(LocServ.inst.t('unsaved_changes')),
+        content: Text(LocServ.inst.t('unsaved_changes_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'discard'),
+            child: Text(LocServ.inst.t('discard')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            child: Text(LocServ.inst.t('save')),
+          ),
+        ],
+      ),
+    );
+    if (result == 'save') {
+      await _save(); // pops the page on success
+      return false;
+    }
+    return result == 'discard';
   }
 
   // -----------------------------------------------------------------------
@@ -531,195 +620,150 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      key: appMenuScaffoldKey,
-      endDrawer: buildAppMenuEndDrawer(),
-      appBar: AppBar(
-        title: Text(
-          _isEditing
-              ? LocServ.inst.t('edit_audio')
-              : LocServ.inst.t('new_audio_recording'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        await _leaveIfConfirmed();
+      },
+      child: Scaffold(
+        key: appMenuScaffoldKey,
+        endDrawer: buildAppMenuEndDrawer(),
+        appBar: AppBar(
+          title: Text(
+            _isEditing
+                ? LocServ.inst.t('edit_audio')
+                : LocServ.inst.t('new_audio_recording'),
+          ),
+          actions: [
+            if ((_hasRecording || _isRecording) && !_isSaving)
+              IconButton(
+                icon: const Icon(Icons.save),
+                tooltip: LocServ.inst.t('save'),
+                onPressed: _save,
+              ),
+            if (_isSaving)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
+          ],
         ),
-        actions: [
-          if ((_hasRecording || _isRecording) && !_isSaving)
-            IconButton(
-              icon: const Icon(Icons.save),
-              tooltip: LocServ.inst.t('save'),
-              onPressed: _save,
-            ),
-          if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // ---- Title field ----
+              TextField(
+                key: tourKeys['title_field'],
+                controller: _titleCtrl,
+                decoration: InputDecoration(
+                  labelText: LocServ.inst.t('title'),
+                  border: const OutlineInputBorder(),
                 ),
+                textInputAction: TextInputAction.done,
               ),
-            ),
-          KeyedSubtree(key: tourKeys['menu'], child: buildAppBarMenuButton()),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // ---- Title field ----
-            TextField(
-              key: tourKeys['title_field'],
-              controller: _titleCtrl,
-              decoration: InputDecoration(
-                labelText: LocServ.inst.t('title'),
-                border: const OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.done,
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // ---- Waveform visualisation ----
-            if (_isRecording)
-              AudioWaveforms(
-                enableGesture: false,
-                size: Size(MediaQuery.of(context).size.width - 32, 120),
-                recorderController: _waveController,
-                waveStyle: WaveStyle(
-                  waveColor: theme.colorScheme.primary,
-                  extendWaveform: true,
-                  showMiddleLine: true,
-                  middleLineColor: theme.colorScheme.outline,
-                ),
-              )
-            else if (_hasRecording)
-              AudioFileWaveforms(
-                size: Size(MediaQuery.of(context).size.width - 32, 120),
-                playerController: _playerController,
-                enableSeekGesture: true,
-                waveformType: WaveformType.long,
-                playerWaveStyle: PlayerWaveStyle(
-                  fixedWaveColor: theme.colorScheme.outlineVariant,
-                  liveWaveColor: theme.colorScheme.primary,
-                  seekLineColor: theme.colorScheme.primary,
-                ),
-              )
-            else
-              Container(
-                height: 120,
-                alignment: Alignment.center,
-                child: Text(
-                  LocServ.inst.t('tap_record'),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey,
+              // ---- Waveform visualisation ----
+              if (_isRecording)
+                AudioWaveforms(
+                  enableGesture: false,
+                  size: Size(MediaQuery.of(context).size.width - 32, 120),
+                  recorderController: _waveController,
+                  waveStyle: WaveStyle(
+                    waveColor: theme.colorScheme.primary,
+                    extendWaveform: true,
+                    showMiddleLine: true,
+                    middleLineColor: theme.colorScheme.outline,
                   ),
-                ),
-              ),
-
-            const SizedBox(height: 16),
-
-            // ---- Elapsed time ----
-            Text(
-              _formatDuration(_elapsed),
-              style: theme.textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 24),
-
-            // ---- Controls ----
-            Row(
-              key: tourKeys['controls'],
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (_hasRecording && !_isRecording)
-                  IconButton.filled(
-                    iconSize: 36,
-                    onPressed: _togglePlayback,
-                    icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                )
+              else if (_hasRecording)
+                AudioFileWaveforms(
+                  size: Size(MediaQuery.of(context).size.width - 32, 120),
+                  playerController: _playerController,
+                  enableSeekGesture: true,
+                  waveformType: WaveformType.long,
+                  playerWaveStyle: PlayerWaveStyle(
+                    fixedWaveColor: theme.colorScheme.outlineVariant,
+                    liveWaveColor: theme.colorScheme.primary,
+                    seekLineColor: theme.colorScheme.primary,
                   ),
-                if (_isRecording) ...[
-                  // Pause / resume button
-                  IconButton.filled(
-                    iconSize: 36,
-                    style: IconButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondary,
+                )
+              else
+                Container(
+                  height: 120,
+                  alignment: Alignment.center,
+                  child: Text(
+                    LocServ.inst.t('tap_record'),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.grey,
                     ),
-                    onPressed: _isPaused ? _resumeRecording : _pauseRecording,
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // ---- Elapsed time ----
+              Text(
+                _formatDuration(_elapsed),
+                style: theme.textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 24),
+
+              // ---- Controls ----
+              Row(
+                key: tourKeys['controls'],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_hasRecording && !_isRecording)
+                    IconButton.filled(
+                      iconSize: 36,
+                      onPressed: _togglePlayback,
+                      icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                    ),
+                  if (_isRecording) ...[
+                    // Pause / resume button
+                    IconButton.filled(
+                      iconSize: 36,
+                      style: IconButton.styleFrom(
+                        backgroundColor: theme.colorScheme.secondary,
+                      ),
+                      onPressed: _isPaused ? _resumeRecording : _pauseRecording,
+                      icon: Icon(
+                        _isPaused ? Icons.play_arrow : Icons.pause,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                  const SizedBox(width: 24),
+                  IconButton.filled(
+                    iconSize: 48,
+                    style: IconButton.styleFrom(
+                      backgroundColor: _isRecording
+                          ? Colors.red
+                          : theme.colorScheme.primary,
+                    ),
+                    onPressed: _isRecording ? _stopRecording : _startRecording,
                     icon: Icon(
-                      _isPaused ? Icons.play_arrow : Icons.pause,
+                      _isRecording ? Icons.stop : Icons.mic,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 16),
                 ],
-                const SizedBox(width: 24),
-                IconButton.filled(
-                  iconSize: 48,
-                  style: IconButton.styleFrom(
-                    backgroundColor: _isRecording
-                        ? Colors.red
-                        : theme.colorScheme.primary,
-                  ),
-                  onPressed: _isRecording ? _stopRecording : _startRecording,
-                  icon: Icon(
-                    _isRecording ? Icons.stop : Icons.mic,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-//  _WavInfo — lightweight WAV header parser for splice support
-// ---------------------------------------------------------------------------
-
-class _WavInfo {
-  final int sampleRate;
-  final int numChannels;
-  final int bitsPerSample;
-  final int dataOffset; // byte offset where PCM data starts
-  final int dataSize;
-
-  _WavInfo({
-    required this.sampleRate,
-    required this.numChannels,
-    required this.bitsPerSample,
-    required this.dataOffset,
-    required this.dataSize,
-  });
-
-  static _WavInfo parse(Uint8List wav) {
-    final bd = ByteData.sublistView(wav);
-    final sampleRate = bd.getUint32(24, Endian.little);
-    final numChannels = bd.getUint16(22, Endian.little);
-    final bitsPerSample = bd.getUint16(34, Endian.little);
-
-    // Walk RIFF sub-chunks to find the 'data' chunk.
-    int offset = 12;
-    while (offset < wav.length - 8) {
-      final chunkId = String.fromCharCodes(wav.sublist(offset, offset + 4));
-      final chunkSize = bd.getUint32(offset + 4, Endian.little);
-      if (chunkId == 'data') {
-        return _WavInfo(
-          sampleRate: sampleRate,
-          numChannels: numChannels,
-          bitsPerSample: bitsPerSample,
-          dataOffset: offset + 8,
-          dataSize: chunkSize,
-        );
-      }
-      offset += 8 + chunkSize;
-    }
-    // Fallback: standard 44-byte header.
-    return _WavInfo(
-      sampleRate: sampleRate,
-      numChannels: numChannels,
-      bitsPerSample: bitsPerSample,
-      dataOffset: 44,
-      dataSize: wav.length - 44,
     );
   }
 }

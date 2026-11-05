@@ -45,6 +45,7 @@ class DocumentFormatHandler {
     this.buildEditor,
     this.buildViewer,
     this.buildThumbnail,
+    this.canEditDoc,
   });
 
   /// Unique identifier for this format, e.g. `'text'`, `'image'`, `'pdf'`.
@@ -80,8 +81,17 @@ class DocumentFormatHandler {
   /// When null, UI falls back to generic icon placeholders.
   final DocumentThumbnailBuilder? buildThumbnail;
 
+  /// Narrows [buildEditor] to the stored documents it can really edit; when
+  /// null every document of the format is editable. Creating a new document
+  /// is not affected.
+  final bool Function(DocumentationFile doc)? canEditDoc;
+
   bool get hasEditor => buildEditor != null;
   bool get hasViewer => buildViewer != null;
+
+  /// Whether the editor may be offered for the existing [doc].
+  bool canEdit(DocumentationFile doc) =>
+      hasEditor && (canEditDoc?.call(doc) ?? true);
 
   /// Build an editor widget for a [DocumentationGeofeatureLink], unwrapping
   /// the (caveUuid / cavePlaceUuid / caveAreaUuid) fields from the link.
@@ -117,7 +127,7 @@ class DocumentFormatHandler {
   }) {
     if (buildViewer == null) return null;
     final viewer = buildViewer!(file: file, doc: doc);
-    if (!hasEditor) return viewer;
+    if (!canEdit(doc)) return viewer;
     return EditableDocumentViewer(
       doc: doc,
       file: file,
@@ -194,7 +204,7 @@ class DocumentFormatRegistry {
   }) {
     final handler = handlerForDoc(doc);
     if (handler == null) return null;
-    if (handler.hasEditor && link != null) {
+    if (handler.canEdit(doc) && link != null) {
       return handler.buildEditorForLink(link: link, existingDoc: doc);
     }
     return handler.buildEditableViewer(
@@ -390,6 +400,9 @@ void registerBuiltInDocumentFormats() {
           ),
       buildViewer: ({required file, required doc}) =>
           SoundFileViewer(file: file, doc: doc),
+      // The editor records and splices PCM WAV; other containers would be
+      // overwritten with bytes that no longer match their extension.
+      canEditDoc: (doc) => doc.fileName.toLowerCase().endsWith('.wav'),
       buildThumbnail: _iconThumb(Icons.audiotrack, tint: Colors.teal),
     ),
   );

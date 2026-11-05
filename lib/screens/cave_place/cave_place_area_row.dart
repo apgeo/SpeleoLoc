@@ -13,7 +13,7 @@ import 'package:speleoloc/utils/localization.dart';
 /// - A manage-areas icon button whose action is entirely delegated to
 ///   [onManageAreas] (the parent navigates to CaveAreasPage and reloads).
 /// - An optional "show PCI row" eye icon (visible when [pciRowHidden]).
-class CavePlaceAreaRow extends StatelessWidget {
+class CavePlaceAreaRow extends StatefulWidget {
   const CavePlaceAreaRow({
     super.key,
     required this.form,
@@ -42,6 +42,21 @@ class CavePlaceAreaRow extends StatelessWidget {
   final VoidCallback onShowPciRow;
 
   @override
+  State<CavePlaceAreaRow> createState() => _CavePlaceAreaRowState();
+}
+
+class _CavePlaceAreaRowState extends State<CavePlaceAreaRow> {
+  /// The dropdown field changes its own value before `onChanged` runs and
+  /// takes a new one from the form only when `initialValue` changes, so a
+  /// refused change has to be undone through the field itself.
+  final _areaField = GlobalKey<FormFieldState<Uuid?>>();
+
+  /// Set while the field is being put back, which calls `onChanged` again.
+  bool _restoring = false;
+
+  CavePlaceFormController get form => widget.form;
+
+  @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -49,7 +64,7 @@ class CavePlaceAreaRow extends StatelessWidget {
         SizedBox(
           width: 80,
           child: TextFormField(
-            key: depthFieldKey,
+            key: widget.depthFieldKey,
             controller: form.depth,
             decoration: InputDecoration(
               labelText: "Depth '+/-'",
@@ -70,6 +85,7 @@ class CavePlaceAreaRow extends StatelessWidget {
 
         Expanded(
           child: DropdownButtonFormField<Uuid?>(
+            key: _areaField,
             initialValue: form.selectedCaveAreaId,
             decoration: InputDecoration(
               labelText: LocServ.inst.t('area_title'),
@@ -79,7 +95,7 @@ class CavePlaceAreaRow extends StatelessWidget {
                 value: null,
                 child: Text(LocServ.inst.t('none')),
               ),
-              ...caveAreas.map(
+              ...widget.caveAreas.map(
                 (a) => DropdownMenuItem<Uuid?>(
                   value: a.uuid,
                   child: Text(a.title),
@@ -87,6 +103,7 @@ class CavePlaceAreaRow extends StatelessWidget {
               ),
             ],
             onChanged: (v) async {
+              if (_restoring) return;
               final old = form.selectedCaveAreaId;
               if (v == null && old != null) {
                 final confirmed = await showDialog<bool>(
@@ -106,9 +123,15 @@ class CavePlaceAreaRow extends StatelessWidget {
                     ],
                   ),
                 );
-                if (confirmed == true) onAreaChanged(null);
+                if (confirmed == true) {
+                  widget.onAreaChanged(null);
+                } else {
+                  _restoring = true;
+                  _areaField.currentState?.didChange(old);
+                  _restoring = false;
+                }
               } else {
-                onAreaChanged(v);
+                widget.onAreaChanged(v);
               }
             },
           ),
@@ -122,10 +145,10 @@ class CavePlaceAreaRow extends StatelessWidget {
           style: IconButton.styleFrom(
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          onPressed: onManageAreas,
+          onPressed: widget.onManageAreas,
         ),
 
-        if (pciRowHidden)
+        if (widget.pciRowHidden)
           IconButton(
             icon: const Icon(Icons.visibility),
             tooltip: LocServ.inst.t('show_place_code_row'),
@@ -134,7 +157,7 @@ class CavePlaceAreaRow extends StatelessWidget {
             style: IconButton.styleFrom(
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: onShowPciRow,
+            onPressed: widget.onShowPciRow,
           ),
       ],
     );

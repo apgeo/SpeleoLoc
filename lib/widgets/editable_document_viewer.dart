@@ -41,9 +41,9 @@ class EditableDocumentViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final handler = DocumentFormatRegistry.instance.handlerForDoc(doc);
-    final hasEditor = handler?.hasEditor ?? false;
+    final canEdit = handler?.canEdit(doc) ?? false;
 
-    if (!hasEditor) return child;
+    if (!canEdit) return child;
 
     return Stack(
       children: [

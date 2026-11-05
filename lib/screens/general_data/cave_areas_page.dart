@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_area_title_clash_exception.dart';
+import 'package:speleoloc/screens/general_data/cave_area_dialog.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -62,52 +63,11 @@ class _CaveAreasPageState extends ConsumerState<CaveAreasPage>
   }
 
   Future<void> _showAddEditDialog({CaveArea? existing}) async {
-    final controller = TextEditingController(text: existing?.title ?? '');
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          existing == null
-              ? LocServ.inst.t('add_cave_area')
-              : LocServ.inst.t('edit'),
-        ),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: LocServ.inst.t('enter_area_title'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(LocServ.inst.t('cancel')),
-          ),
-          TextButton(
-            onPressed: () async {
-              final title = controller.text.trim();
-              if (title.isEmpty) return;
-              if (existing == null) {
-                await ref
-                    .read(caveRepositoryProvider)
-                    .addCaveArea(widget.caveUuid, title);
-              } else {
-                await ref
-                    .read(caveRepositoryProvider)
-                    .updateCaveAreaTitle(
-                      uuid: existing.uuid,
-                      newTitle: title,
-                      oldTitle: existing.title,
-                    );
-              }
-              if (!context.mounted) return;
-              Navigator.pop(context, true);
-            },
-            child: Text(LocServ.inst.t('save')),
-          ),
-        ],
-      ),
+    final result = await CaveAreaDialog.show(
+      context,
+      caveUuid: widget.caveUuid,
+      existing: existing,
     );
-    controller.dispose();
 
     if (result == true) {
       _changed = true;
