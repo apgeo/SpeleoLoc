@@ -13,6 +13,7 @@ import 'package:speleoloc/widgets/icon_action_button.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/full_screen_image_viewer.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/raster_map/raster_map_thumbnail.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 class RasterMapsPage extends ConsumerStatefulWidget {
@@ -51,6 +52,9 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
 
   List<RasterMap> _rasterMaps = [];
 
+  /// Where map pictures are stored, resolved once with the first load.
+  String? _picturesDir;
+
   bool _changed = false;
   bool _reorderMode = false;
 
@@ -64,6 +68,7 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
     _rasterMaps = await ref
         .read(rasterMapRepositoryProvider)
         .getRasterMaps(widget.caveUuid);
+    _picturesDir ??= (await getApplicationDocumentsDirectory()).path;
     if (mounted) setState(() {});
   }
 
@@ -151,9 +156,10 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
     }
   }
 
-  Future<String> _getFullImagePath(String fileName) async {
-    final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/$fileName';
+  Widget _thumbnail(RasterMap rm) {
+    final dir = _picturesDir;
+    if (dir == null) return const Icon(Icons.image);
+    return RasterMapThumbnail(file: File('$dir/${rm.fileName}'));
   }
 
   void _viewImage(RasterMap rm) async {
@@ -265,61 +271,41 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
   }
 
   Widget _buildNormalList() {
-    return SingleChildScrollView(
+    // Built lazily: only the rows on screen decode their thumbnails.
+    return ListView.builder(
       key: tourKeys['list'],
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(16.0),
+      itemCount: _rasterMaps.length,
+      itemBuilder: (context, index) {
+        final rm = _rasterMaps[index];
+        return Column(
           children: [
-            ..._rasterMaps.map(
-              (rm) => Column(
+            ListTile(
+              leading: SizedBox(width: 50, height: 50, child: _thumbnail(rm)),
+              title: Text(rm.title),
+              onTap: () => _viewImage(rm),
+              hoverColor: Colors.grey[200],
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  ListTile(
-                    leading: SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: FutureBuilder<String>(
-                        future: _getFullImagePath(rm.fileName),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            return Image.file(
-                              File(snapshot.data!),
-                              fit: BoxFit.cover,
-                            );
-                          } else {
-                            return const Icon(Icons.image);
-                          }
-                        },
-                      ),
-                    ),
-                    title: Text(rm.title),
-                    onTap: () => _viewImage(rm),
-                    hoverColor: Colors.grey[200],
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconActionButton(
-                          onPressed: () => _editRasterMap(rm),
-                          icon: Icons.edit,
-                          tooltip: LocServ.inst.t('edit_raster_map'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconActionButton(
-                          onPressed: () => _confirmDeleteRasterMap(rm.uuid),
-                          icon: Icons.delete,
-                          tooltip: LocServ.inst.t('delete_raster_map'),
-                        ),
-                      ],
-                    ),
+                  IconActionButton(
+                    onPressed: () => _editRasterMap(rm),
+                    icon: Icons.edit,
+                    tooltip: LocServ.inst.t('edit_raster_map'),
                   ),
-                  Divider(height: 1, color: Colors.grey[300]),
+                  const SizedBox(width: 8),
+                  IconActionButton(
+                    onPressed: () => _confirmDeleteRasterMap(rm.uuid),
+                    icon: Icons.delete,
+                    tooltip: LocServ.inst.t('delete_raster_map'),
+                  ),
                 ],
               ),
             ),
+            Divider(height: 1, color: Colors.grey[300]),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -348,23 +334,7 @@ class _RasterMapsPageState extends ConsumerState<RasterMapsPage>
           child: Column(
             children: [
               ListTile(
-                leading: SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: FutureBuilder<String>(
-                    future: _getFullImagePath(rm.fileName),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return Image.file(
-                          File(snapshot.data!),
-                          fit: BoxFit.cover,
-                        );
-                      } else {
-                        return const Icon(Icons.image);
-                      }
-                    },
-                  ),
-                ),
+                leading: SizedBox(width: 50, height: 50, child: _thumbnail(rm)),
                 title: Text(rm.title),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,

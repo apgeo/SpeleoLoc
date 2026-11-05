@@ -433,21 +433,6 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                                 );
                               }
                               final f = File(snap.data!);
-                              if (!f.existsSync()) {
-                                return Container(
-                                  width: s.rasterMapPlaceholderSize,
-                                  height: s.rasterMapPlaceholderSize,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    size: s.rasterMapBrokenIconSize,
-                                    color: Colors.grey,
-                                  ),
-                                );
-                              }
                               // Decode at thumbnail width under a '#thumb'
                               // cache key — reusing the editor's full-res
                               // FileImage here would pin every map's full
@@ -470,6 +455,24 @@ class RasterMapNavBarState extends State<RasterMapNavBar> {
                                   width: s.rasterMapImageSize,
                                   height: s.rasterMapImageSize,
                                   fit: BoxFit.cover,
+                                  // A missing picture fails the decode, so
+                                  // nothing stats the file while building.
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        width: s.rasterMapPlaceholderSize,
+                                        height: s.rasterMapPlaceholderSize,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          size: s.rasterMapBrokenIconSize,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                                 ),
                               );
                             },
