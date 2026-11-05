@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/retry.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/map/map_mbtiles_config.dart';
@@ -12,6 +13,7 @@ import 'package:speleoloc/services/map/tile_layer_sources.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/widgets/map/cached_network_tile_provider.dart';
+import 'package:speleoloc/widgets/map/map_tile_http_client.dart';
 import 'package:speleoloc/widgets/map/mbtiles_tile_provider.dart';
 
 /// Owns the surface map's tile stack: the selected base layer, the
@@ -56,7 +58,8 @@ class CaveMapLayersController extends ChangeNotifier {
 
   List<MbTilesDescriptor> get baseDescriptors => [
     for (final d in _mbtiles)
-      if (d.metadata.isRaster && _mbConfig.roleOf(d.fileName) == MbTilesRole.base)
+      if (d.metadata.isRaster &&
+          _mbConfig.roleOf(d.fileName) == MbTilesRole.base)
         d,
   ];
 
@@ -199,7 +202,9 @@ class CaveMapLayersController extends ChangeNotifier {
       userAgentPackageName: _userAgentPackageName,
       tileProvider: (_tileCacheEnabled && cache != null)
           ? CachedNetworkTileProvider(sourceId: source.id, cache: cache)
-          : null,
+          // flutter_map's own default, retries included, on the shared
+          // client so the bundled roots apply without the cache too.
+          : NetworkTileProvider(httpClient: RetryClient(mapTileHttpClient)),
     );
   }
 

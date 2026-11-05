@@ -99,13 +99,9 @@ Tap the **bin** icon and confirm. Deleting an area cannot be undone — the
 area is removed from the database, not archived, and the removal travels
 to other devices at the next sync.
 
-An area can only be deleted once **no cave is still assigned to it**.
-Assign those caves elsewhere first, or set their **Area title (optional)**
-back to *None*. Deleting an area that is still in use currently fails
-without telling you: the confirmation closes, no message appears, and the
-area is still in the list. If that happens, that is why.
-
-Deleting an area never deletes the caves in it.
+Deleting an area never deletes the caves in it. Caves still assigned to it
+stay, with **Area title (optional)** back to *None*, on this device and on
+the others after their next sync.
 
 > Note: the confirmation text on this screen reads *"This will delete the
 > cave area. Are you sure?"*. It is the wording of the cave-area dialog

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
+import 'package:speleoloc/services/delete_cascades.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/services/trip_participants.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
@@ -166,59 +167,11 @@ class CaveTripRepository implements ICaveTripRepository {
   Future<void> deleteCaveTrip(Uuid tripUuid) async {
     try {
       await _database.transaction(() async {
-        // Snapshot the rows the cascade will remove, then log a tombstone
-        // for every one of them: sync propagates deletes per-uuid via
-        // change_log, so a missing child tombstone leaves orphaned rows on
-        // peers (and fails their deferred-FK check on import).
+        // With no trip row there are no points or links either: each of
+        // them holds a foreign key to it.
         final trip = await findById(tripUuid);
-        final points = await _database.getTripPoints(tripUuid);
-        final docLinks = await (_database.select(
-          _database.documentationFilesToCaveTrips,
-        )..where((t) => t.caveTripUuid.equalsValue(tripUuid))).get();
-        final pointLinks = <DocumentationFilesToCaveTripPoint>[];
-        for (final p in points) {
-          pointLinks.addAll(await _database.getTripPointDocumentLinks(p.uuid));
-        }
-
-        await _database.deleteCaveTrip(tripUuid);
-
-        if (trip != null) {
-          await _logger.logDelete(
-            'cave_trips',
-            tripUuid,
-            oldValues: {'title': trip.title, 'cave_uuid': trip.caveUuid},
-          );
-        }
-        for (final p in points) {
-          await _logger.logDelete(
-            'cave_trip_points',
-            p.uuid,
-            oldValues: {
-              'cave_trip_uuid': p.caveTripUuid,
-              'cave_place_uuid': p.cavePlaceUuid,
-            },
-          );
-        }
-        for (final l in docLinks) {
-          await _logger.logDelete(
-            'documentation_files_to_cave_trips',
-            l.uuid,
-            oldValues: {
-              'documentation_file_uuid': l.documentationFileUuid,
-              'cave_trip_uuid': l.caveTripUuid,
-            },
-          );
-        }
-        for (final l in pointLinks) {
-          await _logger.logDelete(
-            'documentation_files_to_cave_trip_points',
-            l.uuid,
-            oldValues: {
-              'documentation_file_uuid': l.documentationFileUuid,
-              'cave_trip_point_uuid': l.caveTripPointUuid,
-            },
-          );
-        }
+        if (trip == null) return;
+        await deleteTripsWithChildren(_database, _logger, [trip]);
       });
     } catch (e, st) {
       _log.severe('Failed to delete cave trip', e, st);

@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_area_title_clash_exception.dart';
 import 'package:speleoloc/services/cave_model/model_links_cleanup.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/delete_cascades.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -120,12 +122,52 @@ class CaveRepository implements ICaveRepository {
     }
   }
 
+  /// Writes only the index, so a code generated while another edit of the
+  /// cave is open does not overwrite that edit's other fields.
+  @override
+  Future<void> setCaveLocalIndex(Uuid caveUuid, String caveLocalIndex) async {
+    try {
+      await _database.transaction(() async {
+        final old =
+            await (_database.select(_database.caves)
+                  ..where((c) => c.uuid.equalsValue(caveUuid))
+                  ..limit(1))
+                .getSingleOrNull();
+        if (old == null || old.caveLocalIndex == caveLocalIndex) return;
+        await (_database.update(
+          _database.caves,
+        )..where((c) => c.uuid.equalsValue(caveUuid))).write(
+          CavesCompanion(
+            caveLocalIndex: Value(caveLocalIndex),
+            updatedAt: Value(_clock.nowMs()),
+            lastModifiedByUserUuid: Value(await _currentUser.currentOrSystem()),
+          ),
+        );
+        await _logger.logUpdate(
+          'caves',
+          caveUuid,
+          oldValues: {'cave_local_index': old.caveLocalIndex},
+          newValues: {'cave_local_index': caveLocalIndex},
+        );
+      });
+    } catch (e, st) {
+      _log.severe('Failed to set cave local index', e, st);
+      throw DbException(
+        'Failed to set cave local index',
+        cause: e,
+        stackTrace: st,
+      );
+    }
+  }
+
   @override
   Future<void> deleteCave(Uuid id) async {
     try {
       await _database.transaction(() async {
-        // Capture pre-image of the cave for the tombstone so peers can
-        // LWW-delete locally on sync import.
+        final now = _clock.nowMs();
+        final author = await _currentUser.currentOrSystem();
+        // Pre-images, captured before the rows go, for the tombstones peers
+        // need to remove the same rows on sync import.
         final caveRow =
             await (_database.select(_database.caves)
                   ..where((c) => c.uuid.equalsValue(id))
@@ -149,70 +191,42 @@ class CaveRepository implements ICaveRepository {
         final caveTrips = await (_database.select(
           _database.caveTrips,
         )..where((t) => t.caveUuid.equalsValue(id))).get();
-        final caveTripIds = caveTrips.map((t) => t.uuid).toList();
 
         final beacons = await (_database.select(
           _database.cavePlaceBeacons,
         )..where((b) => b.caveUuid.equalsValue(id))).get();
 
-        // Remove geofeature links for cave, cave places and cave areas.
-        await (_database.delete(_database.documentationFilesToGeofeatures)
-              ..where(
-                (g) =>
-                    (g.geofeatureType.equals('cave') &
-                    g.geofeatureUuid.equalsValue(id)),
-              ))
-            .go();
-        if (cavePlaceIds.isNotEmpty) {
-          await (_database.delete(_database.documentationFilesToGeofeatures)
-                ..where(
-                  (g) =>
-                      g.geofeatureType.equals('cave_place') &
-                      g.geofeatureUuid.isInValues(cavePlaceIds),
-                ))
-              .go();
-        }
-        if (caveAreaIds.isNotEmpty) {
-          await (_database.delete(_database.documentationFilesToGeofeatures)
-                ..where(
-                  (g) =>
-                      g.geofeatureType.equals('cave_area') &
-                      g.geofeatureUuid.isInValues(caveAreaIds),
-                ))
-              .go();
-        }
-
-        // Remove place/map definitions tied to this cave.
-        if (cavePlaceIds.isNotEmpty || rasterMapIds.isNotEmpty) {
-          await (_database.delete(_database.cavePlaceToRasterMapDefinitions)
-                ..where((d) {
-                  final byPlace = cavePlaceIds.isNotEmpty
-                      ? d.cavePlaceUuid.isInValues(cavePlaceIds)
-                      : const Constant(false);
-                  final byMap = rasterMapIds.isNotEmpty
-                      ? d.rasterMapUuid.isInValues(rasterMapIds)
-                      : const Constant(false);
-                  return byPlace | byMap;
-                }))
-              .go();
-        }
-
-        // Remove trip points and trips for this cave.
-        if (caveTripIds.isNotEmpty || cavePlaceIds.isNotEmpty) {
-          await (_database.delete(_database.caveTripPoints)..where((tp) {
-                final byTrip = caveTripIds.isNotEmpty
-                    ? tp.caveTripUuid.isInValues(caveTripIds)
-                    : const Constant(false);
-                final byPlace = cavePlaceIds.isNotEmpty
-                    ? tp.cavePlaceUuid.isInValues(cavePlaceIds)
-                    : const Constant(false);
-                return byTrip | byPlace;
-              }))
-              .go();
-        }
-        await (_database.delete(
-          _database.caveTrips,
-        )..where((t) => t.caveUuid.equalsValue(id))).go();
+        await deleteGeofeatureLinks(_database, _logger, GeofeatureType.cave, [
+          id,
+        ]);
+        await deleteGeofeatureLinks(
+          _database,
+          _logger,
+          GeofeatureType.cavePlace,
+          cavePlaceIds,
+        );
+        await deleteGeofeatureLinks(
+          _database,
+          _logger,
+          GeofeatureType.caveArea,
+          caveAreaIds,
+        );
+        await deletePlaceMapDefinitions(
+          _database,
+          _logger,
+          placeUuids: cavePlaceIds,
+          mapUuids: rasterMapIds,
+        );
+        await deleteTripsWithChildren(_database, _logger, caveTrips);
+        // A trip of another cave may have recorded a visit to one of these
+        // places; that point stays with its own trip.
+        await detachTripPointsFromPlaces(
+          _database,
+          _logger,
+          placeUuids: cavePlaceIds,
+          now: now,
+          author: author,
+        );
 
         await deleteModelLinks(_database, _logger, caveUuid: id);
 
@@ -242,9 +256,6 @@ class CaveRepository implements ICaveRepository {
           _database.caves,
         )..where((c) => c.uuid.equalsValue(id))).go();
 
-        // Log deletion tombstones for the cave itself and its direct
-        // children (places, maps, areas, trips, beacons). Peers will use
-        // these during sync import to propagate the delete cascade.
         if (caveRow != null) {
           await _logger.logDelete(
             'caves',
@@ -275,13 +286,6 @@ class CaveRepository implements ICaveRepository {
             'cave_areas',
             a.uuid,
             oldValues: {'title': a.title, 'cave_uuid': a.caveUuid},
-          );
-        }
-        for (final t in caveTrips) {
-          await _logger.logDelete(
-            'cave_trips',
-            t.uuid,
-            oldValues: {'title': t.title, 'cave_uuid': t.caveUuid},
           );
         }
         for (final b in beacons) {
@@ -415,14 +419,84 @@ class CaveRepository implements ICaveRepository {
   @override
   Future<void> deleteCaveArea(CaveArea area) async {
     try {
-      await (_database.delete(
-        _database.caveAreas,
-      )..where((a) => a.uuid.equalsValue(area.uuid))).go();
-      await _logger.logDelete(
-        'cave_areas',
-        area.uuid,
-        oldValues: {'title': area.title, 'cave_uuid': area.caveUuid},
-      );
+      await _database.transaction(() async {
+        final now = _clock.nowMs();
+        final author = await _currentUser.currentOrSystem();
+
+        // Its places and maps stay in the cave, outside any area. A place
+        // there may already hold the title one of them brings along, and two
+        // places outside every area cannot share a title.
+        final places = await (_database.select(
+          _database.cavePlaces,
+        )..where((p) => p.caveAreaUuid.equalsValue(area.uuid))).get();
+        if (places.isNotEmpty) {
+          final clash =
+              await (_database.select(_database.cavePlaces)
+                    ..where(
+                      (p) =>
+                          p.caveUuid.equalsValue(area.caveUuid) &
+                          p.caveAreaUuid.isNull() &
+                          p.title.isIn(places.map((x) => x.title)),
+                    )
+                    ..limit(1))
+                  .getSingleOrNull();
+          if (clash != null) throw CaveAreaTitleClashException(clash.title);
+        }
+        for (final p in places) {
+          await (_database.update(
+            _database.cavePlaces,
+          )..where((t) => t.uuid.equalsValue(p.uuid))).write(
+            CavePlacesCompanion(
+              caveAreaUuid: const Value(null),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
+          await _logger.logUpdate(
+            'cave_places',
+            p.uuid,
+            oldValues: {'cave_area_uuid': p.caveAreaUuid},
+            newValues: {'cave_area_uuid': null},
+          );
+        }
+        final maps = await (_database.select(
+          _database.rasterMaps,
+        )..where((m) => m.caveAreaUuid.equalsValue(area.uuid))).get();
+        for (final m in maps) {
+          await (_database.update(
+            _database.rasterMaps,
+          )..where((t) => t.uuid.equalsValue(m.uuid))).write(
+            RasterMapsCompanion(
+              caveAreaUuid: const Value(null),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
+          await _logger.logUpdate(
+            'raster_maps',
+            m.uuid,
+            oldValues: {'cave_area_uuid': m.caveAreaUuid},
+            newValues: {'cave_area_uuid': null},
+          );
+        }
+        await deleteGeofeatureLinks(
+          _database,
+          _logger,
+          GeofeatureType.caveArea,
+          [area.uuid],
+        );
+
+        await (_database.delete(
+          _database.caveAreas,
+        )..where((a) => a.uuid.equalsValue(area.uuid))).go();
+        await _logger.logDelete(
+          'cave_areas',
+          area.uuid,
+          oldValues: {'title': area.title, 'cave_uuid': area.caveUuid},
+        );
+      });
+    } on CaveAreaTitleClashException {
+      rethrow;
     } catch (e, st) {
       _log.severe('Failed to delete cave area', e, st);
       throw DbException('Failed to delete cave area', cause: e, stackTrace: st);
@@ -509,14 +583,40 @@ class CaveRepository implements ICaveRepository {
   @override
   Future<void> deleteSurfaceArea(SurfaceArea area) async {
     try {
-      await (_database.delete(
-        _database.surfaceAreas,
-      )..where((a) => a.uuid.equalsValue(area.uuid))).go();
-      await _logger.logDelete(
-        'surface_areas',
-        area.uuid,
-        oldValues: {'title': area.title, 'description': area.description},
-      );
+      await _database.transaction(() async {
+        final now = _clock.nowMs();
+        final author = await _currentUser.currentOrSystem();
+        // Its caves stay, outside any surface area. Caves without one never
+        // clash on title, so nothing can block this.
+        final caves = await (_database.select(
+          _database.caves,
+        )..where((c) => c.surfaceAreaUuid.equalsValue(area.uuid))).get();
+        for (final c in caves) {
+          await (_database.update(
+            _database.caves,
+          )..where((t) => t.uuid.equalsValue(c.uuid))).write(
+            CavesCompanion(
+              surfaceAreaUuid: const Value(null),
+              updatedAt: Value(now),
+              lastModifiedByUserUuid: Value(author),
+            ),
+          );
+          await _logger.logUpdate(
+            'caves',
+            c.uuid,
+            oldValues: {'surface_area_uuid': c.surfaceAreaUuid},
+            newValues: {'surface_area_uuid': null},
+          );
+        }
+        await (_database.delete(
+          _database.surfaceAreas,
+        )..where((a) => a.uuid.equalsValue(area.uuid))).go();
+        await _logger.logDelete(
+          'surface_areas',
+          area.uuid,
+          oldValues: {'title': area.title, 'description': area.description},
+        );
+      });
     } catch (e, st) {
       _log.severe('Failed to delete surface area', e, st);
       throw DbException(

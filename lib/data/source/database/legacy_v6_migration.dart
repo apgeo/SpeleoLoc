@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:speleoloc/data/source/database/migrations/raster_map_type.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
@@ -175,6 +176,11 @@ Future<LegacyV6Snapshot> snapshotLegacyV6(DatabaseConnectionUser db) async {
 
 /// Phase 2: drop all pre-v7 tables. Caller must then run
 /// `migrator.createAll()` so the new UUID-PK tables exist before phase 3.
+///
+/// The snapshot is the only copy of the data from here until phase 3
+/// commits, so all three phases must run inside one transaction, as the
+/// schema upgrade runs them, with foreign keys off: a kill in between then
+/// leaves the legacy tables as they were.
 Future<void> dropLegacyV6Tables(DatabaseConnectionUser db) async {
   const tablesToDrop = [
     'documentation_files_to_cave_trips',
@@ -193,7 +199,6 @@ Future<void> dropLegacyV6Tables(DatabaseConnectionUser db) async {
     'documentation_files',
     'configurations',
   ];
-  await db.customStatement('PRAGMA foreign_keys = OFF');
   for (final t in tablesToDrop) {
     await db.customStatement('DROP TABLE IF EXISTS $t');
   }
@@ -207,12 +212,6 @@ Future<void> reinsertLegacyData(
 ) async {
   final log = AppLogger.of('LegacyV6Migration');
   log.info('Phase 3: re-inserting legacy rows into v7 schema …');
-
-  // Disable FK checks during bulk insert so row ordering within a table
-  // (e.g. self-referencing orderings, if any) never trips a constraint.
-  // createAll() re-enables; we toggle explicitly for clarity.
-  // PRAGMA must run outside the transaction (it is a no-op inside one).
-  await db.customStatement('PRAGMA foreign_keys = OFF');
 
   // Wrap every insert in a single transaction. Without this, each
   // customInsert auto-commits, triggering one fsync per row — with ~11k
@@ -312,7 +311,7 @@ Future<void> reinsertLegacyData(
     final rasterSeenTitle = <String>{};
     for (final r in snap.rasterMaps) {
       final legacyId = r['id'] as int;
-      final mapType = r['map_type'] as String;
+      final mapType = rasterMapTypeOrOther(r['map_type']);
       final caveId = r['cave_id'];
       var title = r['title'] as String;
       var fileName = r['file_name'] as String;
@@ -562,7 +561,6 @@ Future<void> reinsertLegacyData(
     }
   }); // end transaction
 
-  await db.customStatement('PRAGMA foreign_keys = ON');
   log.info('Phase 3 complete: ${snap.totalRows} rows inserted.');
 }
 

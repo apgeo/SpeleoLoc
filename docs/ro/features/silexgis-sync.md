@@ -408,6 +408,14 @@ deja pe acest dispozitiv, care nu mai sunt pe server pentru dumneavoastră,
 care nu sunt date acestui cont, sau care nu au putut fi descărcate
 (**încearcă din nou ca să continui**).
 
+O fotografie sau un document scos de pe o peșteră, un loc sau o tură în
+interfața web este scos și de aici, la următoarea sincronizare, iar telefonul
+nu îl pune la loc. O excepție: un fișier al dumneavoastră își păstrează
+ultimul loc pe care stă. Serverul raportează la fel o legătură scoasă și un
+fișier șters acolo, iar dacă fișierul a fost șters acolo, următoarea lui
+editare îl trimite din nou, împreună cu locul unde stă pe telefonul
+dumneavoastră.
+
 ### Copiile de pe server
 
 Ce primește contul dumneavoastră depinde de regulile instalării, fișier cu
@@ -526,7 +534,8 @@ indicator rotativ):
 
 Cât timp o rulare este în curs, restul ecranului o așteaptă și el:
 creionul, **Autentificare**, **Uită**, **Alege** și comutatoarele sunt
-inactive până la sfârșitul rulării. Rularea continuă cu serverul,
+inactive până la sfârșitul rulării, iar între timp fiecare card scrie sub
+ele *Disponibil după ce se termină sincronizarea*. Rularea continuă cu serverul,
 autentificarea și setările cu care a pornit, așa că o schimbare făcută la
 jumătate ar fi anulată de ea sau ar lăsa-o să scrie sub un server pe care
 tocmai l-ați uitat.
@@ -590,16 +599,24 @@ Aceasta este partea distructivă, în ambele sensuri.
   Peștera sau locul rămâne așa cum este, nu este trimis și ajunge pe pagina
   **Necesită o decizie** ca **Ștearsă pe server, dar conține lucru de-al tău
   pe care serverul nu l-a avut**; vedeți [Pagina Necesită o
-  decizie](#pagina-necesită-o-decizie).
+  decizie](#pagina-necesită-o-decizie). Acolo o puteți șterge și de aici,
+  o puteți păstra pe telefon sau o puteți trimite din nou la server ca
+  element nou. Serverul păstrează pentru totdeauna identitatea unui element
+  șters, așa că o peșteră trimisă din nou pleacă sub identificatori noi, cu
+  fiecare zonă și loc din ea, iar turele, hărțile, fotografiile și
+  documentele ei sunt mutate pe ea pe telefon. Serverul vede elemente noi;
+  deocamdată nimic de pe el nu spune că au fost șterse acolo înainte.
 - O peșteră sau un loc **pe care îl ștergeți aici**, dacă serverul îl
   cunoștea deja, este trimis ca ștergere la următoarea rulare, iar serverul îl
   elimină *cu tot ce se află în el*. Turele și hărțile raster pleacă la fel,
   chiar și una venită de pe alt telefon: serverul o elimină pentru toți, iar
   telefonul care a făcut-o își șterge propria copie la următoarea
-  sincronizare. Ștergerea unei ture sau a unei hărți raster pe care serverul o
-  are spune asta în confirmare: *Și Clubul Speo Example are acest element.
-  Următoarea sincronizare îl șterge și acolo, pentru toți cei care îl citesc, inclusiv
-  pentru cel care l-a făcut.*
+  sincronizare. Ștergerea unei peșteri, a unui loc, a unei ture sau a unei
+  hărți raster pe care serverul o are spune asta în confirmare: *Și Clubul
+  Speo Example are acest element. Următoarea sincronizare îl șterge și acolo,
+  pentru toți cei care îl citesc, inclusiv pentru cel care l-a făcut.*
+  Ștergerea mai multor peșteri sau locuri deodată le numără pe cele pe care
+  serverul le are: *Și Clubul Speo Example are 2 dintre ele. …*
 
 Niciuna nu cere confirmare în momentul sincronizării. Confirmarea a fost
 însăși ștergerea. Dacă nu sunteți sigur, faceți o copie de siguranță înainte
@@ -780,7 +797,9 @@ după caz:
 | Buton | Ce se întâmplă |
 |---|---|
 | **Folosește versiunea serverului** | Întreabă întâi, în afară de cazul în care elementul este o ștergere de-a dumneavoastră: **Folosești versiunea serverului?** — *Versiunea ta de pe acest dispozitiv este înlocuită cu cea a serverului. Modificările tale se pierd.* Apoi versiunea dumneavoastră este înlocuită cu a serverului: **Versiunea serverului a fost pusă la loc.** Când telefonul nu a primit versiunea serverului, butonul scrie **Recitește de pe server**, iar răspunsul este **Versiunea serverului vine la următoarea sincronizare.** |
-| **Păstrează-o pe a mea, nu o trimite** | **Păstrată pe acest dispozitiv. Se trimite din nou când o modifici.** Pentru ceva șters pe server: **Păstrată doar pe acest dispozitiv. Nu se trimite la server.** |
+| **Păstrează-o pe a mea, nu o trimite** | **Păstrată pe acest dispozitiv. Se trimite din nou când o modifici.** Pentru ceva șters pe server întreabă întâi: **O păstrezi pe acest dispozitiv?** — *Clubul Speo Example nu o mai are. Rămâne pe acest dispozitiv și nu se trimite. Dacă o modifici pe ea sau ceva din ea, următoarea sincronizare o trimite din nou la Clubul Speo Example ca element nou, cu tot ce conține.* Apoi: **Păstrată doar pe acest dispozitiv. Dacă o modifici, pleacă din nou la server ca element nou.** Rămâne pe această pagină marcată **Păstrată doar pe acest dispozitiv**, iar cardul **Necesită atenția ta** o numără ca **1 păstrate doar pe acest dispozitiv**, ca să o puteți încă trimite din nou sau șterge. |
+| **Trimite din nou ca nou** | Pentru ceva șters pe server, păstrat sau nu. Întreabă întâi: **O trimiți din nou ca element nou?** — *Clubul Speo Example a șters-o. Următoarea sincronizare o trimite acolo din nou ca element nou, cu tot ce conține. Pe acest dispozitiv primește identificatori noi, așa că nu mai contează ca elementul care a fost șters.* Apoi: **Pleacă la server ca element nou la următoarea sincronizare.** Pleacă chiar și când **Trimite peșterile explorate în altă parte** este oprit; o peșteră trimisă astfel nu este în selecția dumneavoastră de pe server până nu o adaugă cineva acolo. |
+| **Trimite-o oricum pe a mea** | Pentru o peșteră, o zonă sau un loc schimbat și pe server, când telefonul a primit versiunea serverului. Întreabă întâi: **Trimiți totuși versiunea ta?** — *Următoarea sincronizare scrie versiunea ta peste cea mai nouă de pe Clubul Speo Example: numele, descrierea, proprietățile și poziția devin toate ale tale. Ce s-a schimbat acolo de la ultima ta sincronizare se pierde.* Apoi: **Versiunea ta pleacă la următoarea sincronizare.** Dacă cineva o schimbă din nou pe server înainte de asta, revine aici ca un conflict nou. |
 | **Șterge** | Pentru ceva ce serverul nu a avut niciodată. **Ștergi această ciornă?** — *Serverul nu a avut-o niciodată. Dacă o ștergi, dispare de pe acest dispozitiv.* Pentru ceva șters pe server: **O ștergi și de aici?** — *Serverul nu o mai are. Dacă o ștergi, dispare de pe acest dispozitiv, cu tot ce conține și cu modificările tale netrimise.* |
 | **Șterge punctul meu** | Pentru un al doilea punct pe același loc. Punctul dumneavoastră pleacă, iar cel al serverului sosește la următoarea sincronizare. Un loc la stația unui model 3D primește în schimb **Elimină stația mea**. |
 

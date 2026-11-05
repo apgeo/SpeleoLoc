@@ -62,6 +62,24 @@ class SilexgisSyncReportCard extends StatelessWidget {
                 ),
               ),
             ),
+          if (reviews.keptAfterRemoval > 0)
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: Text(
+                LocServ.inst.t('silexgis_kept_after_removal', <String, String>{
+                  'count': '${reviews.keptAfterRemoval}',
+                }),
+              ),
+              subtitle: Text(
+                LocServ.inst.t('silexgis_kept_after_removal_desc'),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SilexgisDecisionsPage(),
+                ),
+              ),
+            ),
           if (reviews.waiting > 0)
             ListTile(
               leading: const Icon(Icons.hourglass_empty),

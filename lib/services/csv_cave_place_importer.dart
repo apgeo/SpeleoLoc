@@ -1,6 +1,7 @@
 import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -87,16 +88,22 @@ class CSVCavePlaceImportResult {
 }
 
 /// Helper class for importing cave place data from CSV files.
+///
+/// Every row written is logged in the change log like a repository write:
+/// the log is what the FTP upload gate and the change history read, so an
+/// unlogged import would never be uploaded to other devices.
 class CSVCavePlaceImporter {
   final AppDatabase _database;
   final CurrentUserService _currentUser;
   final PlaceCodeService _placeCodeService;
+  final ChangeLogger _logger;
   final Clock _clock;
 
   CSVCavePlaceImporter(
     this._database,
     this._currentUser,
-    this._placeCodeService, {
+    this._placeCodeService,
+    this._logger, {
     Clock clock = const SystemClock(),
   }) : _clock = clock;
 
@@ -370,6 +377,7 @@ class CSVCavePlaceImporter {
                     lastModifiedByUserUuid: Value(author),
                   ),
                 );
+            await _logger.logInsert('caves', newUuid);
             caveCache[caveKey] = newUuid;
             targetCaveUuid = newUuid;
             cavesCreated++;
@@ -399,6 +407,7 @@ class CSVCavePlaceImporter {
                     lastModifiedByUserUuid: Value(author),
                   ),
                 );
+            await _logger.logInsert('cave_areas', newUuid);
             areaCache[areaKey] = newUuid;
             targetAreaUuid = newUuid;
             caveAreasCreated++;
@@ -430,6 +439,22 @@ class CSVCavePlaceImporter {
               await (_database.update(_database.cavePlaces)
                     ..where((cp) => cp.uuid.equalsValue(existingPlace.uuid)))
                   .write(patch);
+              await _logger.logUpdate(
+                'cave_places',
+                existingPlace.uuid,
+                oldValues: {
+                  'place_code_identifier': existingPlace.placeCodeIdentifier,
+                  'qr_code_resource_identifier':
+                      existingPlace.qrCodeResourceIdentifier,
+                },
+                newValues: {
+                  'place_code_identifier': patch.placeCodeIdentifier.value,
+                  'qr_code_resource_identifier':
+                      patch.qrCodeResourceIdentifier.present
+                      ? patch.qrCodeResourceIdentifier.value
+                      : existingPlace.qrCodeResourceIdentifier,
+                },
+              );
               qrCodesUpdated++;
             }
           }
@@ -444,6 +469,12 @@ class CSVCavePlaceImporter {
                 updatedAt: Value(now),
                 lastModifiedByUserUuid: Value(author),
               ),
+            );
+            await _logger.logUpdate(
+              'cave_places',
+              existingPlace.uuid,
+              oldValues: {'cave_area_uuid': existingPlace.caveAreaUuid},
+              newValues: {'cave_area_uuid': targetAreaUuid},
             );
           }
         } else {
@@ -464,6 +495,7 @@ class CSVCavePlaceImporter {
             cavePlaceUuid: newUuid,
           );
           await _database.into(_database.cavePlaces).insert(companion);
+          await _logger.logInsert('cave_places', newUuid);
           cavePlacesCreated++;
         }
       }

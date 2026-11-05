@@ -8,10 +8,10 @@ import 'package:drift/drift.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/data/source/database/legacy_timestamps.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
+import 'package:speleoloc/services/sync/sync_merge_engine.dart';
 import 'package:speleoloc/services/sync/sync_serializer.dart';
 import 'package:speleoloc/services/sync/sync_table_handler.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
@@ -35,36 +35,57 @@ import 'package:sqlite3/sqlite3.dart' show OpenMode, sqlite3;
 ///     v3 archives still merge into a v4 reader.
 const int kSyncArchiveVersion = 4;
 
-/// Current database schema version an exported archive targets, written to
-/// the manifest as `schema_version`. Must equal [AppDatabase.schemaVersion]
-/// — a guard test in `test/services/sync_archive_test.dart` fails if they
-/// drift apart.
+/// The database schema version whose archived tables an exported archive
+/// carries, written to the manifest as `schema_version`.
 ///
-/// History: this was frozen at 9 for a long time while the real DB schema
-/// advanced to 15, so every archive in the wild currently carries `9`
-/// regardless of the app version that produced it. The import gate accepts
-/// any version in [kSyncArchiveMinImportSchemaVersion, this] (see below),
-/// so raising this to the true schema does not orphan those archives.
-const int kSyncArchiveDbSchemaVersion = 36;
+/// It is the schema version at which an archived table — one in
+/// [SyncTableRegistry], or `change_log` / `change_log_field` — last changed
+/// its columns, not [AppDatabase.schemaVersion]. A schema bump that touches
+/// only local-only tables, indexes or stored values leaves it where it is, so
+/// phones that have not updated yet keep importing this device's archives.
+/// The change that alters an archived table's columns moves it to that
+/// change's schema version; a guard test compares those columns with a
+/// snapshot recorded for this value and fails until both move together.
+///
+/// History: frozen at 9 while the schema went to 15, then kept equal to the
+/// schema version up to 34, so archives in the wild carry 9 to 34;
+/// development builds also wrote 35 and 36 over the same archived tables.
+const int kSyncArchiveDbSchemaVersion = 34;
 
 /// Oldest archive `schema_version` this app still imports. The sync-v2
-/// format has only ever emitted `schema_version >= 9`, and every schema in
-/// `[9, kSyncArchiveDbSchemaVersion]` is additively compatible on read
-/// (columns added since 9 are nullable or defaulted when absent, and
-/// unknown tables are ignored), so archives in that range merge safely.
-/// Archives below this floor, or above the current version (from a newer
-/// app), are refused rather than silently mis-merged.
+/// format has only ever emitted `schema_version >= 9`, and every archived
+/// layout since 9 is additively compatible on read (columns added since are
+/// nullable or defaulted when absent, and unknown tables are ignored), so
+/// archives from there on merge safely.
+///
+/// The newest one it imports is its own [AppDatabase.schemaVersion]: an
+/// archive is never stamped above the schema of the app that wrote it, so a
+/// stamp up to ours names archived tables this app already knows — including
+/// the stamps above [kSyncArchiveDbSchemaVersion] that development builds
+/// wrote. A higher stamp comes from an app whose archived tables changed
+/// after this one was built, and is refused as too new rather than
+/// silently mis-merged.
 const int kSyncArchiveMinImportSchemaVersion = 9;
 
 /// Result of an import operation.
 class SyncImportReport {
   final int rowsInserted;
   final int rowsUpdated;
-  final int rowsSkipped; // local copy already newer
+  final int rowsSkipped; // local copy already newer, or not brought in
   final int deletesApplied;
   final int changeLogMerged;
   final int filesCopied;
   final int filesSkipped; // already present locally
+
+  /// Asset files the archive carries that could not be written on this
+  /// device (disk full, extraction failure). Their rows are imported, so a
+  /// caller that wants the files must import the archive again.
+  final int filesFailed;
+
+  /// Records waiting, after this import, for a person to decide about: each
+  /// a record whose unique name a different record here already holds.
+  /// Counts those held by earlier imports too.
+  final int decisionsPending;
   final List<String> warnings;
 
   const SyncImportReport({
@@ -75,29 +96,38 @@ class SyncImportReport {
     required this.changeLogMerged,
     required this.filesCopied,
     required this.filesSkipped,
+    this.filesFailed = 0,
     required this.warnings,
+    this.decisionsPending = 0,
   });
 
   /// Returns a copy with the asset-file counts filled in — used by
   /// `importFromZip`, which runs asset extraction after the DB merge.
-  SyncImportReport copyWith({int? filesCopied, int? filesSkipped}) =>
-      SyncImportReport(
-        rowsInserted: rowsInserted,
-        rowsUpdated: rowsUpdated,
-        rowsSkipped: rowsSkipped,
-        deletesApplied: deletesApplied,
-        changeLogMerged: changeLogMerged,
-        filesCopied: filesCopied ?? this.filesCopied,
-        filesSkipped: filesSkipped ?? this.filesSkipped,
-        warnings: warnings,
-      );
+  SyncImportReport copyWith({
+    int? filesCopied,
+    int? filesSkipped,
+    int? filesFailed,
+  }) => SyncImportReport(
+    rowsInserted: rowsInserted,
+    rowsUpdated: rowsUpdated,
+    rowsSkipped: rowsSkipped,
+    deletesApplied: deletesApplied,
+    changeLogMerged: changeLogMerged,
+    filesCopied: filesCopied ?? this.filesCopied,
+    filesSkipped: filesSkipped ?? this.filesSkipped,
+    filesFailed: filesFailed ?? this.filesFailed,
+    warnings: warnings,
+    decisionsPending: decisionsPending,
+  );
 
   @override
   String toString() =>
       'SyncImportReport(inserted=$rowsInserted, updated=$rowsUpdated, '
       'skipped=$rowsSkipped, deletes=$deletesApplied, '
       'changeLog=$changeLogMerged, filesCopied=$filesCopied, '
-      'filesSkipped=$filesSkipped, warnings=${warnings.length})';
+      'filesSkipped=$filesSkipped, filesFailed=$filesFailed, '
+      'decisionsPending=$decisionsPending, '
+      'warnings=${warnings.length})';
 }
 
 /// User (or programmatic) decision when an incoming sync row would overwrite
@@ -154,6 +184,24 @@ class SyncImportCancelledException implements Exception {
   String toString() => 'SyncImportCancelledException: $message';
 }
 
+/// Thrown by [SyncArchiveService.importFromZip] with `holdBackDeletions`
+/// when the archive would delete rows on this device. Nothing was changed;
+/// [preview] holds the counts the import would have produced.
+class SyncImportHasDeletionsException implements Exception {
+  const SyncImportHasDeletionsException(this.preview);
+  final SyncImportReport preview;
+
+  @override
+  String toString() =>
+      'SyncImportHasDeletionsException: the archive would delete '
+      '${preview.deletesApplied} row(s)';
+}
+
+/// Rolls back the outer transaction of a held-back import.
+class _DeletionsHeldBack implements Exception {
+  const _DeletionsHeldBack();
+}
+
 /// Thrown by [SyncArchiveService.importFromZip] when the archive's database
 /// schema version does not match the running app's. Carries enough metadata
 /// to render an actionable message:
@@ -205,29 +253,27 @@ class SyncArchiveSchemaMismatchException implements Exception {
 ///
 /// Export produces a `.zip` containing, in addition to a small manifest,
 /// one JSONL file per synced table plus the `change_log` / `change_log_field`
-/// rows. Import replays those files with a last-writer-wins policy keyed on
-/// `updated_at` (falling back to `created_at`). Change-log entries carrying
-/// a delete tombstone are used to propagate deletes across devices without
-/// requiring an app-wide soft-delete query refactor.
-///
-/// The whole import runs inside [ChangeLogger.runSuspended] so replay does
-/// not double-log into the local `change_log`.
+/// rows. Import hands those rows to [SyncMergeEngine], which replays them
+/// with a last-writer-wins policy keyed on `updated_at` (falling back to
+/// `created_at`), applies the deletions the change log carries, and holds for
+/// a decision what it cannot merge on its own.
 class SyncArchiveService {
   SyncArchiveService(
     this._db,
-    this._logger, {
+    ChangeLogger logger, {
     Future<Directory> Function()? assetsBaseDirResolver,
     Clock clock = const SystemClock(),
   }) : _assetsBaseDirResolver =
            assetsBaseDirResolver ?? getApplicationDocumentsDirectory,
        _clock = clock,
-       _registry = SyncTableRegistry(_db);
+       _registry = SyncTableRegistry(_db),
+       _engine = SyncMergeEngine(_db, logger);
 
   final AppDatabase _db;
-  final ChangeLogger _logger;
   final Future<Directory> Function() _assetsBaseDirResolver;
   final Clock _clock;
   final SyncTableRegistry _registry;
+  final SyncMergeEngine _engine;
   final _log = AppLogger.of('SyncArchiveService');
 
   static const _serializer = SyncValueSerializer();
@@ -236,12 +282,6 @@ class SyncArchiveService {
   /// Ordered list of synced tables — delegates to [SyncTableRegistry] so
   /// the big table-handler list lives in one place.
   List<SyncTableHandler> _syncedTables() => _registry.tables();
-
-  // ---------------------------------------------------------------------------
-  //  EXPORT
-  // ---------------------------------------------------------------------------
-
-  /// Writes a sync archive to [outputDir] and returns the file.
 
   // ---------------------------------------------------------------------------
   //  EXPORT
@@ -265,6 +305,78 @@ class SyncArchiveService {
     // asset file paths. The CPU-bound zip compression (and the asset file
     // reads) then run in a background isolate so a large export never blocks
     // the UI thread (Android ANR — see the class doc-comment).
+    // The asset folder comes from a platform channel, so it is resolved
+    // before the snapshot is opened rather than while it holds the database.
+    Directory? baseDir;
+    try {
+      baseDir = await _assetsBaseDirResolver();
+    } catch (e) {
+      _log.warning('assets base dir unavailable, skipping asset files: $e');
+    }
+
+    // Every read below runs in one transaction, so the archive is a single
+    // snapshot. Read table by table on the live database, an edit made while
+    // the export runs could leave a row in the archive without the row it
+    // hangs on, or a row alive beside its own delete entry; a peer then drops
+    // that entry as stale and the deletion never reaches it.
+    final (jsonlEntries, changeLogCount, assetRelPaths) = await _db.transaction(
+      () => _readSnapshot(
+        tables,
+        baseDir,
+        includeDocumentationFiles: includeDocumentationFiles,
+        includeRasterMaps: includeRasterMaps,
+      ),
+    );
+
+    final nowMs = _clock.nowMs();
+    final pkgInfo = await _safeReadPackageInfo();
+    // asset_count is filled in by the isolate once it knows how many files
+    // actually existed on disk.
+    final manifest = <String, dynamic>{
+      'format': 'speleo_loc_sync',
+      'format_version': kSyncArchiveVersion,
+      'schema_version': kSyncArchiveDbSchemaVersion,
+      'app_version': pkgInfo?.version,
+      'app_build_number': pkgInfo?.buildNumber,
+      'exported_at': nowMs,
+      'tables': tables.map((t) => t.name).toList(),
+      'includes_documentation_files': includeDocumentationFiles,
+      'includes_raster_maps': includeRasterMaps,
+    };
+
+    final dir = Directory(outputDir);
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
+    final out = File('${dir.path}${Platform.pathSeparator}$name');
+
+    final job = _EncodeArchiveJob(
+      jsonlEntries: jsonlEntries,
+      assetBaseDir: baseDir?.path,
+      assetRelPaths: assetRelPaths,
+      manifest: manifest,
+      outputPath: out.path,
+    );
+    final assetCount = await _encodeInBackground(job);
+
+    final size = await out.length();
+    _log.info(
+      'Sync archive exported: ${out.path} '
+      '($size bytes, ${tables.length} tables, '
+      '$changeLogCount change-log entries, '
+      '$assetCount asset files)',
+    );
+    return out;
+  }
+
+  /// Reads everything an archive carries: each table and the change log as
+  /// JSONL bytes, how many change-log rows went in, and the relative paths of
+  /// the asset files to bundle. Run inside one transaction by [exportToZip].
+  Future<(List<(String, Uint8List)>, int, List<String>)> _readSnapshot(
+    List<SyncTableHandler> tables,
+    Directory? baseDir, {
+    required bool includeDocumentationFiles,
+    required bool includeRasterMaps,
+  }) async {
     final jsonlEntries = <(String, Uint8List)>[];
     for (final t in tables) {
       jsonlEntries.add(('tables/${t.name}.jsonl', _jsonlBytes(await t.dump())));
@@ -299,7 +411,6 @@ class SyncArchiveService {
     final changeLogRows = keptLog
         .map((r) => r.toJson(serializer: _serializer))
         .toList();
-    final changeLogCount = changeLogRows.length;
     jsonlEntries.add(('change_log.jsonl', _jsonlBytes(changeLogRows)));
 
     final fieldRows = (await _db.select(_db.changeLogField).get())
@@ -311,12 +422,6 @@ class SyncArchiveService {
     // Resolve the asset relative paths (the isolate reads the files itself,
     // so no file bytes cross the isolate boundary).
     final assetRelPaths = <String>[];
-    Directory? baseDir;
-    try {
-      baseDir = await _assetsBaseDirResolver();
-    } catch (e) {
-      _log.warning('assets base dir unavailable, skipping asset files: $e');
-    }
     if (baseDir != null) {
       final serverOnlyKinds = <String>[
         for (final kind in SilexgisHeldAs.serverOnlyCopies) kind.wireName,
@@ -364,7 +469,7 @@ class SyncArchiveService {
       // outside the documents folder, or the database itself, would
       // otherwise be read and uploaded.
       // A plain loop, not a closure: a closure here would capture `this` into
-      // the context the isolate job below is sent with.
+      // the context the isolate job in [exportToZip] is sent with.
       final contained = <String>[];
       for (final relPath in assetRelPaths) {
         if (relPath.isEmpty ||
@@ -382,46 +487,14 @@ class SyncArchiveService {
         ..clear()
         ..addAll(contained);
     }
-
-    final nowMs = _clock.nowMs();
-    final pkgInfo = await _safeReadPackageInfo();
-    // asset_count is filled in by the isolate once it knows how many files
-    // actually existed on disk.
-    final manifest = <String, dynamic>{
-      'format': 'speleo_loc_sync',
-      'format_version': kSyncArchiveVersion,
-      'schema_version': kSyncArchiveDbSchemaVersion,
-      'app_version': pkgInfo?.version,
-      'app_build_number': pkgInfo?.buildNumber,
-      'exported_at': nowMs,
-      'tables': tables.map((t) => t.name).toList(),
-      'includes_documentation_files': includeDocumentationFiles,
-      'includes_raster_maps': includeRasterMaps,
-    };
-
-    final dir = Directory(outputDir);
-    if (!await dir.exists()) await dir.create(recursive: true);
-    final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
-    final out = File('${dir.path}${Platform.pathSeparator}$name');
-
-    final job = _EncodeArchiveJob(
-      jsonlEntries: jsonlEntries,
-      assetBaseDir: baseDir?.path,
-      assetRelPaths: assetRelPaths,
-      manifest: manifest,
-      outputPath: out.path,
-    );
-    final assetCount = await Isolate.run(() => _encodeSyncArchive(job));
-
-    final size = await out.length();
-    _log.info(
-      'Sync archive exported: ${out.path} '
-      '($size bytes, ${tables.length} tables, '
-      '$changeLogCount change-log entries, '
-      '$assetCount asset files)',
-    );
-    return out;
+    return (jsonlEntries, changeLogRows.length, assetRelPaths);
   }
+
+  /// Static, so the closure sent to the isolate captures [job] alone: one
+  /// built inside [exportToZip] would share that method's context, which
+  /// also holds `this`, and the database cannot be sent to an isolate.
+  static Future<int> _encodeInBackground(_EncodeArchiveJob job) =>
+      Isolate.run(() => _encodeSyncArchive(job));
 
   static String _placeholders(List<Object> values) =>
       List<String>.filled(values.length, '?').join(', ');
@@ -439,9 +512,16 @@ class SyncArchiveService {
   /// [SyncConflictAction.cancel], the whole import is rolled back and
   /// [SyncImportCancelledException] is thrown. Returning `null` from the
   /// resolver falls back to the default LWW decision.
+  ///
+  /// With [holdBackDeletions], an import that would delete rows on this
+  /// device is rolled back before any file is written and
+  /// [SyncImportHasDeletionsException] is thrown with what it would have
+  /// done, so the user can be asked first; importing again without it
+  /// applies the deletions.
   Future<SyncImportReport> importFromZip(
     String zipPath, {
     ConflictResolver? conflictResolver,
+    bool holdBackDeletions = false,
   }) async {
     // Read the file asynchronously so the UI/main isolate is never blocked.
     //
@@ -487,6 +567,7 @@ class SyncArchiveService {
       archive,
       conflictResolver,
       zipPath,
+      holdBackDeletions: holdBackDeletions,
     );
 
     // Release the full in-memory archive and its backing byte buffer before
@@ -504,6 +585,7 @@ class SyncArchiveService {
     return partial.copyWith(
       filesCopied: assetResult.copied,
       filesSkipped: assetResult.skipped,
+      filesFailed: assetResult.failed,
     );
   }
 
@@ -543,7 +625,7 @@ class SyncArchiveService {
       final fieldRows = (await source.select(source.changeLogField).get())
           .map((r) => r.toJson(serializer: _serializer))
           .toList();
-      return await _mergeRows(
+      return await _engine.merge(
         tableRows: tableRows,
         logRows: logRows,
         fieldRows: fieldRows,
@@ -606,8 +688,9 @@ class SyncArchiveService {
   Future<(SyncImportReport, List<String>)> _mergeArchiveIntoDb(
     Archive archive,
     ConflictResolver? conflictResolver,
-    String zipPath,
-  ) async {
+    String zipPath, {
+    bool holdBackDeletions = false,
+  }) async {
     final manifestFile = archive.findFile('manifest.json');
     if (manifestFile == null) {
       final f = File(zipPath);
@@ -640,14 +723,15 @@ class SyncArchiveService {
     // Accept any schema in the supported range; the JSONL format is
     // additively compatible across it. Refuse only archives from a newer
     // app (schema above ours) or implausibly old ones below the floor.
-    if (archiveSchema > kSyncArchiveDbSchemaVersion ||
+    final newestImportable = _db.schemaVersion;
+    if (archiveSchema > newestImportable ||
         archiveSchema < kSyncArchiveMinImportSchemaVersion) {
       throw SyncArchiveSchemaMismatchException(
         archiveSchemaVersion: archiveSchema,
-        localSchemaVersion: kSyncArchiveDbSchemaVersion,
+        localSchemaVersion: newestImportable,
         archiveAppVersion: manifest['app_version'] as String?,
         archiveAppBuildNumber: manifest['app_build_number'] as String?,
-        tooNew: archiveSchema > kSyncArchiveDbSchemaVersion,
+        tooNew: archiveSchema > newestImportable,
       );
     }
 
@@ -686,13 +770,16 @@ class SyncArchiveService {
         ? _readJsonl(fieldEntry)
         : <Map<String, dynamic>>[];
 
-    final report = await _mergeRows(
+    Future<SyncImportReport> merge() => _engine.merge(
       tableRows: tableRows,
       logRows: logRows,
       fieldRows: fieldRows,
       conflictResolver: conflictResolver,
       warnings: warnings,
     );
+    final report = holdBackDeletions
+        ? await _mergeUnlessDeleting(merge)
+        : await merge();
 
     // Collect the asset entry names for the caller to extract after it has
     // released this archive; file counts are filled in there.
@@ -704,243 +791,22 @@ class SyncArchiveService {
     return (report, assetEntryNames);
   }
 
-  /// Merges rows read from an archive into the live database: the
-  /// last-writer-wins upsert of every synced table, the change-log replay and
-  /// the delete tombstones it carries. [tableRows] is keyed by table name and
-  /// holds rows in the JSON shape [SyncTableHandler.dump] produces. Asset
-  /// files are left to the caller, so the report's file counts are zero.
-  Future<SyncImportReport> _mergeRows({
-    required Map<String, List<Map<String, dynamic>>> tableRows,
-    required List<Map<String, dynamic>> logRows,
-    required List<Map<String, dynamic>> fieldRows,
-    required ConflictResolver? conflictResolver,
-    required List<String> warnings,
-  }) async {
-    var inserted = 0;
-    var updated = 0;
-    var skipped = 0;
-    var deletesApplied = 0;
-    var changeLogMerged = 0;
-
-    // A device on an older app can still send timestamps in seconds; store
-    // them the way this device now does.
-    for (final rows in [...tableRows.values, logRows]) {
-      for (final row in rows) {
-        for (final key in legacyTimestampColumns) {
-          final v = row[key];
-          if (v is int) row[key] = timestampToMillis(v);
-        }
-      }
-    }
-
-    // Build a remap table for incoming user UUIDs that collide on
-    // `username` with a different local user (e.g. the auto-generated
-    // 'system' user, whose UUID is independently created on each device).
-    // Without this remap the insert would trip the UNIQUE(username)
-    // constraint and every FK from the archive that points at the
-    // incoming user UUID would be orphaned.
-    final userRemap = await _buildUserUuidRemap(
-      tableRows['users'] ?? const [],
-      warnings,
-    );
-    if (userRemap.isNotEmpty) {
-      for (final entry in tableRows.entries) {
-        for (final r in entry.value) {
-          _applyUserRemapToRow(r, userRemap, entry.key);
-        }
-      }
-      for (final row in logRows) {
-        _applyUserRemapToChangeLogRow(row, userRemap);
-      }
-    }
-
-    final tables = _syncedTables();
-    // ── Phase 2: DB transaction — pure async DB operations only ──────────
-    await _logger.runSuspended(() async {
+  /// Runs [merge] inside an outer transaction, so that a merge that deleted
+  /// rows can be undone whole: its own transaction becomes a savepoint, and
+  /// throwing here rolls everything back.
+  Future<SyncImportReport> _mergeUnlessDeleting(
+    Future<SyncImportReport> Function() merge,
+  ) async {
+    SyncImportReport? report;
+    try {
       await _db.transaction(() async {
-        // Defer FK checks to the end of the transaction so we can insert
-        // in any order without hitting transient constraint violations.
-        await _db.customStatement('PRAGMA defer_foreign_keys = ON');
-
-        for (final t in tables) {
-          final rows = tableRows[t.name];
-          if (rows == null) continue; // missing entry already warned above
-          final result = await t.upsert(rows, conflictResolver);
-          inserted += result.inserted;
-          updated += result.updated;
-          skipped += result.skipped;
-        }
-
-        // A server copy the archive's row replaced now holds another
-        // device's file, and has to stop being recorded as the copy.
-        await SilexgisFileCopyRepository(_db).adoptArchiveFiles(<Uuid, String>{
-          for (final r in tableRows['documentation_files'] ?? const [])
-            if (Uuid.tryParse(r['uuid'] as String? ?? '') case final id?)
-              if (r['file_name'] case final String name) id: name,
-        });
-
-        // Merge change_log headers first (FK parent) then fields.
-        final existingLogUuids = <String>{};
-        for (final r in await _db.select(_db.changeLog).get()) {
-          existingLogUuids.add(r.uuid.toString());
-        }
-        // uuid-string -> (entity_table, changed_at). The entity_table lets
-        // us target the one table the row lives in instead of probing all
-        // of them.
-        final deleteTargets = <String, (String, int)>{};
-
-        for (final row in logRows) {
-          final uuidStr = row['uuid'] as String;
-          if (existingLogUuids.contains(uuidStr)) continue;
-          final data = ChangeLogData.fromJson(row, serializer: _serializer);
-          await _db.into(_db.changeLog).insert(data);
-          existingLogUuids.add(uuidStr);
-          changeLogMerged++;
-          if (data.changeType == ChangeType.delete) {
-            deleteTargets[data.entityUuid.toString()] = (
-              data.entityTable,
-              data.changedAt,
-            );
-          }
-        }
-
-        for (final row in fieldRows) {
-          try {
-            final data = ChangeLogFieldData.fromJson(
-              row,
-              serializer: _serializer,
-            );
-            await _db
-                .into(_db.changeLogField)
-                .insert(data, mode: InsertMode.insertOrIgnore);
-          } catch (e) {
-            warnings.add('change_log_field: $e');
-          }
-        }
-
-        // An archive is a full snapshot of its source device, so a row it
-        // still carries, and has not soft-deleted, is alive there whatever
-        // its change log says. Such a tombstone is stale — the row was
-        // deleted and later restored with the same uuid — and applying it
-        // would delete on this device what the source still shows. Rows that
-        // keep a creation time in seconds from older data lose every
-        // timestamp comparison, so the check below cannot spare them.
-        final carried = <String>{
-          for (final rows in tableRows.values)
-            for (final r in rows)
-              if (r['uuid'] case final String uuid when r['deleted_at'] == null)
-                uuid,
-        };
-        deleteTargets.removeWhere((uuid, _) => carried.contains(uuid));
-
-        // Apply delete tombstones: for every delete entry in the archive,
-        // remove the corresponding row from its table locally if the
-        // delete was more recent than the local row's updated_at.
-        if (deleteTargets.isNotEmpty) {
-          deletesApplied += await _applyDeletes(deleteTargets, warnings);
-        }
+        final r = report = await merge();
+        if (r.deletesApplied > 0) throw const _DeletionsHeldBack();
       });
-    });
-
-    return SyncImportReport(
-      rowsInserted: inserted,
-      rowsUpdated: updated,
-      rowsSkipped: skipped,
-      deletesApplied: deletesApplied,
-      changeLogMerged: changeLogMerged,
-      filesCopied: 0,
-      filesSkipped: 0,
-      warnings: warnings,
-    );
-  }
-
-  /// For each (entityUuid -> deleteTs) mapping, delete the row from whichever
-  /// synced table still holds it iff its updated_at/created_at is older than
-  /// the tombstone. Returns the number of rows physically removed.
-  Future<int> _applyDeletes(
-    Map<String, (String, int)> deleteTargets,
-    List<String> warnings,
-  ) async {
-    var n = 0;
-    // Each synced table's delete-by-uuid function, keyed by table name.
-    // Tombstones record the entity_table, so we run only that table's
-    // delete instead of probing all of them per tombstone. Relies on the
-    // caller holding a transaction with deferred FK checks.
-    final deleteByTable = <String, Future<int> Function(Uuid, int)>{
-      'users': (u, ts) => _deleteIfOlder(_db.users, u, ts),
-      'cave_place_model_stations': (u, ts) =>
-          _deleteIfOlder(_db.cavePlaceModelStations, u, ts),
-      'cave_default_survey_models': (u, ts) =>
-          _deleteIfOlder(_db.caveDefaultSurveyModels, u, ts),
-      'cave_place_to_raster_map_definitions': (u, ts) =>
-          _deleteIfOlder(_db.cavePlaceToRasterMapDefinitions, u, ts),
-      'documentation_files_to_geofeatures': (u, ts) =>
-          _deleteIfOlder(_db.documentationFilesToGeofeatures, u, ts),
-      'documentation_files_to_cave_trips': (u, ts) =>
-          _deleteIfOlder(_db.documentationFilesToCaveTrips, u, ts),
-      'documentation_files_to_cave_trip_points': (u, ts) =>
-          _deleteIfOlder(_db.documentationFilesToCaveTripPoints, u, ts),
-      'cave_trip_points': (u, ts) => _deleteIfOlder(_db.caveTripPoints, u, ts),
-      'cave_trips': (u, ts) => _deleteIfOlder(_db.caveTrips, u, ts),
-      'documentation_files': (u, ts) =>
-          _deleteIfOlder(_db.documentationFiles, u, ts),
-      'trip_report_templates': (u, ts) =>
-          _deleteIfOlder(_db.tripReportTemplates, u, ts),
-      'raster_maps': (u, ts) => _deleteIfOlder(_db.rasterMaps, u, ts),
-      'cave_place_beacons': (u, ts) =>
-          _deleteIfOlder(_db.cavePlaceBeacons, u, ts),
-      'cave_places': (u, ts) => _deleteIfOlder(_db.cavePlaces, u, ts),
-      'cave_areas': (u, ts) => _deleteIfOlder(_db.caveAreas, u, ts),
-      'caves': (u, ts) => _deleteIfOlder(_db.caves, u, ts),
-      'surface_areas': (u, ts) => _deleteIfOlder(_db.surfaceAreas, u, ts),
-    };
-
-    for (final entry in deleteTargets.entries) {
-      final (entityTable, ts) = entry.value;
-      final deleteFn = deleteByTable[entityTable];
-      // A tombstone for a non-physically-deletable table (e.g. a local-only
-      // key/value row) simply has nothing to remove here.
-      if (deleteFn == null) continue;
-      try {
-        n += await deleteFn(Uuid.parse(entry.key), ts);
-      } catch (e) {
-        warnings.add('delete ${entry.key} ($entityTable): $e');
-      }
+    } on _DeletionsHeldBack {
+      throw SyncImportHasDeletionsException(report!);
     }
-    return n;
-  }
-
-  /// Applies a delete tombstone to a local row using last-write-wins on
-  /// timestamps. The local row survives only when it is *strictly* newer than
-  /// the tombstone; on a tie (`tombstoneTs == localTs`) the delete wins. This
-  /// tie-goes-to-delete policy is deliberate and must match the LWW upsert side
-  /// so a delete and an equal-timestamp edit can't disagree about the outcome.
-  Future<int> _deleteIfOlder(
-    TableInfo table,
-    Uuid entityUuid,
-    int tombstoneTs,
-  ) async {
-    // We can't read `updated_at` generically, so use a custom statement.
-    final countRows = await _db
-        .customSelect(
-          'SELECT COALESCE(updated_at, created_at, 0) AS ts '
-          'FROM ${table.actualTableName} WHERE uuid = ?',
-          variables: [Variable<Uint8List>(entityUuid.bytes)],
-        )
-        .get();
-    if (countRows.isEmpty) return 0;
-    final localTs = countRows.first.read<int>('ts');
-    if (tombstoneTs < localTs)
-      return 0; // local strictly newer → keep (ties delete)
-    // customUpdate rather than customStatement: it tells drift which table
-    // changed, so screens watching it reload after the import.
-    await _db.customUpdate(
-      'DELETE FROM ${table.actualTableName} WHERE uuid = ?',
-      variables: [Variable<Uint8List>(entityUuid.bytes)],
-      updates: {table},
-      updateKind: UpdateKind.delete,
-    );
-    return 1;
+    return report!;
   }
 
   // ---------------------------------------------------------------------------
@@ -1002,7 +868,11 @@ class SyncArchiveService {
       baseDir = await _assetsBaseDirResolver();
     } catch (e) {
       warnings.add('assets base dir unavailable: $e');
-      return const _AssetResult(copied: 0, skipped: 0);
+      return _AssetResult(
+        copied: 0,
+        skipped: 0,
+        failed: assetEntryNames.length,
+      );
     }
     var skipped = 0;
 
@@ -1042,108 +912,22 @@ class SyncArchiveService {
     // raster-map file, triggering Android ANR.  Offloading to Isolate.run()
     // keeps the UI thread completely free during the entire extraction.
     try {
-      final (copied, isolateWarnings) = await Isolate.run(
+      final (copied, failed, isolateWarnings) = await Isolate.run(
         () => _extractAssetsInBackground(zipPath, toExtract),
       );
       warnings.addAll(isolateWarnings);
-      return _AssetResult(copied: copied, skipped: skipped);
+      return _AssetResult(copied: copied, skipped: skipped, failed: failed);
     } catch (e) {
       warnings.add(
         'asset extraction failed: $e '
         '(— skipping ${toExtract.length} file(s))',
       );
-      return _AssetResult(copied: 0, skipped: skipped);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  //  User-UUID remap (collision on username)
-  // ---------------------------------------------------------------------------
-
-  /// Inspects the incoming `users` rows against the local `users` table and
-  /// returns a `{incomingUuidStr: localUuidStr}` map for every incoming
-  /// user whose `username` already exists locally under a different UUID.
-  ///
-  /// This is what makes seed users (notably the auto-generated `system`
-  /// user, whose UUID is independently allocated on every device)
-  /// importable across devices: instead of inserting the incoming row
-  /// (which would fail on the UNIQUE(username) constraint) and orphaning
-  /// every FK that references the incoming UUID, we rewrite all those
-  /// references to the local UUID and let normal LWW handle the row
-  /// itself.
-  Future<Map<String, String>> _buildUserUuidRemap(
-    List<Map<String, dynamic>> rows,
-    List<String> warnings,
-  ) async {
-    if (rows.isEmpty) return const <String, String>{};
-
-    final localByUsername = <String, String>{};
-    final localUuids = <String>{};
-    for (final u in await _db.select(_db.users).get()) {
-      localUuids.add(u.uuid.toString());
-      localByUsername[u.username] = u.uuid.toString();
-    }
-
-    final remap = <String, String>{};
-    for (final row in rows) {
-      final incomingUuid = row['uuid'];
-      final incomingUsername = row['username'];
-      if (incomingUuid is! String || incomingUsername is! String) continue;
-      if (localUuids.contains(incomingUuid)) continue;
-      final localUuid = localByUsername[incomingUsername];
-      if (localUuid == null) continue; // brand-new user — insert as-is
-      remap[incomingUuid] = localUuid;
-      warnings.add(
-        'remapped user "$incomingUsername" '
-        '$incomingUuid -> $localUuid (matched by username)',
+      return _AssetResult(
+        copied: 0,
+        skipped: skipped,
+        failed: toExtract.length,
       );
     }
-    return remap;
-  }
-
-  /// Rewrites user-FK columns of [row] using [remap]. For the `users`
-  /// table the row's own `uuid` is also rewritten so the subsequent
-  /// upsert resolves to the local row via LWW instead of attempting an
-  /// insert that would violate the UNIQUE(username) constraint.
-  void _applyUserRemapToRow(
-    Map<String, dynamic> row,
-    Map<String, String> remap,
-    String tableName,
-  ) {
-    if (tableName == 'users') {
-      final u = row['uuid'];
-      if (u is String) {
-        final mapped = remap[u];
-        if (mapped != null) row['uuid'] = mapped;
-      }
-    }
-    _remapField(row, 'created_by_user_uuid', remap);
-    _remapField(row, 'last_modified_by_user_uuid', remap);
-  }
-
-  /// Rewrites user-FK columns of a single `change_log` row using [remap].
-  /// `entity_uuid` is also rewritten when the row targets the `users`
-  /// table so that delete tombstones and field-history entries follow the
-  /// remapped user identity.
-  void _applyUserRemapToChangeLogRow(
-    Map<String, dynamic> row,
-    Map<String, String> remap,
-  ) {
-    _remapField(row, 'changed_by_user_uuid', remap);
-    if (row['entity_table'] == 'users') {
-      _remapField(row, 'entity_uuid', remap);
-    }
-  }
-
-  void _remapField(
-    Map<String, dynamic> row,
-    String key,
-    Map<String, String> remap,
-  ) {
-    final v = row[key];
-    if (v is! String) return;
-    final mapped = remap[v];
-    if (mapped != null) row[key] = mapped;
   }
 
   /// Reads `PackageInfo.fromPlatform()` and swallows any failure so a
@@ -1169,13 +953,16 @@ class SyncArchiveService {
 /// [entries] is a list of `[entryName, outputPath]` pairs; output parent
 /// directories must already exist (created by the caller on the main isolate).
 ///
-/// Returns `(copied, warnings)` — number of files successfully written and
-/// any per-file error messages.
-Future<(int, List<String>)> _extractAssetsInBackground(
+/// Returns `(copied, failed, warnings)` — files successfully written, files
+/// that could not be written here, and any per-file error messages. An entry
+/// missing from the archive is a defect of the archive, not a failure of this
+/// device, so it is only warned about.
+Future<(int, int, List<String>)> _extractAssetsInBackground(
   String zipPath,
   List<List<String>> entries,
 ) async {
   var copied = 0;
+  var failed = 0;
   final warnings = <String>[];
   final input = InputFileStream(zipPath);
   try {
@@ -1197,19 +984,25 @@ Future<(int, List<String>)> _extractAssetsInBackground(
         }
         copied++;
       } catch (e) {
+        failed++;
         warnings.add('$name → $outputPath: $e');
       }
     }
   } finally {
     await input.close();
   }
-  return (copied, warnings);
+  return (copied, failed, warnings);
 }
 
 class _AssetResult {
   final int copied;
   final int skipped;
-  const _AssetResult({required this.copied, required this.skipped});
+  final int failed;
+  const _AssetResult({
+    required this.copied,
+    required this.skipped,
+    this.failed = 0,
+  });
 }
 
 /// Payload for [_encodeSyncArchive] — everything the background isolate needs

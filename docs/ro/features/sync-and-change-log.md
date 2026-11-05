@@ -108,15 +108,19 @@ Apoi:
 
 1. Apăsați **Importă arhivă de sincronizare** și alegeți fișierul `.zip`.
 2. Confirmați întrebarea **Import arhivă de sincronizare?**. Citiți-o:
-   vă avertizează că modificările locale mai noi se păstrează, cele mai
-   vechi se suprascriu și că **ștergerile aduse de arhivă se aplică bazei
-   voastre de date**.
+   vă avertizează că modificările locale mai noi se păstrează, iar cele
+   mai vechi se suprascriu.
 3. Îmbinarea rulează. În modul Manual apare un dialog pentru fiecare
-   înregistrare aflată în conflict (vedeți mai jos).
+   înregistrare aflată în conflict (vedeți mai jos). Dacă arhiva ar șterge
+   înregistrări de pe dispozitivul vostru, **Ștergeți înregistrări de pe
+   acest dispozitiv?** întreabă întâi, cu numărul lor (vedeți [Importul vă
+   poate șterge înregistrări](#importul-vă-poate-șterge-înregistrări)).
 4. Sub butoane apare un rezumat pe o linie, de exemplu
    `Import finalizat: +12 / ~3 / -1 (57 Istoric modificări, 8 fișiere)` —
    înregistrări adăugate, înregistrări actualizate, înregistrări șterse,
-   intrări din istoric îmbinate și fișiere media copiate.
+   intrări din istoric îmbinate și fișiere media copiate. Urmează o a doua
+   linie când există înregistrări care vă așteaptă decizia (vedeți [Când o
+   înregistrare de aici are deja numele](#când-o-înregistrare-de-aici-are-deja-numele)).
 
 ### Revizuirea unui conflict de mână
 
@@ -147,19 +151,84 @@ pe dispozitivul vostru. O peșteră, un loc, o hartă sau un document pe care
 colegul de echipă le-a înlăturat vor fi înlăturate și din baza voastră de
 date.
 
-Operațiunea este ireversibilă și nimic nu vă întreabă înregistrare cu
-înregistrare:
+Operațiunea este ireversibilă, așa că înainte ca o arhivă să șteargă ceva
+de pe dispozitivul vostru sunteți întrebat o dată, pentru toată arhiva:
+**Ștergeți înregistrări de pe acest dispozitiv?** spune câte înregistrări
+ar șterge, adăuga și modifica.
+
+- **Șterge și importă** importă arhiva, cu tot cu ștergeri.
+- **Păstrează înregistrările mele** nu importă nimic din ea, iar ecranul
+  raportează *Import anulat — nicio modificare nu a fost aplicată*.
+
+[Sincronizarea FTP](ftp-sync.md#ștergerile-sunt-întrebate) pune aceeași
+întrebare. Nu se întreabă înregistrare cu înregistrare, iar **Manual
+(revizuiește fiecare conflict)** nu schimbă asta: dialogul de conflict
+acoperă doar modificările.
+
+O ștergere pe care o lăsați să treacă se aplică astfel:
 
 - Înregistrarea supraviețuiește doar dacă ați modificat-o **strict după**
   ce el a șters-o. Dacă cele două s-au petrecut în același moment,
   ștergerea câștigă.
-- **Manual (revizuiește fiecare conflict)** nu ajută aici. Dialogul de
-  conflict acoperă doar modificările; ștergerile se aplică întotdeauna în
-  tăcere.
+- La fel și pentru ce se află în ea. Dacă, după ce el a șters un loc, ați
+  înregistrat acolo un punct de tură, l-ați fixat pe o hartă sau i-ați
+  atașat o fotografie, locul rămâne — pe dispozitivul vostru și, după ce
+  importă următoarea voastră arhivă, și pe al lui. Importul îl numără ca
+  sărit.
+- Ce n-a văzut niciodată celălalt dispozitiv pleacă odată cu
+  înregistrarea, cum ar fi plecat și la el: un pin adăugat de voi înainte
+  de ștergerea lui este înlăturat împreună cu locul, iar un punct de tură
+  înregistrat acolo rămâne în tura lui, fără loc.
+- O arhivă făcută înainte ca dispozitivul ei să afle de o ștergere nu
+  poate aduce înregistrarea înapoi. Dacă telefonul colegului mai avea
+  locul la ultima lui sincronizare, importul acelei arhive nu readuce
+  locul pe care l-ați șters după aceea.
 
 Dacă nu sunteți sigur pe o arhivă, exportați-vă mai întâi propriile date
 (sau faceți o copie de siguranță a bazei de date), ca să puteți recupera o
 înregistrare ștearsă.
+
+### Când o înregistrare de aici are deja numele
+
+Unele înregistrări trebuie să aibă un nume doar al lor: două zone ale
+aceleiași peșteri, două locuri ale aceleiași peșteri din aceeași zonă (sau
+din afara oricărei zone), două peșteri ale aceleiași arii de suprafață,
+două arii de suprafață, două hărți raster ale aceleiași peșteri cu același
+titlu sau aceeași imagine. Când două telefoane creează fiecare separat o
+astfel de înregistrare — amândouă adaugă zona „Sala” în aceeași peșteră —
+telefonul care importă al doilea nu poate pur și simplu s-o adauge pe cea
+venită.
+
+Importul nu se oprește pentru ea și nici nu o aruncă. Tot restul arhivei
+este îmbinat, iar înregistrarea venită este **reținută**, împreună cu tot
+ce atârnă de ea în arhivă: locurile din acea „Sala”, punctele de tură
+înregistrate la acel „Sifon”. La fel este reținută și o modificare venită
+care ar redenumi o înregistrare cu numele pe care îl are deja aici o altă
+înregistrare.
+
+Fila **Arhivă sincronizare** afișează atunci *N înregistrări de pe alte
+dispozitive așteaptă decizia ta*. Apăsați pe ea ca să deschideți
+**Necesită o decizie**, unde fiecare înregistrare reținută are un card: ce
+este, din ce peșteră face parte, care dintre înregistrările voastre îi are
+numele și câte înregistrări așteaptă împreună cu ea.
+
+| Buton | Ce se întâmplă |
+|---|---|
+| **Unește cu a mea** | Cele două sunt același lucru. Ce conține înregistrarea venită trece la a voastră, iar înregistrarea venită este ștearsă pe fiecare dispozitiv la următoarea sincronizare — împreună cu ce i-a adăugat între timp celălalt telefon, care trece și el la a voastră. |
+| **Păstrează-le pe amândouă** | Sunt lucruri diferite. Dați înregistrării venite un nume nou și ea este adăugată lângă a voastră. Apare când cele două au același titlu. |
+| **Renunță la cea venită** | Înregistrarea venită este ștearsă, cu tot ce conține, pe fiecare dispozitiv la următoarea sincronizare. Pentru o redenumire venită, rămâne în schimb versiunea voastră și ajunge pe celelalte dispozitive. |
+
+Unirea și renunțarea vă cer întâi o confirmare. Alegerea voastră este o
+modificare obișnuită făcută pe acest dispozitiv: se scrie în istoricul
+modificărilor și pleacă în următoarea voastră arhivă, așa că celelalte
+telefoane ajung la fel fără să fie întrebate.
+
+Până alegeți, înregistrările reținute rămân reținute, și după reporniri,
+și după alte sincronizări. O copie mai nouă de pe celălalt telefon o
+înlocuiește pe cea reținută. Dacă acel telefon își redenumește sau își
+șterge înregistrarea, ori dacă o redenumiți pe a voastră, ciocnirea
+dispare, iar înregistrarea este adăugată la următoarea sincronizare sau
+imediat ce deschideți **Necesită o decizie**.
 
 ### Alte lucruri de știut înainte de import
 
@@ -178,12 +247,14 @@ Dacă nu sunteți sigur pe o arhivă, exportați-vă mai întâi propriile date
   contopește fără să spună nimic, iar istoricul modificărilor va trece
   totul pe un singur nume.
 - **O arhivă parțial stricată se importă totuși.** O înregistrare coruptă,
-  sau care se ciocnește pe un cod unic de o înregistrare locală fără
-  legătură cu ea, este sărită, iar restul arhivei este îmbinat oricum. De
-  obicei asta și vreți, într-o cabană cu o liniuță de semnal, dar
-  înseamnă că un import poate raporta reușită în timp ce câteva
-  înregistrări au rămas pe dinafară. Numerele din linia de rezumat sunt
-  singurul indiciu — comparați-le cu ce vă așteptați să primiți.
+  sau una care are nevoie de o înregistrare pe care n-o au nici
+  dispozitivul vostru, nici arhiva, este sărită, iar restul arhivei este
+  îmbinat oricum. De obicei asta și vreți, într-o cabană cu o liniuță de
+  semnal, dar înseamnă că un import poate raporta reușită în timp ce
+  câteva înregistrări au rămas pe dinafară. Numerele din linia de rezumat
+  sunt singurul indiciu — comparați-le cu ce vă așteptați să primiți.
+- **Un import se face complet sau deloc.** Fie este îmbinat tot ce aduce
+  arhiva, fie, când importul eșuează sau îl anulați, nu se scrie nimic.
 - **Se verifică doar formatul arhivei și versiunea bazei de date.**
   Aplicația nu întreabă niciodată de pe ce dispozitiv vine o arhivă și nu
   afișează niciun avertisment pentru unul necunoscut. O arhivă produsă de

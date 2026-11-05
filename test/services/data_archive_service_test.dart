@@ -8,13 +8,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/database_file_version.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
+import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/user_repository.dart';
 import 'package:speleoloc/utils/constants.dart';
+import 'package:sqlite3/sqlite3.dart' show sqlite3;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -109,4 +112,53 @@ void main() {
     expect(await configs.readString(ConfigKey.ftpProfiles), localProfiles);
     expect(keystoreWrites, isEmpty);
   });
+
+  test('a replace import refuses a database from a newer app and keeps the '
+      'live one', () async {
+    appDatabase = AppDatabase.forTesting(NativeDatabase.memory());
+    final live = appDatabase;
+    final configs = ConfigurationRepository(live);
+    await configs.writeString('invented_key', 'kept');
+
+    final sourceFile = File(p.join(tempDir.path, 'speleo_loc.sqlite'));
+    final source = AppDatabase.file(sourceFile);
+    await source.customSelect('SELECT 1').get();
+    await source.close();
+    final raw = sqlite3.open(sourceFile.path);
+    try {
+      raw.userVersion = live.schemaVersion + 1;
+    } finally {
+      raw.close();
+    }
+    final dbBytes = await sourceFile.readAsBytes();
+    final zip = Archive()
+      ..addFile(ArchiveFile('speleo_loc.sqlite', dbBytes.length, dbBytes));
+    final zipPath = p.join(tempDir.path, 'newer.zip');
+    await File(zipPath).writeAsBytes(ZipEncoder().encode(zip)!);
+
+    await expectLater(
+      DataArchiveService(
+        DataExportImportRepository(live),
+      ).importArchiveReplace(zipPath: zipPath, silexgisTokens: _NoTokens()),
+      throwsA(isA<DatabaseTooNewException>()),
+    );
+
+    expect(appDatabase, same(live));
+    expect(await configs.readString('invented_key'), 'kept');
+    expect(
+      File(p.join(tempDir.path, 'docs', 'speleo_loc.sqlite')).existsSync(),
+      isFalse,
+    );
+  });
+}
+
+class _NoTokens implements SilexgisRefreshTokenStore {
+  @override
+  Future<String?> read(String profileUuid) async => null;
+
+  @override
+  Future<void> write(String profileUuid, String refreshToken) async {}
+
+  @override
+  Future<void> delete(String profileUuid) async {}
 }

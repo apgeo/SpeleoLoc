@@ -94,4 +94,19 @@ class SilexgisServerLinkRepository {
                 t.documentUuid.equalsValue(documentUuid),
           ))
           .go();
+
+  /// The installation no longer holds these targets, and so none of the
+  /// links that hung anything on them.
+  Future<void> forgetTargets(
+    String profileUuid,
+    Iterable<Uuid> targetIds,
+  ) async {
+    if (targetIds.isEmpty) return;
+    await (_db.delete(_db.silexgisServerLink)..where(
+          (t) =>
+              t.profileUuid.equals(profileUuid) &
+              t.targetId.isIn(targetIds.map((u) => u.bytes)),
+        ))
+        .go();
+  }
 }

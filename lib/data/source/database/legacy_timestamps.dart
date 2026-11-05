@@ -25,8 +25,8 @@ int? timestampToMillis(int? value) =>
 
 /// Rewrites every legacy seconds value of [legacyTimestampColumns] in [db]
 /// to milliseconds. Only such values change, so running it again does
-/// nothing. Done in place rather than as a schema migration: a schema bump
-/// would make devices not yet updated refuse this device's sync archives.
+/// nothing. Done on every open rather than once as a schema step, so a
+/// database file restored from an older app later is converted too.
 /// Nothing is change-logged, so it does not by itself cause an upload.
 ///
 /// Columns are taken from the file itself, not from the declared schema: a

@@ -130,9 +130,11 @@ which it is by default.
 Deleting a cave removes everything under it: its cave places, its cave
 areas, its raster maps and the pin positions of places on them, its trips
 and recorded trip points, and its BLE beacon registrations (including ones
-already unregistered). Documents attached to the cave, to its areas or to
-its places are **unlinked**, but the files themselves stay in the app's
-documentation library.
+already unregistered). Documents attached to the cave, to its areas, to its
+places, to its trips or to their trip points are **unlinked**, but the
+files themselves stay in the app's documentation library. A trip of another
+cave that recorded a visit to one of its places keeps that trip point,
+without the place.
 
 ## Finding caves in the list
 
@@ -196,12 +198,15 @@ The screen is titled **Cave areas**. From there:
 
 ### Deleting an area that is still in use
 
-An area can only be deleted once **no cave place is still assigned to it**.
-Open those places first and set **Area title (optional)** back to *None*.
+Deleting an area does not delete what is in it. Its places and the raster
+maps assigned to it stay in the cave, with no area, and the documents
+linked to the area are unlinked. Other devices do the same at their next
+sync.
 
-Deleting an area that is still in use currently fails silently: the
-confirmation dialog closes, no message appears, and the area is still in the
-list afterwards. If a delete seems to do nothing, that is why.
+Among the places of a cave that have no area, each title can be used only
+once. If one of the area's places has the title of a place that already
+has no area, the area is not deleted and a message names the place; rename
+one of the two and delete the area again.
 
 ### Assigning a place to an area
 

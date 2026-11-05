@@ -37,6 +37,9 @@ import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_registry.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_auth_service.dart';
 import 'package:speleoloc/services/silexgis/auth/silexgis_secure_token_store.dart';
+import 'package:speleoloc/services/silexgis/silexgis_conflict_override.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_rekeyer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_resend_as_new.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decision.dart';
 import 'package:speleoloc/services/silexgis/silexgis_decisions_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
@@ -72,7 +75,10 @@ import 'package:speleoloc/services/silexgis/silexgis_trip_state_repository.dart'
 import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_controller.dart';
+import 'package:speleoloc/services/sync/archive_held_row_repository.dart';
+import 'package:speleoloc/services/sync/archive_sync_decisions_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
+import 'package:speleoloc/services/sync/sync_merge_engine.dart';
 import 'package:speleoloc/services/trip_media/media_scan_cache.dart';
 import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
 import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
@@ -160,6 +166,34 @@ final syncArchiveServiceProvider = Provider<SyncArchiveService>(
     clock: ref.watch(clockProvider),
   ),
 );
+
+/// The archive rows waiting for a decision, kept across syncs.
+final archiveHeldRowRepositoryProvider = Provider<ArchiveHeldRowRepository>(
+  (ref) => ArchiveHeldRowRepository(
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
+final syncMergeEngineProvider = Provider<SyncMergeEngine>(
+  (ref) => SyncMergeEngine(
+    ref.watch(appDatabaseProvider),
+    ref.watch(changeLoggerProvider),
+    heldRows: ref.watch(archiveHeldRowRepositoryProvider),
+  ),
+);
+
+final archiveSyncDecisionsServiceProvider =
+    Provider<ArchiveSyncDecisionsService>(
+      (ref) => ArchiveSyncDecisionsService(
+        db: ref.watch(appDatabaseProvider),
+        logger: ref.watch(changeLoggerProvider),
+        currentUser: ref.watch(currentUserServiceProvider),
+        engine: ref.watch(syncMergeEngineProvider),
+        heldRows: ref.watch(archiveHeldRowRepositoryProvider),
+        clock: ref.watch(clockProvider),
+      ),
+    );
 
 /// The SSH host key each SFTP profile trusts. Device-only, in the OS keystore.
 final ftpHostKeyStoreProvider = Provider<FtpHostKeyStore>(
@@ -397,6 +431,20 @@ final silexgisDecisionsServiceProvider = Provider<SilexgisDecisionsService>((
         db: db,
         reread: reread,
         placer: placer,
+        override: SilexgisConflictOverride(
+          localState: localState,
+          heldRows: heldRows,
+        ),
+        resend: SilexgisResendAsNew(
+          rekeyer: SilexgisFeatureRekeyer(
+            db: db,
+            logger: logger,
+            localState: localState,
+            heldRows: heldRows,
+            serverLinks: ref.watch(silexgisServerLinksProvider),
+          ),
+          heldRows: heldRows,
+        ),
         caves: caves,
         places: places,
       ),
@@ -545,7 +593,10 @@ final ruuviHistoryStreamProvider =
 /// The single chokepoint for PCI/QCRI generation, validation and write
 /// integration. See `docs/features/place-code-identifiers.md`.
 final placeCodeServiceProvider = Provider<PlaceCodeService>(
-  (ref) => PlaceCodeService(ref.watch(appDatabaseProvider)),
+  (ref) => PlaceCodeService(
+    ref.watch(appDatabaseProvider),
+    caveIndexWriter: ref.watch(caveRepositoryProvider),
+  ),
 );
 
 /// Batch runner orchestrating PCI/QCRI generation over a scope.

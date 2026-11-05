@@ -21,6 +21,9 @@ import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_upload_answers.dart';
+import 'package:speleoloc/services/silexgis/silexgis_resend_as_new.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_rekeyer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_staged_upload_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_recordings_upload_part.dart';
@@ -62,6 +65,7 @@ void main() {
   late SilexgisHeldRowRepository heldRows;
   late SilexgisTripStateRepository trips;
   late SilexgisDecisionsService decisions;
+  late SilexgisResendAsNew resend;
 
   final caveId = Uuid.v7();
   final placeId = Uuid.v7();
@@ -88,6 +92,17 @@ void main() {
       localState: localState,
       heldRows: heldRows,
       clock: clock,
+    );
+    resend = SilexgisResendAsNew(
+      rekeyer: SilexgisFeatureRekeyer(
+        db: db,
+        logger: logger,
+        localState: localState,
+        heldRows: heldRows,
+        serverLinks: SilexgisServerLinkRepository(db, clock: clock),
+        clock: clock,
+      ),
+      heldRows: heldRows,
     );
 
     final t0 = clock.nowMs();
@@ -322,20 +337,169 @@ void main() {
       );
     });
 
+    Future<List<PendingUploadRow>> pending() => SilexgisUploadBuilder(
+      db: db,
+      localState: localState,
+      heldRows: heldRows,
+      profileUuid: profile.profileUuid,
+    ).build();
+
     test('kept, it stays here, unsent, and no longer asks', () async {
       await decisions.keepMine(profile.profileUuid, await single());
 
-      expect(await decisions.decisions(profile.profileUuid), isEmpty);
-      expect((await heldRows.counts(profile.profileUuid)).isEmpty, isTrue);
+      final counts = await heldRows.counts(profile.profileUuid);
+      expect(counts.toDecide, 0);
+      expect(counts.keptAfterRemoval, 1);
+      // Still listed, so that it can be sent again or deleted.
+      final kept = await single();
+      expect(kept.isKept, isTrue);
+      expect(kept.canSendAgainAsNew, isTrue);
       expect(await db.select(db.cavePlaces).get(), hasLength(2));
-      final pending = await SilexgisUploadBuilder(
-        db: db,
-        localState: localState,
-        heldRows: heldRows,
-        profileUuid: profile.profileUuid,
-      ).build();
-      expect(pending.where((p) => p.entityUuid == newPlace), isEmpty);
-      expect(pending.where((p) => p.entityUuid == caveId), isEmpty);
+      final rows = await pending();
+      expect(rows.where((p) => p.entityUuid == newPlace), isEmpty);
+      expect(rows.where((p) => p.entityUuid == caveId), isEmpty);
+      // Not edited since: nothing goes again.
+      expect(await resend.resendEdited(profile.profileUuid), 0);
+    });
+
+    /// What the next run would send: the cave, as new even though nothing
+    /// above it is on the server, and every place inside it, all under new
+    /// identifiers.
+    Future<Cave> expectSentAgainAsNew() async {
+      final cave = (await db.select(db.caves).get()).single;
+      expect(cave.uuid, isNot(caveId));
+      expect(cave.title, 'Invented');
+      final places = await db.select(db.cavePlaces).get();
+      expect(places, hasLength(2));
+      expect(places.map((p) => p.caveUuid).toSet(), <Uuid>{cave.uuid});
+      expect(
+        places.map((p) => p.uuid).toSet().intersection(<Uuid>{
+          placeId,
+          newPlace,
+        }),
+        isEmpty,
+      );
+
+      final rows = await pending();
+      expect(rows.map((p) => p.entityUuid).toSet(), <Uuid>{
+        cave.uuid,
+        ...places.map((p) => p.uuid),
+      });
+      expect(rows.every((p) => p.row.baseRevision == null), isTrue);
+      expect(rows.first.entityUuid, cave.uuid);
+      expect(await localState.readRevisions(profile.profileUuid), isEmpty);
+      expect(await decisions.decisions(profile.profileUuid), isEmpty);
+
+      // Logged as the old rows gone and new ones added, so a device sharing
+      // archives with this one swaps them instead of keeping both.
+      final logged = await db.select(db.changeLog).get();
+      expect(
+        logged.where(
+          (e) => e.entityUuid == caveId && e.changeType == ChangeType.delete,
+        ),
+        hasLength(1),
+      );
+      expect(
+        logged.where(
+          (e) => e.entityUuid == cave.uuid && e.changeType == ChangeType.insert,
+        ),
+        hasLength(1),
+      );
+      return cave;
+    }
+
+    test('sent again as new, it goes up with what is inside it under new '
+        'identifiers', () async {
+      await decisions.sendAgainAsNew(profile.profileUuid, await single());
+      await expectSentAgainAsNew();
+    });
+
+    test('kept, an edit of it sends it again as new', () async {
+      await decisions.keepMine(profile.profileUuid, await single());
+      clock.advance(const Duration(minutes: 5));
+      await (db.update(db.caves)..where((t) => t.uuid.equalsValue(caveId)))
+          .write(CavesCompanion(updatedAt: Value(clock.nowMs())));
+
+      expect(await resend.resendEdited(profile.profileUuid), 1);
+      await expectSentAgainAsNew();
+    });
+
+    test('kept, an edit inside it sends it again as new', () async {
+      await decisions.keepMine(profile.profileUuid, await single());
+      clock.advance(const Duration(minutes: 5));
+      await (db.update(db.cavePlaces)
+            ..where((t) => t.uuid.equalsValue(newPlace)))
+          .write(CavePlacesCompanion(updatedAt: Value(clock.nowMs())));
+
+      expect(await resend.resendEdited(profile.profileUuid), 1);
+      await expectSentAgainAsNew();
+    });
+  });
+
+  group('a cave edit that met a later version', () {
+    const serverRevision = '2026-10-28T07:30:00Z';
+
+    Future<void> conflicted({Map<String, Object?>? current}) async {
+      clock.advance(const Duration(minutes: 5));
+      final edited = clock.nowMs();
+      await (db.update(
+        db.caves,
+      )..where((t) => t.uuid.equalsValue(caveId))).write(
+        CavesCompanion(title: const Value('Mine'), updatedAt: Value(edited)),
+      );
+      await heldRows
+          .recordConflicts(profile.profileUuid, <SilexgisConflictEntry>[
+            SilexgisConflictEntry(
+              section: SyncUploadSection.rows,
+              entityUuid: caveId,
+              entityTable: 'caves',
+              wireKind: 'cave',
+              code: SilexgisCodes.conflict,
+              sentLocalUpdatedAt: edited,
+              current: current,
+            ),
+          ]);
+    }
+
+    Future<List<PendingUploadRow>> pending() => SilexgisUploadBuilder(
+      db: db,
+      localState: localState,
+      heldRows: heldRows,
+      profileUuid: profile.profileUuid,
+    ).build();
+
+    test('sent anyway, goes with the next run against the server\'s '
+        'revision', () async {
+      await conflicted(
+        current: <String, Object?>{
+          'id': caveId.toString(),
+          'name': 'Theirs',
+          'updatedAt': serverRevision,
+        },
+      );
+      expect(await pending(), isEmpty);
+
+      final decision = await single();
+      expect(decision.canSendMineAnyway, isTrue);
+      await decisions.sendMineAnyway(profile.profileUuid, decision);
+
+      expect(await decisions.decisions(profile.profileUuid), isEmpty);
+      final row = (await pending()).single;
+      expect(row.entityUuid, caveId);
+      expect(row.row.baseRevision, serverRevision);
+      expect(row.row.name, 'Mine');
+    });
+
+    test('with no server row to say which revision it overwrites, is not '
+        'offered', () async {
+      // The account may not have the row's position: re-reading is the way.
+      await conflicted();
+
+      final decision = await single();
+      expect(decision.canSendMineAnyway, isFalse);
+      await decisions.sendMineAnyway(profile.profileUuid, decision);
+      expect(await pending(), isEmpty);
+      expect(await decisions.decisions(profile.profileUuid), hasLength(1));
     });
   });
 

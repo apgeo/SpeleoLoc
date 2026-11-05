@@ -156,11 +156,20 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
         ),
       );
     } else if (value == 'delete') {
+      final installation = await ref
+          .read(silexgisServerPresenceProvider)
+          .holdingInstallation(widget.caveUuid);
+      if (!mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(LocServ.inst.t('confirm')),
-          content: Text(LocServ.inst.t('delete_cave_confirm')),
+          content: Text(
+            _withDeleteTravels(
+              LocServ.inst.t('delete_cave_confirm'),
+              installation,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -387,6 +396,37 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
   }
 
   Future<void> _deleteSelectedPlaces(List<CavePlace> selected) async {
+    // The list has already asked; a second question only when the deletion
+    // also travels to the server, so the caver knows before it does.
+    final held = await ref
+        .read(silexgisServerPresenceProvider)
+        .holdingInstallationOfAny(selected.map((cp) => cp.uuid));
+    if (!mounted) return;
+    if (held != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(LocServ.inst.t('confirm')),
+          content: Text(
+            LocServ.inst.t('silexgis_delete_travels_some', <String, String>{
+              'server': held.installation,
+              'count': '${held.count}',
+            }),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(LocServ.inst.t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(LocServ.inst.t('yes')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
     for (final cp in selected) {
       await ref.read(cavePlaceRepositoryProvider).deleteCavePlace(cp.uuid);
     }
@@ -725,12 +765,32 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
       SnackBarService.showSuccess(LocServ.inst.t('cave_place_deleted'));
   }
 
+  /// Adds the warning that a deletion travels to the installation holding
+  /// the item, so the caver is told before rather than after.
+  static String _withDeleteTravels(String question, String? installation) =>
+      <String>[
+        question,
+        if (installation != null)
+          LocServ.inst.t('silexgis_delete_travels', <String, String>{
+            'server': installation,
+          }),
+      ].join('\n\n');
+
   Future<void> _confirmDeleteCavePlace(Uuid id) async {
+    final installation = await ref
+        .read(silexgisServerPresenceProvider)
+        .holdingInstallation(id);
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(LocServ.inst.t('confirm')),
-        content: Text(LocServ.inst.t('delete_place_confirm')),
+        content: Text(
+          _withDeleteTravels(
+            LocServ.inst.t('delete_place_confirm'),
+            installation,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

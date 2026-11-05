@@ -3,13 +3,19 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
+import 'package:speleoloc/services/cave_repository.dart';
+import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/place_code/strategies/global_hierarchical_strategy.dart';
+
+import '../../support/cave_repository_fixture.dart';
 
 void main() {
   late AppDatabase db;
+  late CaveRepository caves;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    caves = await buildCaveRepository(db);
   });
 
   tearDown(() async => db.close());
@@ -74,7 +80,7 @@ void main() {
   test('aborts when country/organization code is missing', () async {
     final cave = await addCave();
     final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, const {});
+    final strat = GlobalHierarchicalStrategy(db, const {}, caves);
     final r = await strat.generate(
       caveUuid: cave,
       cavePlaceUuid: p,
@@ -92,7 +98,7 @@ void main() {
     () async {
       final cave = await addCave();
       final p = await addPlace(cave);
-      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
       final r = await strat.generate(
         caveUuid: cave,
         cavePlaceUuid: p,
@@ -112,7 +118,7 @@ void main() {
       final area = await addArea();
       final cave = await addCave(surfaceAreaUuid: area);
       final p = await addPlace(cave);
-      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
       final r = await strat.generate(
         caveUuid: cave,
         cavePlaceUuid: p,
@@ -132,7 +138,7 @@ void main() {
       final area = await addArea(identifier: '2048');
       final cave = await addCave(surfaceAreaUuid: area);
       final p = await addPlace(cave);
-      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
       final r = await strat.generate(
         caveUuid: cave,
         cavePlaceUuid: p,
@@ -151,7 +157,7 @@ void main() {
     final area = await addArea(identifier: '2048');
     final cave = await addCave(surfaceAreaUuid: area, localIndex: '001');
     final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
     final r = await strat.generate(
       caveUuid: cave,
       cavePlaceUuid: p,
@@ -166,7 +172,7 @@ void main() {
     final cave1 = await addCave(surfaceAreaUuid: area, localIndex: '001');
     final cave2 = await addCave(surfaceAreaUuid: area);
     final p = await addPlace(cave2);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
     final r = await strat.generate(
       caveUuid: cave2,
       cavePlaceUuid: p,
@@ -196,7 +202,7 @@ void main() {
       // pooled every cave globally and would have handed out 002.
       final caveB = await addCave(surfaceAreaUuid: areaB);
       final p = await addPlace(caveB);
-      final strat = GlobalHierarchicalStrategy(db, goodConfig());
+      final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
       final r = await strat.generate(
         caveUuid: caveB,
         cavePlaceUuid: p,
@@ -211,13 +217,59 @@ void main() {
     },
   );
 
+  test('an allocated cave index is stamped and logged so it syncs', () async {
+    final area = await addArea(identifier: '2048');
+    final cave = await addCave(surfaceAreaUuid: area);
+    final p = await addPlace(cave);
+    final before = await (db.select(
+      db.caves,
+    )..where((c) => c.uuid.equalsValue(cave))).getSingle();
+
+    await GlobalHierarchicalStrategy(
+      db,
+      goodConfig(),
+      caves,
+    ).generate(caveUuid: cave, cavePlaceUuid: p, isMainEntrance: false);
+
+    final after = await (db.select(
+      db.caves,
+    )..where((c) => c.uuid.equalsValue(cave))).getSingle();
+    expect(after.caveLocalIndex, '001');
+    expect(after.updatedAt, isNotNull);
+    expect(after.updatedAt, greaterThan(before.updatedAt ?? 0));
+    final log = await (db.select(
+      db.changeLog,
+    )..where((l) => l.entityUuid.equalsValue(cave))).get();
+    expect(log.map((l) => (l.entityTable, l.changeType)), [
+      ('caves', ChangeType.update),
+    ]);
+    final fields = await (db.select(
+      db.changeLogField,
+    )..where((f) => f.changeUuid.equalsValue(log.single.uuid))).get();
+    expect(fields.map((f) => f.fieldName), ['cave_local_index']);
+
+    // A later generation reuses the index and writes nothing more.
+    final p2 = await addPlace(cave);
+    await GlobalHierarchicalStrategy(
+      db,
+      goodConfig(),
+      caves,
+    ).generate(caveUuid: cave, cavePlaceUuid: p2, isMainEntrance: false);
+    expect(
+      await (db.select(
+        db.changeLog,
+      )..where((l) => l.entityUuid.equalsValue(cave))).get(),
+      hasLength(1),
+    );
+  });
+
   test('caves in the zeros fallback bucket share one index space', () async {
     // Two caves with no surface area both land in the '000' area bucket, so
     // they must NOT collide on cave_local_index.
     await addCave(localIndex: '001'); // no surface area -> area '000'
     final cave2 = await addCave();
     final p = await addPlace(cave2);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
     await strat.generate(
       caveUuid: cave2,
       cavePlaceUuid: p,
@@ -233,7 +285,7 @@ void main() {
     final area = await addArea(identifier: '2048');
     final cave = await addCave(surfaceAreaUuid: area, localIndex: '001');
     final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
     expect(
       await strat.validate(
         '8810282048001000A',
@@ -251,7 +303,7 @@ void main() {
     final area = await addArea(identifier: '2048');
     final cave = await addCave(surfaceAreaUuid: area, localIndex: '001');
     final p = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
     expect(
       await strat.validate(
         '88102820480010005',
@@ -267,7 +319,7 @@ void main() {
     final cave = await addCave(surfaceAreaUuid: area, localIndex: '001');
     await addPlace(cave, pci: '88102820480010005');
     final p2 = await addPlace(cave);
-    final strat = GlobalHierarchicalStrategy(db, goodConfig());
+    final strat = GlobalHierarchicalStrategy(db, goodConfig(), caves);
     expect(
       await strat.validate(
         '88102820480010005',

@@ -137,9 +137,11 @@ activ, ceea ce este cazul implicit.
 Ștergerea unei peșteri elimină tot ce se află sub ea: locurile din peșteră,
 zonele de peșteră, hărțile și pozițiile locurilor marcate pe ele, turele și
 punctele de tură înregistrate, precum și asocierile de beaconuri BLE (inclusiv
-cele deja dezasociate). Documentele atașate peșterii, zonelor sau locurilor ei
-sunt **dezasociate**, dar fișierele rămân în biblioteca de documente a
-aplicației.
+cele deja dezasociate). Documentele atașate peșterii, zonelor, locurilor,
+turelor ei sau punctelor acestor ture sunt **dezasociate**, dar fișierele
+rămân în biblioteca de documente a aplicației. O tură a altei peșteri care a
+înregistrat o vizită la unul dintre locurile ei își păstrează punctul de
+tură, fără loc.
 
 ## Găsirea peșterilor în listă
 
@@ -208,13 +210,15 @@ Ecranul se numește **Zonele peșterii**. De acolo:
 
 ### Ștergerea unei zone încă folosite
 
-O zonă poate fi ștearsă doar după ce **niciun loc din peșteră nu îi mai este
-atribuit**. Deschideți întâi acele locuri și readuceți **Titlul ariei
-(opțional)** la *Niciuna*.
+Ștergerea unei zone nu șterge ce se află în ea. Locurile ei și hărțile
+raster atribuite ei rămân în peșteră, fără zonă, iar documentele legate de
+zonă sunt dezasociate. Celelalte dispozitive fac la fel la următoarea lor
+sincronizare.
 
-Ștergerea unei zone încă folosite eșuează în prezent în tăcere: dialogul de
-confirmare se închide, nu apare niciun mesaj, iar zona rămâne în listă după
-aceea. Dacă o ștergere pare să nu facă nimic, acesta este motivul.
+Printre locurile fără zonă ale unei peșteri, fiecare titlu poate fi folosit
+o singură dată. Dacă unul dintre locurile zonei are titlul unui loc care
+este deja fără zonă, zona nu este ștearsă, iar un mesaj numește locul;
+redenumiți unul dintre cele două și ștergeți din nou zona.
 
 ### Atribuirea unui loc la o zonă
 

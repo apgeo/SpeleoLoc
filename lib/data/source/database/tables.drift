@@ -14,8 +14,8 @@
 -- not synced across devices. Local-only means: absent from the sync-archive
 -- table registry and from the archive import/export configs, so no exporter
 -- has to remember to skip it. The other local-only tables are
--- `ruuvi_sensor_history` and the `silexgis_*` tables at the end of this
--- file.
+-- `ruuvi_sensor_history`, `media_qr_scan_cache`, `archive_held_row` and the
+-- `silexgis_*` tables at the end of this file.
 --
 -- `place_code_identifier` (PCI) and `qr_code_resource_identifier` (QCRI)
 -- are user-facing alphanumeric identifiers on cave_places. PCI is the
@@ -90,6 +90,11 @@ CREATE TABLE IF NOT EXISTS cave_place_to_raster_map_definitions (
     UNIQUE(cave_place_uuid, raster_map_uuid) ON CONFLICT ROLLBACK
 );
 
+-- Every places-list load reads the definitions of the cave's maps by map;
+-- the UNIQUE above leads with the place.
+CREATE INDEX IF NOT EXISTS idx_cave_place_definitions_map
+    ON cave_place_to_raster_map_definitions(raster_map_uuid);
+
 -- Table: cave_places
 CREATE TABLE IF NOT EXISTS cave_places (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
@@ -122,6 +127,16 @@ CREATE TABLE IF NOT EXISTS cave_places (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area
     ON cave_places(title, cave_uuid) WHERE cave_area_uuid IS NULL;
 
+-- Every places list and watch filters by cave, and every QR resolve and
+-- code uniqueness check looks a place up by one of its codes; the title
+-- indexes above serve none of them.
+CREATE INDEX IF NOT EXISTS idx_cave_places_cave
+    ON cave_places(cave_uuid);
+CREATE INDEX IF NOT EXISTS idx_cave_places_place_code
+    ON cave_places(place_code_identifier);
+CREATE INDEX IF NOT EXISTS idx_cave_places_qr_code
+    ON cave_places(qr_code_resource_identifier);
+
 -- Table: caves
 CREATE TABLE IF NOT EXISTS caves (
     uuid                        BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
@@ -153,6 +168,11 @@ CREATE TABLE IF NOT EXISTS documentation_files (
     last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(title, file_name, file_size, file_hash) ON CONFLICT ROLLBACK
 );
+
+-- Checking whether a file is already held looks it up by its hash; the
+-- UNIQUE above leads with the title.
+CREATE INDEX IF NOT EXISTS idx_documentation_files_hash
+    ON documentation_files(file_hash);
 
 -- Table: documentation_files_to_geofeatures
 CREATE TABLE IF NOT EXISTS documentation_files_to_geofeatures (
@@ -302,6 +322,12 @@ CREATE TABLE IF NOT EXISTS documentation_files_to_cave_trip_points (
     last_modified_by_user_uuid  BLOB MAPPED BY `const UuidConverter()` REFERENCES users(uuid),
     UNIQUE(documentation_file_uuid, cave_trip_point_uuid) ON CONFLICT ROLLBACK
 );
+
+-- The trip rebuild reads every link of a point, and the cascade on point
+-- delete looks rows up the same way; the UNIQUE above leads with the
+-- document, so it cannot serve either.
+CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point
+    ON documentation_files_to_cave_trip_points(cave_trip_point_uuid);
 
 -- Table: cave_place_model_stations
 -- Where a cave place is in one survey model (a .lox/.3d documentation file):
@@ -473,6 +499,31 @@ CREATE TABLE IF NOT EXISTS change_log_field (
     old_value_short      BLOB,
     old_value_truncated  INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (change_uuid, field_name)
+);
+
+-- Table: archive_held_row
+-- LOCAL ONLY, like `configurations`: never change-logged, never carried by an
+-- archive. The rows of an archive merge that wait for a person to decide:
+-- a new record whose unique name a different record here already holds (two
+-- phones each created cave area "Hall" in the same cave), an edit that would
+-- give a record such a name, and every incoming row that hangs on such a new
+-- record. The rest of the archive is merged; these wait here.
+--
+-- `group_uuid` is the record the row waits on: the colliding record itself,
+-- or the colliding record a dependent row hangs on. `collides_with_uuid` is
+-- the local record holding the same name, set on the colliding row only.
+-- `row_json` is the row as the archive carried it.
+--
+-- Every merge reads these rows back beside the archive it merges, so a newer
+-- version replaces a held one, a record its source has since renamed or
+-- deleted stops waiting, and whatever still collides is held again.
+CREATE TABLE IF NOT EXISTS archive_held_row (
+    entity_uuid         BLOB PRIMARY KEY NOT NULL MAPPED BY `const UuidConverter()`,
+    entity_table        TEXT(80) NOT NULL,
+    group_uuid          BLOB NOT NULL MAPPED BY `const UuidConverter()`,
+    collides_with_uuid  BLOB MAPPED BY `const UuidConverter()`,
+    row_json            TEXT NOT NULL,
+    held_at             INTEGER NOT NULL
 );
 
 -- Indexes for change_log lookups

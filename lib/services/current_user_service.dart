@@ -32,8 +32,10 @@ class ConfigKey {
   /// imported from the remote (so future downloads skip them).
   static const String ftpSeenArchives = 'ftp_seen_archives';
 
-  /// `archiveFilename<TAB>sizeBytes` per line — server archives that could
-  /// not be read, so they are not downloaded again until their size changes.
+  /// Server archives that are not downloaded again for now: ones that could
+  /// not be read, until their size changes, and ones this app could not
+  /// import, until it is updated or a few runs pass. Format in
+  /// `FtpArchiveDeferrals`.
   static const String ftpUnreadableArchives = 'ftp_unreadable_archives';
 
   /// JSON map `{ profileUuid: timestampMs }` — the wall-clock time of the
@@ -41,6 +43,12 @@ class ConfigKey {
   /// a fresh upload is needed (local has unsynced changes when the latest
   /// `change_log.changed_at` is newer than this timestamp).
   static const String ftpLastUploadAt = 'ftp_last_upload_at';
+
+  /// `profileUuid=count` per line — how many of this device's changes were
+  /// dated after its clock (made while it ran ahead) at the last upload to
+  /// that profile, so a new one triggers an upload but the old ones do not
+  /// trigger one on every run.
+  static const String ftpUploadedFutureChanges = 'ftp_uploaded_future_changes';
 
   // SilexGIS server sync. Its own keys, deliberately not a new member of the
   // FTP protocol enum: an older build reading a profile whose protocol it does

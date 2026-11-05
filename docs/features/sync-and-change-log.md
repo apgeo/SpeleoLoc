@@ -100,14 +100,18 @@ Then:
 
 1. Tap **Import sync archive** and pick the `.zip`.
 2. Confirm the **Import sync archive?** prompt. Read it: it warns that
-   newer local edits are kept, older ones overwritten, and that
-   **deletions carried by the archive are applied to your database**.
+   newer local edits are kept and older ones overwritten.
 3. The merge runs. In Manual mode a dialog appears for each conflicting
-   record (see below).
+   record (see below). If the archive would delete records on your
+   device, **Delete records on this device?** asks first, with their
+   number (see [Importing can delete your
+   records](#importing-can-delete-your-records)).
 4. A one-line summary appears under the buttons, for example
    `Import complete: +12 / ~3 / -1 (57 Change history, 8 files)` —
    records added, records updated, records deleted, change-log entries
-   merged, and media files copied.
+   merged, and media files copied. A second line follows when records wait
+   for your decision (see [When a record here already has the
+   name](#when-a-record-here-already-has-the-name)).
 
 ### Reviewing a conflict by hand
 
@@ -135,15 +139,74 @@ added and edited, and importing replays those deletions on your device. A
 cave, place, map or document your team-mate removed will be removed from
 your database too.
 
-This is irreversible and nothing prompts you record by record:
+This is irreversible, so before an archive deletes anything on your
+device you are asked once, for the whole archive: **Delete records on
+this device?** says how many records it would delete, add and change.
+
+- **Delete and import** imports the archive, deletions included.
+- **Keep my records** imports nothing from it, and the screen reports
+  *Import cancelled — no changes were applied*.
+
+[FTP sync](ftp-sync.md#deletions-are-asked-about) asks the same question.
+It is not asked record by record, and **Manual (review each conflict)**
+does not change that: the conflict dialog only covers edits.
+
+A deletion you let through works like this:
 
 - The record survives only if you edited it **strictly after** they
   deleted it. If the two happened at the same moment, the deletion wins.
-- **Manual (review each conflict)** does not help here. The conflict
-  dialog only covers edits; deletions are always applied silently.
+- The same goes for what is inside it. If, after they deleted a place, you
+  recorded a trip point at it, pinned it on a map or attached a photo to
+  it, the place stays — on your device, and on theirs once they import
+  your next archive. The import counts it as skipped.
+- What the other device never saw goes with the record, as it would have
+  there: a pin you added before their deletion is removed with the place,
+  and a trip point recorded at it stays on its trip without a place.
+- An archive made before its device heard of a deletion cannot bring the
+  record back. If your team-mate's phone still had the place when it last
+  synced, importing that archive does not restore the place you deleted
+  afterwards.
 
 If you are unsure about an archive, export your own data first (or take a
 database backup) so you can get a deleted record back.
+
+### When a record here already has the name
+
+Some records must have a name of their own: two cave areas of one cave,
+two places of one cave in the same area (or outside any area), two caves
+of one surface area, two surface areas, two raster maps of one cave with
+the same title or image. When two phones each create such a record
+separately — both add cave area "Hall" to the same cave — the phone that
+imports second cannot simply add the incoming one.
+
+The import does not stop for it, and does not throw it away. Everything
+else in the archive is merged, and the incoming record is **held**,
+together with everything in the archive that hangs on it: the places
+inside that "Hall", the trip points recorded at that "Siphon". An incoming
+edit that would rename a record to a name a different record here already
+has is held the same way.
+
+The **Archive sync** tab then shows *N records from other devices wait for
+your decision*. Tap it to open **Needs a decision**, where each held record
+has a card: what it is, which cave it belongs to, which of your records has
+its name, and how many records wait with it.
+
+| Button | What happens |
+|---|---|
+| **Merge into mine** | The two are the same thing. What the incoming record holds moves to yours, and the incoming record is removed on every device at its next sync — together with what the other phone added to it meanwhile, which moves to yours too. |
+| **Keep both** | They are different things. You give the incoming record a new name and it is added beside yours. Offered when the two share their title. |
+| **Discard incoming** | The incoming record is deleted, with everything inside it, on every device at its next sync. For an incoming rename, your version stays instead and reaches the other devices. |
+
+Merging and discarding ask you to confirm first. Your choice is an ordinary
+change made on this device: it is written to the change log and travels in
+your next archive, so the other phones end up the same without being
+asked.
+
+Until you choose, the held records stay held, across restarts and further
+syncs. A newer copy from the other phone replaces the held one. If that
+phone renames or deletes its record, or you rename yours, the clash is
+gone, and the record is added at the next sync or as soon as you open
+**Needs a decision**.
 
 ### Other things worth knowing before you import
 
@@ -160,12 +223,15 @@ database backup) so you can get a deleted record back.
   syncing quietly merges them and the change log will credit both to one
   name.
 - **A partly damaged archive still imports.** A record that is corrupt,
-  or that collides with an unrelated local record on a unique code, is
+  or that needs a record neither your device nor the archive has, is
   skipped and the rest of the archive is merged anyway. That is usually
   what you want in a hut with one bar of signal, but it means an import
   can report success while a few records quietly stayed behind. The
   counts in the summary line are your only clue — compare them against
   what you expected to receive.
+- **An import is all or nothing.** Either everything the archive brings
+  is merged, or, when the import fails or you cancel it, nothing at all
+  is written.
 - **Only the archive format and the database version are checked.** The
   app never asks which device an archive came from, and shows no warning
   for an unfamiliar one. An archive produced by a *newer* app than yours

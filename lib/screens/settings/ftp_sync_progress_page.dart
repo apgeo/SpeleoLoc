@@ -8,6 +8,7 @@ import 'package:speleoloc/screens/settings/ftp_sync_settings_page.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_sync_progress.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/sync_deletion_consent.dart';
 
 /// Detailed view of an in-flight or just-finished FTP sync.
 ///
@@ -28,6 +29,7 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
     length: 3,
     vsync: this,
   );
+  bool _pendingShown = false;
 
   @override
   void dispose() {
@@ -41,6 +43,15 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
     final progress = controller.progress;
     final isRunning = progress.isRunning;
     final isPaused = progress.isPaused;
+    // The run waits on a question shown on the Progress tab: bring it into
+    // view once, then leave the user free to read the log before answering.
+    final awaiting = progress.pendingDeletions != null;
+    if (awaiting && !_pendingShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _tabController.animateTo(0);
+      });
+    }
+    _pendingShown = awaiting;
 
     return Scaffold(
       key: appMenuScaffoldKey,
@@ -105,7 +116,11 @@ class _FtpSyncProgressPageState extends ConsumerState<FtpSyncProgressPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _ProgressTab(progress: progress),
+          _ProgressTab(
+            progress: progress,
+            onApplyDeletions: controller.applyPendingDeletions,
+            onKeepRecords: controller.skipPendingDeletions,
+          ),
           _LogTab(entries: progress.log),
           const ChangeLogPage(embedded: true),
         ],
@@ -139,15 +154,33 @@ class _LogCountBadge extends StatelessWidget {
 
 class _ProgressTab extends StatelessWidget {
   final FtpSyncProgress progress;
-  const _ProgressTab({required this.progress});
+  final VoidCallback onApplyDeletions;
+  final VoidCallback onKeepRecords;
+  const _ProgressTab({
+    required this.progress,
+    required this.onApplyDeletions,
+    required this.onKeepRecords,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final pending = progress.pendingDeletions;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _PhaseHeader(progress: progress),
         const SizedBox(height: 16),
+        if (pending != null) ...[
+          SyncDeletionConsentCard(
+            archiveName: pending.archiveName,
+            deletes: pending.deletes,
+            inserts: pending.inserts,
+            updates: pending.updates,
+            onApply: onApplyDeletions,
+            onKeep: onKeepRecords,
+          ),
+          const SizedBox(height: 16),
+        ],
         _OverallProgressSection(progress: progress),
         const SizedBox(height: 16),
         if (progress.currentFileName != null)
@@ -328,6 +361,8 @@ class _PhaseHeader extends StatelessWidget {
       case FtpSyncPhase.importing:
       case FtpSyncPhase.generatingArchive:
         return Icons.sync;
+      case FtpSyncPhase.awaitingConfirmation:
+        return Icons.help_outline;
       case FtpSyncPhase.uploading:
         return Icons.cloud_upload;
       case FtpSyncPhase.finalizing:
@@ -350,6 +385,7 @@ class _PhaseHeader extends StatelessWidget {
       case FtpSyncPhase.failed:
         return Colors.red;
       case FtpSyncPhase.cancelled:
+      case FtpSyncPhase.awaitingConfirmation:
         return Colors.orange;
       case FtpSyncPhase.paused:
         return Colors.blueGrey;

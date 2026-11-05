@@ -376,6 +376,13 @@ are about sending. When it ends, a message counts what happened: downloaded,
 already on this device, no longer on the server for you, not handed to this
 account, or could not be downloaded (**try again to continue**).
 
+A photo or document taken off a cave, place or trip in the web interface is
+taken off it here too, at the next sync, and the phone does not put it back.
+One exception: your own file keeps the last place it hangs on. The server
+reports a link taken down and a file deleted there the same way, and if the
+file was deleted there, your next edit of it sends it up again with where it
+hangs on your phone.
+
 ### Server copies
 
 What your account is handed depends on the installation's rules, file by
@@ -482,7 +489,8 @@ and while a run is in progress (a small spinner shows beside the heading):
 
 While a run is in progress, the rest of the screen waits for it as well:
 the pencil, **Sign in**, **Forget**, **Choose** and the switches are greyed
-out until the run ends. The run carries on with the server, the sign-in and
+out until the run ends, and each card says *Available when the sync
+finishes* under them meanwhile. The run carries on with the server, the sign-in and
 the settings it started with, so a change made halfway would be undone by
 it, or would leave it writing under a server you had just forgotten.
 
@@ -542,14 +550,22 @@ This is the destructive part, in both directions.
   The cave or place stays as it is, is not sent, and goes on the **Needs a
   decision** page as **Deleted on the server, but holds work of yours it
   never had**; see [The Needs a decision page](#the-needs-a-decision-page).
+  There you can delete it here too, keep it on the phone, or send it to the
+  server again as a new item. The server keeps a deleted item's identity
+  for good, so a cave sent again goes up under new identifiers, with every
+  area and place inside it, and its trips, maps, photos and documents are
+  moved onto it on the phone. The server sees new items; nothing on it says
+  yet that they were deleted there before.
 - A cave or place **you delete here**, if the server already knew it, is
   sent as a deletion on the next run, and the server removes it *with
   everything inside it*. Trips and raster maps go the same way, also one
   that came from another phone: the server removes it for everyone, and the
   phone that made it deletes its own copy when it next syncs. Deleting a
-  trip or a raster map the server holds says so in its confirmation: *Clubul
-  Speo Example holds it too. The next sync deletes it there as well, for
-  everyone who reads it, including whoever made it.*
+  cave, a place, a trip or a raster map the server holds says so in its
+  confirmation: *Clubul Speo Example holds it too. The next sync deletes it
+  there as well, for everyone who reads it, including whoever made it.*
+  Deleting several caves or places at once counts the ones the server
+  holds: *Clubul Speo Example holds 2 of them too. …*
 
 Neither asks for confirmation at sync time. The confirmation was the delete
 itself. If you are unsure, take a backup before syncing — see
@@ -715,7 +731,9 @@ apply:
 | Button | What happens |
 |---|---|
 | **Use the server's version** | Asks first, unless the item is a removal of yours: **Use the server's version?** — *Your version on this device is replaced by the server's. Your changes to it are lost.* Your version is then replaced by the server's: **The server's version is back.** When the phone was not handed the server's version, the button reads **Re-read from the server** and the answer is **The server's version arrives with the next sync.** |
-| **Keep mine, don't send** | **Kept on this device. It is sent again when you edit it.** For something deleted on the server: **Kept on this device only. It is not sent to the server.** |
+| **Keep mine, don't send** | **Kept on this device. It is sent again when you edit it.** For something deleted on the server it asks first: **Keep it on this device?** — *Clubul Speo Example no longer has it. It stays on this device and is not sent. If you edit it, or anything inside it, the next sync sends it to Clubul Speo Example again as a new item, with everything inside it.* Then: **Kept on this device only. If you edit it, it goes to the server again as new.** It stays on this page marked **Kept on this device only**, and the **Needs your attention** card counts it as **1 kept on this device only**, so you can still send it again or delete it. |
+| **Send again as new** | For something deleted on the server, kept or not. Asks first: **Send it again as new?** — *Clubul Speo Example deleted it. The next sync sends it there again as a new item, with everything inside it. On this device it gets new identifiers, so it no longer counts as the item that was deleted.* Then: **It goes to the server as new with the next sync.** It goes even when **Send caves I survey elsewhere** is off; a cave sent this way is not in your selection on the server until somebody adds it there. |
+| **Send mine anyway** | For a cave, area or place changed on the server as well, when the phone was handed the server's version. Asks first: **Send your version anyway?** — *The next sync writes your version over the newer one on Clubul Speo Example: its name, description, properties and position all become yours. Whatever was changed there since your last sync is lost.* Then: **Your version goes with the next sync.** If somebody changes it on the server yet again before that, it comes back here as a new conflict. |
 | **Delete** | For something the server never had. **Delete this draft?** — *The server never had it. Deleting it removes it from this device.* For something deleted on the server: **Delete it here too?** — *The server no longer has it. Deleting it removes it from this device, with everything inside it and your unsent changes.* |
 | **Remove my point** | For a second point on the same place. Your point goes, and the server's arrives with the next sync. A place at a 3D model's station gets **Remove my station** instead. |
 

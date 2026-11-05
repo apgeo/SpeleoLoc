@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
-import 'package:drift/drift.dart' show Variable;
+import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +13,7 @@ import 'package:speleoloc/services/cave_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_archive_deferrals.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
@@ -283,6 +284,49 @@ class _BlockingTransport implements IFtpTransport {
   }
 }
 
+/// Archive service whose imports return what a test scripts, without
+/// reading the downloaded file.
+class _ScriptedArchiveService extends SyncArchiveService {
+  _ScriptedArchiveService(super.db, super.logger, this.onImport);
+
+  Future<SyncImportReport> Function(String zipPath) onImport;
+
+  /// Used instead of [onImport] for an import holding back deletions.
+  Future<SyncImportReport> Function(String zipPath)? onHeldBackImport;
+  final List<String> imported = <String>[];
+  final List<bool> heldBack = <bool>[];
+
+  @override
+  Future<SyncImportReport> importFromZip(
+    String zipPath, {
+    ConflictResolver? conflictResolver,
+    bool holdBackDeletions = false,
+  }) {
+    imported.add(zipPath.split(Platform.pathSeparator).last);
+    heldBack.add(holdBackDeletions);
+    final held = onHeldBackImport;
+    return holdBackDeletions && held != null
+        ? held(zipPath)
+        : onImport(zipPath);
+  }
+}
+
+SyncImportReport _report({
+  List<String> warnings = const [],
+  int filesFailed = 0,
+  int deletes = 0,
+}) => SyncImportReport(
+  rowsInserted: 1,
+  rowsUpdated: 0,
+  rowsSkipped: 0,
+  deletesApplied: deletes,
+  changeLogMerged: 0,
+  filesCopied: 0,
+  filesSkipped: 0,
+  filesFailed: filesFailed,
+  warnings: warnings,
+);
+
 class _Harness {
   _Harness(
     this.db,
@@ -403,6 +447,7 @@ void main() {
   Future<(FtpSyncController, _FakeTransport)> makeController(
     _Harness h, {
     Map<String, List<int>>? seedFromHarnessExports,
+    SyncArchiveService? archiveService,
   }) async {
     final profileRepo = FtpProfileRepository(h.db);
     const profile = FtpProfile(
@@ -424,12 +469,26 @@ void main() {
     final controller = FtpSyncController(
       db: h.db,
       profileRepository: profileRepo,
-      archiveService: h.sync,
+      archiveService: archiveService ?? h.sync,
       currentUserService: h.currentUser,
       transportBuilder: (_) => fake,
     );
     return (controller, fake);
   }
+
+  Future<Set<String>> seenArchives(_Harness h) async {
+    final rows = await h.db
+        .customSelect(
+          'SELECT value FROM configurations WHERE title = ?',
+          variables: [const Variable<String>(ConfigKey.ftpSeenArchives)],
+        )
+        .get();
+    if (rows.isEmpty) return {};
+    return rows.single.read<String>('value').split('\n').toSet();
+  }
+
+  Iterable<String> logLines(FtpSyncProgress p, FtpSyncLogLevel level) =>
+      p.log.where((e) => e.level == level).map((e) => e.message);
 
   test('fails cleanly when no default profile is set', () async {
     final h = await _buildHarness();
@@ -1160,6 +1219,392 @@ void main() {
       expect(controller.timestampOfArchiveName('garbage.txt'), 0);
     },
   );
+
+  group('import report', () {
+    const peerArchive = 'speleo_loc_sync_1000_deadbeef.zip';
+
+    test('every import warning reaches the log, and the run says so', () async {
+      final h = await _buildHarness();
+      final service = _ScriptedArchiveService(
+        h.db,
+        h.logger,
+        (_) async =>
+            _report(warnings: [for (var i = 0; i < 30; i++) 'row $i skipped']),
+      );
+      final (controller, fake) = await makeController(
+        h,
+        archiveService: service,
+      );
+      fake.publish(peerArchive, [1, 2, 3]);
+
+      await controller.startDefault();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      final warnings = logLines(end, FtpSyncLogLevel.warning).toList();
+      expect(warnings, contains(contains('row 0 skipped')));
+      expect(warnings, contains(contains('row 19 skipped')));
+      expect(warnings, isNot(contains(contains('row 20 skipped'))));
+      expect(warnings, contains(contains('10 more')));
+      expect(end.log.last.message, contains('30 import warning(s)'));
+      expect(end.warningMessage, isNull);
+      expect(await seenArchives(h), contains(peerArchive));
+    });
+
+    test('an archive whose files could not be written stays unseen', () async {
+      final h = await _buildHarness();
+      final service = _ScriptedArchiveService(
+        h.db,
+        h.logger,
+        (_) async => _report(
+          filesFailed: 3,
+          warnings: ['asset extraction failed: disk full'],
+        ),
+      );
+      final (controller, fake) = await makeController(
+        h,
+        archiveService: service,
+      );
+      fake.publish(peerArchive, [1, 2, 3]);
+
+      await controller.startDefault();
+      final first = await _waitForTerminal(controller);
+
+      expect(first.phase, FtpSyncPhase.failed);
+      expect(first.errorMessage, contains(peerArchive));
+      expect(
+        logLines(first, FtpSyncLogLevel.error),
+        contains(contains('3 file(s)')),
+      );
+      expect(await seenArchives(h), isNot(contains(peerArchive)));
+
+      // Space was freed: the next run imports it again and completes.
+      service.onImport = (_) async => _report();
+      await controller.startDefault();
+      final second = await _waitForTerminal(controller);
+      expect(service.imported, [peerArchive, peerArchive]);
+      expect(second.phase, FtpSyncPhase.completed, reason: second.errorMessage);
+      expect(await seenArchives(h), contains(peerArchive));
+    });
+  });
+
+  group('unimportable archives', () {
+    const peerArchive = 'speleo_loc_sync_1000_deadbeef.zip';
+
+    /// A controller over [service] whose downloads are recorded, and whose
+    /// app version a test can change between runs.
+    Future<(FtpSyncController, _FakeTransport, List<String>)> build(
+      _Harness h,
+      SyncArchiveService service,
+      String Function() appVersion,
+    ) async {
+      final (_, fake) = await makeController(h);
+      final downloads = <String>[];
+      final controller = FtpSyncController(
+        db: h.db,
+        profileRepository: FtpProfileRepository(h.db),
+        archiveService: service,
+        currentUserService: h.currentUser,
+        transportBuilder: (_) => _OrderTrackingTransport(fake, downloads),
+        appVersionReader: () async => appVersion(),
+      );
+      return (controller, fake, downloads);
+    }
+
+    test(
+      'an archive from a newer app is downloaded once per app version',
+      () async {
+        final h = await _buildHarness();
+        final service = _ScriptedArchiveService(
+          h.db,
+          h.logger,
+          (_) async => throw const SyncArchiveSchemaMismatchException(
+            archiveSchemaVersion: 99,
+            localSchemaVersion: 36,
+            archiveAppVersion: '9.0.0',
+            archiveAppBuildNumber: null,
+            tooNew: true,
+          ),
+        );
+        var version = '1.0.0+1';
+        final (controller, fake, downloads) = await build(
+          h,
+          service,
+          () => version,
+        );
+        fake.publish(peerArchive, [1, 2, 3]);
+
+        await controller.startDefault();
+        final first = await _waitForTerminal(controller);
+        expect(downloads, [peerArchive, '$peerArchive.sha256']);
+        expect(first.warningMessage, contains('v9.0.0'));
+
+        downloads.clear();
+        await controller.startDefault();
+        final second = await _waitForTerminal(controller);
+        expect(downloads, isEmpty, reason: 'same app: not downloaded again');
+        expect(second.phase, FtpSyncPhase.completed);
+        expect(second.warningMessage, contains(peerArchive));
+        expect(
+          logLines(second, FtpSyncLogLevel.warning),
+          contains(contains('tried again once this app is updated')),
+        );
+
+        version = '1.1.0+2';
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(downloads, contains(peerArchive), reason: 'updated app retries');
+        expect(await seenArchives(h), isNot(contains(peerArchive)));
+      },
+    );
+
+    test(
+      'a failed import waits a few runs, or until the file changes',
+      () async {
+        final h = await _buildHarness();
+        final service = _ScriptedArchiveService(
+          h.db,
+          h.logger,
+          (_) async => throw StateError('FOREIGN KEY constraint failed'),
+        );
+        final (controller, fake, downloads) = await build(
+          h,
+          service,
+          () => '1.0.0+1',
+        );
+        fake.publish(peerArchive, [1, 2, 3]);
+
+        await controller.startDefault();
+        final first = await _waitForTerminal(controller);
+        expect(first.phase, FtpSyncPhase.failed);
+        expect(service.imported, [peerArchive]);
+
+        for (
+          var run = 0;
+          run < FtpArchiveDeferrals.failedImportSkippedRuns;
+          run++
+        ) {
+          await controller.startDefault();
+          final held = await _waitForTerminal(controller);
+          expect(held.phase, FtpSyncPhase.completed, reason: 'run $run');
+          expect(held.warningMessage, contains(peerArchive));
+        }
+        expect(service.imported, [peerArchive], reason: 'skipped meanwhile');
+
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(service.imported, [peerArchive, peerArchive]);
+
+        // Failed again, and now the device re-uploads it: tried at once.
+        downloads.clear();
+        fake.publish(peerArchive, [1, 2, 3, 4]);
+        service.onImport = (_) async => _report();
+        await controller.startDefault();
+        final fixed = await _waitForTerminal(controller);
+        expect(downloads, contains(peerArchive));
+        expect(fixed.phase, FtpSyncPhase.completed, reason: fixed.errorMessage);
+        expect(await seenArchives(h), contains(peerArchive));
+      },
+    );
+  });
+
+  group('wrong clocks', () {
+    // Far enough ahead to be a wrong clock, not drift between phones.
+    final future = DateTime.now()
+        .add(const Duration(days: 5 * 365))
+        .millisecondsSinceEpoch;
+    final recent = DateTime.now()
+        .subtract(const Duration(minutes: 5))
+        .millisecondsSinceEpoch;
+
+    String ownId(_Harness h) =>
+        h.currentUser.deviceUuid.value!.toString().replaceAll('-', '');
+
+    test(
+      'a future-dated archive does not hide its device\'s later one',
+      () async {
+        final peer = await _buildHarness();
+        await peer.caveRepo.addCave('Made after the clock was fixed');
+        final later = await peer.sync.exportToZip(
+          tempDir.path,
+          filenameHint: 'later.zip',
+        );
+        final b = await _buildHarness();
+        final futureName = 'speleo_loc_sync_${future}_deadbeef.zip';
+        // The peer's wrong-clock archive was imported by an earlier run.
+        await b.db.customStatement(
+          'INSERT INTO configurations (title, value) VALUES (?, ?)',
+          [ConfigKey.ftpSeenArchives, futureName],
+        );
+        final (controller, fake) = await makeController(b);
+        fake.publish(futureName, [1, 2, 3]);
+        fake.publish(
+          'speleo_loc_sync_${recent}_deadbeef.zip',
+          await later.readAsBytes(),
+        );
+
+        await controller.startDefault();
+        final end = await _waitForTerminal(controller);
+
+        expect(
+          (await b.caveRepo.getCaves()).map((c) => c.title),
+          contains('Made after the clock was fixed'),
+          reason: end.log.map((e) => e.message).join('\n'),
+        );
+        expect(end.warningMessage, contains("dated after this device's clock"));
+      },
+    );
+
+    test(
+      'an own future-dated archive is replaced, then uploads stop',
+      () async {
+        final h = await _buildHarness();
+        await h.caveRepo.addCave('Alpha');
+        final (controller, fake) = await makeController(h);
+        final futureName = 'speleo_loc_sync_${future}_${ownId(h)}.zip';
+        fake.publish(futureName, [1, 2, 3]);
+        await h.db.customStatement(
+          'INSERT INTO configurations (title, value) VALUES (?, ?)',
+          [ConfigKey.ftpSeenArchives, futureName],
+        );
+
+        await controller.startDefault();
+        final first = await _waitForTerminal(controller);
+
+        expect(first.phase, FtpSyncPhase.completed, reason: first.errorMessage);
+        expect(_zipsOnly(fake.uploadedNames), hasLength(1));
+        expect(fake.store.keys, isNot(contains(futureName)));
+        expect(fake.store.keys, isNot(contains('$futureName.sha256')));
+
+        fake.uploadedNames.clear();
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(fake.uploadedNames, isEmpty, reason: 'nothing new to send');
+      },
+    );
+
+    test(
+      'changes dated ahead of the clock upload once, not every run',
+      () async {
+        final h = await _buildHarness();
+        await h.caveRepo.addCave('Alpha');
+        final (controller, fake) = await makeController(h);
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(_zipsOnly(fake.uploadedNames), hasLength(1));
+
+        // An edit made while this phone's clock ran years ahead.
+        final caveUuid = (await h.caveRepo.getCaves()).single.uuid;
+        await h.db
+            .into(h.db.changeLog)
+            .insert(
+              ChangeLogCompanion.insert(
+                uuid: Uuid.v7(),
+                entityTable: 'caves',
+                entityUuid: caveUuid,
+                changeType: ChangeType.update,
+                changedAt: future,
+                deviceUuid: Value(h.currentUser.deviceUuid.value),
+              ),
+            );
+
+        fake.uploadedNames.clear();
+        await controller.startDefault();
+        final second = await _waitForTerminal(controller);
+        expect(_zipsOnly(fake.uploadedNames), hasLength(1));
+        expect(second.warningMessage, contains('dated after its clock'));
+
+        fake.uploadedNames.clear();
+        await controller.startDefault();
+        await _waitForTerminal(controller);
+        expect(fake.uploadedNames, isEmpty);
+      },
+    );
+  });
+
+  group('incoming deletions', () {
+    const peerArchive = 'speleo_loc_sync_1000_deadbeef.zip';
+
+    /// Waits for the run [c] was just told to start to ask its question.
+    Future<FtpSyncProgress> waitForQuestion(FtpSyncController c) async {
+      while (!c.progress.isRunning) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      while (c.progress.phase != FtpSyncPhase.awaitingConfirmation) {
+        if (!c.progress.isRunning && c.progress.phase != FtpSyncPhase.idle) {
+          fail('the run ended without asking: ${c.progress.phase}');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      return c.progress;
+    }
+
+    Future<(FtpSyncController, _FakeTransport, _ScriptedArchiveService)> build(
+      _Harness h,
+    ) async {
+      final service =
+          _ScriptedArchiveService(
+              h.db,
+              h.logger,
+              (_) async => _report(deletes: 2),
+            )
+            ..onHeldBackImport = (_) async =>
+                throw SyncImportHasDeletionsException(_report(deletes: 2));
+      final (controller, fake) = await makeController(
+        h,
+        archiveService: service,
+      );
+      fake.publish(peerArchive, [1, 2, 3]);
+      return (controller, fake, service);
+    }
+
+    test('a one-tap sync asks before applying them, then imports', () async {
+      final h = await _buildHarness();
+      final (controller, fake, service) = await build(h);
+
+      unawaited(controller.startDefault());
+      final asking = await waitForQuestion(controller);
+
+      expect(asking.pendingDeletions?.archiveName, peerArchive);
+      expect(asking.pendingDeletions?.deletes, 2);
+      expect(service.heldBack, [true], reason: 'nothing applied yet');
+
+      controller.applyPendingDeletions();
+      final end = await _waitForTerminal(controller);
+
+      expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+      expect(end.pendingDeletions, isNull);
+      expect(service.heldBack, [true, false]);
+      expect(await seenArchives(h), contains(peerArchive));
+      expect(fake.connectCalls, 2, reason: 'reconnects after the wait');
+    });
+
+    test(
+      'keeping the records imports nothing and asks again next time',
+      () async {
+        final h = await _buildHarness();
+        final (controller, _, service) = await build(h);
+
+        unawaited(controller.startDefault());
+        await waitForQuestion(controller);
+        controller.skipPendingDeletions();
+        final end = await _waitForTerminal(controller);
+
+        expect(end.phase, FtpSyncPhase.completed, reason: end.errorMessage);
+        expect(end.warningMessage, contains(peerArchive));
+        expect(service.heldBack, [true]);
+        expect(await seenArchives(h), isNot(contains(peerArchive)));
+
+        unawaited(controller.startDefault());
+        await waitForQuestion(controller);
+        controller.cancel();
+        expect(
+          (await _waitForTerminal(controller)).phase,
+          FtpSyncPhase.cancelled,
+        );
+      },
+    );
+  });
 
   group('SFTP host key', () {
     const sftpProfile = FtpProfile(

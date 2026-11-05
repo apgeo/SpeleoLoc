@@ -158,12 +158,15 @@ What happens then:
 1. The run starts **immediately** — there is no confirmation and no
    profile picker — and, unless you started it from the app menu, the
    **FTP sync** screen opens on top of it. If there is no default
-   profile, or it has no stored password, the run fails at once.
+   profile, or it has no stored password, the run fails at once. It
+   stops to ask only before an archive would delete records on this
+   device — see [Deletions are asked about](#deletions-are-asked-about).
 2. The header on the **Progress** tab names the current phase:
    **Connecting…**, **Listing remote archives…**, **Downloading
-   archive**, **Importing archive**, **Generating local archive…**,
-   **Uploading archive**, **Finalizing…**. Underneath it are the profile
-   name and **Started at**.
+   archive**, **Importing archive**, **Waiting for your answer**,
+   **Generating local archive…**, **Uploading archive**,
+   **Finalizing…**. Underneath it are the profile name and **Started
+   at**.
 3. **Overall progress** is a single bar for the whole run, with an
    **Archives: 2 / 5** count once the download queue is known. Under
    **Current file** you get the file's name, **Transferred** so far out
@@ -186,7 +189,9 @@ What happens then:
 
 The **Log** tab is where a sync explains itself: how many new archives
 were found, each file downloaded with its size, each checksum verified,
-how many rows an import added, changed and skipped, and every archive
+how many rows an import added, changed and skipped, every warning an
+import raised — a record it could not take in, a deletion it could not
+apply, a file it could not write, up to 20 per archive — and every archive
 that was skipped and why. When a run did not do what you expected, look
 there first.
 
@@ -272,6 +277,24 @@ change-log entries against the newest archive it already has on the
 server (or, if there is none there, its own record of when it last
 uploaded).
 
+### When a phone's clock is wrong
+
+Archive names, and every change you make, carry the date and time of
+the phone that made them, and phones in the field often go without
+network time. An archive dated more than an hour after this phone's
+clock means one of the two clocks is or was wrong. The Log tab and the
+orange banner say so — check the date and time in the phone's settings.
+Such an archive is still imported, but it never counts as its device's
+newest, so it cannot hide that device's later, correctly dated archives.
+
+If this phone uploaded while its clock ran ahead, its next sync notices
+its own archive dated after its clock, uploads a correctly dated one even
+without new changes, and removes the old one, so the other devices keep
+receiving its uploads. Changes made while the clock ran ahead are
+uploaded once; the Log tab and the banner count them, because until their
+date has passed they win over any edit of the same records on every
+device. Correct those records by hand if needed.
+
 ## How a run ends
 
 Whatever happened, a successful run's header reads **Sync complete**.
@@ -285,7 +308,11 @@ The last line of the **Log** tab is more precise, and says one of:
   new and published your own snapshot.
 
 That last distinction matters when you want to be sure your work has
-actually reached the server.
+actually reached the server. When imports raised warnings, the line ends
+with their number, for example *(3 import warning(s), listed above)*;
+the warnings themselves are the orange lines above it. Some are routine —
+a user matched by name to one you already have — so they do not turn the
+banner orange.
 
 A run that skipped unreadable archives still ends as **Sync complete**,
 with an orange banner listing them.
@@ -295,8 +322,19 @@ the first problem — even if most of it succeeded. One archive that
 failed to download or failed to import does not stop the rest, and does
 not stop your own upload. So a red result does
 not mean nothing worked: read the Log tab to see what did. Everything
-that failed is deliberately left unmarked, so simply running the sync
-again retries it.
+that failed is deliberately left unmarked, so running the sync again
+retries it — a failed download on the very next sync. An archive whose
+**import** failed is different: the cause is usually in the data, and
+downloading the whole archive again on every sync would not change it.
+It is left alone for the next 4 syncs and tried again on the 5th, or as
+soon as it changes on the server or the app is updated. Meanwhile each
+sync names it in an orange line in the Log tab and in the orange banner.
+
+An archive whose files could not be written on this device — the phone's
+storage is full, for instance — also counts as failed. Its records are
+imported, but the photos and maps they point to are missing, so it is
+imported again on the next sync; files that did arrive are not written a
+second time. Free some space and sync again.
 
 For a connection or sign-in failure, a changed SFTP host key or an FTPS
 profile, the red banner also carries an **Open Settings** button that
@@ -333,10 +371,51 @@ If you need to see what an incoming change overwrote, look at the
 by hand and import it on the Man. sync screen with manual conflict
 resolution turned on.
 
+The one thing a run leaves to you is a record another phone created under
+a name a different record of yours already has — cave area "Hall" added to
+the same cave on both phones. It is neither overwritten nor dropped: it is
+held, with whatever hangs on it, and everything else is merged. The run
+carries on, and the Log tab adds an orange line, *N record(s) from other
+devices wait for a decision*. Decide on **Man. sync → Archive sync → Needs
+a decision**; see [When a record here already has the
+name](sync-and-change-log.md#when-a-record-here-already-has-the-name).
+
+## Deletions are asked about
+
+An archive carries what other devices deleted as well as what they added
+and edited, and importing it deletes those records here too. A deletion
+made by mistake on one phone would otherwise vanish from every phone at
+the next one-tap sync, with nothing to bring it back.
+
+So before importing an archive that would delete records on this device,
+the run stops with **Waiting for your answer**. The **Progress** tab shows
+**Delete records on this device?**, the archive's name and what it would
+do — how many records it deletes, adds and changes — and the sync card in
+the app menu reads *N record(s) would be deleted — tap to decide*.
+Nothing from that archive has been imported yet.
+
+- **Delete and import** imports the archive with its deletions, and the
+  run goes on.
+- **Keep my records** imports nothing from that archive and goes on with
+  the others. The archive is named in the orange banner at the end, and
+  the next sync downloads it and asks again. That device's later archives
+  carry the same deletions, so nothing else from it arrives either until
+  you let them through: settle the deletion with the team-mate.
+- **Cancel sync** or **Pause sync** stop the run; the next one asks again.
+
+The question is the same on the Man. sync screen, so an archive is never
+imported with its deletions on one route without asking while the other
+asks. If you are unsure, check with the team-mate first: you can look at
+what was deleted in the [change log](sync-and-change-log.md#change-log)
+once you have let it through, but not get the records back from there.
+
 ## Housekeeping on the server
 
 SpeleoLoc never deletes another device's files, nor any finished archive,
-from the remote folder — only the leftovers of its own cut-off uploads.
+from the remote folder — only the leftovers of its own cut-off uploads,
+and its own archives dated after a new upload of its own, which a wrong
+clock produced (see [When a phone's clock is
+wrong](#when-a-phones-clock-is-wrong)).
 Every sync that uploads adds one archive plus one small checksum file, so
 the folder grows steadily — one pair per device per upload.
 
@@ -396,7 +475,9 @@ already handled — the most recent 500 — so it does not fetch them twice.
 - **An archive was skipped over its app version** — the Log tab says
   which way round it is. From a *newer* version of SpeleoLoc: the
   message names the version you need, and once this device is updated
-  the archive imports itself on the next sync. From an *older* version:
+  the archive imports itself on the next sync. Until then it is
+  downloaded only once: later syncs leave it on the server, and say so in
+  the Log tab and the orange banner. From an *older* version:
   it is skipped for good on this device, and the only cure is to update
   the app that produced it and let that device sync again. Either way
   the rest of the run carries on.

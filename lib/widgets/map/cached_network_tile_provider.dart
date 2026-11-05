@@ -3,8 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:http/http.dart' as http;
 import 'package:speleoloc/services/map/tile_disk_cache.dart';
+import 'package:speleoloc/widgets/map/map_tile_http_client.dart';
 
 /// Drop-in replacement for flutter_map's NetworkTileProvider that runs
 /// every fetch through [loadTileBytes]: fresh tiles render from the
@@ -15,12 +15,6 @@ class CachedNetworkTileProvider extends TileProvider {
 
   final String sourceId;
   final TileDiskCache cache;
-
-  /// One keep-alive client for every provider instance: providers are
-  /// rebuilt with the layer stack on each map rebuild, so a per-instance
-  /// client would leak sockets (TileLayer may also dispose providers
-  /// mid-flight, and in-flight tiles must not lose their client).
-  static final http.Client _client = http.Client();
 
   @override
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
@@ -74,7 +68,7 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
       x: key.x,
       y: key.y,
       url: Uri.parse(key.url),
-      client: CachedNetworkTileProvider._client,
+      client: mapTileHttpClient,
       headers: key.provider.headers,
     );
     final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
@@ -82,7 +76,8 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
   }
 
   @override
-  bool operator ==(Object other) => other is _CachedTileImage && other.url == url;
+  bool operator ==(Object other) =>
+      other is _CachedTileImage && other.url == url;
 
   @override
   int get hashCode => url.hashCode;

@@ -15,6 +15,7 @@ import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
+import 'package:speleoloc/screens/settings/database_file_error_text.dart';
 import 'package:speleoloc/screens/settings/sql_command_runner.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
@@ -236,6 +237,8 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
         );
       }
 
+      DatabaseRestoreHelper.ensureNotNewer(File(result.files.single.path!));
+
       // Preserve device identity before replacing the database.
       // Disabled when `copy_device_uuid_from_archive_on_import` is true in
       // the archive_sync_import_export_config configuration key.
@@ -278,6 +281,8 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
       );
       final silexgisTokens = ref.read(silexgisTokenStoreProvider);
       final silexgisSignInRegistry = ref.read(silexgisAuthRegistryProvider);
+      // Read before the database is swapped; it touches only the keystore.
+      final ftpSecrets = ref.read(ftpProfileRepositoryProvider);
       final silexgisSignIns = await SilexgisSignInCarryOver.capture(
         appDatabase,
         silexgisTokens,
@@ -314,7 +319,10 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
         );
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
-      await devicePreferences.applyTo(appDatabase);
+      await devicePreferences.applyTo(
+        appDatabase,
+        adoptFtpProfiles: ftpSecrets.forgetSecrets,
+      );
       await silexgisSignIns.applyTo(
         appDatabase,
         silexgisTokens,
@@ -331,7 +339,8 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
       if (context.mounted) {
         Navigator.pop(context);
         SnackBarService.showError(
-          '${LocServ.inst.t('database_restore_failed')}: $e',
+          '${LocServ.inst.t('database_restore_failed')}: '
+          '${databaseFileErrorText(e)}',
         );
       }
     }

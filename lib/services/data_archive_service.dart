@@ -157,11 +157,14 @@ class DataArchiveService {
 
   /// Replaces the entire local database and files with the archive contents.
   ///
-  /// The caller must restart the app afterwards.
+  /// The caller must restart the app afterwards. Pass [adoptFtpProfiles]
+  /// when the archive is the caver's own data rather than a sample: see
+  /// [DevicePreferencesCarryOver.applyTo].
   Future<void> importArchiveReplace({
     required String zipPath,
     required SilexgisRefreshTokenStore silexgisTokens,
     SilexgisAuthRegistry? silexgisSignInRegistry,
+    ForgetFtpProfileSecrets? adoptFtpProfiles,
     ProgressCallback? onProgress,
   }) async {
     onProgress?.call('Extracting archive...');
@@ -172,6 +175,7 @@ class DataArchiveService {
       if (!await importedDbFile.exists()) {
         throw Exception('No database found in archive');
       }
+      DatabaseRestoreHelper.ensureNotNewer(importedDbFile);
 
       // Preserve the device-local identity so the restored database keeps
       // this device's UUID (the archive may carry a different device's UUID).
@@ -215,7 +219,10 @@ class DataArchiveService {
         await _writeConfigValue('device_uuid', savedDeviceUuid);
       }
       await UserHandoverStore(appDatabase).handOver(userHandover);
-      await devicePreferences.applyTo(appDatabase);
+      await devicePreferences.applyTo(
+        appDatabase,
+        adoptFtpProfiles: adoptFtpProfiles,
+      );
       await silexgisSignIns.applyTo(
         appDatabase,
         silexgisTokens,

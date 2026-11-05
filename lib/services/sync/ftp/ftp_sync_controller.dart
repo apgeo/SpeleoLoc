@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/sync/ftp/ftp_archive_deferrals.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_host_key_store.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_repository.dart';
@@ -75,6 +77,7 @@ class FtpSyncController extends ChangeNotifier {
   final CurrentUserService _currentUser;
   final FtpHostKeyStore _hostKeys;
   final FtpTransportBuilder? _transportBuilderOverride;
+  final Future<String> Function() _appVersionReader;
 
   // Syncs run without a dialog, so a server's first host key is trusted
   // without asking and reported in the log instead.
@@ -91,6 +94,10 @@ class FtpSyncController extends ChangeNotifier {
   /// `paused` terminal phase instead of `cancelled`.
   bool _pauseRequested = false;
 
+  /// Completed with the user's answer while a run waits in
+  /// [FtpSyncPhase.awaitingConfirmation].
+  Completer<bool>? _deletionAnswer;
+
   // Speed / ETA rolling window for the current file transfer step. Cleared
   // each time we enter a fresh download/upload step.
   final List<_SpeedSample> _speedSamples = <_SpeedSample>[];
@@ -99,6 +106,12 @@ class FtpSyncController extends ChangeNotifier {
   // Rolling log buffer cap.
   static const int _maxLogEntries = 200;
 
+  static const int _maxWarningsPerArchive = 20;
+
+  /// How far a date may run ahead of this device's clock before it is taken
+  /// for a wrong clock rather than ordinary drift between phones.
+  static const Duration _clockTolerance = Duration(hours: 1);
+
   FtpSyncController({
     required AppDatabase db,
     required FtpProfileRepository profileRepository,
@@ -106,12 +119,14 @@ class FtpSyncController extends ChangeNotifier {
     required CurrentUserService currentUserService,
     FtpHostKeyStore? hostKeyStore,
     FtpTransportBuilder? transportBuilder,
+    Future<String> Function()? appVersionReader,
   }) : _db = db,
        _profileRepo = profileRepository,
        _archiveService = archiveService,
        _currentUser = currentUserService,
        _hostKeys = hostKeyStore ?? FtpHostKeyStore(),
-       _transportBuilderOverride = transportBuilder;
+       _transportBuilderOverride = transportBuilder,
+       _appVersionReader = appVersionReader ?? _defaultAppVersion;
 
   /// Latest live progress snapshot. Listeners are notified via
   /// [ChangeNotifier.notifyListeners] on every change.
@@ -158,6 +173,7 @@ class FtpSyncController extends ChangeNotifier {
     _pauseRequested = false;
     _appendLog(FtpSyncLogLevel.warning, 'Cancellation requested');
     token.cancel();
+    _answerDeletions(apply: false);
   }
 
   /// Pauses the in-flight run: the current step is cancelled and the run
@@ -170,6 +186,66 @@ class FtpSyncController extends ChangeNotifier {
     _pauseRequested = true;
     _appendLog(FtpSyncLogLevel.info, 'Pause requested');
     token.cancel();
+    _answerDeletions(apply: false);
+  }
+
+  /// Answers [FtpSyncProgress.pendingDeletions]: imports the archive with
+  /// its deletions, and the run goes on.
+  void applyPendingDeletions() {
+    if (_deletionAnswer == null) return;
+    _appendLog(FtpSyncLogLevel.info, 'Deletions accepted');
+    _answerDeletions(apply: true);
+  }
+
+  /// Answers [FtpSyncProgress.pendingDeletions]: leaves the archive aside,
+  /// keeping this device's records, and the run goes on. The archive is
+  /// offered again on the next run.
+  void skipPendingDeletions() {
+    if (_deletionAnswer == null) return;
+    _answerDeletions(apply: false);
+  }
+
+  void _answerDeletions({required bool apply}) {
+    final answer = _deletionAnswer;
+    if (answer != null && !answer.isCompleted) answer.complete(apply);
+  }
+
+  /// Stops the run until the user answers whether [archiveName] may delete
+  /// what [preview] counts. Throws [TransferCancelledException] when the run
+  /// is cancelled or paused meanwhile.
+  Future<bool> _awaitDeletionAnswer(
+    String archiveName,
+    SyncImportReport preview,
+    CancelToken token,
+  ) async {
+    final answer = Completer<bool>();
+    _deletionAnswer = answer;
+    _appendLog(
+      FtpSyncLogLevel.warning,
+      'Importing $archiveName would delete ${preview.deletesApplied} '
+      'record(s) on this device (and add ${preview.rowsInserted}, change '
+      '${preview.rowsUpdated}). Waiting for your answer.',
+    );
+    _emit(
+      (s) => s.copyWith(
+        phase: FtpSyncPhase.awaitingConfirmation,
+        statusMessage: 'ftp_phase_awaitingConfirmation',
+        pendingDeletions: FtpPendingDeletions(
+          archiveName: archiveName,
+          deletes: preview.deletesApplied,
+          inserts: preview.rowsInserted,
+          updates: preview.rowsUpdated,
+        ),
+      ),
+    );
+    try {
+      final apply = await answer.future;
+      token.throwIfCancelled();
+      return apply;
+    } finally {
+      _deletionAnswer = null;
+      _emit((s) => s.copyWith(clearPendingDeletions: true));
+    }
   }
 
   /// Resumes a previously paused run by triggering a fresh [startDefault].
@@ -255,15 +331,35 @@ class FtpSyncController extends ChangeNotifier {
         remoteEntries.map((e) => _deviceIdOf(e.name)).nonNulls,
         myDeviceId,
       );
-      // Archives that could not be read when last downloaded are not fetched
-      // again until their size changes — an upload still in progress grows,
-      // an abandoned one never does.
-      final unreadable = await _loadUnreadableArchives();
+      // Peer archives left aside because the file is unusable or arrived
+      // without its checksum. That is the producer's problem, not a failure
+      // of this sync, so the run still completes and only warns.
+      final skipped = <String>[];
+      // Other problems the finished run's banner must mention.
+      final notices = <String>[];
+      // Archives that could not be read or imported when last downloaded
+      // are not fetched again until something changes — an upload still in
+      // progress grows, an abandoned one never does, and an updated app may
+      // import what this one could not.
+      final appVersion = await _appVersionReader();
+      final deferrals = FtpArchiveDeferrals.parse(
+        await _readConfig(ConfigKey.ftpUnreadableArchives),
+      );
       final remoteNames = {for (final e in remoteEntries) e.name};
-      unreadable.removeWhere((name, _) => !remoteNames.contains(name));
-      final stillUnreadable = remoteEntries
-          .where((e) => unreadable[e.name] == e.size)
-          .length;
+      deferrals.retainOnly(remoteNames);
+      final held = <String>{};
+      var stillUnreadable = 0;
+      for (final e in remoteEntries) {
+        if (seen.contains(e.name)) continue;
+        final deferral = deferrals.holding(e.name, e.size, appVersion);
+        if (deferral == null) continue;
+        held.add(e.name);
+        if (deferral.reason == FtpDeferralReason.unreadable) {
+          stillUnreadable++;
+        } else {
+          skipped.add(_reportHeldArchive(e.name, deferral, deferrals));
+        }
+      }
       if (stillUnreadable > 0) {
         _appendLog(
           FtpSyncLogLevel.info,
@@ -276,7 +372,7 @@ class FtpSyncController extends ChangeNotifier {
             (e) =>
                 _archiveNameRe.hasMatch(e.name) &&
                 !seen.contains(e.name) &&
-                unreadable[e.name] != e.size,
+                !held.contains(e.name),
           )
           .toList();
 
@@ -303,18 +399,26 @@ class FtpSyncController extends ChangeNotifier {
       // (finding 5.3).
       final supersededByDevice = <String, List<String>>{};
       var supersededCount = 0;
-      // Peer archives left aside because the file is unusable or arrived
-      // without its checksum. That is the producer's problem, not a failure
-      // of this sync, so the run still completes and only warns.
-      final skipped = <String>[];
       // A device's newest archive may already be seen — our own upload, or
       // one adopted with a database taken over from another device. Its
       // unseen older siblings are then subsumed too, and must not be imported
       // on their own: one may be an upload cut off half-way, which never
       // imports and would fail every sync from then on.
+      //
+      // Archive names carry the clock of the phone that made them. One
+      // dated after this device's clock, past a margin for ordinary drift,
+      // was made under a wrong clock — here or there — so its date says
+      // nothing about its age. It never counts as a device's newest, which
+      // would hide every correctly dated archive of that device until the
+      // wrong date has passed.
+      final futureLimit =
+          DateTime.now().millisecondsSinceEpoch +
+          _clockTolerance.inMilliseconds;
+      bool futureDated(String name) => _timestampOf(name) > futureLimit;
+      _warnAboutFutureDatedArchives(remoteEntries, futureDated, notices);
       final newestSeenByDevice = <String, int>{};
       for (final e in remoteEntries) {
-        if (!seen.contains(e.name)) continue;
+        if (!seen.contains(e.name) || futureDated(e.name)) continue;
         final deviceId = deviceKeys.of(_deviceIdOf(e.name));
         if (deviceId == null) continue;
         final ts = _timestampOf(e.name);
@@ -323,12 +427,20 @@ class FtpSyncController extends ChangeNotifier {
         }
       }
       for (final deviceEntry in byDevice.entries) {
+        // Oldest first, future-dated archives before all others.
         final group = deviceEntry.value
-          ..sort(
-            (a, b) => _timestampOf(a.name).compareTo(_timestampOf(b.name)),
-          );
+          ..sort((a, b) {
+            final byClock = (futureDated(a.name) ? 0 : 1).compareTo(
+              futureDated(b.name) ? 0 : 1,
+            );
+            return byClock != 0
+                ? byClock
+                : _timestampOf(a.name).compareTo(_timestampOf(b.name));
+          });
         final newestSeen = newestSeenByDevice[deviceEntry.key];
-        if (newestSeen != null && newestSeen > _timestampOf(group.last.name)) {
+        if (newestSeen != null &&
+            !futureDated(group.last.name) &&
+            newestSeen > _timestampOf(group.last.name)) {
           seen.addAll(group.map((e) => e.name));
           supersededCount += group.length;
           continue;
@@ -340,13 +452,9 @@ class FtpSyncController extends ChangeNotifier {
         final usable = group
             .where((e) => remoteNames.contains('${e.name}$_sha256Suffix'))
             .toList();
-        final newestUsableTs = usable.isEmpty
-            ? -1
-            : _timestampOf(usable.last.name);
-        for (final e in group) {
-          if (usable.contains(e) || _timestampOf(e.name) < newestUsableTs) {
-            continue;
-          }
+        final newestUsable = usable.isEmpty ? -1 : group.indexOf(usable.last);
+        for (var i = newestUsable + 1; i < group.length; i++) {
+          final e = group[i];
           skipped.add('${e.name} (no .sha256 checksum file)');
           _appendLog(
             FtpSyncLogLevel.warning,
@@ -356,10 +464,7 @@ class FtpSyncController extends ChangeNotifier {
         }
         if (usable.isEmpty) continue;
         unseen.add(usable.last);
-        final olders = [
-          for (final e in group)
-            if (_timestampOf(e.name) < newestUsableTs) e.name,
-        ];
+        final olders = [for (final e in group.take(newestUsable)) e.name];
         if (olders.isNotEmpty) {
           supersededByDevice[deviceEntry.key] = olders;
           supersededCount += olders.length;
@@ -403,21 +508,63 @@ class FtpSyncController extends ChangeNotifier {
       // lastUploadAt because (a) it survives reinstall and (b) it prevents
       // peer-imported change_log entries from causing false positives when
       // the change_log is filtered by device_uuid.
+      //
+      // A reference dated after this device's clock was set by a wrong
+      // clock, and no later change could ever pass it: it is ignored, and an
+      // own archive with such a date is replaced (and then removed) by this
+      // run's upload.
+      final ownArchives = myDeviceId == null
+          ? const <RemoteFileEntry>[]
+          : remoteEntries
+                .where((e) => deviceKeys.of(_deviceIdOf(e.name)) == myDeviceId)
+                .toList();
+      final ownFutureDated = ownArchives
+          .where((e) => futureDated(e.name))
+          .toList();
       int? serverNewestOwnTs;
-      if (myDeviceId != null) {
-        final myRemoteTs = remoteEntries
-            .where((e) => deviceKeys.of(_deviceIdOf(e.name)) == myDeviceId)
-            .map((e) => _timestampOf(e.name));
-        if (myRemoteTs.isNotEmpty) {
-          serverNewestOwnTs = myRemoteTs.reduce((a, b) => a > b ? a : b);
-        }
+      final myRemoteTs = ownArchives
+          .where((e) => !futureDated(e.name))
+          .map((e) => _timestampOf(e.name));
+      if (myRemoteTs.isNotEmpty) {
+        serverNewestOwnTs = myRemoteTs.reduce((a, b) => a > b ? a : b);
       }
-      final referenceTs =
-          serverNewestOwnTs ?? await _loadLastUploadAt(profile.profileUuid);
-      final localChanged = await _hasLocalChangesSince(
-        referenceTs,
-        deviceUuid: myDeviceUuid,
+      var lastUploadAt = await _loadLastUploadAt(profile.profileUuid);
+      if (lastUploadAt != null && lastUploadAt > futureLimit) {
+        lastUploadAt = null;
+      }
+      final referenceTs = serverNewestOwnTs ?? lastUploadAt;
+      final futureChanges = await _futureDatedLocalChanges(
+        myDeviceUuid,
+        futureLimit,
       );
+      final uploadedFutureChanges = await _loadUploadedFutureChanges(
+        profile.profileUuid,
+      );
+      if (futureChanges.count > 0) {
+        final notice =
+            '${futureChanges.count} change(s) made on this device are dated '
+            'after its clock, up to ${_formatTime(futureChanges.latest!)}: '
+            'its clock was wrong when they were made. Until then they win '
+            'over any edit of the same records';
+        _appendLog(FtpSyncLogLevel.warning, notice);
+        notices.add(notice);
+      }
+      var localChanged =
+          await _hasLocalChangesSince(
+            referenceTs,
+            deviceUuid: myDeviceUuid,
+            until: futureLimit,
+          ) ||
+          futureChanges.count > uploadedFutureChanges;
+      if (ownFutureDated.isNotEmpty) {
+        localChanged = true;
+        _appendLog(
+          FtpSyncLogLevel.warning,
+          'This device has ${ownFutureDated.length} archive(s) on the server '
+          "dated after its clock, which would hide its later uploads from "
+          'the other devices. A correctly dated archive replaces them.',
+        );
+      }
       _appendLog(
         FtpSyncLogLevel.info,
         referenceTs == null
@@ -436,11 +583,28 @@ class FtpSyncController extends ChangeNotifier {
       // misleadingly green-ticked `completed`.
       var importErrors = 0;
       String? firstImportError;
+      var importWarnings = 0;
+
+      // A server drops a connection left idle while the user decides about
+      // deletions, so the next transfer after an answer starts afresh.
+      var reconnectNeeded = false;
+      Future<void> reconnectIfNeeded() async {
+        if (!reconnectNeeded) return;
+        reconnectNeeded = false;
+        try {
+          await transport.disconnect();
+        } catch (e, st) {
+          _log.fine('best-effort disconnect before reconnect failed', e, st);
+        }
+        await transport.connect(password: password);
+        token.throwIfCancelled();
+      }
 
       for (var i = 0; i < unseen.length; i++) {
         token.throwIfCancelled();
         final entry = unseen[i];
         final localPath = p.join(tempDir.path, entry.name);
+        await reconnectIfNeeded();
 
         _resetSpeedSamples();
         _emit(
@@ -565,7 +729,7 @@ class FtpSyncController extends ChangeNotifier {
                 'got ${actual.substring(0, 12)}…)';
             // The file itself is damaged: not worth downloading again until
             // it changes.
-            unreadable[entry.name] = entry.size;
+            deferrals.markUnreadable(entry.name, entry.size);
           }
         } on TransferCancelledException {
           rethrow;
@@ -604,12 +768,89 @@ class FtpSyncController extends ChangeNotifier {
           ),
         );
         try {
-          final report = await _archiveService.importFromZip(localPath);
+          SyncImportReport report;
+          try {
+            report = await _archiveService.importFromZip(
+              localPath,
+              holdBackDeletions: true,
+            );
+          } on SyncImportHasDeletionsException catch (held) {
+            // Nothing was imported. A one-tap sync must not delete what
+            // another device deleted without the user's say: some of those
+            // deletions are mistakes, and nothing here brings them back.
+            final apply = await _awaitDeletionAnswer(
+              entry.name,
+              held.preview,
+              token,
+            );
+            reconnectNeeded = true;
+            if (!apply) {
+              skipped.add('${entry.name} (its deletions were not accepted)');
+              _appendLog(
+                FtpSyncLogLevel.warning,
+                'Left ${entry.name} aside: its deletions were not accepted, '
+                'so nothing from it was imported. It is offered again on '
+                'the next sync.',
+              );
+              _emit(
+                (s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0),
+              );
+              try {
+                await File(localPath).delete();
+              } catch (e, st) {
+                _log.fine('best-effort delete failed: $localPath', e, st);
+              }
+              continue;
+            }
+            _emit(
+              (s) => s.copyWith(
+                phase: FtpSyncPhase.importing,
+                statusMessage: 'ftp_phase_importing',
+              ),
+            );
+            report = await _archiveService.importFromZip(localPath);
+          }
           _appendLog(
             FtpSyncLogLevel.info,
             'Imported ${entry.name}: +${report.rowsInserted} / '
             '~${report.rowsUpdated} / =${report.rowsSkipped}',
           );
+          // Held records never stop a run; they wait for the caver.
+          if (report.decisionsPending > 0) {
+            _appendLog(
+              FtpSyncLogLevel.warning,
+              '${report.decisionsPending} record(s) from other devices wait '
+              'for a decision: Man. sync → Archive sync → Needs a decision',
+            );
+          }
+          importWarnings += report.warnings.length;
+          _logImportWarnings(entry.name, report.warnings);
+          if (report.filesFailed > 0) {
+            // The rows are in, but the files they point to are not. Left
+            // unseen, so the next run imports it again; files already
+            // written are not extracted twice.
+            importErrors++;
+            final reason =
+                '${report.filesFailed} file(s) could not be written on '
+                'this device';
+            firstImportError ??= '${entry.name}: $reason';
+            _appendLog(
+              FtpSyncLogLevel.error,
+              'Imported ${entry.name} without its files: $reason. It will '
+              'be imported again on the next sync.',
+            );
+            _emit(
+              (s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0),
+            );
+            try {
+              await File(localPath).delete();
+            } catch (e, st) {
+              _log.fine('best-effort delete failed: $localPath', e, st);
+            }
+            continue;
+          }
+        } on TransferCancelledException {
+          rethrow;
         } on SyncArchiveSchemaMismatchException catch (e) {
           // Make the message actionable: tell the user the minimum app
           // version they need to update to. We deliberately *do not* mark
@@ -631,13 +872,21 @@ class FtpSyncController extends ChangeNotifier {
           );
           // Older archives won't ever import — mark as seen so we stop
           // re-listing them (and its older superseded siblings too, which
-          // are older still). Newer archives are intentionally left unseen
-          // so a future app upgrade can import them.
+          // are older still). Newer archives are left unseen so an updated
+          // app imports them, and are not downloaded again until then.
           if (!e.tooNew) {
             seen.add(entry.name);
             markSupersededSeen(entry.name);
+          } else {
+            final needed = 'v${e.archiveAppVersion ?? '?'}';
+            deferrals.markTooNew(
+              entry.name,
+              entry.size,
+              appVersion: appVersion,
+              detail: needed,
+            );
+            skipped.add('${entry.name} (needs app $needed or newer)');
           }
-          // Skip the trailing seen.add for too-new archives.
           _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
           try {
             await File(localPath).delete();
@@ -649,7 +898,7 @@ class FtpSyncController extends ChangeNotifier {
           // Not a readable sync archive: typically an upload cut off before
           // it finished, which also never got its .sha256 sidecar.
           skipped.add('${entry.name} (not a readable sync archive)');
-          unreadable[entry.name] = entry.size;
+          deferrals.markUnreadable(entry.name, entry.size);
           _appendLog(
             FtpSyncLogLevel.warning,
             'Skipping ${entry.name}: not a readable sync archive '
@@ -668,7 +917,16 @@ class FtpSyncController extends ChangeNotifier {
           firstImportError ??= '${entry.name}: $e';
           _appendLog(
             FtpSyncLogLevel.error,
-            'Import failed for ${entry.name}: $e — continuing with next',
+            'Import failed for ${entry.name}: $e — continuing with next. '
+            'It is not downloaded again for the next '
+            '${FtpArchiveDeferrals.failedImportSkippedRuns} sync(s), unless '
+            'it changes on the server or the app is updated.',
+          );
+          deferrals.markImportFailed(
+            entry.name,
+            entry.size,
+            appVersion: appVersion,
+            detail: '$e',
           );
           // Leave this archive AND its device's superseded siblings unseen so
           // a later run can retry once the source device re-uploads or the
@@ -682,6 +940,7 @@ class FtpSyncController extends ChangeNotifier {
           continue;
         }
         seen.add(entry.name);
+        deferrals.clear(entry.name);
         markSupersededSeen(entry.name);
         _emit((s) => s.copyWith(archivesProcessed: i + 1, stepProgress: 1.0));
         // Best-effort cleanup of the local copy.
@@ -711,7 +970,7 @@ class FtpSyncController extends ChangeNotifier {
           ),
         );
         await _saveSeenArchives(seen);
-        await _saveUnreadableArchives(unreadable);
+        await _saveDeferrals(deferrals);
         try {
           await tempDir.delete(recursive: true);
         } catch (e, st) {
@@ -726,7 +985,10 @@ class FtpSyncController extends ChangeNotifier {
           final summary =
               'Sync finished with $importErrors import error(s); '
               'first: ${firstImportError ?? '<unknown>'}';
-          _appendLog(FtpSyncLogLevel.error, summary);
+          _appendLog(
+            FtpSyncLogLevel.error,
+            _withWarningCount(summary, importWarnings),
+          );
           _emit(
             (s) => s.copyWith(
               phase: FtpSyncPhase.failed,
@@ -737,7 +999,7 @@ class FtpSyncController extends ChangeNotifier {
           );
           return;
         }
-        final warning = _skippedSummary(skipped);
+        final warning = _runWarning(skipped, notices);
         _emit(
           (s) => s.copyWith(
             phase: FtpSyncPhase.completed,
@@ -751,9 +1013,12 @@ class FtpSyncController extends ChangeNotifier {
         );
         _appendLog(
           FtpSyncLogLevel.info,
-          unseen.isEmpty
-              ? 'Sync complete — already in sync, no transfer needed'
-              : 'Sync complete — downloaded ${unseen.length} archive(s); no upload needed',
+          _withWarningCount(
+            unseen.isEmpty
+                ? 'Sync complete — already in sync, no transfer needed'
+                : 'Sync complete — downloaded ${unseen.length} archive(s); no upload needed',
+            importWarnings,
+          ),
         );
         return;
       }
@@ -807,6 +1072,7 @@ class FtpSyncController extends ChangeNotifier {
           clearStepEta: true,
         ),
       );
+      await reconnectIfNeeded();
       await _deleteOwnLeftovers(transport, remoteEntries, myDeviceId);
 
       // The SHA-256 sidecar goes up first: peers refuse an archive without
@@ -856,6 +1122,12 @@ class FtpSyncController extends ChangeNotifier {
       await transport.rename(partName, archiveName);
       seen.add(archiveName);
       _appendLog(FtpSyncLogLevel.info, 'Uploaded $archiveName');
+      await _deleteOwnArchivesDatedAfter(
+        transport,
+        ownArchives,
+        remoteNames,
+        nowMs,
+      );
 
       _emit(
         (s) => s.copyWith(
@@ -866,10 +1138,14 @@ class FtpSyncController extends ChangeNotifier {
         ),
       );
       await _saveSeenArchives(seen);
-      await _saveUnreadableArchives(unreadable);
+      await _saveDeferrals(deferrals);
       await _saveLastUploadAt(
         profile.profileUuid,
         DateTime.now().millisecondsSinceEpoch,
+      );
+      await _saveUploadedFutureChanges(
+        profile.profileUuid,
+        futureChanges.count,
       );
       try {
         await archiveFile.delete();
@@ -890,7 +1166,10 @@ class FtpSyncController extends ChangeNotifier {
         final summary =
             'Sync finished with $importErrors import error(s); '
             'first: ${firstImportError ?? '<unknown>'}';
-        _appendLog(FtpSyncLogLevel.error, summary);
+        _appendLog(
+          FtpSyncLogLevel.error,
+          _withWarningCount(summary, importWarnings),
+        );
         _emit(
           (s) => s.copyWith(
             phase: FtpSyncPhase.failed,
@@ -901,7 +1180,7 @@ class FtpSyncController extends ChangeNotifier {
         );
         return;
       }
-      final warning = _skippedSummary(skipped);
+      final warning = _runWarning(skipped, notices);
       _emit(
         (s) => s.copyWith(
           phase: FtpSyncPhase.completed,
@@ -911,7 +1190,10 @@ class FtpSyncController extends ChangeNotifier {
           warningMessage: warning,
         ),
       );
-      _appendLog(FtpSyncLogLevel.info, 'Sync complete');
+      _appendLog(
+        FtpSyncLogLevel.info,
+        _withWarningCount('Sync complete', importWarnings),
+      );
     } on TransferCancelledException {
       if (_pauseRequested) {
         _pauseRequested = false;
@@ -1060,35 +1342,111 @@ class FtpSyncController extends ChangeNotifier {
     }
   }
 
-  /// `name<TAB>size` per line: archives that could not be read, with the
-  /// size they had then.
-  Future<Map<String, int>> _loadUnreadableArchives() async {
-    final raw = await _readConfig(ConfigKey.ftpUnreadableArchives);
-    final out = <String, int>{};
-    if (raw == null) return out;
-    for (final line in raw.split('\n')) {
-      final tab = line.lastIndexOf('\t');
-      if (tab <= 0) continue;
-      final size = int.tryParse(line.substring(tab + 1));
-      if (size != null) out[line.substring(0, tab)] = size;
+  Future<void> _saveDeferrals(FtpArchiveDeferrals deferrals) =>
+      _writeConfig(ConfigKey.ftpUnreadableArchives, deferrals.serialize());
+
+  /// Logs why [name] is not downloaded this time, counts the run against a
+  /// failed import's wait, and returns the archive's entry for the banner.
+  String _reportHeldArchive(
+    String name,
+    FtpArchiveDeferral deferral,
+    FtpArchiveDeferrals deferrals,
+  ) {
+    if (deferral.reason == FtpDeferralReason.tooNew) {
+      _appendLog(
+        FtpSyncLogLevel.warning,
+        'Not downloading $name again: it was made by a newer version of the '
+        'app (${deferral.detail}). It is tried again once this app is '
+        'updated.',
+      );
+      return '$name (needs app ${deferral.detail} or newer)';
     }
-    return out;
+    final left = deferrals.countSkippedRun(name);
+    _appendLog(
+      FtpSyncLogLevel.warning,
+      'Not downloading $name again: its import failed (${deferral.detail}). '
+      '${left == 0 ? 'It is tried again on the next sync' : 'It is tried again in ${left + 1} sync(s)'}'
+      ', or as soon as it changes on the server or the app is updated.',
+    );
+    return '$name (import failed earlier)';
   }
 
-  Future<void> _saveUnreadableArchives(Map<String, int> unreadable) =>
-      _writeConfig(
-        ConfigKey.ftpUnreadableArchives,
-        unreadable.entries.map((e) => '${e.key}\t${e.value}').join('\n'),
-      );
+  /// The running app, as far as deciding whether an archive it could not
+  /// import deserves another try: a new version may import it.
+  static Future<String> _defaultAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      return '${info.version}+${info.buildNumber}/$kSyncArchiveDbSchemaVersion';
+    } catch (_) {
+      return 'schema $kSyncArchiveDbSchemaVersion';
+    }
+  }
 
-  /// One line for the finished run when archives were left aside, or null.
-  String? _skippedSummary(List<String> skipped) {
-    if (skipped.isEmpty) return null;
-    final summary =
+  /// The finished run's banner when archives were left aside or [notices]
+  /// were raised, or null.
+  String? _runWarning(List<String> skipped, List<String> notices) {
+    final parts = [
+      if (skipped.isNotEmpty)
         'Skipped ${skipped.length} archive(s) on the server: '
-        '${skipped.join('; ')}';
+            '${skipped.join('; ')}',
+      ...notices,
+    ];
+    if (parts.isEmpty) return null;
+    final summary = parts.join('. ');
     _appendLog(FtpSyncLogLevel.warning, summary);
     return summary;
+  }
+
+  /// Archives dated after this device's clock mean a phone's clock is or
+  /// was wrong — this one's or theirs — which also skews which edit wins a
+  /// conflict, so the user is told to check.
+  void _warnAboutFutureDatedArchives(
+    List<RemoteFileEntry> remoteEntries,
+    bool Function(String name) futureDated,
+    List<String> notices,
+  ) {
+    final dated = [
+      for (final e in remoteEntries)
+        if (_archiveNameRe.hasMatch(e.name) && futureDated(e.name))
+          _timestampOf(e.name),
+    ];
+    if (dated.isEmpty) return;
+    final latest = dated.reduce((a, b) => a > b ? a : b);
+    final notice =
+        '${dated.length} archive(s) on the server are dated after this '
+        "device's clock (latest ${_formatTime(latest)}, now "
+        '${_formatTime(DateTime.now().millisecondsSinceEpoch)}): the clock of '
+        'this phone or of the phone that made them is or was wrong. Check '
+        'the date and time in the phone settings';
+    _appendLog(FtpSyncLogLevel.warning, notice);
+    notices.add(notice);
+  }
+
+  static String _formatTime(int ms) =>
+      DateTime.fromMillisecondsSinceEpoch(ms).toLocal().toString();
+
+  /// [line] with the run's import-warning count appended. The count is kept
+  /// out of the banner: some warnings, such as a user matched by name,
+  /// come with nearly every import and would turn every run orange.
+  static String _withWarningCount(String line, int importWarnings) =>
+      importWarnings == 0
+      ? line
+      : '$line ($importWarnings import warning(s), listed above)';
+
+  /// Each warning an import reported, so a skipped row or a file that did
+  /// not arrive is visible where the sync explains itself. Capped per
+  /// archive: a systematic problem repeats one line for every row.
+  void _logImportWarnings(String archiveName, List<String> warnings) {
+    for (final w in warnings.take(_maxWarningsPerArchive)) {
+      _appendLog(FtpSyncLogLevel.warning, '$archiveName: $w');
+    }
+    final more = warnings.length - _maxWarningsPerArchive;
+    if (more > 0) {
+      _appendLog(
+        FtpSyncLogLevel.warning,
+        '$archiveName: $more more warning(s) not shown',
+      );
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -1141,25 +1499,101 @@ class FtpSyncController extends ChangeNotifier {
   /// When [deviceUuid] is provided the query is restricted to rows that
   /// originated on this device, preventing change_log entries imported from
   /// peer archives from causing false-positive "something changed" results.
+  ///
+  /// Changes dated after [until] are left to [_futureDatedLocalChanges]:
+  /// they would pass any reference, and trigger an upload on every run.
   Future<bool> _hasLocalChangesSince(
     int? lastUploadAt, {
     Uuid? deviceUuid,
+    required int until,
   }) async {
     if (lastUploadAt == null) return true;
     final List<Variable<Object>> vars;
     final String sql;
     if (deviceUuid != null) {
-      sql = 'SELECT MAX(changed_at) AS m FROM change_log WHERE device_uuid = ?';
-      vars = [Variable<Uint8List>(deviceUuid.bytes)];
+      sql =
+          'SELECT MAX(changed_at) AS m FROM change_log '
+          'WHERE device_uuid = ? AND changed_at <= ?';
+      vars = [Variable<Uint8List>(deviceUuid.bytes), Variable<int>(until)];
     } else {
-      sql = 'SELECT MAX(changed_at) AS m FROM change_log';
-      vars = [];
+      sql = 'SELECT MAX(changed_at) AS m FROM change_log WHERE changed_at <= ?';
+      vars = [Variable<int>(until)];
     }
     final rows = await _db.customSelect(sql, variables: vars).get();
     if (rows.isEmpty) return false;
     final m = rows.first.data['m'] as int?;
     if (m == null) return false;
     return m > lastUploadAt;
+  }
+
+  /// This device's changes dated after [after]: made under a clock that ran
+  /// ahead. Their number, compared with the number already uploaded, is
+  /// what tells whether one of them still needs uploading.
+  Future<({int count, int? latest})> _futureDatedLocalChanges(
+    Uuid? deviceUuid,
+    int after,
+  ) async {
+    final row = await _db
+        .customSelect(
+          'SELECT COUNT(*) AS n, MAX(changed_at) AS m FROM change_log '
+          'WHERE changed_at > ?'
+          '${deviceUuid == null ? '' : ' AND device_uuid = ?'}',
+          variables: [
+            Variable<int>(after),
+            if (deviceUuid != null) Variable<Uint8List>(deviceUuid.bytes),
+          ],
+        )
+        .getSingle();
+    return (count: row.data['n'] as int? ?? 0, latest: row.data['m'] as int?);
+  }
+
+  Future<int> _loadUploadedFutureChanges(String profileUuid) async {
+    final raw = await _readConfig(ConfigKey.ftpUploadedFutureChanges);
+    if (raw == null || raw.isEmpty) return 0;
+    return _decodeUploadMap(raw)[profileUuid] ?? 0;
+  }
+
+  Future<void> _saveUploadedFutureChanges(String profileUuid, int n) async {
+    final raw = await _readConfig(ConfigKey.ftpUploadedFutureChanges);
+    final map = raw == null || raw.isEmpty
+        ? <String, int>{}
+        : _decodeUploadMap(raw);
+    map[profileUuid] = n;
+    await _writeConfig(
+      ConfigKey.ftpUploadedFutureChanges,
+      _encodeUploadMap(map),
+    );
+  }
+
+  /// Removes this device's archives named after [uploadedTs], the archive
+  /// just uploaded. Their dates came from a wrong clock — this phone's then
+  /// or now — and other devices take the newest name for its newest
+  /// snapshot, so they would hide the upload. The upload holds everything
+  /// they held. Best-effort.
+  Future<void> _deleteOwnArchivesDatedAfter(
+    IFtpTransport transport,
+    List<RemoteFileEntry> ownArchives,
+    Set<String> remoteNames,
+    int uploadedTs,
+  ) async {
+    for (final e in ownArchives) {
+      if (_timestampOf(e.name) <= uploadedTs) continue;
+      for (final name in [e.name, '${e.name}$_sha256Suffix']) {
+        if (!remoteNames.contains(name)) continue;
+        try {
+          await transport.deleteFile(name);
+          _appendLog(
+            FtpSyncLogLevel.info,
+            'Removed $name, dated after this upload',
+          );
+        } catch (err) {
+          _appendLog(
+            FtpSyncLogLevel.warning,
+            'Could not remove $name, dated after this upload: $err',
+          );
+        }
+      }
+    }
   }
 
   Future<String?> _readConfig(String key) async {

@@ -29,6 +29,8 @@ import 'package:speleoloc/services/silexgis/silexgis_file_stager.dart';
 import 'package:speleoloc/services/silexgis/silexgis_files_network_gate.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_row_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_feature_rekeyer.dart';
+import 'package:speleoloc/services/silexgis/silexgis_link_removal_follower.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_people_reader.dart';
@@ -37,6 +39,7 @@ import 'package:speleoloc/services/silexgis/silexgis_people_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_place_stations_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile_repository.dart';
+import 'package:speleoloc/services/silexgis/silexgis_resend_as_new.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_applier.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_maps_upload_part.dart';
 import 'package:speleoloc/services/silexgis/silexgis_raster_picture_fetcher.dart';
@@ -311,6 +314,18 @@ class SilexgisSyncController extends ChangeNotifier {
                   capabilities.servesDocumentUpload && profile.sendsFiles,
             )
           : null;
+      // A row removed there that the caver kept, and has edited since, goes
+      // again as new: keeping it, they were told that is what an edit does.
+      await SilexgisResendAsNew(
+        rekeyer: SilexgisFeatureRekeyer(
+          db: _db,
+          logger: _logger,
+          localState: _localState,
+          heldRows: _heldRows,
+          serverLinks: _serverLinks,
+        ),
+        heldRows: _heldRows,
+      ).resendEdited(profile.profileUuid);
       final SilexgisUploadReport report;
       try {
         report = await SilexgisUploadRunner(
@@ -435,6 +450,15 @@ class SilexgisSyncController extends ChangeNotifier {
             catalogue: _catalogue,
             copies: _copies,
             serverLinks: _serverLinks,
+            profileUuid: profile.profileUuid,
+          ),
+          removals: SilexgisLinkRemovalFollower(
+            db: _db,
+            logger: _logger,
+            catalogue: _catalogue,
+            copies: _copies,
+            serverLinks: _serverLinks,
+            heldRows: _heldRows,
             profileUuid: profile.profileUuid,
           ),
           profileUuid: profile.profileUuid,

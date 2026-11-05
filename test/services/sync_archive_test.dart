@@ -145,6 +145,63 @@ void main() {
     await b.db.close();
   });
 
+  test(
+    'an import holding back deletions changes nothing and counts them',
+    () async {
+      final a = await buildHarness();
+      final b = await buildHarness();
+      final id = await a.caveRepo.addCave('ToDelete');
+      final zip1 = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'a1.zip',
+      );
+      // Nothing to delete yet: it imports as usual.
+      await b.sync.importFromZip(zip1.path, holdBackDeletions: true);
+      expect((await b.caveRepo.getCaves()).map((c) => c.title), ['ToDelete']);
+
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await a.logger.logDelete('caves', id, oldValues: {'title': 'ToDelete'});
+      await (a.db.delete(
+        a.db.caves,
+      )..where((c) => c.uuid.equalsValue(id))).go();
+      await a.caveRepo.addCave('Added with the deletion');
+      final zip2 = await a.sync.exportToZip(
+        tempDir.path,
+        filenameHint: 'a2.zip',
+      );
+      final logBefore = await b.db.select(b.db.changeLog).get();
+
+      final held = await b.sync
+          .importFromZip(zip2.path, holdBackDeletions: true)
+          .then<SyncImportHasDeletionsException?>((_) => null)
+          .catchError(
+            (Object e) => e as SyncImportHasDeletionsException,
+            test: (e) => e is SyncImportHasDeletionsException,
+          );
+
+      expect(held, isNotNull);
+      expect(held!.preview.deletesApplied, 1);
+      expect(held.preview.rowsInserted, greaterThan(0));
+      expect((await b.caveRepo.getCaves()).map((c) => c.title), [
+        'ToDelete',
+      ], reason: 'neither the deletion nor the new cave is kept');
+      expect(
+        await b.db.select(b.db.changeLog).get(),
+        hasLength(logBefore.length),
+      );
+
+      // Asked and agreed: the same archive imported again applies it all.
+      final report = await b.sync.importFromZip(zip2.path);
+      expect(report.deletesApplied, 1);
+      expect((await b.caveRepo.getCaves()).map((c) => c.title), [
+        'Added with the deletion',
+      ]);
+
+      await a.db.close();
+      await b.db.close();
+    },
+  );
+
   test('rejects archive with wrong schema_version', () async {
     final a = await buildHarness();
     final b = await buildHarness();
@@ -164,13 +221,48 @@ void main() {
     await b.db.close();
   });
 
-  test('emitted schema_version tracks the real DB schema', () async {
-    final db = AppDatabase.forTesting(NativeDatabase.memory());
-    // Guard against the historical drift where this constant was frozen at 9
-    // while the schema advanced. If a future migration bumps the schema,
-    // bump kSyncArchiveDbSchemaVersion in the same change.
-    expect(kSyncArchiveDbSchemaVersion, db.schemaVersion);
-    await db.close();
+  test('an archive is stamped with the archive schema version', () async {
+    final a = await buildHarness();
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    final archive = ZipDecoder().decodeBytes(
+      await File(zip.path).readAsBytes(),
+    );
+    final manifest =
+        jsonDecode(
+              utf8.decode(
+                archive.findFile('manifest.json')!.content as List<int>,
+              ),
+            )
+            as Map<String, dynamic>;
+    expect(manifest['schema_version'], kSyncArchiveDbSchemaVersion);
+    await a.db.close();
+  });
+
+  test('imports every stamp from the archive version up to the local '
+      'schema', () async {
+    // Development builds wrote stamps above the archive version for the
+    // same archived tables.
+    final a = await buildHarness();
+    final b = await buildHarness();
+
+    await a.caveRepo.addCave('Stamped');
+    final zip = await a.sync.exportToZip(tempDir.path, filenameHint: 'a.zip');
+    for (
+      var stamp = kSyncArchiveDbSchemaVersion;
+      stamp <= b.db.schemaVersion;
+      stamp++
+    ) {
+      final relabeled = await _rewriteSchemaVersion(
+        zip.path,
+        tempDir.path,
+        stamp,
+      );
+      await b.sync.importFromZip(relabeled);
+    }
+    expect((await b.caveRepo.getCaves()).single.title, 'Stamped');
+
+    await a.db.close();
+    await b.db.close();
   });
 
   test('accepts an older but in-range schema_version', () async {
@@ -204,7 +296,7 @@ void main() {
     final tooNew = await _rewriteSchemaVersion(
       zip.path,
       tempDir.path,
-      kSyncArchiveDbSchemaVersion + 1,
+      b.db.schemaVersion + 1,
     );
 
     await expectLater(
@@ -300,6 +392,48 @@ void main() {
     );
     expect(await destOnB.exists(), isTrue);
     expect(await destOnB.readAsBytes(), payload);
+
+    await a.db.close();
+    await b.db.close();
+  });
+
+  test('an asset file that cannot be written is counted as failed', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+    const relPath = 'documentation/doc1.txt';
+    final payload = utf8.encode('hello cave');
+    final src = File('${a.assetsDir.path}${Platform.pathSeparator}$relPath');
+    await src.parent.create(recursive: true);
+    await src.writeAsBytes(payload);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await a.db
+        .into(a.db.documentationFiles)
+        .insert(
+          DocumentationFilesCompanion.insert(
+            uuid: Uuid.v7(),
+            title: 'Doc 1',
+            fileName: relPath,
+            fileSize: payload.length,
+            fileType: 'txt',
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+    final zip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'assets.zip',
+    );
+    // A folder where the file should go: writing it fails on B.
+    await Directory(
+      '${b.assetsDir.path}${Platform.pathSeparator}$relPath',
+    ).create(recursive: true);
+
+    final report = await b.sync.importFromZip(zip.path);
+
+    expect(report.rowsInserted, greaterThan(0));
+    expect(report.filesCopied, 0);
+    expect(report.filesFailed, 1);
+    expect(report.warnings, isNotEmpty);
 
     await a.db.close();
     await b.db.close();

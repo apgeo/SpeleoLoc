@@ -74,8 +74,10 @@ toolbar: it does not open this screen, it starts an FTP sync immediately
      **Keep local**, **Use incoming**, **Keep all local**,
      **Use all incoming** or **Cancel import**.
 3. Press **Import sync archive** and pick the zip.
-4. Confirm the **Import sync archive?** prompt. Read it — it is the only
-   warning that deletions travel too.
+4. Confirm the **Import sync archive?** prompt. If the archive would
+   delete records on your phone, **Delete records on this device?** then
+   asks, with their number: **Delete and import**, or **Keep my
+   records** to import nothing from it.
 5. When it finishes you get one line: **Import complete** followed by
    how many records were added, updated and deleted, and how many change
    history entries and files came across.
@@ -90,9 +92,9 @@ message says *Import cancelled — no changes were applied*.
   on your phone: a cave, place, map or document your team-mate removed
   disappears from yours too. Your copy survives only if you edited it
   *strictly after* they deleted it; if the two happened in the same
-  instant, the delete wins. This happens in **Manual** mode as well —
-  the review dialog only ever covers edits, so you are never asked
-  before something vanishes.
+  instant, the delete wins. You are asked once before an archive
+  deletes anything — on this route and on the FTP route alike — but not
+  record by record: the **Manual** review dialog only ever covers edits.
 - **Two people with the same user name become one.** An incoming user
   whose name already exists on your device is treated as the same
   person, and their records are attached to your local user. That is
@@ -109,8 +111,10 @@ message says *Import cancelled — no changes were applied*.
   and the rest is merged rather than failing the whole import. Compare
   the counts in the result line against what you expected to receive.
 - **An archive from a newer app version is refused** outright, with a
-  message naming the version you need to update to. One from a much
-  older version is refused too — re-export it from an up-to-date phone.
+  message naming the version you need to update to. A newer version that
+  changed only what each phone keeps to itself does not count: its
+  archives import as usual. One from a much older version is refused
+  too — re-export it from an up-to-date phone.
 
 ## Route 2: let a shared FTP/SFTP folder do the passing
 
@@ -147,7 +151,9 @@ little bandwidth, never data.
 
 Everything an FTP import does to your database is exactly what
 "What an import can quietly do to your data" above describes —
-including replaying deletions, without a prompt. Full details of the
+including replaying deletions, after the same question as the manual
+route: the run stops on **Waiting for your answer** until you choose
+**Delete and import** or **Keep my records**. Full details of the
 profile fields and the log are in [FTP sync](../features/ftp-sync.md).
 
 ## Route 3: sync caves with your club's server
@@ -220,7 +226,8 @@ current database and puts the archive's in its place — everything the old
 one held is gone — then copies the archive's photos and map images over
 the top, overwriting any file of the same name, and restarts the app.
 Confirm the warning first. Your phone keeps its own device identity
-rather than adopting the sender's.
+rather than adopting the sender's. An archive from a newer app version is
+refused before anything is replaced.
 
 **Merge with existing data** — merges the archive exactly as
 [Man. sync](../features/sync-and-change-log.md) does:
@@ -267,7 +274,7 @@ released app has no such section at all — no button and no notice. See
 | Action | What it does |
 |---|---|
 | **Export database** | writes a raw `speleo_loc_export.sqlite` copy through your device's save dialog (a folder you pick, on iOS). No photos, no map images — a same-device snapshot only. |
-| **Restore database from file** | replaces the database with a `.sqlite` or `.db` file you pick, after one confirmation, then restarts the app. It cannot take a zip — restore a whole archive from **Data Export / Import** instead. |
+| **Restore database from file** | replaces the database with a `.sqlite` or `.db` file you pick, after one confirmation, then restarts the app. It cannot take a zip — restore a whole archive from **Data Export / Import** instead. A file saved by a newer app version is refused and your data stays as it was. |
 | **Reinitialize database** | erases everything and leaves an empty app. |
 
 Developer builds add a **Reinitialize database with test data** button

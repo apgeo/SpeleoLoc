@@ -18,6 +18,10 @@ enum FtpSyncPhase {
   /// Importing a downloaded archive into the local database.
   importing,
 
+  /// Stopped before importing an archive that would delete records here,
+  /// until the user answers. See `FtpSyncProgress.pendingDeletions`.
+  awaitingConfirmation,
+
   /// Generating a fresh local archive reflecting the merged state.
   generatingArchive,
 
@@ -63,6 +67,21 @@ class FtpSyncLogEntry {
     required this.message,
     this.isSeparator = false,
   });
+}
+
+/// What an archive waiting for the user's answer would do to this device.
+class FtpPendingDeletions {
+  const FtpPendingDeletions({
+    required this.archiveName,
+    required this.deletes,
+    required this.inserts,
+    required this.updates,
+  });
+
+  final String archiveName;
+  final int deletes;
+  final int inserts;
+  final int updates;
 }
 
 /// Immutable snapshot of in-flight progress. A new instance is emitted by
@@ -125,6 +144,9 @@ class FtpSyncProgress {
   /// when not computable (no total, paused, idle, etc.).
   final Duration? stepEta;
 
+  /// Set while [phase] is [FtpSyncPhase.awaitingConfirmation].
+  final FtpPendingDeletions? pendingDeletions;
+
   const FtpSyncProgress({
     required this.phase,
     required this.stepProgress,
@@ -142,6 +164,7 @@ class FtpSyncProgress {
     required this.profileName,
     this.bytesPerSecond,
     this.stepEta,
+    this.pendingDeletions,
   });
 
   /// Initial idle state; used when no sync has ever run in this session.
@@ -197,10 +220,11 @@ class FtpSyncProgress {
         return 0.1;
       case FtpSyncPhase.downloading:
       case FtpSyncPhase.importing:
+      case FtpSyncPhase.awaitingConfirmation:
         final perArchive = archivesTotal == 0
             ? 0.0
             : (archivesProcessed +
-                      (phase == FtpSyncPhase.importing
+                      (phase != FtpSyncPhase.downloading
                           ? 0.8 + 0.2 * stepProgress.clamp(0.0, 1.0)
                           : 0.8 * stepProgress.clamp(0.0, 1.0))) /
                   archivesTotal;
@@ -242,6 +266,8 @@ class FtpSyncProgress {
     bool clearBytesPerSecond = false,
     Duration? stepEta,
     bool clearStepEta = false,
+    FtpPendingDeletions? pendingDeletions,
+    bool clearPendingDeletions = false,
   }) {
     return FtpSyncProgress(
       phase: phase ?? this.phase,
@@ -266,6 +292,9 @@ class FtpSyncProgress {
           ? null
           : (bytesPerSecond ?? this.bytesPerSecond),
       stepEta: clearStepEta ? null : (stepEta ?? this.stepEta),
+      pendingDeletions: clearPendingDeletions
+          ? null
+          : (pendingDeletions ?? this.pendingDeletions),
     );
   }
 }

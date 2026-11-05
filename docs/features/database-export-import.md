@@ -156,6 +156,10 @@ its media files overwrite anything of the same name. The app restarts.
 **This is destructive and there is no undo.** Everything currently on the
 device is gone. Export an archive first if you are not certain.
 
+An archive whose database was saved by a newer version of the app is
+refused before anything is replaced: update the app first. Nothing on the
+device changes.
+
 Your device keeps its own identity through a replace — it does not start
 pretending to be the device that made the archive, which is what stops
 sync from getting confused afterwards.
@@ -163,8 +167,16 @@ sync from getting confused afterwards.
 It also keeps its own [FTP server profiles](ftp-sync.md) and its choice of
 default profile; the archive's are not taken over. Saved passwords stay in
 each device's secure keystore, so a profile list from another device could
-otherwise send your password to a server it names. On a new phone this
-means setting the FTP profiles up again after the import.
+otherwise send your password to a server it names.
+
+The exception is a device with **no** FTP profiles yet, such as a new
+phone: it takes the archive's profiles and default profile, so you need not
+type the servers in again. Passwords never come with them — open each
+profile and enter its password before the first sync. Any password or SFTP
+server key the device still had saved under one of those profiles is
+forgotten first, so an SFTP profile asks you to confirm its server's key
+again on the first connection. The sample dataset never brings FTP
+profiles.
 
 [SilexGIS servers](silexgis-sync.md) come from the archive, but a sign-in
 stays only for a server the archive names at the same address. If a server
@@ -198,16 +210,21 @@ on two phones stay two caves, even with the same title.
 conflict in the whole import, across all record types. Closing the dialog
 without choosing keeps your record.
 
-A new record whose name collides with a *different* record of yours — the
+A new record whose name a *different* record of yours already has — the
 same place title in the same cave, created separately on two phones — is
-not added: yours is kept and the incoming one is counted as skipped.
+neither added nor lost: it is held, with whatever hangs on it, until you
+decide on **Man. sync → Archive sync → Needs a decision** (see [When a
+record here already has the
+name](sync-and-change-log.md#when-a-record-here-already-has-the-name)).
+The rest of the archive is merged.
 
 #### A merge also deletes
 
 The archive carries what the other device deleted, and a merge replays
 those deletions: a cave your team-mate removed is removed from your
-device too, unless you changed it after they deleted it. Nothing prompts
-for this. If you are unsure about an archive, export your own data first.
+device too, unless you changed it, or added something to it, after they
+deleted it. Nothing prompts for this. If you are unsure about an archive,
+export your own data first.
 
 #### What a merge brings across
 
@@ -239,8 +256,10 @@ and the **Files copied** count comes out lower than you expected. Only
 #### The Import Complete summary
 
 When a merge finishes, an **Import Complete** dialog reports four numbers:
-**Records imported** (added), **Records skipped** (unchanged, kept local or
-colliding), **Records overwritten** (updated) and **Files copied**. If
+**Records imported** (added), **Records skipped** (unchanged, kept local,
+or not brought in because what they belong to is gone), **Records
+overwritten** (updated) and **Files copied** — and a fifth, **Waiting for a
+decision (Man. sync)**, when records are held for you. If
 anything went wrong along the way — a file that failed to copy, a user
 matched to one of yours by user name — up to ten **Warnings** are listed
 underneath in orange, with a "… and N more" line if there were others.
@@ -260,8 +279,9 @@ everything from an archive, use **Data Export / Import → Import Archive →
 Replace all data** instead.
 
 The chosen file then replaces the current database and the app restarts.
-Your device keeps its own identity and its FTP server profiles, and its
-SilexGIS sign-ins follow the same rule as on a replace. Any
+Your device keeps its own identity and its FTP server profiles — or, if it
+had none, takes the restored database's, without passwords, as on a
+replace — and its SilexGIS sign-ins follow the same rule as on a replace. Any
 documentation files or map images the restored database refers to must
 already be on the device, or they will show as missing.
 

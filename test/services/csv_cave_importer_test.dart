@@ -28,6 +28,7 @@ void main() {
       db,
       currentUser,
       CavePlaceRepository(db, currentUser, loggerRef),
+      loggerRef,
       clock: FakeClock(DateTime.utc(2026, 7, 20)),
     );
   });
@@ -737,6 +738,64 @@ void main() {
       final existing = await importer.findExistingCaves(rows, config);
 
       expect(existing.totalCount, 0);
+    });
+  });
+
+  group('change log', () {
+    Future<List<(String, Uuid, int)>> logged() async => [
+      for (final l in await db.select(db.changeLog).get())
+        (l.entityTable, l.entityUuid, l.changeType),
+    ];
+
+    test('logs every cave and surface area the import creates', () async {
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '001', 'Padis', '005'],
+          ['Cave B', '', '002', 'Padis', '005'],
+        ]),
+        config,
+      );
+      await importer.importRows(rows, config);
+
+      final caves = await db.select(db.caves).get();
+      final area = await db.select(db.surfaceAreas).getSingle();
+      expect(
+        await logged(),
+        unorderedEquals([
+          for (final c in caves) ('caves', c.uuid, ChangeType.insert),
+          ('surface_areas', area.uuid, ChangeType.insert),
+        ]),
+      );
+    });
+
+    test('logs an approved update and an identifier backfill', () async {
+      final padis = await insertArea('Padis');
+      final cave = await insertCave(
+        'Cave A',
+        localIndex: '012',
+        areaUuid: padis,
+      );
+      final rows = importer.parseRows(
+        csv([
+          ['Cave A', '', '013', 'Padis', '005'],
+        ]),
+        config,
+      );
+      final candidates = await importer.planCaveUpdates(rows, config);
+      await importer.importRows(
+        rows,
+        config,
+        updateCandidates: candidates,
+        approvedUpdates: {candidates.single.rowIndex},
+      );
+
+      expect(
+        await logged(),
+        unorderedEquals([
+          ('caves', cave, ChangeType.update),
+          ('surface_areas', padis, ChangeType.update),
+        ]),
+      );
     });
   });
 }

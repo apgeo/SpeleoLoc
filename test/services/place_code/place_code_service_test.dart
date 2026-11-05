@@ -10,6 +10,8 @@ import 'package:speleoloc/services/place_code/qcri_hasher.dart';
 import 'package:speleoloc/services/place_code/strategies/global_hierarchical_strategy.dart';
 import 'package:speleoloc/services/place_code/strategies/per_cave_sequential_strategy.dart';
 
+import '../../support/cave_repository_fixture.dart';
+
 void main() {
   late AppDatabase db;
   late PlaceCodeService service;
@@ -27,7 +29,10 @@ void main() {
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    service = PlaceCodeService(db);
+    service = PlaceCodeService(
+      db,
+      caveIndexWriter: await buildCaveRepository(db),
+    );
   });
 
   tearDown(() async => db.close());

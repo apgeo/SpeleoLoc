@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/data/source/database/database_file_version.dart';
 import 'package:speleoloc/data/source/database/test_database_loader.dart';
 import 'package:speleoloc/services/device_preferences_carry_over.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -48,6 +49,15 @@ class DatabaseRestoreHelper {
     await devicePreferences.applyTo(appDatabase);
     return true;
   }
+
+  /// Throws [DatabaseTooNewException] when [file] was written by a newer
+  /// version of the app. Called before a file replaces the live database, so
+  /// a refused file leaves the current data and the open database as they
+  /// were.
+  static void ensureNotNewer(File file) => ensureDatabaseFileNotNewer(
+    file,
+    supportedVersion: appDatabase.schemaVersion,
+  );
 
   /// Restarts the application via the restart_app plugin.
   static Future<void> restartApplication() async {

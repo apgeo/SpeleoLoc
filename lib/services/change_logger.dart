@@ -30,6 +30,10 @@ const Set<String> _auditFields = {
 /// row itself anyway).
 const int kOldValueMaxBytes = 20;
 
+/// The `change_log_field` name a merge's delete entry gives the record it
+/// was merged into.
+const String kMergedIntoField = 'merged_into_uuid';
+
 /// Writes structured audit rows to `change_log` / `change_log_field` for
 /// every repository write. Synced across peers and auto-purged locally
 /// after `configurations.change_log_retention_days`.
@@ -111,6 +115,30 @@ class ChangeLogger {
         if (!_auditFields.contains(e.key)) e.key: e.value,
     };
     await _writeFields(changeUuid, filtered);
+  }
+
+  /// Log that a record was merged into [into]: a delete, whose fields name
+  /// [into] under [kMergedIntoField] beside the record's last values, so a
+  /// peer replaying it moves what hangs on the record over to [into] instead
+  /// of removing it.
+  Future<void> logMerge(
+    String entityTable,
+    Uuid entityUuid, {
+    required Uuid into,
+    required Map<String, Object?> oldValues,
+  }) async {
+    if (isSuspended) return;
+    final changeUuid = await _writeHeader(
+      entityTable,
+      entityUuid,
+      ChangeType.delete,
+    );
+    await _writeFields(changeUuid, <String, Object?>{
+      for (final e in oldValues.entries)
+        if (!_auditFields.contains(e.key)) e.key: e.value,
+      // The raw 16 bytes, which stay within the stored value size.
+      kMergedIntoField: into.bytes,
+    });
   }
 
   /// Writes the change_log header row. Failures propagate to the caller:

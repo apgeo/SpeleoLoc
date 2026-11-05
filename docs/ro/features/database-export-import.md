@@ -169,6 +169,10 @@ nume. Aplicația repornește.
 **Este distructiv și nu există anulare.** Tot ce se află acum pe
 dispozitiv dispare. Exportați întâi o arhivă dacă nu sunteți sigur.
 
+O arhivă a cărei bază de date a fost salvată de o versiune mai nouă a
+aplicației este refuzată înainte să se înlocuiască ceva: actualizați întâi
+aplicația. Nimic de pe dispozitiv nu se schimbă.
+
 Dispozitivul dumneavoastră își păstrează propria identitate printr-o
 înlocuire — nu începe să pretindă că este dispozitivul care a făcut
 arhiva, iar asta este ceea ce împiedică sincronizarea să se încurce după
@@ -178,8 +182,17 @@ aceea.
 profilul ales implicit; cele din arhivă nu sunt preluate. Parolele salvate
 rămân în depozitul securizat al fiecărui dispozitiv, așa că o listă de
 profiluri venită de pe alt dispozitiv v-ar putea trimite altfel parola la
-un server pe care îl numește ea. Pe un telefon nou, asta înseamnă că
-profilurile FTP se configurează din nou după import.
+un server pe care îl numește ea.
+
+Excepția este un dispozitiv care **nu are încă niciun** profil FTP, cum
+este un telefon nou: acesta preia profilurile și profilul implicit din
+arhivă, ca să nu fie nevoie să introduceți din nou serverele. Parolele nu
+vin niciodată cu ele — deschideți fiecare profil și introduceți-i parola
+înainte de prima sincronizare. Orice parolă sau cheie de server SFTP pe
+care dispozitivul o mai avea salvată sub unul dintre acele profiluri este
+uitată mai întâi, așa că un profil SFTP vă cere să confirmați din nou cheia
+serverului la prima conectare. Setul de date de exemplu nu aduce niciodată
+profiluri FTP.
 
 [Serverele SilexGIS](silexgis-sync.md) vin din arhivă, dar o autentificare
 rămâne valabilă doar pentru un server pe care arhiva îl numește la aceeași
@@ -217,18 +230,22 @@ fiecărui conflict rămas din tot importul, la toate tipurile de
 înregistrări. Dacă închideți dialogul fără să alegeți, înregistrarea
 dumneavoastră este păstrată.
 
-O înregistrare nouă al cărei nume se ciocnește cu o înregistrare *diferită*
+O înregistrare nouă al cărei nume îl are deja o înregistrare *diferită*
 de-a dumneavoastră — același titlu de loc în aceeași peșteră, creat separat
-pe două telefoane — nu este adăugată: a dumneavoastră este păstrată, iar
-cea primită este numărată ca omisă.
+pe două telefoane — nu este nici adăugată, nici pierdută: este reținută, cu
+tot ce atârnă de ea, până decideți în **Sinc. man. → Arhivă sincronizare →
+Necesită o decizie** (vedeți [Când o înregistrare de aici are deja
+numele](sync-and-change-log.md#când-o-înregistrare-de-aici-are-deja-numele)).
+Restul arhivei este îmbinat.
 
 #### O îmbinare și șterge
 
 Arhiva duce cu ea ce a șters celălalt dispozitiv, iar o îmbinare repetă
 acele ștergeri: o peșteră pe care colegul dumneavoastră a eliminat-o este
 eliminată și de pe dispozitivul dumneavoastră, cu excepția cazului în care
-ați modificat-o după ce a ștears-o el. Nu sunteți întrebat nimic. Dacă nu
-sunteți sigur de o arhivă, exportați întâi propriile date.
+ați modificat-o, sau i-ați adăugat ceva, după ce a ștears-o el. Nu sunteți
+întrebat nimic. Dacă nu sunteți sigur de o arhivă, exportați întâi
+propriile date.
 
 #### Ce aduce o îmbinare
 
@@ -264,8 +281,10 @@ numărul de la **Fișiere copiate** iese mai mic decât vă așteptați. Doar
 
 Când o îmbinare se termină, un dialog **Import Complet** raportează patru
 numere: **Înregistrări importate** (adăugate), **Înregistrări omise**
-(neschimbate, păstrate local sau în coliziune), **Înregistrări
-suprascrise** (actualizate) și **Fișiere copiate**. Dacă ceva a mers prost
+(neschimbate, păstrate local sau neaduse pentru că ce le conține a
+dispărut), **Înregistrări suprascrise** (actualizate) și **Fișiere
+copiate** — plus un al cincilea, **Așteaptă o decizie (Sinc. man.)**, când
+există înregistrări reținute pentru dumneavoastră. Dacă ceva a mers prost
 pe parcurs — un fișier care nu s-a putut copia, un utilizator potrivit cu
 unul de-al dumneavoastră după numele de utilizator — dedesubt sunt listate
 cu portocaliu până la zece **Avertismente**, cu un rând „… și N în plus”
@@ -288,8 +307,9 @@ a restaura totul dintr-o arhivă, folosiți în schimb **Export / Import Date
 
 Fișierul ales înlocuiește apoi baza de date curentă, iar aplicația
 repornește. Dispozitivul dumneavoastră își păstrează propria identitate și
-profilurile de server FTP, iar autentificările SilexGIS urmează aceeași
-regulă ca la o înlocuire. Orice fișiere de documentație sau imagini de hărți la care se referă baza
+profilurile de server FTP — sau, dacă nu avea niciunul, le preia pe cele ale
+bazei de date restaurate, fără parole, ca la o înlocuire — iar
+autentificările SilexGIS urmează aceeași regulă ca la o înlocuire. Orice fișiere de documentație sau imagini de hărți la care se referă baza
 de date restaurată trebuie să fie deja pe dispozitiv, altfel vor apărea ca
 lipsă.
 

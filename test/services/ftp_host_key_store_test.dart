@@ -104,6 +104,30 @@ void main() {
     expect(await store.read('p1'), isNull);
   });
 
+  test('forgetting a profile\'s secrets keeps the profile itself', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final repo = FtpProfileRepository(db);
+    const profile = FtpProfile(
+      profileUuid: 'p1',
+      displayName: 'Test Server',
+      protocol: FtpProtocol.sftp,
+      host: 'sftp.example.test',
+      port: 2222,
+      username: 'caver',
+      remoteFolder: '/',
+    );
+    await repo.save(profile, password: 'pw');
+    final store = FtpHostKeyStore();
+    await store.write('p1', key);
+
+    await repo.forgetSecrets('p1');
+
+    expect(await repo.readPassword('p1'), isNull);
+    expect(await store.read('p1'), isNull);
+    expect((await repo.list()).single.profileUuid, 'p1');
+  });
+
   test('an unreadable record raises instead of reading as absent', () async {
     secure['ftp_host_key_p1'] = 'not json';
     expect(FtpHostKeyStore().read('p1'), throwsFormatException);

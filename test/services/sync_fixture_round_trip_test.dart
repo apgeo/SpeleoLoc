@@ -83,7 +83,10 @@ void main() {
 
       try {
         // Opening migrated the fixture to the current schema.
-        expect(srcDb.schemaVersion, kSyncArchiveDbSchemaVersion);
+        final stamp = await srcDb
+            .customSelect('PRAGMA user_version')
+            .getSingle();
+        expect(stamp.data.values.single, srcDb.schemaVersion);
 
         // Per-table dump counts on the migrated source.
         final srcRegistry = SyncTableRegistry(srcDb);

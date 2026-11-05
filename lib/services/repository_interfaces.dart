@@ -1,9 +1,10 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_model/model_splay_offset.dart';
+import 'package:speleoloc/services/place_code/cave_local_index_writer.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
 /// Abstract contract for the cave repository.
-abstract class ICaveRepository {
+abstract class ICaveRepository implements CaveLocalIndexWriter {
   Future<List<Cave>> getCaves();
   Stream<List<Cave>> watchCaves();
   Future<Uuid> addCave(

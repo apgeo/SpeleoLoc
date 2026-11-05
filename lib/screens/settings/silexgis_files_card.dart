@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speleoloc/screens/settings/silexgis_after_sync_hint.dart';
 import 'package:speleoloc/services/silexgis/silexgis_profile.dart';
 import 'package:speleoloc/utils/localization.dart';
 
@@ -50,6 +51,7 @@ class SilexgisFilesCard extends StatelessWidget {
           title: Text(LocServ.inst.t('silexgis_files_ask')),
           subtitle: Text(LocServ.inst.t('silexgis_files_ask_desc')),
         ),
+        if (onChanged == null) const SilexgisAfterSyncHint(),
       ],
     ),
   );

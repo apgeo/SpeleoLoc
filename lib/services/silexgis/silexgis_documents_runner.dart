@@ -5,6 +5,7 @@ import 'package:speleoloc/services/silexgis/model/sync_stream.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_catalogue_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_document_linker.dart';
 import 'package:speleoloc/services/silexgis/silexgis_held_document_updater.dart';
+import 'package:speleoloc/services/silexgis/silexgis_link_removal_follower.dart';
 import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_paged_stream_runner.dart';
 import 'package:speleoloc/services/silexgis/silexgis_sync_api.dart';
@@ -18,6 +19,7 @@ class SilexgisDocumentsReport {
     this.removed = 0,
     this.renamed = 0,
     this.linked = 0,
+    this.unlinked = 0,
   });
 
   final int pages;
@@ -34,6 +36,9 @@ class SilexgisDocumentsReport {
 
   /// Links made from fetched documents to features this device came to hold.
   final int linked;
+
+  /// Local links taken down because the installation took them down.
+  final int unlinked;
 }
 
 /// Reads the photo and document catalogue on the documents stream's own
@@ -47,6 +52,7 @@ class SilexgisDocumentsRunner {
     required SilexgisDocumentCatalogueRepository catalogue,
     required SilexgisHeldDocumentUpdater heldDocuments,
     required SilexgisDocumentLinker linker,
+    required SilexgisLinkRemovalFollower removals,
     required String profileUuid,
   }) : _db = db,
        _api = api,
@@ -54,6 +60,7 @@ class SilexgisDocumentsRunner {
        _catalogue = catalogue,
        _heldDocuments = heldDocuments,
        _linker = linker,
+       _removals = removals,
        _profileUuid = profileUuid;
 
   final AppDatabase _db;
@@ -62,6 +69,7 @@ class SilexgisDocumentsRunner {
   final SilexgisDocumentCatalogueRepository _catalogue;
   final SilexgisHeldDocumentUpdater _heldDocuments;
   final SilexgisDocumentLinker _linker;
+  final SilexgisLinkRemovalFollower _removals;
   final String _profileUuid;
 
   static const int preferredPageSize = 200;
@@ -84,6 +92,7 @@ class SilexgisDocumentsRunner {
     var links = 0;
     var removed = 0;
     var renamed = 0;
+    var unlinked = 0;
     final read = await SilexgisPagedStreamRunner<SyncDocumentsPage>(
       name: 'documents',
       cursors: cursors,
@@ -97,6 +106,10 @@ class SilexgisDocumentsRunner {
         links += applied.links;
         removed += applied.removed;
         renamed += await _heldDocuments.apply(applied.documents);
+        unlinked += await _removals.follow(
+          applied.tombstonedLinkIds,
+          applied.removedLinks,
+        );
         await cursors.write(page);
       }),
     ).run(fromBeginning: fromBeginning);
@@ -112,6 +125,7 @@ class SilexgisDocumentsRunner {
       removed: removed,
       renamed: renamed,
       linked: linked,
+      unlinked: unlinked,
     );
   }
 }

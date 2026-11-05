@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/data/source/database/legacy_v6_migration.dart';
+import 'package:speleoloc/data/source/database/migrations/raster_map_type.dart';
 import 'package:speleoloc/data/source/database/migrations/schema_migration.dart';
 
 /// Pre-v7 → v7. Converts legacy INTEGER-PK schema to UUID-PK schema,
@@ -14,6 +15,12 @@ class LegacyV6ToV7Migration extends SchemaMigration {
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
+    // Builds before the upgrade ran in one transaction committed the
+    // re-keying on its own, so a later failure left files stamped below 7
+    // that already hold the uuid-keyed tables and their rows. Snapshotting
+    // those again fails on the missing integer ids; the remaining steps are
+    // idempotent and finish them.
+    if (await _isUuidKeyed(db)) return;
     final snap = await snapshotLegacyV6(db);
     await dropLegacyV6Tables(db);
     await migrator.createAll();
@@ -28,13 +35,19 @@ class LegacyV6ToV7Migration extends SchemaMigration {
       await reinsertLegacyData(db, snap);
     }
   }
+
+  static Future<bool> _isUuidKeyed(AppDatabase db) async {
+    final columns = await db.customSelect('PRAGMA table_info(caves)').get();
+    return columns.any((c) => c.read<String>('name') == 'uuid');
+  }
 }
 
 /// v7 → v8.
 /// 1. Add created_at column to documentation_files_to_geofeatures.
 /// 2. Backfill cave_places.is_entrance / is_main_entrance NULL → 0.
 /// 3. Recreate cave_trips for the new UNIQUE(title, cave_uuid) constraint.
-/// 4. Recreate raster_maps for the new map_type CHECK constraint.
+/// 4. Recreate raster_maps for the new map_type CHECK constraint; a type it
+///    rejects becomes `other`.
 ///
 /// Only runs when `from == 7`: the v6→v7 path calls `createAll()` at the
 /// current schema, so this step must not double-apply.
@@ -49,7 +62,11 @@ class V7ToV8Migration extends SchemaMigration {
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
-    await migrator.addColumn(
+    // Guarded: builds before the upgrade ran in one transaction could leave
+    // a file stamped 7 with this column already added.
+    await _addColumnIfMissing(
+      db,
+      migrator,
       db.documentationFilesToGeofeatures,
       db.documentationFilesToGeofeatures.createdAt,
     );
@@ -103,7 +120,7 @@ class V7ToV8Migration extends SchemaMigration {
           [
             d['uuid'],
             d['title'],
-            d['map_type'],
+            rasterMapTypeOrOther(d['map_type']),
             d['file_name'],
             d['cave_uuid'],
             d['cave_area_uuid'],
@@ -1111,11 +1128,40 @@ class V33ToV34Migration extends SchemaMigration {
   }
 }
 
-class V34ToV35Migration extends SchemaMigration {
-  const V34ToV35Migration();
+/// v34 → v37: every change since the last released schema, in one step.
+///
+/// It is written so that it can run over a database at 34, 35 or 36 — the
+/// numbers development builds stamped while these changes were made — and
+/// does nothing a second time: tables and indexes are created only where
+/// missing, and each rebuild checks first.
+///
+/// - Local-only tables: the installation's SilexGIS survey models, the rows
+///   a download page carried before their container, the feature rows of an
+///   upload sent and not answered, and the archive rows that wait for a
+///   person to decide (a record whose unique name another record here
+///   already holds, and the rows that hang on it).
+/// - `cave_places.is_entrance` and `is_main_entrance` are still nullable with
+///   no default on databases that came up from v7, where a fresh install has
+///   them NOT NULL DEFAULT 0. An insert that leaves them out stored NULL
+///   there, and reading that place back then failed. The table is recreated
+///   with NULLs turned into 0.
+/// - `configurations` from v7 still carries a UNIQUE on its integer key,
+///   which a fresh install does not have.
+/// - The index on `documentation_files_to_cave_trip_points` by point, which
+///   only upgraded databases got from v20 → v21, is created on the rest.
+/// - `configurations.is_synced` is cleared on every key outside the synced
+///   set.
+/// - Indexes for the hot lookups that were scanning whole tables: places by
+///   cave and by either code, map definitions by map and documents by file
+///   hash.
+///
+/// Archived tables keep their columns, so the sync archive schema version
+/// stays where it is.
+class V34ToV37Migration extends SchemaMigration {
+  const V34ToV37Migration();
 
   @override
-  int get toVersion => 35;
+  int get toVersion => 37;
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
@@ -1124,27 +1170,196 @@ class V34ToV35Migration extends SchemaMigration {
       'CREATE INDEX IF NOT EXISTS idx_silexgis_survey_model_document '
       'ON silexgis_survey_model(profile_uuid, document_id)',
     );
+    await migrator.createTable(db.silexgisDeferredRow);
+    await migrator.createTable(db.silexgisUploadAttempt);
+    await migrator.createTable(db.archiveHeldRow);
+    if (await _entranceFlagsNullable(db)) {
+      await _recreateCavePlaces(db, migrator);
+    }
+    if (await _configurationsHasUniqueId(db)) {
+      await _recreateConfigurations(db, migrator);
+    }
+    // Imports by earlier builds took an incoming row's is_synced as it came,
+    // so a crafted archive could leave device-only keys flagged as synced.
+    // Export and import now go by the key alone; this makes the flag say the
+    // same again.
+    await _executeIfTableExists(
+      db,
+      'configurations',
+      'UPDATE configurations SET is_synced = 0 '
+          'WHERE is_synced <> 0 AND title NOT IN '
+          '(${List.filled(_syncedConfigurationKeys.length, '?').join(', ')})',
+      _syncedConfigurationKeys,
+    );
+    await _executeIfTableExists(
+      db,
+      'documentation_files_to_cave_trip_points',
+      'CREATE INDEX IF NOT EXISTS idx_doc_files_to_trip_points_point '
+          'ON documentation_files_to_cave_trip_points(cave_trip_point_uuid)',
+    );
+    // After the cave_places recreate, which would drop them.
+    for (final (table, createIndex) in const [
+      (
+        'cave_places',
+        'CREATE INDEX IF NOT EXISTS idx_cave_places_cave '
+            'ON cave_places(cave_uuid)',
+      ),
+      (
+        'cave_places',
+        'CREATE INDEX IF NOT EXISTS idx_cave_places_place_code '
+            'ON cave_places(place_code_identifier)',
+      ),
+      (
+        'cave_places',
+        'CREATE INDEX IF NOT EXISTS idx_cave_places_qr_code '
+            'ON cave_places(qr_code_resource_identifier)',
+      ),
+      (
+        'cave_place_to_raster_map_definitions',
+        'CREATE INDEX IF NOT EXISTS idx_cave_place_definitions_map '
+            'ON cave_place_to_raster_map_definitions(raster_map_uuid)',
+      ),
+      (
+        'documentation_files',
+        'CREATE INDEX IF NOT EXISTS idx_documentation_files_hash '
+            'ON documentation_files(file_hash)',
+      ),
+    ]) {
+      await _executeIfTableExists(db, table, createIndex);
+    }
+  }
+
+  /// The configuration keys that travel between devices, as of v37. Written
+  /// out rather than taken from the services layer's live set: the data
+  /// layer does not reach up into it, and this step must not change meaning
+  /// when that set changes later.
+  static const _syncedConfigurationKeys = [
+    'place_code_strategy',
+    'place_code_strategy_config',
+    'qcri_mode',
+    'qcri_hash_config',
+  ];
+
+  static Future<bool> _entranceFlagsNullable(AppDatabase db) async {
+    final columns = await db
+        .customSelect('PRAGMA table_info(cave_places)')
+        .get();
+    return columns.any(
+      (c) =>
+          const {
+            'is_entrance',
+            'is_main_entrance',
+          }.contains(c.read<String>('name')) &&
+          c.read<int>('notnull') == 0,
+    );
+  }
+
+  static Future<void> _recreateCavePlaces(
+    AppDatabase db,
+    Migrator migrator,
+  ) async {
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.cavePlaces,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO cave_places '
+          '(uuid, title, description, cave_uuid, place_code_identifier, '
+          'qr_code_resource_identifier, cave_area_uuid, latitude, longitude, '
+          'altitude, depth_in_cave, is_entrance, is_main_entrance, '
+          'created_at, updated_at, deleted_at, '
+          'created_by_user_uuid, last_modified_by_user_uuid) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            d['uuid'],
+            d['title'],
+            d['description'],
+            d['cave_uuid'],
+            d['place_code_identifier'],
+            d['qr_code_resource_identifier'],
+            d['cave_area_uuid'],
+            d['latitude'],
+            d['longitude'],
+            d['altitude'],
+            d['depth_in_cave'],
+            d['is_entrance'] ?? 0,
+            d['is_main_entrance'] ?? 0,
+            d['created_at'],
+            d['updated_at'],
+            d['deleted_at'],
+            d['created_by_user_uuid'],
+            d['last_modified_by_user_uuid'],
+          ],
+        );
+      },
+    );
+    // The recreate drops the table's indexes with it.
+    await db.customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cave_places_title_no_area '
+      'ON cave_places(title, cave_uuid) WHERE cave_area_uuid IS NULL',
+    );
+  }
+
+  static Future<bool> _configurationsHasUniqueId(AppDatabase db) async {
+    final indexes = await db
+        .customSelect('PRAGMA index_list(configurations)')
+        .get();
+    for (final index in indexes) {
+      if (index.read<int>('unique') != 1) continue;
+      final columns = await db
+          .customSelect("PRAGMA index_info('${index.read<String>('name')}')")
+          .get();
+      if (columns.length == 1 && columns.single.read<String>('name') == 'id') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static Future<void> _recreateConfigurations(
+    AppDatabase db,
+    Migrator migrator,
+  ) async {
+    await TableRecreator.recreate(
+      db: db,
+      migrator: migrator,
+      table: db.configurations,
+      reinsert: (d) async {
+        await db.customStatement(
+          'INSERT INTO configurations '
+          '(id, title, value, is_synced, created_at, updated_at) '
+          'VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            d['id'],
+            d['title'],
+            d['value'],
+            d['is_synced'] ?? 0,
+            d['created_at'],
+            d['updated_at'],
+          ],
+        );
+      },
+    );
   }
 }
 
-/// v35 → v36.
-///
-/// Adds two local-only SilexGIS tables that let a sync run cut short carry on
-/// where it stopped: the rows a download page carried before their container,
-/// and the feature rows of an upload sent and not answered, so they go again
-/// under the same batch identifier. Local only, like the other SilexGIS state
-/// tables; nothing is moved into them.
-class V35ToV36Migration extends SchemaMigration {
-  const V35ToV36Migration();
-
-  @override
-  int get toVersion => 36;
-
-  @override
-  Future<void> apply(AppDatabase db, Migrator migrator) async {
-    await migrator.createTable(db.silexgisDeferredRow);
-    await migrator.createTable(db.silexgisUploadAttempt);
-  }
+/// Runs [statement] on [table] unless the table is absent, which only a
+/// deliberately partial database is, as [_addColumnIfMissing] explains.
+Future<void> _executeIfTableExists(
+  AppDatabase db,
+  String table,
+  String statement, [
+  List<Object?> args = const [],
+]) async {
+  final found = await db
+      .customSelect(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        variables: [Variable.withString(table)],
+      )
+      .get();
+  if (found.isEmpty) return;
+  await db.customStatement(statement, args);
 }
 
 /// Adds [column] to [table] unless it is already there — or unless the
@@ -1204,8 +1419,7 @@ const List<SchemaMigration> schemaMigrations = <SchemaMigration>[
   V31ToV32Migration(),
   V32ToV33Migration(),
   V33ToV34Migration(),
-  V34ToV35Migration(),
-  V35ToV36Migration(),
+  V34ToV37Migration(),
 ];
 
 /// Seeds a row into `configurations` with ON CONFLICT IGNORE on the

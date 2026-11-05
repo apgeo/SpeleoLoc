@@ -103,14 +103,83 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
     return confirmed == true;
   }
 
-  Future<void> _keepMine(SilexgisDecision decision) => _act((p) async {
-    await _service.keepMine(p.profileUuid, decision);
-    return LocServ.inst.t(
-      decision.isDeletedOnServer
-          ? 'silexgis_decision_deleted_kept'
-          : 'silexgis_review_kept',
+  /// Overwriting the server's newer version loses whatever was changed there,
+  /// so the caver is told what goes before choosing it.
+  Future<void> _sendMine(SilexgisDecision decision) async {
+    if (!await _confirm(
+      'silexgis_review_send_mine_title',
+      'silexgis_review_send_mine_body',
+      'silexgis_review_send_mine',
+    )) {
+      return;
+    }
+    await _act((p) async {
+      await _service.sendMineAnyway(p.profileUuid, decision);
+      return LocServ.inst.t('silexgis_review_send_mine_done');
+    });
+  }
+
+  /// Keeping a row the server removed is also the caver's consent that an
+  /// edit sends it up again as new, so that is said before they choose it.
+  Future<void> _keepMine(SilexgisDecision decision) async {
+    if (decision.isDeletedOnServer &&
+        !await _confirm(
+          'silexgis_decision_keep_title',
+          'silexgis_decision_keep_body',
+          'silexgis_review_keep_mine',
+        )) {
+      return;
+    }
+    await _act((p) async {
+      await _service.keepMine(p.profileUuid, decision);
+      return LocServ.inst.t(
+        decision.isDeletedOnServer
+            ? 'silexgis_decision_deleted_kept'
+            : 'silexgis_review_kept',
+      );
+    });
+  }
+
+  Future<void> _sendAgain(SilexgisDecision decision) async {
+    if (!await _confirm(
+      'silexgis_review_send_again_title',
+      'silexgis_review_send_again_body',
+      'silexgis_review_send_again',
+    )) {
+      return;
+    }
+    await _act((p) async {
+      await _service.sendAgainAsNew(p.profileUuid, decision);
+      return LocServ.inst.t('silexgis_review_send_again_done');
+    });
+  }
+
+  /// Asks before a choice that the caver should understand first. The body
+  /// may name the installation as `{server}`.
+  Future<bool> _confirm(String title, String body, String action) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(LocServ.inst.t(title)),
+        content: Text(
+          LocServ.inst.t(body, <String, String>{
+            'server': _profile?.displayName ?? '',
+          }),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(LocServ.inst.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(LocServ.inst.t(action)),
+          ),
+        ],
+      ),
     );
-  });
+    return confirmed == true;
+  }
 
   Future<void> _delete(SilexgisDecision decision) async {
     final pin = decision.canRemovePin;
@@ -168,6 +237,8 @@ class _SilexgisDecisionsPageState extends ConsumerState<SilexgisDecisionsPage>
                     enabled: !_busy,
                     onUseServer: () => _useServer(decision),
                     onKeepMine: () => _keepMine(decision),
+                    onSendMine: () => _sendMine(decision),
+                    onSendAgain: () => _sendAgain(decision),
                     onDelete: () => _delete(decision),
                   ),
               ],

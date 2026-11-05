@@ -5,11 +5,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/screens/settings/archive_sync_decisions_page.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/sync_conflict_dialog.dart';
+import 'package:speleoloc/widgets/sync_deletion_consent.dart';
+
+/// Gives a conflict already asked about the same answer again: an import
+/// that held back its deletions runs a second time once they are allowed,
+/// and must not ask about every conflict twice.
+ConflictResolver _rememberingAnswers(ConflictResolver ask) {
+  final answers = <String, SyncConflictAction?>{};
+  return (conflict) async {
+    final key = '${conflict.tableName}/${conflict.entityUuid}';
+    if (answers.containsKey(key)) return answers[key];
+    return answers[key] = await ask(conflict);
+  };
+}
 
 /// Import-time conflict resolution strategy picked by the user.
 enum _ConflictMode {
@@ -44,6 +58,11 @@ class _SyncPageState extends ConsumerState<SyncPage>
   bool _includeRasterMaps = true;
   _ConflictMode _conflictMode = _ConflictMode.auto;
   String? _lastMessage;
+
+  /// How many records earlier imports hold for a decision.
+  late final Stream<int> _decisionCount = ref
+      .read(archiveHeldRowRepositoryProvider)
+      .watchDecisionCount();
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +118,35 @@ class _SyncPageState extends ConsumerState<SyncPage>
         const Divider(height: 32),
 
         // ---- Import --------------------------------------------------
+        StreamBuilder<int>(
+          stream: _decisionCount,
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            if (count == 0) return const SizedBox.shrink();
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  Icons.rule,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  LocServ.inst.t('archive_decisions_waiting', {
+                    'count': '$count',
+                  }),
+                ),
+                subtitle: Text(
+                  LocServ.inst.t('archive_decisions_waiting_desc'),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ArchiveSyncDecisionsPage(),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
         Text(
           LocServ.inst.t('sync_conflict_mode_title'),
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -245,12 +293,35 @@ class _SyncPageState extends ConsumerState<SyncPage>
 
     try {
       final service = ref.read(syncArchiveServiceProvider);
-      final report = await service.importFromZip(
-        path,
-        conflictResolver: _conflictMode == _ConflictMode.manual
-            ? promptingConflictResolver(context)
-            : null,
-      );
+      final resolver = _conflictMode == _ConflictMode.manual
+          ? _rememberingAnswers(promptingConflictResolver(context))
+          : null;
+      SyncImportReport report;
+      try {
+        report = await service.importFromZip(
+          path,
+          conflictResolver: resolver,
+          holdBackDeletions: true,
+        );
+      } on SyncImportHasDeletionsException catch (held) {
+        // Nothing was imported yet; the same question as an FTP sync asks.
+        if (!mounted) return;
+        final apply = await showSyncDeletionConsentDialog(
+          context,
+          deletes: held.preview.deletesApplied,
+          inserts: held.preview.rowsInserted,
+          updates: held.preview.rowsUpdated,
+        );
+        if (!apply) {
+          if (mounted) {
+            setState(() {
+              _lastMessage = LocServ.inst.t('sync_import_cancelled');
+            });
+          }
+          return;
+        }
+        report = await service.importFromZip(path, conflictResolver: resolver);
+      }
       if (!mounted) return;
       setState(() {
         _lastMessage =
@@ -258,7 +329,8 @@ class _SyncPageState extends ConsumerState<SyncPage>
             '+${report.rowsInserted} / ~${report.rowsUpdated} / '
             '-${report.deletesApplied} '
             '(${report.changeLogMerged} ${LocServ.inst.t('change_log')}, '
-            '${report.filesCopied} ${LocServ.inst.t('files')})';
+            '${report.filesCopied} ${LocServ.inst.t('files')})'
+            '${report.decisionsPending == 0 ? '' : '\n${LocServ.inst.t('archive_decisions_waiting', {'count': '${report.decisionsPending}'})}'}';
       });
     } on SyncImportCancelledException {
       if (!mounted) return;

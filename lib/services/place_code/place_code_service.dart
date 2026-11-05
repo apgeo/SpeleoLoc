@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/current_user_service.dart';
+import 'package:speleoloc/services/place_code/cave_local_index_writer.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
 import 'package:speleoloc/services/place_code/qcri_hasher.dart';
 import 'package:speleoloc/services/place_code/strategies/global_hierarchical_strategy.dart';
@@ -36,10 +37,15 @@ class PlaceCodePair {
 /// repository so change-log entries are emitted correctly.
 class PlaceCodeService {
   final AppDatabase _db;
+  final CaveLocalIndexWriter _caveIndexWriter;
   final QcriHasher _hasher;
 
-  PlaceCodeService(this._db, {QcriHasher? hasher})
-    : _hasher = hasher ?? const QcriHasher();
+  PlaceCodeService(
+    this._db, {
+    required CaveLocalIndexWriter caveIndexWriter,
+    QcriHasher? hasher,
+  }) : _caveIndexWriter = caveIndexWriter,
+       _hasher = hasher ?? const QcriHasher();
 
   // ----- Active strategy -----
 
@@ -155,7 +161,7 @@ class PlaceCodeService {
         return PerAreaSequentialStrategy(_db, config);
       case GlobalHierarchicalStrategy.strategyId:
       default:
-        return GlobalHierarchicalStrategy(_db, config);
+        return GlobalHierarchicalStrategy(_db, config, _caveIndexWriter);
     }
   }
 

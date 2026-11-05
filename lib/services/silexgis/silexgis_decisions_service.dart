@@ -30,13 +30,14 @@ class SilexgisDecisionsService {
   final SilexgisHeldRowRepository _heldRows;
   final Map<SyncUploadSection, SilexgisDecisionResolver> _resolvers;
 
-  /// The items waiting for the caver's choice on [profileUuid].
+  /// The items waiting for the caver's choice on [profileUuid], and the rows
+  /// removed there that the caver kept, which can still be sent again.
   Future<List<SilexgisDecision>> decisions(String profileUuid) async {
     final revisions = await _localState.readRevisions(profileUuid);
     final decisions = <SilexgisDecision>[];
     final orphans = <SyncUploadSection, List<Uuid>>{};
     for (final held in await _heldRows.readAll(profileUuid)) {
-      if (!held.awaitsCaver) continue;
+      if (!held.awaitsCaver && !held.isKeptAfterRemoval) continue;
       final resolver = _resolvers[held.section];
       if (resolver == null) continue;
       final title = await resolver.title(held);
@@ -52,6 +53,12 @@ class SilexgisDecisionsService {
           held: held,
           isNew: await resolver.isNew(held, revisions),
           title: title,
+          canSendMineAnyway:
+              resolver is SilexgisOverwriteResolver &&
+              (resolver as SilexgisOverwriteResolver).canSendMineAnyway(held),
+          canSendAgainAsNew:
+              resolver is SilexgisResendResolver &&
+              (resolver as SilexgisResendResolver).canSendAgainAsNew(held),
         ),
       );
     }
@@ -70,6 +77,38 @@ class SilexgisDecisionsService {
     final resolver = _resolvers[decision.section];
     if (resolver == null || !decision.canUseServerVersion) return false;
     return resolver.useServerVersion(profile, decision.held);
+  }
+
+  /// Sends the caver's version over the server's newer one with the next
+  /// run.
+  Future<void> sendMineAnyway(
+    String profileUuid,
+    SilexgisDecision decision,
+  ) async {
+    final resolver = _resolvers[decision.section];
+    if (resolver is! SilexgisOverwriteResolver || !decision.canSendMineAnyway) {
+      return;
+    }
+    await (resolver as SilexgisOverwriteResolver).sendMineAnyway(
+      profileUuid,
+      decision.held,
+    );
+  }
+
+  /// Sends a row the installation removed up again as a new one, with
+  /// everything inside it, with the next run.
+  Future<void> sendAgainAsNew(
+    String profileUuid,
+    SilexgisDecision decision,
+  ) async {
+    final resolver = _resolvers[decision.section];
+    if (resolver is! SilexgisResendResolver || !decision.canSendAgainAsNew) {
+      return;
+    }
+    await (resolver as SilexgisResendResolver).sendAgainAsNew(
+      profileUuid,
+      decision.held,
+    );
   }
 
   /// Keeps the caver's version on the device, unsent until they edit it.

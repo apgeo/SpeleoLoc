@@ -20,7 +20,11 @@ void main() {
   setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => db.close());
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    Map<String, Object?>? current,
+    bool deletedOnServer = false,
+  }) async {
     container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
@@ -56,17 +60,28 @@ void main() {
           wireKind: 'cave',
           revision: '2026-10-01T08:00:00Z',
         );
-    await container
-        .read(silexgisHeldRowsProvider)
-        .recordConflicts('p-1', <SilexgisConflictEntry>[
-          SilexgisConflictEntry(
-            section: SyncUploadSection.rows,
-            entityUuid: caveId,
-            entityTable: 'caves',
-            wireKind: 'cave',
-            code: 'sync.conflict',
-          ),
-        ]);
+    if (deletedOnServer) {
+      await container
+          .read(silexgisHeldRowsProvider)
+          .recordDeletedOnServer('p-1', caveId, entityTable: 'caves');
+      await container.read(silexgisLocalStateProvider).forgetRevisions(
+        'p-1',
+        <Uuid>[caveId],
+      );
+    } else {
+      await container
+          .read(silexgisHeldRowsProvider)
+          .recordConflicts('p-1', <SilexgisConflictEntry>[
+            SilexgisConflictEntry(
+              section: SyncUploadSection.rows,
+              entityUuid: caveId,
+              entityTable: 'caves',
+              wireKind: 'cave',
+              code: 'sync.conflict',
+              current: current,
+            ),
+          ]);
+    }
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -108,5 +123,86 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(await tester.runAsync(stillToDecide), isFalse);
+  });
+
+  testWidgets('sending mine anyway says what it overwrites, and asks first', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      current: <String, Object?>{
+        'id': caveId.toString(),
+        'name': 'Theirs',
+        'updatedAt': '2026-10-28T07:30:00Z',
+      },
+    );
+
+    await tester.tap(find.text('silexgis_review_send_mine'));
+    await tester.pumpAndSettle();
+    expect(find.text('silexgis_review_send_mine_title'), findsOneWidget);
+    expect(find.text('silexgis_review_send_mine_body'), findsOneWidget);
+    await tester.tap(find.text('cancel'));
+    await tester.pumpAndSettle();
+    expect(await tester.runAsync(stillToDecide), isTrue);
+
+    await tester.tap(find.text('silexgis_review_send_mine'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('silexgis_review_send_mine'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(await tester.runAsync(stillToDecide), isFalse);
+  });
+
+  group('a cave deleted on the server', () {
+    Future<void> confirm(WidgetTester tester, String action) async {
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(action),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('kept, after being told an edit sends it again as new', (
+      tester,
+    ) async {
+      await pump(tester, deletedOnServer: true);
+
+      await tester.tap(find.text('silexgis_review_keep_mine'));
+      await tester.pumpAndSettle();
+      expect(find.text('silexgis_decision_keep_title'), findsOneWidget);
+      expect(find.text('silexgis_decision_keep_body'), findsOneWidget);
+      await confirm(tester, 'silexgis_review_keep_mine');
+
+      expect(await tester.runAsync(stillToDecide), isFalse);
+      // Still listed, kept, and it can still be sent again.
+      expect(
+        find.textContaining('silexgis_decision_kept_here'),
+        findsOneWidget,
+      );
+      expect(find.text('silexgis_review_keep_mine'), findsNothing);
+      expect(find.text('silexgis_review_send_again'), findsOneWidget);
+    });
+
+    testWidgets('sent again as new, after saying what that does', (
+      tester,
+    ) async {
+      await pump(tester, deletedOnServer: true);
+
+      await tester.tap(find.text('silexgis_review_send_again'));
+      await tester.pumpAndSettle();
+      expect(find.text('silexgis_review_send_again_title'), findsOneWidget);
+      expect(find.text('silexgis_review_send_again_body'), findsOneWidget);
+      await confirm(tester, 'silexgis_review_send_again');
+
+      final caves = await tester.runAsync(() => db.select(db.caves).get());
+      expect(caves!.single.uuid, isNot(caveId));
+      expect(find.text('silexgis_review_none'), findsOneWidget);
+    });
   });
 }

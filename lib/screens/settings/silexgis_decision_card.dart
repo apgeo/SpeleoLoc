@@ -12,6 +12,8 @@ class SilexgisDecisionCard extends StatelessWidget {
     required this.enabled,
     required this.onUseServer,
     required this.onKeepMine,
+    required this.onSendMine,
+    required this.onSendAgain,
     required this.onDelete,
     super.key,
   });
@@ -20,6 +22,12 @@ class SilexgisDecisionCard extends StatelessWidget {
   final bool enabled;
   final VoidCallback onUseServer;
   final VoidCallback onKeepMine;
+
+  /// Sends the caver's version over the server's newer one.
+  final VoidCallback onSendMine;
+
+  /// Sends a row the server removed up again as a new one.
+  final VoidCallback onSendAgain;
 
   /// Deletes a draft, or removes a pin another already stands for.
   final VoidCallback onDelete;
@@ -48,6 +56,8 @@ class SilexgisDecisionCard extends StatelessWidget {
             Text(
               <String>[
                 _reason(decision),
+                if (decision.isKept)
+                  LocServ.inst.t('silexgis_decision_kept_here'),
                 if (held.isDelete) LocServ.inst.t('silexgis_review_removal'),
                 if (decision.isNew &&
                     !decision.canRemovePin &&
@@ -87,10 +97,21 @@ class SilexgisDecisionCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                TextButton(
-                  onPressed: enabled ? onKeepMine : null,
-                  child: Text(LocServ.inst.t('silexgis_review_keep_mine')),
-                ),
+                if (!decision.isKept)
+                  TextButton(
+                    onPressed: enabled ? onKeepMine : null,
+                    child: Text(LocServ.inst.t('silexgis_review_keep_mine')),
+                  ),
+                if (decision.canSendAgainAsNew)
+                  TextButton(
+                    onPressed: enabled ? onSendAgain : null,
+                    child: Text(LocServ.inst.t('silexgis_review_send_again')),
+                  ),
+                if (decision.canSendMineAnyway)
+                  TextButton(
+                    onPressed: enabled ? onSendMine : null,
+                    child: Text(LocServ.inst.t('silexgis_review_send_mine')),
+                  ),
                 if (decision.canUseServerVersion)
                   FilledButton(
                     onPressed: enabled ? onUseServer : null,

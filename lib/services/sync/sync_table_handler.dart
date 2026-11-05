@@ -1,4 +1,5 @@
 import 'sync_archive_service.dart' show ConflictResolver;
+import 'sync_row_merger.dart';
 
 /// Insert/update/skip counters returned by a single per-table upsert pass.
 ///
@@ -22,10 +23,10 @@ class UpsertCounters {
 /// - [dump] reads every row from the live DB and returns it as a list
 ///   of JSON-shaped maps ready to be serialised into the archive.
 /// - [upsert] takes a list of JSON-shaped rows (as read back from an
-///   archive) and merges them into the live DB using the LWW policy in
-///   `SyncArchiveService._upsertRows`. An optional [ConflictResolver]
-///   from the caller (the import workflow) is forwarded so the UI can
-///   prompt the user before applying ambiguous merges.
+///   archive) and merges them into the live DB through the merge's
+///   [SyncRowMerger]. An optional [ConflictResolver] from the caller (the
+///   import workflow) is forwarded so the UI can prompt the user before
+///   applying ambiguous merges.
 ///
 /// All instances are produced from the per-table registry inside
 /// `SyncArchiveService`; the class itself is intentionally
@@ -50,6 +51,7 @@ class SyncTableHandler {
   final Future<UpsertCounters> Function(
     List<Map<String, dynamic>> rows,
     ConflictResolver? resolver,
+    SyncRowMerger merger,
   )
   upsert;
 }

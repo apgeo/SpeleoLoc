@@ -7,13 +7,18 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/services/range_code_generator.dart';
 
+import '../support/cave_repository_fixture.dart';
+
 void main() {
   late AppDatabase db;
   late RangeCodeGenerator generator;
 
-  setUp(() {
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    generator = RangeCodeGenerator(db, PlaceCodeService(db));
+    generator = RangeCodeGenerator(
+      db,
+      PlaceCodeService(db, caveIndexWriter: await buildCaveRepository(db)),
+    );
   });
 
   tearDown(() => db.close());

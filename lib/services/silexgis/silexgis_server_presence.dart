@@ -27,4 +27,24 @@ class SilexgisServerPresence {
     final revision = await _localState.readRevision(profile.profileUuid, uuid);
     return revision == null ? null : profile.displayName;
   }
+
+  /// The installation's name and how many of [uuids] it holds, for a
+  /// deletion of several items at once; null when it holds none of them.
+  Future<({String installation, int count})?> holdingInstallationOfAny(
+    Iterable<Uuid> uuids,
+  ) async {
+    final profile = await _profiles.getDefaultProfile();
+    if (profile == null) return null;
+    var count = 0;
+    for (final uuid in uuids) {
+      final revision = await _localState.readRevision(
+        profile.profileUuid,
+        uuid,
+      );
+      if (revision != null) count++;
+    }
+    return count == 0
+        ? null
+        : (installation: profile.displayName, count: count);
+  }
 }

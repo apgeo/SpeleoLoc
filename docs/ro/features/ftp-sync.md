@@ -168,10 +168,14 @@ Ce se întâmplă apoi:
    profil — și, dacă nu ați pornit-o din meniul aplicației, ecranul
    **Sincronizare FTP** se deschide peste ea. Dacă nu există profil
    implicit sau dacă acesta nu are parolă stocată, rularea eșuează pe loc.
+   Se oprește să întrebe doar înainte ca o arhivă să șteargă înregistrări
+   de pe acest dispozitiv — vedeți [Ștergerile sunt
+   întrebate](#ștergerile-sunt-întrebate).
 2. Antetul din fila **Progres** numește faza curentă: **Conectare…**,
    **Listare arhive pe server…**, **Se descarcă arhiva**, **Se importă
-   arhiva**, **Se generează arhiva locală…**, **Se încarcă arhiva**,
-   **Finalizare…**. Dedesubt stau numele profilului și **Început la**.
+   arhiva**, **Se așteaptă răspunsul dumneavoastră**, **Se generează
+   arhiva locală…**, **Se încarcă arhiva**, **Finalizare…**. Dedesubt
+   stau numele profilului și **Început la**.
 3. **Progres total** este o singură bară pentru întreaga rulare, cu un
    contor **Arhive: 2 / 5** odată ce coada de descărcare este cunoscută.
    Sub **Fișier curent** aveți numele fișierului, cât s-a **Transferat**
@@ -196,8 +200,11 @@ Ce se întâmplă apoi:
 Fila **Jurnal** este locul unde o sincronizare se explică pe sine: câte
 arhive noi au fost găsite, fiecare fișier descărcat cu dimensiunea lui,
 fiecare sumă de control verificată, câte rânduri a adăugat, a schimbat și
-a sărit un import și fiecare arhivă sărită, cu motivul. Când o rulare nu a
-făcut ce vă așteptați, acolo să vă uitați întâi.
+a sărit un import, fiecare avertisment al unui import — o înregistrare pe
+care nu a putut-o prelua, o ștergere pe care nu a putut-o aplica, un
+fișier pe care nu l-a putut scrie, cel mult 20 pentru fiecare arhivă — și
+fiecare arhivă sărită, cu motivul. Când o rulare nu a făcut ce vă
+așteptați, acolo să vă uitați întâi.
 
 > 📷 [Fila de jurnal a sincronizării](../screenshots/06-sync-and-sharing.md#ftp-sync-log-tab) — Fila Jurnal listând fiecare pas al ultimei sincronizări FTP, cea mai nouă prima.
 
@@ -280,6 +287,27 @@ modificărilor de pe acest dispozitiv cu cea mai nouă arhivă pe care o are
 deja pe server (sau, dacă nu există niciuna acolo, cu propria evidență a
 momentului ultimei încărcări).
 
+### Când ceasul unui telefon este greșit
+
+Numele arhivelor, ca și fiecare modificare pe care o faceți, poartă data
+și ora telefonului care le-a făcut, iar telefoanele de pe teren rămân
+adesea fără ora din rețea. O arhivă datată cu mai mult de o oră după
+ceasul acestui telefon înseamnă că unul dintre cele două ceasuri este sau
+a fost greșit. Fila Jurnal și bannerul portocaliu o spun — verificați data
+și ora în setările telefonului. O astfel de arhivă este totuși importată,
+dar nu contează niciodată drept cea mai nouă a dispozitivului ei, așa că
+nu poate ascunde arhivele lui ulterioare, datate corect.
+
+Dacă acest telefon a încărcat cât timp ceasul îi mergea înainte,
+următoarea lui sincronizare își observă propria arhivă datată după ceasul
+lui, încarcă una datată corect chiar fără modificări noi și o șterge pe
+cea veche, ca celelalte dispozitive să-i primească în continuare
+încărcările. Modificările făcute cât timp ceasul mergea înainte sunt
+încărcate o singură dată; fila Jurnal și bannerul le numără, pentru că
+până trece data lor ele câștigă în fața oricărei editări a acelorași
+înregistrări, pe fiecare dispozitiv. Corectați manual acele înregistrări
+dacă e nevoie.
+
 ## Cum se încheie o rulare
 
 Orice s-ar fi întâmplat, antetul unei rulări reușite scrie **Sincronizare
@@ -294,7 +322,11 @@ dintre:
   ce era nou și v-ați publicat propriul instantaneu.
 
 Ultima distincție contează când vreți să fiți siguri că munca
-dumneavoastră a ajuns într-adevăr pe server.
+dumneavoastră a ajuns într-adevăr pe server. Când importurile au dat
+avertismente, linia se termină cu numărul lor, de exemplu *(3 import
+warning(s), listed above)*; avertismentele sunt rândurile portocalii de
+deasupra. Unele sunt obișnuite — un utilizator potrivit după nume cu unul
+pe care îl aveți deja — așa că nu fac bannerul portocaliu.
 
 O rulare care a sărit arhive ilizibile se încheie tot cu **Sincronizare
 reușită**, cu un banner portocaliu care le enumeră.
@@ -304,8 +336,21 @@ banner roșu care numește prima problemă — chiar dacă cea mai mare parte a
 reușit. O arhivă care nu s-a descărcat sau care nu s-a importat nu
 oprește restul și nu vă oprește nici propria încărcare. Așadar, un
 rezultat roșu nu înseamnă că nu a mers nimic: citiți fila Jurnal ca să
-vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că e
-destul să rulați sincronizarea din nou ca să se reîncerce.
+vedeți ce a mers. Tot ce a eșuat este lăsat dinadins nemarcat, așa că o
+nouă sincronizare îl reîncearcă — o descărcare eșuată, chiar la
+sincronizarea următoare. O arhivă al cărei **import** a eșuat este altfel:
+cauza stă de obicei în date, iar descărcarea întregii arhive la fiecare
+sincronizare nu ar schimba-o. Este lăsată deoparte la următoarele 4
+sincronizări și reîncercată la a 5-a, sau imediat ce se schimbă pe server
+ori aplicația este actualizată. Între timp fiecare sincronizare o numește
+într-un rând portocaliu din fila Jurnal și în bannerul portocaliu.
+
+O arhivă ale cărei fișiere nu au putut fi scrise pe acest dispozitiv — de
+exemplu pentru că memoria telefonului este plină — contează și ea ca
+eșuată. Înregistrările ei sunt importate, dar fotografiile și hărțile la
+care trimit lipsesc, așa că este importată din nou la următoarea
+sincronizare; fișierele care au ajuns nu sunt scrise a doua oară.
+Eliberați spațiu și sincronizați din nou.
 
 La o eșuare de conexiune sau de autentificare, la o cheie de gazdă SFTP
 schimbată sau la un profil FTPS, bannerul roșu poartă și un buton
@@ -342,9 +387,57 @@ uitați-vă în [istoricul modificărilor](sync-and-change-log.md#change-log)
 sau schimbați arhiva de mână și importați-o pe ecranul Sinc. man. cu
 rezolvarea manuală a conflictelor pornită.
 
+Singurul lucru pe care o rulare vi-l lasă vouă este o înregistrare creată
+pe alt telefon cu un nume pe care îl are deja o altă înregistrare a
+voastră — zona „Sala” adăugată aceleiași peșteri pe ambele telefoane. Ea
+nu este nici suprascrisă, nici aruncată: este reținută, cu tot ce atârnă
+de ea, iar tot restul este îmbinat. Rularea continuă, iar fila Jurnal
+adaugă o linie portocalie, *N record(s) from other devices wait for a
+decision*. Decideți în **Sinc. man. → Arhivă sincronizare → Necesită o
+decizie**; vedeți [Când o înregistrare de aici are deja
+numele](sync-and-change-log.md#când-o-înregistrare-de-aici-are-deja-numele).
+
+## Ștergerile sunt întrebate
+
+O arhivă poartă ce au șters alte dispozitive, nu doar ce au adăugat și
+modificat, iar importul ei șterge aceste înregistrări și aici. Altfel, o
+ștergere făcută din greșeală pe un telefon ar dispărea de pe toate
+telefoanele la următoarea sincronizare dintr-o atingere, fără nimic care
+să o aducă înapoi.
+
+De aceea, înainte de a importa o arhivă care ar șterge înregistrări de pe
+acest dispozitiv, rularea se oprește cu **Se așteaptă răspunsul
+dumneavoastră**. Fila **Progres** arată **Ștergeți înregistrări de pe
+acest dispozitiv?**, numele arhivei și ce ar face — câte înregistrări
+șterge, adaugă și modifică — iar cardul de sincronizare din meniul
+aplicației scrie *N înregistrare(i) ar fi șterse — atingeți pentru a
+decide*. Din acea arhivă nu s-a importat încă nimic.
+
+- **Șterge și importă** importă arhiva cu ștergerile ei, iar rularea
+  merge mai departe.
+- **Păstrează înregistrările mele** nu importă nimic din acea arhivă și
+  continuă cu celelalte. Arhiva este numită în bannerul portocaliu de la
+  sfârșit, iar următoarea sincronizare o descarcă și întreabă din nou.
+  Arhivele ulterioare ale acelui dispozitiv poartă aceleași ștergeri, așa
+  că nici altceva de la el nu ajunge până nu le lăsați să treacă: lămuriți
+  ștergerea cu coechipierul.
+- **Anulează sincronizarea** sau **Pauză** opresc rularea; următoarea
+  întreabă din nou.
+
+Întrebarea este aceeași pe ecranul Sinc. man., așa că o arhivă nu este
+niciodată importată cu ștergerile ei pe o cale fără să fiți întrebat, în
+timp ce cealaltă întreabă. Dacă nu sunteți sigur, vorbiți întâi cu
+coechipierul: după ce o lăsați să treacă, puteți vedea ce s-a șters în
+[istoricul modificărilor](sync-and-change-log.md#change-log), dar nu
+puteți recupera înregistrările de acolo.
+
 ## Întreținerea pe server
 
-SpeleoLoc **nu șterge niciodată nimic** din folderul de pe server. Fiecare
+SpeleoLoc nu șterge niciodată fișierele altui dispozitiv din folderul de
+pe server. Șterge doar resturile propriilor încărcări întrerupte și
+propriile arhive datate după o încărcare nouă a sa, produse de un ceas
+greșit (vedeți [Când ceasul unui telefon este
+greșit](#când-ceasul-unui-telefon-este-greșit)). Fiecare
 sincronizare care încarcă adaugă o arhivă plus un mic fișier de sumă de
 control, așa că folderul crește constant — o pereche pentru fiecare
 dispozitiv, la fiecare încărcare.
@@ -411,7 +504,9 @@ aducă de două ori.
 - **O arhivă a fost sărită din cauza versiunii aplicației** — fila Jurnal
   spune în ce sens. De la o versiune *mai nouă* de SpeleoLoc: mesajul
   numește versiunea de care aveți nevoie, iar odată actualizat acest
-  dispozitiv, arhiva se importă singură la sincronizarea următoare. De la
+  dispozitiv, arhiva se importă singură la sincronizarea următoare. Până
+  atunci este descărcată o singură dată: sincronizările următoare o lasă
+  pe server și spun asta în fila Jurnal și în bannerul portocaliu. De la
   o versiune *mai veche*: este sărită definitiv pe acest dispozitiv, iar
   singurul leac este să actualizați aplicația care a produs-o și să lăsați
   acel dispozitiv să sincronizeze din nou. În ambele cazuri, restul

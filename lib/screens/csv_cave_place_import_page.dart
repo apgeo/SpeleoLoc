@@ -69,6 +69,7 @@ class _CSVCavePlacesImportPageState
       ref.read(appDatabaseProvider),
       ref.read(currentUserServiceProvider),
       ref.read(placeCodeServiceProvider),
+      ref.read(changeLoggerProvider),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToCSVImport());
   }

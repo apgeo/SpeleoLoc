@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/place_code/cave_local_index_writer.dart';
 import 'package:speleoloc/services/place_code/place_code_strategy.dart';
 import 'package:speleoloc/utils/uuid.dart';
 
@@ -54,8 +55,9 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
 
   final AppDatabase _db;
   final Map<String, dynamic> _config;
+  final CaveLocalIndexWriter _caveIndexWriter;
 
-  GlobalHierarchicalStrategy(this._db, this._config);
+  GlobalHierarchicalStrategy(this._db, this._config, this._caveIndexWriter);
 
   @override
   String get id => strategyId;
@@ -218,13 +220,9 @@ class GlobalHierarchicalStrategy extends PlaceCodeStrategy {
         areaSegment: areaSegment,
         currentCaveUuid: caveUuid,
       );
-      // Persist the allocation so subsequent generations are stable.
-      // (Direct write here — callers of PlaceCodeService should not be
-      // expected to know about this side effect. The change_log is not
-      // emitted from this layer; the integration step in Phase 3 wires
-      // it through the repository if needed.)
-      await (_db.update(_db.caves)..where((c) => c.uuid.equalsValue(caveUuid)))
-          .write(CavesCompanion(caveLocalIndex: Value(caveLocal)));
+      // Persisted so later codes for this cave share the prefix, here and
+      // on every device the cave syncs to.
+      await _caveIndexWriter.setCaveLocalIndex(caveUuid, caveLocal);
     }
 
     final baseline =

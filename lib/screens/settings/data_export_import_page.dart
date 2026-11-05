@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
+import 'package:speleoloc/screens/settings/database_file_error_text.dart';
 import 'package:speleoloc/services/data_archive_service.dart';
 import 'package:speleoloc/services/data_export_import_repository.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
@@ -356,6 +357,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
         zipPath: zipPath,
         silexgisTokens: ref.read(silexgisTokenStoreProvider),
         silexgisSignInRegistry: ref.read(silexgisAuthRegistryProvider),
+        adoptFtpProfiles: ref.read(ftpProfileRepositoryProvider).forgetSecrets,
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
       );
 
@@ -368,7 +370,9 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        SnackBarService.showError('${LocServ.inst.t('import_failed')}: $e');
+        SnackBarService.showError(
+          '${LocServ.inst.t('import_failed')}: ${databaseFileErrorText(e)}',
+        );
       }
     }
   }
@@ -522,6 +526,11 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
                 LocServ.inst.t('import_files_copied'),
                 result.filesCopied,
               ),
+              if (result.decisionsPending > 0)
+                _resultRow(
+                  LocServ.inst.t('import_decisions_pending'),
+                  result.decisionsPending,
+                ),
               if (result.warnings.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
