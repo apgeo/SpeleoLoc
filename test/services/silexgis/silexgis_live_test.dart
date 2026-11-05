@@ -868,11 +868,13 @@ abstract final class _MemberView {
   /// Every entrance but that cave's `Shaft`.
   static const int entrances = 6;
 
-  /// `Demo marker A`. `Demo marker B (protected)` is a protection root of its
+  /// `Demo marker A`, and `Demo marker C`, at the end of a splay of the
+  /// seeded survey. `Demo marker B (protected)` is a protection root of its
   /// own and is absent.
-  static const int places = 1;
+  static const int places = 2;
 
-  static const int centrelines = 1;
+  /// One for the demonstration cave, and one for each seeded survey model.
+  static const int centrelines = 3;
 
   static const int rows = caves + entrances + places + centrelines;
 

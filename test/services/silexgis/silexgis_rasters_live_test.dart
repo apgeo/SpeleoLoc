@@ -242,8 +242,14 @@ void main() {
     expect(state.pictureSha256, hash);
     final copy = (await SilexgisFileCopyRepository(db).read(document))!;
     expect(copy.origin, SilexgisCopyOrigin.server);
-    // Never a documentation file, and an import rather than an edit.
-    expect(await db.select(db.documentationFiles).get(), isEmpty);
+    // Never a documentation file — the only ones are the cave's survey
+    // models — and an import rather than an edit.
+    expect(
+      (await db.select(db.documentationFiles).get()).where(
+        (d) => d.fileType != 'survey_model',
+      ),
+      isEmpty,
+    );
     expect(await db.select(db.changeLog).get(), isEmpty);
 
     // A second run has nothing to send and nothing to fetch.
