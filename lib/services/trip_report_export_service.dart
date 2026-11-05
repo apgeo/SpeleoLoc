@@ -195,23 +195,42 @@ class TripReportExportService {
     return result;
   }
 
-  /// Inserts `<w:p>` paragraphs before the closing `</w:body>` tag.
+  /// Inserts `<w:p>` paragraphs at the end of the body content.
+  ///
+  /// The schema makes the body's own `<w:sectPr>` its last child, and every
+  /// Word-saved document has one; paragraphs placed after it make Word call
+  /// the file corrupt. So they go before that element when there is one,
+  /// otherwise before `</w:body>`. Leading spaces of a log line are kept
+  /// with `xml:space="preserve"`, which `<w:t>` otherwise collapses.
   String _insertDocxParagraph(String xml, String text) {
     final paragraphs = text
         .split('\n')
         .map((line) {
           final escaped = _escapeXml(line);
-          return '<w:p><w:r><w:t>$escaped</w:t></w:r></w:p>';
+          return '<w:p><w:r><w:t xml:space="preserve">$escaped</w:t></w:r></w:p>';
         })
         .join('\n');
 
     const closingTag = '</w:body>';
-    final idx = xml.lastIndexOf(closingTag);
-    if (idx == -1) {
+    final bodyEnd = xml.lastIndexOf(closingTag);
+    if (bodyEnd == -1) {
       log.warning('<w:body> closing tag not found in DOCX document.xml');
       return xml;
     }
-    return '${xml.substring(0, idx)}$paragraphs\n$closingTag${xml.substring(idx + closingTag.length)}';
+    final idx = _bodySectionStart(xml, bodyEnd) ?? bodyEnd;
+    return '${xml.substring(0, idx)}$paragraphs\n${xml.substring(idx)}';
+  }
+
+  static final _sectPrOpen = RegExp(r'<w:sectPr[\s>/]');
+
+  /// Where the body-level `<w:sectPr>` starts, or null when the body has
+  /// none. A section break inside a paragraph (`<w:pPr><w:sectPr>`) is not
+  /// it: the body's own one has no paragraph closing after it.
+  int? _bodySectionStart(String xml, int bodyEnd) {
+    final matches = _sectPrOpen.allMatches(xml.substring(0, bodyEnd));
+    if (matches.isEmpty) return null;
+    final start = matches.last.start;
+    return xml.substring(start, bodyEnd).contains('</w:p>') ? null : start;
   }
 
   String _escapeXml(String text) {
