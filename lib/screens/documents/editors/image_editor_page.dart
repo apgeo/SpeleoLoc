@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/screens/documents/editors/image_editor_i18n.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/file_utils.dart';
 import 'package:speleoloc/utils/app_logger.dart';
@@ -150,6 +151,7 @@ class _ImageEditorPageState extends ConsumerState<ImageEditorPage> {
 
     return ProImageEditor.memory(
       _imageBytes!,
+      configs: ProImageEditorConfigs(i18n: buildImageEditorI18n()),
       callbacks: ProImageEditorCallbacks(
         onImageEditingComplete: (bytes) async {
           await _onImageEditingComplete(bytes);
