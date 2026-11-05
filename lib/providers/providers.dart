@@ -80,6 +80,7 @@ import 'package:speleoloc/services/sync/archive_sync_decisions_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_merge_engine.dart';
 import 'package:speleoloc/services/trip_media/media_scan_cache.dart';
+import 'package:speleoloc/services/trip_media/trip_media_access.dart';
 import 'package:speleoloc/services/trip_media/trip_media_import_service.dart';
 import 'package:speleoloc/services/user_identity/current_user_resolver.dart';
 import 'package:speleoloc/services/user_identity/user_handover.dart';
@@ -663,6 +664,12 @@ final mediaScanCacheProvider = Provider<MediaScanCache>(
     ref.watch(appDatabaseProvider),
     clock: ref.watch(clockProvider),
   ),
+);
+
+/// Asks for photo-library access for the trip-media screen. A provider so a
+/// test can stand in for the platform plugin.
+final tripMediaAccessResolverProvider = Provider<TripMediaAccessResolver>(
+  (ref) => const TripMediaAccessResolver(),
 );
 
 /// Applies the decisions made on the trip-media screen: track points at the
