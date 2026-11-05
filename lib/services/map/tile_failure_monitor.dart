@@ -25,5 +25,12 @@ class TileFailureMonitor {
     return _failures.length >= threshold;
   }
 
+  /// True when no failure was recorded within [window], so the next one
+  /// starts a new outage rather than continuing the last.
+  bool get quiet {
+    final at = _now();
+    return _failures.every((t) => at.difference(t) > window);
+  }
+
   void reset() => _failures.clear();
 }

@@ -63,7 +63,8 @@ class CaveMapLayersController extends ChangeNotifier {
 
   /// True once the online base map has failed to load a screenful of tiles
   /// (no connection, nothing cached) and the caver has not dismissed the
-  /// notice. A blank map otherwise looks the same as one still loading.
+  /// notice for this outage. A blank map otherwise looks the same as one
+  /// still loading.
   bool get tilesNoticeVisible => _tilesUnavailable && !_tilesNoticeDismissed;
 
   void dismissTilesNotice() {
@@ -72,7 +73,13 @@ class CaveMapLayersController extends ChangeNotifier {
   }
 
   void _onTileError(TileImage tile, Object error, StackTrace? stackTrace) {
-    if (_disposed || !_tileFailures.record() || _tilesUnavailable) return;
+    if (_disposed) return;
+    // flutter_map reports no successful tile, so a quiet spell is the only
+    // sign that an outage the caver dismissed is over: failures after one
+    // belong to a new outage, which earns the notice again. Panning an
+    // offline map keeps failing and so stays dismissed.
+    if (_tilesNoticeDismissed && _tileFailures.quiet) _resetTilesNotice();
+    if (!_tileFailures.record() || _tilesUnavailable) return;
     _tilesUnavailable = true;
     notifyListeners();
   }
@@ -119,6 +126,9 @@ class CaveMapLayersController extends ChangeNotifier {
     _tileCacheEnabled =
         await _configRepository.readString(tileCacheEnabledKey) != 'false';
 
+    // Back from the map settings, a different cache or file may serve the
+    // tiles; count failures afresh.
+    _resetTilesNotice();
     final base = prefs['base'];
     if (base is String && baseLayerExists(base)) _baseId = base;
     final overlays = prefs['overlays'];
