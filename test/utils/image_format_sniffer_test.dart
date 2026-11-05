@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,31 @@ void main() {
         ImageFormatSniffer.extensionForPicked(bytes([1, 2, 3, 4]), 'noext'),
         'jpg',
       );
+    });
+  });
+
+  group('readHead', () {
+    test('reads only the bytes the sniffer needs', () async {
+      final dir = await Directory.systemTemp.createTemp('sniff_head_');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/scan.bin');
+      await file.writeAsBytes(webp);
+
+      final head = await ImageFormatSniffer.readHead(file.path);
+
+      expect(head, hasLength(ImageFormatSniffer.headLength));
+      expect(ImageFormatSniffer.extensionFor(head), 'webp');
+    });
+
+    test('returns what there is of a file shorter than the head', () async {
+      final dir = await Directory.systemTemp.createTemp('sniff_head_');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/tiny.bin');
+      await file.writeAsBytes([0xFF, 0xD8, 0xFF]);
+
+      final head = await ImageFormatSniffer.readHead(file.path);
+
+      expect(ImageFormatSniffer.extensionFor(head), 'jpg');
     });
   });
 }

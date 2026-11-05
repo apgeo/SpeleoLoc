@@ -10,6 +10,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_model/survey_model_format.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
+import 'package:speleoloc/utils/file_digest.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/image_compressor.dart';
 
@@ -115,17 +116,13 @@ class DocumentationFileHelper {
     final outPath = '${folder.path}/$outName';
     await sourceFile.copy(outPath);
 
-    final outFile = File(outPath);
-    final bytes = await outFile.readAsBytes();
-    final fileSize = bytes.length;
-    final fileHash = computeSha256(bytes);
-    final relativePath = '$storageSubDir/$outName';
+    final digest = await FileDigest.of(outPath);
 
     return SavedFileInfo(
-      relativePath: relativePath,
+      relativePath: '$storageSubDir/$outName',
       absolutePath: outPath,
-      fileSize: fileSize,
-      fileHash: fileHash,
+      fileSize: digest.size,
+      fileHash: digest.sha256Hex,
     );
   }
 
@@ -142,7 +139,7 @@ class DocumentationFileHelper {
     ImageCompressionSettings settings,
   ) async {
     final file = File(info.absolutePath);
-    final compressed = ImageCompressor.compressBytes(
+    final compressed = await ImageCompressor.compressInBackground(
       await file.readAsBytes(),
       settings,
     );

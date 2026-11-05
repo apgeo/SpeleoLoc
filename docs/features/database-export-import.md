@@ -59,7 +59,10 @@ device's save dialog with that name already filled in, and you say where
 the file goes — if you cancel there, nothing is saved. On iOS and desktop
 you choose the destination folder first instead. Inside the zip are the
 database, the media you asked for, and a small manifest describing the
-export.
+export. Files larger than 32 MB go in uncompressed: they are videos,
+photos and scans whose formats are compressed already, and leaving them
+as they are keeps the app responsive and its memory low however large the
+export grows.
 
 Under **Export Settings**, three switches control what goes in; a fourth
 appears only in special builds. The first two are on when you open the

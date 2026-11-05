@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
 import 'package:speleoloc/services/silexgis/model/sync_upload_batch.dart';
@@ -326,5 +328,54 @@ void main() {
       throwsA(isA<SilexgisInsecureAddressException>()),
     );
     expect(client.sent, isEmpty);
+  });
+
+  group('a large body', () {
+    // Big enough to be decoded on a background isolate.
+    final rows = <Object?>[
+      for (var i = 0; i < 4000; i++)
+        <String, Object?>{
+          'id': 'row-$i',
+          'title': 'Invented passage ș ț $i',
+          'points': <double>[i * 0.5, i * 1.5, -i * 0.25],
+        },
+    ];
+
+    test('decodes to the same value a small one would', () async {
+      final page = ScriptedResponse.json(
+        path: SilexgisContract.capabilitiesPath,
+        json: <String, Object?>{'rows': rows},
+      );
+      expect(utf8.encode(page.body).length, greaterThan(256 * 1024));
+      final client = ScriptedClient(<ScriptedResponse>[page]);
+
+      final body = await build(
+        client,
+        _FakeTokens(),
+      ).getJson(SilexgisContract.capabilitiesPath);
+
+      expect(body['rows'], rows);
+    });
+
+    test('that is not JSON is still a transport failure', () async {
+      final client = ScriptedClient(<ScriptedResponse>[
+        ScriptedResponse(
+          path: SilexgisContract.capabilitiesPath,
+          status: 502,
+          body: '<html>${'x' * (300 * 1024)}</html>',
+        ),
+      ]);
+
+      await expectLater(
+        build(client, _FakeTokens()).getJson(SilexgisContract.capabilitiesPath),
+        throwsA(
+          isA<SilexgisTransportException>().having(
+            (e) => e.status,
+            'status',
+            502,
+          ),
+        ),
+      );
+    });
   });
 }

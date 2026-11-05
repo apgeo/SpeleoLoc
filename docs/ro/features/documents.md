@@ -299,6 +299,12 @@ document cu text formatat nu are vizualizator propriu, așa că arată aceeași
 pagină substitut ca un fișier nerecunoscut — folosiți butonul cu creion ca
 să-l citiți ca lumea.
 
+Un fișier text simplu sau CSV mai mare de 256 KB arată în vizualizator doar
+primii 256 KB, cu un rând deasupra care spune cât din fișier reprezintă
+aceștia. Octeții care nu sunt UTF-8 valid, ca într-un export dintr-un
+program mai vechi care folosește altă pagină de cod, apar ca semn de
+înlocuire, în loc ca fișierul să nu se deschidă deloc.
+
 ## Import în masă: câte un folder de documente pentru fiecare peșteră
 
 Dacă vă țineți deja fotografiile și topografiile în foldere — câte un folder

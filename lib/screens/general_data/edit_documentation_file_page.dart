@@ -6,6 +6,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
+import 'package:speleoloc/utils/file_digest.dart';
 import 'package:speleoloc/utils/image_compression_settings.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:drift/drift.dart' as drift;
@@ -88,12 +89,14 @@ class _EditDocumentationFilePageState
   Future<void> _pick() async {
     final res = await FilePicker.platform.pickFiles(allowMultiple: false);
     if (res == null || res.files.isEmpty) return;
-    final pf = res.files.first;
-    final fileBytes = pf.bytes ?? await File(pf.path!).readAsBytes();
+    final path = res.files.first.path;
+    if (path == null) return;
+    final digest = await FileDigest.of(path);
+    if (!mounted) return;
     setState(() {
-      _pickedFile = File(pf.path!);
-      _fileSize = pf.size;
-      _fileHash = DocumentationFileHelper.computeSha256(fileBytes);
+      _pickedFile = File(path);
+      _fileSize = digest.size;
+      _fileHash = digest.sha256Hex;
     });
 
     // optional: compare with DB entries (only if we have size+hash)
