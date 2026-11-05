@@ -34,7 +34,7 @@ câte una pentru fiecare peșteră. Cât timp o tură este în desfășurare:
 Ca să reluați tura de oriunde, deschideți meniul **⋮** al aplicației
 (sertarul care intră dinspre marginea dreaptă) și derulați până jos.
 Cardul turei de acolo conține **Vezi tura**, **Pauză** / **Continuă**
-și un buton roșu de oprire.
+și, separat, la capătul din dreapta, un buton roșu de oprire.
 
 ## Înainte de coborâre
 
@@ -157,14 +157,16 @@ Două lucruri de știut despre pauză:
 1. Apăsați butonul roșu **Oprește**. Se află pe rândul de butoane al
    ecranului turei, pe ecranul **Ture trecute / active** al peșterii și
    pe cardul turei din meniul **⋮** al aplicației.
-2. Primele două întreabă *„Oprești înregistrarea acestei ture?”* —
-   confirmați. **Butonul de pe cardul din sertar oprește tura imediat,
-   fără confirmare.**
+2. Ecranul turei și cardul din sertar întreabă *„Închei tura din
+   <peșteră>?”* — apăsați **Închei tura**. **Continuă înregistrarea**,
+   butonul evidențiat, lasă tura să ruleze. Ecranul **Ture trecute /
+   active** întreabă *„Oprești înregistrarea acestei ture?”*.
 
 La ieșire puteți în schimb să scanați codul QR al intrării: aplicația
-întreabă *„Ai scanat o intrare în peșteră. Ieși din peșteră? Oprești
-tura activă?”*. Răspundeți **Da** și tura se încheie; răspundeți **Nu**
-și intrarea este înregistrată ca punct de tură obișnuit.
+întreabă *„Închei tura din <peșteră>?”* și explică faptul că ați scanat
+intrarea. Apăsați **Închei tura** și tura se încheie; apăsați
+**Continuă înregistrarea** — de exemplu când doar treceți prin sala de
+la intrare — și intrarea este înregistrată ca punct de tură obișnuit.
 
 O tură oprită **nu** este blocată. Traseul, jurnalul, documentele legate
 și orele ei se păstrează, ea intră în istoricul turelor peșterii și o
@@ -179,6 +181,11 @@ vedere listă: un card de rezumat cu peștera, **Început**, **Terminat**,
 **Durată** și **Puncte**, apoi fiecare punct în ordinea vizitării, cu o
 insignă numerotată, ora și adâncimea locului în dreapta, acolo unde este
 cunoscută. Apăsați un rând ca să deschideți acel loc din peșteră.
+
+O tură încă deschisă pe alt telefon — înregistrarea unui coechipier
+sosită prin SilexGIS — afișează *„Deschisă — nu se înregistrează pe
+acest telefon”* și nu are butoane de oprire sau pauză: acestea
+acționează doar asupra turei pe care o înregistrează acest telefon.
 
 Dacă peștera are cel puțin o hartă raster, rândul de butoane oferă și
 **Vedere hartă**. Acolo traseul este desenat ca o linie albastră cu
@@ -305,8 +312,12 @@ așa că fiecare dispozitiv trebuie să-și adauge propria copie. Vedeți
 
 **Ați oprit tura prea devreme sau ați reintrat în aceeași zi.**
 Deschideți tura; acolo unde era butonul roșu de oprire se află acum un
-**Repornește** albastru. Apăsându-l, acea tură devine din nou tura
-activă, așa că scanările noi și detectările de beaconuri continuă să
+**Repornește** albastru. Mai întâi întreabă *„Repornești această tură?”*
+și arată orele de început și de sfârșit care vor fi înlocuite;
+**Înlocuiește orele și repornește** continuă. Cât timp se înregistrează
+altă tură, repornirea este refuzată cu *„Altă tură se înregistrează:
+…”* — opriți-o mai întâi pe aceea. Prin repornire tura devine din nou
+tura activă, așa că scanările noi și detectările de beaconuri continuă să
 adauge la același traseu. Două consecințe: ora de început este
 **resetată la momentul repornirii**, așa că **Început** și **Durată** se
 socotesc de acolo, nu de la plecarea inițială —

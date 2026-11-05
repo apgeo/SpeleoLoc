@@ -13,6 +13,7 @@ import 'package:speleoloc/services/repository_interfaces.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/end_trip_dialog.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 /// What to do when a QR code matches places in multiple caves.
@@ -295,13 +296,17 @@ class QrCodeLookupHandler {
         await _startTripForCave(context, cavePlace.caveUuid);
       }
     } else if (activeTripCaveId == cavePlace.caveUuid) {
-      // Trip running for THIS cave — offer to stop (exiting).
-      final stop = await _confirm(
+      // Trip running for THIS cave — the caver may be leaving, or may only
+      // be passing the entrance chamber, so the question names what ending
+      // costs and keeping the trip is the default.
+      final cave = await _caveRepo.findById(cavePlace.caveUuid);
+      if (!context.mounted) return;
+      final stop = await showEndTripDialog(
         context,
-        title: LocServ.inst.t('trip_stop'),
-        message: LocServ.inst.t('scan_entrance_exit_cave'),
+        caveTitle: cave?.title ?? '',
+        message: LocServ.inst.t('trip_end_dialog_entrance_body'),
       );
-      if (stop == true && context.mounted) {
+      if (stop && context.mounted) {
         await _performStopTrip();
       } else if (context.mounted) {
         // Still in cave — record the entrance scan as a trip point.

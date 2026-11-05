@@ -12,8 +12,10 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/beacon_detection_drawer_toggle.dart';
+import 'package:speleoloc/widgets/end_trip_dialog.dart';
 import 'package:speleoloc/widgets/ftp_sync_drawer_card.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
+import 'package:speleoloc/widgets/snack_bar_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:speleoloc/utils/build_config.dart';
 
@@ -706,6 +708,19 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
     return h > 0 ? '${h}h ${m}m' : '${m}m';
   }
 
+  Future<void> _stop(CaveTrip trip) async {
+    final end = await showEndTripDialog(context, caveTitle: _cave?.title ?? '');
+    if (!end) return;
+    widget.onClose();
+    try {
+      await caveTripService.stopTrip(trip.uuid);
+      SnackBarService.showSuccess(LocServ.inst.t('trip_stopped'));
+    } catch (e, st) {
+      log.warning('stopping the trip from the drawer failed', e, st);
+      SnackBarService.showError(e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = _trip;
@@ -789,14 +804,14 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                   ),
               ],
               const SizedBox(height: 4),
+              // Full 48 dp targets, and Stop set apart at the far end: the
+              // card is used with wet or gloved hands, and Stop ends the
+              // recording.
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.route, size: 28),
-                    padding: EdgeInsets.zero,
                     color: Colors.blue,
-                    constraints: const BoxConstraints(),
                     tooltip: LocServ.inst.t('trip_view'),
                     onPressed: () {
                       widget.onClose();
@@ -809,29 +824,24 @@ class _ActiveTripCardState extends State<_ActiveTripCard> {
                       size: 28,
                       color: isPaused ? Colors.green : Colors.orange,
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                     tooltip: isPaused
                         ? LocServ.inst.t('trip_resume')
                         : LocServ.inst.t('trip_pause'),
                     onPressed: () {
                       if (isPaused) {
-                        caveTripService.resumeTrip();
+                        caveTripService.resumeTrip(trip.uuid);
                       } else {
-                        caveTripService.pauseTrip();
+                        caveTripService.pauseTrip(trip.uuid);
                       }
                       setState(() {});
                     },
                   ),
+                  const Spacer(),
                   IconButton(
+                    key: const ValueKey('drawer_trip_stop'),
                     icon: const Icon(Icons.stop, size: 28, color: Colors.red),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                     tooltip: LocServ.inst.t('trip_stop'),
-                    onPressed: () async {
-                      widget.onClose();
-                      await caveTripService.stopTrip();
-                    },
+                    onPressed: () => _stop(trip),
                   ),
                 ],
               ),

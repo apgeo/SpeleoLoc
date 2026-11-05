@@ -120,10 +120,9 @@ on its own — it always asks first.
   Would you like to start a new trip?"* Answer **Yes** and a **Start a
   new trip** dialog appears with a suggested **Trip title** you can
   edit.
-- **A trip running in this cave** — **Stop trip**: *"You scanned a cave
-  entrance. Are you exiting the cave? Stop the active trip?"* Answer
-  **No** and the scan is recorded as a trip point instead, so you can
-  pass the entrance without ending the trip.
+- **A trip running in this cave** — *"End the trip at <cave>?"* Answer
+  **Keep recording** and the scan is recorded as a trip point instead,
+  so you can pass the entrance without ending the trip.
 - **A trip running in a different cave** — SpeleoLoc names that cave and
   asks whether to stop its trip; if you agree, it then offers to start a
   trip here.
