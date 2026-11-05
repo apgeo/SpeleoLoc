@@ -112,16 +112,20 @@ când butoanele nu încap toate.
 |---|---|
 | **Oprește** / **Pauză** / **Continuă** | Apar cât timp aceasta este tura pe care o înregistrează acest telefon. Vedeți [Pauză și continuare](#pausing-and-resuming) și [Oprirea unei ture](#stopping-a-trip). |
 | **Repornește** | Apare în locul lor după ce tura s-a încheiat. Vedeți [Repornirea unei ture încheiate](#restarting-a-finished-trip). |
-
-O tură încă deschisă pe alt telefon — înregistrarea unui coechipier
-primită prin SilexGIS — afișează în cardul de rezumat *„Deschisă — nu
-se înregistrează pe acest telefon”* și niciunul dintre aceste trei
-butoane.
 | **Adaugă punct** | Înregistrează un punct la un loc și la o oră alese de dumneavoastră. Vedeți [Corectarea punctelor](#correcting-the-points). |
 | **Poze** | Deschide **Puncte din poze**. Vedeți [Puncte din poze](#points-from-pictures). |
 | **Jurnal** | Deschide jurnalul. Vedeți [Jurnalul turei](#the-trip-log). |
 | **Export raport** | Vedeți [Rapoarte de tură](trip-reports.md). |
 | **Vedere hartă** / **Vedere listă** | Doar când peștera are cel puțin o hartă raster. Vedeți [Vederea hartă](#map-view). |
+
+O tură încă deschisă pe alt telefon — înregistrarea unui coechipier
+primită prin SilexGIS — afișează în cardul de rezumat *„Deschisă — nu
+se înregistrează pe acest telefon”* și niciunul dintre aceste trei
+butoane. O tură lăsată deschisă pe care a înregistrat-o acest telefon,
+sau una care nu numește niciun telefon, afișează același rând, dar oferă
+**Oprește**, ca să poată fi închisă; oprirea întreabă întâi și nu
+atinge tura pe care o înregistrează acest telefon. **Repornește**
+nu este oferit cât timp tura este încă deschisă.
 
 ### Cardul rezumat și lista punctelor
 

@@ -137,11 +137,12 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
   /// device left open without tracking it.
   bool get _isOpenElsewhere => _trip?.tripEndedAt == null && !_isActive;
 
-  /// Recorded by this device, so ending it here cannot cut short a
-  /// recording still running on another phone.
-  bool get _recordedHere {
+  /// Not known to be another phone's recording, so ending it here cannot cut
+  /// one short: this device recorded it, or no device was stored with it,
+  /// and then nobody but the caver here can close it.
+  bool get _notRecordedElsewhere {
     final device = _trip?.deviceUuid;
-    return device != null &&
+    return device == null ||
         device == ref.read(currentUserServiceProvider).deviceUuid.value;
   }
 
@@ -827,7 +828,7 @@ class _CaveTripPageState extends ConsumerState<CaveTripPage>
     final isPaused = ref.read(caveTripServiceProvider).isPausedNotifier.value;
     final buttons = <_TripToolbarButton>[];
 
-    if (_isActive || (_isOpenElsewhere && _recordedHere)) {
+    if (_isActive || (_isOpenElsewhere && _notRecordedElsewhere)) {
       buttons.add(
         _TripToolbarButton(
           icon: Icons.stop_circle,

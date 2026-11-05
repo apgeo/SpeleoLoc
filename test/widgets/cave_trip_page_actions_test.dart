@@ -103,6 +103,42 @@ void main() {
     expect(find.text(LocServ.inst.t('trip_open_not_here')), findsOneWidget);
   });
 
+  testWidgets('an open trip with no recording device offers Stop, which ends '
+      'that trip only', (tester) async {
+    await seedCave(tester);
+    final mine = await run(tester, () => service.startTrip(caveUuid, 'Mine'));
+    final unknown = await run(
+      tester,
+      () async => db.insertCaveTrip(
+        caveUuid: caveUuid,
+        title: 'No device',
+        startedAt: DateTime(2026, 10, 1, 9).millisecondsSinceEpoch,
+        authorUuid: await container
+            .read(currentUserServiceProvider)
+            .currentOrSystem(),
+      ),
+    );
+
+    await open(tester, unknown);
+
+    expect(find.text(LocServ.inst.t('trip_stop')), findsOneWidget);
+    expect(find.text(LocServ.inst.t('trip_pause')), findsNothing);
+    expect(find.text(LocServ.inst.t('trip_restart')), findsNothing);
+
+    await tester.tap(find.text(LocServ.inst.t('trip_stop')));
+    await settle(tester);
+    expect(
+      find.text(LocServ.inst.t('trip_end_dialog_title', {'cave': 'Cave'})),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('end_trip_confirm')));
+    await settle(tester);
+
+    expect((await row(tester, unknown)).tripEndedAt, isNotNull);
+    expect((await row(tester, mine)).tripEndedAt, isNull);
+    expect(service.activeTripIdNotifier.value, mine);
+  });
+
   testWidgets('the recording trip offers Stop and Pause', (tester) async {
     await seedCave(tester);
     final mine = await run(tester, () => service.startTrip(caveUuid, 'Mine'));
