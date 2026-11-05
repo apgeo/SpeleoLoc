@@ -127,6 +127,7 @@
   "database_file_not_this_app": "The file is a database, but not a SpeleoLoc one. Nothing was changed.",
   "database_file_damaged": "The database in the file is damaged. Nothing was changed.",
   "database_swap_sync_running": "A sync is in progress. Wait for it to finish, then try again.",
+  "database_swap_restore_pending": "The previous database could not be put back. Close the app and open it again to restore it.",
   "test_database_not_bundled": "This build does not include the test database. Nothing was changed.",
   "startup_failed_title": "SpeleoLoc could not start",
   "startup_failed_database_too_new": "Your data was saved by a newer version of SpeleoLoc. Update the app to open it. Nothing has been changed.",

@@ -294,7 +294,9 @@ already be on the device, or they will show as missing.
 The file is checked first, as on a replace: one that is not a SpeleoLoc
 database, is damaged, or was saved by a newer version of the app is
 refused with nothing changed, and a restore that fails part-way puts your
-previous database back.
+previous database back. Should even putting it back fail, the app says so
+and works on no database until you close it and open it again; that next
+start puts your previous database back.
 
 **Once the restore succeeds, it is irreversible.** The database you had is
 deleted, not archived.

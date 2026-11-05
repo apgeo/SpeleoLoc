@@ -126,6 +126,7 @@
   "database_file_not_this_app": "Fișierul este o bază de date, dar nu una SpeleoLoc. Nu s-a modificat nimic.",
   "database_file_damaged": "Baza de date din fișier este deteriorată. Nu s-a modificat nimic.",
   "database_swap_sync_running": "O sincronizare este în curs. Așteaptă să se termine, apoi încearcă din nou.",
+  "database_swap_restore_pending": "Baza de date anterioară nu a putut fi pusă la loc. Închide aplicația și deschide-o din nou pentru a o restaura.",
   "test_database_not_bundled": "Această versiune nu include baza de date de test. Nu s-a modificat nimic.",
   "startup_failed_title": "SpeleoLoc nu a putut porni",
   "startup_failed_database_too_new": "Datele tale au fost salvate de o versiune mai nouă a SpeleoLoc. Actualizează aplicația pentru a le deschide. Nu s-a modificat nimic.",

@@ -324,6 +324,9 @@ Fișierul este verificat întâi, ca la o înlocuire: unul care nu este o
 bază de date SpeleoLoc, este deteriorat sau a fost salvat de o versiune
 mai nouă a aplicației este refuzat fără să se schimbe nimic, iar o
 restaurare care eșuează pe parcurs pune la loc baza de date anterioară.
+Dacă nici punerea la loc nu reușește, aplicația spune asta și nu lucrează
+cu nicio bază de date până când o închideți și o deschideți din nou;
+pornirea următoare pune la loc baza de date anterioară.
 
 **Odată reușită, restaurarea este ireversibilă.** Baza de date pe care o
 aveați este ștearsă, nu arhivată.

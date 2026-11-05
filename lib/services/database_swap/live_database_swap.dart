@@ -17,6 +17,22 @@ class SyncRunActiveException implements Exception {
   String toString() => 'SyncRunActiveException: a sync run is in progress';
 }
 
+/// Thrown when the previous database could not be put back after a failed
+/// swap. It waits beside the live name and goes back at the next start; until
+/// then no database is open, so nothing can be written that the restore
+/// would set aside.
+class DatabaseRestorePendingException implements Exception {
+  const DatabaseRestorePendingException([this.cause]);
+
+  /// What stopped the swap, when the swap itself failed.
+  final Object? cause;
+
+  @override
+  String toString() =>
+      'DatabaseRestorePendingException: the previous database goes back at '
+      'the next start${cause == null ? '' : ' ($cause)'}';
+}
+
 /// Replaces the live database file — a restore, a replace-import, a
 /// reinitialize — so that a failure at any step leaves the caver's data and
 /// a working database in place.
@@ -24,8 +40,10 @@ class SyncRunActiveException implements Exception {
 /// The candidate is copied next to the live file and checked before the live
 /// database is closed. The live file is then moved aside, not deleted, and
 /// moved back when the new database does not open or [replaceWith]'s
-/// `afterOpen` step fails; either way the app ends on an open database. A
-/// backup still present at the next start means a swap was cut short, and
+/// `afterOpen` step fails, and the app ends on an open database. Only when
+/// the old file cannot be moved back does the app stay without one, so
+/// nothing is written while the caver's data waits aside. A backup still
+/// present at the next start means a swap was cut short, and
 /// [recoverInterruptedSwap] puts the old file back.
 ///
 /// The working names start with the database's own name and a dash, which
@@ -59,6 +77,7 @@ class LiveDatabaseSwap {
 
   static const String backupSuffix = '-swap-backup';
   static const String incomingSuffix = '-swap-incoming';
+  static const String discardedSuffix = '-swap-discarded';
   static const List<String> _sidecars = ['-journal', '-wal', '-shm'];
 
   static final _log = AppLogger.of('LiveDatabaseSwap');
@@ -113,10 +132,7 @@ class LiveDatabaseSwap {
       // Left by a rollback that failed earlier in this session: it may be
       // the only copy of the caver's data, so it is never overwritten here.
       await _bestEffortDelete(incoming);
-      throw const FileSystemException(
-        'A previous database is still waiting to be restored; '
-        'restart the app first',
-      );
+      throw const DatabaseRestorePendingException();
     }
 
     await _closeQuietly(_currentDatabase());
@@ -133,7 +149,16 @@ class LiveDatabaseSwap {
       if (afterOpen != null) await afterOpen(opened);
     } catch (e, st) {
       _log.warning('Database swap failed; restoring the previous one', e, st);
-      await _rollBack(live, incoming, backup, opened, hadLive: hadLive);
+      final restored = await _rollBack(
+        live,
+        incoming,
+        backup,
+        opened,
+        hadLive: hadLive,
+      );
+      if (!restored) {
+        Error.throwWithStackTrace(DatabaseRestorePendingException(e), st);
+      }
       await _settle();
       Error.throwWithStackTrace(e, st);
     }
@@ -144,13 +169,17 @@ class LiveDatabaseSwap {
   /// Puts back a live database a swap moved aside and never finished with,
   /// such as when the app was killed mid-swap. Call at start, before the
   /// database is first opened. Returns whether a backup was restored.
+  ///
+  /// Whatever is at the live name then is moved aside rather than deleted:
+  /// it is most likely the half-installed new database, but it could hold
+  /// writes made after a rollback that went wrong.
   Future<bool> recoverInterruptedSwap() async {
     final live = await _liveFile();
     final backup = File('${live.path}$backupSuffix');
     await _bestEffortDelete(File('${live.path}$incomingSuffix'));
     if (!await backup.exists()) return false;
     _log.warning('A database swap was interrupted; restoring the previous one');
-    await _deleteWithSidecars(live);
+    await _moveAside(live);
     await _moveWithSidecars(backup, live);
     return true;
   }
@@ -182,7 +211,9 @@ class LiveDatabaseSwap {
     return File(p.join(docs.path, databaseFileName));
   }
 
-  Future<void> _rollBack(
+  /// Returns false when the previous database is still aside and the app
+  /// was left without an open one.
+  Future<bool> _rollBack(
     File live,
     File incoming,
     File backup,
@@ -201,10 +232,16 @@ class LiveDatabaseSwap {
         await _deleteWithSidecars(live);
       }
     } catch (e, st) {
-      // The backup stays on disk, and the next start puts it back.
       _log.severe('Could not restore the database after a failed swap', e, st);
     }
+    if (await _existsQuietly(backup)) {
+      // A database opened at the live name now would start empty, and the
+      // next start would set aside whatever the caver wrote into it while
+      // putting the backup back.
+      return false;
+    }
     _install(_openLiveDatabase());
+    return true;
   }
 
   Future<void> _settle() async {
@@ -224,6 +261,28 @@ class LiveDatabaseSwap {
       // A database that never opened, the case after a failed start, can
       // throw on close; the file is still free to move.
       _log.fine('closing the database failed', e, st);
+    }
+  }
+
+  /// Renames [file] and its sidecars to a free name beside the live file,
+  /// which no swap step deletes.
+  static Future<void> _moveAside(File file) async {
+    if (!await file.exists()) return;
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    var target = File('${file.path}$discardedSuffix-$stamp');
+    for (var n = 1; await target.exists(); n++) {
+      target = File('${file.path}$discardedSuffix-$stamp-$n');
+    }
+    await _moveWithSidecars(file, target);
+  }
+
+  static Future<bool> _existsQuietly(File file) async {
+    try {
+      return await file.exists();
+    } catch (e, st) {
+      _log.fine('could not check ${file.path}', e, st);
+      // Assume it is there: the safe answer is to open nothing over it.
+      return true;
     }
   }
 
