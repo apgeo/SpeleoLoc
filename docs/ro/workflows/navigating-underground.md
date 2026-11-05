@@ -85,8 +85,9 @@ să umblați prin meniuri și este descrisă în
 Cât timp în acea peșteră rulează o tură, fiecare scanare obișnuită
 adaugă discret un punct de tură și confirmă cu *Punct adăugat la tură*,
 așa că traseul se construiește singur pe măsură ce înaintați. O tură
-**pusă pe pauză** nu înregistrează nimic, deși același mesaj apare în
-continuare — reluați-o înainte să vă bazați pe traseu.
+**pusă pe pauză** nu înregistrează nimic și spune asta în schimb:
+*Tură în pauză — punctul nu a fost înregistrat*, cu un buton
+**Continuă** pe mesaj.
 
 ### Când eticheta nu se lasă scanată
 

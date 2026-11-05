@@ -392,7 +392,10 @@ să fi fost oprită vreodată.
 
 **Pauză** oprește înregistrarea: scanările QR și detectările de
 beaconuri nu mai adaugă puncte, iar documentele pe care le creați nu mai
-sunt legate de tură. **Continuă** repornește înregistrarea. Pauza și
+sunt legate de tură. O scanare sau o detectare în timpul pauzei răspunde
+cu *„Tură în pauză — punctul nu a fost înregistrat”*, în portocaliu, cu
+un buton **Continuă**, în loc de *„Punct adăugat la tură”*; în fundal,
+notificarea spune același lucru. **Continuă** repornește înregistrarea. Pauza și
 continuarea se află în ecranul turei, în ecranul **Ture trecute /
 active** al peșterii și pe cardul turei din meniul ⋮.
 

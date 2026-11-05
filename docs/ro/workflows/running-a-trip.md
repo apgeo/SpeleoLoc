@@ -140,7 +140,10 @@ turei sau pe ecranul **Ture trecute / active** — ca să opriți
 înregistrarea în timpul unei pauze la suprafață sau al unei galerii
 laterale pe care nu o vreți pe traseu. Cardul și eticheta de rezumat
 devin portocalii și afișează **Tură în pauză**. **Continuă** repornește
-înregistrarea.
+înregistrarea. Scanările și detectările de beaconuri din timpul pauzei
+răspund cu *„Tură în pauză — punctul nu a fost înregistrat”*, cu un
+buton **Continuă** pe mesaj, așa că o pauză uitată se vede la
+următoarea scanare.
 
 Două lucruri de știut despre pauză:
 

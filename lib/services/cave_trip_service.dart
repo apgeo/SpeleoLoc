@@ -7,6 +7,7 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/trip_log_method.dart';
 import 'package:speleoloc/services/trip_log_renderer.dart';
 import 'package:speleoloc/services/trip_log_update.dart';
+import 'package:speleoloc/services/trip_record_outcome.dart';
 import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -160,9 +161,15 @@ class CaveTripService {
     isPausedNotifier.value = false;
   }
 
-  Future<void> recordPoint(Uuid cavePlaceUuid, {String? placeTitle}) async {
+  /// Adds a live-scan point at [cavePlaceUuid] to the active trip and says
+  /// what happened, so callers never confirm a point that a pause dropped.
+  Future<TripRecordOutcome> recordPoint(
+    Uuid cavePlaceUuid, {
+    String? placeTitle,
+  }) async {
     final id = activeTripIdNotifier.value;
-    if (id == null || isPausedNotifier.value) return;
+    if (id == null) return TripRecordOutcome.noActiveTrip;
+    if (isPausedNotifier.value) return TripRecordOutcome.paused;
     try {
       final author = await _currentUser.currentOrSystem();
       final pointUuid = await _db.insertTripPoint(
@@ -172,8 +179,10 @@ class CaveTripService {
       );
       await _logger.logInsert('cave_trip_points', pointUuid);
       await _appendForNewEvent(id);
+      return TripRecordOutcome.recorded;
     } catch (e, st) {
       log.warning('recordPoint failed (cavePlace=$cavePlaceUuid)', e, st);
+      return TripRecordOutcome.failed;
     }
   }
 
@@ -441,13 +450,14 @@ class CaveTripService {
   /// it on subsequent re-renders. Document text is preserved in the
   /// `documentation_files` table (file content on disk) and is reachable
   /// from the document itself.
-  Future<void> linkDocument(
+  Future<TripRecordOutcome> linkDocument(
     Uuid docUuid, {
     String? documentTitle,
     String? textContent,
   }) async {
     final id = activeTripIdNotifier.value;
-    if (id == null || isPausedNotifier.value) return;
+    if (id == null) return TripRecordOutcome.noActiveTrip;
+    if (isPausedNotifier.value) return TripRecordOutcome.paused;
     try {
       final author = await _currentUser.currentOrSystem();
       await _db.linkDocumentToTrip(docUuid, id, authorUuid: author);
@@ -464,8 +474,10 @@ class CaveTripService {
         await _logger.logInsert('documentation_files_to_cave_trips', link.uuid);
       }
       await _appendForNewEvent(id);
+      return TripRecordOutcome.recorded;
     } catch (e, st) {
       log.warning('linkDocument failed (doc=$docUuid)', e, st);
+      return TripRecordOutcome.failed;
     }
   }
 

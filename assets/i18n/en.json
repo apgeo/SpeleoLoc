@@ -747,6 +747,8 @@
   "trip_points": "Points",
   "trip_no_points": "No points recorded yet",
   "trip_point_added": "Point added to trip",
+  "trip_point_not_recorded_paused": "Trip paused — point not recorded",
+  "trip_point_record_failed": "The point could not be added to the trip",
   "trip_point_add": "Add point",
   "trip_point_actions": "Point actions",
   "trip_point_pictures": "Pictures at this point ({n})",

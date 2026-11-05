@@ -132,7 +132,10 @@ Press **Pause** — on the trip card, on the trip screen's button row, or
 on the **Past / active trip(s)** screen — to stop recording during a
 surface break or a side passage you do not want on the route. The card
 and the summary chip turn orange and read **Trip paused**. **Resume
-trip** starts recording again.
+trip** starts recording again. Scans and beacon detections during a
+pause answer *"Trip paused — point not recorded"*, with a **Resume
+trip** button on the message, so a forgotten pause shows at the next
+scan.
 
 Two things to know about pause:
 

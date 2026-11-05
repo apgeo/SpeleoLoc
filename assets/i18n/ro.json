@@ -746,6 +746,8 @@
   "trip_points": "Puncte",
   "trip_no_points": "Niciun punct înregistrat",
   "trip_point_added": "Punct adăugat la tură",
+  "trip_point_not_recorded_paused": "Tură în pauză — punctul nu a fost înregistrat",
+  "trip_point_record_failed": "Punctul nu a putut fi adăugat la tură",
   "trip_point_add": "Adaugă punct",
   "trip_point_actions": "Acțiuni punct",
   "trip_point_pictures": "Poze la acest punct ({n})",

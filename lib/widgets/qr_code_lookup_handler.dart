@@ -15,6 +15,7 @@ import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/end_trip_dialog.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/trip_record_feedback.dart';
 
 /// What to do when a QR code matches places in multiple caves.
 enum QrAmbiguityPolicy {
@@ -142,11 +143,11 @@ class QrCodeLookupHandler {
       // Record a trip point when there is an active trip for this place's cave.
       final activeTripCaveId = await _tripService.getActiveTripCaveId();
       if (activeTripCaveId == cavePlace.caveUuid) {
-        await _tripService.recordPoint(
+        final outcome = await _tripService.recordPoint(
           cavePlace.uuid,
           placeTitle: cavePlace.title,
         );
-        SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
+        showTripRecordFeedback(_tripService, outcome);
       }
     }
 
@@ -310,11 +311,11 @@ class QrCodeLookupHandler {
         await _performStopTrip();
       } else if (context.mounted) {
         // Still in cave — record the entrance scan as a trip point.
-        await _tripService.recordPoint(
+        final outcome = await _tripService.recordPoint(
           cavePlace.uuid,
           placeTitle: cavePlace.title,
         );
-        SnackBarService.showSuccess(LocServ.inst.t('trip_point_added'));
+        showTripRecordFeedback(_tripService, outcome);
       }
     } else {
       // Trip running for a DIFFERENT cave — offer to stop it first.

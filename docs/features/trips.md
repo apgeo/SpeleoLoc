@@ -363,6 +363,9 @@ to reach a cave's first trip before it has ever been stopped.
 
 **Pause** stops recording: QR scans and beacon detections no longer
 add points, and documents you create are no longer linked to the trip.
+A scan or detection during a pause answers *"Trip paused — point not
+recorded"* in amber, with a **Resume trip** button, instead of *"Point
+added to trip"*; in the background the notification says the same.
 **Resume trip** switches recording back on. Pause and resume are on
 the trip screen, on the cave's **Past / active trip(s)** screen, and on
 the trip card in the ⋮ menu.
