@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:speleoloc/providers/database_swap_providers.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
 import 'package:speleoloc/screens/settings/database_file_error_text.dart';
@@ -332,7 +333,16 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
   //  Replace import
   // ---------------------------------------------------------------------------
 
+  /// Shows why the database cannot be replaced now and returns true while a
+  /// sync run is writing to it.
+  bool _refuseWhileSyncRuns() {
+    if (!ref.read(liveDatabaseSwapProvider).isSyncRunning) return false;
+    SnackBarService.showWarning(LocServ.inst.t('database_swap_sync_running'));
+    return true;
+  }
+
   Future<void> _importReplace(BuildContext context, String zipPath) async {
+    if (_refuseWhileSyncRuns()) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) =>
@@ -352,6 +362,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
     try {
       final service = DataArchiveService(
         DataExportImportRepository(ref.read(appDatabaseProvider)),
+        databaseSwap: ref.read(liveDatabaseSwapProvider),
       );
       await service.importArchiveReplace(
         zipPath: zipPath,
@@ -424,6 +435,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
   // ===========================================================================
 
   Future<void> _importTestArchive(BuildContext context) async {
+    if (_refuseWhileSyncRuns()) return;
     // Warn if there is existing data that will be overwritten.
     final hasData = await _hasAnyData();
     if (!context.mounted) return;
@@ -465,6 +477,7 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
       await TestArchiveImportService.importFrom(
         urlOrPath: testArchiveUrl,
         silexgisTokens: ref.read(silexgisTokenStoreProvider),
+        databaseSwap: ref.read(liveDatabaseSwapProvider),
         silexgisSignIns: ref.read(silexgisAuthRegistryProvider),
         onProgress: (msg) => messageNotifier.value = msg,
       );

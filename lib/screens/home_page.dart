@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/providers/database_swap_providers.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/add_new_cave.dart';
 import 'package:speleoloc/screens/cave_map/cave_map_page.dart';
@@ -385,6 +386,10 @@ class _HomePageState extends ConsumerState<HomePage>
   /// archive defined by [testArchiveUrl] and replaces the local DB+files
   /// via [DataArchiveService.importArchiveReplace].
   Future<void> _runArchiveTestDataLoad() async {
+    if (ref.read(liveDatabaseSwapProvider).isSyncRunning) {
+      SnackBarService.showWarning(LocServ.inst.t('database_swap_sync_running'));
+      return;
+    }
     if (testArchiveUrl.trim().isEmpty) {
       SnackBarService.showError(
         LocServ.inst.t('test_archive_url_not_configured'),
@@ -419,6 +424,7 @@ class _HomePageState extends ConsumerState<HomePage>
       await TestArchiveImportService.importFrom(
         urlOrPath: testArchiveUrl,
         silexgisTokens: ref.read(silexgisTokenStoreProvider),
+        databaseSwap: ref.read(liveDatabaseSwapProvider),
         silexgisSignIns: ref.read(silexgisAuthRegistryProvider),
         onProgress: (msg) => messageNotifier.value = msg,
       );

@@ -198,7 +198,9 @@ class DataArchiveService {
       final importExportCfgRaw = await _readConfigValue(
         'archive_sync_import_export_config',
       );
-      final copyUuidFromArchive = _parseCopyDeviceUuidFlag(importExportCfgRaw);
+      final copyUuidFromArchive = copiesDeviceUuidFromArchive(
+        importExportCfgRaw,
+      );
       final userHandover = await UserHandoverStore(appDatabase).capture();
       final devicePreferences = await DevicePreferencesCarryOver.capture(
         appDatabase,
@@ -514,7 +516,7 @@ class DataArchiveService {
   /// Any other value — absent config row, absent key in the JSON object,
   /// `null` value, `false`, or unparseable JSON — returns `false`, so
   /// the local device_uuid is preserved.
-  static bool _parseCopyDeviceUuidFlag(String? raw) {
+  static bool copiesDeviceUuidFromArchive(String? raw) {
     if (raw == null || raw.isEmpty) return false;
     try {
       final map = jsonDecode(raw) as Map<String, dynamic>;

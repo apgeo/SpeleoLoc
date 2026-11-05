@@ -1,17 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'package:drift/drift.dart' show Variable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:speleoloc/services/device_preferences_carry_over.dart';
 import 'package:speleoloc/services/database_restore_helper.dart';
-import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/storage/saf_storage_service.dart';
-import 'package:speleoloc/services/user_identity/user_handover.dart';
 import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/screens/dialogs/confirm_dialog.dart';
@@ -21,8 +15,7 @@ import 'package:speleoloc/widgets/app_global_menu.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
-import 'package:speleoloc/services/silexgis/silexgis_sign_in_carry_over.dart';
-import 'package:speleoloc/providers/providers.dart';
+import 'package:speleoloc/providers/database_swap_providers.dart';
 
 /// Database management settings: reinitialize, export.
 class SettingsDatabasePage extends ConsumerStatefulWidget {
@@ -202,6 +195,7 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
   }
 
   Future<void> _restoreDatabaseFromExternalFile(BuildContext context) async {
+    if (_refuseWhileSyncRuns()) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => ConfirmDialog(
@@ -210,6 +204,7 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
     );
     if (confirmed != true) return;
 
+    var progressShown = false;
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
@@ -219,6 +214,7 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
       if (result == null || result.files.single.path == null) return;
 
       if (context.mounted) {
+        progressShown = true;
         unawaited(
           showDialog<void>(
             context: context,
@@ -237,97 +233,9 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
         );
       }
 
-      DatabaseRestoreHelper.ensureNotNewer(File(result.files.single.path!));
-
-      // Preserve device identity before replacing the database.
-      // Disabled when `copy_device_uuid_from_archive_on_import` is true in
-      // the archive_sync_import_export_config configuration key.
-      final savedDeviceUuid =
-          (await appDatabase
-                  .customSelect(
-                    'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-                    variables: [Variable<String>('device_uuid')],
-                  )
-                  .get())
-              .map((r) => r.data['value'] as String?)
-              .firstOrNull;
-      final importCfgRaw =
-          (await appDatabase
-                  .customSelect(
-                    'SELECT value FROM configurations WHERE title = ? LIMIT 1',
-                    variables: [
-                      Variable<String>('archive_sync_import_export_config'),
-                    ],
-                  )
-                  .get())
-              .map((r) => r.data['value'] as String?)
-              .firstOrNull;
-      // copyUuidFromArchive is true ONLY when the flag is explicitly true.
-      // Absent config row, absent key, null value, false, or bad JSON all
-      // leave it false, so the local device_uuid is preserved.
-      bool copyUuidFromArchive = false;
-      if (importCfgRaw != null && importCfgRaw.isNotEmpty) {
-        try {
-          final map = jsonDecode(importCfgRaw) as Map<String, dynamic>;
-          // null or absent key → null == true → false (preserve UUID).
-          copyUuidFromArchive =
-              map['copy_device_uuid_from_archive_on_import'] == true;
-        } catch (_) {}
-      }
-
-      final userHandover = await UserHandoverStore(appDatabase).capture();
-      final devicePreferences = await DevicePreferencesCarryOver.capture(
-        appDatabase,
-      );
-      final silexgisTokens = ref.read(silexgisTokenStoreProvider);
-      final silexgisSignInRegistry = ref.read(silexgisAuthRegistryProvider);
-      // Read before the database is swapped; it touches only the keystore.
-      final ftpSecrets = ref.read(ftpProfileRepositoryProvider);
-      final silexgisSignIns = await SilexgisSignInCarryOver.capture(
-        appDatabase,
-        silexgisTokens,
-      );
-
-      await appDatabase.close();
-      final directory = await getApplicationDocumentsDirectory();
-      final targetPath = '${directory.path}/speleo_loc.sqlite';
-      final pickedPath = result.files.single.path!;
-
-      final targetFile = File(targetPath);
-      if (await targetFile.exists()) {
-        await targetFile.delete();
-      }
-      await File(pickedPath).copy(targetPath);
-
-      replaceAppDatabase(AppDatabase());
-      DatabaseRestoreHelper.logMigrationIfAny(
-        source: 'external-database-restore',
-      );
-
-      // Restore device identity so this device keeps its own UUID,
-      // unless the flag says to adopt the archive's identity.
-      if (!copyUuidFromArchive &&
-          savedDeviceUuid != null &&
-          savedDeviceUuid.isNotEmpty) {
-        final now = DateTime.now().millisecondsSinceEpoch;
-        await appDatabase.customStatement(
-          'INSERT INTO configurations (title, value, created_at, updated_at) '
-          'VALUES (?, ?, ?, ?) '
-          'ON CONFLICT(title) DO UPDATE SET value = excluded.value, '
-          'updated_at = excluded.updated_at',
-          ['device_uuid', savedDeviceUuid, now, now],
-        );
-      }
-      await UserHandoverStore(appDatabase).handOver(userHandover);
-      await devicePreferences.applyTo(
-        appDatabase,
-        adoptFtpProfiles: ftpSecrets.forgetSecrets,
-      );
-      await silexgisSignIns.applyTo(
-        appDatabase,
-        silexgisTokens,
-        signIns: silexgisSignInRegistry,
-      );
+      await ref
+          .read(databaseFileRestoreProvider)
+          .restoreFrom(File(result.files.single.path!));
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -337,13 +245,23 @@ class _SettingsDatabasePageState extends ConsumerState<SettingsDatabasePage>
       await DatabaseRestoreHelper.restartApplication();
     } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context);
+        // The picker can throw before the progress dialog is up, and a pop
+        // then would close this page instead.
+        if (progressShown) Navigator.pop(context);
         SnackBarService.showError(
           '${LocServ.inst.t('database_restore_failed')}: '
           '${databaseFileErrorText(e)}',
         );
       }
     }
+  }
+
+  /// Shows why the database cannot be replaced now and returns true while a
+  /// sync run is writing to it.
+  bool _refuseWhileSyncRuns() {
+    if (!ref.read(liveDatabaseSwapProvider).isSyncRunning) return false;
+    SnackBarService.showWarning(LocServ.inst.t('database_swap_sync_running'));
+    return true;
   }
 
   void _exportDatabase(BuildContext context) async {
