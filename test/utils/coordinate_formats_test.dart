@@ -83,11 +83,7 @@ void main() {
 
     test('dms', () {
       expect(
-        formatCoordinates(
-          45.359167,
-          -22.714722,
-          CoordinateDisplayFormat.dms,
-        ),
+        formatCoordinates(45.359167, -22.714722, CoordinateDisplayFormat.dms),
         '45°21\'33.0"N 22°42\'53.0"W',
       );
     });
@@ -136,6 +132,25 @@ void main() {
     test('dms with letters leading and bare numbers', () {
       expectPoint('N45 21 33 E22 42 53', 45.359167, 22.714722);
       expectPoint('N 45 21.55 E 22 42.883', 45.359167, 22.714717, tol: 1e-4);
+    });
+
+    test('a decimal comma inside dms minutes or seconds is a decimal mark', () {
+      // Degrees and decimal minutes typed with Romanian decimal commas.
+      expectPoint('N45 21,55 E22 42,38', 45.359167, 22.706333);
+      expectPoint('45 21,55 N 22 42,38 E', 45.359167, 22.706333);
+      expectPoint('N 45 21,55 E 22 42,883', 45.359167, 22.714717, tol: 1e-4);
+      expectPoint('45°21\'33,0"N 22°42\'53,0"E', 45.359167, 22.714722);
+      expectPoint('45°21\'32,4"N 22°42\'52,8"E', 45.359, 22.714667);
+      expectPoint('45,3592°N 22,7147°E', 45.3592, 22.7147);
+    });
+
+    test('a comma followed by a space still separates the dms halves', () {
+      expectPoint('N45 21 33, E22 42 53', 45.359167, 22.714722);
+      expectPoint('45°21\'33"N,22°42\'53"E', 45.359167, 22.714722);
+    });
+
+    test('commas used as dms field separators are refused, not misread', () {
+      expect(parseCoordinates('N45,21,33 E22,42,53'), isNull);
     });
 
     test('longitude-first dms is reordered by hemisphere letters', () {

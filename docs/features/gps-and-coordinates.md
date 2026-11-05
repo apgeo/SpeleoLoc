@@ -125,7 +125,7 @@ itself, whatever the display setting says.
 | Format | Example the app accepts |
 | --- | --- |
 | Decimal degrees | `45.359167, 22.714722` — also `45,359167 22,714722` with commas as decimal marks, and a semicolon or plain space as separator. Latitude first. |
-| Degrees, minutes, seconds | `45°21'33.0"N 22°42'53.0"E`. The hemisphere letters are required, and either both lead their numbers or both trail them, so `N45 21.55 E22 42.88` (degrees and decimal minutes) also works, and putting the E half first is fine. |
+| Degrees, minutes, seconds | `45°21'33.0"N 22°42'53.0"E`. The hemisphere letters are required, and either both lead their numbers or both trail them, so `N45 21.55 E22 42.88` (degrees and decimal minutes) also works, and putting the E half first is fine. A comma between two digits is a decimal mark here too, so `N45 21,55 E22 42,38` means 21.55 and 42.38 minutes; a comma followed by a space separates the two halves. |
 | UTM | `34T 634605 5023721`. The band letter is required — it is what tells the app which hemisphere you mean — and easting comes before northing. |
 
 The three example lines are printed under the field as a reminder. If

@@ -127,7 +127,7 @@ din textul însuși, indiferent ce spune setarea de afișare.
 | Format | Exemplu acceptat de aplicație |
 | --- | --- |
 | Grade zecimale | `45.359167, 22.714722` — și `45,359167 22,714722`, cu virgula ca semn zecimal și cu punct și virgulă sau spațiu simplu ca separator. Latitudinea prima. |
-| Grade, minute, secunde | `45°21'33.0"N 22°42'53.0"E`. Literele de emisferă sunt obligatorii și fie stau amândouă înaintea numerelor, fie amândouă după ele, așa că merge și `N45 21.55 E22 42.88` (grade și minute zecimale), iar jumătatea E poate fi pusă prima. |
+| Grade, minute, secunde | `45°21'33.0"N 22°42'53.0"E`. Literele de emisferă sunt obligatorii și fie stau amândouă înaintea numerelor, fie amândouă după ele, așa că merge și `N45 21.55 E22 42.88` (grade și minute zecimale), iar jumătatea E poate fi pusă prima. Și aici o virgulă între două cifre este semn zecimal, așa că `N45 21,55 E22 42,38` înseamnă 21,55 și 42,38 minute; o virgulă urmată de spațiu desparte cele două jumătăți. |
 | UTM | `34T 634605 5023721`. Litera de bandă este obligatorie — ea îi spune aplicației la ce emisferă vă referiți — iar coordonata estică vine înaintea celei nordice. |
 
 Cele trei linii de exemplu sunt tipărite sub câmp, ca memento. Dacă textul
