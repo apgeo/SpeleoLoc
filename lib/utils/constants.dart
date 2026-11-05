@@ -95,6 +95,10 @@ const String appLanguageKey = 'app_language';
 // Home page UI
 const String showHomeToolbarKey = 'show_home_toolbar';
 
+/// What the toolbar setting reads as before anyone has changed it; the home
+/// screen and the settings switch must agree on it.
+const String showHomeToolbarDefault = 'true';
+
 // GeofeatureDocumentsPage toolbar
 const String showDocumentToolbarKey = 'show_docs_toolbar';
 

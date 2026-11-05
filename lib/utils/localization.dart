@@ -8,7 +8,10 @@ import 'package:speleoloc/utils/build_config.dart';
 ///
 /// Loads localization strings from JSON files in assets/i18n/.
 /// Supports parameter substitution via `t('key', {'param': 'value'})`.
-class LocServ {
+///
+/// Listeners are told when the active language changes, so the app root can
+/// hand the new locale to the framework widgets.
+class LocServ extends ChangeNotifier {
   LocServ._private();
   static final LocServ inst = LocServ._private(); // instance
 
@@ -40,12 +43,37 @@ class LocServ {
     }
   }
 
-  /// Load default and fallback locales. Call once at app startup (e.g. in main).
+  /// Codes of every bundle under assets/i18n/, or empty when the asset
+  /// manifest cannot be read.
+  Future<List<String>> _shippedLocales() async {
+    try {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      const prefix = 'assets/i18n/';
+      const suffix = '.json';
+      return [
+        for (final asset in manifest.listAssets())
+          if (asset.startsWith(prefix) && asset.endsWith(suffix))
+            asset.substring(prefix.length, asset.length - suffix.length),
+      ];
+    } catch (e, st) {
+      AppLogger.of(
+        'LocServ',
+      ).warning('Asset manifest unreadable; loading known locales only', e, st);
+      return const [];
+    }
+  }
+
+  /// Load default and fallback locales plus every other shipped bundle, so
+  /// the language picker and the framework widgets offer all of them. Call
+  /// once at app startup (e.g. in main).
   Future<void> load() async {
     await _loadLocale('en');
     await _loadLocale(_defaultLocale);
     if (_locale != _defaultLocale && _locale != 'en') {
       await _loadLocale(_locale);
+    }
+    for (final code in await _shippedLocales()) {
+      await _loadLocale(code);
     }
     _loaded = true;
   }
@@ -56,6 +84,7 @@ class LocServ {
   Future<void> setLocale(String locale) async {
     _locale = locale;
     await _loadLocale(locale);
+    notifyListeners();
   }
 
   /// Return list of supported locale codes.

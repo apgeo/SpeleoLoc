@@ -37,7 +37,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
   ];
 
   String? _appLanguage;
-  bool _showHomeToolbar = false;
+  bool _showHomeToolbar = showHomeToolbarDefault == 'true';
   bool _autoAddEntrancePlace = true;
   bool _allowMainObjectBulkDeletes = true;
   bool _qrScanAskOnAmbiguity = true;
@@ -53,7 +53,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage>
   Future<void> _load() async {
     final showToolbar = await SettingsHelper.loadStringConfig(
       showHomeToolbarKey,
-      'false',
+      showHomeToolbarDefault,
     );
     final autoAddEntrance = await SettingsHelper.loadStringConfig(
       autoAddEntrancePlaceKey,

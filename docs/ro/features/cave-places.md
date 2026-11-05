@@ -26,8 +26,8 @@ evidență într-o listă lungă.
 
 | Element | Semnificație |
 |---|---|
-| Pictograma QR | Verde când locul are deja un cod de loc, gri când nu are niciunul. |
-| Contorul de puncte | Pe câte dintre hărțile peșterii a fost poziționat acest loc. Roșu la zero, verde odată ce este marcat pe fiecare hartă a peșterii, gri între ele. |
+| Pictograma QR | Un simbol QR plin (verde) când locul are deja un cod de loc, unul conturat (gri) când nu are niciunul. Apăsați lung pe el, sau folosiți un cititor de ecran, pentru *Are cod QR* / *Fără cod QR*. |
+| Contorul de puncte | Pe câte dintre hărțile peșterii a fost poziționat acest loc, cu numărul scris. Un pin tăiat (roșu) la zero, un pin cu bifă (verde) odată ce este marcat pe fiecare hartă a peșterii, un pin simplu (gri) între ele. Apăsați lung pe el, sau folosiți un cititor de ecran, pentru *Nu este plasat pe nicio hartă* / *Plasat pe 1 din 3 hărți* / *Plasat pe toate cele 3 hărți*. Atingerea lui deschide raportul. |
 | Butonul coș de gunoi | **Șterge locul din peșteră** — vezi [Ștergerea unui loc din peșteră](#deleting-a-cave-place). |
 
 Adâncimea, aria și textul codului **nu** sunt afișate pe rând. Folosiți

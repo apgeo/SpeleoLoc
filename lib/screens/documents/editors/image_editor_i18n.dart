@@ -1,0 +1,116 @@
+import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:speleoloc/utils/localization.dart';
+
+/// The photo editor's own labels in the app language; the package ships
+/// English only and does not follow the app's language setting.
+///
+/// Filter names (Aden, Amaro, ...) are proper names and stay as shipped.
+I18n buildImageEditorI18n() {
+  final loc = LocServ.inst;
+  return I18n(
+    cancel: loc.t('image_editor_cancel'),
+    undo: loc.t('image_editor_undo'),
+    redo: loc.t('image_editor_redo'),
+    done: loc.t('image_editor_done'),
+    remove: loc.t('image_editor_remove'),
+    doneLoadingMsg: loc.t('image_editor_applying'),
+    importStateHistoryMsg: loc.t('image_editor_starting'),
+    various: I18nVarious(
+      loadingDialogMsg: loc.t('image_editor_loading'),
+      closeEditorWarningTitle: loc.t('image_editor_close_title'),
+      closeEditorWarningMessage: loc.t('image_editor_close_message'),
+      closeEditorWarningConfirmBtn: loc.t('image_editor_ok'),
+      closeEditorWarningCancelBtn: loc.t('image_editor_cancel'),
+    ),
+    layerInteraction: I18nLayerInteraction(
+      remove: loc.t('image_editor_remove'),
+      edit: loc.t('image_editor_edit'),
+      rotateScale: loc.t('image_editor_rotate_scale'),
+    ),
+    paintEditor: I18nPaintEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_paint'),
+      moveAndZoom: loc.t('image_editor_zoom'),
+      freestyle: loc.t('image_editor_freestyle'),
+      arrow: loc.t('image_editor_arrow'),
+      line: loc.t('image_editor_line'),
+      rectangle: loc.t('image_editor_rectangle'),
+      circle: loc.t('image_editor_circle'),
+      dashLine: loc.t('image_editor_dash_line'),
+      lineWidth: loc.t('image_editor_line_width'),
+      eraser: loc.t('image_editor_eraser'),
+      toggleFill: loc.t('image_editor_toggle_fill'),
+      changeOpacity: loc.t('image_editor_opacity'),
+      undo: loc.t('image_editor_undo'),
+      redo: loc.t('image_editor_redo'),
+      done: loc.t('image_editor_done'),
+      back: loc.t('image_editor_back'),
+      smallScreenMoreTooltip: loc.t('image_editor_more'),
+    ),
+    textEditor: I18nTextEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_text'),
+      inputHintText: loc.t('image_editor_text_hint'),
+      back: loc.t('image_editor_back'),
+      done: loc.t('image_editor_done'),
+      textAlign: loc.t('image_editor_text_align'),
+      fontScale: loc.t('image_editor_font_scale'),
+      backgroundMode: loc.t('image_editor_text_background'),
+      smallScreenMoreTooltip: loc.t('image_editor_more'),
+    ),
+    cropRotateEditor: I18nCropRotateEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_crop'),
+      rotate: loc.t('image_editor_rotate'),
+      flip: loc.t('image_editor_flip'),
+      ratio: loc.t('image_editor_ratio'),
+      back: loc.t('image_editor_back'),
+      done: loc.t('image_editor_done'),
+      cancel: loc.t('image_editor_cancel'),
+      undo: loc.t('image_editor_undo'),
+      redo: loc.t('image_editor_redo'),
+      smallScreenMoreTooltip: loc.t('image_editor_more'),
+      reset: loc.t('image_editor_reset'),
+    ),
+    tuneEditor: I18nTuneEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_tune'),
+      back: loc.t('image_editor_back'),
+      done: loc.t('image_editor_done'),
+      brightness: loc.t('image_editor_brightness'),
+      contrast: loc.t('image_editor_contrast'),
+      saturation: loc.t('image_editor_saturation'),
+      exposure: loc.t('image_editor_exposure'),
+      hue: loc.t('image_editor_hue'),
+      temperature: loc.t('image_editor_temperature'),
+      sharpness: loc.t('image_editor_sharpness'),
+      fade: loc.t('image_editor_fade'),
+      luminance: loc.t('image_editor_luminance'),
+      undo: loc.t('image_editor_undo'),
+      redo: loc.t('image_editor_redo'),
+    ),
+    filterEditor: I18nFilterEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_filter'),
+      back: loc.t('image_editor_back'),
+      done: loc.t('image_editor_done'),
+      filters: I18nFilters(none: loc.t('image_editor_no_filter')),
+    ),
+    blurEditor: I18nBlurEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_blur'),
+      back: loc.t('image_editor_back'),
+      done: loc.t('image_editor_done'),
+    ),
+    emojiEditor: I18nEmojiEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_emoji'),
+      search: loc.t('image_editor_emoji_search'),
+      categoryRecent: loc.t('image_editor_emoji_recent'),
+      categorySmileys: loc.t('image_editor_emoji_smileys'),
+      categoryAnimals: loc.t('image_editor_emoji_animals'),
+      categoryFood: loc.t('image_editor_emoji_food'),
+      categoryActivities: loc.t('image_editor_emoji_activities'),
+      categoryTravel: loc.t('image_editor_emoji_travel'),
+      categoryObjects: loc.t('image_editor_emoji_objects'),
+      categorySymbols: loc.t('image_editor_emoji_symbols'),
+      categoryFlags: loc.t('image_editor_emoji_flags'),
+    ),
+    stickerEditor: I18nStickerEditor(
+      bottomNavigationBarText: loc.t('image_editor_tab_stickers'),
+    ),
+  );
+}

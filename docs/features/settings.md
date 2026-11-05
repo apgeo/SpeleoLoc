@@ -48,8 +48,10 @@ The list mirrors the order shown in the app.
   The app starts in Romanian, so this is where you switch to English.
   The choice takes effect immediately — nothing restarts — and a screen
   still open behind Settings shows the new language once you go back to
-  it.
-- **Show home toolbar** — displays the scan / add / documents / settings
+  it. The system-supplied parts of the app — the back button's label,
+  date and time pickers, the text editor's toolbar and the photo
+  editor — follow this setting too, not the phone's own language.
+- **Show home toolbar** — on by default; displays the scan / add / documents / settings
   buttons in a toolbar on the home screen. With it off, **Scan QR**,
   **Add new cave** and **FTP / SFTP sync** move up into the top bar
   instead; the ⋮ menu holds the same entries either way. The small

@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
+import 'package:flutter/painting.dart' show MemoryImage;
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
@@ -122,34 +125,37 @@ void main() {
     expect(layers.attributionText, isNot(descriptor('x').displayName));
   });
 
-  test('mbtiles base: blank while opening, layer + attribution after', () async {
-    createMbTiles('real.mbtiles');
-    await config.writeJson(mapMbtilesConfigKey, {
-      'roles': {'real.mbtiles': 'base'},
-    });
-    await config.writeJson(mapScreenPrefsKey, {
-      'base': 'mbtiles:real.mbtiles',
-    });
-    final layers = controller([descriptor('real.mbtiles')]);
-    await layers.load();
-    expect(layers.baseId, 'mbtiles:real.mbtiles');
+  test(
+    'mbtiles base: blank while opening, layer + attribution after',
+    () async {
+      createMbTiles('real.mbtiles');
+      await config.writeJson(mapMbtilesConfigKey, {
+        'roles': {'real.mbtiles': 'base'},
+      });
+      await config.writeJson(mapScreenPrefsKey, {
+        'base': 'mbtiles:real.mbtiles',
+      });
+      final layers = controller([descriptor('real.mbtiles')]);
+      await layers.load();
+      expect(layers.baseId, 'mbtiles:real.mbtiles');
 
-    final opened = Completer<void>();
-    layers.addListener(() {
-      if (!opened.isCompleted) opened.complete();
-    });
+      final opened = Completer<void>();
+      layers.addListener(() {
+        if (!opened.isCompleted) opened.complete();
+      });
 
-    // First build: the worker is still opening — no base layer, but the
-    // attribution already names the file (never the online fallback).
-    expect(layers.buildBaseLayer(), isNull);
-    expect(layers.attributionText, 'real.mbtiles');
+      // First build: the worker is still opening — no base layer, but the
+      // attribution already names the file (never the online fallback).
+      expect(layers.buildBaseLayer(), isNull);
+      expect(layers.attributionText, 'real.mbtiles');
 
-    await opened.future;
-    expect(layers.buildBaseLayer(), isNotNull);
-    expect(layers.attributionText, 'real.mbtiles');
+      await opened.future;
+      expect(layers.buildBaseLayer(), isNotNull);
+      expect(layers.attributionText, 'real.mbtiles');
 
-    layers.dispose();
-  });
+      layers.dispose();
+    },
+  );
 
   test('unreadable mbtiles base falls back to the online source', () async {
     final bogusPath = '${tempDir.path}${Platform.pathSeparator}bad.mbtiles';
@@ -178,5 +184,80 @@ void main() {
     );
 
     layers.dispose();
+  });
+
+  group('tile outage notice', () {
+    // The layer's own callback is what flutter_map calls on a failed tile.
+    void failTiles(CaveMapLayersController layers, int count) {
+      final callback = layers.buildBaseLayer()!.errorTileCallback;
+      expect(callback, isNotNull);
+      for (var i = 0; i < count; i++) {
+        callback!(
+          TileImage(
+            vsync: const TestVSync(),
+            coordinates: TileCoordinates(i, 0, 3),
+            imageProvider: MemoryImage(Uint8List(0)),
+            onLoadComplete: (_) {},
+            onLoadError: (_, _, _) {},
+            tileDisplay: const TileDisplay.instantaneous(),
+            errorImage: null,
+            cancelLoading: Completer<void>(),
+          ),
+          Exception('offline'),
+          null,
+        );
+      }
+    }
+
+    test('stays hidden while tiles load', () async {
+      final layers = controller([]);
+      await layers.load();
+
+      expect(layers.tilesNoticeVisible, isFalse);
+      failTiles(layers, 1);
+      expect(layers.tilesNoticeVisible, isFalse);
+      layers.dispose();
+    });
+
+    test(
+      'shows once a screenful of tiles has failed, and says so once',
+      () async {
+        final layers = controller([]);
+        await layers.load();
+        var notified = 0;
+        layers.addListener(() => notified++);
+
+        failTiles(layers, 8);
+
+        expect(layers.tilesNoticeVisible, isTrue);
+        expect(notified, 1);
+        layers.dispose();
+      },
+    );
+
+    test('dismissing hides it for the rest of the layer choice', () async {
+      final layers = controller([]);
+      await layers.load();
+      failTiles(layers, 8);
+
+      layers.dismissTilesNotice();
+      expect(layers.tilesNoticeVisible, isFalse);
+      failTiles(layers, 8);
+      expect(layers.tilesNoticeVisible, isFalse);
+      layers.dispose();
+    });
+
+    test('choosing another base map starts the count afresh', () async {
+      final layers = controller([]);
+      await layers.load();
+      failTiles(layers, 8);
+      expect(layers.tilesNoticeVisible, isTrue);
+
+      layers.selectBase('google_hybrid');
+      expect(layers.tilesNoticeVisible, isFalse);
+      failTiles(layers, 1);
+      expect(layers.tilesNoticeVisible, isFalse);
+      layers.dispose();
+    });
   });
 }

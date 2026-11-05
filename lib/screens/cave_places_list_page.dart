@@ -18,6 +18,7 @@ import 'package:speleoloc/services/documents_controller.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/services/range_code_generator.dart';
 import 'package:speleoloc/widgets/icon_action_button.dart';
+import 'package:speleoloc/widgets/place_status_indicators.dart';
 import 'package:speleoloc/widgets/index_range_dialog.dart';
 import 'package:speleoloc/widgets/place_code_batch_ui.dart';
 import 'package:speleoloc/widgets/range_qr_launcher.dart';
@@ -1338,40 +1339,12 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
             ),
             Padding(
               padding: const EdgeInsets.only(left: 4.0, right: 2.0),
-              child: Icon(
-                cp.placeCodeIdentifier != null
-                    ? Icons.qr_code
-                    : Icons.qr_code_outlined,
-                color: cp.placeCodeIdentifier != null
-                    ? Colors.green.withValues(alpha: 0.8)
-                    : Colors.grey,
-                size: 20,
-              ),
+              child: PlaceQrStatusIcon(hasCode: cp.placeCodeIdentifier != null),
             ),
-            Builder(
-              builder: (context) {
-                final count = _definitionCountByPlace[cp.uuid] ?? 0;
-                final Color col = (count == 0)
-                    ? Colors.red.withValues(alpha: 0.8)
-                    : (count == _rasterMapsCountForCave &&
-                          _rasterMapsCountForCave > 0)
-                    ? Colors.green.withValues(alpha: 0.8)
-                    : Colors.grey;
-                return InkWell(
-                  onTap: () => _showDefinitionsReport(cp.uuid),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.place, color: col, size: 18),
-                        const SizedBox(width: 2),
-                        Text('$count', style: TextStyle(color: col)),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            PlaceMapStatusChip(
+              count: _definitionCountByPlace[cp.uuid] ?? 0,
+              totalMaps: _rasterMapsCountForCave,
+              onTap: () => _showDefinitionsReport(cp.uuid),
             ),
             IconActionButton(
               onPressed: () => _confirmDeleteCavePlace(cp.uuid),

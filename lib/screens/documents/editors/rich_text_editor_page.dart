@@ -316,9 +316,9 @@ class _RichTextEditorPageState extends ConsumerState<RichTextEditorPage>
                         controller: _quillController,
                         focusNode: _editorFocusNode,
                         scrollController: _scrollController,
-                        config: const QuillEditorConfig(
-                          padding: EdgeInsets.all(8),
-                          placeholder: 'Start writing...',
+                        config: QuillEditorConfig(
+                          padding: const EdgeInsets.all(8),
+                          placeholder: LocServ.inst.t('rich_text_placeholder'),
                         ),
                       ),
                     ),

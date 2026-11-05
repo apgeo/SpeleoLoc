@@ -320,6 +320,13 @@ Două mecanisme independente:
   [Folosirea straturilor MBTiles offline](../workflows/mbtiles-layers.md)
   pentru cum se produce și se instalează unul.
 
+Când o hartă de bază online nu poate încărca mai multe plăci la rând (fără
+semnal și fără nimic stocat pentru zonă), un banner sub bara de instrumente
+spune *Dalele hărții nu s-au putut încărca. Este posibil să fiți fără
+conexiune…*. **Setări hartă** deschide Setări → Hartă, iar butonul de
+închidere ascunde bannerul până alegeți altă hartă de bază. Fără el, harta ar
+arăta doar fundalul gol.
+
 ## Setări → Hartă
 
 | Rând | Ce face |

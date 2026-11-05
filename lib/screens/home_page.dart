@@ -263,7 +263,7 @@ class _HomePageState extends ConsumerState<HomePage>
   Future<void> _loadUiSettings() async {
     final showToolbar = await SettingsHelper.loadStringConfig(
       showHomeToolbarKey,
-      'true',
+      showHomeToolbarDefault,
     );
     final allowBulkDeletes = await SettingsHelper.loadStringConfig(
       allowMainObjectBulkDeletesKey,
