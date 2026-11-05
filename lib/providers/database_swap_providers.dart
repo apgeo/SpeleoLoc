@@ -12,6 +12,9 @@ final liveDatabaseSwapProvider = Provider<LiveDatabaseSwap>(
     isSyncRunning: () =>
         ref.read(ftpSyncControllerProvider).isRunning ||
         ref.read(silexgisSyncControllerProvider).isRunning,
+    // The trip service is rebuilt on the new database with no trip active;
+    // its stored trip is read once the device's own settings are back.
+    onSettled: () => ref.read(caveTripServiceProvider).initActiveTrip(),
   ),
 );
 

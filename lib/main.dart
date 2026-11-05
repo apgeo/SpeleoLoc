@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:speleoloc/app.dart';
+import 'package:speleoloc/providers/active_trip_reconciler_provider.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -86,6 +87,7 @@ Future<void> _runApp() async {
   await container.read(currentUserServiceProvider).initialize();
 
   await container.read(caveTripServiceProvider).initActiveTrip();
+  container.read(activeTripSyncReconcilerProvider);
 
   // Builds that bake in a shared sync endpoint install it here; a build
   // without one does nothing. Failure must not block startup — the user can

@@ -56,6 +56,28 @@ class CaveTripService {
     }
   }
 
+  /// Drops the active trip when its row is gone or ended — deleted or ended
+  /// by a sync, removed with its cave. Recording into it would otherwise
+  /// fail on every scan, and the cave pages would keep hiding "Start trip".
+  Future<void> reconcileActiveTrip() async {
+    final id = activeTripIdNotifier.value;
+    if (id == null) return;
+    try {
+      final trip =
+          await (_db.select(_db.caveTrips)
+                ..where((t) => t.uuid.equalsValue(id) & t.tripEndedAt.isNull()))
+              .getSingleOrNull();
+      // A trip started or stopped while the row was read is left to that.
+      if (trip != null || activeTripIdNotifier.value != id) return;
+      log.info('active trip $id is gone or ended; no trip is active now');
+      await _clearConfig();
+      activeTripIdNotifier.value = null;
+      isPausedNotifier.value = false;
+    } catch (e, st) {
+      log.warning('reconcileActiveTrip failed', e, st);
+    }
+  }
+
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
     isPausedNotifier.value = false;
     final author = await _currentUser.currentOrSystem();

@@ -412,6 +412,8 @@ class _DataExportImportPageState extends ConsumerState<DataExportImportPage>
         conflictResolver: promptingConflictResolver(context),
         onProgress: (msg) => progressKey.currentState?.updateMessage(msg),
       );
+      // The archive can delete or end the trip running here.
+      await ref.read(caveTripServiceProvider).reconcileActiveTrip();
 
       if (context.mounted) {
         Navigator.pop(context); // close progress

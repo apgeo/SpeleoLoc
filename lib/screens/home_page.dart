@@ -573,6 +573,8 @@ class _HomePageState extends ConsumerState<HomePage>
     if (confirmed != true || !mounted) return;
     try {
       await ref.read(caveRepositoryProvider).deleteCave(caveUuid);
+      // A trip running in this cave went with it.
+      await ref.read(caveTripServiceProvider).reconcileActiveTrip();
       // Stream subscription auto-refreshes _caves.
       if (mounted) {
         SnackBarService.showSuccess(LocServ.inst.t('cave_deleted'));
@@ -651,6 +653,7 @@ class _HomePageState extends ConsumerState<HomePage>
     for (final c in selected) {
       await ref.read(caveRepositoryProvider).deleteCave(c.uuid);
     }
+    await ref.read(caveTripServiceProvider).reconcileActiveTrip();
   }
 
   @override
