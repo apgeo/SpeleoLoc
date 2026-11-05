@@ -84,4 +84,28 @@ void main() {
     final strategy = blob!.values.single as Map;
     expect(strategy['segment_separator'], '-');
   });
+
+  testWidgets('a salt typed before leaving by Back is stored, trimmed', (
+    tester,
+  ) async {
+    await configurationRepository.writeString(ConfigKey.qcriMode, 'hash');
+    await openPage(tester);
+
+    await tester.tap(find.text('place_code_tab_qcri'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '  pepper ');
+    await tester.pumpAndSettle();
+
+    // The system Back gesture is not a pointer event, so nothing taps
+    // outside the field first.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPlaceCodesPage), findsNothing);
+
+    final hash = await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      return stored(ConfigKey.qcriHashConfig);
+    });
+    expect(hash!['salt'], 'pepper');
+  });
 }
