@@ -1064,6 +1064,8 @@
 
   "tour_doc_file_viewer_content_title": "Vizualizator document",
   "tour_doc_file_viewer_content_body": "Vizualizează conținutul fișierului — imagini, text sau PDF.",
+  "text_file_preview_truncated": "Se afișează doar primii {shown} KB din cei {total} KB ai fișierului.",
+  "text_file_preview_failed": "Acest fișier nu a putut fi citit.",
 
   "tour_sound_file_viewer_player_title": "Player audio",
   "tour_sound_file_viewer_player_body": "Redă înregistrarea audio. Folosește forma de undă pentru a naviga la o poziție specifică.",

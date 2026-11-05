@@ -1065,6 +1065,8 @@
 
   "tour_doc_file_viewer_content_title": "Document Viewer",
   "tour_doc_file_viewer_content_body": "View the contents of this documentation file — images, text, or PDF.",
+  "text_file_preview_truncated": "Only the first {shown} KB of this {total} KB file are shown.",
+  "text_file_preview_failed": "This file could not be read.",
 
   "tour_sound_file_viewer_player_title": "Audio Player",
   "tour_sound_file_viewer_player_body": "Play back the audio recording. Use the waveform to scrub to a specific position.",
