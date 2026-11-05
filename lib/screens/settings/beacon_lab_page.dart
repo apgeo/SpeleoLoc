@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/services/beacon/bp1003_advertisement_parser.dart';
+import 'package:speleoloc/services/beacon/shared_ble_scan.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -55,7 +56,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
   String? _rangingError;
 
   // --- Raw scan state -------------------------------------------------------
-  StreamSubscription<List<fbp.ScanResult>>? _scanSub;
+  StreamSubscription<fbp.ScanResult>? _scanSub;
   final Map<String, _RawDevice> _rawDevices = {};
   bool _scanning = false;
   bool _beaconsOnly = true;
@@ -298,18 +299,16 @@ class _BeaconLabPageState extends State<BeaconLabPage>
       }
       // Disposed during the adapter check: don't subscribe past dispose.
       if (!mounted) return;
-      _scanSub = fbp.FlutterBluePlus.scanResults.listen(
-        _onRawResults,
+      // Through the shared scan, never the plugin directly: starting or
+      // stopping the plugin's one scan here would silence Ruuvi detection.
+      _scanSub = SharedBleScan.instance.advertisements().listen(
+        _onRawResult,
         onError: (Object e, StackTrace st) {
           _log.warning('Raw scan stream error', e, st);
           if (mounted) setState(() => _scanError = e.toString());
         },
       );
-      await fbp.FlutterBluePlus.startScan(
-        continuousUpdates: true,
-        androidUsesFineLocation: true,
-      );
-      if (mounted) setState(() => _scanning = true);
+      setState(() => _scanning = true);
     } catch (e, st) {
       _log.warning('Raw scan start failed', e, st);
       await _scanSub?.cancel();
@@ -318,80 +317,69 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     }
   }
 
-  void _onRawResults(List<fbp.ScanResult> results) {
+  void _onRawResult(fbp.ScanResult r) {
     final now = DateTime.now();
-    var changed = false;
-    for (final r in results) {
-      final id = r.device.remoteId.str;
-      final entry = _rawDevices.putIfAbsent(
-        id,
-        () => _RawDevice(first: now, last: r),
-      );
-      final isNewPacket =
-          entry.count == 0 || r.timeStamp != entry.last.timeStamp;
-      entry.update(r, now);
-      changed = true;
-      if (isNewPacket && (entry.isBeaconLike || !_beaconsOnly)) {
-        _appendLog('rawscan', {
-          'id': id,
-          'name': r.advertisementData.advName,
-          'rssi': r.rssi,
-          if (entry.iBeacon != null)
-            'ibeacon': {
-              'uuid': entry.iBeacon!.proximityUuid,
-              'major': entry.iBeacon!.major,
-              'minor': entry.iBeacon!.minor,
-              'measuredPower': entry.iBeacon!.measuredPower,
-            },
-          if (entry.bp1003 != null)
-            'bp1003': {
-              'batteryMv': entry.bp1003!.batteryMv,
-              'intervalMs': entry.bp1003!.broadcastIntervalMs,
-              'txPowerDbm': entry.bp1003!.txPowerDbm,
-              'mac': entry.bp1003!.macAddress,
-              'flags': entry.bp1003!.statusFlags,
-              'temperatureC': entry.bp1003!.temperatureC,
-              'humidityPct': entry.bp1003!.humidityPct,
-            },
-          if (entry.ruuvi != null)
-            'ruuvi': {
-              'mac': entry.ruuvi!.macAddress,
-              'model': entry.ruuvi!.inferredModel.label,
-              'temperatureC': entry.ruuvi!.temperatureC,
-              'humidityPct': entry.ruuvi!.humidityPct,
-              'pressureHpa': entry.ruuvi!.pressureHpa,
-              'batteryMv': entry.ruuvi!.batteryMv,
-              'txPowerDbm': entry.ruuvi!.txPowerDbm,
-              'accMg': [
-                entry.ruuvi!.accelerationXMg,
-                entry.ruuvi!.accelerationYMg,
-                entry.ruuvi!.accelerationZMg,
-              ],
-              'movement': entry.ruuvi!.movementCounter,
-              'sequence': entry.ruuvi!.measurementSequence,
-            },
-          'manufacturerData': {
-            for (final e in r.advertisementData.manufacturerData.entries)
-              '0x${e.key.toRadixString(16).padLeft(4, '0')}': _hex(e.value),
+    final id = r.device.remoteId.str;
+    final entry = _rawDevices.putIfAbsent(
+      id,
+      () => _RawDevice(first: now, last: r),
+    );
+    entry.update(r, now);
+    if (entry.isBeaconLike || !_beaconsOnly) {
+      _appendLog('rawscan', {
+        'id': id,
+        'name': r.advertisementData.advName,
+        'rssi': r.rssi,
+        if (entry.iBeacon != null)
+          'ibeacon': {
+            'uuid': entry.iBeacon!.proximityUuid,
+            'major': entry.iBeacon!.major,
+            'minor': entry.iBeacon!.minor,
+            'measuredPower': entry.iBeacon!.measuredPower,
           },
-          'serviceData': {
-            for (final e in r.advertisementData.serviceData.entries)
-              e.key.str: _hex(e.value),
+        if (entry.bp1003 != null)
+          'bp1003': {
+            'batteryMv': entry.bp1003!.batteryMv,
+            'intervalMs': entry.bp1003!.broadcastIntervalMs,
+            'txPowerDbm': entry.bp1003!.txPowerDbm,
+            'mac': entry.bp1003!.macAddress,
+            'flags': entry.bp1003!.statusFlags,
+            'temperatureC': entry.bp1003!.temperatureC,
+            'humidityPct': entry.bp1003!.humidityPct,
           },
-        });
-      }
+        if (entry.ruuvi != null)
+          'ruuvi': {
+            'mac': entry.ruuvi!.macAddress,
+            'model': entry.ruuvi!.inferredModel.label,
+            'temperatureC': entry.ruuvi!.temperatureC,
+            'humidityPct': entry.ruuvi!.humidityPct,
+            'pressureHpa': entry.ruuvi!.pressureHpa,
+            'batteryMv': entry.ruuvi!.batteryMv,
+            'txPowerDbm': entry.ruuvi!.txPowerDbm,
+            'accMg': [
+              entry.ruuvi!.accelerationXMg,
+              entry.ruuvi!.accelerationYMg,
+              entry.ruuvi!.accelerationZMg,
+            ],
+            'movement': entry.ruuvi!.movementCounter,
+            'sequence': entry.ruuvi!.measurementSequence,
+          },
+        'manufacturerData': {
+          for (final e in r.advertisementData.manufacturerData.entries)
+            '0x${e.key.toRadixString(16).padLeft(4, '0')}': _hex(e.value),
+        },
+        'serviceData': {
+          for (final e in r.advertisementData.serviceData.entries)
+            e.key.str: _hex(e.value),
+        },
+      });
     }
-    if (mounted && changed) setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _stopRawScan() async {
     await _scanSub?.cancel();
     _scanSub = null;
-    try {
-      await fbp.FlutterBluePlus.stopScan();
-    } catch (_) {
-      // adapter may already be off — nothing to stop
-    }
     if (mounted && _scanning) setState(() => _scanning = false);
   }
 
