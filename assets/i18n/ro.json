@@ -83,6 +83,8 @@
   "image_file_not_found_warning": "Avertisment: Fișierul imagine nu a fost găsit",
   "raster_map_deleted": "Harta a fost ștearsă",
   "raster_map_title_duplicate": "Există deja o hartă cu același titlu și tip pentru această peșteră",
+  "raster_map_save_failed": "Harta nu a putut fi salvată.",
+  "raster_map_image_failed": "Imaginea nu a putut fi adăugată.",
   "raster_map_image_duplicate_title": "Imagine duplicată",
   "raster_map_image_duplicate_body": "Această imagine este deja folosită de harta \"{title}\". Salvezi oricum?",
   "save_anyway": "Salvează oricum",

@@ -84,6 +84,8 @@
   "image_file_not_found_warning": "Warning: Image file not found",
   "raster_map_deleted": "Raster map deleted",
   "raster_map_title_duplicate": "A raster map with this title and type already exists for this cave",
+  "raster_map_save_failed": "The map could not be saved.",
+  "raster_map_image_failed": "The picture could not be added.",
   "raster_map_image_duplicate_title": "Duplicate map image",
   "raster_map_image_duplicate_body": "This image is already used by raster map \"{title}\". Add it anyway?",
   "save_anyway": "Save anyway",
