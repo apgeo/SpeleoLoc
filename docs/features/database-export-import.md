@@ -311,11 +311,14 @@ offers:
 
 - **Export database file** — saves a copy of the raw database file through
   the same save dialog as **Export database**, so nothing is lost whatever
-  you do next.
+  you do next. When a restore or replace was cut short, the copy is of the
+  database you had before it, the one the app is trying to put back.
 - **Retry** — tries to start again, for example after freeing some space.
 - **Reset app data** — deletes the database so the app starts empty. It
   asks first, says what will be deleted, and offers **Export first**.
-  Photos and documents already saved on the device are not deleted.
+  Photos and documents already saved on the device are not deleted, and
+  neither is a previous database a cut-short restore left waiting: it stays
+  on the device under another name.
 
 A database saved by a newer version of the app gets its own message: update
 the app and it opens as it is. **Reset app data** is not offered then.

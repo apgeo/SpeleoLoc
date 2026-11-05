@@ -285,4 +285,48 @@ void main() {
     expect(await marker(current), isNull);
     expect(docsEntries(), ['speleo_loc.sqlite']);
   });
+
+  group('after a swap was cut short', () {
+    late File backup;
+
+    setUp(() async {
+      await current.close();
+      backup = File('${liveFile.path}${LiveDatabaseSwap.backupSuffix}');
+      await liveFile.rename(backup.path);
+      await appDatabaseFile(liveFile.path, marker: 'half-done');
+      current = AppDatabase.file(liveFile);
+    });
+
+    test('the file to export is the backup, which holds the caver\'s '
+        'data', () async {
+      expect((await swap.databaseFileToExport()).path, backup.path);
+
+      await backup.delete();
+      expect((await swap.databaseFileToExport()).path, liveFile.path);
+    });
+
+    test(
+      'starting over sets the backup aside instead of deleting it',
+      () async {
+        await swap.discardLiveDatabase();
+
+        expect(await marker(current), isNull);
+        final entries = docsEntries();
+        expect(entries, hasLength(2));
+        expect(entries.first, 'speleo_loc.sqlite');
+        expect(
+          entries.last,
+          startsWith('speleo_loc.sqlite${LiveDatabaseSwap.discardedSuffix}-'),
+        );
+        final setAside = AppDatabase.file(
+          File(p.join(docs.path, entries.last)),
+        );
+        try {
+          expect(await marker(setAside), 'live');
+        } finally {
+          await setAside.close();
+        }
+      },
+    );
+  });
 }

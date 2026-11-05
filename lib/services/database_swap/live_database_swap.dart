@@ -179,21 +179,34 @@ class LiveDatabaseSwap {
     await _bestEffortDelete(File('${live.path}$incomingSuffix'));
     if (!await backup.exists()) return false;
     _log.warning('A database swap was interrupted; restoring the previous one');
-    await _moveAside(live);
+    await _moveAside(live, live: live);
     await _moveWithSidecars(backup, live);
     return true;
   }
 
-  /// Deletes the live database and anything a swap left behind, then installs
-  /// a new empty one. Only for a caver who has chosen to start over.
+  /// Deletes the live database, then installs a new empty one. Only for a
+  /// caver who has chosen to start over.
+  ///
+  /// A backup a cut-short swap left is moved aside rather than deleted: the
+  /// caver chose to lose the database they could see, which after a failed
+  /// start may be the half-installed new one while their data is the backup.
   Future<void> discardLiveDatabase() async {
     ensureNoSyncRunning();
     final live = await _liveFile();
     await _closeQuietly(_currentDatabase());
     await _deleteWithSidecars(live);
-    await _deleteWithSidecars(File('${live.path}$backupSuffix'));
+    await _moveAside(File('${live.path}$backupSuffix'), live: live);
     await _deleteWithSidecars(File('${live.path}$incomingSuffix'));
     _install(_openLiveDatabase());
+  }
+
+  /// The file to save when the app could not start: the backup a cut-short
+  /// swap left when there is one, since the live file is then whatever the
+  /// swap was installing, or else the live file. It may not exist.
+  Future<File> databaseFileToExport() async {
+    final live = await _liveFile();
+    final backup = File('${live.path}$backupSuffix');
+    return await backup.exists() ? backup : live;
   }
 
   /// Installs a fresh connection to the live file. A connection whose open
@@ -264,14 +277,14 @@ class LiveDatabaseSwap {
     }
   }
 
-  /// Renames [file] and its sidecars to a free name beside the live file,
-  /// which no swap step deletes.
-  static Future<void> _moveAside(File file) async {
+  /// Renames [file] and its sidecars to a free name beside [live], which no
+  /// swap step deletes.
+  static Future<void> _moveAside(File file, {required File live}) async {
     if (!await file.exists()) return;
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    var target = File('${file.path}$discardedSuffix-$stamp');
+    var target = File('${live.path}$discardedSuffix-$stamp');
     for (var n = 1; await target.exists(); n++) {
-      target = File('${file.path}$discardedSuffix-$stamp-$n');
+      target = File('${live.path}$discardedSuffix-$stamp-$n');
     }
     await _moveWithSidecars(file, target);
   }

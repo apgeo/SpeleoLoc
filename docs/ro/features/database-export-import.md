@@ -341,13 +341,16 @@ pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
 
 - **Exportă fișierul bazei de date** — salvează o copie a fișierului brut
   al bazei de date prin același dialog de salvare ca **Exportă baza de
-  date**, ca să nu se piardă nimic orice ați face după aceea.
+  date**, ca să nu se piardă nimic orice ați face după aceea. Când o
+  restaurare sau o înlocuire a fost întreruptă, copia este a bazei de date
+  pe care o aveați înainte, cea pe care aplicația încearcă să o pună la loc.
 - **Reîncearcă** — încearcă din nou pornirea, de exemplu după ce ați
   eliberat spațiu.
 - **Resetează datele aplicației** — șterge baza de date, iar aplicația
   pornește goală. Întreabă întâi, spune ce se va șterge și oferă
   **Exportă întâi**. Fotografiile și documentele deja salvate pe
-  dispozitiv nu se șterg.
+  dispozitiv nu se șterg și nici o bază de date anterioară lăsată în
+  așteptare de o restaurare întreruptă: rămâne pe dispozitiv sub alt nume.
 
 O bază de date salvată de o versiune mai nouă a aplicației are propriul
 mesaj: actualizați aplicația și baza de date se deschide așa cum este.
