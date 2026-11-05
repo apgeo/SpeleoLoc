@@ -82,6 +82,7 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
   final _descriptionController = TextEditingController();
   final _caveLocalIndexController = TextEditingController();
   bool _saving = false;
+  Uuid? _createdCaveUuid;
 
   List<SurfaceArea> _surfaceAreas = [];
   bool _surfaceAreasLoaded = false;
@@ -138,14 +139,28 @@ class _CaveFormPageState extends ConsumerState<CaveFormPage>
             );
         if (mounted) Navigator.pop(context, widget.cave!.uuid);
       } else {
-        final id = await ref
-            .read(caveRepositoryProvider)
-            .addCave(
-              _titleController.text.trim(),
-              surfaceAreaUuid: _selectedSurfaceAreaId,
-              description: desc,
-              caveLocalIndex: localIdx,
-            );
+        final caves = ref.read(caveRepositoryProvider);
+        var id = _createdCaveUuid;
+        if (id == null) {
+          id = await caves.addCave(
+            _titleController.text.trim(),
+            surfaceAreaUuid: _selectedSurfaceAreaId,
+            description: desc,
+            caveLocalIndex: localIdx,
+          );
+          _createdCaveUuid = id;
+        } else {
+          // The cave was written before the entrance place failed. Adding it
+          // again would duplicate it or collide with its own title, so the
+          // retry carries the form's current values onto the same row.
+          await caves.updateCave(
+            id,
+            _titleController.text.trim(),
+            surfaceAreaUuid: _selectedSurfaceAreaId,
+            description: desc,
+            caveLocalIndex: localIdx,
+          );
+        }
         // Auto-add entrance cave place if setting is enabled (default: true)
         final autoAdd = await SettingsHelper.loadStringConfig(
           autoAddEntrancePlaceKey,
