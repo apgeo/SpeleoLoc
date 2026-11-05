@@ -254,8 +254,10 @@ rebuilds the log, and when the log is regenerated after you edited the
 points. So complete the points first and write in the log last. New
 points added while the trip runs are *appended* in the Raw, Classic and
 Field journal styles, so they do not disturb text you have already
-written. Narrative is the exception: every new point rebuilds the whole
-log, and manual edits go with it.
+written. Narrative regroups its paragraphs as points arrive, so it
+rewrites its own generated text but keeps whatever you typed after it.
+If you reworded the generated text itself, a new point leaves the log
+as you wrote it and marks it out of date instead.
 
 ## Step 6 — Export a report
 

@@ -271,9 +271,11 @@ care reconstruiește jurnalul, și când jurnalul este regenerat după ce ați
 modificat punctele. Așa că completați întâi punctele și scrieți în jurnal
 la urmă. Punctele noi adăugate cât timp tura rulează sunt *adăugate la
 sfârșit* în stilurile Brut, Clasic și Jurnal de teren, așa că nu
-deranjează textul deja scris. Narativ este excepția: fiecare punct nou
-reconstruiește tot jurnalul, iar modificările manuale se duc odată cu
-el.
+deranjează textul deja scris. Narativ își regrupează paragrafele pe
+măsură ce sosesc punctele, așa că își rescrie propriul text generat, dar
+păstrează ce ați scris după el. Dacă ați reformulat chiar textul
+generat, un punct nou lasă jurnalul așa cum l-ați scris și îl marchează
+în schimb ca neactualizat.
 
 <a id="step-6--export-a-report"></a>
 

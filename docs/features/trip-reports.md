@@ -75,19 +75,19 @@ Two things will catch you out:
    asking. Always save before exporting, because the export reads the
    saved log and not what is on screen.
 2. **Some actions rebuild the log from scratch** and throw your text
-   away. Restarting a trip does it, switching the log style does it,
-   and — with the **Narrative** style only — so does every new event
-   while the trip is still running. Regenerating after the trip's
+   away. Restarting a trip does it, and switching the log style does
+   it. Regenerating after the trip's
    points were edited does it too; whether that happens by itself is
    up to **Settings → Trip log** — see
    [Trips → When the points change](trips.md#when-the-points-change).
 
 With **Raw**, **Classic** or **Field journal**, a new event is added
 as one more line after whatever is already in the log, so your own
-text survives. **Narrative** has to rebuild the whole thing to keep
-the paragraphs reading properly. If you want to annotate the log of a
-trip that is still running, use one of the other three styles, or wait
-until you have stopped the trip.
+text survives. **Narrative** regroups its paragraphs as events
+arrive, so it rewrites the text it generated and keeps what you typed
+after it. If you reworded the generated text itself, a new event leaves
+your log alone and marks it out of date instead, for you to regenerate
+or keep.
 
 ### Log styles
 
@@ -241,7 +241,7 @@ PNG where you want it.
 | An error containing **Template file not found** | The template is listed but its document is missing on this device. Normal on a second device or after restoring a backup: add the file again here. |
 | **Unsupported format. Please select an ODT or DOCX file.** | The picked file is not `.odt` or `.docx`. Save it again from your word processor in one of those two formats. |
 | The report is just the template with text pasted at the end | That is exactly what it is. There is no substitution step. Rearrange things in your word processor after exporting. |
-| Text you typed into the log has vanished | The log was regenerated — by a trip restart, by a style switch, or by a new event while the **Narrative** style was active. |
+| Text you typed into the log has vanished | The log was regenerated — by a trip restart, by a style switch, or after the points were edited. |
 | Nothing happened after the export succeeded | The file was written; your device has no app that handles ODT or DOCX. |
 
 ## See also

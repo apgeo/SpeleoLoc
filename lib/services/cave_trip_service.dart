@@ -535,18 +535,15 @@ class CaveTripService {
       final events = await _renderer.loadEvents(tripUuid);
       if (events.isEmpty) return;
 
+      final trip = await _tripRow(tripUuid);
+      final current = trip?.log ?? '';
+
       final delta = _renderer.renderTailDelta(events, method);
       if (delta == null) {
-        // Method (narrative) does not support incremental rendering.
-        final full = _renderer.render(events, method);
-        await _db.updateTripLog(tripUuid, full);
+        await _rerenderGeneratedPart(tripUuid, current, events, method);
         return;
       }
 
-      final trip = await (_db.select(
-        _db.caveTrips,
-      )..where((t) => t.uuid.equalsValue(tripUuid))).getSingleOrNull();
-      final current = trip?.log ?? '';
       if (current.isEmpty) {
         // First event — write the delta as-is (no leading separator).
         await _db.updateTripLog(tripUuid, delta);
@@ -558,6 +555,32 @@ class CaveTripService {
       }
     } catch (e, st) {
       log.warning('appendForNewEvent failed (trip=$tripUuid)', e, st);
+    }
+  }
+
+  /// For a method that cannot append (narrative regroups its paragraphs
+  /// as events arrive): re-renders the generated part of the log and keeps
+  /// whatever the caver typed after it. The generated part is recognised as
+  /// the render of every event but the newest; a log that no longer starts
+  /// with it was reworded by hand, so it is left as written and marked
+  /// behind its points instead of being overwritten.
+  Future<void> _rerenderGeneratedPart(
+    Uuid tripUuid,
+    String current,
+    List<TripLogEvent> events,
+    TripLogMethod method,
+  ) async {
+    final full = _renderer.render(events, method);
+    if (current == full) return;
+    final previous = events.length > 1
+        ? _renderer.render(events.sublist(0, events.length - 1), method)
+        : '';
+    if (current.isEmpty ||
+        previous.isNotEmpty && current.startsWith(previous)) {
+      final typed = current.isEmpty ? '' : current.substring(previous.length);
+      await _db.updateTripLog(tripUuid, '$full$typed');
+    } else {
+      await _markLogStale(tripUuid);
     }
   }
 

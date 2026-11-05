@@ -450,8 +450,10 @@ tratați-vă notele ca pe ceva fragil:
   vedeți mai jos.
 - În stilurile **Brut**, **Clasic** și **Jurnal de teren** un eveniment
   nou este doar adăugat la sfârșit, așa că modificările anterioare îi
-  supraviețuiesc. În stilul **Narativ** fiecare punct sau document nou
-  rescrie tot jurnalul.
+  supraviețuiesc. În stilul **Narativ** un punct sau document nou
+  rescrie textul generat și păstrează ce ați scris după el; un jurnal
+  al cărui text generat l-ați reformulat este lăsat neatins și marcat
+  ca neactualizat.
 
 Adăugați astfel de note la sfârșitul turei și păstrați o copie în altă
 parte dacă sunt importante.

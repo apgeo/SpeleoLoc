@@ -417,8 +417,9 @@ your notes as fragile:
   below.
 - In the **Raw**, **Classic** and **Field journal** styles a new event
   is only appended to the end, so earlier edits survive it. In the
-  **Narrative** style every new point or document rewrites the whole
-  log.
+  **Narrative** style a new point or document rewrites the generated
+  text and keeps what you typed after it; a log whose generated text
+  you reworded is left alone and marked out of date.
 
 Add such notes at the end of the trip, and keep a copy elsewhere if
 they matter.
