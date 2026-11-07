@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -28,6 +29,7 @@ import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/clock.dart';
 
+import '../../support/fake_silexgis_server.dart';
 import 'scripted_client.dart';
 import 'token_source.dart';
 
@@ -284,7 +286,7 @@ void main() {
   }
 
   Future<(SilexgisUploadReport, SilexgisRasterMapsUploadPart)> run(
-    ScriptedClient client, {
+    http.Client client, {
     SilexgisFileSendingGate gate = const SilexgisFilesAlwaysGo(),
     bool filesAllowed = true,
   }) async {
@@ -718,6 +720,46 @@ void main() {
         );
       },
     );
+
+    test('a pin removed and placed again is taken by an installation that '
+        'holds one live pin per place', () async {
+      final server = FakeSilexgisServer(clock: clock)
+        ..issueAccessToken(token: 'access-1');
+      final (id, bytes) = await map();
+      await agreed(
+        id,
+        table: SilexgisRasterTables.maps,
+        mapId: id,
+        picture: bytes,
+      );
+      final oldPin = await pin(id);
+      await agreed(oldPin, table: SilexgisRasterTables.pins, mapId: id);
+      server
+        ..putItem(SyncUploadSection.rasterMaps, <String, Object?>{
+          'id': id.toString(),
+          'caveId': caveId.toString(),
+        }, revision: 'rev-$id')
+        ..putItem(SyncUploadSection.rasterPins, <String, Object?>{
+          'id': oldPin.toString(),
+          'rasterMapId': id.toString(),
+          'placeId': placeId.toString(),
+        }, revision: 'rev-$oldPin');
+      await (db.delete(
+        db.cavePlaceToRasterMapDefinitions,
+      )..where((t) => t.uuid.equalsValue(oldPin))).go();
+      final newPin = await pin(id, x: 200, y: 40);
+
+      final (report, _) = await run(server.client());
+
+      expect(report.refusals, isEmpty);
+      expect(server.items(SyncUploadSection.rasterPins).keys, <String>[
+        newPin.toString(),
+      ]);
+      expect(await heldRows.readAll(profile), isEmpty);
+      final revisions = await localState.readRevisions(profile);
+      expect(revisions[oldPin], isNull);
+      expect(revisions[newPin], isNotNull);
+    });
 
     test('a removed pin names its map', () async {
       final (id, bytes) = await map();

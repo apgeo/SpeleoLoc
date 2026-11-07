@@ -114,9 +114,9 @@ class FakeSilexgisServer {
   String signIn() => _mintRefresh(_chains++);
 
   /// An access token good for [accessLifetime] from now, for a test that
-  /// stands a fixed credential in for the sign-in.
-  String issueAccessToken() {
-    final access = 'access-${++_minted}';
+  /// stands a fixed credential in for the sign-in. [token] names it.
+  String issueAccessToken({String? token}) {
+    final access = token ?? 'access-${++_minted}';
     _accessTokens[access] = _clock.now().add(accessLifetime);
     return access;
   }
@@ -304,10 +304,15 @@ class FakeSilexgisServer {
       };
 
   /// Stores [json] as an item of [section] the installation already holds,
-  /// and returns its revision.
-  String putItem(SyncUploadSection section, Map<String, Object?> json) {
+  /// at [revision] when the test names the one the device agreed, and returns
+  /// its revision.
+  String putItem(
+    SyncUploadSection section,
+    Map<String, Object?> json, {
+    String? revision,
+  }) {
     final id = json['id']! as String;
-    final revision = _nextRevision();
+    revision ??= _nextRevision();
     (_items[section] ??= <String, _Item>{})[id] = _Item(id, json, revision);
     return revision;
   }
