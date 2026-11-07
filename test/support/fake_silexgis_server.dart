@@ -460,7 +460,8 @@ class FakeSilexgisServer {
       'id': row['id'],
       'kind': row['kind'],
       'name': row['name'],
-      'description': row['description'],
+      // Null leaves the stored text alone; a device clears it with a space.
+      'description': row['description'] ?? existing?['description'],
       'geometry': geometry,
       'properties':
           row['properties'] ??

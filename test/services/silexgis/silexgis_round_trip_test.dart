@@ -96,6 +96,30 @@ void main() {
       expect(server.feature(place.toString())?['name'], 'Invented sump, lower');
     });
 
+    test('a description cleared on one phone is cleared on the other, and '
+        'stays cleared on the first', () async {
+      final cave = await a.caves.addCave(
+        'Invented cave',
+        description: 'A short invented cave.',
+      );
+      await syncOk(a);
+      await syncOk(b);
+      expect(
+        (await b.db.select(b.db.caves).getSingle()).description,
+        'A short invented cave.',
+      );
+
+      later();
+      await a.caves.updateCave(cave, 'Invented cave');
+      await syncOk(a);
+      await syncOk(b);
+      // A run from the beginning reads the server's own row back here too.
+      await a.sync(fromBeginning: true);
+
+      expect((await b.db.select(b.db.caves).getSingle()).description, isNull);
+      expect((await a.db.select(a.db.caves).getSingle()).description, isNull);
+    });
+
     test('a cave inside a new surface area arrives inside it', () async {
       // Each row names its parent, and the server applies them in order: the
       // area has to go before the cave that names it.
