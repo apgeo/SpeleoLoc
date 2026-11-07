@@ -62,7 +62,10 @@ fiecare rămâne cu ambele jumătăți.
 
 Fișierele de documentație (fotografii, schițe, PDF-uri) și imaginile
 hărților sunt mari, așa că sunt opționale — vedeți cele două comutatoare
-de mai jos.
+de mai jos. Fișierele mai mari de 32 MB intră în arhivă necomprimate: sunt
+filme, fotografii și scanări ale căror formate sunt deja comprimate, iar
+lăsarea lor așa cum sunt păstrează aplicația receptivă și memoria ocupată
+mică, oricât de mare ar fi arhiva.
 
 ### Exportul unei arhive de sincronizare
 
