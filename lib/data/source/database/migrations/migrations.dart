@@ -388,7 +388,7 @@ class V12ToV13Migration extends SchemaMigration {
 
   @override
   Future<void> apply(AppDatabase db, Migrator migrator) async {
-    final caveCounter = <Object?, int>{};
+    final caveCounter = <Uuid, int>{};
     await TableRecreator.recreate(
       db: db,
       migrator: migrator,
@@ -396,7 +396,9 @@ class V12ToV13Migration extends SchemaMigration {
       selectSql:
           'SELECT * FROM raster_maps ORDER BY cave_uuid, created_at, uuid',
       reinsert: (d) async {
-        final caveKey = d['cave_uuid'];
+        // Each row reads its blob into a list of its own, and lists compare
+        // by identity, so the cave is keyed by value.
+        final caveKey = Uuid.fromBytes(d['cave_uuid']! as List<int>);
         final idx = caveCounter[caveKey] ?? 0;
         caveCounter[caveKey] = idx + 1;
         await db.customStatement(
