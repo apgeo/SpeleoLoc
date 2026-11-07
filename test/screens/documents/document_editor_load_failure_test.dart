@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart'
     show FlutterQuillLocalizations;
@@ -16,7 +15,7 @@ import 'package:speleoloc/screens/documents/editors/text_document_editor_page.da
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/widgets/product_tour.dart';
+import '../../support/pump_app.dart';
 
 /// An editor whose document cannot be read says so and offers no Save: an
 /// empty editor saved over the stored file would replace the real content.
@@ -27,13 +26,7 @@ void main() {
 
   setUp(() async {
     docs = await Directory.systemTemp.createTemp('speleoloc_editor_load_');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/path_provider'),
-          (call) async => call.method == 'getApplicationDocumentsDirectory'
-              ? docs.path
-              : null,
-        );
+    mockPathProvider(documents: docs);
     db = AppDatabase.forTesting(NativeDatabase.memory());
     container = ProviderContainer(
       overrides: [appDatabaseProvider.overrideWithValue(db)],
@@ -62,28 +55,16 @@ void main() {
         await file.writeAsString(content);
       });
 
-  Future<void> open(WidgetTester tester, Widget page) async {
-    await tester.runAsync(() => setAutoToursDisabled(true));
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          localizationsDelegates: const [
-            FlutterQuillLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-          ],
-          home: page,
-        ),
-      ),
-    );
-    for (var i = 0; i < 5; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 20)),
-      );
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-  }
+  Future<void> open(WidgetTester tester, Widget page) => pumpScreen(
+    tester,
+    container,
+    page,
+    delegates: const [
+      FlutterQuillLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+    ],
+  );
 
   final failed = LocServ.inst.t('document_load_failed_title');
 

@@ -15,6 +15,8 @@ import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
+import '../../support/pump_app.dart';
+
 /// Stands in for the `flutter_sound` recorder: a recording is a small file
 /// written at start, and stopping can be held open to model the moment a
 /// caver taps Save while the recorder is still flushing.
@@ -67,14 +69,7 @@ void main() {
     tmp = await Directory.systemTemp.createTemp('speleoloc_rec_tmp_');
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (call) async => switch (call.method) {
-        'getApplicationDocumentsDirectory' => docs.path,
-        'getTemporaryDirectory' => tmp.path,
-        _ => null,
-      },
-    );
+    mockPathProvider(documents: docs, temporary: tmp);
     // Microphone permission: always granted.
     messenger.setMockMethodCallHandler(
       const MethodChannel('flutter.baseflow.com/permissions/methods'),
@@ -105,7 +100,6 @@ void main() {
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     for (final channel in const [
-      'plugins.flutter.io/path_provider',
       'flutter.baseflow.com/permissions/methods',
       'simform_audio_waveforms_plugin/methods',
     ]) {
@@ -118,15 +112,8 @@ void main() {
     await tmp.delete(recursive: true);
   });
 
-  /// Lets real file IO and the page's async steps run between frames.
-  Future<void> settle(WidgetTester tester, [int rounds = 8]) async {
-    for (var i = 0; i < rounds; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 20)),
-      );
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-  }
+  Future<void> settle(WidgetTester tester, [int rounds = 8]) =>
+      settleWithRealTime(tester, rounds: rounds);
 
   /// Opens the recorder over a launcher page and reports what it popped.
   Future<List<Object?>> open(
