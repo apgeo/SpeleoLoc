@@ -95,13 +95,16 @@ void main() {
     await attach(a, 'documentation_files/v.mp4', videoSize);
     final videoDigest = await FileDigest.of(video.path);
 
-    var peakBefore = ProcessInfo.maxRss;
+    // Growth is measured from the resident size at the start, not from the
+    // peak: a peak left high by earlier work would hide any growth that
+    // stays below it, and the check would pass whatever the code held.
+    var rssBefore = ProcessInfo.currentRss;
     final zip = await a.sync.exportToZip(root.path, filenameHint: 'a.zip');
-    expect(ProcessInfo.maxRss - peakBefore, lessThan(videoSize ~/ 2));
+    expect(ProcessInfo.maxRss - rssBefore, lessThan(videoSize ~/ 2));
 
-    peakBefore = ProcessInfo.maxRss;
+    rssBefore = ProcessInfo.currentRss;
     final report = await b.sync.importFromZip(zip.path);
-    expect(ProcessInfo.maxRss - peakBefore, lessThan(videoSize ~/ 2));
+    expect(ProcessInfo.maxRss - rssBefore, lessThan(videoSize ~/ 2));
 
     expect(report.warnings, isEmpty);
     expect(report.filesCopied, 2);

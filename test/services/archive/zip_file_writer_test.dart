@@ -125,13 +125,16 @@ void main() {
     final expected = await FileDigest.of(video.path);
     final zipPath = p.join(dir.path, 'big.zip');
 
-    final peakBefore = ProcessInfo.maxRss;
+    // Growth is measured from the resident size at the start, not from the
+    // peak: a peak left high by earlier work would hide any growth that
+    // stays below it, and the check would pass whatever the code held.
+    final rssBefore = ProcessInfo.currentRss;
     await writeZipFile(zipPath, [
       ZipEntrySource.file('documentation_files/video.mp4', video.path),
     ]);
     final out = await Directory(p.join(dir.path, 'out')).create();
     await extractZipFileInto(zipPath, out.path);
-    final peakGrowth = ProcessInfo.maxRss - peakBefore;
+    final peakGrowth = ProcessInfo.maxRss - rssBefore;
 
     final extracted = await FileDigest.of(
       p.join(out.path, 'documentation_files', 'video.mp4'),
