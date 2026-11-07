@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_capabilities.dart';
 import 'package:speleoloc/services/silexgis/model/silexgis_problem.dart';
@@ -21,6 +22,7 @@ import 'package:speleoloc/services/silexgis/silexgis_upload_builder.dart';
 import 'package:speleoloc/services/silexgis/silexgis_upload_runner.dart';
 import 'package:speleoloc/utils/clock.dart';
 
+import '../../support/fake_silexgis_server.dart';
 import 'scripted_client.dart';
 import 'token_source.dart';
 
@@ -157,7 +159,7 @@ void main() {
         'detail': null,
       };
 
-  Future<SilexgisUploadReport> run(ScriptedClient client) {
+  Future<SilexgisUploadReport> run(http.Client client) {
     final http = SilexgisHttp(
       baseUri: Uri.parse('https://club.example.org'),
       tokens: FixedTokenSource(),
@@ -311,6 +313,35 @@ void main() {
       ]);
     },
   );
+
+  test('a place unmapped and mapped again is taken by an installation that '
+      'holds one live mapping per place', () async {
+    final server = FakeSilexgisServer(clock: clock)
+      ..issueAccessToken(token: 'access-1');
+    final oldMapping = Uuid.v7();
+    await localState.writeRevision(
+      profile,
+      oldMapping,
+      entityTable: SilexgisSurveyTables.placeStations,
+      revision: 'r-1',
+      localUpdatedAt: 1,
+    );
+    server.putItem(SyncUploadSection.placeStations, <String, Object?>{
+      'id': oldMapping.toString(),
+      'placeId': placeId.toString(),
+      'station': '1.12',
+    }, revision: 'r-1');
+    final newMapping = await mapping(serverModelDoc, station: '1.13');
+
+    final report = await run(server.client());
+
+    expect(report.refusals, isEmpty);
+    expect(server.items(SyncUploadSection.placeStations).keys, <String>[
+      newMapping.toString(),
+    ]);
+    expect(await heldRows.readAll(profile), isEmpty);
+    expect((await localState.readRevisions(profile))[newMapping], isNotNull);
+  });
 
   test('place_station_exists is kept for the caver and has the stream read '
       'again from the beginning', () async {

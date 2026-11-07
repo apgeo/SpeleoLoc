@@ -267,6 +267,42 @@ void main() {
       // inherited along containment and along nothing else.
       expect(pending.last.row.toJson()['parentId'], caveAreaId.toString());
     });
+
+    test('a place naming a cave area that does not travel hangs under its '
+        'cave', () async {
+      // An area of another cave, one this installation has never held: a
+      // place sent under it would name a parent the server does not have.
+      final t0 = clock.nowMs();
+      await insertArea(updatedAt: t0);
+      await insertCave(updatedAt: t0);
+      await known(areaId, table: 'surface_areas', localUpdatedAt: t0);
+      await known(caveId, table: 'caves', kind: 'cave', localUpdatedAt: t0);
+      final otherCave = Uuid.v7();
+      await db
+          .into(db.caves)
+          .insert(Cave(uuid: otherCave, title: 'Peștera Alta', updatedAt: t0));
+      await db
+          .into(db.caveAreas)
+          .insert(
+            CaveArea(
+              uuid: caveAreaId,
+              title: 'Galeria',
+              caveUuid: otherCave,
+              updatedAt: t0,
+            ),
+          );
+      clock.advance(const Duration(minutes: 5));
+      await insertPlace(
+        placeId,
+        title: 'Sala Mare',
+        caveArea: caveAreaId,
+        updatedAt: clock.nowMs(),
+      );
+
+      final pending = await builder.build();
+      expect(pending.map((p) => p.entityUuid), <Uuid>[placeId]);
+      expect(pending.single.row.toJson()['parentId'], caveId.toString());
+    });
   });
 
   group('a row removed here', () {

@@ -1,0 +1,13 @@
+# Read by `flutter test` as well as `dart test`.
+
+tags:
+  # Contacts a real server: a SilexGIS development installation or an FTP
+  # account. Every such file checks its own environment variable before it
+  # signs in anywhere, and without it registers a skipped test, so a plain
+  # `flutter test` reports these as skipped and contacts nothing.
+  #
+  # The tag is not skipped here. The SilexGIS server's own end-to-end runner
+  # starts a development server and runs these files by name with the variable
+  # set, and a skip here would silence every one of them. CI leaves them out
+  # entirely with `--exclude-tags live`.
+  live:

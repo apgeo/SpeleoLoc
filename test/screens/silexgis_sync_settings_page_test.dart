@@ -248,6 +248,17 @@ void main() {
       expect(profile.syncSetId, 'set-1');
     });
 
+    testWidgets('the same server in capitals and on its default port does not '
+        'ask, and keeps the sign-in', (tester) async {
+      await pumpSignedIn(tester);
+
+      await edit(tester, address: 'HTTPS://SPEO.Example.ORG:443/');
+
+      expect(find.text('silexgis_server_change_title'), findsNothing);
+      expect(await tokens.read('p-1'), 'refresh-token');
+      expect((await stored()).syncSetId, 'set-1');
+    });
+
     testWidgets('a plain http address is refused and the dialog stays open', (
       tester,
     ) async {
