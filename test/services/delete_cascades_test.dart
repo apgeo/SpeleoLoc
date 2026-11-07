@@ -133,6 +133,11 @@ void main() {
     ]) {
       expect(await d.uuidsOf(table), isEmpty, reason: '$table keeps rows');
     }
+    expect(
+      await d.db.customSelect('PRAGMA foreign_key_check').get(),
+      isEmpty,
+      reason: 'a row still points at something that was deleted',
+    );
     expect(await d.uuidsOf('cave_trips'), {otherTrip});
     expect(await d.uuidsOf('cave_trip_points'), {visit});
     expect(await tombstones('cave_trips'), contains(trip));
