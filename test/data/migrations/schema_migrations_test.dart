@@ -1,11 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/migrations/migrations.dart';
-import 'package:speleoloc/data/source/database/migrations/schema_migration.dart';
 
 /// Pure-logic tests for the migration registry: ordering, version
 /// coverage, and the per-class `shouldApply` rules. These complement
-/// the end-to-end `legacy_v6_migration_test.dart` (which runs the
-/// whole ladder against a real v6 SQLite fixture).
+/// the end-to-end tests that run the whole ladder from each historical
+/// schema.
 void main() {
   group('schemaMigrations registry', () {
     test('is ordered strictly by toVersion ascending', () {
@@ -61,31 +60,25 @@ void main() {
     });
 
     test('non-overriding migrations use default from < toVersion', () {
-      const cases = <(SchemaMigration, int)>[
-        (V8ToV9Migration(), 9),
-        (V9ToV10Migration(), 10),
-        (V10ToV11Migration(), 11),
-        (V11ToV12Migration(), 12),
-        (V12ToV13Migration(), 13),
-        (V13ToV14Migration(), 14),
-        (V14ToV15Migration(), 15),
-        (V15ToV16Migration(), 16),
-        (V16ToV17Migration(), 17),
-      ];
-      for (final (m, v) in cases) {
-        expect(m.toVersion, v);
+      // The two first steps choose their own starting versions; every later
+      // one applies from any version below its own.
+      final defaults = schemaMigrations.skipWhile((m) => m.toVersion <= 8);
+      expect(defaults, isNotEmpty);
+      for (final m in defaults) {
+        for (var from = 0; from < m.toVersion; from++) {
+          expect(
+            m.shouldApply(from),
+            isTrue,
+            reason: '${m.runtimeType} should apply from v$from',
+          );
+        }
         expect(
-          m.shouldApply(v - 1),
-          isTrue,
-          reason: '${m.runtimeType} should apply when from == toVersion-1',
-        );
-        expect(
-          m.shouldApply(v),
+          m.shouldApply(m.toVersion),
           isFalse,
           reason: '${m.runtimeType} must not re-apply at its target version',
         );
         expect(
-          m.shouldApply(v + 1),
+          m.shouldApply(m.toVersion + 1),
           isFalse,
           reason: '${m.runtimeType} must not run when already past target',
         );
