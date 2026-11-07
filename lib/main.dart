@@ -9,6 +9,7 @@ import 'package:speleoloc/providers/database_swap_providers.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
 import 'package:speleoloc/services/database_swap/live_database_swap.dart';
+import 'package:speleoloc/services/database_swap/set_aside_database_pruner.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/startup/startup_recovery.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_seed.dart';
@@ -79,6 +80,8 @@ Future<void> _startServices(
   // Before anything opens the database: a swap cut short by a kill left the
   // caver's previous database aside, and it goes back now.
   await swap.recoverInterruptedSwap();
+  // Only after the recovery, which may have set a copy aside just now.
+  await const SetAsideDatabasePruner().prune(await swap.liveDatabaseFile());
 
   // Track application start count. Only statistics: a full disk must not
   // stop the app over it.

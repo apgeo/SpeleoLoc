@@ -356,6 +356,9 @@ pornire. Spune pe înțeles ce nu a mers, cu detaliile tehnice ascunse sub
   **Exportă întâi**. Fotografiile și documentele deja salvate pe
   dispozitiv nu se șterg și nici o bază de date anterioară lăsată în
   așteptare de o restaurare întreruptă: rămâne pe dispozitiv sub alt nume.
+  O astfel de copie pusă deoparte se șterge la o pornire ulterioară, după
+  ce are peste 30 de zile și există una mai nouă; cea mai recentă se
+  păstrează întotdeauna.
 
 O bază de date salvată de o versiune mai nouă a aplicației are propriul
 mesaj: actualizați aplicația și baza de date se deschide așa cum este.
