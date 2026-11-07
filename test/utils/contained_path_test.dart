@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:speleoloc/utils/contained_path.dart';
@@ -116,6 +118,22 @@ void main() {
         p.join(base, 'documentation_files', 'speleo_loc.sqlite'),
       );
       expect(containedDocumentsPath(base, '../x'), isNull);
+    });
+
+    test('never resolves a name built from separators, dots and letters '
+        'outside the folder', () {
+      final random = Random(20261107);
+      const pieces = ['a', '.', '..', '/', r'\', 'C:'];
+      for (var i = 0; i < 200; i++) {
+        final name = [
+          for (var j = 0; j < 1 + random.nextInt(8); j++)
+            pieces[random.nextInt(pieces.length)],
+        ].join();
+        final resolved = containedDocumentsPath(base, name);
+        if (resolved != null) {
+          expect(p.isWithin(base, resolved), isTrue, reason: '"$name"');
+        }
+      }
     });
   });
 }

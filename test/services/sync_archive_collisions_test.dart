@@ -8,7 +8,7 @@ import 'package:speleoloc/services/sync/archive_sync_decision_errors.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_merge_engine.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// Two phones each create a record with the same unique name — cave area
 /// "Hall" in a shared cave, place "Siphon" outside any area. The import
