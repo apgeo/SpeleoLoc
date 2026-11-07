@@ -33,12 +33,17 @@ Future<void> expectNoOrphans(AppDatabase db, {String? reason}) async {
 }
 
 /// What [db] would send in a sync archive, table by table: each table's
-/// rows as a sorted list of canonical JSON lines, so two databases holding
-/// the same records compare equal whatever order they were written in.
+/// records as a sorted list of canonical JSON lines, so two databases
+/// holding the same records compare equal whatever order they were written
+/// in.
 ///
-/// Users are matched by name across devices, and each device keeps its own
-/// `system` user, so a user stands here for its name: as a row of `users`,
-/// and wherever another row names one.
+/// A record is what a merge compares: its stamps, authorship and the
+/// readings a device refreshes on its own are left out, as a merge leaves
+/// a row alone when only those differ; and a row stamped deleted, as an
+/// unregistered beacon is, counts as gone. Users are matched by name across
+/// devices, and each device keeps its own `system` user, so a user stands
+/// here for its name: as a row of `users`, and wherever another row names
+/// one.
 Future<Map<String, List<String>>> syncedContent(AppDatabase db) async {
   final names = <String, String>{
     for (final u in await db.select(db.users).get())
@@ -49,15 +54,32 @@ Future<Map<String, List<String>>> syncedContent(AppDatabase db) async {
     for (final table in SyncTableRegistry(db).tables())
       table.name: [
         for (final row in await table.dump())
-          table.name == 'users'
-              ? 'user:${row['username']}'
-              : _canonical({
-                  for (final MapEntry(:key, :value) in row.entries)
-                    key: named(value),
-                }),
+          if (row['deleted_at'] == null)
+            table.name == 'users'
+                ? 'user:${row['username']}'
+                : _canonical({
+                    for (final MapEntry(:key, :value) in row.entries)
+                      if (!_bookkeeping.contains(key)) key: named(value),
+                  }),
       ]..sort(),
   };
 }
+
+const _bookkeeping = <String>{
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'created_by_user_uuid',
+  'last_modified_by_user_uuid',
+  'last_seen_at',
+  'last_battery_mv',
+  'last_temperature_c',
+  'last_humidity_pct',
+  'last_pressure_hpa',
+  'last_movement_counter',
+  'firmware_version',
+  'log_stale_since',
+};
 
 /// Fails when [a] and [b] would not send the same records, field for field,
 /// naming the first table that differs.

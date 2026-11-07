@@ -1,26 +1,51 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/cave_model/cave_default_model_repository.dart';
 import 'package:speleoloc/services/cave_model/place_station_mapping_repository.dart';
 
 import 'sync_device.dart';
 
 /// A cave holding one of each kind of record that can hang on a cave, all
-/// invented: an area with a place in it, a place outside it pinned on a
-/// map, a beacon, a trip with a point at a place and a document on each,
-/// documents linked to the cave and to the area, and a survey-model station
+/// invented: it lies in a surface area, and has an area with a place in it,
+/// a place outside it pinned on a map, a beacon, a trip with a point at
+/// each place and a document on the trip and on one point, documents linked
+/// to the cave and to the area, a default survey model and a station of it
 /// mapped to a place.
 ///
-/// [rows] lists, table by table, what deleting the cave removes. The three
-/// documents themselves outlive the cave, as they do in the app.
+/// [rows] lists, table by table, what deleting the cave removes. The surface
+/// area and the three documents outlive the cave, as they do in the app.
 class PopulatedCave {
-  PopulatedCave._(this.cave, this.area, this.pinnedPlace, this.rows);
+  PopulatedCave._({
+    required this.cave,
+    required this.surfaceArea,
+    required this.area,
+    required this.pinnedPlace,
+    required this.map,
+    required this.trip,
+    required this.visit,
+    required this.recording,
+    required this.model,
+    required this.rows,
+  });
 
   final Uuid cave;
+  final Uuid surfaceArea;
   final Uuid area;
 
-  /// The place outside the area, pinned on the cave's map and visited by
-  /// the trip.
+  /// The place outside the area, pinned on [map] and visited by [trip].
   final Uuid pinnedPlace;
+  final Uuid map;
+  final Uuid trip;
+
+  /// The trip's point at [pinnedPlace], with a photo linked to it.
+  final Uuid visit;
+
+  /// A document linked to [trip].
+  final Uuid recording;
+
+  /// The cave's survey model: linked to the cave and to the area, its
+  /// default model, with a station mapped to [pinnedPlace].
+  final Uuid model;
 
   final Map<String, Set<Uuid>> rows;
 
@@ -29,7 +54,8 @@ class PopulatedCave {
     String title = 'Invented Cave',
   }) async {
     final db = d.db;
-    final cave = await d.caves.addCave(title);
+    final surfaceArea = await d.caves.addSurfaceArea(title: '$title Karst');
+    final cave = await d.caves.addCave(title, surfaceAreaUuid: surfaceArea);
     final area = await d.caves.addCaveArea(cave, 'Invented Hall');
     final inArea = Uuid.v7();
     await db
@@ -122,6 +148,12 @@ class PopulatedCave {
           documentationFileUuid: model,
           station: 'A1',
         );
+    await CaveDefaultModelRepository(
+      db,
+      d.currentUser,
+      d.logger,
+      clock: d.clock,
+    ).setDefaultModel(cave, model);
 
     Future<Set<Uuid>> where(String table, String sql) async => {
       for (final r
@@ -136,21 +168,37 @@ class PopulatedCave {
       'documentation_files_to_geofeatures',
       "geofeature_uuid IN (x'${_hex(cave)}', x'${_hex(area)}')",
     );
+    final defaultModel = await where(
+      'cave_default_survey_models',
+      "cave_uuid = x'${_hex(cave)}'",
+    );
 
-    return PopulatedCave._(cave, area, pinned, {
-      'caves': {cave},
-      'cave_areas': {area},
-      'cave_places': {inArea, pinned},
-      'raster_maps': {map},
-      'cave_place_to_raster_map_definitions': {pin},
-      'cave_place_beacons': {beacon},
-      'cave_trips': {trip},
-      'cave_trip_points': {atPlace, atPool},
-      'documentation_files_to_cave_trips': tripLinks,
-      'documentation_files_to_cave_trip_points': {pointLink},
-      'documentation_files_to_geofeatures': featureLinks,
-      'cave_place_model_stations': {station.uuid},
-    });
+    return PopulatedCave._(
+      cave: cave,
+      surfaceArea: surfaceArea,
+      area: area,
+      pinnedPlace: pinned,
+      map: map,
+      trip: trip,
+      visit: atPlace,
+      recording: recording,
+      model: model,
+      rows: {
+        'caves': {cave},
+        'cave_areas': {area},
+        'cave_places': {inArea, pinned},
+        'raster_maps': {map},
+        'cave_place_to_raster_map_definitions': {pin},
+        'cave_place_beacons': {beacon},
+        'cave_trips': {trip},
+        'cave_trip_points': {atPlace, atPool},
+        'documentation_files_to_cave_trips': tripLinks,
+        'documentation_files_to_cave_trip_points': {pointLink},
+        'documentation_files_to_geofeatures': featureLinks,
+        'cave_place_model_stations': {station.uuid},
+        'cave_default_survey_models': defaultModel,
+      },
+    );
   }
 
   static Future<Uuid> _doc(SyncTestDevice d, String title) =>
