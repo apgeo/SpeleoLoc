@@ -45,13 +45,15 @@ class SilexgisTestDevice {
 
   /// A device signed in to [server] with a chain of its own, carrying the
   /// server's one set. [uploadsNewRoots] is the profile's switch; on, a cave
-  /// made here travels.
+  /// made here travels. The network is not known here, so files go only while
+  /// [filesOnlyOverWifi] is off.
   static Future<SilexgisTestDevice> create(
     FakeSilexgisServer server, {
     required Clock clock,
     String profileUuid = 'p-1',
     bool uploadsNewRoots = true,
     bool sendsFiles = true,
+    bool filesOnlyOverWifi = false,
   }) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     late ChangeLogger loggerRef;
@@ -83,6 +85,7 @@ class SilexgisTestDevice {
       syncSetId: server.setId,
       uploadsNewRoots: uploadsNewRoots,
       sendsFiles: sendsFiles,
+      filesOnlyOverWifi: filesOnlyOverWifi,
     );
     await profiles.save(profile);
     await tokens.write(profileUuid, server.signIn());
@@ -155,8 +158,17 @@ class SilexgisTestDevice {
   Future<void> sync({bool fromBeginning = false}) =>
       controller.syncDefault(fromBeginning: fromBeginning);
 
-  Future<void> dispose() async {
+  bool _controllerDisposed = false;
+
+  /// Disposes the controller as a database swap does, once.
+  void disposeController() {
+    if (_controllerDisposed) return;
+    _controllerDisposed = true;
     controller.dispose();
+  }
+
+  Future<void> dispose() async {
+    disposeController();
     await db.close();
     if (documentsDir.existsSync()) {
       await documentsDir.delete(recursive: true);

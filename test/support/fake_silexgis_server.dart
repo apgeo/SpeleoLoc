@@ -76,9 +76,17 @@ class FakeSilexgisServer {
   /// failure.
   final List<FakeSilexgisRequest> requests = <FakeSilexgisRequest>[];
 
+  /// What went wrong inside the fake while it answered. A test that expects
+  /// a run to succeed checks this is empty.
+  final List<Object> faults = <Object>[];
+
   /// Rows whose every upload is refused with the code given, as a server
   /// answers a row this account may not write.
   final Map<String, String> rejectRows = <String, String>{};
+
+  /// Called with each request as it arrives, before it is answered, so a test
+  /// can act at a chosen moment of a run.
+  void Function(FakeSilexgisRequest request)? onRequest;
 
   /// A client for one device. Every device of a test talks to the same state.
   http.Client client() => _FakeSilexgisClient(this);
@@ -467,7 +475,8 @@ class FakeSilexgisServer {
     Map<String, Object?> item,
   ) {
     final store = _items[section] ??= <String, _Item>{};
-    final id = item['id']! as String;
+    // A document link is named by the server, which mints its identifier.
+    final id = item['id'] as String? ?? 'link-${++_minted}';
     final base = item['baseRevision'] as String?;
     final existing = store[id];
     final rejectedWith = rejectRows[id];
@@ -664,12 +673,21 @@ class FakeSilexgisServer {
       utf8.decode(bodyBytes, allowMalformed: true),
     );
     requests.add(recorded);
+    onRequest?.call(recorded);
 
     final path = request.url.path;
     final refusal = _refuseNext.remove(path);
-    final answer = refusal != null
-        ? _Answer.problem(refusal.status, refusal.code, refusal.detail)
-        : _route(recorded, bodyBytes);
+    final _Answer answer;
+    try {
+      answer = refusal != null
+          ? _Answer.problem(refusal.status, refusal.code, refusal.detail)
+          : _route(recorded, bodyBytes);
+    } on Object catch (e) {
+      // The client would report it as a transport failure and carry on;
+      // kept here so a test can say the fake itself broke.
+      faults.add(e);
+      rethrow;
+    }
     if (_loseNext.remove(path)) {
       throw const SocketException('Connection reset by peer');
     }

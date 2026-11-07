@@ -30,6 +30,7 @@ void main() {
     b = await SilexgisTestDevice.create(server, clock: clock);
   });
   tearDown(() async {
+    expect(server.faults, isEmpty);
     await a.dispose();
     await b.dispose();
   });
