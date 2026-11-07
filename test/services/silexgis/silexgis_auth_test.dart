@@ -461,6 +461,17 @@ void main() {
         ),
         'a 502 with no body': () =>
             ScriptedResponse(path: SilexgisContract.tokenPath, status: 502),
+        'a 502 page from a gateway': () => ScriptedResponse(
+          path: SilexgisContract.tokenPath,
+          status: 502,
+          body: '<html><body>Bad Gateway</body></html>',
+          headers: const <String, String>{'content-type': 'text/html'},
+        ),
+        'a 503 in JSON that is no OAuth error': () => ScriptedResponse.json(
+          path: SilexgisContract.tokenPath,
+          status: 503,
+          json: <String, Object?>{'status': 'down'},
+        ),
         'a 429': () =>
             ScriptedResponse(path: SilexgisContract.tokenPath, status: 429),
         'a redirect': () => ScriptedResponse(
@@ -483,6 +494,19 @@ void main() {
         'a 200 with no access token in it': () => ScriptedResponse.json(
           path: SilexgisContract.tokenPath,
           json: <String, Object?>{'token_type': 'Bearer'},
+        ),
+        'a 200 whose members have the wrong types': () => ScriptedResponse.json(
+          path: SilexgisContract.tokenPath,
+          json: <String, Object?>{
+            'access_token': 42,
+            'token_type': 'Bearer',
+            'expires_in': 'soon',
+            'refresh_token': <String>['refresh-2'],
+          },
+        ),
+        'a 200 that is a JSON list': () => ScriptedResponse.json(
+          path: SilexgisContract.tokenPath,
+          json: const <Object?>['access-2'],
         ),
       };
 
