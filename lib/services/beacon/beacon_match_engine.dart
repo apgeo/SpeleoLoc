@@ -1,4 +1,4 @@
-import 'package:speleoloc/screens/settings/settings_helper.dart';
+import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/constants.dart';
 
 /// Tuning for automatic beacon detection. Persisted per device (detection
@@ -101,15 +101,15 @@ class BeaconDetectionConfig {
   }
 
   static Future<BeaconDetectionConfig> load() async {
-    final j = await SettingsHelper.loadJsonConfig(
+    final j = await configurationRepository.readJson(
       beaconDetectionConfigKey,
-      () => const BeaconDetectionConfig().toJson(),
+      defaults: () => const BeaconDetectionConfig().toJson(),
     );
     return fromJson(j);
   }
 
   Future<void> save() =>
-      SettingsHelper.saveJsonConfig(beaconDetectionConfigKey, toJson());
+      configurationRepository.writeJson(beaconDetectionConfigKey, toJson());
 }
 
 /// Pure detection logic: decides when a stream of beacon sightings

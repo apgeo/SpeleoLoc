@@ -8,6 +8,8 @@ import 'package:speleoloc/providers/active_trip_reconciler_provider.dart';
 import 'package:speleoloc/providers/database_swap_providers.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
+import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
+import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/services/database_swap/live_database_swap.dart';
 import 'package:speleoloc/services/database_swap/set_aside_database_pruner.dart';
 import 'package:speleoloc/services/service_locator.dart';
@@ -17,7 +19,9 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/beacon_detection_screen_host.dart';
 
 // DSN is injected at build time: --dart-define=SENTRY_DSN=https://...
 // An empty DSN means Sentry.init is a no-op, so debug/CI builds without
@@ -58,6 +62,16 @@ Future<void> _runApp() async {
 
   // Register built-in document format handlers (editors & viewers).
   registerBuiltInDocumentFormats();
+
+  final beaconScreens = BeaconDetectionScreenHost(
+    navigator: navigatorKey,
+    trips: () => container.read(caveTripServiceProvider),
+    rasterMaps: () => container.read(rasterMapRepositoryProvider),
+    definitions: () => container.read(definitionRepositoryProvider),
+    lastLocated: container.read(lastLocatedPlaceProvider),
+  );
+  BeaconDetectionService.instance.attach(beaconScreens);
+  BeaconAlertNotifier.instance.attachPlaceOpener(beaconScreens.openPlacePage);
 
   final swap = container.read(liveDatabaseSwapProvider);
   await startApp(

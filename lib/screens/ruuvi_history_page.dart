@@ -14,6 +14,7 @@ import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_history_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/widgets/location_services_prompt.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
 
 enum _Metric { temperature, humidity, pressure }
@@ -64,7 +65,7 @@ class _RuuviHistoryPageState extends ConsumerState<RuuviHistoryPage> {
       return;
     }
     if (!mounted) return;
-    if (!await BeaconScanHelper.ensureLocationServicesEnabled(context)) {
+    if (!await ensureLocationServicesEnabled(context)) {
       return;
     }
     setState(() {

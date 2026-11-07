@@ -10,6 +10,7 @@ import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/location_services_prompt.dart';
 
 /// A tag chosen from the nearby-scan picker: an iBeacon (identity triple)
 /// or a Ruuvi tag (identity MAC), discriminated by [beaconType].
@@ -64,7 +65,7 @@ class BeaconPickerDialog extends StatefulWidget {
     // BLE scan results are also gated behind the location master switch on
     // Android: with it off the scan silently returns nothing and the plugin's
     // own check hangs, so prompt the user to enable it before opening.
-    if (!await BeaconScanHelper.ensureLocationServicesEnabled(context)) {
+    if (!await ensureLocationServicesEnabled(context)) {
       return null;
     }
     if (!context.mounted) return null;
