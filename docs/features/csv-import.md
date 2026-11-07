@@ -199,7 +199,10 @@ code generation pass over them.
 A row whose name is the name of a place in this cave counts as that
 place; every other row creates a new place. Capitalisation is ignored,
 both here and in the warning dialog, so "Sump" and "sump" are the same
-place.
+place. So is the difference between the two ways of writing the
+Romanian ș and ț: older keyboards and spreadsheets type them with a
+cedilla (ş, ţ), and "Sala Ştefan" in the file is the place you saved as
+"Sala Ștefan". The place keeps the spelling it already had.
 
 A cave can hold two places with the same name when they sit in
 different cave areas. A row naming such a place cannot tell which one

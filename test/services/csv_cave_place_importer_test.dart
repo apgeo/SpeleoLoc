@@ -570,12 +570,62 @@ void main() {
       ], CSVCavePlacesImportConfig(caveUuid: cave, cavePlaceNameColumn: 0));
 
       expect(result.cavePlacesCreated, 0);
-      expect((await db.select(db.cavePlaces).get()).single.uuid, existing);
+      final place = (await db.select(db.cavePlaces).get()).single;
+      expect(place.uuid, existing);
+      expect(place.title, 'Sala \u0218tefan');
     },
-    skip:
-        'names are matched after lower-casing only, so cedilla and '
-        'comma-below letters differ',
   );
+
+  test('a cave and an area match across the cedilla and comma-below letters, '
+      'in either case, and keep their stored spelling', () async {
+    final cave = Uuid.v7();
+    await db
+        .into(db.caves)
+        .insert(
+          CavesCompanion.insert(uuid: cave, title: 'Pe\u0219tera Mic\u0103'),
+        );
+    final area = Uuid.v7();
+    await db
+        .into(db.caveAreas)
+        .insert(
+          CaveAreasCompanion.insert(
+            uuid: area,
+            title: 'Galeria \u021Aurcanilor',
+            caveUuid: cave,
+          ),
+        );
+
+    final result = await importer.importRows([
+      CSVCavePlaceImportRow(
+        caveName: 'PE\u015ETERA MIC\u0102',
+        cavePlaceName: 'Punct 1',
+        caveArea: 'galeria \u0163urcanilor',
+        lineNumber: 2,
+      ),
+      CSVCavePlaceImportRow(
+        caveName: 'Pe\u015Ftera Mic\u0103',
+        cavePlaceName: 'Punct 2',
+        caveArea: 'Galeria \u0162urcanilor',
+        lineNumber: 3,
+      ),
+    ], multiCave);
+
+    expect(result.cavesCreated, 0);
+    expect(result.caveAreasCreated, 0);
+    expect(result.cavePlacesCreated, 2);
+    expect(
+      (await db.select(db.caves).get()).single.title,
+      'Pe\u0219tera Mic\u0103',
+    );
+    expect(
+      (await db.select(db.caveAreas).get()).single.title,
+      'Galeria \u021Aurcanilor',
+    );
+    final places = await db.select(db.cavePlaces).get();
+    expect(places.map((p) => (p.caveUuid, p.caveAreaUuid)).toSet(), {
+      (cave, area),
+    });
+  });
 
   test("parsing records each row's line in the file", () {
     final rows = importer.parseRows(

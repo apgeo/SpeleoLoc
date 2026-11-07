@@ -212,7 +212,11 @@ să rulați peste ele o trecere de generare a codurilor.
 Un rând al cărui nume este numele unui loc din această peșteră contează
 drept acel loc; orice alt rând creează un loc nou. Majusculele și
 minusculele sunt ignorate, atât aici, cât și în dialogul de avertizare,
-așa că „Sifon” și „sifon” sunt același loc.
+așa că „Sifon” și „sifon” sunt același loc. La fel și diferența dintre
+cele două feluri de a scrie ș și ț: tastaturile și foile de calcul mai
+vechi le scriu cu sedilă (ş, ţ), iar „Sala Ştefan” din fișier este locul
+pe care l-ați salvat ca „Sala Ștefan”. Locul își păstrează scrierea pe
+care o avea deja.
 
 O peșteră poate ține două locuri cu același nume când stau în zone
 diferite ale peșterii. Un rând care numește un astfel de loc nu poate
