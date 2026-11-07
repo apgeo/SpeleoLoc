@@ -374,9 +374,14 @@ Iterable<String> _zipsOnly(Iterable<String> names) =>
     names.where((n) => n.endsWith('.zip'));
 
 /// Drives the controller through [FtpSyncController.progress] and returns the
-/// final progress once it reaches a terminal phase.
+/// final progress once it reaches a terminal phase. A run that never ends
+/// fails the test with its last progress, rather than hanging the suite.
 Future<FtpSyncProgress> _waitForTerminal(FtpSyncController c) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 30));
   while (c.progress.isRunning || c.progress.phase == FtpSyncPhase.idle) {
+    if (DateTime.now().isAfter(deadline)) {
+      fail('sync run did not end: ${c.progress.phase}');
+    }
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
   return c.progress;
