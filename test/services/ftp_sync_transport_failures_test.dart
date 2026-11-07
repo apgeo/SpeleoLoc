@@ -126,47 +126,35 @@ void main() {
       expect(await caveTitles(a), ['Invented Cave B']);
     });
 
-    test(
-      'after an import does not download that archive again',
-      () async {
-        final archive = await publishFromA();
-        await b.device.caves.addCave('Invented Cave B');
-        folder.fault = (step, _) => step == FtpFolderStep.upload
-            ? const FtpTransportException('connection dropped')
-            : null;
+    test('after an import does not download that archive again', () async {
+      final archive = await publishFromA();
+      await b.device.caves.addCave('Invented Cave B');
+      folder.fault = (step, _) => step == FtpFolderStep.upload
+          ? const FtpTransportException('connection dropped')
+          : null;
 
-        final end = await b.sync();
+      final end = await b.sync();
 
-        expect(end.phase, FtpSyncPhase.failed);
-        expect(await caveTitles(b), contains('Invented Cave A'));
+      expect(end.phase, FtpSyncPhase.failed);
+      expect(await caveTitles(b), contains('Invented Cave A'));
 
-        folder.fault = null;
-        await syncRound([b]);
-        expect(downloadsOf(archive), 1);
-      },
-      skip:
-          'fix pending: a run that fails after importing forgets which '
-          'archives it imported',
-    );
+      folder.fault = null;
+      await syncRound([b]);
+      expect(downloadsOf(archive), 1);
+    });
 
-    test(
-      'part-way leaves no scratch files behind',
-      () async {
-        await b.device.caves.addCave('Invented Cave B');
-        final before = scratch();
-        folder.fault = (step, _) => step == FtpFolderStep.upload
-            ? const FtpTransportException('connection dropped')
-            : null;
+    test('part-way leaves no scratch files behind', () async {
+      await b.device.caves.addCave('Invented Cave B');
+      final before = scratch();
+      folder.fault = (step, _) => step == FtpFolderStep.upload
+          ? const FtpTransportException('connection dropped')
+          : null;
 
-        final end = await b.sync();
+      final end = await b.sync();
 
-        expect(end.phase, FtpSyncPhase.failed);
-        expect(scratch(), before);
-      },
-      skip:
-          'fix pending: a run that fails part-way leaves its scratch folder '
-          'in the temporary files',
-    );
+      expect(end.phase, FtpSyncPhase.failed);
+      expect(scratch(), before);
+    }, skip: 'a run that fails part-way leaves its scratch folder behind');
   });
 
   test('a change made at the moment of the last upload does not upload '

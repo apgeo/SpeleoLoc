@@ -305,6 +305,11 @@ class FtpSyncController extends ChangeNotifier {
 
     final transport = _transportBuilder(profile);
     final tempDir = await _syncWorkspace();
+    // What the run has learnt about the server's archives, kept even when it
+    // stops part-way: an archive already imported is not downloaded again
+    // by the next run.
+    Set<String>? seenSoFar;
+    FtpArchiveDeferrals? deferralsSoFar;
     try {
       final connectStartedAt = DateTime.now();
       await transport.connect(password: password);
@@ -325,6 +330,7 @@ class FtpSyncController extends ChangeNotifier {
       token.throwIfCancelled();
 
       final seen = await _loadSeenArchives();
+      seenSoFar = seen;
       final myDeviceUuid = _currentUser.deviceUuid.value;
       final myDeviceId = myDeviceUuid?.toString().replaceAll('-', '');
       final deviceKeys = _DeviceKeys(
@@ -345,6 +351,7 @@ class FtpSyncController extends ChangeNotifier {
       final deferrals = FtpArchiveDeferrals.parse(
         await _readConfig(ConfigKey.ftpUnreadableArchives),
       );
+      deferralsSoFar = deferrals;
       final remoteNames = {for (final e in remoteEntries) e.name};
       deferrals.retainOnly(remoteNames);
       final held = <String>{};
@@ -971,6 +978,8 @@ class FtpSyncController extends ChangeNotifier {
         );
         await _saveSeenArchives(seen);
         await _saveDeferrals(deferrals);
+        seenSoFar = null;
+        deferralsSoFar = null;
         try {
           await tempDir.delete(recursive: true);
         } catch (e, st) {
@@ -1139,6 +1148,8 @@ class FtpSyncController extends ChangeNotifier {
       );
       await _saveSeenArchives(seen);
       await _saveDeferrals(deferrals);
+      seenSoFar = null;
+      deferralsSoFar = null;
       await _saveLastUploadAt(
         profile.profileUuid,
         DateTime.now().millisecondsSinceEpoch,
@@ -1265,6 +1276,7 @@ class FtpSyncController extends ChangeNotifier {
       } catch (e, st) {
         _log.fine('best-effort transport.disconnect failed', e, st);
       }
+      await _keepWhatTheRunLearnt(seenSoFar, deferralsSoFar);
       _cancelToken = null;
       _runCompleter = null;
       if (!completer.isCompleted) completer.complete();
@@ -1299,6 +1311,21 @@ class FtpSyncController extends ChangeNotifier {
     final raw = await _readConfig(ConfigKey.ftpSeenArchives);
     if (raw == null || raw.isEmpty) return <String>{};
     return raw.split('\n').where((s) => s.isNotEmpty).toSet();
+  }
+
+  /// Saves the seen set and deferrals of a run that ended before saving
+  /// them itself. Best-effort: the run has already failed or stopped, and
+  /// the database may have been replaced and closed meanwhile.
+  Future<void> _keepWhatTheRunLearnt(
+    Set<String>? seen,
+    FtpArchiveDeferrals? deferrals,
+  ) async {
+    try {
+      if (seen != null) await _saveSeenArchives(seen);
+      if (deferrals != null) await _saveDeferrals(deferrals);
+    } catch (e, st) {
+      _log.warning('could not save the archives this run saw', e, st);
+    }
   }
 
   Future<void> _saveSeenArchives(Set<String> seen) async {
