@@ -154,7 +154,7 @@ void main() {
 
       expect(end.phase, FtpSyncPhase.failed);
       expect(scratch(), before);
-    }, skip: 'a run that fails part-way leaves its scratch folder behind');
+    });
   });
 
   test('a change made at the moment of the last upload does not upload '

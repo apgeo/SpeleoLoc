@@ -980,15 +980,6 @@ class FtpSyncController extends ChangeNotifier {
         await _saveDeferrals(deferrals);
         seenSoFar = null;
         deferralsSoFar = null;
-        try {
-          await tempDir.delete(recursive: true);
-        } catch (e, st) {
-          _log.fine(
-            'best-effort tempDir delete failed: ${tempDir.path}',
-            e,
-            st,
-          );
-        }
 
         if (importErrors > 0) {
           final summary =
@@ -1167,11 +1158,6 @@ class FtpSyncController extends ChangeNotifier {
           st,
         );
       }
-      try {
-        await tempDir.delete(recursive: true);
-      } catch (e, st) {
-        _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
-      }
 
       if (importErrors > 0) {
         final summary =
@@ -1277,6 +1263,13 @@ class FtpSyncController extends ChangeNotifier {
         _log.fine('best-effort transport.disconnect failed', e, st);
       }
       await _keepWhatTheRunLearnt(seenSoFar, deferralsSoFar);
+      // Every way out of the run, failed and cancelled ones included, leaves
+      // no downloaded archive or half-made upload in the temporary files.
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (e, st) {
+        _log.fine('best-effort tempDir delete failed: ${tempDir.path}', e, st);
+      }
       _cancelToken = null;
       _runCompleter = null;
       if (!completer.isCompleted) completer.complete();
