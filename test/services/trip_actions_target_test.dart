@@ -138,4 +138,33 @@ void main() {
       expect((await row(ended)).tripEndedAt, isNull);
     });
   });
+
+  group('starting', () {
+    test(
+      'a second start never leaves two trips open on this device',
+      () async {
+        final first = await service.startTrip(caveUuid, 'First');
+
+        Object? refused;
+        try {
+          await service.startTrip(caveUuid, 'Second');
+        } on ValidationException catch (e) {
+          refused = e;
+        }
+
+        final open = await (db.select(
+          db.caveTrips,
+        )..where((t) => t.tripEndedAt.isNull())).get();
+        expect(open.length, 1);
+        if (refused != null) {
+          expect(service.activeTripIdNotifier.value, first);
+        } else {
+          expect(service.activeTripIdNotifier.value, open.single.uuid);
+          expect((await row(first)).tripEndedAt, isNotNull);
+        }
+      },
+      skip:
+          'a second start leaves the first trip open with nothing tracking it',
+    );
+  });
 }
