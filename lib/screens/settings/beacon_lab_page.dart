@@ -15,6 +15,7 @@ import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
 import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/location_services_prompt.dart';
 
 /// Phase-0 diagnostics screen for BLE beacon hardware validation.
 ///
@@ -167,7 +168,7 @@ class _BeaconLabPageState extends State<BeaconLabPage>
     if (!mounted) return false;
     // BLE scan results also need the location master switch on (Android);
     // otherwise both ranging and raw scans come back empty.
-    return BeaconScanHelper.ensureLocationServicesEnabled(context);
+    return ensureLocationServicesEnabled(context);
   }
 
   Future<void> _startRanging() async {

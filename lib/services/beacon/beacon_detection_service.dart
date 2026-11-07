@@ -2,32 +2,29 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dchs_flutter_beacon/dchs_flutter_beacon.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart'
+    show AppLifecycleState, SchedulerBinding;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
 import 'package:speleoloc/services/beacon/beacon_alert_sound.dart';
+import 'package:speleoloc/services/beacon/beacon_detection_host.dart';
 import 'package:speleoloc/services/beacon/beacon_enabled_notice.dart';
-import 'package:speleoloc/screens/settings/settings_helper.dart';
 import 'package:speleoloc/services/beacon/beacon_match_engine.dart';
 import 'package:speleoloc/services/beacon/beacon_repository.dart';
 import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/services/beacon/shared_beacon_ranging.dart';
 import 'package:speleoloc/services/location/last_located_place.dart';
-import 'package:speleoloc/services/map/best_raster_map_finder.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_advertisement_parser.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/build_config.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/utils/navigator_key.dart';
-import 'package:speleoloc/widgets/snack_bar_service.dart';
-import 'package:speleoloc/widgets/trip_record_feedback.dart';
 
 /// Foreground automatic beacon detection (plan Phase 2).
 ///
@@ -42,8 +39,9 @@ import 'package:speleoloc/widgets/trip_record_feedback.dart';
 ///  2. stamps beacon health (last seen),
 ///  3. records a trip point when a trip is active in that cave
 ///     (exactly like a QR scan),
-///  4. shows a toast — or navigates to the place when
-///     [BeaconDetectionConfig.autoOpenPlace] is on.
+///  4. tells the caver through the [BeaconDetectionHost] the app attached —
+///     and has it open the place when [BeaconDetectionConfig.autoOpenPlace]
+///     is on.
 ///
 /// Entrance start/stop-trip prompts remain QR-only for now: modal dialogs
 /// firing while walking past a beacon would be intrusive; Phase 4 revisits
@@ -57,8 +55,10 @@ class BeaconDetectionService {
   BeaconDetectionService._({
     bool featureEnabled = BuildConfig.beaconsEnabled,
     Future<BeaconDetectionConfig> Function()? loadConfig,
+    BeaconDetectionHost? host,
   }) : _featureEnabled = featureEnabled,
-       _loadConfig = loadConfig ?? BeaconDetectionConfig.load {
+       _loadConfig = loadConfig ?? BeaconDetectionConfig.load,
+       _host = host {
     // The registration watch subscribes against the appDatabase instance
     // current at start; re-subscribe whenever a restore/import swaps it.
     onAppDatabaseReplaced(() => unawaited(restart()));
@@ -68,6 +68,7 @@ class BeaconDetectionService {
   factory BeaconDetectionService.forTesting({
     required bool featureEnabled,
     required Future<BeaconDetectionConfig> Function() loadConfig,
+    BeaconDetectionHost? host,
   }) = BeaconDetectionService._;
 
   static final BeaconDetectionService instance = BeaconDetectionService._();
@@ -78,6 +79,14 @@ class BeaconDetectionService {
   /// has no screen to switch it off.
   final bool _featureEnabled;
   final Future<BeaconDetectionConfig> Function() _loadConfig;
+
+  /// The screens' side of detection. Until the app attaches one, detection
+  /// still records trip points and alerts in the background, but says
+  /// nothing on screen.
+  BeaconDetectionHost? _host;
+
+  /// Called once at start, before detection can first run.
+  void attach(BeaconDetectionHost host) => _host = host;
 
   final _log = AppLogger.of('BeaconDetectionService');
 
@@ -235,15 +244,13 @@ class BeaconDetectionService {
   Future<bool> setEnabled(bool enable) async {
     if (enable) {
       if (!await BeaconScanHelper.ensureAndroidPermissions()) {
-        SnackBarService.showWarning(
-          LocServ.inst.t('beacon_lab_permissions_missing'),
-        );
+        _host?.permissionsMissing();
         return false;
       }
       try {
         await BeaconScanHelper.initializeScanning(checkPermissions: true);
       } on PlatformException catch (e) {
-        SnackBarService.showWarning(e.message ?? e.code);
+        _host?.scanningRefused(e.message ?? e.code);
         return false;
       }
     }
@@ -265,7 +272,7 @@ class BeaconDetectionService {
     enabledListenable.value = enable;
     await restart();
     if (enable) {
-      _showEnabledNotice(
+      _host?.switchedOn(
         enabledNoticeFor(
           running: _running,
           backgroundEnabled: config.backgroundEnabled,
@@ -294,32 +301,6 @@ class BeaconDetectionService {
         ? BeaconEnabledNotice.stopsWhenLockedUnlessBackground
         : BeaconEnabledNotice.stopsWhenLocked;
   }
-
-  void _showEnabledNotice(BeaconEnabledNotice notice) {
-    final loc = LocServ.inst;
-    switch (notice) {
-      case BeaconEnabledNotice.none:
-        break;
-      case BeaconEnabledNotice.notRunning:
-        SnackBarService.showWarning(loc.t('beacon_detection_not_running'));
-      case BeaconEnabledNotice.stopsWhenLocked:
-        SnackBarService.showInfo(
-          loc.t('beacon_detection_stops_when_locked'),
-          duration: _enabledNoticeDuration,
-        );
-      case BeaconEnabledNotice.stopsWhenLockedUnlessBackground:
-        SnackBarService.showInfo(
-          loc.t('beacon_detection_stops_when_locked_hint', {
-            'option': loc.t('beacon_background_enable'),
-            'page': '${loc.t('settings')} → ${loc.t('settings_beacons')}',
-          }),
-          duration: _enabledNoticeDuration,
-        );
-    }
-  }
-
-  /// Long enough to read two sentences.
-  static const _enabledNoticeDuration = Duration(seconds: 8);
 
   /// App lifecycle hook. With background detection enabled the scan
   /// survives app pause inside a foreground service (duty-cycled);
@@ -355,7 +336,7 @@ class BeaconDetectionService {
   /// service starts with detection, not when the app leaves the screen.
   Future<void> _startServiceWhileVisible() async {
     if (!Platform.isAndroid || _serviceHasLocation) return;
-    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    final lifecycle = SchedulerBinding.instance.lifecycleState;
     if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
     // A service started from the background lacks the location type;
     // replace it now that the app is visible.
@@ -746,13 +727,9 @@ class BeaconDetectionService {
       );
     } else {
       if (soundEnabled) unawaited(BeaconAlertSound.instance.play());
-      showTripRecordFeedback(
-        caveTripService,
-        tripOutcome,
-        lead: '${LocServ.inst.t('beacon_place_detected')}: "${place.title}"',
-      );
+      _host?.placeDetected(place, tripOutcome);
       if ((_engine?.config.autoOpenPlace ?? false)) {
-        await _openPlace(place);
+        await _host?.openPlace(place);
       }
     }
   }
@@ -767,7 +744,8 @@ class BeaconDetectionService {
         if (m.cavePlace.caveUuid == activeTripCaveId) return m;
       }
     }
-    final lastCaveRaw = await SettingsHelper.loadStringConfig(lastOpenCaveKey);
+    final lastCaveRaw =
+        await configurationRepository.readString(lastOpenCaveKey) ?? '';
     if (lastCaveRaw.isNotEmpty) {
       try {
         final lastCave = Uuid.parse(lastCaveRaw);
@@ -779,33 +757,5 @@ class BeaconDetectionService {
       }
     }
     return matches.first;
-  }
-
-  /// Mirrors the QR flow's navigation: open the best raster map with the
-  /// place pinned, falling back to the place page.
-  Future<void> _openPlace(CavePlace place) async {
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    lastLocated.record(place.uuid);
-    final bestMapUuid = await BestRasterMapFinder(
-      rasterMapRepository,
-      definitionRepository,
-    ).bestMapFor(place);
-    if (!context.mounted) return;
-    if (bestMapUuid != null) {
-      await AppRoutes.pushCavePlaceView(
-        context,
-        cavePlaceUuid: place.uuid,
-        caveUuid: place.caveUuid,
-        initialRasterMapUuid: bestMapUuid,
-      );
-    } else {
-      await AppRoutes.pushCavePlace(
-        context,
-        caveUuid: place.caveUuid,
-        cavePlaceUuid: place.uuid,
-      );
-    }
   }
 }
