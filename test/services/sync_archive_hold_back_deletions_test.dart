@@ -23,8 +23,8 @@ void main() {
     b = await SyncTestDevice.create();
   });
   tearDown(() async {
-    await a.db.close();
-    await b.db.close();
+    await a.dispose();
+    await b.dispose();
     await tmp.delete(recursive: true);
   });
 

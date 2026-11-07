@@ -25,7 +25,7 @@ void main() {
     final a = await SyncTestDevice.create(
       executor: NativeDatabase.memory().interceptWith(trigger),
     );
-    addTearDown(a.db.close);
+    addTearDown(a.dispose);
 
     final cave = await a.caves.addCave('Invented Cave');
     await a.places.addCavePlace(cave, 'Doomed');

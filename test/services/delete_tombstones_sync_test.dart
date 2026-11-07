@@ -29,7 +29,7 @@ void main() {
     'trip delete writes tombstones for trip, points and doc links',
     () async {
       final d = await SyncTestDevice.create();
-      addTearDown(d.db.close);
+      addTearDown(d.dispose);
 
       final caveUuid = await d.caves.addCave('Cave');
       await d.places.addCavePlace(caveUuid, 'P1');
@@ -75,7 +75,7 @@ void main() {
 
   test('trip report template delete writes a tombstone', () async {
     final d = await SyncTestDevice.create();
-    addTearDown(d.db.close);
+    addTearDown(d.dispose);
 
     final uuid = await d.trips.insertTripReportTemplate(
       title: 'Template',
@@ -95,7 +95,7 @@ void main() {
     'documentation file delete writes tombstones for file and links',
     () async {
       final d = await SyncTestDevice.create();
-      addTearDown(d.db.close);
+      addTearDown(d.dispose);
 
       final caveUuid = await d.caves.addCave('Cave');
       final docUuid = await d.db.insertDocumentationFile(
@@ -129,8 +129,8 @@ void main() {
     () async {
       final a = await SyncTestDevice.create();
       final b = await SyncTestDevice.create();
-      addTearDown(a.db.close);
-      addTearDown(b.db.close);
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
 
       // Device A records a trip with one scanned point.
       final caveUuid = await a.caves.addCave('Shared Cave');
@@ -188,8 +188,8 @@ void main() {
     () async {
       final a = await SyncTestDevice.create();
       final b = await SyncTestDevice.create();
-      addTearDown(a.db.close);
-      addTearDown(b.db.close);
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
 
       final caveUuid = await a.caves.addCave('Beacon Cave');
       await a.places.addCavePlace(caveUuid, 'P1');
@@ -238,8 +238,8 @@ void main() {
   test('a screen watching trips hears a synced trip arrive and go', () async {
     final a = await SyncTestDevice.create();
     final b = await SyncTestDevice.create();
-    addTearDown(a.db.close);
-    addTearDown(b.db.close);
+    addTearDown(a.dispose);
+    addTearDown(b.dispose);
 
     final caveUuid = await a.caves.addCave('Watched Cave');
     final tripUuid = await a.db.insertCaveTrip(

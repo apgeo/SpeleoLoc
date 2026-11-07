@@ -22,8 +22,8 @@ void main() {
     b = await SyncTestDevice.create();
   });
   tearDown(() async {
-    await a.db.close();
-    await b.db.close();
+    await a.dispose();
+    await b.dispose();
     await tmp.delete(recursive: true);
   });
 
@@ -73,7 +73,7 @@ void main() {
   test('a deletion this device received from a third device is not undone '
       'by an older snapshot either', () async {
     final c = await SyncTestDevice.create();
-    addTearDown(c.db.close);
+    addTearDown(c.dispose);
     final cave = await c.caves.addCave('Invented Cave');
     await c.places.addCavePlace(cave, 'X');
     final x = await c.placeUuid(cave, 'X');
@@ -226,7 +226,7 @@ void main() {
       );
       await tick();
     });
-    tearDown(() => c.db.close());
+    tearDown(() => c.dispose());
 
     test('comes back on every phone, also once the visit is deleted', () async {
       await b.sync.importFromZip(deletion.path);
