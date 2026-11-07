@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
-/// A test that contacts a real server is tagged `live`, which `dart_test.yaml`
-/// skips unless asked for. A new one that forgets the tag would run in every
-/// plain `flutter test`, and sign in wherever its environment points.
+/// A test that contacts a real server is tagged `live`. CI leaves the tag out
+/// with `--exclude-tags live`; elsewhere each such file skips itself unless
+/// its own environment variable is set. A new one that forgets the tag
+/// escapes that exclusion, and signs in wherever its environment points.
 void main() {
   test('every live test file is tagged live', () {
     final files =
