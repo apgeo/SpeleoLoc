@@ -113,6 +113,14 @@ class FakeSilexgisServer {
   /// of a chain of its own.
   String signIn() => _mintRefresh(_chains++);
 
+  /// An access token good for [accessLifetime] from now, for a test that
+  /// stands a fixed credential in for the sign-in.
+  String issueAccessToken() {
+    final access = 'access-${++_minted}';
+    _accessTokens[access] = _clock.now().add(accessLifetime);
+    return access;
+  }
+
   /// The refresh tokens presented to the token endpoint, in order.
   final List<String> refreshesPresented = <String>[];
 
