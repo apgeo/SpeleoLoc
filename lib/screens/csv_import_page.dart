@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
-import 'package:csv/csv.dart';
+import 'package:speleoloc/services/csv_text_parser.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -148,7 +148,7 @@ class _CSVImportPageState extends State<CSVImportPage>
 
       final file = File(path);
       final content = await file.readAsString(encoding: utf8);
-      final csvData = _parseCSV(content);
+      final csvData = parseCsvText(content);
 
       if (csvData.isEmpty) {
         setState(() {
@@ -173,17 +173,6 @@ class _CSVImportPageState extends State<CSVImportPage>
         _errorMessage = '${LocServ.inst.t('error')}: $e';
       });
     }
-  }
-
-  List<List<dynamic>> _parseCSV(String csvContent) {
-    final converter = const CsvToListConverter(
-      eol: '\n',
-      shouldParseNumbers: false,
-    );
-    final normalized = csvContent
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n');
-    return converter.convert(normalized);
   }
 
   List<String> _getHeaders(List<List<dynamic>> csvData) {

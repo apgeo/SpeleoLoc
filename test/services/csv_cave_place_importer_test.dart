@@ -544,7 +544,16 @@ void main() {
 
     test('a semicolon-delimited file is read as columns', () {
       expect(parsed('name;code\nA;1\nB;2\n'), [('A', '1'), ('B', '2')]);
-    }, skip: 'the parser splits on commas only');
+      expect(parsed('name;code\r\n"Hall, east";1,5\r\n'), [
+        ('Hall, east', '1,5'),
+      ]);
+    });
+
+    test('the separator is read from the header outside quotes', () {
+      expect(parsed('"name;alias;other",code\nA;B,1\n'), [('A;B', '1')]);
+      expect(parsed('"name, alias";code\nA,B;1\n'), [('A,B', '1')]);
+      expect(parsed('"name\n;;;",code\nA,1\n'), [('A', '1')]);
+    });
   });
 
   test(
