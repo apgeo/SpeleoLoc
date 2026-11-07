@@ -45,7 +45,8 @@ class FakeSilexgisRequest {
 ///
 /// The read streams other than the feature download are not served. Sections
 /// without a rule here (documents, links, trips, people) are stored and
-/// answered as written.
+/// answered as written, and the transfer routes stage whatever bytes they are
+/// sent.
 class FakeSilexgisServer {
   FakeSilexgisServer({
     required Clock clock,

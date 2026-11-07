@@ -196,6 +196,39 @@ void main() {
     });
   });
 
+  test(
+    'a read across several pages brings every row and every removal',
+    () async {
+      final paged = FakeSilexgisServer(clock: clock, pageSizeMax: 2);
+      final writer = await SilexgisTestDevice.create(paged, clock: clock);
+      final reader = await SilexgisTestDevice.create(paged, clock: clock);
+      addTearDown(writer.dispose);
+      addTearDown(reader.dispose);
+      final cave = await writer.caves.addCave('Invented cave');
+      for (final title in <String>['One', 'Two', 'Three', 'Four']) {
+        await writer.places.addCavePlace(cave, title);
+      }
+      await syncOk(writer);
+      await syncOk(reader);
+      expect(await reader.db.select(reader.db.cavePlaces).get(), hasLength(4));
+
+      final gone = (await writer.db.select(writer.db.cavePlaces).get()).first;
+      await writer.places.deleteCavePlace(gone.uuid);
+      later();
+      await writer.places.addCavePlace(cave, 'Five');
+      await syncOk(writer);
+      await syncOk(reader);
+
+      final titles = (await reader.db.select(reader.db.cavePlaces).get())
+          .map((p) => p.title)
+          .toSet();
+      expect(titles, hasLength(4));
+      expect(titles, isNot(contains(gone.title)));
+      expect(titles, contains('Five'));
+      expect(paged.faults, isEmpty);
+    },
+  );
+
   group('a lost answer', () {
     test('to an upload is answered from the first attempt, not applied '
         'twice', () async {
