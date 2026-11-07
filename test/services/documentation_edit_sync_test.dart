@@ -9,7 +9,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/documentation_byte_edit_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// A document edited on one phone reaches another phone that already holds
 /// the earlier version: the row update and the new content both arrive, so

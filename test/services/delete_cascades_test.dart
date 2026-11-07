@@ -6,7 +6,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_area_title_clash_exception.dart';
 import 'package:speleoloc/services/change_logger.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// Deleting a cave, a place or an area removes or detaches everything that
 /// hangs on it, and logs each removal as a delete and each detach as an

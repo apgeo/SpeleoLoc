@@ -4,7 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// How an archive's deletions meet this device's data: a deletion is never
 /// undone by a snapshot older than it, reaches every table it names, takes

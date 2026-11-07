@@ -8,7 +8,7 @@ import 'package:drift/drift.dart'
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// An archive is one snapshot of the device: an edit made while the export
 /// reads the tables lands wholly before it or wholly after it, never between

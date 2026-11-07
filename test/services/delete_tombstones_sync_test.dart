@@ -1,71 +1,10 @@
 import 'dart:io';
 
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:speleoloc/data/repositories/configuration_repository.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
-import 'package:speleoloc/services/beacon/beacon_repository.dart';
-import 'package:speleoloc/services/cave_place_repository.dart';
-import 'package:speleoloc/services/cave_repository.dart';
-import 'package:speleoloc/services/cave_trip_repository.dart';
 import 'package:speleoloc/services/change_logger.dart';
-import 'package:speleoloc/services/current_user_service.dart';
-import 'package:speleoloc/services/documentation_repository.dart';
-import 'package:speleoloc/services/sync/sync_archive_service.dart';
-import 'package:speleoloc/services/user_repository.dart';
 
-/// One simulated device: in-memory DB + the repository/sync stack over it.
-class _Device {
-  _Device(
-    this.db,
-    this.currentUser,
-    this.caveRepo,
-    this.placeRepo,
-    this.tripRepo,
-    this.docRepo,
-    this.beaconRepo,
-    this.sync,
-  );
-
-  final AppDatabase db;
-  final CurrentUserService currentUser;
-  final CaveRepository caveRepo;
-  final CavePlaceRepository placeRepo;
-  final CaveTripRepository tripRepo;
-  final DocumentationRepository docRepo;
-  final BeaconRepository beaconRepo;
-  final SyncArchiveService sync;
-
-  Uuid get author => currentUser.currentUserUuid.value!;
-}
-
-Future<_Device> _buildDevice() async {
-  final db = AppDatabase.forTesting(NativeDatabase.memory());
-  late ChangeLogger loggerRef;
-  final userRepo = UserRepository(db, () => loggerRef);
-  final currentUser = CurrentUserService(
-    db,
-    userRepo,
-    ConfigurationRepository(db),
-  );
-  await currentUser.initialize();
-  final logger = loggerRef = ChangeLogger(db, currentUser);
-  final assetsDir = await Directory.systemTemp.createTemp('tombstone_assets_');
-  return _Device(
-    db,
-    currentUser,
-    CaveRepository(db, currentUser, logger),
-    CavePlaceRepository(db, currentUser, logger),
-    CaveTripRepository(db, logger),
-    DocumentationRepository(db, logger, currentUser),
-    BeaconRepository(db, currentUser, logger),
-    SyncArchiveService(
-      db,
-      logger,
-      assetsBaseDirResolver: () async => assetsDir,
-    ),
-  );
-}
+import '../support/sync_device.dart';
 
 Future<List<ChangeLogData>> _tombstones(AppDatabase db) => (db.select(
   db.changeLog,
@@ -89,12 +28,12 @@ void main() {
   test(
     'trip delete writes tombstones for trip, points and doc links',
     () async {
-      final d = await _buildDevice();
+      final d = await SyncTestDevice.create();
       addTearDown(d.db.close);
 
-      final caveUuid = await d.caveRepo.addCave('Cave');
-      await d.placeRepo.addCavePlace(caveUuid, 'P1');
-      final placeUuid = (await d.placeRepo.findCavePlaceByTitle(
+      final caveUuid = await d.caves.addCave('Cave');
+      await d.places.addCavePlace(caveUuid, 'P1');
+      final placeUuid = (await d.places.findCavePlaceByTitle(
         caveUuid,
         'P1',
       ))!.uuid;
@@ -122,7 +61,7 @@ void main() {
       final link =
           (await d.db.select(d.db.documentationFilesToCaveTrips).get()).single;
 
-      await d.tripRepo.deleteCaveTrip(tripUuid);
+      await d.trips.deleteCaveTrip(tripUuid);
 
       final tombstones = await _tombstones(d.db);
       final byUuid = {for (final t in tombstones) t.entityUuid: t.entityTable};
@@ -135,16 +74,16 @@ void main() {
   );
 
   test('trip report template delete writes a tombstone', () async {
-    final d = await _buildDevice();
+    final d = await SyncTestDevice.create();
     addTearDown(d.db.close);
 
-    final uuid = await d.tripRepo.insertTripReportTemplate(
+    final uuid = await d.trips.insertTripReportTemplate(
       title: 'Template',
       fileName: 't.odt',
       fileSize: 10,
       format: 'odt',
     );
-    await d.tripRepo.deleteTripReportTemplate(uuid);
+    await d.trips.deleteTripReportTemplate(uuid);
 
     final tombstones = await _tombstones(d.db);
     expect(tombstones, hasLength(1));
@@ -155,10 +94,10 @@ void main() {
   test(
     'documentation file delete writes tombstones for file and links',
     () async {
-      final d = await _buildDevice();
+      final d = await SyncTestDevice.create();
       addTearDown(d.db.close);
 
-      final caveUuid = await d.caveRepo.addCave('Cave');
+      final caveUuid = await d.caves.addCave('Cave');
       final docUuid = await d.db.insertDocumentationFile(
         companion: DocumentationFilesCompanion.insert(
           uuid: Uuid.v7(),
@@ -176,7 +115,7 @@ void main() {
           (await d.db.select(d.db.documentationFilesToGeofeatures).get())
               .single;
 
-      await d.docRepo.deleteDocumentationFile(docUuid);
+      await d.documents.deleteDocumentationFile(docUuid);
 
       final tombstones = await _tombstones(d.db);
       final byUuid = {for (final t in tombstones) t.entityUuid: t.entityTable};
@@ -188,15 +127,15 @@ void main() {
   test(
     'deleted trip does not resurrect on a peer after sync round-trip',
     () async {
-      final a = await _buildDevice();
-      final b = await _buildDevice();
+      final a = await SyncTestDevice.create();
+      final b = await SyncTestDevice.create();
       addTearDown(a.db.close);
       addTearDown(b.db.close);
 
       // Device A records a trip with one scanned point.
-      final caveUuid = await a.caveRepo.addCave('Shared Cave');
-      await a.placeRepo.addCavePlace(caveUuid, 'P1');
-      final placeUuid = (await a.placeRepo.findCavePlaceByTitle(
+      final caveUuid = await a.caves.addCave('Shared Cave');
+      await a.places.addCavePlace(caveUuid, 'P1');
+      final placeUuid = (await a.places.findCavePlaceByTitle(
         caveUuid,
         'P1',
       ))!.uuid;
@@ -226,7 +165,7 @@ void main() {
       // A deletes the trip; the tombstones must ship with the next archive
       // and remove the trip (and its points) from B instead of letting B's
       // copy survive — the pre-fix resurrection bug.
-      await a.tripRepo.deleteCaveTrip(tripUuid);
+      await a.trips.deleteCaveTrip(tripUuid);
       final zip2 = await a.sync.exportToZip(
         tempDir.path,
         filenameHint: 'sync_2.zip',
@@ -247,18 +186,18 @@ void main() {
   test(
     'deleted beacon does not resurrect on a peer after sync round-trip',
     () async {
-      final a = await _buildDevice();
-      final b = await _buildDevice();
+      final a = await SyncTestDevice.create();
+      final b = await SyncTestDevice.create();
       addTearDown(a.db.close);
       addTearDown(b.db.close);
 
-      final caveUuid = await a.caveRepo.addCave('Beacon Cave');
-      await a.placeRepo.addCavePlace(caveUuid, 'P1');
-      final placeUuid = (await a.placeRepo.findCavePlaceByTitle(
+      final caveUuid = await a.caves.addCave('Beacon Cave');
+      await a.places.addCavePlace(caveUuid, 'P1');
+      final placeUuid = (await a.places.findCavePlaceByTitle(
         caveUuid,
         'P1',
       ))!.uuid;
-      final beaconUuid = await a.beaconRepo.registerBeacon(
+      final beaconUuid = await a.beacons.registerBeacon(
         cavePlaceUuid: placeUuid,
         caveUuid: caveUuid,
         proximityUuid: '11111111-2222-3333-4444-555555555555',
@@ -273,14 +212,14 @@ void main() {
         includeRasterMaps: false,
       );
       await b.sync.importFromZip(zip1.path);
-      expect(await b.beaconRepo.getBeaconsForCave(caveUuid), hasLength(1));
+      expect(await b.beacons.getBeaconsForCave(caveUuid), hasLength(1));
 
       // A unregisters the beacon (soft-delete + tombstone). deleted_at is
       // excluded from the sync diff, so the row upsert alone skips the
       // change on B; only the tombstone applied via _applyDeletes — which
       // pre-fix did not cover cave_place_beacons — removes it.
       await Future<void>.delayed(const Duration(milliseconds: 5));
-      await a.beaconRepo.unregisterBeacon(beaconUuid);
+      await a.beacons.unregisterBeacon(beaconUuid);
       final zip2 = await a.sync.exportToZip(
         tempDir.path,
         filenameHint: 'b2.zip',
@@ -290,19 +229,19 @@ void main() {
       final report = await b.sync.importFromZip(zip2.path);
 
       expect(report.deletesApplied, greaterThanOrEqualTo(1));
-      expect(await b.beaconRepo.getBeaconsForCave(caveUuid), isEmpty);
+      expect(await b.beacons.getBeaconsForCave(caveUuid), isEmpty);
       // Physically removed on B, not merely soft-deleted.
       expect(await b.db.select(b.db.cavePlaceBeacons).get(), isEmpty);
     },
   );
 
   test('a screen watching trips hears a synced trip arrive and go', () async {
-    final a = await _buildDevice();
-    final b = await _buildDevice();
+    final a = await SyncTestDevice.create();
+    final b = await SyncTestDevice.create();
     addTearDown(a.db.close);
     addTearDown(b.db.close);
 
-    final caveUuid = await a.caveRepo.addCave('Watched Cave');
+    final caveUuid = await a.caves.addCave('Watched Cave');
     final tripUuid = await a.db.insertCaveTrip(
       caveUuid: caveUuid,
       title: 'Trip',
@@ -317,16 +256,16 @@ void main() {
     );
 
     var heard = 0;
-    final sub = b.tripRepo.watchTripChanges().listen((_) => heard++);
+    final sub = b.trips.watchTripChanges().listen((_) => heard++);
     addTearDown(sub.cancel);
 
     await b.sync.importFromZip(added.path);
     await pumpEventQueue();
     expect(heard, greaterThan(0), reason: 'the import inserted a trip');
-    expect(await b.tripRepo.getCaveTrips(caveUuid), hasLength(1));
+    expect(await b.trips.getCaveTrips(caveUuid), hasLength(1));
 
     await Future<void>.delayed(const Duration(milliseconds: 5));
-    await a.tripRepo.deleteCaveTrip(tripUuid);
+    await a.trips.deleteCaveTrip(tripUuid);
     final removed = await a.sync.exportToZip(
       tempDir.path,
       filenameHint: 'w2.zip',
@@ -337,7 +276,7 @@ void main() {
 
     await b.sync.importFromZip(removed.path);
     await pumpEventQueue();
-    expect(await b.tripRepo.getCaveTrips(caveUuid), isEmpty);
+    expect(await b.trips.getCaveTrips(caveUuid), isEmpty);
     expect(heard, greaterThan(0), reason: 'the tombstone deleted the trip');
   });
 }

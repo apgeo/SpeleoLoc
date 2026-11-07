@@ -1206,15 +1206,6 @@ void main() {
     expect(fake.store.keys, isNot(contains(orphan)));
   });
 
-  // The "remote unseen + local changed" union case is logically the
-  // composition of the two preceding tests; the dual-system-user UNIQUE
-  // constraint in the in-memory test fixture (each harness lazily creates
-  // its own 'system' user on first write) prevents importing a peer
-  // archive into a DB that has already had a local write, which is an
-  // import-side limitation unrelated to the upload-skipping logic under
-  // test here. Worth revisiting once the import handles user merge by
-  // username.
-
   test(
     'sha256 sidecars inherit their base archive timestamp (seen-set trim)',
     () async {
