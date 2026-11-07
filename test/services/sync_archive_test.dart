@@ -440,6 +440,62 @@ void main() {
     await b.db.close();
   });
 
+  test('an asset whose folder is a file here is counted as failed, and the '
+      'other assets still arrive', () async {
+    final a = await buildHarness();
+    final b = await buildHarness();
+    const blocked = 'documentation/blocked/doc1.txt';
+    const free = 'documentation/doc2.txt';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final relPath in [blocked, free]) {
+      final payload = utf8.encode('invented $relPath');
+      final src = File('${a.assetsDir.path}${Platform.pathSeparator}$relPath');
+      await src.parent.create(recursive: true);
+      await src.writeAsBytes(payload);
+      await a.db
+          .into(a.db.documentationFiles)
+          .insert(
+            DocumentationFilesCompanion.insert(
+              uuid: Uuid.v7(),
+              title: relPath,
+              fileName: relPath,
+              fileSize: payload.length,
+              fileType: 'txt',
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
+    }
+    final zip = await a.sync.exportToZip(
+      tempDir.path,
+      filenameHint: 'assets.zip',
+    );
+    // A file where the asset's folder should go.
+    final inTheWay = File(
+      '${b.assetsDir.path}${Platform.pathSeparator}documentation'
+      '${Platform.pathSeparator}blocked',
+    );
+    await inTheWay.parent.create(recursive: true);
+    await inTheWay.writeAsString('invented');
+
+    final report = await b.sync.importFromZip(zip.path);
+
+    expect(report.rowsInserted, greaterThan(0));
+    expect(report.filesCopied, 1);
+    expect(report.filesFailed, 1);
+    expect(report.warnings.where((w) => w.contains(blocked)), isNotEmpty);
+    expect(
+      await File(
+        '${b.assetsDir.path}${Platform.pathSeparator}$free',
+      ).readAsString(),
+      'invented $free',
+    );
+    expect(await inTheWay.readAsString(), 'invented');
+
+    await a.db.close();
+    await b.db.close();
+  });
+
   test('manual resolver keepLocal overrides LWW', () async {
     final a = await buildHarness();
     final b = await buildHarness();
