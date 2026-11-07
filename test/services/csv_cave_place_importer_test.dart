@@ -495,6 +495,88 @@ void main() {
     expect(await db.select(db.cavePlaces).get(), isEmpty);
   });
 
+  group('parsing', () {
+    final config = CSVCavePlacesImportConfig(
+      caveUuid: Uuid.v7(),
+      cavePlaceNameColumn: 0,
+      qrCodeColumn: 1,
+    );
+
+    List<(String?, String?)> parsed(String csv) => [
+      for (final r in importer.parseRows(importer.parseCSV(csv), config))
+        (r.cavePlaceName, r.qrCode),
+    ];
+
+    test('a file with only a header has no rows', () {
+      expect(parsed('name,code\n'), isEmpty);
+      expect(parsed('name,code'), isEmpty);
+      expect(parsed(''), isEmpty);
+    });
+
+    test('a row shorter than the header keeps what it has', () {
+      expect(parsed('name,code\nShort\nFull,7\n'), [
+        ('Short', null),
+        ('Full', '7'),
+      ]);
+    });
+
+    test('blank and whitespace-only names are skipped', () {
+      expect(parsed('name,code\n,1\n   ,2\n\t,3\nKept,4\n'), [('Kept', '4')]);
+    });
+
+    test('names and codes are trimmed', () {
+      expect(parsed('name,code\n  Sala Mare  , PN-01 \n'), [
+        ('Sala Mare', 'PN-01'),
+      ]);
+    });
+
+    test('quoted commas and line breaks stay inside one cell', () {
+      expect(parsed('name,code\n"Hall, east",1\n"Two\nlines",2\n'), [
+        ('Hall, east', '1'),
+        ('Two\nlines', '2'),
+      ]);
+    });
+
+    test('Windows and old Mac line endings read like Unix ones', () {
+      expect(parsed('name,code\r\nA,1\r\nB,2\r\n'), [('A', '1'), ('B', '2')]);
+      expect(parsed('name,code\rA,1\rB,2\r'), [('A', '1'), ('B', '2')]);
+    });
+
+    test('a semicolon-delimited file is read as columns', () {
+      expect(parsed('name;code\nA;1\nB;2\n'), [('A', '1'), ('B', '2')]);
+    }, skip: 'the parser splits on commas only');
+  });
+
+  test(
+    'Romanian names match whichever form of s and t they are typed in',
+    () async {
+      final cave = Uuid.v7();
+      await db
+          .into(db.caves)
+          .insert(CavesCompanion.insert(uuid: cave, title: 'Test Cave'));
+      final existing = Uuid.v7();
+      await db
+          .into(db.cavePlaces)
+          .insert(
+            CavePlacesCompanion.insert(
+              uuid: existing,
+              title: 'Sala \u0218tefan',
+              caveUuid: cave,
+            ),
+          );
+
+      final result = await importer.importRows([
+        CSVCavePlaceImportRow(cavePlaceName: 'Sala \u015Etefan', qrCode: 'S-1'),
+      ], CSVCavePlacesImportConfig(caveUuid: cave, cavePlaceNameColumn: 0));
+
+      expect(result.cavePlacesCreated, 0);
+      expect((await db.select(db.cavePlaces).get()).single.uuid, existing);
+    },
+    skip:
+        'names are matched after lower-casing only, so cedilla and '
+        'comma-below letters differ',
+  );
+
   test("parsing records each row's line in the file", () {
     final rows = importer.parseRows(
       importer.parseCSV('name,code\nFirst,1\n,2\nThird,3\n'),

@@ -35,12 +35,19 @@ class SoundRecorderPage extends ConsumerStatefulWidget {
     this.caveUuid,
     this.caveAreaUuid,
     this.existingDoc,
+    @visibleForTesting this.recorder,
+    @visibleForTesting this.player,
   });
 
   final Uuid? cavePlaceUuid;
   final Uuid? caveUuid;
   final Uuid? caveAreaUuid;
   final DocumentationFile? existingDoc;
+
+  /// The `flutter_sound` engines, replaceable so a widget test can run the
+  /// page without the native audio plugin. Production leaves both null.
+  final FlutterSoundRecorder? recorder;
+  final FlutterSoundPlayer? player;
 
   @override
   ConsumerState<SoundRecorderPage> createState() => _SoundRecorderPageState();
@@ -76,8 +83,9 @@ class _SoundRecorderPageState extends ConsumerState<SoundRecorderPage>
   final _titleCtrl = TextEditingController();
 
   // flutter_sound
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  late final FlutterSoundRecorder _recorder =
+      widget.recorder ?? FlutterSoundRecorder();
+  late final FlutterSoundPlayer _player = widget.player ?? FlutterSoundPlayer();
 
   // audio_waveforms
   late RecorderController _waveController;

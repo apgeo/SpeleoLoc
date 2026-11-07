@@ -49,6 +49,13 @@ void main() {
       expect(detection.isRunning, isFalse);
     });
 
+    test('restarting after a settings save does not start detection', () async {
+      await detection.restart();
+
+      expect(configReads, 0);
+      expect(detection.isRunning, isFalse);
+    });
+
     test('a database swap does not start detection', () async {
       final previous = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(previous.close);

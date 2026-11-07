@@ -13,7 +13,8 @@ const _title = 'Flow Cave Echo';
 /// is listed, it got its main entrance without being asked, and opening it
 /// shows that entrance.
 ///
-/// Runs last in a process: it adds a cave, and the sweep picks the first
+/// Writes a cave, so it runs against the invented dataset only. It runs last
+/// in a process: it adds a cave, and the sweep picks the first
 /// cave it finds.
 void main() {
   flow('deep_cave_create', (driver) async {
@@ -51,5 +52,5 @@ void main() {
     expect(find.text(places.single.title), findsWidgets);
     await driver.shoot('31_new_cave_opened');
     expect(tester.takeException(), isNull);
-  });
+  }, inventedOnly: true);
 }

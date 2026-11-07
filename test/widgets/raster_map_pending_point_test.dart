@@ -114,6 +114,29 @@ void main() {
     });
   }
 
+  testWidgets('accepting the prompt saves once and keeps the map open', (
+    tester,
+  ) async {
+    var prompts = 0;
+    var saveAndClose = 0;
+    await pumpEditor(
+      tester,
+      onAutoSave: (_, _, _, _) async {
+        prompts++;
+        return true;
+      },
+      onSaveAndClose: () => saveAndClose++,
+    );
+    await tapThePicture(tester);
+
+    await tester.tap(find.byIcon(Icons.info_outline));
+    await settle(tester);
+
+    expect(prompts, 1);
+    expect(saveAndClose, 0);
+    expect(find.byType(RasterMapPlacePointEditor), findsOneWidget);
+  });
+
   testWidgets('leaving the editor saves the point without closing anything', (
     tester,
   ) async {

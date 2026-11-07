@@ -77,4 +77,19 @@ void main() {
     await service.resumeTrip();
     expect(await service.linkDocument(doc), TripRecordOutcome.recorded);
   });
+
+  test(
+    'a scan or document whose active trip row is gone says failed',
+    () async {
+      final trip = await service.startTrip(caveUuid, 'Trip');
+      await (db.delete(
+        db.caveTrips,
+      )..where((t) => t.uuid.equalsValue(trip))).go();
+      final doc = await document();
+
+      expect(await service.recordPoint(place), TripRecordOutcome.failed);
+      expect(await service.linkDocument(doc), TripRecordOutcome.failed);
+      expect(await db.select(db.caveTripPoints).get(), isEmpty);
+    },
+  );
 }

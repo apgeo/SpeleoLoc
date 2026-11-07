@@ -131,26 +131,29 @@ void main() {
 
     /// A DOCX whose body ends, as every Word-saved one does, with the
     /// section properties; its first paragraph closes a section of its own.
-    List<int> docx() {
+    List<int> docx({
+      String tail =
+          '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+          '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>'
+          '</w:sectPr>',
+    }) {
       final xml = utf8.encode(
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<w:document xmlns:w="$w"><w:body>'
         '<w:p><w:pPr><w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>'
         '</w:pPr><w:r><w:t>Cover</w:t></w:r></w:p>'
         '<w:p><w:r><w:t>Template text</w:t></w:r></w:p>'
-        '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
-        '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>'
-        '</w:sectPr></w:body></w:document>',
+        '$tail</w:body></w:document>',
       );
       final archive = Archive()
         ..addFile(ArchiveFile('word/document.xml', xml.length, xml));
       return ZipEncoder().encode(archive)!;
     }
 
-    Future<XmlElement> builtBody(String text) async {
+    Future<XmlElement> builtBody(String text, {String? tail}) async {
       await File(
         p.join(await service.getTemplatesDir(), 'a.docx'),
-      ).writeAsBytes(docx());
+      ).writeAsBytes(tail == null ? docx() : docx(tail: tail));
       final bytes = await service.buildReportBytes(
         templateFileName: 'a.docx',
         text: text,
@@ -177,6 +180,30 @@ void main() {
       ];
       expect(texts, ['Cover', 'Template text', 'Hall', 'Sump']);
     });
+
+    test('an empty section properties element stays last', () async {
+      final body = await builtBody('Hall', tail: '<w:sectPr/>');
+
+      final children = body.childElements.toList();
+      expect(children.last.name.local, 'sectPr');
+      expect(children[children.length - 2].innerText, 'Hall');
+    });
+
+    test(
+      'a template without section properties gets the lines at the end',
+      () async {
+        final body = await builtBody('Hall\nSump', tail: '');
+
+        final texts = [
+          for (final para in body.childElements)
+            para
+                .findAllElements('t', namespace: w)
+                .map((t) => t.innerText)
+                .join(),
+        ];
+        expect(texts, ['Cover', 'Template text', 'Hall', 'Sump']);
+      },
+    );
 
     test('keeps the spaces a log line starts with', () async {
       final body = await builtBody('  indented line');
