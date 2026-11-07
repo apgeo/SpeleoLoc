@@ -93,7 +93,17 @@ class CaveTripService {
     }
   }
 
+  /// Starts a new trip in [caveUuid] and makes it the one recording here.
+  ///
+  /// Refused while another trip is recording, for the same reason as
+  /// [restartTrip]: the running trip would stay open with nothing tracking
+  /// it.
   Future<Uuid> startTrip(Uuid caveUuid, String title) async {
+    if (activeTripIdNotifier.value != null) {
+      throw const ValidationException(
+        'Another trip is recording; stop it before starting a new one',
+      );
+    }
     isPausedNotifier.value = false;
     await _clearPause();
     final author = await _currentUser.currentOrSystem();
