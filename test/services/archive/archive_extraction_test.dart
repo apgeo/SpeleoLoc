@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,6 +100,42 @@ void main() {
           .whereType<File>()
           .map((f) => p.relative(f.path, from: dest.path)),
       [p.join('documentation_files', 'hall.jpg')],
+    );
+  });
+
+  test('no name built from separators, dots and letters lands outside the '
+      'folder', () async {
+    final random = Random(20261107);
+    const pieces = ['a', '.', '..', '/', r'\'];
+    for (var i = 0; i < 200; i++) {
+      final name = [
+        for (var j = 0; j < 1 + random.nextInt(8); j++)
+          pieces[random.nextInt(pieces.length)],
+      ].join();
+      // One entry per extraction, each deeper than its name can climb, so an
+      // escape lands where this test sees it.
+      final caseRoot = Directory(p.join(root.path, 'case$i'));
+      final into = Directory(
+        p.joinAll([caseRoot.path, for (var d = 0; d < 9; d++) 'd$d']),
+      );
+      await into.create(recursive: true);
+
+      final rejected = extractArchiveInto(
+        roundTrip([text(name, 'payload')]),
+        into,
+      );
+
+      final outside = [
+        for (final e in caseRoot.listSync(recursive: true))
+          if (e is File && !p.isWithin(into.path, e.path)) e.path,
+      ];
+      expect(outside, isEmpty, reason: '"$name"');
+      final written = into.listSync(recursive: true).whereType<File>();
+      expect(written.length + rejected.length, lessThanOrEqualTo(1));
+    }
+    expect(
+      root.listSync().map((e) => p.basename(e.path)),
+      everyElement(anyOf(startsWith('case'), 'cache')),
     );
   });
 
