@@ -261,6 +261,60 @@ void main() {
     });
   });
 
+  group('main entrances', () {
+    test('a place first met here is not taken for one, and the cave keeps '
+        'its own', () async {
+      await applier.applyPage(
+        page(<Map<String, Object?>>[aCave()]),
+        setId: setId,
+      );
+      final mainHere = Uuid.v7();
+      await db
+          .into(db.cavePlaces)
+          .insert(
+            CavePlace(
+              uuid: mainHere,
+              title: 'Intrarea principală',
+              caveUuid: caveId,
+              isEntrance: 1,
+              isMainEntrance: 1,
+            ),
+          );
+
+      await applier.applyPage(
+        page(<Map<String, Object?>>[
+          feature(
+            id: Uuid.v7().toString(),
+            kind: 'caveEntrance',
+            name: 'Intrarea de sus',
+            parentId: caveId.toString(),
+            point: <double>[25.44, 45.53],
+          ),
+          aPlace(),
+          feature(
+            id: Uuid.v7().toString(),
+            kind: 'generic',
+            featureTypeCode: 'cave_place',
+            name: 'Sifonul',
+            parentId: caveId.toString(),
+          ),
+        ], cursor: 'cursor-2'),
+        setId: setId,
+      );
+
+      final places = await (db.select(
+        db.cavePlaces,
+      )..where((t) => t.caveUuid.equalsValue(caveId))).get();
+      expect(places, hasLength(4));
+      expect(
+        places.where((p) => p.isMainEntrance == 1).map((p) => p.uuid),
+        <Uuid>[mainHere],
+      );
+      // The entrance itself did arrive as an entrance.
+      expect(places.where((p) => p.isEntrance == 1), hasLength(2));
+    });
+  });
+
   group('an unsent local edit is not written over', () {
     test('the download leaves it alone and says so', () async {
       // Overwriting would lose the caver's work silently. Sending it produces
