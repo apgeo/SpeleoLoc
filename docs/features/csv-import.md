@@ -35,10 +35,12 @@ not exist yet, create them first with the caves import.
 - The first row must be a **header row** with column names. The names
   themselves do not matter: you always pick which column feeds which
   field from a dropdown.
-- **Comma separated.** Semicolon-separated files, which many European
-  spreadsheet settings produce by default, load as a single column, with
-  nothing to map the individual fields onto — re-export with commas.
-- Values that contain a comma or a line break must be wrapped in
+- **Comma or semicolon separated.** Spreadsheets set up for Romanian,
+  and for most other languages that write decimals with a comma, save
+  CSV with semicolons; both kinds load. The separator is read from the
+  header row: whichever of the two appears more often there is used for
+  the whole file.
+- Values that contain the separator or a line break must be wrapped in
   double quotes.
 - Windows and Unix line endings both work.
 - Columns you do not map are ignored. Extra columns such as depth or
@@ -199,7 +201,10 @@ code generation pass over them.
 A row whose name is the name of a place in this cave counts as that
 place; every other row creates a new place. Capitalisation is ignored,
 both here and in the warning dialog, so "Sump" and "sump" are the same
-place.
+place. So is the difference between the two ways of writing the
+Romanian ș and ț: older keyboards and spreadsheets type them with a
+cedilla (ş, ţ), and "Sala Ştefan" in the file is the place you saved as
+"Sala Ștefan". The place keeps the spelling it already had.
 
 A cave can hold two places with the same name when they sit in
 different cave areas. A row naming such a place cannot tell which one

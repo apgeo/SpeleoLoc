@@ -48,8 +48,8 @@ void main() {
     await tick();
   });
   tearDown(() async {
-    await a.db.close();
-    await b.db.close();
+    await a.dispose();
+    await b.dispose();
     await tmp.delete(recursive: true);
   });
 

@@ -1,8 +1,8 @@
-import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/csv_cave_place_import_snapshot.dart';
+import 'package:speleoloc/services/csv_text_parser.dart';
 import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/place_code/place_code_service.dart';
 import 'package:speleoloc/utils/clock.dart';
@@ -173,17 +173,7 @@ class CSVCavePlaceImporter {
 
   /// Parse a CSV string into a list of lists (rows x columns).
   /// Expects the first row to be headers.
-  List<List<dynamic>> parseCSV(String csvContent) {
-    final converter = const CsvToListConverter(
-      eol: '\n',
-      shouldParseNumbers: false,
-    );
-    // Normalize line endings
-    final normalized = csvContent
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n');
-    return converter.convert(normalized);
-  }
+  List<List<dynamic>> parseCSV(String csvContent) => parseCsvText(csvContent);
 
   /// Extract header names from the first row of parsed CSV data.
   List<String> getHeaders(List<List<dynamic>> csvData) {

@@ -68,6 +68,7 @@ void main() {
     final d = await SyncTestDevice.create(
       executor: NativeDatabase(File(p.join(docs.path, databaseFileName))),
     );
+    addTearDown(d.dispose);
     appDatabase = d.db;
     await PopulatedCave.build(d);
     return d;
@@ -124,6 +125,7 @@ void main() {
     final aCaves = await a.uuidsOf('caves');
     await a.db.close();
     final b = await SyncTestDevice.create();
+    addTearDown(b.dispose);
     appDatabase = b.db;
     final own = await b.caves.addCave('Invented Own Cave');
     final service = DataArchiveService(DataExportImportRepository(b.db));

@@ -8,6 +8,7 @@ import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/qr_code_lookup_service.dart';
 import 'package:speleoloc/services/qr_scan_service.dart';
 import 'package:speleoloc/services/repository_interfaces.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
@@ -433,10 +434,14 @@ class QrCodeLookupHandler {
     final enteredTitle = controller.text.trim();
     controller.dispose();
     if (confirmed == true) {
-      await _tripService.startTrip(
-        caveUuid,
-        enteredTitle.isNotEmpty ? enteredTitle : suggestedTitle,
-      );
+      try {
+        await _tripService.startTrip(
+          caveUuid,
+          enteredTitle.isNotEmpty ? enteredTitle : suggestedTitle,
+        );
+      } on ValidationException {
+        SnackBarService.showWarning(LocServ.inst.t('trip_start_other_running'));
+      }
     }
   }
 

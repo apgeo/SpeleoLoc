@@ -920,6 +920,7 @@
   "trip_restart_confirm_body": "Its recorded times ({start} – {end}) will be replaced: the start becomes now, and the end is cleared until you stop the trip again.",
   "trip_restart_confirm_action": "Replace times and restart",
   "trip_restart_other_running": "Another trip is recording: {trip}. Stop it before restarting this one.",
+  "trip_start_other_running": "Another trip is recording. Stop it before starting a new one.",
   "trip_open_not_here": "Open — not recording on this phone",
   "trip_history": "Past / active trip(s)",
   "trip_no_history": "No past trips",

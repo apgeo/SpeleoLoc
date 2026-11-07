@@ -51,7 +51,7 @@ void main() {
         text('documentation_files/hall.jpg', 'photo'),
       ]),
       dest,
-    );
+    ).outside;
 
     expect(rejected, isEmpty);
     expect(
@@ -84,7 +84,7 @@ void main() {
         text('documentation_files/hall.jpg', 'photo'),
       ]),
       dest,
-    );
+    ).outside;
 
     expect(rejected, hasLength(hostile.length));
     expect(filesOutsideDest(), isEmpty);
@@ -123,7 +123,7 @@ void main() {
       final rejected = extractArchiveInto(
         roundTrip([text(name, 'payload')]),
         into,
-      );
+      ).outside;
 
       final outside = [
         for (final e in caseRoot.listSync(recursive: true))
@@ -139,6 +139,40 @@ void main() {
     );
   });
 
+  test('an entry that cannot be written is reported, and the rest are still '
+      'written', () {
+    for (final order in [
+      ['documentation_files/x', 'documentation_files/x/inner.jpg'],
+      ['documentation_files/x/inner.jpg', 'documentation_files/x'],
+    ]) {
+      final into = Directory(p.join(root.path, 'case${order.first.length}'));
+      into.createSync();
+
+      final extraction = extractArchiveInto(
+        roundTrip([
+          for (final name in order) text(name, 'payload'),
+          text('documentation_files/hall.jpg', 'photo'),
+        ]),
+        into,
+      );
+
+      expect(extraction.outside, isEmpty);
+      expect(extraction.failures.keys, [order.last], reason: '$order');
+      expect(
+        File(
+          p.join(into.path, 'documentation_files', 'hall.jpg'),
+        ).readAsStringSync(),
+        'photo',
+      );
+      expect(
+        FileSystemEntity.typeSync(
+          p.joinAll([into.path, ...order.first.split('/')]),
+        ),
+        isNot(FileSystemEntityType.notFound),
+      );
+    }
+  });
+
   test('never materialises a symbolic-link entry', () async {
     final link = text('documentation_files/link.jpg', '../../speleo_loc.sqlite')
       ..isFile = false
@@ -146,7 +180,7 @@ void main() {
       ..nameOfLinkedFile = '../../speleo_loc.sqlite';
     final archive = Archive()..addFile(link);
 
-    final rejected = extractArchiveInto(archive, dest);
+    final rejected = extractArchiveInto(archive, dest).outside;
 
     expect(rejected, isEmpty);
     expect(root.listSync(recursive: true).whereType<Link>(), isEmpty);

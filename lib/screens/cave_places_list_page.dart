@@ -11,6 +11,7 @@ import 'package:speleoloc/screens/raster_map_place_selector.dart';
 import 'package:speleoloc/screens/cave_place_page.dart';
 import 'package:speleoloc/screens/generated_qr_code_viewer.dart';
 import 'package:speleoloc/screens/geofeature_documents_page.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
@@ -349,12 +350,17 @@ class _CavePlacesListPageState extends ConsumerState<CavePlacesListPage>
     final enteredTitle = controller.text.trim();
     controller.dispose();
     if (confirmed == true && mounted) {
-      await ref
-          .read(caveTripServiceProvider)
-          .startTrip(
-            widget.caveUuid,
-            enteredTitle.isNotEmpty ? enteredTitle : suggestedTitle,
-          );
+      try {
+        await ref
+            .read(caveTripServiceProvider)
+            .startTrip(
+              widget.caveUuid,
+              enteredTitle.isNotEmpty ? enteredTitle : suggestedTitle,
+            );
+      } on ValidationException {
+        SnackBarService.showWarning(LocServ.inst.t('trip_start_other_running'));
+        return;
+      }
       if (mounted) {
         await AppRoutes.pushCaveTripList(context, widget.caveUuid);
         setState(() {});

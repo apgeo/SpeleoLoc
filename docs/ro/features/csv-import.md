@@ -40,11 +40,12 @@ creați-le întâi cu importul de peșteri.
 - Primul rând trebuie să fie un **rând de antet** cu numele coloanelor.
   Numele în sine nu contează: alegeți întotdeauna dintr-o listă derulantă
   ce coloană alimentează ce câmp.
-- **Separate prin virgulă.** Fișierele separate prin punct și virgulă, pe
-  care multe setări europene de foi de calcul le produc implicit, se
-  încarcă drept o singură coloană, fără nimic pe care să mapați câmpurile
-  individuale — reexportați cu virgule.
-- Valorile care conțin o virgulă sau o întrerupere de rând trebuie
+- **Separate prin virgulă sau prin punct și virgulă.** Foile de calcul
+  setate pe limba română, și pe cele mai multe limbi care scriu zecimalele
+  cu virgulă, salvează CSV-ul cu punct și virgulă; ambele feluri se
+  încarcă. Separatorul este citit din rândul de antet: cel care apare de
+  mai multe ori acolo este folosit pentru tot fișierul.
+- Valorile care conțin separatorul sau o întrerupere de rând trebuie
   încadrate în ghilimele duble.
 - Terminațiile de rând Windows și Unix funcționează amândouă.
 - Coloanele pe care nu le mapați sunt ignorate. Coloanele suplimentare,
@@ -212,7 +213,11 @@ să rulați peste ele o trecere de generare a codurilor.
 Un rând al cărui nume este numele unui loc din această peșteră contează
 drept acel loc; orice alt rând creează un loc nou. Majusculele și
 minusculele sunt ignorate, atât aici, cât și în dialogul de avertizare,
-așa că „Sifon” și „sifon” sunt același loc.
+așa că „Sifon” și „sifon” sunt același loc. La fel și diferența dintre
+cele două feluri de a scrie ș și ț: tastaturile și foile de calcul mai
+vechi le scriu cu sedilă (ş, ţ), iar „Sala Ştefan” din fișier este locul
+pe care l-ați salvat ca „Sala Ștefan”. Locul își păstrează scrierea pe
+care o avea deja.
 
 O peșteră poate ține două locuri cu același nume când stau în zone
 diferite ale peșterii. Un rând care numește un astfel de loc nu poate

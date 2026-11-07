@@ -884,6 +884,10 @@ class SyncArchiveService {
       );
     }
     var skipped = 0;
+    // The rows are already merged by now, so a file that cannot be placed
+    // is reported like any other failed asset instead of failing the
+    // import.
+    var unplaced = 0;
 
     // Which entries to write, and where; their folders are created here.
     final toExtract = <String, String>{};
@@ -904,12 +908,20 @@ class SyncArchiveService {
         skipped++;
         continue;
       }
-      await dest.parent.create(recursive: true);
+      try {
+        await dest.parent.create(recursive: true);
+      } on FileSystemException catch (e) {
+        // Typically a file here already has the name of a folder on the
+        // asset's path.
+        warnings.add('$entryName → ${dest.path}: $e');
+        unplaced++;
+        continue;
+      }
       toExtract[entryName] = dest.path;
     }
 
     if (toExtract.isEmpty) {
-      return _AssetResult(copied: 0, skipped: skipped);
+      return _AssetResult(copied: 0, skipped: skipped, failed: unplaced);
     }
 
     try {
@@ -925,7 +937,7 @@ class SyncArchiveService {
       return _AssetResult(
         copied: result.written,
         skipped: skipped,
-        failed: result.failures.length,
+        failed: unplaced + result.failures.length,
       );
     } catch (e) {
       warnings.add(
@@ -935,7 +947,7 @@ class SyncArchiveService {
       return _AssetResult(
         copied: 0,
         skipped: skipped,
-        failed: toExtract.length,
+        failed: unplaced + toExtract.length,
       );
     }
   }

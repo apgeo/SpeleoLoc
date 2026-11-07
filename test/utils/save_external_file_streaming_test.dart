@@ -48,14 +48,17 @@ void main() {
       ..closeSync();
 
     final expected = _digestOfZerosThen(size - 1, 0x7f);
-    final peakBefore = ProcessInfo.maxRss;
+    // Growth is measured from the resident size at the start, not from the
+    // peak: a peak left high by earlier work would hide any growth that
+    // stays below it, and the check would pass whatever the code held.
+    final rssBefore = ProcessInfo.currentRss;
 
     final info = await DocumentationFileHelper.saveExternalFile(source);
 
     expect(info.fileSize, size);
     expect(info.fileHash, expected);
     // A whole read raises the process peak by at least the file's size.
-    expect(ProcessInfo.maxRss - peakBefore, lessThan(size ~/ 2));
+    expect(ProcessInfo.maxRss - rssBefore, lessThan(size ~/ 2));
   });
 }
 
