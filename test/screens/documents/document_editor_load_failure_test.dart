@@ -14,6 +14,7 @@ import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/editors/rich_text_editor_page.dart';
 import 'package:speleoloc/screens/documents/editors/text_document_editor_page.dart';
 import 'package:speleoloc/services/service_locator.dart';
+import 'package:speleoloc/utils/documentation_file_helper.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/product_tour.dart';
 
@@ -149,6 +150,48 @@ void main() {
       expect(find.text(failed), findsNothing);
       expect(find.text('Invented passage notes'), findsOneWidget);
       expect(find.byIcon(Icons.save), findsOneWidget);
+    });
+
+    testWidgets('a readable file saved after an edit stores the new text', (
+      tester,
+    ) async {
+      await store(tester, 'doc_1_ok.txt', 'Invented passage notes');
+      final stored = document('doc_1_ok.txt');
+      await tester.runAsync(
+        () => db.insertDocumentationFile(
+          companion: DocumentationFilesCompanion.insert(
+            uuid: stored.uuid,
+            title: stored.title,
+            fileName: stored.fileName,
+            fileSize: stored.fileSize,
+            fileType: stored.fileType,
+          ),
+        ),
+      );
+      await open(tester, TextDocumentEditorPage(existingDoc: stored));
+
+      await tester.enterText(
+        find.text('Invented passage notes'),
+        'Invented passage notes, revised',
+      );
+      await tester.tap(find.byIcon(Icons.save));
+      for (var i = 0; i < 10; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      final row = await tester.runAsync(
+        () => (db.select(
+          db.documentationFiles,
+        )..where((d) => d.uuid.equalsValue(stored.uuid))).getSingle(),
+      );
+      final bytes = await tester.runAsync(
+        () => File('${docs.path}/${row!.fileName}').readAsBytes(),
+      );
+      expect(utf8.decode(bytes!), 'Invented passage notes, revised');
+      expect(row!.fileHash, DocumentationFileHelper.computeSha256(bytes));
     });
   });
 }
