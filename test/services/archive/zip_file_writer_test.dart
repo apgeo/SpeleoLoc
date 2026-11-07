@@ -69,7 +69,7 @@ void main() {
     );
 
     final out = await Directory(p.join(dir.path, 'out')).create();
-    final rejected = await extractZipFileInto(zipPath, out.path);
+    final rejected = (await extractZipFileInto(zipPath, out.path)).outside;
 
     expect(rejected, isEmpty);
     expect(

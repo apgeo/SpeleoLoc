@@ -5,39 +5,53 @@ import 'dart:typed_data';
 import 'package:archive/archive_io.dart' hide ZLibDecoder;
 import 'package:speleoloc/utils/contained_path.dart';
 
+/// The entries [extractArchiveInto] left out: those named to land outside
+/// the folder, and why each one that could not be written failed, by entry
+/// name.
+typedef ArchiveExtraction = ({
+  List<String> outside,
+  Map<String, String> failures,
+});
+
 /// Writes every regular file entry of [archive] under [destDir], keeping its
-/// relative path, and returns the names of the entries left out because they
-/// would land outside [destDir].
+/// relative path, and reports the entries it left out.
 ///
 /// The `archive` package does not check entry names, and an imported archive
 /// can come from anyone, so each name is confined here. Folder and
-/// symbolic-link entries are never materialised.
+/// symbolic-link entries are never materialised. An entry that cannot be
+/// written — say the archive also holds a file named like one of its
+/// folders — is left out and reported, and the others are still written.
 ///
 /// Each entry is copied or inflated to disk in chunks: the package's own
 /// `content` holds a whole entry in memory, and an archive can carry a
 /// multi-gigabyte video. Synchronous, so run it off the UI isolate; see
 /// [extractZipFileInto].
-List<String> extractArchiveInto(Archive archive, Directory destDir) {
-  final rejected = <String>[];
+ArchiveExtraction extractArchiveInto(Archive archive, Directory destDir) {
+  final outside = <String>[];
+  final failures = <String, String>{};
   for (final entry in archive) {
     if (!entry.isFile || entry.isSymbolicLink) continue;
     final destPath = containedPath(destDir.path, entry.name);
     if (destPath == null) {
-      rejected.add(entry.name);
+      outside.add(entry.name);
       continue;
     }
     final raw = entry.rawContent;
     if (raw == null) continue;
     final outFile = File(destPath);
-    outFile.parent.createSync(recursive: true);
-    _writeEntry(entry, raw, outFile);
+    try {
+      outFile.parent.createSync(recursive: true);
+      _writeEntry(entry, raw, outFile);
+    } on FileSystemException catch (e) {
+      failures[entry.name] = '$e';
+    }
   }
-  return rejected;
+  return (outside: outside, failures: failures);
 }
 
 /// [extractArchiveInto] for the zip file at [zipPath], on a background
 /// isolate so neither reading nor inflating blocks the UI.
-Future<List<String>> extractZipFileInto(String zipPath, String destDir) =>
+Future<ArchiveExtraction> extractZipFileInto(String zipPath, String destDir) =>
     Isolate.run(
       () => _withZip(
         zipPath,
