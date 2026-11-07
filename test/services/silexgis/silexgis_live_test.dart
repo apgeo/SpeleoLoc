@@ -1,3 +1,6 @@
+@Tags(['live'])
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -48,14 +51,14 @@ import 'live_server.dart';
 /// serve on another port.
 void main() {
   final env = Platform.environment;
-  if (env['SPELEO_LOC_SILEXGIS_LIVE'] != '1') {
-    test('SilexGIS live test skipped (set SPELEO_LOC_SILEXGIS_LIVE=1)', () {});
+  final skip = liveSkipReason(env);
+  if (skip != null) {
+    // Registered as skipped rather than left out, so a run reports it.
+    test('SilexGIS live test', () {}, skip: skip);
     return;
   }
 
-  final baseUri = Uri.parse(
-    env['SPELEO_LOC_SILEXGIS_URL'] ?? 'http://127.0.0.1:5205',
-  );
+  final baseUri = liveBaseUri(env);
   // The development server's own accounts, printed by the script that starts
   // it. The member owns nothing, so what it sees is decided by the permission
   // and protection rules rather than by ownership.

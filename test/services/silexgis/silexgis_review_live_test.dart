@@ -1,3 +1,6 @@
+@Tags(['live'])
+library;
+
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -48,17 +51,14 @@ import 'live_server.dart';
 /// `SPELEO_LOC_SILEXGIS_URL` overrides the base address.
 void main() {
   final env = Platform.environment;
-  if (env['SPELEO_LOC_SILEXGIS_LIVE'] != '1') {
-    test(
-      'SilexGIS review live test skipped (set SPELEO_LOC_SILEXGIS_LIVE=1)',
-      () {},
-    );
+  final skip = liveSkipReason(env);
+  if (skip != null) {
+    // Registered as skipped rather than left out, so a run reports it.
+    test('SilexGIS review live test', () {}, skip: skip);
     return;
   }
 
-  final baseUri = Uri.parse(
-    env['SPELEO_LOC_SILEXGIS_URL'] ?? 'http://127.0.0.1:5205',
-  );
+  final baseUri = liveBaseUri(env);
   // The member's twin, except that what it uploads waits for a reviewer. It
   // signs in with the member's password.
   const email = 'review@dev.local';

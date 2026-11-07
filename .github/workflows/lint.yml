@@ -50,8 +50,8 @@ jobs:
         run: bash tool/check_appdatabase_leakage.sh
 
       - name: Tests
-        # Excludes the opt-in live FTP integration test (needs a real server;
-        # see test/services/ftp_sync_live_test.dart). Known-failing baseline
+        # Excludes the opt-in tests tagged `live`, which need a real FTP or
+        # SilexGIS server (see dart_test.yaml). Known-failing baseline
         # tests are parked with @Skip annotations that reference the plan
         # steps that will fix and re-enable them.
         run: flutter test --exclude-tags live

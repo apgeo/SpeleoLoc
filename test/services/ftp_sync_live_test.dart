@@ -44,7 +44,7 @@ import 'package:speleoloc/services/user_repository.dart';
 /// concurrent runs / leftover artefacts don't pollute the assertions.
 void main() {
   if (Platform.environment['SPELEO_LOC_FTP_LIVE'] != '1') {
-    test('FTP live test skipped (set SPELEO_LOC_FTP_LIVE=1 to enable)', () {});
+    test('FTP live test', () {}, skip: 'set SPELEO_LOC_FTP_LIVE=1 to enable');
     return;
   }
 
@@ -52,7 +52,7 @@ void main() {
     p.join(Directory.current.path, 'test_data', 'ftp_test.json'),
   );
   if (!configFile.existsSync()) {
-    test('FTP live test skipped (missing test_data/ftp_test.json)', () {});
+    test('FTP live test', () {}, skip: 'missing test_data/ftp_test.json');
     return;
   }
 
