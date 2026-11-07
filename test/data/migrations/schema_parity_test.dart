@@ -101,9 +101,10 @@ void main() {
     });
   });
 
-  for (final version in schemaSnapshotVersions()) {
+  // The last snapshot is the current schema, which has nothing to upgrade.
+  final snapshots = schemaSnapshotVersions();
+  for (final version in snapshots.take(snapshots.length - 1)) {
     test('a v$version database upgrades to the fresh schema', () async {
-      if (version >= latest) return;
       final f = createDatabaseAtVersion(
         p.join(tmp.path, 'v$version.sqlite'),
         version,
