@@ -36,10 +36,11 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 windows/flutter/generated_plugin_registrant.cc
 windows/flutter/generated_plugins.cmake
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# launch.json is shared (run/build configurations) and stays tracked;
+# settings.json holds per-machine editor state (colors, local paths) that
+# VS Code rewrites on its own.
+.vscode/*
+!.vscode/launch.json
 
 # Flutter/Dart/Pub related
 **/doc/api/
