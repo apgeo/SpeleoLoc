@@ -81,6 +81,11 @@ with whatever the username is now. That cuts both ways: filling in a
 first and last name later also improves old entries, which then read
 `anna (Anna Popescu)` instead of the bare `anna`.
 
+With a [club server](silexgis-sync.md) whose installation offers
+**People**, the **Edit user** dialog also ends with a **Caver on …**
+box, where you say which of the club's cavers this phone user is. See
+[People](silexgis-sync.md#people).
+
 ## Users cannot be deleted
 
 There is no delete anywhere on this screen — no long-press, no menu.
@@ -88,20 +93,59 @@ Once created, an identity stays in the list, because rows and change-log
 entries keep pointing at it. If someone was added by mistake, edit the
 row and reuse it for a real caver instead.
 
-## The automatic "system" user
+## Who is using the app? — the start-up question
 
-SpeleoLoc creates no user for you when it first starts, and the
-device's own identifier is never used as a person.
+When the app starts and nobody has been chosen on this device yet, it
+opens a full-screen page, **Who is using the app?**, before you can
+work. The page cannot be closed with Back; it goes away once a user is
+chosen. It offers:
 
-The first change to any data — adding a cave, adding a place,
-starting a trip — creates a user named **system** (first name *System*,
-details *Auto-generated default user.*) and selects it, so the
-who-changed-what stamps are never empty. Until then, **Settings →
-Users** shows *No users yet*.
+- **Choose an existing user** — every user in this database except
+  deleted ones and the automatic *system* user. Tap yourself.
+- **Create a new user** — the same fields as [Adding a
+  caver](#adding-a-caver), then **Create and continue**. The new user
+  is selected straight away, and its own creation is recorded under its
+  name. A username already held by any user, deleted ones included, is
+  refused with *This username is already in use*.
 
-On a fresh device, add yourself and press **Select** early. Anything
-done before that stays attributed to *system* and cannot be
-re-attributed afterwards.
+The same page comes back on a later start in two cases, with a line at
+the top saying why:
+
+- **The data was replaced and your user is not in it** — after a
+  [restore or a full import](database-export-import.md) that replaced
+  the whole database. *The user "…" was not found in the data that was
+  just loaded.* When neither that username nor its identity exist in
+  the new data, the page also offers **Keep your previous user** —
+  **Continue as "…" (add to this data)**, which adds you to the new data
+  under the same identity, so your changes there and on other devices
+  stay attributed to one person.
+- **Your user was deleted** — usually on another device, then synced
+  here. *The user "…" has been deleted, possibly on another device and
+  then synced here.* Choose or create another user.
+
+A sample-data offer on an empty database, when the build has one, comes
+first; the question follows it.
+
+### When the data is replaced
+
+Replacing the whole database — restoring a file, a full archive import,
+loading sample data — no longer takes on the user whoever exported that
+data had selected. The user selected on this phone before the replace
+is carried over: if the new data holds the same user (by identity, or
+else by the same username), it stays selected without asking;
+otherwise the start-up question above is asked.
+
+### The automatic "system" user
+
+The device's own identifier is never used as a person. If a change is
+written while no user is chosen at all — for example when the start-up
+question could not be shown — SpeleoLoc creates a user named
+**system** (first name *System*, details *Auto-generated default
+user.*) and selects it, so the who-changed-what stamps are never empty.
+*system* stands for nobody in particular: it is never offered on the
+start-up page, and a phone left on *system* is asked again on its next
+start. Anything already done under *system* stays attributed to it and
+cannot be re-attributed afterwards.
 
 ## Handing the phone to someone else
 
@@ -136,6 +180,7 @@ inside the app.
 
 - [Sync dashboard & change log](sync-and-change-log.md)
 - [FTP sync](ftp-sync.md)
+- [Club server (SilexGIS)](silexgis-sync.md)
 - [Settings](settings.md)
 - [Trips](trips.md)
 - [Running a trip](../workflows/running-a-trip.md)

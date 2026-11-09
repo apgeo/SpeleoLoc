@@ -174,11 +174,12 @@ you had never seen them.
 
 ## Before you take it underground
 
-1. **Say who you are.** In **Settings → Users**, add a user, then tap
-   **Select** on your row so it shows the **Current** chip. From then on
-   every change you make is stamped with that identity in the change
-   history — useful after a trip, when someone asks who moved a point.
-   See [Users](features/users.md).
+1. **Say who you are.** On the first start the app asks **Who is using
+   the app?** — pick yourself from the list or create a new user. From
+   then on every change you make is stamped with that identity in the
+   change history — useful after a trip, when someone asks who moved a
+   point. Hand the phone to someone else in **Settings → Users** with
+   **Select** on their row. See [Users](features/users.md).
 2. **Get data onto the device.** Either build it yourself, following
    [Documenting a new cave](workflows/documenting-a-new-cave.md), or take
    an archive from another team: **Settings → Data Export / Import →
