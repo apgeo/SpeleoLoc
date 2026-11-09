@@ -187,6 +187,46 @@ your code — reformatting everything would bury your real diff in thousands of 
 
 ---
 
+## Build variants and release builds
+
+A build is shaped by compile-time defines (`lib/utils/build_config.dart`), passed with
+`--dart-define-from-file=<file>`. Every switch hides entry points only: code and stored data stay,
+so a build that turns a feature back on loses nothing.
+
+| Define | Default | Effect |
+|---|---|---|
+| `DEV_TOOLS` | on in debug/profile, off in release | Test-archive loading, reinitialize-with-test-data, manual QR entry, the SQL runner. Tree-shaken out when off. |
+| `SAMPLE_DATA` | follows `DEV_TOOLS` | Offers the sample archive at `test_archive_url` (first-start prompt on an empty database, button on the export/import page) without the rest of the dev tooling. Downloaded on request, never bundled. |
+| `FEATURE_SILEXGIS` | `true` | The club-server settings and every SilexGIS entry point. |
+| `FEATURE_BEACONS` | `true` | Beacon settings, the drawer's detection toggle, per-place and per-cave beacon screens, background detection. Detection never starts when off. |
+| `FEATURE_MODEL_3D` | `true` | "3D model" / "View in 3D" buttons and the viewer's settings page. |
+| `DEFAULT_LOCALE` | `ro` | Language until the user picks one; a language already saved on the device wins. |
+
+The define files in the repository root:
+
+- `build_settings.json` / `build_settings_local_archive.json` — development builds, pointing at the
+  test data on this machine or at a local test archive
+  ([local test archive](docs/workflows/local-test-archive.md)).
+- `build_settings.automation.json` — the test matrix's invented fixture.
+- `build_settings.store.json` — closed testing: no dev tools, sample data offered as an `https://`
+  download, crash reporting, SilexGIS and beacons hidden (testers have neither), English first.
+- `build_settings.store.production.json` — the public release: no dev tools, no sample data, no
+  crash reporting, English first.
+
+Release artifacts come from two PowerShell scripts that refuse a configuration that must not ship —
+files left in `assets/test_archive/`, `DEV_TOOLS` not `false`, a sample archive that is not an
+`https://` URL, any `ftp_seed_*` key, a missing `android/key.properties` (debug signing), or an empty
+`SENTRY_DSN` on the closed-testing build unless `-AllowEmptySentryDsn` is passed:
+
+- `tool/build_store_release.ps1 [-Production]` — the Google Play `.aab`.
+- `tool/build_store_apk.ps1 [-Production] [-SplitPerAbi]` — a release-signed APK for sideloading,
+  universal by default or one per CPU architecture.
+
+Hand-out builds that carry a shared sync account are a separate case; see
+[seeded sync profile](docs/workflows/seeded-sync-profile.md).
+
+---
+
 ## The 3D model viewer
 
 The viewer is the SilexGIS fork of CaveView.js in a WebView (`webview_flutter`, Android and iOS
