@@ -6,6 +6,13 @@ A BLE beacon is a small battery-powered Bluetooth tag mounted at a point
 of interest. SpeleoLoc can recognise the tags you registered and tell you
 which cave place you are standing at without you touching the phone.
 
+> Note: some builds ship with beacons switched off — the closed-testing
+> store build, for example, whose testers have no tags. In such a build
+> none of the beacon settings, buttons or the drawer's detection switch
+> appear, and detection never starts. Beacons registered on another
+> device still travel with the data and reappear in a build that has
+> them.
+
 ## What a beacon adds over a QR label
 
 A [QR label](qr-codes.md) is cheap, needs no battery and lasts as long as

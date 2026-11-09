@@ -29,6 +29,10 @@ nothing configured the screen says so plainly:
 > SpeleoLoc works without one. Add a server only if your club runs a
 > SilexGIS installation and you want this device to carry some of its caves.
 
+Some builds leave the club server out altogether — the closed-testing
+store build, for example. In such a build **Settings** has no club-server
+entry and no other screen shows anything of it.
+
 That is the ordinary state, not a fault. Everything on your device is yours
 whether a server exists or not — the app never needs one to work. Other
 screens change only where the server brought something: a section of server
