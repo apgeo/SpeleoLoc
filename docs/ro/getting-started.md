@@ -184,12 +184,13 @@ comporte ca și cum nu le-ați fi văzut niciodată.
 
 ## Înainte de a coborî în subteran
 
-1. **Spuneți cine sunteți.** În **Setări → Utilizatori**, adăugați un
-   utilizator, apoi apăsați **Selectează** pe rândul dvs. ca să afișeze
-   eticheta **Curent**. De atunci înainte, fiecare modificare pe care o
-   faceți este marcată cu acea identitate în istoricul modificărilor —
-   util după o tură, când cineva întreabă cine a mutat un punct. Vedeți
-   [Utilizatori](features/users.md).
+1. **Spuneți cine sunteți.** La prima pornire aplicația întreabă **Cine
+   folosește aplicația?** — alegeți-vă din listă sau creați un utilizator
+   nou. De atunci înainte, fiecare modificare pe care o faceți este
+   marcată cu acea identitate în istoricul modificărilor — util după o
+   tură, când cineva întreabă cine a mutat un punct. Predați telefonul
+   altcuiva din **Setări → Utilizatori**, cu **Selectează** pe rândul
+   lui. Vedeți [Utilizatori](features/users.md).
 2. **Aduceți date pe dispozitiv.** Fie le construiți singur, urmând
    [Documentarea unei peșteri noi](workflows/documenting-a-new-cave.md),
    fie luați o arhivă de la altă echipă: **Setări → Export / Import Date →
