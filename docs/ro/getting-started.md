@@ -10,8 +10,28 @@ care merită configurate înainte de a coborî cu telefonul în subteran.
 SpeleoLoc este construit în primul rând pentru Android; există versiuni și
 pentru iOS, Windows, macOS și Linux. Aplicația este în stadiu alfa, așa că
 de obicei veți primi un fișier — un APK de Android sau o versiune de
-desktop — în loc să o găsiți într-un magazin. Instalați-o ca pe orice altă
-aplicație.
+desktop — în loc să o găsiți într-un magazin.
+
+### Instalarea APK-ului de Android
+
+1. Deschideți pe telefon [ultima versiune publicată](https://github.com/apgeo/SpeleoLoc/releases/latest)
+   și descărcați fișierul `.apk` din lista **Assets**. Adresa duce
+   întotdeauna la cea mai nouă versiune publicată.
+2. Deschideți fișierul descărcat. Android refuză la început, pentru că
+   fișierul nu vine dintr-un magazin: permiteți browserului sau
+   managerului de fișiere cu care l-ați deschis să instaleze aplicații —
+   **Setări → Aplicații → Acces special pentru aplicații → Instalare
+   aplicații necunoscute**, alegeți acea aplicație și activați **Permite
+   din această sursă**. Pe Android 8 și mai vechi, comutatorul este în
+   **Setări → Securitate → Surse necunoscute**. Denumirile exacte ale
+   meniurilor diferă de la un producător la altul.
+3. Reveniți și confirmați instalarea.
+
+Pentru actualizare, instalați APK-ul mai nou peste cel vechi; datele
+rămân. O versiune care schimbă baza de date sau formatul arhivei spune
+asta în notele ei — exportați-vă mai întâi datele și actualizați fiecare
+dispozitiv care se sincronizează cu acesta. Ce a adus fiecare versiune
+găsiți în [Noutăți](whats-new.md).
 
 Nu mai este nevoie de nimic altceva pentru a începe. SpeleoLoc păstrează
 toate datele pe dispozitiv, iar funcțiile din subteran merg complet fără

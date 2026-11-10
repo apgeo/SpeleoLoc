@@ -11,7 +11,26 @@ underground.
 SpeleoLoc is built for Android first; builds also exist for iOS, Windows,
 macOS and Linux. The app is in alpha, so you will normally be handed a
 file — an Android APK, or a desktop build — rather than find it in a
-store. Install it like any other app.
+store.
+
+### Installing the Android APK
+
+1. Open the [latest release](https://github.com/apgeo/SpeleoLoc/releases/latest)
+   on the phone and download the `.apk` file listed under **Assets**.
+   That address always leads to the newest published version.
+2. Open the downloaded file. Android refuses at first, because the file
+   does not come from a store: allow the browser or file manager you
+   opened it with to install apps — **Settings → Apps → Special app
+   access → Install unknown apps**, pick that app and turn on **Allow
+   from this source**. On Android 8 and older the switch is **Settings →
+   Security → Unknown sources**. The exact menu names vary between phone
+   makers.
+3. Go back and confirm the installation.
+
+To update, install the newer APK over the old one; the data stays. A
+release that changes the database or the archive format says so in its
+notes — export your data first, and update every device that syncs with
+this one. What each release brought is listed in [What's new](whats-new.md).
 
 Nothing else is needed to get going. SpeleoLoc keeps all of its data on
 the device and the underground features work with no network at all. A
