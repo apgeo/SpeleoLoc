@@ -3,7 +3,7 @@ description: "An application that helps cavers to navigate underground and to do
 
 publish_to: 'none'
 
-version: 0.4.2+452
+version: 0.4.2+453
 environment:
   sdk: ^3.10.1
 
