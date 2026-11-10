@@ -4,9 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/trip_record_outcome.dart';
 import 'package:speleoloc/utils/app_logger.dart';
-import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
-import 'package:speleoloc/utils/navigator_key.dart';
 
 /// System notification with a **loud** alert sound for beacon detections
 /// that happen while the app is not in the foreground.
@@ -28,6 +26,14 @@ class BeaconAlertNotifier {
   final _plugin = FlutterLocalNotificationsPlugin();
   final _log = AppLogger.of('BeaconAlertNotifier');
   bool _initialized = false;
+  void Function(Uuid caveUuid, Uuid placeUuid)? _openPlace;
+
+  /// Sets how a tapped notification opens its place. The app sets it at
+  /// start, since navigation belongs to the screens; until then a tap only
+  /// brings the app up.
+  void attachPlaceOpener(
+    void Function(Uuid caveUuid, Uuid placeUuid) openPlace,
+  ) => _openPlace = openPlace;
 
   /// Idempotent plugin init. Returns false when the platform refuses
   /// (e.g. notification permission permanently denied).
@@ -153,13 +159,7 @@ class BeaconAlertNotifier {
     try {
       final caveUuid = Uuid.parse(parts[1]);
       final placeUuid = Uuid.parse(parts[2]);
-      final context = navigatorKey.currentContext;
-      if (context == null) return;
-      AppRoutes.pushCavePlace(
-        context,
-        caveUuid: caveUuid,
-        cavePlaceUuid: placeUuid,
-      );
+      _openPlace?.call(caveUuid, placeUuid);
     } catch (e, st) {
       _log.warning('Notification tap navigation failed', e, st);
     }

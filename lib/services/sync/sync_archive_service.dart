@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
-import 'dart:typed_data';
 
-import 'package:archive/archive_io.dart';
 import 'package:drift/drift.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/services/archive/archive_extraction.dart';
+import 'package:speleoloc/services/archive/zip_file_writer.dart';
 import 'package:speleoloc/services/change_logger.dart';
 import 'package:speleoloc/services/silexgis/silexgis_file_copy_repository.dart';
 import 'package:speleoloc/services/silexgis/silexgis_map_picture_copies.dart';
@@ -278,6 +277,10 @@ class SyncArchiveService {
 
   static const _serializer = SyncValueSerializer();
   static const _assetsPrefix = 'assets/';
+  static const _manifestEntry = 'manifest.json';
+  static const _changeLogEntry = 'change_log.jsonl';
+  static const _changeLogFieldEntry = 'change_log_field.jsonl';
+  static String _tableEntry(String table) => 'tables/$table.jsonl';
 
   /// Ordered list of synced tables — delegates to [SyncTableRegistry] so
   /// the big table-handler list lives in one place.
@@ -302,9 +305,9 @@ class SyncArchiveService {
 
     // Everything that needs the database runs here on the main isolate: dump
     // each table and the change log to JSONL byte blobs, and resolve the
-    // asset file paths. The CPU-bound zip compression (and the asset file
-    // reads) then run in a background isolate so a large export never blocks
-    // the UI thread (Android ANR — see the class doc-comment).
+    // asset file paths. The zip is then written on a background isolate, each
+    // asset streamed from its file, so a large export neither blocks the UI
+    // nor holds a photo or video in memory.
     // The asset folder comes from a platform channel, so it is resolved
     // before the snapshot is opened rather than while it holds the database.
     Directory? baseDir;
@@ -330,8 +333,7 @@ class SyncArchiveService {
 
     final nowMs = _clock.nowMs();
     final pkgInfo = await _safeReadPackageInfo();
-    // asset_count is filled in by the isolate once it knows how many files
-    // actually existed on disk.
+    final assets = await _assetEntries(baseDir, assetRelPaths);
     final manifest = <String, dynamic>{
       'format': 'speleo_loc_sync',
       'format_version': kSyncArchiveVersion,
@@ -342,6 +344,7 @@ class SyncArchiveService {
       'tables': tables.map((t) => t.name).toList(),
       'includes_documentation_files': includeDocumentationFiles,
       'includes_raster_maps': includeRasterMaps,
+      'asset_count': assets.length,
     };
 
     final dir = Directory(outputDir);
@@ -349,21 +352,22 @@ class SyncArchiveService {
     final name = filenameHint ?? 'speleo_loc_sync_$nowMs.zip';
     final out = File('${dir.path}${Platform.pathSeparator}$name');
 
-    final job = _EncodeArchiveJob(
-      jsonlEntries: jsonlEntries,
-      assetBaseDir: baseDir?.path,
-      assetRelPaths: assetRelPaths,
-      manifest: manifest,
-      outputPath: out.path,
-    );
-    final assetCount = await _encodeInBackground(job);
+    await writeZipFile(out.path, [
+      for (final (entryName, bytes) in jsonlEntries)
+        ZipEntrySource.bytes(entryName, bytes),
+      ...assets,
+      ZipEntrySource.bytes(
+        _manifestEntry,
+        utf8.encode(const JsonEncoder.withIndent('  ').convert(manifest)),
+      ),
+    ]);
 
     final size = await out.length();
     _log.info(
       'Sync archive exported: ${out.path} '
       '($size bytes, ${tables.length} tables, '
       '$changeLogCount change-log entries, '
-      '$assetCount asset files)',
+      '${assets.length} asset files)',
     );
     return out;
   }
@@ -419,8 +423,8 @@ class SyncArchiveService {
         .toList();
     jsonlEntries.add(('change_log_field.jsonl', _jsonlBytes(fieldRows)));
 
-    // Resolve the asset relative paths (the isolate reads the files itself,
-    // so no file bytes cross the isolate boundary).
+    // Resolve the asset relative paths; the zip writer reads the files
+    // itself.
     final assetRelPaths = <String>[];
     if (baseDir != null) {
       final serverOnlyKinds = <String>[
@@ -468,8 +472,6 @@ class SyncArchiveService {
       // File names arrive in rows from other devices; one naming a place
       // outside the documents folder, or the database itself, would
       // otherwise be read and uploaded.
-      // A plain loop, not a closure: a closure here would capture `this` into
-      // the context the isolate job in [exportToZip] is sent with.
       final contained = <String>[];
       for (final relPath in assetRelPaths) {
         if (relPath.isEmpty ||
@@ -490,11 +492,29 @@ class SyncArchiveService {
     return (jsonlEntries, changeLogRows.length, assetRelPaths);
   }
 
-  /// Static, so the closure sent to the isolate captures [job] alone: one
-  /// built inside [exportToZip] would share that method's context, which
-  /// also holds `this`, and the database cannot be sent to an isolate.
-  static Future<int> _encodeInBackground(_EncodeArchiveJob job) =>
-      Isolate.run(() => _encodeSyncArchive(job));
+  /// The zip entries of the asset files to bundle, each once, that are on
+  /// disk now. Checked before the zip is written so the manifest can count
+  /// them; a file removed in between is left out of the zip, still counted.
+  static Future<List<ZipEntrySource>> _assetEntries(
+    Directory? baseDir,
+    List<String> relPaths,
+  ) async {
+    if (baseDir == null) return const [];
+    final seen = <String>{};
+    final entries = <ZipEntrySource>[];
+    for (final relPath in relPaths) {
+      if (relPath.isEmpty || !seen.add(relPath)) continue;
+      final file = File('${baseDir.path}${Platform.pathSeparator}$relPath');
+      if (!await file.exists()) continue;
+      entries.add(
+        ZipEntrySource.file(
+          '$_assetsPrefix${relPath.replaceAll('\\', '/')}',
+          file.path,
+        ),
+      );
+    }
+    return entries;
+  }
 
   static String _placeholders(List<Object> values) =>
       List<String>.filled(values.length, '?').join(', ');
@@ -523,59 +543,29 @@ class SyncArchiveService {
     ConflictResolver? conflictResolver,
     bool holdBackDeletions = false,
   }) async {
-    // Read the file asynchronously so the UI/main isolate is never blocked.
-    //
-    // Previous approach used InputFileStream (a forward-only sequential
-    // reader). ZIP stores its central directory at the END of the file, so
-    // ZipDecoder had to read the entire archive byte-by-byte to reach it.
-    // On a Samsung Galaxy S20 FE (Exynos 990) this took >5 s for a 17.8 MB
-    // archive, exceeding Android's 5 s input-dispatching deadline and
-    // causing ANR even before the import logic ran.
-    //
-    // InputStream wraps an in-memory Uint8List and IS seekable: ZipDecoder
-    // jumps straight to the last 22 bytes to locate the EOCD, reads the
-    // central directory (a few KB), and returns in milliseconds regardless
-    // of archive size.
-    //
-    // The historical RangeError from in-memory archives (which motivated the
-    // InputFileStream approach) is no longer a risk: large asset entries
-    // (raster maps) are never inflated via entry.content in this isolate —
-    // _extractAssetsInBackground opens its own InputFileStream in a
-    // background isolate and handles all binary extraction there.
-    var bytes = await File(zipPath).readAsBytes();
-    // InputStream is backed by the Uint8List above. Both are released (see
-    // below) once the DB merge is done, before asset extraction runs.
-    var archive = ZipDecoder().decodeBuffer(InputStream(bytes));
-
-    if (archive.findFile('manifest.json') == null) {
-      final size = bytes.length;
-      // InputStream is seekable so a false-positive EOCD hit is extremely
-      // unlikely here, but log diagnostics for forensics regardless.
-      final eocdOffsets = _findEocdOffsets(bytes);
-      final headHex = _hexHead(bytes, 16);
-      final tailHex = _hexTail(bytes, 32);
-      _log.severe(
-        'in-memory decode of $zipPath ($size bytes) yielded '
-        '${archive.files.length} entries without manifest.json. '
-        'eocd_offsets=$eocdOffsets, head=$headHex, tail=$tailHex',
-      );
+    // Read through a file stream on a background isolate: only the manifest
+    // and the table dumps come into memory, and the asset entries are later
+    // copied or inflated to disk in chunks, so an archive carrying large
+    // photos or videos neither blocks the UI nor costs their size in memory.
+    final (:fileNames, :contents) = await readZipEntries(zipPath, {
+      _manifestEntry,
+      _changeLogEntry,
+      _changeLogFieldEntry,
+      for (final t in _syncedTables()) _tableEntry(t.name),
+    });
+    if (!contents.containsKey(_manifestEntry)) {
+      await _logMissingManifest(zipPath, fileNames.length);
     }
 
     // Phase 1+2: parse the JSONL and merge into the DB. Returns the report
     // (with file counts still zero) plus the names of the `assets/*` entries.
     final (partial, assetEntryNames) = await _mergeArchiveIntoDb(
-      archive,
+      fileNames,
+      contents,
       conflictResolver,
       zipPath,
       holdBackDeletions: holdBackDeletions,
     );
-
-    // Release the full in-memory archive and its backing byte buffer before
-    // the file-backed asset extraction. The extractor re-opens the zip in a
-    // background isolate, so holding this copy here would just double peak
-    // memory for a large archive (finding 5.6).
-    bytes = Uint8List(0);
-    archive = Archive();
 
     final assetResult = await _extractAssets(
       assetEntryNames,
@@ -646,69 +636,88 @@ class SyncArchiveService {
     }
   }
 
-  /// Returns every byte offset in [bytes] where the 4-byte zip End-Of-
-  /// Central-Directory signature (0x06054b50, little-endian "PK\x05\x06")
-  /// appears. A healthy zip has exactly one near the end.
-  List<int> _findEocdOffsets(List<int> bytes) {
+  /// Logs what a zip without a manifest looks like, for telling a truncated
+  /// or corrupted transfer from a file that is no archive at all: its size,
+  /// where the end-of-central-directory signature appears, and its first and
+  /// last bytes. Read in chunks, so even a large file costs no memory.
+  Future<void> _logMissingManifest(String zipPath, int entryCount) async {
+    try {
+      final file = await File(zipPath).open();
+      try {
+        final size = await file.length();
+        final head = await file.read(16);
+        await file.setPosition(size < 32 ? 0 : size - 32);
+        final tail = await file.read(32);
+        final eocdOffsets = await _findEocdOffsets(file, size);
+        _log.severe(
+          'decode of $zipPath ($size bytes) yielded $entryCount entries '
+          'without manifest.json. eocd_offsets=$eocdOffsets, '
+          'head=${_hex(head)}, tail=${_hex(tail)}',
+        );
+      } finally {
+        await file.close();
+      }
+    } catch (e, st) {
+      _log.warning('could not inspect $zipPath', e, st);
+    }
+  }
+
+  /// Every byte offset, up to eight, where the 4-byte zip End-Of-Central-
+  /// Directory signature (0x06054b50, little-endian "PK\x05\x06") appears.
+  /// A healthy zip has exactly one near the end.
+  static Future<List<int>> _findEocdOffsets(
+    RandomAccessFile file,
+    int size,
+  ) async {
     const sig = [0x50, 0x4b, 0x05, 0x06];
+    const chunk = 1 << 20;
     final hits = <int>[];
-    for (var i = 0; i + 3 < bytes.length; i++) {
-      if (bytes[i] == sig[0] &&
-          bytes[i + 1] == sig[1] &&
-          bytes[i + 2] == sig[2] &&
-          bytes[i + 3] == sig[3]) {
-        hits.add(i);
-        if (hits.length >= 8) break;
+    for (var start = 0; start < size && hits.length < 8; start += chunk) {
+      await file.setPosition(start);
+      // Three bytes past the chunk, so a signature across the boundary counts.
+      final bytes = await file.read(chunk + sig.length - 1);
+      for (var i = 0; i < chunk && i + 3 < bytes.length; i++) {
+        if (bytes[i] == sig[0] &&
+            bytes[i + 1] == sig[1] &&
+            bytes[i + 2] == sig[2] &&
+            bytes[i + 3] == sig[3]) {
+          hits.add(start + i);
+          if (hits.length >= 8) break;
+        }
       }
     }
     return hits;
   }
 
-  String _hexHead(List<int> bytes, int n) {
-    final end = bytes.length < n ? bytes.length : n;
-    return bytes
-        .sublist(0, end)
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join(' ');
-  }
-
-  String _hexTail(List<int> bytes, int n) {
-    final start = bytes.length < n ? 0 : bytes.length - n;
-    return bytes
-        .sublist(start)
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join(' ');
-  }
+  static String _hex(List<int> bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
 
   /// Validates the manifest, replays the JSONL into the DB (Phase 1 parse +
   /// Phase 2 transaction), and returns the report (with file counts still
   /// zero) alongside the names of the `assets/*` entries the caller should
-  /// extract. Asset extraction is deliberately left to the caller so the
-  /// in-memory archive can be released first (finding 5.6).
+  /// extract. [fileNames] lists every file entry of the zip and [contents]
+  /// holds the manifest and JSONL entries it carries; each is released once
+  /// parsed.
   Future<(SyncImportReport, List<String>)> _mergeArchiveIntoDb(
-    Archive archive,
+    List<String> fileNames,
+    Map<String, Uint8List> contents,
     ConflictResolver? conflictResolver,
     String zipPath, {
     bool holdBackDeletions = false,
   }) async {
-    final manifestFile = archive.findFile('manifest.json');
-    if (manifestFile == null) {
-      final f = File(zipPath);
-      final size = await f.length();
-      final names = archive.files
-          .map((f) => f.name)
-          .take(10)
-          .toList(growable: false);
+    final manifestBytes = contents.remove(_manifestEntry);
+    if (manifestBytes == null) {
+      final size = await File(zipPath).length();
+      final names = fileNames.take(10).toList(growable: false);
       throw FormatException(
         'Archive missing manifest.json '
-        '(file_size=$size bytes, ${archive.files.length} zip entries found'
+        '(file_size=$size bytes, ${fileNames.length} zip entries found'
         '${names.isEmpty ? '' : ', e.g. ${names.join(", ")}'}). '
         'See log for forensic details (EOCD offsets, head/tail bytes).',
       );
     }
     final manifest =
-        jsonDecode(utf8.decode(manifestFile.content as List<int>))
-            as Map<String, dynamic>;
+        jsonDecode(utf8.decode(manifestBytes)) as Map<String, dynamic>;
     if (manifest['format'] != 'speleo_loc_sync') {
       throw FormatException(
         'Unrecognized archive format: ${manifest['format']}',
@@ -750,24 +759,25 @@ class SyncArchiveService {
       // zip entry so the Flutter engine can process frames / input between
       // table parses.
       await Future.delayed(Duration.zero);
-      final entry = archive.findFile('tables/${t.name}.jsonl');
-      if (entry == null) {
-        warnings.add('archive missing tables/${t.name}.jsonl');
+      final name = _tableEntry(t.name);
+      final bytes = contents.remove(name);
+      if (bytes == null) {
+        warnings.add('archive missing $name');
         continue;
       }
-      tableRows[t.name] = _readJsonl(entry);
+      tableRows[t.name] = _readJsonl(name, bytes);
     }
 
     await Future.delayed(Duration.zero);
-    final logEntry = archive.findFile('change_log.jsonl');
-    final logRows = logEntry != null
-        ? _readJsonl(logEntry)
+    final logBytes = contents.remove(_changeLogEntry);
+    final logRows = logBytes != null
+        ? _readJsonl(_changeLogEntry, logBytes)
         : <Map<String, dynamic>>[];
 
     await Future.delayed(Duration.zero);
-    final fieldEntry = archive.findFile('change_log_field.jsonl');
-    final fieldRows = fieldEntry != null
-        ? _readJsonl(fieldEntry)
+    final fieldBytes = contents.remove(_changeLogFieldEntry);
+    final fieldRows = fieldBytes != null
+        ? _readJsonl(_changeLogFieldEntry, fieldBytes)
         : <Map<String, dynamic>>[];
 
     Future<SyncImportReport> merge() => _engine.merge(
@@ -781,11 +791,11 @@ class SyncArchiveService {
         ? await _mergeUnlessDeleting(merge)
         : await merge();
 
-    // Collect the asset entry names for the caller to extract after it has
-    // released this archive; file counts are filled in there.
+    // The asset entries for the caller to extract; file counts are filled
+    // in there.
     final assetEntryNames = [
-      for (final entry in archive.files)
-        if (entry.isFile && entry.name.startsWith(_assetsPrefix)) entry.name,
+      for (final name in fileNames)
+        if (name.startsWith(_assetsPrefix)) name,
     ];
 
     return (report, assetEntryNames);
@@ -821,8 +831,8 @@ class SyncArchiveService {
     return utf8.encode(buf.toString());
   }
 
-  List<Map<String, dynamic>> _readJsonl(ArchiveFile file) {
-    final content = utf8.decode(file.content as List<int>);
+  List<Map<String, dynamic>> _readJsonl(String name, Uint8List bytes) {
+    final content = utf8.decode(bytes);
     final out = <Map<String, dynamic>>[];
     var lineNo = 0;
     for (final line in const LineSplitter().convert(content)) {
@@ -837,7 +847,7 @@ class SyncArchiveService {
       try {
         out.add(jsonDecode(trimmed) as Map<String, dynamic>);
       } catch (e) {
-        _log.warning('skipping malformed JSONL line $lineNo in ${file.name}');
+        _log.warning('skipping malformed JSONL line $lineNo in $name');
       }
     }
     return out;
@@ -852,9 +862,8 @@ class SyncArchiveService {
   /// on content: last export wins only for DB rows; filesystem assets are
   /// treated as immutable-per-name).
   ///
-  /// Takes the entry names (not the [Archive]) so the caller can release the
-  /// full in-memory archive first; the actual bytes are re-read from
-  /// [zipPath] in a background isolate.
+  /// Each entry is copied or inflated from [zipPath] to its file in chunks
+  /// on a background isolate, so memory stays flat however large the file.
   Future<_AssetResult> _extractAssets(
     List<String> assetEntryNames,
     String zipPath,
@@ -875,12 +884,13 @@ class SyncArchiveService {
       );
     }
     var skipped = 0;
+    // The rows are already merged by now, so a file that cannot be placed
+    // is reported like any other failed asset instead of failing the
+    // import.
+    var unplaced = 0;
 
-    // Phase 1 (main isolate): determine which entries need extracting and
-    // create output parent directories.  getApplicationDocumentsDirectory()
-    // and Directory.create() use platform channels that must run on the main
-    // isolate, so we resolve all paths here before spawning.
-    final toExtract = <List<String>>[];
+    // Which entries to write, and where; their folders are created here.
+    final toExtract = <String, String>{};
     for (final entryName in assetEntryNames) {
       final destPath = containedDocumentsPath(
         baseDir.path,
@@ -898,25 +908,37 @@ class SyncArchiveService {
         skipped++;
         continue;
       }
-      await dest.parent.create(recursive: true);
-      toExtract.add([entryName, dest.path]);
+      try {
+        await dest.parent.create(recursive: true);
+      } on FileSystemException catch (e) {
+        // Typically a file here already has the name of a folder on the
+        // asset's path.
+        warnings.add('$entryName → ${dest.path}: $e');
+        unplaced++;
+        continue;
+      }
+      toExtract[entryName] = dest.path;
     }
 
     if (toExtract.isEmpty) {
-      return _AssetResult(copied: 0, skipped: skipped);
+      return _AssetResult(copied: 0, skipped: skipped, failed: unplaced);
     }
 
-    // Phase 2 (background isolate): inflate + write all asset files.
-    // entry.writeContent() is fully synchronous, CPU-bound decompression
-    // that can block the Dart UI thread for several seconds per large
-    // raster-map file, triggering Android ANR.  Offloading to Isolate.run()
-    // keeps the UI thread completely free during the entire extraction.
     try {
-      final (copied, failed, isolateWarnings) = await Isolate.run(
-        () => _extractAssetsInBackground(zipPath, toExtract),
+      final result = await extractZipEntriesTo(zipPath, toExtract);
+      // An entry missing from the archive is a defect of the archive, not a
+      // failure of this device, so it is only warned about.
+      for (final name in result.missing) {
+        warnings.add('entry not found in archive: $name');
+      }
+      for (final MapEntry(key: name, value: error) in result.failures.entries) {
+        warnings.add('$name → ${toExtract[name]}: $error');
+      }
+      return _AssetResult(
+        copied: result.written,
+        skipped: skipped,
+        failed: unplaced + result.failures.length,
       );
-      warnings.addAll(isolateWarnings);
-      return _AssetResult(copied: copied, skipped: skipped, failed: failed);
     } catch (e) {
       warnings.add(
         'asset extraction failed: $e '
@@ -925,7 +947,7 @@ class SyncArchiveService {
       return _AssetResult(
         copied: 0,
         skipped: skipped,
-        failed: toExtract.length,
+        failed: unplaced + toExtract.length,
       );
     }
   }
@@ -942,58 +964,6 @@ class SyncArchiveService {
   }
 }
 
-/// Extracts archive entries to their pre-created output paths.
-///
-/// Runs in a background isolate spawned by [SyncArchiveService._extractAssets]
-/// so that synchronous CPU-bound decompression (via [ArchiveFile.writeContent])
-/// does not block the Flutter UI isolate and cause Android ANR.
-///
-/// [zipPath] is re-opened with a fresh [InputFileStream] so this function is
-/// fully self-contained and can run in any isolate without sharing state.
-/// [entries] is a list of `[entryName, outputPath]` pairs; output parent
-/// directories must already exist (created by the caller on the main isolate).
-///
-/// Returns `(copied, failed, warnings)` — files successfully written, files
-/// that could not be written here, and any per-file error messages. An entry
-/// missing from the archive is a defect of the archive, not a failure of this
-/// device, so it is only warned about.
-Future<(int, int, List<String>)> _extractAssetsInBackground(
-  String zipPath,
-  List<List<String>> entries,
-) async {
-  var copied = 0;
-  var failed = 0;
-  final warnings = <String>[];
-  final input = InputFileStream(zipPath);
-  try {
-    final archive = ZipDecoder().decodeBuffer(input);
-    for (final pair in entries) {
-      final name = pair[0];
-      final outputPath = pair[1];
-      final entry = archive.findFile(name);
-      if (entry == null) {
-        warnings.add('entry not found in archive: $name');
-        continue;
-      }
-      try {
-        final out = OutputFileStream(outputPath);
-        try {
-          entry.writeContent(out);
-        } finally {
-          await out.close();
-        }
-        copied++;
-      } catch (e) {
-        failed++;
-        warnings.add('$name → $outputPath: $e');
-      }
-    }
-  } finally {
-    await input.close();
-  }
-  return (copied, failed, warnings);
-}
-
 class _AssetResult {
   final int copied;
   final int skipped;
@@ -1003,78 +973,4 @@ class _AssetResult {
     required this.skipped,
     this.failed = 0,
   });
-}
-
-/// Payload for [_encodeSyncArchive] — everything the background isolate needs
-/// to assemble and compress the archive without touching the database. All
-/// fields are plain sendable data so the whole object can cross an
-/// [Isolate.run] boundary.
-class _EncodeArchiveJob {
-  const _EncodeArchiveJob({
-    required this.jsonlEntries,
-    required this.assetBaseDir,
-    required this.assetRelPaths,
-    required this.manifest,
-    required this.outputPath,
-  });
-
-  /// `(entryName, bytes)` for each `tables/*.jsonl` and change-log file.
-  final List<(String, Uint8List)> jsonlEntries;
-
-  /// Base directory the [assetRelPaths] are relative to, or null when no
-  /// assets should be bundled. The isolate reads the files itself, so their
-  /// bytes never cross the isolate boundary.
-  final String? assetBaseDir;
-  final List<String> assetRelPaths;
-
-  /// Manifest fields WITHOUT `asset_count`; the isolate fills that in once it
-  /// knows how many asset files actually existed on disk.
-  final Map<String, dynamic> manifest;
-  final String outputPath;
-}
-
-/// Assembles the sync archive and compresses it to
-/// [_EncodeArchiveJob.outputPath], reading asset files itself. Runs in a
-/// background isolate (spawned from [SyncArchiveService.exportToZip]) so the
-/// CPU-bound zip compression never blocks the UI isolate. Returns the number
-/// of asset files actually bundled.
-Future<int> _encodeSyncArchive(_EncodeArchiveJob job) async {
-  final archive = Archive();
-  for (final (name, bytes) in job.jsonlEntries) {
-    archive.addFile(ArchiveFile(name, bytes.length, bytes));
-  }
-
-  var assetCount = 0;
-  final baseDir = job.assetBaseDir;
-  if (baseDir != null) {
-    final seen = <String>{};
-    for (final relPath in job.assetRelPaths) {
-      if (relPath.isEmpty || !seen.add(relPath)) continue;
-      final file = File('$baseDir${Platform.pathSeparator}$relPath');
-      if (!await file.exists()) continue;
-      final bytes = await file.readAsBytes();
-      final normalized = relPath.replaceAll('\\', '/');
-      archive.addFile(ArchiveFile('assets/$normalized', bytes.length, bytes));
-      assetCount++;
-    }
-  }
-
-  final manifest = <String, dynamic>{
-    ...job.manifest,
-    'asset_count': assetCount,
-  };
-  archive.addFile(
-    ArchiveFile.string(
-      'manifest.json',
-      const JsonEncoder.withIndent('  ').convert(manifest),
-    ),
-  );
-
-  final output = OutputFileStream(job.outputPath);
-  try {
-    ZipEncoder().encode(archive, output: output);
-  } finally {
-    await output.close();
-  }
-  return assetCount;
 }

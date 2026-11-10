@@ -1,3 +1,6 @@
+@Tags(['live'])
+library;
+
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -50,17 +53,14 @@ import 'live_server.dart';
 /// looked at.
 void main() {
   final env = Platform.environment;
-  if (env['SPELEO_LOC_SILEXGIS_LIVE'] != '1') {
-    test(
-      'SilexGIS documents live test skipped (set SPELEO_LOC_SILEXGIS_LIVE=1)',
-      () {},
-    );
+  final skip = liveSkipReason(env);
+  if (skip != null) {
+    // Registered as skipped rather than left out, so a run reports it.
+    test('SilexGIS documents live test', () {}, skip: skip);
     return;
   }
 
-  final baseUri = Uri.parse(
-    env['SPELEO_LOC_SILEXGIS_URL'] ?? 'http://127.0.0.1:5205',
-  );
+  final baseUri = liveBaseUri(env);
   // The plain member: the open cave's photo is handed over as stored, the
   // one also hung on the protected cave without its position.
   const email = 'member@dev.local';

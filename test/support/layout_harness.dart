@@ -28,6 +28,25 @@ class LayoutHarness {
     await LocServ.inst.setLocale('en');
     await LocServ.inst.load();
     final flutterRoot = _flutterRoot();
+    // A golden drawn with the fallback glyph boxes still passes against a
+    // reference drawn the same way, so a missing font must stop the run
+    // instead of quietly degrading every image.
+    if (flutterRoot == null) {
+      throw StateError(
+        'The Flutter SDK was not found, so the Material fonts cannot be '
+        'loaded. Set FLUTTER_ROOT.',
+      );
+    }
+    final sdkFonts = '$flutterRoot/bin/cache/artifacts/material_fonts';
+    for (final font in const [
+      'Roboto-Regular.ttf',
+      'Roboto-Medium.ttf',
+      'MaterialIcons-Regular.otf',
+    ]) {
+      if (!File('$sdkFonts/$font').existsSync()) {
+        throw StateError('Missing $sdkFonts/$font; run `flutter precache`.');
+      }
+    }
     await _loadFont('Roboto', [
       'assets/fonts/Roboto-Regular.ttf',
       'assets/fonts/Roboto-Bold.ttf',
@@ -35,20 +54,13 @@ class LayoutHarness {
       // arrow in a before/after line, for one). The SDK ships the full
       // family, so append it as a fallback rather than reshaping UI text
       // around what a test can draw.
-      if (flutterRoot != null)
-        '$flutterRoot/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf',
-      if (flutterRoot != null)
-        '$flutterRoot/bin/cache/artifacts/material_fonts/Roboto-Medium.ttf',
+      '$sdkFonts/Roboto-Regular.ttf',
+      '$sdkFonts/Roboto-Medium.ttf',
     ]);
     // Icons are not in the test asset bundle either, and an icon-heavy row
     // reviewed as a grid of empty boxes tells a reviewer nothing. Taken
     // from the SDK's own cache so it tracks the Flutter version in use.
-    if (flutterRoot != null) {
-      await _loadFont('MaterialIcons', [
-        '$flutterRoot/bin/cache/artifacts/material_fonts/'
-            'MaterialIcons-Regular.otf',
-      ]);
-    }
+    await _loadFont('MaterialIcons', ['$sdkFonts/MaterialIcons-Regular.otf']);
   }
 
   /// Locates the SDK from the running `dart` executable, so no environment

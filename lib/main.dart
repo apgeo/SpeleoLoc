@@ -8,7 +8,10 @@ import 'package:speleoloc/providers/active_trip_reconciler_provider.dart';
 import 'package:speleoloc/providers/database_swap_providers.dart';
 import 'package:speleoloc/providers/providers.dart';
 import 'package:speleoloc/screens/documents/document_format_registry.dart';
+import 'package:speleoloc/services/beacon/beacon_alert_notifier.dart';
+import 'package:speleoloc/services/beacon/beacon_detection_service.dart';
 import 'package:speleoloc/services/database_swap/live_database_swap.dart';
+import 'package:speleoloc/services/database_swap/set_aside_database_pruner.dart';
 import 'package:speleoloc/services/service_locator.dart';
 import 'package:speleoloc/services/startup/startup_recovery.dart';
 import 'package:speleoloc/services/sync/ftp/ftp_profile_seed.dart';
@@ -16,7 +19,9 @@ import 'package:speleoloc/utils/app_logger.dart';
 import 'package:speleoloc/utils/app_start_counter.dart';
 import 'package:speleoloc/utils/constants.dart';
 import 'package:speleoloc/utils/localization.dart';
+import 'package:speleoloc/utils/navigator_key.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
+import 'package:speleoloc/widgets/beacon_detection_screen_host.dart';
 
 // DSN is injected at build time: --dart-define=SENTRY_DSN=https://...
 // An empty DSN means Sentry.init is a no-op, so debug/CI builds without
@@ -58,6 +63,16 @@ Future<void> _runApp() async {
   // Register built-in document format handlers (editors & viewers).
   registerBuiltInDocumentFormats();
 
+  final beaconScreens = BeaconDetectionScreenHost(
+    navigator: navigatorKey,
+    trips: () => container.read(caveTripServiceProvider),
+    rasterMaps: () => container.read(rasterMapRepositoryProvider),
+    definitions: () => container.read(definitionRepositoryProvider),
+    lastLocated: container.read(lastLocatedPlaceProvider),
+  );
+  BeaconDetectionService.instance.attach(beaconScreens);
+  BeaconAlertNotifier.instance.attachPlaceOpener(beaconScreens.openPlacePage);
+
   final swap = container.read(liveDatabaseSwapProvider);
   await startApp(
     start: () => _startServices(container, swap),
@@ -79,6 +94,8 @@ Future<void> _startServices(
   // Before anything opens the database: a swap cut short by a kill left the
   // caver's previous database aside, and it goes back now.
   await swap.recoverInterruptedSwap();
+  // Only after the recovery, which may have set a copy aside just now.
+  await const SetAsideDatabasePruner().prune(await swap.liveDatabaseFile());
 
   // Track application start count. Only statistics: a full disk must not
   // stop the app over it.

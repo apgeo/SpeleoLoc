@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,7 +51,7 @@ void main() {
         text('documentation_files/hall.jpg', 'photo'),
       ]),
       dest,
-    );
+    ).outside;
 
     expect(rejected, isEmpty);
     expect(
@@ -83,7 +84,7 @@ void main() {
         text('documentation_files/hall.jpg', 'photo'),
       ]),
       dest,
-    );
+    ).outside;
 
     expect(rejected, hasLength(hostile.length));
     expect(filesOutsideDest(), isEmpty);
@@ -102,6 +103,76 @@ void main() {
     );
   });
 
+  test('no name built from separators, dots and letters lands outside the '
+      'folder', () async {
+    final random = Random(20261107);
+    const pieces = ['a', '.', '..', '/', r'\'];
+    for (var i = 0; i < 200; i++) {
+      final name = [
+        for (var j = 0; j < 1 + random.nextInt(8); j++)
+          pieces[random.nextInt(pieces.length)],
+      ].join();
+      // One entry per extraction, each deeper than its name can climb, so an
+      // escape lands where this test sees it.
+      final caseRoot = Directory(p.join(root.path, 'case$i'));
+      final into = Directory(
+        p.joinAll([caseRoot.path, for (var d = 0; d < 9; d++) 'd$d']),
+      );
+      await into.create(recursive: true);
+
+      final rejected = extractArchiveInto(
+        roundTrip([text(name, 'payload')]),
+        into,
+      ).outside;
+
+      final outside = [
+        for (final e in caseRoot.listSync(recursive: true))
+          if (e is File && !p.isWithin(into.path, e.path)) e.path,
+      ];
+      expect(outside, isEmpty, reason: '"$name"');
+      final written = into.listSync(recursive: true).whereType<File>();
+      expect(written.length + rejected.length, lessThanOrEqualTo(1));
+    }
+    expect(
+      root.listSync().map((e) => p.basename(e.path)),
+      everyElement(anyOf(startsWith('case'), 'cache')),
+    );
+  });
+
+  test('an entry that cannot be written is reported, and the rest are still '
+      'written', () {
+    for (final order in [
+      ['documentation_files/x', 'documentation_files/x/inner.jpg'],
+      ['documentation_files/x/inner.jpg', 'documentation_files/x'],
+    ]) {
+      final into = Directory(p.join(root.path, 'case${order.first.length}'));
+      into.createSync();
+
+      final extraction = extractArchiveInto(
+        roundTrip([
+          for (final name in order) text(name, 'payload'),
+          text('documentation_files/hall.jpg', 'photo'),
+        ]),
+        into,
+      );
+
+      expect(extraction.outside, isEmpty);
+      expect(extraction.failures.keys, [order.last], reason: '$order');
+      expect(
+        File(
+          p.join(into.path, 'documentation_files', 'hall.jpg'),
+        ).readAsStringSync(),
+        'photo',
+      );
+      expect(
+        FileSystemEntity.typeSync(
+          p.joinAll([into.path, ...order.first.split('/')]),
+        ),
+        isNot(FileSystemEntityType.notFound),
+      );
+    }
+  });
+
   test('never materialises a symbolic-link entry', () async {
     final link = text('documentation_files/link.jpg', '../../speleo_loc.sqlite')
       ..isFile = false
@@ -109,7 +180,7 @@ void main() {
       ..nameOfLinkedFile = '../../speleo_loc.sqlite';
     final archive = Archive()..addFile(link);
 
-    final rejected = extractArchiveInto(archive, dest);
+    final rejected = extractArchiveInto(archive, dest).outside;
 
     expect(rejected, isEmpty);
     expect(root.listSync(recursive: true).whereType<Link>(), isEmpty);

@@ -1,3 +1,6 @@
+@Tags(['live'])
+library;
+
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -47,17 +50,14 @@ import 'live_server.dart';
 /// sends no bytes; and takes it down again.
 void main() {
   final env = Platform.environment;
-  if (env['SPELEO_LOC_SILEXGIS_LIVE'] != '1') {
-    test(
-      'SilexGIS rasters live test skipped (set SPELEO_LOC_SILEXGIS_LIVE=1)',
-      () {},
-    );
+  final skip = liveSkipReason(env);
+  if (skip != null) {
+    // Registered as skipped rather than left out, so a run reports it.
+    test('SilexGIS rasters live test', () {}, skip: skip);
     return;
   }
 
-  final baseUri = Uri.parse(
-    env['SPELEO_LOC_SILEXGIS_URL'] ?? 'http://127.0.0.1:5205',
-  );
+  final baseUri = liveBaseUri(env);
   const email = 'member@dev.local';
   const password = 'dev-member-pass-1';
   const profileUuid = 'rasters-live';

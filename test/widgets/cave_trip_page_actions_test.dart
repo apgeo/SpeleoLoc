@@ -176,6 +176,31 @@ void main() {
     expect(service.activeTripIdNotifier.value, isNull);
   });
 
+  testWidgets('Delete on another phone\'s trip leaves the recording one '
+      'running', (tester) async {
+    await seedCave(tester);
+    final mine = await run(tester, () => service.startTrip(caveUuid, 'Mine'));
+    final other = await openElsewhere(tester);
+    await open(tester, other);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await settle(tester);
+    await tester.tap(find.text(LocServ.inst.t('trip_delete')));
+    await settle(tester);
+    await tester.tap(find.text(LocServ.inst.t('yes')));
+    await settle(tester);
+
+    expect(
+      await run(
+        tester,
+        () => container.read(caveTripRepositoryProvider).findById(other),
+      ),
+      isNull,
+    );
+    expect(service.activeTripIdNotifier.value, mine);
+    expect((await row(tester, mine)).tripEndedAt, isNull);
+  });
+
   testWidgets('Restart asks before replacing the times', (tester) async {
     await seedCave(tester);
     final ended = await run(tester, () async {

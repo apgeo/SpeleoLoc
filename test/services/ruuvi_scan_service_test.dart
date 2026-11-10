@@ -57,6 +57,36 @@ void main() {
     await sub.cancel();
   });
 
+  test(
+    'a newer advertisement from the same tag is a second sighting',
+    () async {
+      final sightings = <RuuviSighting>[];
+      final sub = ruuvi.sightings.listen(sightings.add);
+      await _settle();
+
+      final first = later(10);
+      platform.emit([
+        scanResult(
+          'CB:B8:33:4C:88:4F',
+          at: first,
+          manufacturerData: {ruuviCompanyId: _ruuviPayload},
+        ),
+      ]);
+      final second = later(1000);
+      platform.emit([
+        scanResult(
+          'CB:B8:33:4C:88:4F',
+          at: second,
+          manufacturerData: {ruuviCompanyId: _ruuviPayload},
+        ),
+      ]);
+      await _settle();
+
+      expect(sightings.map((s) => s.seenAt), [first, second]);
+      await sub.cancel();
+    },
+  );
+
   test('scans only for Ruuvi manufacturer data', () async {
     final sub = ruuvi.sightings.listen((_) {});
     await _settle();

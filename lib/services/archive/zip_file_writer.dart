@@ -41,7 +41,15 @@ void _writeZipFileSync(String outputPath, List<ZipEntrySource> entries) {
     final encoder = ZipEncoder()..startEncode(output);
     for (final entry in entries) {
       final archiveFile = _archiveFileFor(entry);
-      if (archiveFile != null) encoder.addFile(archiveFile);
+      if (archiveFile == null) continue;
+      try {
+        encoder.addFile(archiveFile);
+      } finally {
+        // A large file's entry reads from a file stream the encoder leaves
+        // open; without this only garbage collection would close it, and
+        // an archive of many videos could hold them all open at once.
+        archiveFile.closeSync();
+      }
     }
     encoder.endEncode();
   } finally {

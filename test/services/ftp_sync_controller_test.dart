@@ -374,9 +374,14 @@ Iterable<String> _zipsOnly(Iterable<String> names) =>
     names.where((n) => n.endsWith('.zip'));
 
 /// Drives the controller through [FtpSyncController.progress] and returns the
-/// final progress once it reaches a terminal phase.
+/// final progress once it reaches a terminal phase. A run that never ends
+/// fails the test with its last progress, rather than hanging the suite.
 Future<FtpSyncProgress> _waitForTerminal(FtpSyncController c) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 30));
   while (c.progress.isRunning || c.progress.phase == FtpSyncPhase.idle) {
+    if (DateTime.now().isAfter(deadline)) {
+      fail('sync run did not end: ${c.progress.phase}');
+    }
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
   return c.progress;
@@ -1205,15 +1210,6 @@ void main() {
     expect(fake.uploadedNames, ['$zip.sha256', zip]);
     expect(fake.store.keys, isNot(contains(orphan)));
   });
-
-  // The "remote unseen + local changed" union case is logically the
-  // composition of the two preceding tests; the dual-system-user UNIQUE
-  // constraint in the in-memory test fixture (each harness lazily creates
-  // its own 'system' user on first write) prevents importing a peer
-  // archive into a DB that has already had a local write, which is an
-  // import-side limitation unrelated to the upload-skipping logic under
-  // test here. Worth revisiting once the import handles user merge by
-  // username.
 
   test(
     'sha256 sidecars inherit their base archive timestamp (seen-set trim)',

@@ -8,7 +8,7 @@ import 'package:drift/drift.dart'
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// An archive is one snapshot of the device: an edit made while the export
 /// reads the tables lands wholly before it or wholly after it, never between
@@ -25,7 +25,7 @@ void main() {
     final a = await SyncTestDevice.create(
       executor: NativeDatabase.memory().interceptWith(trigger),
     );
-    addTearDown(a.db.close);
+    addTearDown(a.dispose);
 
     final cave = await a.caves.addCave('Invented Cave');
     await a.places.addCavePlace(cave, 'Doomed');

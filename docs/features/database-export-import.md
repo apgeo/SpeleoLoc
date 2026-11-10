@@ -323,7 +323,9 @@ offers:
   asks first, says what will be deleted, and offers **Export first**.
   Photos and documents already saved on the device are not deleted, and
   neither is a previous database a cut-short restore left waiting: it stays
-  on the device under another name.
+  on the device under another name. Such a set-aside copy is deleted at a
+  later start once it is more than 30 days old and a newer one exists; the
+  most recent one is always kept.
 
 A database saved by a newer version of the app gets its own message: update
 the app and it opens as it is. **Reset app data** is not offered then, nor

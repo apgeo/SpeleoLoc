@@ -219,7 +219,7 @@ class DataArchiveService {
   }) async {
     _databaseSwap.ensureNoSyncRunning();
     onProgress?.call('Extracting archive...');
-    final tempDir = await _extractZip(zipPath);
+    final (tempDir, _) = await _extractZip(zipPath);
 
     try {
       final importedDbFile = File('${tempDir.path}/speleo_loc.sqlite');
@@ -311,7 +311,7 @@ class DataArchiveService {
     ProgressCallback? onProgress,
   }) async {
     onProgress?.call('Extracting archive...');
-    final tempDir = await _extractZip(zipPath);
+    final (tempDir, unwritten) = await _extractZip(zipPath);
 
     try {
       final importedDb = File('${tempDir.path}/speleo_loc.sqlite');
@@ -326,6 +326,7 @@ class DataArchiveService {
       );
 
       onProgress?.call('Copying files...');
+      report.warnings.addAll(unwritten);
       final filesCopied = await _copyNewFiles(tempDir.path, report.warnings);
 
       await _restoreFtpCredentialsIfAllowed(
@@ -368,18 +369,27 @@ class DataArchiveService {
     }
   }
 
-  /// Extract zip to a new temporary directory.
-  Future<Directory> _extractZip(String zipPath) async {
+  /// Extract zip to a new temporary directory. Also returns a warning for
+  /// each entry that could not be written there; the import goes on
+  /// without them.
+  Future<(Directory, List<String>)> _extractZip(String zipPath) async {
     final tempDir = await Directory.systemTemp.createTemp('speleo_loc_import_');
+    final unwritten = <String>[];
     try {
-      for (final name in await extractZipFileInto(zipPath, tempDir.path)) {
+      final extraction = await extractZipFileInto(zipPath, tempDir.path);
+      for (final name in extraction.outside) {
         _log.warning('skipping archive entry outside the import folder: $name');
+      }
+      for (final MapEntry(key: name, value: error)
+          in extraction.failures.entries) {
+        _log.warning('could not extract archive entry $name: $error');
+        unwritten.add('Skipped $name: $error');
       }
     } catch (_) {
       await tempDir.delete(recursive: true);
       rethrow;
     }
-    return tempDir;
+    return (tempDir, unwritten);
   }
 
   /// Copy all extracted files (except DB & manifest) into [docsDir],

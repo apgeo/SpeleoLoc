@@ -8,6 +8,7 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/screens/cave_trip/cave_trip_history_list.dart';
 import 'package:speleoloc/services/cave_trip_service.dart';
 import 'package:speleoloc/services/silexgis/silexgis_trip_origin_service.dart';
+import 'package:speleoloc/utils/app_exceptions.dart';
 import 'package:speleoloc/utils/app_routes.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/app_global_menu.dart';
@@ -153,7 +154,14 @@ class _CaveTripListPageState extends ConsumerState<CaveTripListPage>
       final title = controller.text.trim().isNotEmpty
           ? controller.text.trim()
           : suggestedTitle;
-      await ref.read(caveTripServiceProvider).startTrip(widget.caveUuid, title);
+      try {
+        await ref
+            .read(caveTripServiceProvider)
+            .startTrip(widget.caveUuid, title);
+      } on ValidationException {
+        SnackBarService.showWarning(LocServ.inst.t('trip_start_other_running'));
+        return;
+      }
       if (mounted) {
         unawaited(_load());
       }

@@ -15,7 +15,8 @@ const _title = 'Flow trip Foxtrot';
 /// a name is given, the trip becomes the active one and the toolbar offers
 /// Stop; stopping asks first, then the trip is closed with an end time.
 ///
-/// Runs after the flows that only read data: it adds a trip.
+/// Writes a trip, so it runs against the invented dataset only. It runs after
+/// the flows that only read data.
 void main() {
   flow('deep_trip_lifecycle', (driver) async {
     final tester = driver.tester;
@@ -61,5 +62,5 @@ void main() {
     expect(service.activeTripIdNotifier.value, isNull);
     await driver.shoot('41_trip_stopped');
     expect(tester.takeException(), isNull);
-  });
+  }, inventedOnly: true);
 }

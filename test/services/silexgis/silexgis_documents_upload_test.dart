@@ -1025,6 +1025,8 @@ void main() {
       // a parent folder must never get that file uploaded as a document.
       final (atRoot, _) = await photo('root.jpg');
       final (escaping, _) = await photo('escape.jpg');
+      final (backOut, _) = await photo('back.jpg');
+      final (absolute, _) = await photo('absolute.jpg');
       final outside = File('${base.path}_outside.sqlite');
       await File('${base.path}/speleo_loc.sqlite').writeAsString('database');
       await outside.writeAsString('outside');
@@ -1034,6 +1036,8 @@ void main() {
       for (final (id, name) in <(Uuid, String)>[
         (atRoot, 'speleo_loc.sqlite'),
         (escaping, '../${outside.uri.pathSegments.last}'),
+        (backOut, 'documentation_files/../speleo_loc.sqlite'),
+        (absolute, outside.path),
       ]) {
         await (db.update(db.documentationFiles)
               ..where((t) => t.uuid.equalsValue(id)))
@@ -1045,9 +1049,38 @@ void main() {
 
       expect(touchedTransfers(client), isFalse);
       expect(sentSection(client, SyncUploadSection.documents), isEmpty);
-      expect(documents.keptBack, containsAll(<Uuid>[atRoot, escaping]));
-      expect(documents.files.missing, 2);
+      expect(
+        documents.keptBack,
+        containsAll(<Uuid>[atRoot, escaping, backOut, absolute]),
+      );
+      expect(documents.files.missing, 4);
     });
+
+    test(
+      'sends no bytes for a file that is not the one the row describes',
+      () async {
+        // A row from another device can name a real documentation file
+        // with another document's hash; what goes up should be what the
+        // row says it is.
+        final (id, _) = await photo('swapped.jpg');
+        await (db.update(
+          db.documentationFiles,
+        )..where((t) => t.uuid.equalsValue(id))).write(
+          DocumentationFilesCompanion(
+            fileHash: Value(sha256.convert(utf8.encode('other')).toString()),
+          ),
+        );
+
+        final client = ScriptedClient(<ScriptedResponse>[]);
+        final (_, documents) = await run(client);
+
+        expect(touchedTransfers(client), isFalse);
+        expect(documents.keptBack, contains(id));
+      },
+      skip:
+          'a new document is staged without comparing its bytes to the '
+          'hash its row records',
+    );
   });
 }
 

@@ -8,7 +8,7 @@ import 'package:speleoloc/services/silexgis/silexgis_local_state_repository.dart
 import 'package:speleoloc/services/silexgis/silexgis_server_link_repository.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// A cave one phone sent to SilexGIS again as new reaches the other phone
 /// under its new identifiers, and what only that phone held inside it moves
@@ -48,8 +48,8 @@ void main() {
     await tick();
   });
   tearDown(() async {
-    await a.db.close();
-    await b.db.close();
+    await a.dispose();
+    await b.dispose();
     await tmp.delete(recursive: true);
   });
 

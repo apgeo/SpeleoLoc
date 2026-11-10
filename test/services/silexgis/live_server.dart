@@ -5,6 +5,39 @@ import 'dart:io';
 // identifiers that differ per installation, read the way a person would find
 // them. Shared by every live test file; none of it is part of the contract.
 
+/// Why the live tests do not run in this environment, or null when they may.
+///
+/// They sign in with the development server's published accounts and write
+/// rows into it, so they run only when asked for by name.
+String? liveSkipReason(Map<String, String> env) =>
+    env['SPELEO_LOC_SILEXGIS_LIVE'] == '1'
+    ? null
+    : 'set SPELEO_LOC_SILEXGIS_LIVE=1 to run against a development server';
+
+/// The development server's address: `SPELEO_LOC_SILEXGIS_URL`, or the port
+/// the script that starts it prints.
+///
+/// The tests sign in with a well-known password and create and remove rows,
+/// which belongs on a server on this machine and nowhere else. An address on
+/// another machine is refused unless `SPELEO_LOC_SILEXGIS_REMOTE=1` says that
+/// it, too, is a disposable development server.
+Uri liveBaseUri(Map<String, String> env) {
+  final uri = Uri.parse(
+    env['SPELEO_LOC_SILEXGIS_URL'] ?? 'http://127.0.0.1:5205',
+  );
+  final loopback = <String>{'127.0.0.1', '::1', '[::1]', 'localhost'};
+  if (!loopback.contains(uri.host) &&
+      env['SPELEO_LOC_SILEXGIS_REMOTE'] != '1') {
+    throw ArgumentError.value(
+      uri.toString(),
+      'SPELEO_LOC_SILEXGIS_URL',
+      'is not on this machine; set SPELEO_LOC_SILEXGIS_REMOTE=1 if it is a '
+          'disposable development server',
+    );
+  }
+  return uri;
+}
+
 /// The demonstration caves' feature ids — all six, or those named in [names] —
 /// read from the ordinary cave list.
 ///

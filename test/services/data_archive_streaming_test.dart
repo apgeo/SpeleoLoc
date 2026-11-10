@@ -68,12 +68,15 @@ void main() {
     final service = DataArchiveService(_FixedPaths(appDatabase));
     final outDir = await Directory(p.join(tempDir.path, 'out')).create();
 
-    var peakBefore = ProcessInfo.maxRss;
+    // Growth is measured from the resident size at the start, not from the
+    // peak: a peak left high by earlier work would hide any growth that
+    // stays below it, and the check would pass whatever the code held.
+    var rssBefore = ProcessInfo.currentRss;
     final zipPath = await service.exportArchive(
       settings: const ExportSettings(),
       outputDir: outDir.path,
     );
-    expect(ProcessInfo.maxRss - peakBefore, lessThan(videoSize ~/ 2));
+    expect(ProcessInfo.maxRss - rssBefore, lessThan(videoSize ~/ 2));
 
     final input = InputFileStream(zipPath);
     try {
@@ -103,12 +106,12 @@ void main() {
     await currentUser.initialize();
     logger = ChangeLogger(appDatabase, currentUser);
 
-    peakBefore = ProcessInfo.maxRss;
+    rssBefore = ProcessInfo.currentRss;
     final report = await service.importArchiveMerge(
       zipPath: zipPath,
       merger: SyncArchiveService(appDatabase, logger),
     );
-    expect(ProcessInfo.maxRss - peakBefore, lessThan(videoSize ~/ 2));
+    expect(ProcessInfo.maxRss - rssBefore, lessThan(videoSize ~/ 2));
 
     expect(report.filesCopied, 3);
     expect(

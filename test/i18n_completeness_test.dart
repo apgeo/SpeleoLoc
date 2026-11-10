@@ -28,8 +28,13 @@ void main() {
       }
     }
     usedKeys.removeWhere((k, _) => _allowlist.contains(k));
-    expect(usedKeys, isNotEmpty, reason: 'key extraction found nothing — '
-        'the regex or the working directory is broken');
+    expect(
+      usedKeys,
+      isNotEmpty,
+      reason:
+          'key extraction found nothing — '
+          'the regex or the working directory is broken',
+    );
 
     final localeFiles = Directory('assets/i18n')
         .listSync()
@@ -59,5 +64,34 @@ void main() {
           'Missing i18n keys — add them to the locale file(s):\n'
           '${failures.join('\n')}',
     );
+  });
+
+  test('every locale defines the same keys, with the same placeholders', () {
+    Map<String, dynamic> load(String name) =>
+        jsonDecode(File('assets/i18n/$name.json').readAsStringSync())
+            as Map<String, dynamic>;
+    final en = load('en');
+    final ro = load('ro');
+    final placeholder = RegExp(r'\{\w+\}');
+    List<String> placeholders(Object? text) =>
+        (placeholder.allMatches('$text').map((m) => m[0]!).toList()..sort());
+
+    expect(
+      en.keys.toSet().difference(ro.keys.toSet()),
+      isEmpty,
+      reason: 'defined in en.json only',
+    );
+    expect(
+      ro.keys.toSet().difference(en.keys.toSet()),
+      isEmpty,
+      reason: 'defined in ro.json only',
+    );
+    final mismatched = [
+      for (final key in en.keys)
+        if (ro.containsKey(key) &&
+            placeholders(en[key]).join() != placeholders(ro[key]).join())
+          key,
+    ];
+    expect(mismatched, isEmpty, reason: 'placeholders differ between locales');
   });
 }

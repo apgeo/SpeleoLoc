@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 
-import 'sync_test_device.dart';
+import '../support/sync_device.dart';
 
 /// An import that holds back its deletions counts every row the merge would
 /// remove — the records the archive deletes, what their deletion reaches on
@@ -23,8 +23,8 @@ void main() {
     b = await SyncTestDevice.create();
   });
   tearDown(() async {
-    await a.db.close();
-    await b.db.close();
+    await a.dispose();
+    await b.dispose();
     await tmp.delete(recursive: true);
   });
 

@@ -1,4 +1,5 @@
 import 'package:speleoloc/data/source/database/app_database.dart';
+import 'package:speleoloc/utils/name_match_key.dart';
 
 /// Mutable identity of one cave place as CSV place import matching sees it.
 class PlaceSnapshotEntry {
@@ -30,9 +31,10 @@ typedef SnapshotMatch<T> = ({T? match, bool ambiguous});
 /// preview, the code-conflict check and the import resolve every row the
 /// same way without a query per row.
 ///
-/// Names match case-insensitively on every axis, while place codes match
-/// exactly, as the add-place form compares them. A place code is unique
-/// only within its cave, so holders are kept per cave.
+/// Names match case-insensitively on every axis, with the cedilla and
+/// comma-below forms of the Romanian s and t taken as one letter, while
+/// place codes match exactly, as the add-place form compares them. A place
+/// code is unique only within its cave, so holders are kept per cave.
 class CavePlaceImportSnapshot {
   final _cavesByTitle = <String, List<CaveSnapshotRef>>{};
   final _caveTitleByUuid = <Uuid, String>{};
@@ -84,7 +86,7 @@ class CavePlaceImportSnapshot {
 
   void registerCave(Uuid uuid, String title) {
     _caveTitleByUuid[uuid] = title;
-    _cavesByTitle.putIfAbsent(title.toLowerCase(), () => []).add((
+    _cavesByTitle.putIfAbsent(nameMatchKey(title), () => []).add((
       uuid: uuid,
       title: title,
     ));
@@ -95,7 +97,7 @@ class CavePlaceImportSnapshot {
   /// Caves are unique on title plus surface area, so one title can name
   /// several caves; the place CSV carries nothing that tells them apart.
   SnapshotMatch<CaveSnapshotRef> cavesTitled(String title) {
-    final caves = _cavesByTitle[title.toLowerCase()] ?? const [];
+    final caves = _cavesByTitle[nameMatchKey(title)] ?? const [];
     return (
       match: caves.length == 1 ? caves.single : null,
       ambiguous: caves.length > 1,
@@ -103,15 +105,15 @@ class CavePlaceImportSnapshot {
   }
 
   void registerArea(Uuid caveUuid, String title, Uuid uuid) {
-    _areaByKey.putIfAbsent(_key(caveUuid, title.toLowerCase()), () => uuid);
+    _areaByKey.putIfAbsent(_key(caveUuid, nameMatchKey(title)), () => uuid);
   }
 
   Uuid? areaOf(Uuid caveUuid, String title) =>
-      _areaByKey[_key(caveUuid, title.toLowerCase())];
+      _areaByKey[_key(caveUuid, nameMatchKey(title))];
 
   void registerPlace(PlaceSnapshotEntry entry) {
     _placesByKey
-        .putIfAbsent(_key(entry.caveUuid, entry.title.toLowerCase()), () => [])
+        .putIfAbsent(_key(entry.caveUuid, nameMatchKey(entry.title)), () => [])
         .add(entry);
     final code = entry.placeCode;
     if (code != null) {
@@ -135,7 +137,7 @@ class CavePlaceImportSnapshot {
     required bool rowNamesArea,
     Uuid? areaUuid,
   }) {
-    final candidates = _placesByKey[_key(caveUuid, title.toLowerCase())];
+    final candidates = _placesByKey[_key(caveUuid, nameMatchKey(title))];
     if (candidates == null || candidates.isEmpty) {
       return (match: null, ambiguous: false);
     }

@@ -6,7 +6,9 @@ import 'package:speleoloc/data/source/database/app_database.dart';
 import 'package:speleoloc/services/cave_area_title_clash_exception.dart';
 import 'package:speleoloc/services/change_logger.dart';
 
-import 'sync_test_device.dart';
+import '../support/populated_cave.dart';
+import '../support/sync_assertions.dart';
+import '../support/sync_device.dart';
 
 /// Deleting a cave, a place or an area removes or detaches everything that
 /// hangs on it, and logs each removal as a delete and each detach as an
@@ -133,6 +135,11 @@ void main() {
     ]) {
       expect(await d.uuidsOf(table), isEmpty, reason: '$table keeps rows');
     }
+    expect(
+      await d.db.customSelect('PRAGMA foreign_key_check').get(),
+      isEmpty,
+      reason: 'a row still points at something that was deleted',
+    );
     expect(await d.uuidsOf('cave_trips'), {otherTrip});
     expect(await d.uuidsOf('cave_trip_points'), {visit});
     expect(await tombstones('cave_trips'), contains(trip));
@@ -314,5 +321,89 @@ void main() {
       )..where((p) => p.uuid.equalsValue(point))).getSingle();
       expect(kept.cavePlaceUuid, isNull);
     });
+
+    test('a cave holding one of everything, and the same archive a second '
+        'time changes nothing', () async {
+      final b = await SyncTestDevice.create();
+      addTearDown(b.dispose);
+      final full = await PopulatedCave.build(d);
+      await d.sendTo(b, tmp, 'a0.zip');
+      await tick();
+
+      await d.caves.deleteCave(full.cave);
+      final deletion = await d.export(tmp, 'a1.zip');
+      await b.sync.importFromZip(deletion.path);
+
+      for (final MapEntry(key: table, value: rows) in full.rows.entries) {
+        expect(
+          (await b.uuidsOf(table)).intersection(rows),
+          isEmpty,
+          reason: '$table keeps rows of the deleted cave',
+        );
+      }
+      await expectNoOrphans(b.db);
+      await expectConverged(d.db, b.db);
+
+      final before = await syncedContent(b.db);
+      final again = await b.sync.importFromZip(deletion.path);
+      expect(again.rowsInserted, 0);
+      expect(again.rowsUpdated, 0);
+      expect(again.deletesApplied, 0);
+      expect(await syncedContent(b.db), before);
+    });
+
+    test('an edit made on the peer after the deletion keeps the record, '
+        'there and back on the deleting phone', () async {
+      final b = await SyncTestDevice.create();
+      addTearDown(b.dispose);
+      final cave = await d.caves.addCave('Invented Cave');
+      await d.places.addCavePlace(cave, 'Junction');
+      final place = await d.placeUuid(cave, 'Junction');
+      await d.sendTo(b, tmp, 'a0.zip');
+      await tick();
+
+      await d.places.deleteCavePlace(place);
+      final deletion = await d.export(tmp, 'a1.zip');
+      await tick();
+      final row = (await b.places.findCavePlaceByTitle(cave, 'Junction'))!;
+      await b.places.updateCavePlace(
+        row.uuid,
+        const CavePlacesCompanion(title: Value('Junction Renamed')),
+      );
+      await b.sync.importFromZip(deletion.path);
+
+      expect(await b.uuidsOf('cave_places'), {place});
+      await b.sendTo(d, tmp, 'b1.zip');
+      expect(await d.uuidsOf('cave_places'), {place});
+      await expectConverged(d.db, b.db);
+    });
+  });
+
+  test('a cave holding one of everything goes, with each row it held '
+      'tombstoned once and nothing left pointing at it', () async {
+    final full = await PopulatedCave.build(d);
+    await tick();
+
+    await d.caves.deleteCave(full.cave);
+
+    await expectNoOrphans(d.db);
+    for (final MapEntry(key: table, value: rows) in full.rows.entries) {
+      expect(
+        (await d.uuidsOf(table)).intersection(rows),
+        isEmpty,
+        reason: '$table keeps rows of the deleted cave',
+      );
+      final logged = await (d.db.select(
+        d.db.changeLog,
+      )..where((c) => c.entityTable.equals(table))).get();
+      expect(
+        [
+          for (final c in logged)
+            if (c.changeType == ChangeType.delete) c.entityUuid,
+        ],
+        unorderedEquals(rows),
+        reason: '$table tombstones',
+      );
+    }
   });
 }

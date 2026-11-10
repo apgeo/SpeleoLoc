@@ -6,6 +6,7 @@ import 'package:speleoloc/services/beacon/beacon_scan_helper.dart';
 import 'package:speleoloc/services/ruuvi/ruuvi_scan_service.dart';
 import 'package:speleoloc/utils/localization.dart';
 import 'package:speleoloc/widgets/snack_bar_service.dart';
+import 'package:speleoloc/widgets/location_services_prompt.dart';
 
 /// Live readout of one Ruuvi tag from its advertisements — no connection
 /// needed: current temperature/humidity/pressure/battery, motion
@@ -34,7 +35,7 @@ class RuuviLivePage extends StatefulWidget {
       return;
     }
     if (!context.mounted) return;
-    if (!await BeaconScanHelper.ensureLocationServicesEnabled(context)) {
+    if (!await ensureLocationServicesEnabled(context)) {
       return;
     }
     if (!context.mounted) return;

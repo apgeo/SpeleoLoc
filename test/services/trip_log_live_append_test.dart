@@ -104,6 +104,39 @@ void main() {
       expect(await db.getTripPoints(uuid), hasLength(2));
     });
 
+    test('a log reworded by hand is kept when a document is linked', () async {
+      final uuid = await service.startTrip(caveUuid, 'Trip');
+      await service.recordPoint(chamber);
+      const reworded = 'Our own account of the day, written from scratch.';
+      await type(uuid, reworded);
+      final doc = await db.insertDocumentationFile(
+        companion: DocumentationFilesCompanion.insert(
+          uuid: Uuid.v7(),
+          title: 'Photo',
+          fileName: 'photo.jpg',
+          fileSize: 1,
+          fileType: 'image',
+        ),
+      );
+
+      await service.linkDocument(doc, documentTitle: 'Photo');
+
+      final after = await trip(uuid);
+      expect(after.log, reworded);
+      expect(after.logStaleSince, isNotNull);
+    });
+
+    test('a log reworded by hand is kept when the trip stops', () async {
+      final uuid = await service.startTrip(caveUuid, 'Trip');
+      await service.recordPoint(chamber);
+      const reworded = 'Our own account of the day, written from scratch.';
+      await type(uuid, reworded);
+
+      await service.stopTrip();
+
+      expect((await trip(uuid)).log, reworded);
+    });
+
     test('an untouched log follows the points', () async {
       final uuid = await service.startTrip(caveUuid, 'Trip');
       await service.recordPoint(chamber);

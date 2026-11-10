@@ -11,19 +11,18 @@ import 'package:speleoloc/services/current_user_service.dart';
 import 'package:speleoloc/services/sync/sync_archive_service.dart';
 import 'package:speleoloc/services/sync/sync_table_registry.dart';
 import 'package:speleoloc/services/user_repository.dart';
+import 'package:sqlite3/sqlite3.dart' show Database;
 
-/// WS-D D5 precondition: a real, migrated production dataset must survive an
-/// export/import round-trip through the current sync format without row loss.
+import '../support/schema_snapshots.dart';
+
+/// A database brought up from an older version must survive an export and
+/// import through the current sync format without losing a row.
 ///
-/// Uses the richest shipped fixture (`speleo_loc_export_20260425.sqlite`,
-/// user_version 9). Opening it migrates it to the current schema (15) — the
-/// same path `legacy_v6_migration_test.dart` exercises for the older
-/// binaries — then it is exported and imported into a fresh database and the
-/// per-table row counts are compared. The pre-v7 fixtures (user_version 0/1)
-/// are intentionally not round-tripped here: drift treats user_version 0 as a
-/// brand-new database and runs onCreate instead of the migration ladder, so
-/// they can't be opened as a live dataset this way (migration coverage for
-/// those is WS-I I1).
+/// The source is built at v9, the first version with users and audit
+/// columns, from its schema snapshot and an invented data set with a row in
+/// every table that version syncs, every reference set. Opening it runs the
+/// ladder to the current schema; it is then exported, imported into a fresh
+/// database, and the per-table row counts are compared.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -58,21 +57,18 @@ void main() {
   }
 
   test(
-    'richest fixture round-trips through the sync format without row loss',
+    'a database upgraded from v9 round-trips through sync without row loss',
     () async {
-      final source = File(
-        'test_data/db/binaries/speleo_loc_export_20260425.sqlite',
+      // The on-open migration runs the ladder from v9 to the current schema.
+      final source = createDatabaseAtVersion(
+        p.join(tempDir.path, 'source.sqlite'),
+        9,
+        seed: _seedInventedV9Data,
       );
-      expect(source.existsSync(), isTrue, reason: 'fixture missing');
-
-      // Copy so the on-open migration (user_version 9 -> 15) does not mutate
-      // the tracked fixture.
-      final srcCopy = File(p.join(tempDir.path, 'source.sqlite'));
-      await source.copy(srcCopy.path);
 
       final srcAssets = await Directory.systemTemp.createTemp('rt_src_');
       final (srcDb, srcSync) = await buildStack(
-        NativeDatabase(srcCopy),
+        NativeDatabase(source),
         srcAssets,
       );
       final tgtAssets = await Directory.systemTemp.createTemp('rt_tgt_');
@@ -94,11 +90,11 @@ void main() {
         for (final t in srcRegistry.tables()) {
           srcCounts[t.name] = (await t.dump()).length;
         }
-        expect(
-          srcCounts['caves'],
-          greaterThan(0),
-          reason: 'fixture is expected to contain caves',
-        );
+        // Every table the fixture fills is still filled after the upgrade,
+        // so the comparison below covers each of them.
+        for (final table in _filledTables) {
+          expect(srcCounts[table], greaterThan(0), reason: table);
+        }
 
         final zip = await srcSync.exportToZip(
           tempDir.path,
@@ -144,4 +140,175 @@ void main() {
       }
     },
   );
+}
+
+/// The synced tables [_seedInventedV9Data] writes to.
+const _filledTables = [
+  'users',
+  'surface_areas',
+  'caves',
+  'cave_areas',
+  'cave_places',
+  'raster_maps',
+  'cave_place_to_raster_map_definitions',
+  'cave_trips',
+  'cave_trip_points',
+  'documentation_files',
+  'documentation_files_to_geofeatures',
+  'documentation_files_to_cave_trips',
+  'trip_report_templates',
+];
+
+/// Invented rows in every table of the v9 schema that holds caving data,
+/// each one made by an invented caver and every reference pointing at a row
+/// that is there.
+void _seedInventedV9Data(Database d) {
+  const t = 1700000000000;
+  final caver = Uuid.v7().bytes;
+  final plateau = Uuid.v7().bytes;
+  final alpha = Uuid.v7().bytes;
+  final beta = Uuid.v7().bytes;
+  final gallery = Uuid.v7().bytes;
+  final sinkhole = Uuid.v7().bytes;
+  final entrance = Uuid.v7().bytes;
+  final sump = Uuid.v7().bytes;
+  final chamber = Uuid.v7().bytes;
+  final plan = Uuid.v7().bytes;
+  final section = Uuid.v7().bytes;
+  final sketch = Uuid.v7().bytes;
+  final survey = Uuid.v7().bytes;
+  final photo = Uuid.v7().bytes;
+
+  void insert(String table, Map<String, Object?> row) {
+    final values = {
+      ...row,
+      'created_at': t,
+      'updated_at': t + 1,
+      if (table != 'users' || row['uuid'] != caver) ...{
+        'created_by_user_uuid': caver,
+        'last_modified_by_user_uuid': caver,
+      },
+    };
+    if (table == 'documentation_files_to_cave_trips') {
+      values.remove('updated_at');
+    }
+    d.execute(
+      'INSERT INTO $table (${values.keys.join(', ')}) '
+      'VALUES (${List.filled(values.length, '?').join(', ')})',
+      values.values.toList(),
+    );
+  }
+
+  insert('users', {
+    'uuid': caver,
+    'username': 'invented_caver',
+    'first_name': 'Invented',
+    'last_name': 'Caver',
+  });
+  insert('surface_areas', {'uuid': plateau, 'title': 'Invented Plateau'});
+  insert('caves', {
+    'uuid': alpha,
+    'title': 'Invented Cave Alpha',
+    'surface_area_uuid': plateau,
+  });
+  insert('caves', {'uuid': beta, 'title': 'Invented Cave Beta'});
+  insert('cave_areas', {
+    'uuid': gallery,
+    'title': 'Invented Upper Gallery',
+    'cave_uuid': alpha,
+  });
+  insert('surface_places', {'uuid': sinkhole, 'title': 'Invented Sinkhole'});
+  insert('cave_entrances', {
+    'uuid': Uuid.v7().bytes,
+    'cave_uuid': alpha,
+    'surface_place_uuid': sinkhole,
+    'title': 'Invented Main Entrance',
+  });
+  for (final (uuid, title, cave, area, qr, isEntrance) in [
+    (entrance, 'Invented Entrance', alpha, null, 101, 1),
+    (sump, 'Invented Sump', alpha, gallery, null, 0),
+    (chamber, 'Invented Chamber', beta, null, 202, 0),
+  ]) {
+    insert('cave_places', {
+      'uuid': uuid,
+      'title': title,
+      'cave_uuid': cave,
+      'cave_area_uuid': area,
+      'place_qr_code_identifier': qr,
+      'latitude': 45.5,
+      'longitude': 25.25,
+      'depth_in_cave': 12.5,
+      'is_entrance': isEntrance,
+    });
+  }
+  for (final (uuid, title, type, area) in [
+    (plan, 'Invented Plan', 'plane view', null),
+    (section, 'Invented Section', 'projected profile', gallery),
+  ]) {
+    insert('raster_maps', {
+      'uuid': uuid,
+      'title': title,
+      'map_type': type,
+      'file_name': '${title.toLowerCase().replaceAll(' ', '_')}.png',
+      'cave_uuid': alpha,
+      'cave_area_uuid': area,
+    });
+  }
+  insert('cave_place_to_raster_map_definitions', {
+    'uuid': Uuid.v7().bytes,
+    'x_coordinate': 10,
+    'y_coordinate': 20,
+    'cave_place_uuid': entrance,
+    'raster_map_uuid': plan,
+  });
+  insert('documentation_files', {
+    'uuid': sketch,
+    'title': 'Invented Sketch',
+    'file_name': 'invented_sketch.jpg',
+    'file_size': 2048,
+    'file_hash': 'ab' * 32,
+    'file_type': 'image',
+  });
+  for (final (target, type) in [(alpha, 'cave'), (sump, 'cave_place')]) {
+    insert('documentation_files_to_geofeatures', {
+      'uuid': Uuid.v7().bytes,
+      'geofeature_uuid': target,
+      'geofeature_type': type,
+      'documentation_file_uuid': sketch,
+    });
+  }
+  for (final (uuid, cave, title, ended) in [
+    (survey, alpha, 'Invented Survey Trip', t + 3600000),
+    (photo, beta, 'Invented Photo Trip', null),
+  ]) {
+    insert('cave_trips', {
+      'uuid': uuid,
+      'cave_uuid': cave,
+      'title': title,
+      'trip_started_at': t,
+      'trip_ended_at': ended,
+      'log': 'invented log of $title',
+    });
+  }
+  for (final (place, offset) in [(entrance, 60000), (null, 120000)]) {
+    insert('cave_trip_points', {
+      'uuid': Uuid.v7().bytes,
+      'cave_trip_uuid': survey,
+      'cave_place_uuid': place,
+      'scanned_at': t + offset,
+      'notes': 'invented note',
+    });
+  }
+  insert('documentation_files_to_cave_trips', {
+    'uuid': Uuid.v7().bytes,
+    'documentation_file_uuid': sketch,
+    'cave_trip_uuid': survey,
+  });
+  insert('trip_report_templates', {
+    'uuid': Uuid.v7().bytes,
+    'title': 'Invented Template',
+    'file_name': 'invented_template.docx',
+    'file_size': 1234,
+    'format': 'docx',
+  });
 }

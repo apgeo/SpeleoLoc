@@ -58,7 +58,10 @@ up with both halves.
 
 The documentation files themselves (photos, sketches, PDFs) and the
 raster map images are large, so they are optional — see the two switches
-below.
+below. Files larger than 32 MB go into the archive uncompressed: they are
+videos, photos and scans whose formats are compressed already, and leaving
+them as they are keeps the app responsive and its memory low however large
+the archive grows.
 
 ### Exporting a sync archive
 
