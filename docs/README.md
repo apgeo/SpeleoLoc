@@ -32,6 +32,7 @@ than read about it.
 2. [Getting started — first launch](getting-started.md)
 3. [Glossary of terms](glossary.md)
 4. [Screenshot gallery — the app, screen by screen](screenshots/README.md)
+5. [What's new — what each release brought](whats-new.md)
 
 ### Workflows (task-oriented)
 

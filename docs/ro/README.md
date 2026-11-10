@@ -33,6 +33,7 @@ preferați să vedeți aplicația în loc să citiți despre ea.
 2. [Primii pași — prima pornire](getting-started.md)
 3. [Glosar de termeni](glossary.md)
 4. [Galerie de capturi de ecran — aplicația, ecran cu ecran](screenshots/README.md)
+5. [Noutăți — ce a adus fiecare versiune](whats-new.md)
 
 ### Fluxuri de lucru (pe activități)
 
