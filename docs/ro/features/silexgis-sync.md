@@ -33,6 +33,11 @@ instalare. Când nu este configurat nimic, ecranul o spune deschis:
 > o instalare SilexGIS și vrei ca acest dispozitiv să poarte o parte din
 > peșterile ei.
 
+Unele versiuni ale aplicației lasă serverul de club deoparte cu totul —
+de exemplu versiunea de testare închisă din magazin. Într-o astfel de
+versiune, **Setări** nu are intrarea **Server de club (SilexGIS)** și
+niciun alt ecran nu arată ceva din el.
+
 Aceasta este starea obișnuită, nu o defecțiune. Tot ce se află pe
 dispozitivul dumneavoastră este al dumneavoastră, fie că există un server,
 fie că nu — aplicația nu are niciodată nevoie de unul ca să funcționeze.

@@ -7,6 +7,14 @@ punct de interes. SpeleoLoc recunoaște etichetele pe care le-ați
 înregistrat și vă spune în ce loc din peșteră vă aflați fără să atingeți
 telefonul.
 
+> Notă: unele versiuni ale aplicației vin cu beaconurile dezactivate — de
+> exemplu versiunea de testare închisă din magazin, ai cărei testeri nu
+> au etichete. Într-o astfel de versiune nu apare nicio setare, niciun
+> buton pentru beaconuri și nici comutatorul de detectare din meniul
+> lateral, iar detectarea nu pornește niciodată. Beaconurile înregistrate
+> pe alt dispozitiv circulă totuși cu datele și reapar într-o versiune
+> care le are.
+
 ## Ce aduce un beacon în plus față de o etichetă QR
 
 O [etichetă QR](qr-codes.md) este ieftină, nu are nevoie de baterie și
